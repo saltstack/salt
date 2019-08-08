@@ -21,7 +21,6 @@ from random import randint, shuffle
 from stat import S_IMODE
 import salt.serializers.msgpack
 from binascii import crc32
-
 # Import Salt Libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
@@ -1329,26 +1328,30 @@ class Minion(MinionBase):
             mod_opts[key] = val
         return mod_opts
 
-    def _load_modules(self, force_refresh=False, notify=False, grains=None):
+    def _load_modules(self, force_refresh=False, notify=False, grains=None, opts=None):
         '''
         Return the functions and the returners loaded up from the loader
         module
         '''
+        opt_in = True
+        if not opts:
+            opts = self.opts
+            opt_in = False
         # if this is a *nix system AND modules_max_memory is set, lets enforce
         # a memory limit on module imports
         # this feature ONLY works on *nix like OSs (resource module doesn't work on windows)
         modules_max_memory = False
-        if self.opts.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
+        if opts.get('modules_max_memory', -1) > 0 and HAS_PSUTIL and HAS_RESOURCE:
             log.debug(
                 'modules_max_memory set, enforcing a maximum of %s',
-                self.opts['modules_max_memory']
+                opts['modules_max_memory']
             )
             modules_max_memory = True
             old_mem_limit = resource.getrlimit(resource.RLIMIT_AS)
             rss, vms = psutil.Process(os.getpid()).memory_info()[:2]
-            mem_limit = rss + vms + self.opts['modules_max_memory']
+            mem_limit = rss + vms + opts['modules_max_memory']
             resource.setrlimit(resource.RLIMIT_AS, (mem_limit, mem_limit))
-        elif self.opts.get('modules_max_memory', -1) > 0:
+        elif opts.get('modules_max_memory', -1) > 0:
             if not HAS_PSUTIL:
                 log.error('Unable to enforce modules_max_memory because psutil is missing')
             if not HAS_RESOURCE:
@@ -1361,16 +1364,16 @@ class Minion(MinionBase):
             proxy = None
 
         if grains is None:
-            self.opts['grains'] = salt.loader.grains(self.opts, force_refresh, proxy=proxy)
-        self.utils = salt.loader.utils(self.opts, proxy=proxy)
+            opts['grains'] = salt.loader.grains(opts, force_refresh, proxy=proxy)
+        self.utils = salt.loader.utils(opts, proxy=proxy)
 
-        if self.opts.get('multimaster', False):
-            s_opts = copy.deepcopy(self.opts)
+        if opts.get('multimaster', False):
+            s_opts = copy.deepcopy(opts)
             functions = salt.loader.minion_mods(s_opts, utils=self.utils, proxy=proxy,
                                                 loaded_base_name=self.loaded_base_name, notify=notify)
         else:
-            functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=notify, proxy=proxy)
-        returners = salt.loader.returners(self.opts, functions, proxy=proxy)
+            functions = salt.loader.minion_mods(opts, utils=self.utils, notify=notify, proxy=proxy)
+        returners = salt.loader.returners(opts, functions, proxy=proxy)
         errors = {}
         if '_errors' in functions:
             errors = functions['_errors']
@@ -1380,7 +1383,10 @@ class Minion(MinionBase):
         if modules_max_memory is True:
             resource.setrlimit(resource.RLIMIT_AS, old_mem_limit)
 
-        executors = salt.loader.executors(self.opts, functions, proxy=proxy)
+        executors = salt.loader.executors(opts, functions, proxy=proxy)
+
+        if opt_in:
+            self.opts = opts
 
         return functions, returners, errors, executors
 
@@ -3301,6 +3307,21 @@ class ProxyMinionManager(MinionManager):
                            jid_queue=jid_queue)
 
 
+def _metaproxy_call(opts, fn_name):
+    log.debug('=== here ====')
+    metaproxy = salt.loader.metaproxy(opts)
+    try:
+        metaproxy_name = opts['metaproxy']
+    except KeyError:
+        metaproxy_name = 'proxy'
+        errmsg = 'No metaproxy key found in opts for id ' + opts['id'] + '. ' + \
+                 'Defaulting to standard proxy minion'
+        log.trace(errmsg)
+
+    metaproxy_fn = metaproxy_name + '.' + fn_name
+    return metaproxy[metaproxy_fn]
+
+
 class ProxyMinion(Minion):
     '''
     This class instantiates a 'proxy' minion--a minion that does not manipulate
@@ -3323,265 +3344,40 @@ class ProxyMinion(Minion):
         which is why the differences are not factored out into separate helper
         functions.
         '''
-        log.debug("subclassed _post_master_init")
+        mp_call = _metaproxy_call(self.opts, 'post_master_init')
+        return mp_call(self, master)
 
-        if self.connected:
-            self.opts['master'] = master
+    def _target_load(self, load):
+        '''
+        Verify that the publication is valid and applies to this minion
+        '''
+        mp_call = _metaproxy_call(self.opts, 'target_load')
+        return mp_call(self, load)
 
-            async_pillar = salt.pillar.get_async_pillar(
-                self.opts,
-                self.opts['grains'],
-                self.opts['id'],
-                saltenv=self.opts['saltenv'],
-                pillarenv=self.opts.get('pillarenv'),
-            )
-            self.opts['pillar'] = yield async_pillar.compile_pillar()
-            async_pillar.destroy()
+    def _handle_payload(self, payload):
+        mp_call = _metaproxy_call(self.opts, 'handle_payload')
+        return mp_call(self, payload)
 
-        if 'proxy' not in self.opts['pillar'] and 'proxy' not in self.opts:
-            errmsg = 'No proxy key found in pillar or opts for id ' + self.opts['id'] + '. ' + \
-                     'Check your pillar/opts configuration and contents.  Salt-proxy aborted.'
-            log.error(errmsg)
-            self._running = False
-            raise SaltSystemExit(code=-1, msg=errmsg)
-
-        if 'proxy' not in self.opts:
-            self.opts['proxy'] = self.opts['pillar']['proxy']
-
-        if self.opts.get('proxy_merge_pillar_in_opts'):
-            # Override proxy opts with pillar data when the user required.
-            self.opts = salt.utils.dictupdate.merge(self.opts,
-                                                    self.opts['pillar'],
-                                                    strategy=self.opts.get('proxy_merge_pillar_in_opts_strategy'),
-                                                    merge_lists=self.opts.get('proxy_deep_merge_pillar_in_opts', False))
-        elif self.opts.get('proxy_mines_pillar'):
-            # Even when not required, some details such as mine configuration
-            # should be merged anyway whenever possible.
-            if 'mine_interval' in self.opts['pillar']:
-                self.opts['mine_interval'] = self.opts['pillar']['mine_interval']
-            if 'mine_functions' in self.opts['pillar']:
-                general_proxy_mines = self.opts.get('mine_functions', [])
-                specific_proxy_mines = self.opts['pillar']['mine_functions']
-                try:
-                    self.opts['mine_functions'] = general_proxy_mines + specific_proxy_mines
-                except TypeError as terr:
-                    log.error('Unable to merge mine functions from the pillar in the opts, for proxy {}'.format(
-                        self.opts['id']))
-
-        fq_proxyname = self.opts['proxy']['proxytype']
-
-        # Need to load the modules so they get all the dunder variables
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-
-        # we can then sync any proxymodules down from the master
-        # we do a sync_all here in case proxy code was installed by
-        # SPM or was manually placed in /srv/salt/_modules etc.
-        self.functions['saltutil.sync_all'](saltenv=self.opts['saltenv'])
-
-        # Pull in the utils
-        self.utils = salt.loader.utils(self.opts)
-
-        # Then load the proxy module
-        self.proxy = salt.loader.proxy(self.opts, utils=self.utils)
-
-        # And re-load the modules so the __proxy__ variable gets injected
-        self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-        self.functions.pack['__proxy__'] = self.proxy
-        self.proxy.pack['__salt__'] = self.functions
-        self.proxy.pack['__ret__'] = self.returners
-        self.proxy.pack['__pillar__'] = self.opts['pillar']
-
-        # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
-        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
-        self.proxy.pack['__utils__'] = self.utils
-
-        # Reload all modules so all dunder variables are injected
-        self.proxy.reload_modules()
-
-        # Start engines here instead of in the Minion superclass __init__
-        # This is because we need to inject the __proxy__ variable but
-        # it is not setup until now.
-        self.io_loop.spawn_callback(salt.engines.start_engines, self.opts,
-                                    self.process_manager, proxy=self.proxy)
-
-        if ('{0}.init'.format(fq_proxyname) not in self.proxy
-                or '{0}.shutdown'.format(fq_proxyname) not in self.proxy):
-            errmsg = 'Proxymodule {0} is missing an init() or a shutdown() or both. '.format(fq_proxyname) + \
-                     'Check your proxymodule.  Salt-proxy aborted.'
-            log.error(errmsg)
-            self._running = False
-            raise SaltSystemExit(code=-1, msg=errmsg)
-
-        self.module_executors = self.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
-        proxy_init_fn = self.proxy[fq_proxyname + '.init']
-        proxy_init_fn(self.opts)
-
-        self.opts['grains'] = salt.loader.grains(self.opts, proxy=self.proxy)
-
-        self.serial = salt.payload.Serial(self.opts)
-        self.mod_opts = self._prep_mod_opts()
-        self.matchers = salt.loader.matchers(self.opts)
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
-        uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
-        self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
-
-        if self.connected and self.opts['pillar']:
-            # The pillar has changed due to the connection to the master.
-            # Reload the functions so that they can use the new pillar data.
-            self.functions, self.returners, self.function_errors, self.executors = self._load_modules()
-            if hasattr(self, 'schedule'):
-                self.schedule.functions = self.functions
-                self.schedule.returners = self.returners
-
-        if not hasattr(self, 'schedule'):
-            self.schedule = salt.utils.schedule.Schedule(
-                self.opts,
-                self.functions,
-                self.returners,
-                cleanup=[master_event(type='alive')],
-                proxy=self.proxy)
-
-        # add default scheduling jobs to the minions scheduler
-        if self.opts['mine_enabled'] and 'mine.update' in self.functions:
-            self.schedule.add_job({
-                '__mine_interval':
-                    {
-                        'function': 'mine.update',
-                        'minutes': self.opts['mine_interval'],
-                        'jid_include': True,
-                        'maxrunning': 2,
-                        'run_on_start': True,
-                        'return_job': self.opts.get('mine_return_job', False)
-                    }
-            }, persist=True)
-            log.info('Added mine.update to scheduler')
-        else:
-            self.schedule.delete_job('__mine_interval', persist=True)
-
-        # add master_alive job if enabled
-        if (self.opts['transport'] != 'tcp' and
-                self.opts['master_alive_interval'] > 0):
-            self.schedule.add_job({
-                master_event(type='alive', master=self.opts['master']):
-                    {
-                        'function': 'status.master',
-                        'seconds': self.opts['master_alive_interval'],
-                        'jid_include': True,
-                        'maxrunning': 1,
-                        'return_job': False,
-                        'kwargs': {'master': self.opts['master'],
-                                    'connected': True}
-                    }
-            }, persist=True)
-            if self.opts['master_failback'] and \
-                    'master_list' in self.opts and \
-                    self.opts['master'] != self.opts['master_list'][0]:
-                self.schedule.add_job({
-                    master_event(type='failback'):
-                    {
-                        'function': 'status.ping_master',
-                        'seconds': self.opts['master_failback_interval'],
-                        'jid_include': True,
-                        'maxrunning': 1,
-                        'return_job': False,
-                        'kwargs': {'master': self.opts['master_list'][0]}
-                    }
-                }, persist=True)
-            else:
-                self.schedule.delete_job(master_event(type='failback'), persist=True)
-        else:
-            self.schedule.delete_job(master_event(type='alive', master=self.opts['master']), persist=True)
-            self.schedule.delete_job(master_event(type='failback'), persist=True)
-
-        # proxy keepalive
-        proxy_alive_fn = fq_proxyname+'.alive'
-        if (proxy_alive_fn in self.proxy
-            and 'status.proxy_reconnect' in self.functions
-            and self.opts.get('proxy_keep_alive', True)):
-            # if `proxy_keep_alive` is either not specified, either set to False does not retry reconnecting
-            self.schedule.add_job({
-                '__proxy_keepalive':
-                {
-                    'function': 'status.proxy_reconnect',
-                    'minutes': self.opts.get('proxy_keep_alive_interval', 1),  # by default, check once per minute
-                    'jid_include': True,
-                    'maxrunning': 1,
-                    'return_job': False,
-                    'kwargs': {
-                        'proxy_name': fq_proxyname
-                    }
-                }
-            }, persist=True)
-            self.schedule.enable_schedule()
-        else:
-            self.schedule.delete_job('__proxy_keepalive', persist=True)
-
-        #  Sync the grains here so the proxy can communicate them to the master
-        self.functions['saltutil.sync_grains'](saltenv='base')
-        self.grains_cache = self.opts['grains']
-        self.ready = True
+    @tornado.gen.coroutine
+    def _handle_decoded_payload(self, data):
+        mp_call = _metaproxy_call(self.opts, 'handle_decoded_payload')
+        return mp_call(self, data)
 
     @classmethod
     def _target(cls, minion_instance, opts, data, connected):
-        if not minion_instance:
-            minion_instance = cls(opts)
-            minion_instance.connected = connected
-            if not hasattr(minion_instance, 'functions'):
-                # Need to load the modules so they get all the dunder variables
-                functions, returners, function_errors, executors = (
-                    minion_instance._load_modules(grains=opts['grains'])
-                    )
-                minion_instance.functions = functions
-                minion_instance.returners = returners
-                minion_instance.function_errors = function_errors
-                minion_instance.executors = executors
 
-                # Pull in the utils
-                minion_instance.utils = salt.loader.utils(minion_instance.opts)
+        mp_call = _metaproxy_call(opts, 'target')
+        return mp_call(cls, minion_instance, opts, data, connected)
 
-                # Then load the proxy module
-                minion_instance.proxy = salt.loader.proxy(minion_instance.opts, utils=minion_instance.utils)
+    @classmethod
+    def _thread_return(cls, minion_instance, opts, data):
+        mp_call = _metaproxy_call(opts, 'thread_return')
+        return mp_call(cls, minion_instance, opts, data)
 
-                # And re-load the modules so the __proxy__ variable gets injected
-                functions, returners, function_errors, executors = (
-                    minion_instance._load_modules(grains=opts['grains'])
-                    )
-                minion_instance.functions = functions
-                minion_instance.returners = returners
-                minion_instance.function_errors = function_errors
-                minion_instance.executors = executors
-
-                minion_instance.functions.pack['__proxy__'] = minion_instance.proxy
-                minion_instance.proxy.pack['__salt__'] = minion_instance.functions
-                minion_instance.proxy.pack['__ret__'] = minion_instance.returners
-                minion_instance.proxy.pack['__pillar__'] = minion_instance.opts['pillar']
-
-                # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
-                minion_instance.utils = salt.loader.utils(minion_instance.opts, proxy=minion_instance.proxy)
-                minion_instance.proxy.pack['__utils__'] = minion_instance.utils
-
-                # Reload all modules so all dunder variables are injected
-                minion_instance.proxy.reload_modules()
-
-                fq_proxyname = opts['proxy']['proxytype']
-
-                minion_instance.module_executors = minion_instance.proxy.get('{0}.module_executors'.format(fq_proxyname), lambda: [])()
-
-                proxy_init_fn = minion_instance.proxy[fq_proxyname + '.init']
-                proxy_init_fn(opts)
-            if not hasattr(minion_instance, 'serial'):
-                minion_instance.serial = salt.payload.Serial(opts)
-            if not hasattr(minion_instance, 'proc_dir'):
-                uid = salt.utils.user.get_uid(user=opts.get('user', None))
-                minion_instance.proc_dir = (
-                    get_proc_dir(opts['cachedir'], uid=uid)
-                    )
-
-        with tornado.stack_context.StackContext(minion_instance.ctx):
-            if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
-                Minion._thread_multi_return(minion_instance, opts, data)
-            else:
-                Minion._thread_return(minion_instance, opts, data)
+    @classmethod
+    def _thread_multi_return(cls, minion_instance, opts, data):
+        mp_call = _metaproxy_call(opts, 'thread_multi_return')
+        return mp_call(cls, minion_instance, opts, data)
 
 
 class SProxyMinion(SMinion):
