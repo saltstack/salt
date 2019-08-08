@@ -6,6 +6,7 @@ import itertools
 import logging
 import os.path
 import pprint
+import random
 import re
 import shlex
 import time
@@ -945,6 +946,8 @@ class SerializerExtension(Extension):
         "profile",
     }
 
+    _CacheSingleton = ("cache_singleton", random.random())
+
     def __init__(self, environment):
         super().__init__(environment)
         self.environment.filters.update(
@@ -966,6 +969,7 @@ class SerializerExtension(Extension):
                 "zip_longest": itertools.zip_longest,
             }
         )
+        self.environment.extend(import_caching=False)
 
         if self.environment.finalize is None:
             self.environment.finalize = self.finalizer
@@ -1209,6 +1213,75 @@ class SerializerExtension(Extension):
             ).set_lineno(lineno),
         ]
 
+    def _cache_imports(self, body, import_node, target, lineno):
+        '''
+        Opportunistic cache for jinja `import_*` statements.
+        '''
+        # enable caching only if render context is consistent.
+        if import_node.with_context and not self.environment.import_caching:
+            return body
+
+        def mk_key():
+            '''
+            Add a cached node to the language tree.
+            '''
+            return nodes.Concat(
+                [
+                    nodes.Const("_import_{}_cache_".format(converter)),
+                    import_node.template,
+                ],
+            )
+
+        def get_salt_func(name):
+            '''
+            Get the representation of the salt function.
+            '''
+            return nodes.Getitem(
+                nodes.Getattr(nodes.ContextReference(), "salt", "load"),
+                nodes.Const(name),
+                "load",
+            )
+
+        # pseudo logic here is:
+        # obj = from_cache(key, singleton)
+        # if obj == singleton:
+        #   < do import body >
+        #   set_cache(key, obj)
+        cached_import_body = [
+            nodes.Assign(
+                nodes.Name(target, "store"),
+                nodes.Call(
+                    get_salt_func("context.get"),
+                    [],
+                    [],
+                    nodes.List([mk_key(), self.attr("_CacheSingleton")]),
+                    None,
+                ),
+            ).set_lineno(lineno),
+            # compare the result; if it's the singleton, we must load.
+            nodes.If(
+                nodes.Compare(
+                    nodes.Name(target, "load"),
+                    [nodes.Operand("eq", self.attr("_CacheSingleton"))],
+                ),
+                body
+                + [
+                    nodes.ExprStmt(
+                        nodes.Call(
+                            get_salt_func("context.set"),
+                            [],
+                            [],
+                            nodes.List([mk_key(), nodes.Name(target, "load")]),
+                            None,
+                        ),
+                    ),
+                ],
+                [],
+                [],  # elif and else blocks
+            ).set_lineno(lineno),
+        ]
+        return cached_import_body
+
     def parse_import(self, parser, converter):
         import_node = parser.parse_import()
         target = import_node.target
@@ -1228,6 +1301,8 @@ class SerializerExtension(Extension):
                 ).set_lineno(lineno),
             ).set_lineno(lineno),
         ]
+
+        body = self._cache_imports(body, import_node, target, lineno)
         return self._parse_profile_block(
             parser, import_node.template, f"import_{converter}", body, lineno
         )
