@@ -59,7 +59,7 @@ class VultrTest(ShellCase):
                 .format(PROVIDER_NAME)
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
@@ -139,8 +139,13 @@ class VultrTest(ShellCase):
         Test creating an instance on Vultr
         '''
         # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p vultr-test {0}'.format(self.instance_name), timeout=TIMEOUT + 300)
-        self.assertInstanceExists(ret_val)
+        create_vm = self.run_cloud('-p vultr-test {0}'.format(self.instance_name), timeout=TIMEOUT + 300)
+        self.assertIn(
+            self.instance_name,
+            [i.strip() for i in create_vm]
+        )
+        self.assertNotIn('Failed to start', six.text_type(create_vm))
+        self.assertEqual(self._instance_exists(), True)
 
         # Vultr won't let us delete an instance less than 5 minutes old.
         time.sleep(300)

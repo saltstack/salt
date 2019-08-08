@@ -55,7 +55,7 @@ class DimensionDataTest(ShellCase):
                 .format(PROVIDER_NAME)
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
@@ -93,7 +93,9 @@ class DimensionDataTest(ShellCase):
         Test creating an instance on Dimension Data's cloud
         '''
         # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_val)
+        self.assertIn(
+            self.instance_name,
+            [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+        )
 
         self.assertDestroyInstance()

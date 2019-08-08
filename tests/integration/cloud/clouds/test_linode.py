@@ -52,7 +52,7 @@ class LinodeTest(ShellCase):
                 )
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
@@ -60,7 +60,9 @@ class LinodeTest(ShellCase):
         Clean up after tests
         '''
         # check if instance with salt installed returned
-        ret_str = self.run_cloud('-p linode-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_str)
-
+        self.assertIn(
+            self.instance_name,
+            [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+        )
+        self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()

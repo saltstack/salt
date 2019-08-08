@@ -52,7 +52,7 @@ class EC2Test(CloudTest):
                     .format(PROVIDER_NAME)
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def override_profile_config(self, name, data):
@@ -86,7 +86,8 @@ class EC2Test(CloudTest):
         if debug:
             cmd.extend(['-l', 'debug'])
         cmd.append(self.instance_name)
-        ret_val = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
+        instance = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.instance_name)
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
@@ -97,16 +98,19 @@ class EC2Test(CloudTest):
         '''
         Tests creating and renaming an instance on EC2 (classic)
         '''
+        # Start with a name that is different from usual so that it will get deleted normally after the test
+        changed_name = self.instance_name + '-changed'
         # create the instance
         ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
 
         # check if instance returned
         self.assertInstanceExists(ret_val)
 
-        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=TIMEOUT)
+        change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.instance_name),
+                                     timeout=TIMEOUT)
 
-        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(rename), [rename])
-        exp_results = ['        {0}:'.format(rename), '            size:',
+        check_rename = self.run_cloud('-a show_instance {0} --assume-yes'.format(self.instance_name), [self.instance_name])
+        exp_results = ['        {0}:'.format(self.instance_name), '            size:',
                        '            architecture:']
         try:
             for result in exp_results:

@@ -69,15 +69,16 @@ class CloudClientTestCase(ShellCase):
         ret_val = cloud_client.create(
             provider=self.provider_name,
             names=[self.instance_name],
-            image=self.IMAGE_NAME,
+            image=self.image_name,
             location='sfo1', size='512mb', vm_size='512mb'
         )
 
         # Check that the VM was created correctly
-        self.assertInstanceExists(ret_val)
+        self.assertIn(self.instance_name, created)
+        self.assertEqual(self._instance_exists(), True)
 
         # Clean up after ourselves and delete the VM
-        deleted = cloud_client.destroy(names=[INSTANCE_NAME])
+        deleted = cloud_client.destroy(names=[self.instance_name])
 
         # Check that the VM was deleted correctly
-        self.assertIn(INSTANCE_NAME, deleted)
+        self.assertIn(self.instance_name, deleted)

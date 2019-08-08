@@ -70,7 +70,7 @@ class VMWareTest(ShellCase):
                     .format(PROVIDER_NAME)
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
@@ -88,9 +88,9 @@ class VMWareTest(ShellCase):
         profile_config = cloud_config(profile)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
-        ret_val = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore,
-                                                                                      self.instance_name)
+        instance = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.instance_name)
+        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, self.instance_name)
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
@@ -104,15 +104,17 @@ class VMWareTest(ShellCase):
         Tests creating snapshot and creating vm with --no-deploy
         '''
         # create the instance
-        ret_val = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.instance_name),
-                                 timeout=TIMEOUT)
+        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.instance_name),
+                                  timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.instance_name)
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
 
         create_snapshot = self.run_cloud('-a create_snapshot {0} \
                                          snapshot_name=\'Test Cloud\' \
-                                         memdump=True -y'.format(self.instance_name), timeout=TIMEOUT)
+                                         memdump=True -y'.format(self.instance_name),
+                                         timeout=TIMEOUT)
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))

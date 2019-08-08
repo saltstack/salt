@@ -41,33 +41,33 @@ class CloudTest(ShellCase):
         if not instance_name:
             instance_name = self.instance_name
         query = self.run_cloud('--query')
-        print('INSTANCE EXISTS? {}: {}'.format(self.instance_name, query))
+        log.debug('INSTANCE EXISTS? {}: {}'.format(self.instance_name, query))
         return '        {0}:'.format(self.instance_name) in query
 
     def _destroy_instance(self):
-        log.debug('Deleting instance "{}"'.format(self.instance_name))
+        print('Deleting instance "{}"'.format(self.instance_name))
         delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
-        log.debug('Deletion status: {}'.format(delete_str))
+        print('Deletion status: {}'.format(delete_str))
 
         if any([x in delete_str for x in (
             'True',
             'was successfully deleted'
         )]):
-            log.debug('Instance "{}" was successfully deleted'.format(self.instance_name))
+            print('Instance "{}" was successfully deleted'.format(self.instance_name))
         elif any([x in delete_str for x in (
             'shutting-down',
             '.delete',
         )]):
-            log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
-            sleep(30)
+            print('Instance "{}" is cleaning up'.format(self.instance_name))
+            sleep(60)
         else:
-            print('Instance "{}" may not have been deleted properly'.format(self.instance_name))
+            log.error('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
         self.assertEqual(self._instance_exists(), False)
-        log.debug('Instance "{}" no longer exists'.format(self.instance_name))
+        print('Instance "{}" no longer exists'.format(self.instance_name))
 
     def tearDown(self):
         '''

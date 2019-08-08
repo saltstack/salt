@@ -27,7 +27,8 @@ class GCETest(CloudTest):
         '''
 
         # create the instance
-        ret_str = self.run_cloud('-p gce-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        instance = self.run_cloud('-p gce-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.instance_name)
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
@@ -42,7 +43,11 @@ class GCETest(CloudTest):
         '''
 
         # create the instance
-        ret_str = self.run_cloud('-p gce-test-extra {0}'.format(self.instance_name), timeout=TIMEOUT)
+        instance = self.run_cloud('-p gce-test-extra \
+                                  {0}'.format(self.instance_name),
+                                  timeout=TIMEOUT)
+        ret_str = '{0}:'.format(self.instance_name)
+
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
 

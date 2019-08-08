@@ -109,7 +109,7 @@ class AzureTest(CloudTest):
                 )
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
@@ -117,7 +117,14 @@ class AzureTest(CloudTest):
         Clean up after tests
         '''
         # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p {0} {1}'.format(PROFILE_NAME, self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_val)
-
+        self.assertIn(
+            self.instance_name,
+            [i.strip() for i in self.run_cloud(
+                '-p {0} {1}'.format(
+                    PROFILE_NAME,
+                    self.instance_name
+                ), timeout=TIMEOUT
+            )]
+        )
+        self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()

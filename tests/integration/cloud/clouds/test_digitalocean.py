@@ -61,7 +61,7 @@ class DigitalOceanTest(CloudTest):
                 .format(PROVIDER_NAME)
             )
 
-        self.assertFalse(self._instance_exists(),
+        self.assertEqual(self._instance_exists(), False,
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
@@ -98,8 +98,13 @@ class DigitalOceanTest(CloudTest):
         '''
         Test key management
         '''
-        pub = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDDHr/jh2Jy4yALcK4JyWbVkPRaWmhck3IgCoeOO3z1e2dBowLh64QAM+Qb72pxekALga2oi4GvT+TlWNhzPH4V example'
-        finger_print = '3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa'
+        do_key_name = self.instance_name + '-key'
+
+        # generate key and fingerprint
+        ssh_key = RSA.generate(4096)
+        pub = salt.utils.stringutils.to_str(ssh_key.publickey().exportKey("OpenSSH"))
+        key_hex = hashlib.md5(base64.b64decode(pub.strip().split()[1].encode())).hexdigest()
+        finger_print = ':'.join([key_hex[x:x+2] for x in range(0, len(key_hex), 2)])
 
         try:
             _key = self.run_cloud('-f create_key {0} name="{1}" public_key="{2}"'.format(self.PROVIDER,
@@ -139,7 +144,9 @@ class DigitalOceanTest(CloudTest):
         Test creating an instance on DigitalOcean
         '''
         # check if instance with salt installed returned
-        ret_str = self.run_cloud('-p digitalocean-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_str)
-
+        self.assertIn(
+            self.instance_name,
+            [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
+        )
+        self.assertEqual(self._instance_exists(), True)
         self._destroy_instance()
