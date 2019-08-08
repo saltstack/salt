@@ -6,6 +6,8 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import logging
+import time
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
@@ -16,6 +18,7 @@ from tests.support.helpers import expensiveTest, generate_random_name
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
+from salt.ext.six.moves import range
 
 TIMEOUT = 500
 
@@ -33,6 +36,8 @@ INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'azure'
 PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
+
+log = logging.getLogger(__name__)
 
 
 def __has_required_azure():
@@ -129,18 +134,29 @@ class AzureTest(ShellCase):
                            timeout=TIMEOUT)
             raise
 
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(
-                        INSTANCE_NAME
-                    ), timeout=TIMEOUT
-                )]
-            )
-        except AssertionError:
-            raise
+        # Try up to 10 times to delete the instance since it might not be
+        # available for deletion right away.
+        for num_try in range(10):
+            # delete the instance
+            try:
+                self.assertIn(
+                    INSTANCE_NAME + ':',
+                    [i.strip() for i in self.run_cloud(
+                        '-d {0} --assume-yes'.format(
+                            INSTANCE_NAME
+                        ), timeout=TIMEOUT
+                    )]
+                )
+            except AssertionError:
+                # The deletion did not succeed, wait 10s and try again
+                if num_try < 9:
+                    log.warning('Unable to delete azure instance on try %d', num_try)
+                    time.sleep(10)
+                else:
+                    raise
+            else:
+                # The deletion succeeded
+                break
 
     def tearDown(self):
         '''

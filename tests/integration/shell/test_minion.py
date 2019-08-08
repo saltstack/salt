@@ -50,6 +50,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     )
 
     @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
+    @skipIf(salt.utils.platform.is_fedora(), 'Test is flaky on fedora')
     def test_issue_7754(self):
         old_cwd = os.getcwd()
         config_dir = os.path.join(TMP, 'issue-7754')
