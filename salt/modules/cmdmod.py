@@ -407,16 +407,27 @@ def _run(cmd,
         return win_runas(cmd, runas, password, cwd)
 
     if runas and salt.utils.platform.is_darwin():
-        # we need to insert the user simulation into the command itself and not
-        # just run it from the environment on macOS as that
-        # method doesn't work properly when run as root for certain commands.
+        # We need to insert the user simulation into the command itself and not
+        # just run it from the environment on macOS as that method doesn't work
+        # properly when run as root for certain commands.
         if isinstance(cmd, (list, tuple)):
             cmd = ' '.join(map(_cmd_quote, cmd))
 
-        cmd = 'su -l {0} -c "{1}"'.format(runas, cmd)
-        # set runas to None, because if you try to run `su -l` as well as
-        # simulate the environment macOS will prompt for the password of the
-        # user and will cause salt to hang.
+        # Ensure directory is correct before running command
+        cmd = 'cd -- {dir} && {{ {cmd}\n }}'.format(dir=_cmd_quote(cwd), cmd=cmd)
+
+        # Ensure environment is correct for a newly logged-in user by running
+        # the command under bash as a login shell
+        cmd = '/bin/bash -l -c {cmd}'.format(cmd=_cmd_quote(cmd))
+
+        # Ensure the login is simulated correctly (note: su runs sh, not bash,
+        # which causes the environment to be initialised incorrectly, which is
+        # fixed by the previous line of code)
+        cmd = 'su -l {0} -c {1}'.format(_cmd_quote(runas), _cmd_quote(cmd))
+
+        # Set runas to None, because if you try to run `su -l` after changing
+        # user, su will prompt for the password of the user and cause salt to
+        # hang.
         runas = None
 
     if runas:
@@ -459,7 +470,7 @@ def _run(cmd,
                 'sys.stdout.write(\"' + marker + '\");'
             )
 
-            if use_sudo or __grains__['os'] in ['MacOS', 'Darwin']:
+            if use_sudo:
                 env_cmd = ['sudo']
                 # runas is optional if use_sudo is set.
                 if runas:
