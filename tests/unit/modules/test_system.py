@@ -72,6 +72,46 @@ class SystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to shutdown a running system
         '''
-        with patch.dict(system.__salt__,
-                        {'cmd.run': MagicMock(return_value='A')}):
+        cmd_mock = MagicMock(return_value='A')
+        with patch.dict(system.__salt__, {'cmd.run': cmd_mock}), \
+                patch('salt.utils.platform.is_freebsd', MagicMock(return_value=False)), \
+                patch('salt.utils.platform.is_netbsd', MagicMock(return_value=False)), \
+                patch('salt.utils.platform.is_openbsd', MagicMock(return_value=False)):
             self.assertEqual(system.shutdown(), 'A')
+        cmd_mock.assert_called_with(['shutdown', '-h', 'now'], python_shell=False)
+
+    def test_shutdown_freebsd(self):
+        '''
+        Test to shutdown a running FreeBSD system
+        '''
+        cmd_mock = MagicMock(return_value='A')
+        with patch.dict(system.__salt__, {'cmd.run': cmd_mock}), \
+                patch('salt.utils.platform.is_freebsd', MagicMock(return_value=True)), \
+                patch('salt.utils.platform.is_netbsd', MagicMock(return_value=False)), \
+                patch('salt.utils.platform.is_openbsd', MagicMock(return_value=False)):
+            self.assertEqual(system.shutdown(), 'A')
+        cmd_mock.assert_called_with(['shutdown', '-p', 'now'], python_shell=False)
+
+    def test_shutdown_netbsd(self):
+        '''
+        Test to shutdown a running NetBSD system
+        '''
+        cmd_mock = MagicMock(return_value='A')
+        with patch.dict(system.__salt__, {'cmd.run': cmd_mock}), \
+                patch('salt.utils.platform.is_freebsd', MagicMock(return_value=False)), \
+                patch('salt.utils.platform.is_netbsd', MagicMock(return_value=True)), \
+                patch('salt.utils.platform.is_openbsd', MagicMock(return_value=False)):
+            self.assertEqual(system.shutdown(), 'A')
+        cmd_mock.assert_called_with(['shutdown', '-p', 'now'], python_shell=False)
+
+    def test_shutdown_openbsd(self):
+        '''
+        Test to shutdown a running OpenBSD system
+        '''
+        cmd_mock = MagicMock(return_value='A')
+        with patch.dict(system.__salt__, {'cmd.run': cmd_mock}), \
+                patch('salt.utils.platform.is_freebsd', MagicMock(return_value=False)), \
+                patch('salt.utils.platform.is_netbsd', MagicMock(return_value=False)), \
+                patch('salt.utils.platform.is_openbsd', MagicMock(return_value=True)):
+            self.assertEqual(system.shutdown(), 'A')
+        cmd_mock.assert_called_with(['shutdown', '-p', 'now'], python_shell=False)
