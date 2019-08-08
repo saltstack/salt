@@ -263,6 +263,21 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     return salt.utils.hashutils.hmac_signature(string, shared_secret, challenge_hmac)
 
 
+def hmac_compute(string, shared_secret):
+    '''
+    .. versionadded:: Sodium
+
+    Compute a HMAC SHA256 digest using a string and secret.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' hashutil.hmac_compute 'get salted' 'shared secret'
+    '''
+    return salt.utils.hashutils.hmac_compute(string, shared_secret)
+
+
 def github_signature(string, shared_secret, challenge_hmac):
     '''
     Verify a challenging hmac signature against a string / shared-secret for

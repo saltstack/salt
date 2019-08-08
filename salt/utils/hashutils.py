@@ -138,6 +138,17 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     return valid_hmac == challenge
 
 
+@jinja_filter('hmac_compute')
+def hmac_compute(string, shared_secret):
+    '''
+    Create an hmac digest.
+    '''
+    msg = salt.utils.stringutils.to_bytes(string)
+    key = salt.utils.stringutils.to_bytes(shared_secret)
+    hmac_hash = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    return hmac_hash
+
+
 @jinja_filter('random_hash')
 def random_hash(size=9999999999, hash_type=None):
     '''
