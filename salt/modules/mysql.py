@@ -1559,7 +1559,7 @@ def user_chpass(user,
     if salt.utils.data.is_true(allow_passwordless) and \
             salt.utils.data.is_true(unix_socket):
         if host == 'localhost':
-            args['unix_socket'] = 'auth_socket'
+            args['unix_socket'] = 'unix_socket'
             if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
                 qry = "ALTER USER %(user)s@%(host)s IDENTIFIED WITH %(unix_socket)s AS %(user)s;"
             else:
