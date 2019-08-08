@@ -20,7 +20,9 @@ class PycryptoTestCase(TestCase):
     TestCase for salt.utils.pycrypto module
     '''
 
-    @skipIf(salt.utils.platform.is_windows(), 'No crypto module for Windows')
+    # The crypt module is only available on Unix systems
+    # https://docs.python.org/dev/library/crypt.html
+    @skipIf(not salt.utils.pycrypto.HAS_CRYPT, 'crypt module not available')
     def test_gen_hash(self):
         '''
         Test gen_hash
