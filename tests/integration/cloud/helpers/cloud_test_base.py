@@ -18,7 +18,7 @@ TIMEOUT = 500
 
 class CloudTest(ShellCase):
     @property
-    def INSTANCE_NAME(self):
+    def instance_name(self):
         if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
             self._instance_name = generate_random_name('cloud-test-').lower()
@@ -27,33 +27,33 @@ class CloudTest(ShellCase):
     def _instance_exists(self):
         # salt-cloud -a show_instance myinstance
         query = self.run_cloud('--query')
-        log.debug('INSTANCE EXISTS? {}: {}'.format(self.INSTANCE_NAME, query))
-        return '        {0}:'.format(self.INSTANCE_NAME) in query
+        log.debug('INSTANCE EXISTS? {}: {}'.format(self.instance_name, query))
+        return '        {0}:'.format(self.instance_name) in query
 
     def _destroy_instance(self):
-        log.debug('Deleting instance "{}"'.format(self.INSTANCE_NAME))
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
+        print('Deleting instance "{}"'.format(self.instance_name))
+        delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
-        log.debug('Deletion status: {}'.format(delete_str))
+        print('Deletion status: {}'.format(delete_str))
 
         if any([x in delete_str for x in (
             'True',
             'was successfully deleted'
         )]):
-            log.debug('Instance "{}" was successfully deleted'.format(self.INSTANCE_NAME))
+            print('Instance "{}" was successfully deleted'.format(self.instance_name))
         elif any([x in delete_str for x in (
             'shutting-down',
             '.delete',
         )]):
-            log.debug('Instance "{}" is cleaning up'.format(self.INSTANCE_NAME))
+            print('Instance "{}" is cleaning up'.format(self.instance_name))
             sleep(60)
         else:
-            log.error('Instance "{}" may not have been deleted properly'.format(self.INSTANCE_NAME))
+            log.error('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
         self.assertEqual(self._instance_exists(), False)
-        log.debug('Instance "{}" no longer exists'.format(self.INSTANCE_NAME))
+        print('Instance "{}" no longer exists'.format(self.instance_name))
 
     def tearDown(self):
         '''
