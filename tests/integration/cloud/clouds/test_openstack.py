@@ -221,7 +221,7 @@ class RackspaceTest(CloudTest):
             )
 
         self.assertEqual(self._instance_exists(), False,
-                         'The instance "{}" exists before it was created by the test'.format(self.INSTANCE_NAME))
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
         '''
@@ -229,8 +229,8 @@ class RackspaceTest(CloudTest):
         '''
         # check if instance with salt installed returned
         self.assertIn(
-            self.INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.INSTANCE_NAME), timeout=TIMEOUT)]
+            self.instance_name,
+            [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
         )
 
         self.assertEqual(self._instance_exists(), True)
