@@ -8,11 +8,13 @@ import fnmatch
 from salt.ext import six  # pylint: disable=3rd-party-module-not-gated
 
 
-def match(tgt):
+def match(tgt, opts=None):
     '''
     Returns true if the passed glob matches the id
     '''
-    minion_id = __opts__.get('minion_id', __opts__['id'])
+    if not opts:
+        opts = __opts__
+    minion_id = opts.get('minion_id', opts['id'])
     if not isinstance(tgt, six.string_types):
         return False
 
