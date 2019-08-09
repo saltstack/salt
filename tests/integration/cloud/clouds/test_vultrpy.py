@@ -16,7 +16,6 @@ from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
-from salt.ext import six
 
 # Create the cloud instance name to be used throughout the tests
 PROVIDER_NAME = 'vultr'
@@ -66,7 +65,7 @@ class VultrTest(CloudTest):
                 .format(PROVIDER_NAME)
             )
 
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
@@ -146,13 +145,8 @@ class VultrTest(CloudTest):
         Test creating an instance on Vultr
         '''
         # check if instance with salt installed returned
-        create_vm = self.run_cloud('-p vultr-test {0}'.format(self.instance_name), timeout=TIMEOUT + 300)
-        self.assertIn(
-            self.instance_name,
-            [i.strip() for i in create_vm]
-        )
-        self.assertNotIn('Failed to start', six.text_type(create_vm))
-        self.assertEqual(self._instance_exists(), True)
+        ret_val = self.run_cloud('-p vultr-test {0}'.format(self.instance_name), timeout=TIMEOUT + 300)
+        self.assertInstanceExists(ret_val)
 
         # Vultr won't let us delete an instance less than 5 minutes old.
         time.sleep(300)

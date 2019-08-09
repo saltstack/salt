@@ -72,7 +72,7 @@ class VMWareTest(CloudTest):
                     .format(PROVIDER_NAME)
             )
 
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
@@ -90,14 +90,13 @@ class VMWareTest(CloudTest):
         profile_config = cloud_config(profile)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
-        instance = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(self.instance_name)
-        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore, self.instance_name)
+        ret_val = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore,
+                                                                                      self.instance_name)
 
         # check if instance returned with salt installed
-        self.assertIn(ret_str, instance)
-        self.assertEqual(self._instance_exists(), True)
-        self.assertIn(disk_datastore_str, instance,
+        self.assertInstanceExists(ret_val)
+        self.assertIn(disk_datastore_str, ret_val,
                       msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
 
         self._destroy_instance()
@@ -107,21 +106,17 @@ class VMWareTest(CloudTest):
         Tests creating snapshot and creating vm with --no-deploy
         '''
         # create the instance
-        instance = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.instance_name),
-                                  timeout=TIMEOUT)
-        ret_str = '{0}:'.format(self.instance_name)
+        ret_val = self.run_cloud('-p vmware-test {0} --no-deploy'.format(self.instance_name),
+                                 timeout=TIMEOUT)
 
         # check if instance returned with salt installed
-        self.assertIn(ret_str, instance)
-        self.assertEqual(self._instance_exists(), True)
+        self.assertInstanceExists(ret_val)
 
         create_snapshot = self.run_cloud('-a create_snapshot {0} \
                                          snapshot_name=\'Test Cloud\' \
-                                         memdump=True -y'.format(self.instance_name),
-                                         timeout=TIMEOUT)
+                                         memdump=True -y'.format(self.instance_name), timeout=TIMEOUT)
         s_ret_str = 'Snapshot created successfully'
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
-        self.assertEqual(self._instance_exists(), True)
 
         self._destroy_instance()

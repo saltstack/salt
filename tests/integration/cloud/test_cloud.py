@@ -54,7 +54,7 @@ class CloudClientTestCase(CloudTest):
         cloud_client = salt.cloud.CloudClient(self.config_file)
 
         # Create the VM using salt.cloud.CloudClient.create() instead of calling salt-cloud
-        created = cloud_client.create(
+        ret_val = cloud_client.create(
             provider=self.provider_name,
             names=[self.instance_name],
             image=self.image_name,
@@ -62,8 +62,7 @@ class CloudClientTestCase(CloudTest):
         )
 
         # Check that the VM was created correctly
-        self.assertIn(self.instance_name, created)
-        self.assertEqual(self._instance_exists(), True)
+        self.assertInstanceExists(ret_val)
 
         # Clean up after ourselves and delete the VM
         deleted = cloud_client.destroy(names=[self.instance_name])

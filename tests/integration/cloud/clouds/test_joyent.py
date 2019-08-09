@@ -8,10 +8,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
-from unittest import skipIf
-
-from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
+from tests.support.paths import FILES
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
@@ -68,16 +67,14 @@ class JoyentTest(CloudTest):
                 'tests/integration/files/conf/cloud.providers.d/{0}.conf'
                     .format(PROVIDER_NAME)
             )
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
         '''
         Test creating and deleting instance on Joyent
         '''
-        self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud('-p joyent-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
-        )
-        self.assertEqual(self._instance_exists(), True)
+        ret_str = self.run_cloud('-p joyent-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_str)
+
         self._destroy_instance()

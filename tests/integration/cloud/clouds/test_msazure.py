@@ -49,6 +49,7 @@ def __has_required_azure():
     return False
 
 
+@skipIf(True, 'MSAzure will be deprecated in favor of azurearm')
 @skipIf(HAS_AZURE is False, 'These tests require the Azure Python SDK to be installed.')
 @skipIf(__has_required_azure() is False, 'The Azure Python SDK must be >= 0.11.1.')
 class AzureTest(CloudTest):
@@ -108,7 +109,7 @@ class AzureTest(CloudTest):
                 )
             )
 
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
@@ -116,14 +117,7 @@ class AzureTest(CloudTest):
         Test creating an instance on Azure
         '''
         # check if instance with salt installed returned
-        self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud(
-                '-p {0} {1}'.format(
-                    PROFILE_NAME,
-                    self.instance_name
-                ), timeout=TIMEOUT
-            )]
-        )
-        self.assertEqual(self._instance_exists(), True)
+        ret_val = self.run_cloud('-p {0} {1}'.format(PROFILE_NAME, self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_val)
+
         self._destroy_instance()

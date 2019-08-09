@@ -12,6 +12,9 @@ from time import sleep
 from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 
+# Import Salt Libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 TIMEOUT = 500
 
@@ -28,7 +31,16 @@ class CloudTest(ShellCase):
         # salt-cloud -a show_instance myinstance
         query = self.run_cloud('--query')
         log.debug('Checking for "{}" in => {}'.format(self.instance_name, query))
-        return any(self.instance_name is q.strip(': ') for q in query)
+        return any(self.instance_name == q.strip(': ') for q in query)
+
+    def assertInstanceExists(self, creation_ret=None):
+        '''
+        :param creation_ret: The return value from the run_cloud() function that created the instance
+        '''
+        if creation_ret:
+            self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
+            self.assertNotIn('Failed to start', six.text_type(creation_ret))
+        self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
 
     def _destroy_instance(self):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
@@ -52,7 +64,7 @@ class CloudTest(ShellCase):
             log.warning('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
-        self.assertEqual(self._instance_exists(), False, 'Could not destroy "{}"'.format(self.instance_name))
+        self.assertFalse(self._instance_exists(), 'Could not destroy "{}"'.format(self.instance_name))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
     def tearDown(self):
@@ -71,9 +83,9 @@ class CloudTest(ShellCase):
                     sleep(30)
             else:
                 break
-        self.assertEqual(self._instance_exists(), False, 'Instance exists after multiple attempts to delete: {}'
+        self.assertFalse(self._instance_exists(), 'Instance exists after multiple attempts to delete: {}'
                          .format(self.instance_name))
         # Complain if the instance was destroyed in this tearDown.
         # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertEqual(instance_deleted, True, 'The Instance "{}" was not deleted properly at the end of the test'
-                         .format(self.instance_name))
+        self.assertTrue(instance_deleted, 'The Instance "{}" was not deleted properly at the end of the test'
+                        .format(self.instance_name))
