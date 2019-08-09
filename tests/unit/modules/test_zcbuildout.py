@@ -17,7 +17,7 @@ from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Testing libs
-from tests.support.helpers import requires_network, skip_if_binaries_missing
+from tests.support.helpers import requires_network
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import FILES, TMP
 from tests.support.runtests import RUNTIME_VARS
