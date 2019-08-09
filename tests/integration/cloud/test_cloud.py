@@ -60,8 +60,7 @@ class CloudClientTestCase(CloudTest):
         )
 
         # Check that the VM was created correctly
-        self.assertIn(self.instance_name, created)
-        self.assertEqual(self._instance_exists(), True)
+        self.assertInstanceExists(ret_val)
 
         # Clean up after ourselves and delete the VM
         deleted = cloud_client.destroy(names=[self.instance_name])

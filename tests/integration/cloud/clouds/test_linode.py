@@ -61,7 +61,7 @@ class LinodeTest(CloudTest):
                 )
             )
 
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
@@ -69,9 +69,7 @@ class LinodeTest(CloudTest):
         Test creating an instance on Linode
         '''
         # check if instance with salt installed returned
-        self.assertIn(
-            self.instance_name,
-            [i.strip() for i in self.run_cloud('-p linode-test {0}'.format(self.instance_name), timeout=TIMEOUT)]
-        )
-        self.assertEqual(self._instance_exists(), True)
+        ret_str = self.run_cloud('-p linode-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_str)
+
         self._destroy_instance()

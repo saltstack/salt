@@ -67,7 +67,7 @@ class OneAndOneTest(CloudTest):
                     .format(PROVIDER_NAME)
             )
 
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(INSTANCE_NAME))
 
     def test_list_images(self):
@@ -85,12 +85,7 @@ class OneAndOneTest(CloudTest):
         Test creating an instance on 1and1
         '''
         # check if instance with salt installed returned
-        self.assertIn(
-            INSTANCE_NAME,
-            [i.strip() for i in self.run_cloud(
-                '-p oneandone-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT
-            )]
-        )
-        self.assertEqual(self._instance_exists(), True)
+        ret_str = self.run_cloud('-p oneandone-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_str)
 
         self._destroy_instance()
