@@ -17,6 +17,9 @@ from tests.support.helpers import expensiveTest
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
+from salt.ext.six.moves import range
+
+TIMEOUT = 1000
 
 try:
     import azure  # pylint: disable=unused-import
@@ -29,7 +32,8 @@ if HAS_AZURE and not hasattr(azure, '__version__'):
     import azure.common
 
 # Create the cloud instance name to be used throughout the tests
-PROVIDER_NAME = 'azure'
+INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
+PROVIDER_NAME = 'azurearm'
 PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
 
@@ -84,8 +88,7 @@ class AzureTest(CloudTest):
             )
         )
         sub_id = provider_config[provider_str][PROVIDER_NAME]['subscription_id']
-        cert_path = provider_config[provider_str][PROVIDER_NAME]['certificate_path']
-        if sub_id == '' or cert_path == '':
+        if sub_id == '':
             self.skipTest(
                 'A subscription_id and certificate_path must be provided to run '
                 'these tests. Check '
@@ -93,24 +96,6 @@ class AzureTest(CloudTest):
                     PROVIDER_NAME
                 )
             )
-
-        # check if ssh_username, ssh_password, and media_link are present
-        # in the azure configuration file
-        ssh_user = provider_config[provider_str][PROVIDER_NAME]['ssh_username']
-        ssh_pass = provider_config[provider_str][PROVIDER_NAME]['ssh_password']
-        media_link = provider_config[provider_str][PROVIDER_NAME]['media_link']
-
-        if ssh_user == '' or ssh_pass == '' or media_link == '':
-            self.skipTest(
-                'An ssh_username, ssh_password, and media_link must be provided to run '
-                'these tests. One or more of these elements is missing. Check '
-                'tests/integration/files/conf/cloud.profiles.d/{0}.conf'.format(
-                    PROVIDER_NAME
-                )
-            )
-
-        self.assertFalse(self._instance_exists(),
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
         '''
