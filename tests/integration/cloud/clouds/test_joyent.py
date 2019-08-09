@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from unittest import skipIf
+
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
 
@@ -20,6 +22,7 @@ from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 PROVIDER_NAME = 'joyent'
 
 
+@skipIf(True, 'Joyent is EOL as of November 9th, 2019.  It will no longer be supported in salt-cloud')
 class JoyentTest(CloudTest):
     '''
     Integration tests for the Joyent cloud provider in Salt-Cloud

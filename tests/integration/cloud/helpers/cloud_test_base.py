@@ -59,7 +59,21 @@ class CloudTest(ShellCase):
         '''
         Clean up after tests, If the instance still exists for any reason, delete it
         '''
-        if self._instance_exists():
-            log.warning('Destroying instance from CloudTest tearDown conditional.  This shouldn\'t happen.  '
-                        'Make sure the instance is explicitly destroyed at the end of the test case')
-            self._destroy_instance()
+        instance_deleted = True
+        for tries in range(12):
+            if self._instance_exists():
+                instance_deleted = False
+                try:
+                    self._destroy_instance()
+                    log.debug('Instance "{}" destroyed after {} tries'.format(self.instance_name, tries))
+                except AssertionError as e:
+                    log.error(e)
+                    sleep(30)
+            else:
+                break
+        self.assertEqual(self._instance_exists(), False, 'Instance exists after multiple attempts to delete: {}'
+                         .format(self.instance_name))
+        # Complain if the instance was destroyed in this tearDown.
+        # Destroying instances in the tearDown is a contingency, not the way things should work by default.
+        self.assertEqual(instance_deleted, True, 'The Instance "{}" was not deleted properly at the end of the test'
+                         .format(self.instance_name))
