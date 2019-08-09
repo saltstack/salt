@@ -93,22 +93,7 @@ class DimensionDataTest(ShellCase):
         Test creating an instance on Dimension Data's cloud
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p dimensiondata-test {0}'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
+        ret_val = self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_val)
 
         self.assertDestroyInstance()

@@ -24,8 +24,48 @@ class ProfitBricksTest(ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
-    PROVIDER = 'profitbricks'
-    REQUIRED_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
+
+    @expensiveTest
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(ProfitBricksTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'profitbricks-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf '
+                'files in tests/integration/files/conf/cloud.*.d/ to run '
+                'these tests.'.format(PROVIDER_NAME)
+            )
+
+        # check if credentials and datacenter_id present
+        config = cloud_providers_config(
+            os.path.join(
+                FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        username = config[profile_str][DRIVER_NAME]['username']
+        password = config[profile_str][DRIVER_NAME]['password']
+        datacenter_id = config[profile_str][DRIVER_NAME]['datacenter_id']
+        self.datacenter_id = datacenter_id
+        if username in ('' or 'foo') or password in ('' or 'bar') or datacenter_id == '':
+            self.skipTest(
+                'A username, password, and an datacenter must be provided to '
+                'run these tests. Check '
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                    .format(PROVIDER_NAME)
+            )
+
+        self.assertFalse(self._instance_exists(),
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
         '''
@@ -136,7 +176,7 @@ class ProfitBricksTest(ShellCase):
         Test creating an instance on ProfitBricks
         '''
         # check if instance with salt installed returned
-        ret_str = self.run_cloud('-p profitbricks-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        ret_str = self.run_cloud('-p profitbricks-test {0}'.format(self.instance_name),timeout=TIMEOUT)
         self.assertInstanceExists(ret_str)
 
         self.assertDestroyInstance()

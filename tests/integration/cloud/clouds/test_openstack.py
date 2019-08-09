@@ -174,14 +174,53 @@ class RackspaceTest(ShellCase):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
-    PROVIDER = 'openstack'
-    REQUIRED_CONFIG_ITEMS = ('auth', 'cloud', 'region_name')
+
+    @expensiveTest
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(RackspaceTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'openstack-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                    .format(PROVIDER_NAME)
+            )
+
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        region_name = config[profile_str][DRIVER_NAME].get('region_name')
+        auth = config[profile_str][DRIVER_NAME].get('auth')
+        cloud = config[profile_str][DRIVER_NAME].get('cloud')
+        if not region_name or not (auth or cloud):
+            self.skipTest(
+                'A region_name and (auth or cloud) must be provided to run these '
+                'tests. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                    .format(PROVIDER_NAME)
+            )
+
+        self.assertFalse(self._instance_exists(),
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_instance(self):
         '''
         Clean up after tests
         '''
-        query = self.run_cloud('--query')
-        ret = '        {0}:'.format(INSTANCE_NAME)
+        # check if instance with salt installed returned
+        ret_val = self.run_cloud('-p rackspace-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_val)
 
-        self.assertDestroyInstance()
+        self._destroy_instance()

@@ -44,7 +44,16 @@ class EC2Test(CloudTest):
 
         self.assertTrue(group_or_subnet, 'securitygroup or subnetid missing for {} config'.format(self.PROVIDER_NAME))
 
-        super(EC2Test, self).setUp()
+        if missing_conf_item:
+            self.skipTest(
+                'An id, key, keyname, security group, private key, and location must '
+                'be provided to run these tests. One or more of these elements is '
+                'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                    .format(PROVIDER_NAME)
+            )
+
+        self.assertFalse(self._instance_exists(),
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')
@@ -75,15 +84,12 @@ class EC2Test(CloudTest):
         # create the instance
         cmd = '-p {0}'.format(profile)
         if debug:
-            cmd += ' -l debug'
-        cmd += ' {0}'.format(INSTANCE_NAME)
-        instance = self.run_cloud(cmd, timeout=timeout)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+            cmd.extend(['-l', 'debug'])
+        cmd.append(self.instance_name)
+        ret_val = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
-        # Let the instance exist for a bit before destroying it, otherwise the test will fail
-        sleep(30)
 
         self.assertDestroyInstance()
 
@@ -92,12 +98,10 @@ class EC2Test(CloudTest):
         Tests creating and renaming an instance on EC2 (classic)
         '''
         # create the instance
-        rename = INSTANCE_NAME + '-rename'
-        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(INSTANCE_NAME)
+        ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
 
         # check if instance returned
-        self.assertInstanceExists(ret_val, changed_name)
+        self.assertInstanceExists(ret_val)
 
         change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(INSTANCE_NAME, rename), timeout=TIMEOUT)
 

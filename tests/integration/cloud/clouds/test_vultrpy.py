@@ -11,14 +11,56 @@ import time
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 from tests.support.unit import skipIf
 
+# Import Salt Libs
+from salt.config import cloud_providers_config
 
 @expensiveTest
 class VultrTest(ShellCase):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
     '''
-    PROVIDER = 'vultr'
-    REQUIRED_CONFIG_ITEMS = ('api_key', 'ssh_key_file', 'ssh_key_name')
+
+    @expensiveTest
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(VultrTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'vultr-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if api_key, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        api_key = config[profile_str][PROVIDER_NAME]['api_key']
+        ssh_file = config[profile_str][PROVIDER_NAME]['ssh_key_file']
+        ssh_name = config[profile_str][PROVIDER_NAME]['ssh_key_name']
+
+        if api_key == '' or ssh_file == '' or ssh_name == '':
+            self.skipTest(
+                'An API key, an ssh key file, and an ssh key name '
+                'must be provided to run these tests. Check '
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                .format(PROVIDER_NAME)
+            )
+
+        self.assertFalse(self._instance_exists(),
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
         '''
@@ -97,16 +139,8 @@ class VultrTest(ShellCase):
         Test creating an instance on Vultr
         '''
         # check if instance with salt installed returned
-        try:
-            create_vm = self.run_cloud('-p vultr-test {0}'.format(INSTANCE_NAME), timeout=800)
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in create_vm]
-            )
-            self.assertNotIn('Failed to start', six.text_type(create_vm))
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            raise
+        ret_val = self.run_cloud('-p vultr-test {0}'.format(self.instance_name), timeout=TIMEOUT + 300)
+        self.assertInstanceExists(ret_val)
 
         # Vultr won't let us delete an instance less than 5 minutes old.
         time.sleep(300)

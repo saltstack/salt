@@ -17,6 +17,9 @@ from tests.support.paths import FILES
 # Import Salt Libs
 from salt.ext.six import text_type
 
+# Import Salt Libs
+from salt.ext import six
+
 log = logging.getLogger(__name__)
 TIMEOUT = 500
 
@@ -32,19 +35,16 @@ class CloudTest(ShellCase):
         if not instance_name:
             instance_name = self.instance_name
         query = self.run_cloud('--query')
-        log.debug('Checking for "{}" in => {}'.format(instance_name, query))
-        return any(instance_name == q.strip(': ') for q in query)
+        log.debug('Checking for "{}" in => {}'.format(self.instance_name, query))
+        return any(self.instance_name == q.strip(': ') for q in query)
 
-    def assertInstanceExists(self, creation_ret=None, instance_name=None):
+    def assertInstanceExists(self, creation_ret=None):
         '''
-        :param instance_name: Override the checked instance name, otherwise the class default will be used.
         :param creation_ret: The return value from the run_cloud() function that created the instance
         '''
-        if not instance_name:
-            instance_name = self.instance_name
         if creation_ret:
             self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
-            self.assertNotIn('Failed to start', text_type(creation_ret))
+            self.assertNotIn('Failed to start', six.text_type(creation_ret))
         self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
 
     def _destroy_instance(self):
@@ -69,8 +69,7 @@ class CloudTest(ShellCase):
             log.warning('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
-        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: {}'
-                         .format(self.instance_name, delete_str))
+        self.assertFalse(self._instance_exists(), 'Could not destroy "{}"'.format(self.instance_name))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
     @property
@@ -144,13 +143,18 @@ class CloudTest(ShellCase):
         tries = 0
         for tries in range(12):
             if self._instance_exists():
-                sleep(30)
-                instance_deleted_before_teardown = False
-                self._destroy_instance()
-
+                instance_deleted = False
+                try:
+                    self._destroy_instance()
+                    log.debug('Instance "{}" destroyed after {} tries'.format(self.instance_name, tries))
+                except AssertionError as e:
+                    log.error(e)
+                    sleep(30)
+            else:
+                break
         self.assertFalse(self._instance_exists(), 'Instance exists after multiple attempts to delete: {}'
                          .format(self.instance_name))
 
         # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertTrue(instance_deleted, 'The Instance "{}" was deleted during the tearDown, not the test.  Tries: {}'
-                        .format(self.instance_name, tries))
+        self.assertTrue(instance_deleted, 'The Instance "{}" was not deleted properly at the end of the test'
+                        .format(self.instance_name))

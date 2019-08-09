@@ -67,14 +67,14 @@ class CloudClientTestCase(ShellCase):
 
         # Create the VM using salt.cloud.CloudClient.create() instead of calling salt-cloud
         ret_val = cloud_client.create(
-            provider=self.PROVIDER,
+            provider=self.provider_name,
             names=[self.instance_name],
             image=self.IMAGE_NAME,
             location='sfo1', size='512mb', vm_size='512mb'
         )
 
         # Check that the VM was created correctly
-        self.assertIn(INSTANCE_NAME, created)
+        self.assertInstanceExists(ret_val)
 
         # Clean up after ourselves and delete the VM
         deleted = cloud_client.destroy(names=[INSTANCE_NAME])

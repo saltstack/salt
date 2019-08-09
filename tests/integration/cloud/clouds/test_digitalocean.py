@@ -21,8 +21,48 @@ class DigitalOceanTest(CloudTest):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
-    PROVIDER = 'digitalocean'
-    REQUIRED_CONFIG_ITEMS = ('personal_access_token', 'ssh_key_file', 'ssh_key_name')
+
+    @expensiveTest
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        super(DigitalOceanTest, self).setUp()
+
+        # check if appropriate cloud provider and profile files are present
+        profile_str = 'digitalocean-config'
+        providers = self.run_cloud('--list-providers')
+        if profile_str + ':' not in providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(PROVIDER_NAME)
+            )
+
+        # check if personal access token, ssh_key_file, and ssh_key_names are present
+        config = cloud_providers_config(
+            os.path.join(
+                FILES,
+                'conf',
+                'cloud.providers.d',
+                PROVIDER_NAME + '.conf'
+            )
+        )
+
+        personal_token = config[profile_str][PROVIDER_NAME]['personal_access_token']
+        ssh_file = config[profile_str][PROVIDER_NAME]['ssh_key_file']
+        ssh_name = config[profile_str][PROVIDER_NAME]['ssh_key_name']
+
+        if personal_token == '' or ssh_file == '' or ssh_name == '':
+            self.skipTest(
+                'A personal access token, an ssh key file, and an ssh key name '
+                'must be provided to run these tests. Check '
+                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
+                .format(PROVIDER_NAME)
+            )
+
+        self.assertFalse(self._instance_exists(),
+                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def test_list_images(self):
         '''
@@ -99,22 +139,7 @@ class DigitalOceanTest(CloudTest):
         Test creating an instance on DigitalOcean
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p digitalocean-test {0}'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-            raise
+        ret_str = self.run_cloud('-p digitalocean-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_str)
 
-        # delete the instance
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
-
-        self.assertDestroyInstance()
+        self._destroy_instance()
