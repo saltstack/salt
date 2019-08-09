@@ -1127,10 +1127,16 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         Disbatch runner client commands
         '''
         full_return = chunk.pop('full_return', False)
+
+        # pre-generate a jid so we can subscribe before publish
+        chunk['jid'] = salt.utils.jid.gen_jid(self.application.opts) if not chunk.get('jid', None) else chunk['jid']
+        future = self.application.event_listener.get_event(self, tag='salt/run/{}/ret'.format(chunk['jid']))
+
+        # fire it off
         pub_data = self.saltclients['runner'](chunk)
-        tag = pub_data['tag'] + '/ret'
+
         try:
-            event = yield self.application.event_listener.get_event(self, tag=tag)
+            event = yield future
 
             # only return the return data
             ret = event if full_return else event['data']['return']
