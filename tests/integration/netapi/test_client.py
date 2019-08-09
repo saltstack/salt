@@ -7,7 +7,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 
 # Import Salt libs
 import salt.config
@@ -31,6 +31,7 @@ class NetapiClientTest(TestCase):
     def tearDown(self):
         del self.netapi
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_local(self):
         low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
         low.update(self.eauth_creds)
@@ -43,6 +44,7 @@ class NetapiClientTest(TestCase):
         ret.pop('proxytest', None)
         self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_local_batch(self):
         low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
         low.update(self.eauth_creds)
@@ -113,7 +115,7 @@ class NetapiClientTest(TestCase):
         # will finish init even if the underlying zmq socket hasn't connected yet
         # this is problematic for the runnerclient's master_call method if the
         # runner is quick
-        #low = {'client': 'runner', 'fun': 'cache.grains'}
+        # low = {'client': 'runner', 'fun': 'cache.grains'}
         low = {'client': 'runner', 'fun': 'test.sleep', 'arg': [2]}
         low.update(self.eauth_creds)
 

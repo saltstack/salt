@@ -53,6 +53,7 @@ _OPTS = {
     'renderer_blacklist': [],
     'pillar_merge_lists': False,
     'git_pillar_base': 'master',
+    'git_pillar_fallback': '',
     'git_pillar_branch': 'master',
     'git_pillar_env': '',
     'git_pillar_root': '',

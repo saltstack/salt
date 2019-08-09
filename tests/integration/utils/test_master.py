@@ -15,11 +15,13 @@ import salt.utils.master as master
 from tests.support.case import ShellTestCase
 from tests.support.paths import TMP_ROOT_DIR
 from tests.support.helpers import flaky
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 DEFAULT_CONFIG = salt.config.master_config(None)
 DEFAULT_CONFIG['cachedir'] = os.path.join(TMP_ROOT_DIR, 'cache')
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class MasterUtilJobsTestCase(ShellTestCase):
 
     def setUp(self):

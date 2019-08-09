@@ -33,7 +33,7 @@ from unittest import (
     expectedFailure,
     TestSuite as _TestSuite,
     skip,
-    skipIf,
+    skipIf as _skipIf,
     TestResult,
     TextTestResult as _TextTestResult
 )
@@ -51,6 +51,7 @@ log = logging.getLogger(__name__)
 # process details when running in verbose mode
 # i.e. [CPU:15.1%|MEM:48.3%|Z:0]
 SHOW_PROC = 'NO_SHOW_PROC' not in os.environ
+WAR_ROOM_SKIP = os.environ.get('WAR_ROOM_SKIP', 'true').lower() == 'true'
 
 LOREM_IPSUM = '''\
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque eget urna a arcu lacinia sagittis.
@@ -378,6 +379,14 @@ class TextTestRunner(_TextTestRunner):
     Custom Text tests runner to log the start and the end of a test case
     '''
     resultclass = TextTestResult
+
+
+def skipIf(skip, reason):
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        import pytest
+        return pytest.mark.skipif(skip, reason=reason)
+    return _skipIf(skip, reason)
 
 
 __all__ = [

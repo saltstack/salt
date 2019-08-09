@@ -2,6 +2,7 @@
 {%- set git_dir = pillar['git_pillar']['git_dir'] %}
 {%- set venv_dir = pillar['git_pillar']['venv_dir'] %}
 {%- set root_dir = pillar['git_pillar']['root_dir'] %}
+{%- set venv_bin = salt['cmd.retcode']('which virtualenv') %}
 
 {{ config_dir }}/nginx.conf:
   file.managed:
@@ -40,6 +41,9 @@
     - system_site_packages: False
     {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
     - python: {{ salt.runtests_helpers.get_python_executable() }}
+{%- if venv_bin == 0 %}
+    - venv_bin: virtualenv
+{%- endif %}
 
 uwsgi:
   pip.installed:

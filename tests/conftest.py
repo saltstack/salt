@@ -14,10 +14,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import stat
+import pprint
 import shutil
 import socket
 import logging
-
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -38,8 +38,8 @@ except ImportError:
     sys.path.insert(0, CODE_DIR)
 
 # Import test libs
-from tests.support import paths  # pylint: disable=unused-import
 from tests.support.runtests import RUNTIME_VARS
+import tests.support.unit
 
 # Import pytest libs
 import pytest
@@ -51,17 +51,31 @@ import psutil
 from salt.ext import six
 
 # Import salt libs
+import salt.config
 import salt.utils.files
 import salt.utils.path
 import salt.log.setup
 import salt.log.mixins
 import salt.utils.platform
-from salt.utils.odict import OrderedDict
 from salt.utils.immutabletypes import freeze
+
+# Import Pytest Salt libs
+from pytestsalt.utils import cli_scripts
+
+# Coverage
+if 'COVERAGE_PROCESS_START' in os.environ:
+    MAYBE_RUN_COVERAGE = True
+    COVERAGERC_FILE = os.environ['COVERAGE_PROCESS_START']
+else:
+    COVERAGERC_FILE = os.path.join(CODE_DIR, '.coveragerc')
+    MAYBE_RUN_COVERAGE = sys.argv[0].endswith('pytest.py') or '_COVERAGE_RCFILE' in os.environ
+    if MAYBE_RUN_COVERAGE:
+        # Flag coverage to track suprocesses by pointing it to the right .coveragerc file
+        os.environ[str('COVERAGE_PROCESS_START')] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
 # pylint: disable=invalid-name
-pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-from-filenames']
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-runtests-bridge']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
@@ -96,6 +110,9 @@ _pytest.logging._LiveLoggingStreamHandler = LiveLoggingStreamHandler
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
+
+# Reset the root logger to it's default level(because salt changed it)
+logging.root.setLevel(logging.WARNING)
 
 log = logging.getLogger('salt.testsuite')
 
@@ -174,6 +191,25 @@ def pytest_addoption(parser):
         action='store_true',
         help='Disable colour printing.'
     )
+
+    # ----- Test Groups --------------------------------------------------------------------------------------------->
+    # This will allow running the tests in chunks
+    test_selection_group.addoption(
+        '--test-group-count', dest='test-group-count', type=int,
+        help='The number of groups to split the tests into'
+    )
+    test_selection_group.addoption(
+        '--test-group', dest='test-group', type=int,
+        help='The group of tests that should be executed'
+    )
+    # This option is temporary for the WAR ROOM
+    test_selection_group.addoption(
+        '--no-war-room-skips',
+        action='store_true',
+        default=False,
+        help='Do not skip war room tests'
+    )
+    # <---- Test Groups ----------------------------------------------------------------------------------------------
 # <---- CLI Options Setup --------------------------------------------------------------------------------------------
 
 
@@ -184,12 +220,19 @@ def pytest_configure(config):
     called after command line options have been parsed
     and all plugins and initial conftest files been loaded.
     '''
-    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
+    # This is temporary for the WAR ROOM
+    if config.getoption('--no-war-room-skips'):
+        tests.support.unit.WAR_ROOM_SKIP = False
+    for dirname in os.listdir(CODE_DIR):
+        if not os.path.isdir(dirname):
+            continue
+        if dirname != 'tests':
+            config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
-    config.addinivalue_line(
-        'filterwarnings',
-        r'once:encoding is deprecated, Use raw=False instead\.:DeprecationWarning'
-    )
+    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/kitchen'))
+    # pylint: disable=protected-access
+
+    # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         'markers',
         'destructive_test: Run destructive tests. These tests can include adding '
@@ -214,37 +257,123 @@ def pytest_configure(config):
     RUNTIME_VARS.PYTEST_SESSION = True
 
     # Provide a global timeout for each test(pytest-timeout).
-    if config._env_timeout is None:
-        # If no timeout is set, set it to the default timeout value
-        # Right now, we set it to 5 minutes which is absurd, but let's see how it goes
-        config._env_timeout = 5 * 60
+    #if config._env_timeout is None:
+    #    # If no timeout is set, set it to the default timeout value
+    #    # Right now, we set it to 3 minutes which is absurd, but let's see how it goes
+    #    config._env_timeout = 3 * 60
 
     # We always want deferred timeouts. Ie, only take into account the test function time
     # to run, exclude fixture setup/teardown
-    config._env_timeout_func_only = True
+    #config._env_timeout_func_only = True
 # <---- Register Markers ---------------------------------------------------------------------------------------------
 
 
+# ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
+def set_max_open_files_limits(min_soft=3072, min_hard=4096):
+
+    # Get current limits
+    if salt.utils.platform.is_windows():
+        import win32file
+        prev_hard = win32file._getmaxstdio()
+        prev_soft = 512
+    else:
+        import resource
+        prev_soft, prev_hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+
+    # Check minimum required limits
+    set_limits = False
+    if prev_soft < min_soft:
+        soft = min_soft
+        set_limits = True
+    else:
+        soft = prev_soft
+
+    if prev_hard < min_hard:
+        hard = min_hard
+        set_limits = True
+    else:
+        hard = prev_hard
+
+    # Increase limits
+    if set_limits:
+        log.debug(
+            ' * Max open files settings is too low (soft: %s, hard: %s) for running the tests. '
+            'Trying to raise the limits to soft: %s, hard: %s',
+            prev_soft,
+            prev_hard,
+            soft,
+            hard
+        )
+        try:
+            if salt.utils.platform.is_windows():
+                hard = 2048 if hard > 2048 else hard
+                win32file._setmaxstdio(hard)
+            else:
+                resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
+        except Exception as err:
+            log.error(
+                'Failed to raise the max open files settings -> %s. Please issue the following command '
+                'on your console: \'ulimit -u %s\'',
+                err,
+                soft,
+            )
+            exit(1)
+    return soft, hard
+
+
+def pytest_report_header():
+    soft, hard = set_max_open_files_limits()
+    return 'max open files; soft: {}; hard: {}'.format(soft, hard)
+
+
+def pytest_runtest_logstart(nodeid):
+    '''
+    implements the runtest_setup/call/teardown protocol for
+    the given test item, including capturing exceptions and calling
+    reporting hooks.
+    '''
+    log.debug('>>>>> START >>>>> %s', nodeid)
+
+
+def pytest_runtest_logfinish(nodeid):
+    '''
+    called after ``pytest_runtest_call``
+    '''
+    log.debug('<<<<< END <<<<<<< %s', nodeid)
+# <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
+
+
 # ----- Test Setup -------------------------------------------------------------------------------------------------->
+def _has_unittest_attr(item, attr):
+    # XXX: This is a hack while we support both runtests.py and PyTest
+    if hasattr(item.obj, attr):
+        return True
+    if item.cls and hasattr(item.cls, attr):
+        return True
+    if item.parent and hasattr(item.parent.obj, attr):
+        return True
+    return False
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
     '''
     Fixtures injection based on markers or test skips based on CLI arguments
     '''
     destructive_tests_marker = item.get_closest_marker('destructive_test')
-    if destructive_tests_marker is not None:
+    if destructive_tests_marker is not None or _has_unittest_attr(item, '__destructive_test__'):
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
-    os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
+    os.environ[str('DESTRUCTIVE_TESTS')] = str(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_closest_marker('expensive_test')
-    if expensive_tests_marker is not None:
+    if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
-    os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
+    os.environ[str('EXPENSIVE_TESTS')] = str(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
-    if skip_if_not_root_marker is not None:
+    if skip_if_not_root_marker is not None or _has_unittest_attr(item, '__skip_if_not_root__'):
         if os.getuid() != 0:
             pytest.skip('You must be logged in as root to run this test')
 
@@ -333,32 +462,64 @@ def pytest_runtest_setup(item):
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
 
-# ----- Automatic Markers Setup ------------------------------------------------------------------------------------->
-def pytest_collection_modifyitems(items):
+# ----- Test Groups Selection --------------------------------------------------------------------------------------->
+def get_group_size(total_items, total_groups):
     '''
-    Automatically add markers to tests based on directory layout
+    Return the group size.
     '''
-    for item in items:
-        fspath = str(item.fspath)
-        if '/integration/' in fspath:
-            if 'default_session_daemons' not in item.fixturenames:
-                item.fixturenames.append('default_session_daemons')
-            item.add_marker(pytest.mark.integration)
-            for kind in ('cli', 'client', 'cloud', 'fileserver', 'loader', 'minion', 'modules',
-                         'netapi', 'output', 'reactor', 'renderers', 'runners', 'sdb', 'shell',
-                         'ssh', 'states', 'utils', 'wheel'):
-                if '/{0}/'.format(kind) in fspath:
-                    item.add_marker(getattr(pytest.mark, kind))
-                    break
-        if '/unit/' in fspath:
-            item.add_marker(pytest.mark.unit)
-            for kind in ('acl', 'beacons', 'cli', 'cloud', 'config', 'grains', 'modules', 'netapi',
-                         'output', 'pillar', 'renderers', 'runners', 'serializers', 'states',
-                         'templates', 'transport', 'utils'):
-                if '/{0}/'.format(kind) in fspath:
-                    item.add_marker(getattr(pytest.mark, kind))
-                    break
-# <---- Automatic Markers Setup --------------------------------------------------------------------------------------
+    return int(total_items / total_groups)
+
+
+def get_group(items, group_count, group_size, group_id):
+    '''
+    Get the items from the passed in group based on group size.
+    '''
+    start = group_size * (group_id - 1)
+    end = start + group_size
+    total_items = len(items)
+
+    if start >= total_items:
+        pytest.fail("Invalid test-group argument. start({})>=total_items({})".format(start, total_items))
+    elif start < 0:
+        pytest.fail("Invalid test-group argument. Start({})<0".format(start))
+
+    if group_count == group_id and end < total_items:
+        # If this is the last group and there are still items to test
+        # which don't fit in this group based on the group items count
+        # add them anyway
+        end = total_items
+
+    return items[start:end]
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_collection_modifyitems(config, items):
+    # Let PyTest or other plugins handle the initial collection
+    yield
+
+    group_count = config.getoption('test-group-count')
+    group_id = config.getoption('test-group')
+
+    if not group_count or not group_id:
+        # We're not selection tests using groups, don't do any filtering
+        return
+
+    total_items = len(items)
+
+    group_size = get_group_size(total_items, group_count)
+    tests_in_group = get_group(items, group_count, group_size, group_id)
+    # Replace all items in the list
+    items[:] = tests_in_group
+
+    terminal_reporter = config.pluginmanager.get_plugin('terminalreporter')
+    terminal_reporter.write(
+        'Running test group #{0} ({1} tests)\n'.format(
+            group_id,
+            len(items)
+        ),
+        yellow=True
+    )
+# <---- Test Groups Selection ----------------------------------------------------------------------------------------
 
 
 # ----- Pytest Helpers ---------------------------------------------------------------------------------------------->
@@ -459,7 +620,7 @@ def cli_master_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_master'
+    return 'cli_salt_master.py'
 
 
 @pytest.fixture(scope='session')
@@ -467,7 +628,7 @@ def cli_minion_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_minion'
+    return 'cli_salt_minion.py'
 
 
 @pytest.fixture(scope='session')
@@ -475,7 +636,7 @@ def cli_salt_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt'
+    return 'cli_salt.py'
 
 
 @pytest.fixture(scope='session')
@@ -483,7 +644,7 @@ def cli_run_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_run'
+    return 'cli_salt_run.py'
 
 
 @pytest.fixture(scope='session')
@@ -491,7 +652,7 @@ def cli_key_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_key'
+    return 'cli_salt_key.py'
 
 
 @pytest.fixture(scope='session')
@@ -499,7 +660,7 @@ def cli_call_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_call'
+    return 'cli_salt_call.py'
 
 
 @pytest.fixture(scope='session')
@@ -507,7 +668,7 @@ def cli_syndic_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_syndic'
+    return 'cli_salt_syndic.py'
 
 
 @pytest.fixture(scope='session')
@@ -515,7 +676,15 @@ def cli_ssh_script_name():
     '''
     Return the CLI script basename
     '''
-    return 'cli_salt_ssh'
+    return 'cli_salt_ssh.py'
+
+
+@pytest.fixture(scope='session')
+def cli_proxy_script_name():
+    '''
+    Return the CLI script basename
+    '''
+    return 'cli_salt_proxy.py'
 
 
 @pytest.fixture(scope='session')
@@ -529,36 +698,18 @@ def cli_bin_dir(tempdir,
                 cli_key_script_name,
                 cli_run_script_name,
                 cli_ssh_script_name,
-                cli_syndic_script_name):
+                cli_syndic_script_name,
+                cli_proxy_script_name):
     '''
     Return the path to the CLI script directory to use
     '''
     tmp_cli_scripts_dir = tempdir.join('cli-scrips-bin')
+    # Make sure we re-write the scripts every time we start the tests
+    shutil.rmtree(tmp_cli_scripts_dir.strpath, ignore_errors=True)
     tmp_cli_scripts_dir.ensure(dir=True)
     cli_bin_dir_path = tmp_cli_scripts_dir.strpath
 
     # Now that we have the CLI directory created, lets generate the required CLI scripts to run salt's test suite
-    script_templates = {
-        'salt': [
-            'from salt.scripts import salt_main\n',
-            'if __name__ == \'__main__\':\n'
-            '    salt_main()'
-        ],
-        'salt-api': [
-            'import salt.cli\n',
-            'def main():\n',
-            '    sapi = salt.cli.SaltAPI()',
-            '    sapi.run()\n',
-            'if __name__ == \'__main__\':',
-            '    main()'
-        ],
-        'common': [
-            'from salt.scripts import salt_{0}\n',
-            'if __name__ == \'__main__\':\n',
-            '    salt_{0}()'
-        ]
-    }
-
     for script_name in (cli_master_script_name,
                         cli_minion_script_name,
                         cli_call_script_name,
@@ -566,33 +717,16 @@ def cli_bin_dir(tempdir,
                         cli_run_script_name,
                         cli_salt_script_name,
                         cli_ssh_script_name,
-                        cli_syndic_script_name):
-        original_script_name = script_name.split('cli_')[-1].replace('_', '-')
-        script_path = os.path.join(cli_bin_dir_path, script_name)
-
-        if not os.path.isfile(script_path):
-            log.info('Generating %s', script_path)
-
-            with salt.utils.files.fopen(script_path, 'w') as sfh:
-                script_template = script_templates.get(original_script_name, None)
-                if script_template is None:
-                    script_template = script_templates.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        'Salt\'s test suite does not know how to handle the "{0}" script'.format(
-                            original_script_name
-                        )
-                    )
-                sfh.write(
-                    '#!{0}\n\n'.format(python_executable_path) +
-                    'import sys\n' +
-                    'CODE_DIR="{0}"\n'.format(request.config.startdir.realpath().strpath) +
-                    'if CODE_DIR not in sys.path:\n' +
-                    '    sys.path.insert(0, CODE_DIR)\n\n' +
-                    '\n'.join(script_template).format(original_script_name.replace('salt-', ''))
-                )
-            fst = os.stat(script_path)
-            os.chmod(script_path, fst.st_mode | stat.S_IEXEC)
+                        cli_syndic_script_name,
+                        cli_proxy_script_name):
+        original_script_name = os.path.splitext(script_name)[0].split('cli_')[-1].replace('_', '-')
+        cli_scripts.generate_script(
+            bin_dir=cli_bin_dir_path,
+            script_name=original_script_name,
+            executable=sys.executable,
+            code_dir=CODE_DIR,
+            inject_sitecustomize=MAYBE_RUN_COVERAGE
+        )
 
     # Return the CLI bin dir value
     return cli_bin_dir_path
@@ -638,6 +772,14 @@ def session_syndic_id():
     Returns the session scoped syndic id
     '''
     return 'syndic'
+
+
+@pytest.fixture(scope='session')
+def session_proxy_id():
+    '''
+    Returns the session scoped proxy id
+    '''
+    return 'proxytest'
 
 
 @pytest.fixture(scope='session')
@@ -692,7 +834,12 @@ def session_master_config_overrides(session_root_dir):
     autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
     os.chmod(autosign_file_path, autosign_file_permissions)
 
+    pytest_stop_sending_events_file = session_root_dir.join('pytest_stop_sending_events_file').strpath
+    with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+        wfh.write('')
+
     return {
+        'pillar_opts': True,
         'ext_pillar': [ext_pillar],
         'extension_modules': extension_modules_path,
         'file_roots': {
@@ -714,18 +861,24 @@ def session_master_config_overrides(session_root_dir):
                 'salt/minion/*/start': [
                     os.path.join(RUNTIME_VARS.FILES, 'reactor-sync-minion.sls')
                 ],
+            },
+            {
+                'salt/test/reactor': [
+                    os.path.join(RUNTIME_VARS.FILES, 'reactor-test.sls')
+                ],
             }
-        ]
+        ],
+        'pytest_stop_sending_events_file': pytest_stop_sending_events_file
     }
 
 
 @pytest.fixture(scope='session')
-def session_minion_default_options(request, session_root_dir):
+def session_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
@@ -752,24 +905,24 @@ def session_minion_config_overrides():
 
 
 @pytest.fixture(scope='session')
-def session_secondary_minion_default_options(request, session_root_dir):
+def session_secondary_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
 
 
 @pytest.fixture(scope='session')
-def session_master_of_masters_default_options(request, session_root_dir):
+def session_master_of_masters_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
@@ -803,6 +956,10 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
     autosign_file_permissions = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH | stat.S_IWUSR
     os.chmod(autosign_file_path, autosign_file_permissions)
 
+    pytest_stop_sending_events_file = session_master_of_masters_root_dir.join('pytest_stop_sending_events_file').strpath
+    with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+        wfh.write('')
+
     return {
         'ext_pillar': [ext_pillar],
         'extension_modules': extension_modules_path,
@@ -820,35 +977,82 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
                 os.path.join(RUNTIME_VARS.FILES, 'pillar', 'base'),
             ]
         },
+        'pytest_stop_sending_events_file': pytest_stop_sending_events_file
     }
 
 
 @pytest.fixture(scope='session')
-def session_syndic_master_default_options(request, session_root_dir):
+def session_syndic_master_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
 
 
 @pytest.fixture(scope='session')
-def session_syndic_default_options(request, session_root_dir):
+def session_syndic_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
         opts = yaml.load(rfh.read())
 
-        opts['hosts.file'] = session_root_dir.join('hosts').strpath
-        opts['aliases.file'] = session_root_dir.join('aliases').strpath
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
 
 
+@pytest.fixture(scope='session')
+def session_proxy_default_options(request, tempdir):
+    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'proxy')) as rfh:
+        opts = yaml.load(rfh.read())
+
+        opts['hosts.file'] = tempdir.join('hosts').strpath
+        opts['aliases.file'] = tempdir.join('aliases').strpath
+        opts['transport'] = request.config.getoption('--transport')
+
+        return opts
+
+
+@pytest.fixture(scope='session')
+def reap_stray_processes():
+    # Run tests
+    yield
+
+    children = psutil.Process(os.getpid()).children(recursive=True)
+    if not children:
+        log.info('No astray processes found')
+        return
+
+    def on_terminate(proc):
+        log.debug('Process %s terminated with exit code %s', proc, proc.returncode)
+
+    if children:
+        # Reverse the order, sublings first, parents after
+        children.reverse()
+        log.warning(
+            'Test suite left %d astray processes running. Killing those processes:\n%s',
+            len(children),
+            pprint.pformat(children)
+        )
+
+        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        for child in alive:
+            child.kill()
+
+        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        if alive:
+            # Give up
+            for child in alive:
+                log.warning('Process %s survived SIGKILL, giving up:\n%s', child, pprint.pformat(child.as_dict()))
+
+
 @pytest.fixture(scope='session', autouse=True)
-def bridge_pytest_and_runtests(session_root_dir,
+def bridge_pytest_and_runtests(reap_stray_processes,
+                               session_root_dir,
                                session_conf_dir,
                                session_secondary_conf_dir,
                                session_syndic_conf_dir,
@@ -863,7 +1067,7 @@ def bridge_pytest_and_runtests(session_root_dir,
                                session_syndic_config):
 
     # Make sure unittest2 classes know their paths
-    RUNTIME_VARS.TMP = RUNTIME_VARS.SYS_TMP_DIR = session_root_dir.realpath().strpath
+    RUNTIME_VARS.TMP_ROOT_DIR = session_root_dir.realpath().strpath
     RUNTIME_VARS.TMP_CONF_DIR = session_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR = session_secondary_conf_dir.realpath().strpath
     RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR = session_master_of_masters_conf_dir.realpath().strpath
@@ -878,7 +1082,9 @@ def bridge_pytest_and_runtests(session_root_dir,
     RUNTIME_VARS.RUNTIME_CONFIGS['sub_minion'] = freeze(session_secondary_minion_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic_master'] = freeze(session_master_of_masters_config)
     RUNTIME_VARS.RUNTIME_CONFIGS['syndic'] = freeze(session_syndic_config)
-    RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(session_master_config)
+    RUNTIME_VARS.RUNTIME_CONFIGS['client_config'] = freeze(
+        salt.config.client_config(session_conf_dir.join('master').strpath)
+    )
 
     # Copy configuration files and directories which are not automatically generated
     for entry in os.listdir(RUNTIME_VARS.CONF_DIR):
@@ -897,35 +1103,3 @@ def bridge_pytest_and_runtests(session_root_dir,
                 os.path.join(RUNTIME_VARS.TMP_CONF_DIR, entry)
             )
 # <---- Salt Configuration -------------------------------------------------------------------------------------------
-
-
-# <---- Fixtures Overrides -------------------------------------------------------------------------------------------
-# ----- Custom Fixtures Definitions --------------------------------------------------------------------------------->
-# pylint: disable=unused-argument
-@pytest.fixture(scope='session')
-def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
-    request.session.stats_processes.update(OrderedDict((
-        ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
-        ('       Salt Syndic', psutil.Process(session_salt_syndic.pid)),
-    )).items())
-    return session_salt_syndic
-
-
-@pytest.fixture(scope='session')
-def default_session_daemons(request,
-                            log_server,
-                            salt_log_port,
-                            engines_dir,
-                            log_handlers_dir,
-                            session_salt_master,
-                            session_salt_minion,
-                            session_secondary_salt_minion,
-                            ):
-
-    request.session.stats_processes.update(OrderedDict((
-        ('       Salt Master', psutil.Process(session_salt_master.pid)),
-        ('       Salt Minion', psutil.Process(session_salt_minion.pid)),
-        ('   Salt Sub Minion', psutil.Process(session_secondary_salt_minion.pid)),
-    )).items())
-# pylint: enable=unused-argument
-# <---- Custom Fixtures Definitions ----------------------------------------------------------------------------------

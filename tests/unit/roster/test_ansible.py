@@ -11,7 +11,7 @@ from tests.support.mock import (
     patch
 )
 from tests.support import mixins
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
@@ -54,6 +54,7 @@ EXPECTED = {
 }
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(not salt.utils.path.which('ansible-inventory'), 'Skipping because ansible-inventory is not available')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class AnsibleRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):

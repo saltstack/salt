@@ -14,7 +14,7 @@ import sys
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import TestsLoggingHandler, ForceImportErrorOn
+from tests.support.helpers import TstSuiteLoggingHandler, ForceImportErrorOn
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
 # Import salt libs
@@ -54,7 +54,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
             virtualenv_mock.__version__ = '1.10rc1'
@@ -92,7 +92,7 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False
             )
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             # Let's fake a higher virtualenv version
             virtualenv_mock = MagicMock()
@@ -348,6 +348,71 @@ class VirtualenvTestCase(TestCase, LoaderModuleMockMixin):
             virtualenv_mod.create('/tmp/foo', venv_bin='pyvenv', symlinks=True)
             mock.assert_called_once_with(
                 ['pyvenv', '--symlinks', '/tmp/foo'],
+                runas=None,
+                python_shell=False
+            )
+
+    def test_venv_bin_binary_missing(self):
+        '''
+        test when none of the venv binaries
+        exist on the system
+        '''
+        venv_cmd = ['--distribute', '--system-site-packages', '/tmp/foo']
+        if sys.version_info >= (3, 6):
+            venv_cmd = ['python3', '-m', 'venv'] + venv_cmd
+        else:
+            venv_cmd = ['virtualenv'] + venv_cmd
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}), \
+            patch.dict(virtualenv_mod.__opts__, {'venv_bin': None}):
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                venv_cmd,
+                runas=None,
+                python_shell=False
+            )
+
+    def test_venv_bin_from_pillar(self):
+        '''
+        test when venv_bin is set in pillar
+        '''
+        venv_bin = 'venv_from_pillar'
+        venv_cmd = [venv_bin, '--distribute', '--system-site-packages', '/tmp/foo']
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}), \
+            patch.dict(virtualenv_mod.__opts__, {'venv_bin': 'virtualenv'}), \
+            patch.dict(virtualenv_mod.__pillar__, {'venv_bin':
+                                                   venv_bin}):
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                venv_cmd,
+                runas=None,
+                python_shell=False
+            )
+
+    def test_venv_bin_from_opts(self):
+        '''
+        test when venv_bin is set in opts
+        '''
+        venv_bin = 'virtualenv_from_opts'
+        venv_cmd = [venv_bin, '--distribute', '--system-site-packages', '/tmp/foo']
+
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(virtualenv_mod.__salt__, {'cmd.run_all': mock}), \
+            patch.dict(virtualenv_mod.__opts__, {'venv_bin': venv_bin}), \
+            patch.dict(virtualenv_mod.__pillar__, {'venv_bin': None}):
+
+            virtualenv_mod.create(
+                '/tmp/foo', system_site_packages=True, distribute=True
+            )
+            mock.assert_called_once_with(
+                venv_cmd,
                 runas=None,
                 python_shell=False
             )

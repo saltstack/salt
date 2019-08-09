@@ -23,7 +23,7 @@ except ImportError:
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import salt libs
 import salt.utils.files
@@ -271,6 +271,7 @@ class FileModuleTest(ModuleCase):
             content = fp.read()
         self.assertEqual(content, 'Hello' + os.linesep + 'Goodbye' + os.linesep)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_file_tail(self):
         """
         Test file.tail.

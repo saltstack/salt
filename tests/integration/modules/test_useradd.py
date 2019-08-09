@@ -7,7 +7,7 @@ import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import (
     destructiveTest,
     skip_if_not_root,
@@ -24,6 +24,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 @destructiveTest
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 @skip_if_not_root
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class UseraddModuleTestLinux(ModuleCase):
 
     def setUp(self):

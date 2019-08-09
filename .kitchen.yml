@@ -39,7 +39,7 @@ provisioner:
   max_retries: 2
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: develop
+    branch: neon
     repo: git
     testingdir: /testing
   salt_copy_filter:
@@ -95,6 +95,8 @@ platforms:
   - name: ubuntu-18.04
     driver_config:
       run_command: /lib/systemd/systemd
+      provision_command:
+        - apt-get install -y python3-venv
   - name: ubuntu-16.04
     driver_config:
       run_command: /lib/systemd/systemd

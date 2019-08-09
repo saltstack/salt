@@ -7,7 +7,7 @@ import os
 # Import Salt Testing libs
 from tests.support.helpers import requires_network
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt libs
 import salt.utils.path
@@ -17,6 +17,7 @@ import salt.states.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         "The 'virtualenv' packaged needs to be installed")
 class BuildoutTestCase(Base):

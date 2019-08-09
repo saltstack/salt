@@ -15,10 +15,12 @@ from salt.config import cloud_providers_config
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name, flaky
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 TIMEOUT = 500
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @expensiveTest
 class GCETest(ShellCase):
     '''

@@ -15,7 +15,7 @@ from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt libs
 import salt.utils.files
@@ -28,6 +28,7 @@ USERA_PWD = 'saltdev'
 HASHED_USERA_PWD = '$6$SALTsalt$ZZFD90fKFWq8AGmmX0L3uBtS9fXL62SrTk5zcnQ6EkD6zoiM3kB88G1Zvs0xm/gZ7WXJRs5nsTBybUvGSqZkT.'
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-run command

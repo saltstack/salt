@@ -10,8 +10,10 @@ from tests.support.helpers import flaky
 
 # Import Lxd Test Case
 import tests.integration.states.test_lxd
+from tests.support.unit import skipIf, WAR_ROOM_SKIP   # WAR ROOM import
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @flaky
 class LxdContainerTestCase(tests.integration.states.test_lxd.LxdTestCase):
 

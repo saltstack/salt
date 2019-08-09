@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -110,6 +110,7 @@ class MapConfTest(TestCase):
     Validate evaluation of salt-cloud map configuration
     '''
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_cloud_map_merge_conf(self):
         '''
         Ensure that nested values can be selectivly overridden in a map file

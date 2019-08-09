@@ -4,40 +4,6 @@ repos:
     rev: master
     hooks:
       - id: pip-tools-compile
-        alias: compile-linux-py2.7-tcp-requirements
-        name: Linux Py2.7 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(lint|cloud|docs|osx|windows|)\.in$
-        args:
-          - -v
-          - --py-version=2.7
-          - --platform=linux
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
-        alias: compile-osx-py2.7-tcp-requirements
-        name: OSX Py2.7 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
-        args:
-          - -v
-          - --py-version=2.7
-          - --platform=darwin
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
-        alias: compile-windows-py2.7-tcp-requirements
-        name: Windows Py2.7 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/windows\.in)$
-        args:
-          - -v
-          - --py-version=2.7
-          - --platform=windows
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
         alias: compile-linux-py2.7-zmq-requirements
         name: Linux Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
@@ -54,25 +20,30 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py2.7-zmq-requirements
         name: OSX Py2.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=2.7
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py2.7-zmq-requirements
         name: Windows Py2.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        files: ^(pkg/windows/(req|req_win)\.txt|requirements/((base|zeromq|pytest)\.txt|static/windows\.in))$
         args:
           - -v
           - --py-version=2.7
           - --platform=windows
           - --out-prefix=zeromq
+          - --include=pkg/windows/req.txt
+          - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -88,15 +59,6 @@ repos:
           - --platform=linux
 
       - id: pip-tools-compile
-        alias: compile-doc-requirements
-        name: Docs Py2.7 Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
-        args:
-          - -v
-          - --py-version=2.7
-          - --platform=linux
-
-      - id: pip-tools-compile
         alias: compile-cloud-py2.7-requirements
         name: Cloud Py2.7 Requirements
         files: ^requirements/(static/cloud\.in)$
@@ -104,24 +66,11 @@ repos:
           - -v
           - --py-version=2.7
 
-
-      - id: pip-tools-compile
-        alias: compile-linux-py3.4-tcp-requirements
-        name: Linux Py3.4 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
-        args:
-          - -v
-          - --py-version=3.4
-          - --platform=linux
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
       - id: pip-tools-compile
         alias: compile-linux-py3.4-zmq-requirements
         name: Linux Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -141,44 +90,10 @@ repos:
           - --py-version=3.4
 
       - id: pip-tools-compile
-        alias: compile-linux-py3.5-tcp-requirements
-        name: Linux Py3.5 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=linux
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
-        alias: compile-osx-py3.5-tcp-requirements
-        name: OSX Py3.5 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=darwin
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
-        alias: compile-windows-py3.5-tcp-requirements
-        name: Windows Py3.5 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/windows\.in)$
-        args:
-          - -v
-          - --py-version=3.5
-          - --platform=windows
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -191,25 +106,30 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.5-zmq-requirements
         name: OSX Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.5
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.5-zmq-requirements
         name: Windows Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        files: ^(pkg/windows/(req|req_win)\.txt|requirements/((base|zeromq|pytest)\.txt|static/windows\.in))$
         args:
           - -v
           - --py-version=3.5
           - --platform=windows
           - --out-prefix=zeromq
+          - --include=pkg/windows/req.txt
+          - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -224,33 +144,19 @@ repos:
           - --py-version=3.5
 
       - id: pip-tools-compile
-        alias: compile-linux-py3.6-tcp-requirements
-        name: Linux Py3.6 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        alias: compile-doc-requirements
+        name: Docs Py3.5 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
         args:
           - -v
-          - --py-version=3.6
+          - --py-version=3.5
           - --platform=linux
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
-        alias: compile-osx-py3.6-tcp-requirements
-        name: OSX Py3.6 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
-        args:
-          - -v
-          - --py-version=3.6
-          - --platform=darwin
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
+
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -263,25 +169,30 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.6-zmq-requirements
         name: OSX Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.6
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.6-zmq-requirements
         name: Windows Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        files: ^(pkg/windows/(req|req_win)\.txt|requirements/((base|zeromq|pytest)\.txt|static/windows\.in))$
         args:
           - -v
           - --py-version=3.6
           - --platform=windows
           - --out-prefix=zeromq
+          - --include=pkg/windows/req.txt
+          - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -296,33 +207,19 @@ repos:
           - --py-version=3.6
 
       - id: pip-tools-compile
-        alias: compile-linux-py3.7-tcp-requirements
-        name: Linux Py3.7 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        alias: compile-doc-requirements
+        name: Docs Py3.6 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
         args:
           - -v
-          - --py-version=3.7
+          - --py-version=3.6
           - --platform=linux
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
-      - id: pip-tools-compile
-        alias: compile-osx-py3.7-tcp-requirements
-        name: OSX Py3.7 TCP Requirements
-        files: ^requirements/((base|pytest)\.txt|static/osx\.in)$
-        args:
-          - -v
-          - --py-version=3.7
-          - --platform=darwin
-          - --out-prefix=tcp
-          - --include=requirements/base.txt
-          - --include=requirements/pytest.txt
+
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
         name: Linux Py3.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-1|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
           - --py-version=3.7
@@ -335,25 +232,30 @@ repos:
       - id: pip-tools-compile
         alias: compile-osx-py3.7-zmq-requirements
         name: OSX Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/osx\.in)$
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
         args:
           - -v
           - --py-version=3.7
           - --platform=darwin
           - --out-prefix=zeromq
+          - --include=pkg/osx/req.txt
+          - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
+          - --passthrough-line-from-input=^pyobjc(.*)$
       - id: pip-tools-compile
         alias: compile-windows-py3.7-zmq-requirements
         name: Windows Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/windows\.in)$
+        files: ^(pkg/windows/(req|req_win)\.txt|requirements/((base|zeromq|pytest)\.txt|static/windows\.in))$
         args:
           - -v
           - --py-version=3.7
           - --platform=windows
           - --out-prefix=zeromq
+          - --include=pkg/windows/req.txt
+          - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -366,3 +268,12 @@ repos:
         args:
           - -v
           - --py-version=3.7
+
+      - id: pip-tools-compile
+        alias: compile-doc-requirements
+        name: Docs Py3.7 Requirements
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/docs\.in)$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux

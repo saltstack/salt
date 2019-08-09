@@ -8,7 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -113,6 +113,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(win_service.get_service_name('patrick'),
                                  {'Patrick the Starfish': 'patrick'})
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_start(self):
         '''
@@ -137,6 +138,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_service, 'status', mock_true):
             self.assertTrue(win_service.start('spongebob'))
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not WINAPI, 'pywintypes not available')
     def test_start_already_running(self):
         '''
@@ -153,6 +155,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                  patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.start('spongebob'))
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_stop(self):
         '''
@@ -175,6 +178,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_service, 'status', mock_false):
             self.assertTrue(win_service.stop('spongebob'))
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not WINAPI, 'pywintypes not available')
     def test_stop_not_running(self):
         '''

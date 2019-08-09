@@ -142,6 +142,7 @@ from salt://password.sls import password
 '''
 
 requisite_implicit_list_template = '''#!pyobjects
+from tests.support.unit import skipIf, WAR_ROOM_SKIP; skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')  # pylint: disable=C0321,E8702
 from salt.utils.pyobjects import StateFactory
 Service = StateFactory('service')
 
