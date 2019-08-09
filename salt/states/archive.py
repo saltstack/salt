@@ -1218,6 +1218,7 @@ def extracted(name,
             if clean and contents is not None:
                 ret['comment'] += ', after cleaning destination path(s)'
             _add_explanation(ret, source_hash_trigger, contents_missing)
+            ret['changes'] = 'Archive extraction is needed'
             return ret
 
         if clean and contents is not None:
