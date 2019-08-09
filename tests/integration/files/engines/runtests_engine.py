@@ -56,11 +56,7 @@ class PyTestEngine(object):
 
     @gen.coroutine
     def _start(self):
-        if self.opts['__role'] == 'minion':
-            yield self.listen_to_minion_connected_event()
-        else:
-            self.io_loop.spawn_callback(self.fire_master_started_event)
-
+        self.io_loop.spawn_callback(self.fire_master_started_event)
         port = int(self.opts['runtests_conn_check_port'])
         log.info('Starting Pytest Engine(role=%s) on port %s', self.opts['__role'], port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -91,19 +87,6 @@ class PyTestEngine(object):
             except AttributeError:
                 # This is not macOS !?
                 pass
-
-    @gen.coroutine
-    def listen_to_minion_connected_event(self):
-        log.info('Listening for minion connected event...')
-        minion_start_event_match = 'salt/minion/{0}/start'.format(self.opts['id'])
-        event_bus = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=True)
-        event_bus.subscribe(minion_start_event_match)
-        while True:
-            event = event_bus.get_event(full=True, no_block=True)
-            if event is not None and event['tag'] == minion_start_event_match:
-                log.info('Got minion connected event: %s', event)
-                break
-            yield gen.sleep(0.25)
 
     @gen.coroutine
     def fire_master_started_event(self):

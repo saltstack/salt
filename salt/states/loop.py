@@ -78,6 +78,11 @@ def until(name,
            'result': False,
            'comment': ''}
 
+    if m_args is None:
+        m_args = ()
+    if m_kwargs is None:
+        m_kwargs = {}
+
     if name not in __salt__:
         ret['comment'] = 'Cannot find module {0}'.format(name)
         return ret

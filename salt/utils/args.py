@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import inspect
+import logging
 import re
 import shlex
 
@@ -19,6 +20,8 @@ import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
 import salt.utils.yaml
+
+log = logging.getLogger(__name__)
 
 
 if six.PY3:

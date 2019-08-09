@@ -785,9 +785,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 'result': True,
                 'changes': True,
             },
-            'cmd_|-C_|-/bin/false_|-run': {
+            'cmd_|-C_|-$(which false)_|-run': {
                 '__run_num__': 1,
-                'comment': 'Command "/bin/false" run',
+                'comment': 'Command "$(which false)" run',
                 'result': False,
                 'changes': True,
             },
@@ -1972,6 +1972,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                              'File {0} updated'.format(file_name))
             self.assertEqual(val['changes']['diff'], 'New file')
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters(self):
         '''
         test state.sls when state file contains non-ascii characters
@@ -1982,6 +1983,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         _expected = "cmd_|-echo1_|-echo 'This is Æ test!'_|-run"
         self.assertIn(_expected, ret)
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters_cmd_output(self):
         '''
         test the output from running and echo command with non-ascii

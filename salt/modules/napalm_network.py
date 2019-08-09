@@ -5,7 +5,7 @@ NAPALM Network
 
 Basic methods for interaction with the network device through the virtual proxy 'napalm'.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix

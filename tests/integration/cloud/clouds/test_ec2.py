@@ -33,6 +33,7 @@ class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
+
     def _installer_name(self):
         '''
         Determine the downloaded installer name by searching the files
