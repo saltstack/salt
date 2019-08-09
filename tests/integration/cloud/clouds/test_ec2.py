@@ -107,7 +107,7 @@ class EC2Test(CloudTest):
                     .format(PROVIDER_NAME)
             )
 
-        self.assertEqual(self._instance_exists(), False,
+        self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
 
     def override_profile_config(self, name, data):
@@ -141,12 +141,10 @@ class EC2Test(CloudTest):
         if debug:
             cmd.extend(['-l', 'debug'])
         cmd.append(self.instance_name)
-        instance = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(self.instance_name)
+        ret_val = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
 
         # check if instance returned with salt installed
-        self.assertIn(ret_str, instance)
-        self.assertEqual(self._instance_exists(), True)
+        self.assertInstanceExists(ret_val)
 
         self._destroy_instance()
 
@@ -157,11 +155,10 @@ class EC2Test(CloudTest):
         # Start with a name that is different from usual so that it will get deleted normally after the test
         changed_name = self.instance_name + '-changed'
         # create the instance
-        instance = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
-        ret_str = '{0}:'.format(changed_name)
+        ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
 
         # check if instance returned
-        self.assertIn(ret_str, instance)
+        self.assertInstanceExists(ret_val)
 
         change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.instance_name),
                                      timeout=TIMEOUT)
