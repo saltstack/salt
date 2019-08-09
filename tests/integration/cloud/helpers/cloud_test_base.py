@@ -140,7 +140,6 @@ class CloudTest(ShellCase):
         if the tearDown is where an instance is destroyed.
         '''
         instance_deleted = True
-        tries = 0
         for tries in range(12):
             if self._instance_exists():
                 instance_deleted = False
@@ -152,9 +151,9 @@ class CloudTest(ShellCase):
                     sleep(30)
             else:
                 break
-        self.assertFalse(self._instance_exists(), 'Instance exists after multiple attempts to delete: {}'
+        self.assertEqual(self._instance_exists(), False, 'Instance exists after multiple attempts to delete: {}'
                          .format(self.instance_name))
-
+        # Complain if the instance was destroyed in this tearDown.
         # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertTrue(instance_deleted, 'The Instance "{}" was not deleted properly at the end of the test'
-                        .format(self.instance_name))
+        self.assertEqual(instance_deleted, True, 'The Instance "{}" was not deleted properly at the end of the test'
+                         .format(self.instance_name))
