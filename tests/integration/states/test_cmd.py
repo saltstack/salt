@@ -31,31 +31,38 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.cmd = 'dir' if IS_WINDOWS else 'ls'
+
     def test_run_simple(self):
         '''
         cmd.run
         '''
-        cmd = 'dir' if IS_WINDOWS else 'ls'
-        ret = self.run_state('cmd.run', name=cmd, cwd=tempfile.gettempdir())
+        ret = self.run_state(
+            'cmd.run',
+            name=self.cmd,
+            cwd=tempfile.gettempdir())
         self.assertSaltTrueReturn(ret)
 
-    def test_test_run_simple(self):
+    def test_run_simple_test_true(self):
         '''
         cmd.run test interface
         '''
-        ret = self.run_state('cmd.run', name='ls',
-                             cwd=tempfile.gettempdir(), test=True)
+        ret = self.run_state(
+            'cmd.run',
+            name=self.cmd,
+            cwd=tempfile.gettempdir(),
+            test=True)
         self.assertSaltNoneReturn(ret)
 
     def test_run_hide_output(self):
         '''
         cmd.run with output hidden
         '''
-
-        cmd = u'dir' if IS_WINDOWS else u'ls'
         ret = self.run_state(
             u'cmd.run',
-            name=cmd,
+            name=self.cmd,
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
