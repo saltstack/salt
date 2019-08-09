@@ -5,6 +5,7 @@
 #    pip-compile -o requirements/static/py2.7/raet-osx.txt -v pkg/osx/req.txt pkg/osx/req_ext.txt requirements/base.txt requirements/raet.txt requirements/pytest.txt requirements/static/osx.in
 #
 apache-libcloud==2.4.0
+argh==0.26.2              # via watchdog
 asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
@@ -73,6 +74,7 @@ ncclient==0.6.4           # via junos-eznc
 netaddr==0.7.19           # via junos-eznc
 paramiko==2.4.2           # via junos-eznc, ncclient, scp
 pathlib2==2.3.3           # via pytest
+pathtools==0.1.2          # via watchdog
 pbr==5.1.3                # via mock, pylxd
 pluggy==0.9.0             # via pytest
 portend==2.4              # via cherrypy
@@ -127,6 +129,7 @@ tornado==4.5.3 ; python_version < "3"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests, requests-unixsocket
 virtualenv==16.4.3
 vultr==1.0.1
+watchdog==0.9.0
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.2          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
