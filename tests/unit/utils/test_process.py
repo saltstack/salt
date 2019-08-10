@@ -308,9 +308,11 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
         proc.join()
         # When the bug exists, the kill_target_sub_proc signal will kill both
         # processes. sh_proc will be alive if the bug is fixed
-        assert sh_proc.is_alive()
-        evt.set()
-        sh_proc.join()
+        try:
+            assert sh_proc.is_alive()
+        finally:
+            evt.set()
+            sh_proc.join()
 
     @staticmethod
     def no_op_target():
