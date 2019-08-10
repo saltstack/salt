@@ -385,9 +385,12 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
                 break
             time.sleep(.3)
 
+        assert not proc.is_alive()
         assert proc.signal_handled()
         # Reap the signaled process
         proc.join(1)
-        assert psutil.pid_exists(proc2.pid)
-        evt.set()
-        proc2.join()
+        try:
+            assert proc2.is_alive()
+        finally:
+            evt.set()
+            proc2.join()

@@ -753,24 +753,20 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
     def __init__(self, *args, **kwargs):
         super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
-        self._signal_handled = multiprocessing.Value('i', 0)
-        self._signal_handled.value = 0
+        self._signal_handled = multiprocessing.Event()
         self._after_fork_methods.append(
             (SignalHandlingMultiprocessingProcess._setup_signals, [self], {})
         )
 
     def signal_handled(self):
-        if self._signal_handled.value == 1:
-            return True
-        return False
+        return self._signal_handled.is_set()
 
     def _setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
-        if self._signal_handled.value == 0:
-            self._signal_handled.value = 1
+        self._signal_handled.set()
         msg = '{0} received a '.format(self.__class__.__name__)
         if signum == signal.SIGINT:
             msg += 'SIGINT'
