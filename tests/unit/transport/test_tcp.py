@@ -188,10 +188,9 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
-        cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
-
         cls.io_loop = tornado.ioloop.IOLoop()
         cls.stop = threading.Event()
+        cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
             target=run_loop_in_thread,
             args=(cls.io_loop, cls.stop,),
