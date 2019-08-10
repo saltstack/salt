@@ -5,16 +5,19 @@
 #    pip-compile -o requirements/static/py3.6/zeromq-arch.txt -v requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/arch.in
 #
 apache-libcloud==2.0.0
+argh==0.26.2              # via watchdog
 asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
 aws-xray-sdk==0.95        # via moto
+backports-abc==0.5        # via tornado
 backports.functools-lru-cache==1.5  # via cheroot
+backports.ssl-match-hostname==3.7.0.1  # via websocket-client
 boto3==1.9.132
 boto==2.49.0
 botocore==1.12.132        # via boto3, moto, s3transfer
 cachetools==3.1.0         # via google-auth
-certifi==2019.3.9         # via kubernetes, requests
+certifi==2019.3.9         # via kubernetes, requests, tornado
 cffi==1.12.2
 chardet==3.0.4            # via requests
 cheroot==6.5.4            # via cherrypy
@@ -48,6 +51,7 @@ more-itertools==5.0.0
 moto==1.3.7
 msgpack-python==0.5.6
 msgpack==0.6.1
+pathtools==0.1.2          # via watchdog
 pbr==5.1.3                # via mock
 pluggy==0.9.0             # via pytest
 portend==2.4              # via cherrypy
@@ -85,7 +89,8 @@ rsa==4.0                  # via google-auth
 s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 setproctitle==1.1.10
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
+singledispatch==3.4.0.3   # via tornado
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
@@ -93,6 +98,7 @@ timelib==0.2.4
 tornado==4.5.3 ; python_version >= "3.4"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
+watchdog==0.9.0
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.2          # via moto
 wrapt==1.11.1             # via aws-xray-sdk

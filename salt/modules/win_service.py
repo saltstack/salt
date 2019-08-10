@@ -14,6 +14,7 @@ import time
 
 # Import Salt libs
 import salt.utils.platform
+import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd party libs
@@ -581,7 +582,8 @@ def create_win_salt_restart_task():
 
         salt '*' service.create_win_salt_restart_task()
     '''
-    cmd = 'cmd'
+    # Updated to use full name for Nessus agent
+    cmd = salt.utils.path.which('cmd')
     args = '/c ping -n 3 127.0.0.1 && net stop salt-minion && net start ' \
            'salt-minion'
     return __salt__['task.create_task'](name='restart-salt-minion',
