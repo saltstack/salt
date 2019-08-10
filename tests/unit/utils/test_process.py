@@ -236,7 +236,6 @@ class TestProcess(TestCase):
         # pylint: enable=assignment-from-none
 
 
-#@skipIf(sys.platform.startswith('win'), 'pickling nested function errors on Windows')
 class TestSignalHandlingMultiprocessingProcess(TestCase):
 
     @classmethod
