@@ -801,12 +801,13 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         '''
         Shutdown the whole server
         '''
-        if not self._shutting_down:
-            self._shutting_down = True
-            for item in self.clients:
-                client, address = item
-                client.close()
-                self.remove_client(item)
+        if self._shutting_down:
+            return
+        self._shutting_down = True
+        for item in self.clients:
+            client, address = item
+            client.close()
+            self.remove_client(item)
         try:
             self.stop()
         except socket.error as exc:
