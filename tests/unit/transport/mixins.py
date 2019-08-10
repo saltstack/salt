@@ -8,6 +8,7 @@ import salt.transport.client
 
 # Import 3rd-party libs
 from salt.ext import six
+import tornado.gen
 
 
 def run_loop_in_thread(loop, evt):

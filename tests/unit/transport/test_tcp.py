@@ -27,9 +27,9 @@ from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import get_unused_localhost_port, flaky
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin, run_loop_in_thread
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
+from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
 
 log = logging.getLogger(__name__)
 
