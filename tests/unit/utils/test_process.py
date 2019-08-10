@@ -248,7 +248,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
         os.kill(os.getpid(), signal.SIGTERM)
 
     @classmethod
-    def children(*args, **kwargs):
+    def children(cls, *args, **kwargs):
         raise psutil.NoSuchProcess(1)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
