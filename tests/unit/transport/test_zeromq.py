@@ -44,7 +44,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
+from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
 
 ON_SUSE = False
 if 'SuSE' in linux_distribution(full_distribution_name=False):
@@ -93,11 +93,9 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel.pre_fork(cls.process_manager)
 
         cls.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-        cls.io_loop.make_current()
+        cls.evt = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
-
-        cls.server_thread = threading.Thread(target=cls.io_loop.start)
-        cls.server_thread.daemon = True
+        cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls.io_loop, cls.evt))
         cls.server_thread.start()
 
     @classmethod
@@ -108,7 +106,7 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Let the test suite handle this instead.
         cls.process_manager.stop_restarting()
         cls.process_manager.kill_children()
-        cls.io_loop.add_callback(cls.io_loop.stop)
+        cls.evt.set()
         cls.server_thread.join()
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.server_channel.close()
@@ -238,10 +236,9 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.req_server_channel.pre_fork(cls.process_manager)
 
         cls._server_io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        cls.evt = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
-
-        cls.server_thread = threading.Thread(target=cls._server_io_loop.start)
-        cls.server_thread.daemon = True
+        cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt))
         cls.server_thread.start()
 
     @classmethod
@@ -249,7 +246,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.process_manager.kill_children()
         cls.process_manager.stop_restarting()
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
-        cls.io_loop.add_callback(cls.io_loop.stop)
+        cls.evt.set()
         cls.server_thread.join()
         cls.req_server_channel.close()
         cls.server_channel.close()
