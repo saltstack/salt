@@ -17,7 +17,6 @@ from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 # Import salt libs
 import salt.utils.path
 import salt.utils.platform
-import salt.ext.six as six
 from salt.ext.six.moves import range
 
 
