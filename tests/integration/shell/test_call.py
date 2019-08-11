@@ -239,19 +239,21 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                     yaml.dump(minion_config, default_flow_style=False)
                 )
 
-            out = self.run_script(
+            out, err = self.run_script(
                 'salt-call',
                 '--config-dir {0} cmd.run "echo foo"'.format(
                     config_dir
                 ),
                 timeout=timeout,
+                catch_stderr=True,
             )
 
             try:
                 self.assertIn(
                     'Process took more than {0} seconds to complete. '
                     'Process Killed!'.format(timeout),
-                    out
+                    out,
+                    msg="Stderr was: {0!r}".format(err)
                 )
             except AssertionError:
                 if os.path.isfile(minion_config_file):
