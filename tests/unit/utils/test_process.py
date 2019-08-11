@@ -336,9 +336,12 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
         evt = multiprocessing.Event()
         teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
         log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
-        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
-            self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
-            self.sh_proc._run()
+        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
+        # Mock _setup_signals so we do not register one for this process.
+        with patch(sig_to_mock):
+            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+                self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
+                self.sh_proc._run()
         ma.assert_called()
         mb.assert_called()
 
