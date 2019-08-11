@@ -238,6 +238,7 @@ class MacSystemModuleTest(ModuleCase):
 
 
 @skip_if_not_root
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 class MacSystemComputerNameTest(ModuleCase):
 
     def setUp(self):
