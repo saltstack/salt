@@ -5,7 +5,6 @@ Integration tests for functions located in the salt.cloud.__init__.py file.
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
 # Import Salt Testing libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
@@ -53,9 +52,9 @@ class CloudClientTestCase(CloudTest):
 
         # Create the VM using salt.cloud.CloudClient.create() instead of calling salt-cloud
         ret_val = cloud_client.create(
-            provider=self.provider_name,
+            provider=self.PROVIDER,
             names=[self.instance_name],
-            image=self.image_name,
+            image=self.IMAGE_NAME,
             location='sfo1', size='512mb', vm_size='512mb'
         )
 
