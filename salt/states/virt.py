@@ -744,11 +744,11 @@ def pool_running(name,
                 - owner: 1000
                 - group: 100
             - source:
-                - dir: samba_share
-                - hosts:
-                   one.example.com
-                   two.example.com
-                - format: cifs
+                dir: samba_share
+                hosts:
+                  - one.example.com
+                  - two.example.com
+                format: cifs
             - autostart: True
 
     '''
