@@ -12,6 +12,10 @@ from time import sleep
 from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 
+# Import Salt Libs
+from salt.ext.six import text_type
+from salt.ext.six.moves import range
+
 TIMEOUT = 500
 
 log = logging.getLogger(__name__)
@@ -42,7 +46,6 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
         if creation_ret:
             self.assertIn(instance_name, [i.strip(': ') for i in creation_ret])
-            self.assertNotIn('Failed to start', ''.join(creation_ret))
         self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully'
                         .format(instance_name))
 
