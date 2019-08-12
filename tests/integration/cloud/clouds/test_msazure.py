@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 import logging
 
 # Import Salt Testing Libs
@@ -15,7 +14,6 @@ from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
 
 try:
@@ -29,8 +27,6 @@ if HAS_AZURE and not hasattr(azure, '__version__'):
     import azure.common
 
 # Create the cloud instance name to be used throughout the tests
-PROVIDER_NAME = 'azure'
-PROFILE_NAME = 'azure-test'
 REQUIRED_AZURE = '0.11.1'
 
 log = logging.getLogger(__name__)
@@ -58,68 +54,15 @@ class AzureTest(CloudTest):
     '''
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
-
-    @expensiveTest
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(AzureTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        provider_str = 'azure-config'
-        providers = self.run_cloud('--list-providers')
-        if provider_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                    .format(PROVIDER_NAME)
-            )
-
-        # check if subscription_id and certificate_path are present in provider file
-        provider_config = cloud_providers_config(
-            os.path.join(
-                FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-        sub_id = provider_config[provider_str][PROVIDER_NAME]['subscription_id']
-        cert_path = provider_config[provider_str][PROVIDER_NAME]['certificate_path']
-        if sub_id == '' or cert_path == '':
-            self.skipTest(
-                'A subscription_id and certificate_path must be provided to run '
-                'these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(
-                    PROVIDER_NAME
-                )
-            )
-
-        # check if ssh_username, ssh_password, and media_link are present
-        # in the azure configuration file
-        ssh_user = provider_config[provider_str][PROVIDER_NAME]['ssh_username']
-        ssh_pass = provider_config[provider_str][PROVIDER_NAME]['ssh_password']
-        media_link = provider_config[provider_str][PROVIDER_NAME]['media_link']
-
-        if ssh_user == '' or ssh_pass == '' or media_link == '':
-            self.skipTest(
-                'An ssh_username, ssh_password, and media_link must be provided to run '
-                'these tests. One or more of these elements is missing. Check '
-                'tests/integration/files/conf/cloud.profiles.d/{0}.conf'.format(
-                    PROVIDER_NAME
-                )
-            )
-
-        self.assertFalse(self._instance_exists(),
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+    PROVIDER = 'azure'
+    REQUIRED_CONFIG_ITEMS = ('subscription_id', 'certificate_path', 'ssh_username', 'ssh_password', 'media_link')
 
     def test_instance(self):
         '''
         Test creating an instance on Azure
         '''
         # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p {0} {1}'.format(PROFILE_NAME, self.instance_name), timeout=TIMEOUT)
+        ret_val = self.run_cloud('-p {0} {1}'.format(self.profile_str, self.instance_name), timeout=TIMEOUT)
         self.assertInstanceExists(ret_val)
 
         self._destroy_instance()

@@ -13,67 +13,17 @@ from salt.ext import six
 
 # Import Salt Testing LIbs
 from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest
 
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-
-PROVIDER_NAME = 'vmware'
 
 
 class VMWareTest(CloudTest):
     '''
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
-
-    @expensiveTest
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'vmware-config'
-        providers = self.run_cloud('--list-providers')
-
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                    .format(PROVIDER_NAME)
-            )
-
-        # check if user, password, url and provider are present
-        config = cloud_providers_config(
-            os.path.join(
-                FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        user = config[profile_str][PROVIDER_NAME]['user']
-        password = config[profile_str][PROVIDER_NAME]['password']
-        url = config[profile_str][PROVIDER_NAME]['url']
-
-        conf_items = [user, password, url]
-        missing_conf_item = []
-
-        for item in conf_items:
-            if item == '':
-                missing_conf_item.append(item)
-
-        if missing_conf_item:
-            self.skipTest(
-                'A user, password, and url must be provided to run these tests.'
-                'One or more of these elements is missing. Check'
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                    .format(PROVIDER_NAME)
-            )
-
-        self.assertFalse(self._instance_exists(),
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+    PROVIDER = 'vmware'
+    REQUIRED_CONFIG_ITEMS = ('password', 'user', 'url')
 
     def test_instance(self):
         '''
@@ -84,7 +34,7 @@ class VMWareTest(CloudTest):
             FILES,
             'conf',
             'cloud.profiles.d',
-            PROVIDER_NAME + '.conf'
+            self.PROVIDER_NAME + '.conf'
         )
 
         profile_config = cloud_config(profile)
