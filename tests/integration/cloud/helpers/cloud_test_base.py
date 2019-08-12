@@ -14,7 +14,7 @@ from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
-from salt.config import cloud_providers_config, cloud_config
+from salt.config import cloud_providers_config
 from salt.ext.six.moves import range
 from salt.utils import path
 
@@ -24,8 +24,8 @@ log = logging.getLogger(__name__)
 
 
 class CloudTest(ShellCase):
-    PROVIDER = None
-    REQUIRED_CONFIG_ITEMS = None
+    PROVIDER = ''
+    REQUIRED_CONFIG_ITEMS = tuple()
 
     def _instance_exists(self, instance_name=None):
         # salt-cloud -a show_instance myinstance

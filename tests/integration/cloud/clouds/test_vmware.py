@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs
-from salt.config import cloud_providers_config, cloud_config
+from salt.config import cloud_config
 from salt.ext import six
 
 # Import Salt Testing LIbs
