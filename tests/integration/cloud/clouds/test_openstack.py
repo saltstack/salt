@@ -12,7 +12,7 @@ import os
 from tests.support.case import ModuleCase, ShellCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, expensiveTest, generate_random_name
+from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs

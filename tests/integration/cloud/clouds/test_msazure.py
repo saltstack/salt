@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
-from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT as CLOUD_TIMEOUT, CloudTest
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.unit import skipIf
 
 # Import Salt Libs

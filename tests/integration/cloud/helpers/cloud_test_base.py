@@ -15,7 +15,7 @@ from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
-from salt.config import cloud_config, cloud_providers_config
+from salt.config import cloud_providers_config
 from salt.ext.six.moves import range
 
 TIMEOUT = 500
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 class CloudTest(ShellCase):
     PROVIDER = ''
-    REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
+    REQUIRED_CONFIG_ITEMS = tuple()
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
