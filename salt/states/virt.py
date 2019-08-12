@@ -795,6 +795,12 @@ def pool_running(name,
                                         connection=connection,
                                         username=username,
                                         password=password)
+
+            __salt__['virt.pool_start'](name,
+                                        connection=connection,
+                                        username=username,
+                                        password=password)
+
             ret['changes'][name] = 'Pool defined and started'
             ret['comment'] = 'Pool {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
