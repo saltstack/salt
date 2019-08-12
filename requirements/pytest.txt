@@ -1,5 +1,5 @@
 # PyTest
-pytest >=4.6.4,<4.7   # PyTest 4.6.x are the last Py2 and Py3 releases
+pytest >=4.6.5,<4.7   # PyTest 4.6.x are the last Py2 and Py3 releases
 pytest-salt >= 2019.7.20
 #pytest-timeout >= 1.3.3
 pytest-tempdir >= 2019.7.18
