@@ -140,6 +140,8 @@ class EC2Test(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
+        # Let the instance exist for a bit before destroying it, otherwise the test will fail
+        sleep(30)
 
         self._destroy_instance()
 
@@ -153,7 +155,7 @@ class EC2Test(CloudTest):
         ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
 
         # check if instance returned
-        self.assertInstanceExists(ret_val)
+        self.assertInstanceExists(ret_val, changed_name)
 
         change_name = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.instance_name),
                                      timeout=TIMEOUT)
