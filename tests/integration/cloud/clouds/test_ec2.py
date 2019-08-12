@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-from time import sleep
 import os
 import yaml
 
@@ -147,7 +146,6 @@ class EC2Test(CloudTest):
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_val)
         # Let the instance exist for a bit before destroying it, otherwise the test will fail
-        sleep(30)
 
         self._destroy_instance()
 
