@@ -13,7 +13,7 @@ from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 
 # Import Salt Libs
-from salt.ext import six
+from salt.ext.six import text_type
 
 log = logging.getLogger(__name__)
 TIMEOUT = 500
@@ -39,7 +39,7 @@ class CloudTest(ShellCase):
         '''
         if creation_ret:
             self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
-            self.assertNotIn('Failed to start', six.text_type(creation_ret))
+            self.assertNotIn('Failed to start', text_type(creation_ret))
         self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
 
     def _destroy_instance(self):
@@ -64,7 +64,8 @@ class CloudTest(ShellCase):
             log.warning('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
-        self.assertFalse(self._instance_exists(), 'Could not destroy "{}"'.format(self.instance_name))
+        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: {}'
+                         .format(self.instance_name, delete_str))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
     def tearDown(self):
@@ -72,6 +73,7 @@ class CloudTest(ShellCase):
         Clean up after tests, If the instance still exists for any reason, delete it
         '''
         instance_deleted = True
+        tries = 0
         for tries in range(12):
             if self._instance_exists():
                 instance_deleted = False
@@ -87,5 +89,5 @@ class CloudTest(ShellCase):
                          .format(self.instance_name))
         # Complain if the instance was destroyed in this tearDown.
         # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertTrue(instance_deleted, 'The Instance "{}" was not deleted properly at the end of the test'
-                        .format(self.instance_name))
+        self.assertTrue(instance_deleted, 'The Instance "{}" was deleted during the tearDown, not the test.  Tries: {}'
+                        .format(self.instance_name, tries))
