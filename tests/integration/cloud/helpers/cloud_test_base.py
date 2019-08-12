@@ -15,8 +15,9 @@ from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
+from salt.config import cloud_providers_config, cloud_config
 from salt.ext.six.moves import range
+from salt.utils import path
 
 TIMEOUT = 500
 
@@ -24,8 +25,8 @@ log = logging.getLogger(__name__)
 
 
 class CloudTest(ShellCase):
-    PROVIDER = ''
-    REQUIRED_CONFIG_ITEMS = tuple()
+    PROVIDER = None
+    REQUIRED_CONFIG_ITEMS = None
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
@@ -89,23 +90,21 @@ class CloudTest(ShellCase):
 
     @property
     def instance_name(self):
-        if not hasattr(self, '__instance_name'):
+        if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
-            subclass = self.__class__.__bases__[0].__name__.strip('Test')
-            # Use the first three letters of the subclass, fill with '-' if too short
-            self.__instance_name = generate_random_name('cloud-test-{.-<3.3}-'.format(subclass)).lower()
-        return self.__instance_name
+            self._instance_name = generate_random_name('cloud-test-').lower()
+        return self._instance_name
 
     @property
     def providers(self):
-        if not hasattr(self, '__providers'):
-            self.__providers = self.run_cloud('--list-providers')
-        return self.__providers
+        if not hasattr(self, '_providers'):
+            self._providers = self.run_cloud('--list-providers')
+        return self._providers
 
     @property
     def provider_config(self):
-        if not hasattr(self, '__provider_config'):
-            self.__provider_config = cloud_providers_config(
+        if not hasattr(self, '_provider_config'):
+            self._provider_config = cloud_providers_config(
                 path.join(
                     FILES,
                     'conf',
@@ -113,20 +112,7 @@ class CloudTest(ShellCase):
                     self.PROVIDER + '.conf'
                 )
             )
-        return self.__provider_config[self.profile_str][self.PROVIDER]
-
-    @property
-    def config(self):
-        if not hasattr(self, '__config'):
-            self.__config = cloud_config(
-                path.join(
-                    FILES,
-                    'conf',
-                    'cloud.profiles.d',
-                    self.PROVIDER + '.conf'
-                )
-            )
-        return self.__config
+        return self._provider_config
 
     @property
     def profile_str(self):
@@ -140,24 +126,24 @@ class CloudTest(ShellCase):
         super(CloudTest, self).setUp()
 
         if not self.PROVIDER:
-            self.fail('A PROVIDER must be defined for this test')
+            self.fail('A PROVIDER_NAME must be defined for this test')
 
         # check if appropriate cloud provider and profile files are present
         if self.profile_str + ':' not in self.providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
-                .format(self.PROVIDER) +
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                 .format(self.profile_str)
             )
 
         missing_conf_item = []
         for att in self.REQUIRED_CONFIG_ITEMS:
-            if not self.provider_config[att]:
+            if not self.provider_config[self.profile_str][self.PROVIDER][att]:
                 missing_conf_item.append(att)
 
         self.assertFalse(missing_conf_item, 'Conf items are missing that must be provided to run these tests:  {}'
                          .format(', '.join(missing_conf_item)) +
-                         '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
+                         'Check tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
         self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))

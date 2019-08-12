@@ -6,17 +6,15 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-import os
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase, ShellCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 log = logging.getLogger(__name__)
 
@@ -34,11 +32,6 @@ try:
     HAS_SHADE = True
 except ImportError:
     HAS_SHADE = False
-
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'openstack'
-DRIVER_NAME = 'openstack'
 
 
 @skipIf(
@@ -182,32 +175,9 @@ class RackspaceTest(ShellCase):
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
     PROVIDER = 'openstack'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('auth', 'cloud', 'region_name')
+    REQUIRED_CONFIG_ITEMS = ('auth', 'cloud', 'region_name')
 
     def test_instance(self):
-        '''
-        Test creating an instance on rackspace with the openstack driver
-        '''
-        # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud('-p rackspace-test {0}'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
-
-    def tearDown(self):
         '''
         Clean up after tests
         '''

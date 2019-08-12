@@ -9,7 +9,6 @@ import os
 import yaml
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
@@ -22,9 +21,6 @@ from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support import win_installer
 
 
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
 
@@ -34,27 +30,20 @@ class EC2Test(CloudTest):
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
     PROVIDER = 'ec2'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
+    REQUIRED_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
 
     @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
         '''
-        group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER].get('securitygroup', '')
+        group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER_NAME].get('securitygroup', '')
         if not group_or_subnet:
-            group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER].get('subnetid', '')
+            group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER_NAME].get('subnetid', '')
 
-        self.assertTrue(group_or_subnet, 'securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
+        self.assertTrue(group_or_subnet, 'securitygroup or subnetid missing for {} config'.format(self.PROVIDER_NAME))
 
-        if missing_conf_item:
-            self.skipTest(
-                'An id, key, keyname, security group, private key, and location must '
-                'be provided to run these tests. One or more of these elements is '
-                'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
-        self.INSTALLER = self._ensure_installer()
+        super(EC2Test, self).setUp()
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')

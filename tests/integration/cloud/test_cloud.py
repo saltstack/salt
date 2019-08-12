@@ -5,14 +5,10 @@ Integration tests for functions located in the salt.cloud.__init__.py file.
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
-import random
-import string
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.helpers import expensiveTest
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.cloud
@@ -38,25 +34,21 @@ class CloudClientTestCase(ShellCase):
     Integration tests for the CloudClient class. Uses DigitalOcean as a salt-cloud provider.
     '''
     PROVIDER = 'digitalocean'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
+    REQUIRED_CONFIG_ITEMS = tuple()
     IMAGE_NAME = '14.04.5 x64'
 
     @expensiveTest
     def setUp(self):
-        self.config_file = os.path.join(RUNTIME_VARS.TMP_CONF_CLOUD_PROVIDER_INCLUDES,
-                                        'digitalocean.conf')
-        self.provider_name = 'digitalocean-config'
-        self.image_name = '14.04.5 x64'
 
         # Use a --list-images salt-cloud call to see if the DigitalOcean provider is
         # configured correctly before running any tests.
-        images = self.run_cloud('--list-images {0}'.format(self.provider_name))
+        images = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
 
         if self.image_name not in [i.strip() for i in images]:
             self.skipTest(
                 'Image \'{0}\' was not found in image search. Is the {1} provider '
                 'configured correctly for this test?'.format(
-                    self.provider_name,
+                    self.PROVIDER,
                     self.image_name
                 )
             )
@@ -74,13 +66,11 @@ class CloudClientTestCase(ShellCase):
         cloud_client = salt.cloud.CloudClient(self.config_file)
 
         # Create the VM using salt.cloud.CloudClient.create() instead of calling salt-cloud
-        created = cloud_client.create(
-            provider=self.provider_name,
-            names=[INSTANCE_NAME],
-            image=self.image_name,
-            location='sfo1',
-            size='512mb',
-            vm_size='512mb'
+        ret_val = cloud_client.create(
+            provider=self.PROVIDER,
+            names=[self.instance_name],
+            image=self.IMAGE_NAME,
+            location='sfo1', size='512mb', vm_size='512mb'
         )
 
         # Check that the VM was created correctly

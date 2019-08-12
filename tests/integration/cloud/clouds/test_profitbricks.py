@@ -5,16 +5,9 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
-from tests.support.helpers import expensiveTest, generate_random_name
-
-# Import Salt Libs
-from salt.config import cloud_providers_config
 
 # Import Third-Party Libs
 try:
@@ -24,11 +17,6 @@ try:
 except ImportError:
     HAS_PROFITBRICKS = False
 
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'profitbricks'
-DRIVER_NAME = 'profitbricks'
-
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
 @expensiveTest
@@ -37,13 +25,13 @@ class ProfitBricksTest(ShellCase):
     Integration tests for the ProfitBricks cloud provider
     '''
     PROVIDER = 'profitbricks'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
+    REQUIRED_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
 
     def test_list_images(self):
         '''
         Tests the return of running the --list-images command for ProfitBricks
         '''
-        list_images = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
+        list_images = self.run_cloud('--list-images {0}'.format(self.PROVIDER_NAME))
         self.assertIn(
             'Ubuntu-16.04-LTS-server-2017-10-01',
             [i.strip() for i in list_images]
@@ -54,7 +42,7 @@ class ProfitBricksTest(ShellCase):
         Tests the return of running the -f list_images
         command for ProfitBricks
         '''
-        cmd = '-f list_images {0}'.format(self.PROVIDER)
+        cmd = '-f list_images {0}'.format(self.PROVIDER_NAME)
         list_images = self.run_cloud(cmd)
         self.assertIn(
             '- ubuntu:latest',
@@ -65,7 +53,7 @@ class ProfitBricksTest(ShellCase):
         '''
         Tests the return of running the --list_sizes command for ProfitBricks
         '''
-        list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
+        list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER_NAME))
         self.assertIn(
             'Micro Instance:',
             [i.strip() for i in list_sizes]
@@ -76,7 +64,7 @@ class ProfitBricksTest(ShellCase):
         Tests the return of running the -f list_datacenters
         command for ProfitBricks
         '''
-        cmd = '-f list_datacenters {0}'.format(self.PROVIDER)
+        cmd = '-f list_datacenters {0}'.format(self.PROVIDER_NAME)
         list_datacenters = self.run_cloud(cmd)
         self.assertIn(
             self.provider_config['datacenter_id'],
@@ -87,7 +75,7 @@ class ProfitBricksTest(ShellCase):
         '''
         Tests the return of running the -f list_nodes command for ProfitBricks
         '''
-        list_nodes = self.run_cloud('-f list_nodes {0}'.format(self.PROVIDER))
+        list_nodes = self.run_cloud('-f list_nodes {0}'.format(self.PROVIDER_NAME))
         self.assertIn(
             'state:',
             [i.strip() for i in list_nodes]
@@ -103,7 +91,7 @@ class ProfitBricksTest(ShellCase):
         Tests the return of running the -f list_nodes_full
         command for ProfitBricks
         '''
-        cmd = '-f list_nodes_full {0}'.format(self.PROVIDER)
+        cmd = '-f list_nodes_full {0}'.format(self.PROVIDER_NAME)
         list_nodes = self.run_cloud(cmd)
         self.assertIn(
             'state:',
@@ -120,7 +108,7 @@ class ProfitBricksTest(ShellCase):
         Tests the return of running the --list-locations
         command for ProfitBricks
         '''
-        cmd = '--list-locations {0}'.format(self.PROVIDER)
+        cmd = '--list-locations {0}'.format(self.PROVIDER_NAME)
         list_locations = self.run_cloud(cmd)
 
         self.assertIn(

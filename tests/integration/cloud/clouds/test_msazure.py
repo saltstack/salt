@@ -5,14 +5,13 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+import logging
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 from tests.support.unit import skipIf
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
 from salt.utils.versions import LooseVersion
 
 TIMEOUT = 500
@@ -25,6 +24,9 @@ except ImportError:
 
 if HAS_AZURE and not hasattr(azure, '__version__'):
     import azure.common
+
+# Create the cloud instance name to be used throughout the tests
+REQUIRED_AZURE = '0.11.1'
 
 log = logging.getLogger(__name__)
 
@@ -54,46 +56,14 @@ class AzureTest(CloudTest):
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
     PROVIDER = 'azure'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('subscription_id', 'certificate_path', 'ssh_username', 'ssh_password', 'media_link')
+    REQUIRED_CONFIG_ITEMS = ('subscription_id', 'certificate_path', 'ssh_username', 'ssh_password', 'media_link')
 
     def test_instance(self):
         '''
-        Test creating an instance on Azure
-        '''
-        # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud(
-                    '-p {0} {1}'.format(
-                        PROFILE_NAME,
-                        INSTANCE_NAME
-                    ), timeout=TIMEOUT
-                )]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=TIMEOUT)
-            raise
-
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(
-                        INSTANCE_NAME
-                    ), timeout=TIMEOUT
-                )]
-            )
-        except AssertionError:
-            raise
-
-    def tearDown(self):
-        '''
         Clean up after tests
         '''
-        query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
+        # check if instance with salt installed returned
+        ret_val = self.run_cloud('-p {0} {1}'.format(self.profile_str, self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_val)
 
         self.assertDestroyInstance()

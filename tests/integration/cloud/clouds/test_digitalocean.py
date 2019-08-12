@@ -5,35 +5,30 @@ Integration tests for DigitalOcean APIv2
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
+import base64
+import hashlib
+from Crypto.PublicKey import RSA
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
+from salt.ext.six.moves import range
+import salt.utils.stringutils
 
 
-# Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'digitalocean'
-
-
-@expensiveTest
-class DigitalOceanTest(ShellCase):
+class DigitalOceanTest(CloudTest):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
     PROVIDER = 'digitalocean'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('personal_access_token', 'ssh_key_file', 'ssh_key_name')
+    REQUIRED_CONFIG_ITEMS = ('personal_access_token', 'ssh_key_file', 'ssh_key_name')
 
     def test_list_images(self):
         '''
         Tests the return of running the --list-images command for digitalocean
         '''
-        image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
+        image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
         self.assertIn(
             '14.04.5 x64',
             [i.strip() for i in image_list]
@@ -43,7 +38,7 @@ class DigitalOceanTest(ShellCase):
         '''
         Tests the return of running the --list-locations command for digitalocean
         '''
-        _list_locations = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
+        _list_locations = self.run_cloud('--list-locations {0}'.format(self.PROVIDER))
         self.assertIn(
             'San Francisco 2',
             [i.strip() for i in _list_locations]
@@ -53,7 +48,7 @@ class DigitalOceanTest(ShellCase):
         '''
         Tests the return of running the --list-sizes command for digitalocean
         '''
-        _list_sizes = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
+        _list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
         self.assertIn(
             '16gb',
             [i.strip() for i in _list_sizes]
@@ -66,7 +61,9 @@ class DigitalOceanTest(ShellCase):
         pub = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDDHr/jh2Jy4yALcK4JyWbVkPRaWmhck3IgCoeOO3z1e2dBowLh64QAM+Qb72pxekALga2oi4GvT+TlWNhzPH4V example'
         finger_print = '3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa'
 
-        _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
+        try:
+            _key = self.run_cloud('-f create_key {0} name="{1}" public_key="{2}"'.format(self.PROVIDER,
+                                                                                         do_key_name, pub))
 
         # Upload public key
         self.assertIn(
@@ -76,7 +73,7 @@ class DigitalOceanTest(ShellCase):
 
         try:
             # List all keys
-            list_keypairs = self.run_cloud('-f list_keypairs {0}'.format(PROVIDER_NAME))
+            list_keypairs = self.run_cloud('-f list_keypairs {0}'.format(self.PROVIDER))
 
             self.assertIn(
                 finger_print,
@@ -84,19 +81,18 @@ class DigitalOceanTest(ShellCase):
             )
 
             # List key
-            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(PROVIDER_NAME, 'MyPubKey'))
-
+            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(self.PROVIDER, do_key_name))
             self.assertIn(
                 finger_print,
                 [i.strip() for i in show_keypair]
             )
         except AssertionError:
             # Delete the public key if the above assertions fail
-            self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print))
+            self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print))
             raise
-
-        # Delete public key
-        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
+        finally:
+            # Delete public key
+            self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
 
     def test_instance(self):
         '''

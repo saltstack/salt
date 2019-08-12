@@ -10,10 +10,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.config import cloud_config
 from salt.ext import six
 
+# Import Salt Testing LIbs
+from tests.support.paths import FILES
+
 # Create the cloud instance name to be used throughout the tests
-INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
-PROVIDER_NAME = 'vmware'
-TIMEOUT = 500
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 
 @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
@@ -23,14 +24,21 @@ class VMWareTest(ShellCase):
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
     PROVIDER = 'vmware'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('password', 'user', 'url')
+    REQUIRED_CONFIG_ITEMS = ('password', 'user', 'url')
 
     def test_instance(self):
         '''
         Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
-        profile_config = cloud_config(self.provider_config)
+        profile = os.path.join(
+            FILES,
+            'conf',
+            'cloud.profiles.d',
+            self.PROVIDER_NAME + '.conf'
+        )
+
+        profile_config = cloud_config(profile)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
         instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
