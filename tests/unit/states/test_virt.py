@@ -666,7 +666,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               connection='myconnection',
                                               username='user',
                                               password='secret')
-            mocks['start'].assert_not_called()
+            mocks['start'].assert_called_with('mypool',
+                                              connection='myconnection',
+                                              username='user',
+                                              password='secret')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.pool_info': MagicMock(return_value={'state': 'running'}),
