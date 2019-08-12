@@ -573,7 +573,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             define_mock.assert_called_with('mynet',
                                            'br2',
                                            'bridge',
-                                           'openvswitch',
+                                           vport='openvswitch',
                                            tag=180,
                                            autostart=False,
                                            start=True,
