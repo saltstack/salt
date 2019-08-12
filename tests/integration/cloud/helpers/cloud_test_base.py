@@ -18,10 +18,7 @@ from tests.support.paths import FILES
 from salt.ext.six.moves import range
 from salt.utils import path
 
-# Import Salt Libs
-from salt.ext.six import text_type
-from salt.ext.six.moves import range
-
+log = logging.getLogger(__name__)
 TIMEOUT = 500
 
 log = logging.getLogger(__name__)
@@ -47,10 +44,9 @@ class CloudTest(ShellCase):
         if not instance_name:
             instance_name = self.instance_name
         if creation_ret:
-            self.assertIn(instance_name, [i.strip(': ') for i in creation_ret])
+            self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
             self.assertNotIn('Failed to start', ''.join(creation_ret))
-        self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully'
-                        .format(instance_name))
+        self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
 
     def _destroy_instance(self):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
