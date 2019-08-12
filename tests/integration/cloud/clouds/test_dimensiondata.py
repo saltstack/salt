@@ -56,7 +56,7 @@ class DimensionDataTest(CloudTest):
         key = config[profile_str][PROVIDER_NAME]['key']
         region = config[profile_str][PROVIDER_NAME]['region']
 
-        if user_id == '' or key == '' or region == '':
+        if not all((user_id, key, region)):
             self.skipTest(
                 'A user Id, password, and a region '
                 'must be provided to run these tests. Check '

@@ -9,10 +9,10 @@ import os
 import yaml
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
+
 # Import Salt Testing Libs
 from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest
@@ -22,7 +22,6 @@ from tests.support import win_installer
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 
-PROVIDER_NAME = 'ec2'
 HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 # THis test needs a longer timeout than other cloud tests
 TIMEOUT = 1200
@@ -53,62 +52,21 @@ class EC2Test(CloudTest):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
+    PROVIDER = 'ec2'
+    REQUIRED_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
 
     @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
         '''
-        super(EC2Test, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'ec2-config'
-        providers = self.run_cloud('--list-providers')
-
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                    .format(PROVIDER_NAME)
-            )
-
-        # check if id, key, keyname, securitygroup, private_key, location,
-        # and provider are present
-        config = cloud_providers_config(
-            os.path.join(
-                FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        id_ = config[profile_str][PROVIDER_NAME]['id']
-        key = config[profile_str][PROVIDER_NAME]['key']
-        key_name = config[profile_str][PROVIDER_NAME]['keyname']
-        private_key = config[profile_str][PROVIDER_NAME]['private_key']
-        location = config[profile_str][PROVIDER_NAME]['location']
-        group_or_subnet = config[profile_str][PROVIDER_NAME].get('securitygroup', '')
+        group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER_NAME].get('securitygroup', '')
         if not group_or_subnet:
-            group_or_subnet = config[profile_str][PROVIDER_NAME].get('subnetid', '')
+            group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER_NAME].get('subnetid', '')
 
-        conf_items = [id_, key, key_name, private_key, location, group_or_subnet]
-        missing_conf_item = []
+        self.assertTrue(group_or_subnet, 'securitygroup or subnetid missing for {} config'.format(self.PROVIDER_NAME))
 
-        for item in conf_items:
-            if item == '':
-                missing_conf_item.append(item)
-
-        if missing_conf_item:
-            self.skipTest(
-                'An id, key, keyname, security group, private key, and location must '
-                'be provided to run these tests. One or more of these elements is '
-                'missing. Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                    .format(PROVIDER_NAME)
-            )
-
-        self.assertFalse(self._instance_exists(),
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+        super(EC2Test, self).setUp()
 
     def override_profile_config(self, name, data):
         conf_path = os.path.join(self.config_dir, 'cloud.profiles.d', 'ec2.conf')
