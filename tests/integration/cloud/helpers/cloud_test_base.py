@@ -12,9 +12,6 @@ from time import sleep
 from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 
-# Import Salt Libs
-from salt.ext.six import text_type
-
 log = logging.getLogger(__name__)
 TIMEOUT = 500
 
@@ -39,7 +36,7 @@ class CloudTest(ShellCase):
         '''
         if creation_ret:
             self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
-            self.assertNotIn('Failed to start', text_type(creation_ret))
+            self.assertNotIn('Failed to start', ''.join(creation_ret))
         self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
 
     def _destroy_instance(self):
@@ -70,7 +67,10 @@ class CloudTest(ShellCase):
 
     def tearDown(self):
         '''
-        Clean up after tests, If the instance still exists for any reason, delete it
+        Clean up after tests, If the instance still exists for any reason, delete it.
+        Instances should be destroyed before the tearDown, _destroy_instance() should be called exactly
+        one time in a test for each instance created.  This is a failSafe and something went wrong
+        if the tearDown is where an instance is destroyed.
         '''
         instance_deleted = True
         tries = 0
