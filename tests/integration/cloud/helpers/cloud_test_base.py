@@ -31,20 +31,12 @@ class CloudTest(ShellCase):
     PROVIDER = None
     REQUIRED_CONFIG_ITEMS = None
 
-    def _instance_exists(self, instance_name=None, query=None):
-        '''
-        :param instance_name: The name of the instance to check for in salt-cloud.
-        For example this is may used when a test temporarily renames an instance
-        :param query: The result of a salt-cloud --query run outside of this function
-        '''
+    def _instance_exists(self, instance_name=None):
         # salt-cloud -a show_instance myinstance
         if not instance_name:
             instance_name = self.instance_name
-        if not query:
-            query = self.run_cloud('--query')
+        query = self.run_cloud('--query')
         log.debug('Checking for "{}" in => {}'.format(instance_name, query))
-        if isinstance(query, set):
-            return instance_name in query
         return any(instance_name == q.strip(': ') for q in query)
 
     def assertInstanceExists(self, creation_ret=None, instance_name=None):
@@ -54,14 +46,9 @@ class CloudTest(ShellCase):
         '''
         if not instance_name:
             instance_name = self.instance_name
-
-        # Verify that the instance exists via query
-        self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully: `{}`'
-                        .format(instance_name, creation_ret))
-
-        # If it exists but doesn't show up in the creation_ret, there was an error during creation
         if creation_ret:
             self.assertIn(instance_name, [i.strip(': ') for i in creation_ret])
+            self.assertNotIn('Failed to start', ''.join(creation_ret))
         self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully'
                         .format(instance_name))
 
