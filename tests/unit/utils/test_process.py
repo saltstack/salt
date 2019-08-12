@@ -389,12 +389,13 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
                 break
             time.sleep(.3)
 
-        assert not proc.is_alive()
-        assert proc.signal_handled()
-        # Reap the signaled process
-        proc.join(1)
         try:
+            # Allow some time for the signal handler to do it's thing
+            assert proc.signal_handled()
+            # Reap the signaled process
+            proc.join(1)
             assert proc2.is_alive()
         finally:
             evt.set()
-            proc2.join()
+            proc2.join(30)
+            proc.join(30)
