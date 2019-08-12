@@ -126,18 +126,59 @@ def salt_opts():
 
 
 @pytest.fixture(scope='session')
-def sminion(salt_opts):
+def minion_loader_context_dictionary():
+    return {}
+
+
+@pytest.fixture(scope='session')
+def sminion(salt_opts, minion_loader_context_dictionary):
     log.info('Instantiating salt.minion.SMinion')
-    _sminion = salt.minion.SMinion(salt_opts)
+    _sminion = salt.minion.SMinion(salt_opts.copy(), context=minion_loader_context_dictionary)
     for name in ('utils', 'functions', 'serializers', 'returners', 'proxy', 'states', 'rend', 'matchers', 'executors'):
         _attr_dict(getattr(_sminion, name))
     log.info('Instantiating salt.minion.SMinion completed')
     return _sminion
 
 
+@pytest.fixture(autouse=True)
+def __minion_loader_cleanup(sminion,
+                            salt_opts,
+                            minion_loader_context_dictionary,
+                            utils,
+                            functions,
+                            serializers,
+                            returners,
+                            proxy,
+                            states,
+                            rend,
+                            matchers,
+                            executors):
+    # Run tests
+    yield
+    # Clear the context after running the tests
+    minion_loader_context_dictionary.clear()
+    # Reset the options dictionary
+    salt_opts_copy = salt_opts.copy()
+    sminion.opts = salt_opts_copy
+    utils.opts = salt_opts_copy
+    functions.opts = salt_opts_copy
+    serializers.opts = salt_opts_copy
+    returners.opts = salt_opts_copy
+    proxy.opts = salt_opts_copy
+    states.opts = salt_opts_copy
+    rend.opts = salt_opts_copy
+    matchers.opts = salt_opts_copy
+    executors.opts = salt_opts_copy
+
+
+@pytest.fixture
+def grains(sminion):
+    return sminion.opts['grains'].copy()
+
+
 @pytest.fixture
 def pillar(sminion):
-    return sminion.opts['pillar']
+    return sminion.opts['pillar'].copy()
 
 
 @pytest.fixture
