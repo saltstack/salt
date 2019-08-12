@@ -15,8 +15,7 @@ from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
-from salt.ext.six.moves import range
-from salt.utils import path
+from salt.ext.six import text_type
 
 log = logging.getLogger(__name__)
 TIMEOUT = 500
@@ -45,7 +44,7 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
         if creation_ret:
             self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
-            self.assertNotIn('Failed to start', ''.join(creation_ret))
+            self.assertNotIn('Failed to start', text_type(creation_ret))
         self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
 
     def _destroy_instance(self):
@@ -70,7 +69,7 @@ class CloudTest(ShellCase):
             log.warning('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
-        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: `{}`'
+        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: {}'
                          .format(self.instance_name, delete_str))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
@@ -141,9 +140,9 @@ class CloudTest(ShellCase):
         one time in a test for each instance created.  This is a failSafe and something went wrong
         if the tearDown is where an instance is destroyed.
         '''
-        # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
-        instance_deleted_before_teardown = True
-        for _ in range(12):
+        instance_deleted = True
+        tries = 0
+        for tries in range(12):
             if self._instance_exists():
                 sleep(30)
                 instance_deleted_before_teardown = False
@@ -153,5 +152,5 @@ class CloudTest(ShellCase):
                          .format(self.instance_name))
 
         # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertTrue(instance_deleted_before_teardown,
-                        'The Instance "{}" was deleted during the tearDown, not the test.'.format(self.instance_name))
+        self.assertTrue(instance_deleted, 'The Instance "{}" was deleted during the tearDown, not the test.  Tries: {}'
+                        .format(self.instance_name, tries))
