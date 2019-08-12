@@ -5,16 +5,9 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
 # Import Salt Testing Libs
-from tests.support.helpers import expensiveTest
-from tests.support.paths import FILES
 from tests.support.unit import skipIf
-
-# Import Salt Libs
-from salt.config import cloud_providers_config
-
 
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT

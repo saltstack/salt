@@ -9,9 +9,7 @@ import logging
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.paths import FILES
 from tests.support.unit import skipIf
-from tests.support.helpers import expensiveTest
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
