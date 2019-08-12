@@ -80,15 +80,8 @@ class EC2Test(CloudTest):
         ret_str = '{0}:'.format(INSTANCE_NAME)
 
         # check if instance returned with salt installed
-        try:
-            self.assertIn(ret_str, instance)
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=timeout)
-            raise
-
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=timeout)
-        ret_str = '                    shutting-down'
+        self.assertInstanceExists(ret_val)
+        # Let the instance exist for a bit before destroying it, otherwise the test will fail
 
         self.assertDestroyInstance()
 

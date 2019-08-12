@@ -15,7 +15,6 @@ from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
-from salt.config import cloud_providers_config, cloud_config
 from salt.ext.six.moves import range
 from salt.utils import path
 
