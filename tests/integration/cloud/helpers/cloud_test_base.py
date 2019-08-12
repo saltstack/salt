@@ -13,7 +13,6 @@ from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 
 # Import Salt Libs
-from salt.ext.six import text_type
 from salt.ext.six.moves import range
 
 TIMEOUT = 500
