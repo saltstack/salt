@@ -12,8 +12,9 @@ from time import sleep
 from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 
-log = logging.getLogger(__name__)
 TIMEOUT = 500
+
+log = logging.getLogger(__name__)
 
 
 class CloudTest(ShellCase):
@@ -24,20 +25,26 @@ class CloudTest(ShellCase):
             self._instance_name = generate_random_name('cloud-test-').lower()
         return self._instance_name
 
-    def _instance_exists(self):
+    def _instance_exists(self, instance_name=None):
         # salt-cloud -a show_instance myinstance
+        if not instance_name:
+            instance_name = self.instance_name
         query = self.run_cloud('--query')
-        log.debug('Checking for "{}" in => {}'.format(self.instance_name, query))
-        return any(self.instance_name == q.strip(': ') for q in query)
+        log.debug('Checking for "{}" in => {}'.format(instance_name, query))
+        return any(instance_name == q.strip(': ') for q in query)
 
-    def assertInstanceExists(self, creation_ret=None):
+    def assertInstanceExists(self, creation_ret=None, instance_name=None):
         '''
+        :param instance_name: Override the checked instance name, otherwise the class default will be used.
         :param creation_ret: The return value from the run_cloud() function that created the instance
         '''
+        if not instance_name:
+            instance_name = self.instance_name
         if creation_ret:
-            self.assertIn(self.instance_name, [i.strip(': ') for i in creation_ret])
+            self.assertIn(instance_name, [i.strip(': ') for i in creation_ret])
             self.assertNotIn('Failed to start', ''.join(creation_ret))
-        self.assertTrue(self._instance_exists(), 'Instance "{}" was not created successfully')
+        self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully'
+                        .format(instance_name))
 
     def _destroy_instance(self):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
