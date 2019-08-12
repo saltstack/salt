@@ -78,7 +78,7 @@ pyparsing==2.4.0          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.7.20
+pytest-salt==2019.8.15
 pytest-tempdir==2019.7.18
 pytest==4.6.5
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto, pylxd
