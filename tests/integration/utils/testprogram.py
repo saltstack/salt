@@ -828,6 +828,10 @@ class TestDaemon(TestProgram):
                 except psutils.AccessDenied:
                     # We might get access denied if not running as root
                     if not salt.utils.platform.is_windows():
+                        pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
+                        log.error('Unable to access process %s, '
+                                  'running command %s as user %s',
+                                  pinfo['pid'], pinfo['name'], pinfo['username'])
                         raise
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
                         for n in range(len(proc_cmdline) - cmd_len + 1)):
