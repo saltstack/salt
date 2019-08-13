@@ -15,7 +15,6 @@ from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 try:
     # pylint: disable=unused-import
     from profitbricks.client import ProfitBricksService
-
     HAS_PROFITBRICKS = True
 except ImportError:
     HAS_PROFITBRICKS = False
