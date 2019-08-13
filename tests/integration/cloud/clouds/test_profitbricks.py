@@ -33,7 +33,7 @@ class ProfitBricksTest(CloudTest):
         '''
         Tests the return of running the --list-images command for ProfitBricks
         '''
-        list_images = self.run_cloud('--list-images {0}'.format(self.PROVIDER_NAME))
+        list_images = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
         self.assertIn(
             'Ubuntu-16.04-LTS-server-2017-10-01',
             [i.strip() for i in list_images]
@@ -44,7 +44,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_images
         command for ProfitBricks
         '''
-        cmd = '-f list_images {0}'.format(self.PROVIDER_NAME)
+        cmd = '-f list_images {0}'.format(self.PROVIDER)
         list_images = self.run_cloud(cmd)
         self.assertIn(
             '- ubuntu:latest',
@@ -55,7 +55,7 @@ class ProfitBricksTest(CloudTest):
         '''
         Tests the return of running the --list_sizes command for ProfitBricks
         '''
-        list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER_NAME))
+        list_sizes = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
         self.assertIn(
             'Micro Instance:',
             [i.strip() for i in list_sizes]
@@ -66,7 +66,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_datacenters
         command for ProfitBricks
         '''
-        cmd = '-f list_datacenters {0}'.format(self.PROVIDER_NAME)
+        cmd = '-f list_datacenters {0}'.format(self.PROVIDER)
         list_datacenters = self.run_cloud(cmd)
         self.assertIn(
             self.provider_config['datacenter_id'],
@@ -77,7 +77,7 @@ class ProfitBricksTest(CloudTest):
         '''
         Tests the return of running the -f list_nodes command for ProfitBricks
         '''
-        list_nodes = self.run_cloud('-f list_nodes {0}'.format(self.PROVIDER_NAME))
+        list_nodes = self.run_cloud('-f list_nodes {0}'.format(self.PROVIDER))
         self.assertIn(
             'state:',
             [i.strip() for i in list_nodes]
@@ -93,7 +93,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the -f list_nodes_full
         command for ProfitBricks
         '''
-        cmd = '-f list_nodes_full {0}'.format(self.PROVIDER_NAME)
+        cmd = '-f list_nodes_full {0}'.format(self.PROVIDER)
         list_nodes = self.run_cloud(cmd)
         self.assertIn(
             'state:',
@@ -110,7 +110,7 @@ class ProfitBricksTest(CloudTest):
         Tests the return of running the --list-locations
         command for ProfitBricks
         '''
-        cmd = '--list-locations {0}'.format(self.PROVIDER_NAME)
+        cmd = '--list-locations {0}'.format(self.PROVIDER)
         list_locations = self.run_cloud(cmd)
 
         self.assertIn(

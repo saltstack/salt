@@ -10,9 +10,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 from salt.config import cloud_config
 from salt.ext import six
 
-# Import Salt Testing LIbs
-from tests.support.paths import FILES
-
 # Create the cloud instance name to be used throughout the tests
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
@@ -29,14 +26,7 @@ class VMWareTest(CloudTest):
         Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
-        profile = os.path.join(
-            FILES,
-            'conf',
-            'cloud.profiles.d',
-            self.PROVIDER_NAME + '.conf'
-        )
-
-        profile_config = cloud_config(profile)
+        profile_config = cloud_config(self.provider_config)
         disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
         ret_val = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)

@@ -5,67 +5,17 @@ Integration tests for the Dimension Data cloud provider
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
-from tests.support.paths import FILES
-from tests.support.helpers import expensiveTest
-
-# Import Salt Libs
-from salt.config import cloud_providers_config
-
-
-# Create the cloud instance name to be used throughout the tests
-PROVIDER_NAME = 'dimensiondata'
 
 
 class DimensionDataTest(CloudTest):
     '''
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
-
-    @expensiveTest
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(DimensionDataTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'dimensiondata-config'
-        providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
-            )
-
-        # check if user_id, key, and region are present
-        config = cloud_providers_config(
-            os.path.join(
-                FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        user_id = config[profile_str][PROVIDER_NAME]['user_id']
-        key = config[profile_str][PROVIDER_NAME]['key']
-        region = config[profile_str][PROVIDER_NAME]['region']
-
-        if not all((user_id, key, region)):
-            self.skipTest(
-                'A user Id, password, and a region '
-                'must be provided to run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
-
-        self.assertFalse(self._instance_exists(),
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
+    PROVIDER = 'dimensiondata'
+    REQUIRED_CONFIG_ITEMS = ('key', 'region', 'user_id')
 
     def test_list_images(self):
         '''
