@@ -19,7 +19,7 @@ class GoGridTest(CloudTest):
     Integration tests for the GoGrid cloud provider in Salt-Cloud
     '''
     PROVIDER = 'gogrid'
-    REQUIRED_CONFIG_ITEMS = ('apikey', 'sharedsecret')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('apikey', 'sharedsecret')
 
     def test_instance(self):
         '''

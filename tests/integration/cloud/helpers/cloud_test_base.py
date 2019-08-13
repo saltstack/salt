@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 class CloudTest(ShellCase):
     PROVIDER = ''
-    REQUIRED_CONFIG_ITEMS = tuple()
+    REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
 
     def _instance_exists(self, instance_name=None):
         # salt-cloud -a show_instance myinstance
@@ -130,13 +130,13 @@ class CloudTest(ShellCase):
         if self.profile_str + ':' not in self.providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
-                .format(self.PROVIDER) +
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                .format(self.PROVIDER)
             )
 
         missing_conf_item = []
-        for att in self.REQUIRED_CONFIG_ITEMS:
-            if not self.provider_config[att]:
+        for att in self.REQUIRED_PROVIDER_CONFIG_ITEMS:
+            if not self.provider_config.get(att):
                 missing_conf_item.append(att)
 
         if missing_conf_item:

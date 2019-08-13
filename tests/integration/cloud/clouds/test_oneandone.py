@@ -25,7 +25,7 @@ class OneAndOneTest(CloudTest):
     Integration tests for the 1and1 cloud provider
     '''
     PROVIDER = 'oneandone'
-    REQUIRED_CONFIG_ITEMS = ('api_token',)
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('api_token',)
 
     def test_list_images(self):
         '''

@@ -15,7 +15,7 @@ class DimensionDataTest(CloudTest):
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
     PROVIDER = 'dimensiondata'
-    REQUIRED_CONFIG_ITEMS = ('key', 'region', 'user_id')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('key', 'region', 'user_id')
 
     def test_list_images(self):
         '''

@@ -27,7 +27,7 @@ class ProfitBricksTest(CloudTest):
     Integration tests for the ProfitBricks cloud provider
     '''
     PROVIDER = 'profitbricks'
-    REQUIRED_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
 
     def test_list_images(self):
         '''

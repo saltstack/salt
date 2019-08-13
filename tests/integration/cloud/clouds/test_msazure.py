@@ -56,7 +56,7 @@ class AzureTest(CloudTest):
     Integration tests for the Azure cloud provider in Salt-Cloud
     '''
     PROVIDER = 'azure'
-    REQUIRED_CONFIG_ITEMS = ('subscription_id', 'certificate_path', 'ssh_username', 'ssh_password', 'media_link')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('subscription_id', 'certificate_path', 'ssh_username', 'ssh_password', 'media_link')
 
     def test_instance(self):
         '''

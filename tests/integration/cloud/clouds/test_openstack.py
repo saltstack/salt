@@ -176,7 +176,7 @@ class RackspaceTest(CloudTest):
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
     PROVIDER = 'openstack'
-    REQUIRED_CONFIG_ITEMS = ('auth', 'cloud', 'region_name')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('auth', 'cloud', 'region_name')
 
     def test_instance(self):
         '''

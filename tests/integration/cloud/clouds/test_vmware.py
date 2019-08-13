@@ -7,7 +7,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
-from salt.config import cloud_config
 from salt.ext import six
 
 # Create the cloud instance name to be used throughout the tests
@@ -19,7 +18,7 @@ class VMWareTest(CloudTest):
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
     PROVIDER = 'vmware'
-    REQUIRED_CONFIG_ITEMS = ('password', 'user', 'url')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('password', 'user', 'url')
 
     def test_instance(self):
         '''
