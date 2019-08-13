@@ -19,7 +19,7 @@ class CloudClientTestCase(CloudTest):
     Integration tests for the CloudClient class. Uses DigitalOcean as a salt-cloud provider.
     '''
     PROVIDER = 'digitalocean'
-    REQUIRED_CONFIG_ITEMS = tuple()
+    REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
     IMAGE_NAME = '14.04.5 x64'
 
     @expensiveTest

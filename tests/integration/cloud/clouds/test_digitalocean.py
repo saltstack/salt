@@ -22,7 +22,7 @@ class DigitalOceanTest(CloudTest):
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
     '''
     PROVIDER = 'digitalocean'
-    REQUIRED_CONFIG_ITEMS = ('personal_access_token', 'ssh_key_file', 'ssh_key_name')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('personal_access_token', 'ssh_key_file', 'ssh_key_name')
 
     def test_list_images(self):
         '''

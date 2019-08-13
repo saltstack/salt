@@ -16,7 +16,7 @@ class LinodeTest(CloudTest):
     '''
 
     PROVIDER = 'linode'
-    REQUIRED_CONFIG_ITEMS = ('apikey', 'password')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('apikey', 'password')
 
     def test_instance(self):
         '''

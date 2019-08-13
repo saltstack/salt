@@ -17,7 +17,7 @@ class GCETest(CloudTest):
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
     PROVIDER = 'gce'
-    REQUIRED_CONFIG_ITEMS = ('project', 'service_account_email_address', 'service_account_private_key')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('project', 'service_account_email_address', 'service_account_private_key')
 
     def test_instance(self):
         '''
