@@ -45,7 +45,7 @@ _WILDCARDS_SUPPORTED = False
 _VERSION_SPEC_SUPPORTED = True
 
 if salt.utils.platform.is_windows():
-    _PKG_TARGETS = ['7Zip', 'ntp']
+    _PKG_TARGETS = ['7zip', 'ntp']
 if pre_grains:
     if 'arch' in pre_grains.like():
         _WILDCARDS_SUPPORTED = True
