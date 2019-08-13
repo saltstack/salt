@@ -78,6 +78,10 @@ class GCETest(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
+        # Let the instance exist for half a minute before destroying it
+        sleep(30)
+
+        self._destroy_instance()
 
         self.assertDestroyInstance()
 

@@ -36,36 +36,32 @@ class EC2Test(ShellCase):
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
 
-    def _installer_name(self):
-        '''
-        Determine the downloaded installer name by searching the files
-        directory for the firt file that loosk like an installer.
-        '''
-        for path, dirs, files in os.walk(RUNTIME_VARS.FILES):
+    @staticmethod
+    def __fetch_installer():
+        # Determine the downloaded installer name by searching the files
+        # directory for the first file that looks like an installer.
+        for path, dirs, files in os.walk(FILES):
             for file in files:
                 if file.startswith(win_installer.PREFIX):
                     return file
-            break
-        return
 
-    def _fetch_latest_installer(self):
-        '''
-        Download the latest Windows installer executable
-        '''
+        # If the installer wasn't found in the previous steps, download the latest Windows installer executable
         name = win_installer.latest_installer_name()
         path = os.path.join(RUNTIME_VARS.FILES, name)
         with salt.utils.files.fopen(path, 'wb') as fp:
             win_installer.download_and_verify(fp, name)
         return name
 
-    def _ensure_installer(self):
+    @property
+    def installer(self):
         '''
-        Make sure the testing environment has a Windows installer executbale.
+        Make sure the testing environment has a Windows installer executable.
         '''
-        if not hasattr(self, '_installer'):
-            self._installer = self.__fetch_installer()
-        return self._installer
+        if not hasattr(self, '__installer'):
+            self.__installer = self.__fetch_installer()
+        return self.__installer
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -214,7 +210,7 @@ class EC2Test(ShellCase):
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
-                'win_installer': self.copy_file(self.INSTALLER),
+                'win_installer': self.copy_file(self.installer),
             },
         )
         self._test_instance('ec2-win2012r2-test', debug=True, timeout=TIMEOUT)
@@ -229,7 +225,7 @@ class EC2Test(ShellCase):
             'ec2-win2012r2-test',
             {
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
-                'win_installer': self.copy_file(self.INSTALLER),
+                'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
                 'use_winrm': True,
             }
@@ -249,7 +245,7 @@ class EC2Test(ShellCase):
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
-                'win_installer': self.copy_file(self.INSTALLER),
+                'win_installer': self.copy_file(self.installer),
             },
         )
         self._test_instance('ec2-win2016-test', debug=True, timeout=TIMEOUT)
@@ -264,7 +260,7 @@ class EC2Test(ShellCase):
             'ec2-win2016-test',
             {
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
-                'win_installer': self.copy_file(self.INSTALLER),
+                'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
                 'use_winrm': True,
             }
