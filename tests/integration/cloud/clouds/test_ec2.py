@@ -59,7 +59,7 @@ class EC2Test(ShellCase):
         '''
         if not hasattr(self, '__installer'):
             self.__installer = self.__fetch_installer()
-        return self.__installer
+        return self._installer
 
     @expensiveTest
     def setUp(self):
