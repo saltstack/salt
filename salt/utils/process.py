@@ -767,6 +767,8 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
 
     def _handle_signals(self, signum, sigframe):
         self._signal_handled.set()
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = '{0} received a '.format(self.__class__.__name__)
         if signum == signal.SIGINT:
             msg += 'SIGINT'
