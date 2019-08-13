@@ -98,14 +98,14 @@ class CloudTest(ShellCase):
 
     @property
     def providers(self):
-        if not hasattr(self, '_providers'):
-            self._providers = self.run_cloud('--list-providers')
-        return self._providers
+        if not hasattr(self, '__providers'):
+            self.__providers = self.run_cloud('--list-providers')
+        return self.__providers
 
     @property
     def provider_config(self):
-        if not hasattr(self, '_provider_config'):
-            self._provider_config = cloud_providers_config(
+        if not hasattr(self, '__provider_config'):
+            self.__provider_config = cloud_providers_config(
                 path.join(
                     FILES,
                     'conf',
@@ -113,12 +113,12 @@ class CloudTest(ShellCase):
                     self.PROVIDER + '.conf'
                 )
             )
-        return self._provider_config[self.profile_str][self.PROVIDER]
+        return self.__provider_config[self.profile_str][self.PROVIDER]
 
     @property
     def config(self):
-        if not hasattr(self, '_config'):
-            self._config = cloud_config(
+        if not hasattr(self, '__config'):
+            self.__config = cloud_config(
                 path.join(
                     FILES,
                     'conf',
@@ -126,7 +126,7 @@ class CloudTest(ShellCase):
                     self.PROVIDER + '.conf'
                 )
             )
-        return self._config
+        return self.__config
 
     @property
     def profile_str(self):
@@ -146,13 +146,13 @@ class CloudTest(ShellCase):
         if self.profile_str + ':' not in self.providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
+                .format(self.PROVIDER) +
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(self.PROVIDER)
             )
 
         missing_conf_item = []
-        for att in self.REQUIRED_PROVIDER_CONFIG_ITEMS:
-            if not self.provider_config.get(att):
+        for att in self.REQUIRED_CONFIG_ITEMS:
+            if not self.provider_config[att]:
                 missing_conf_item.append(att)
 
         if missing_conf_item:

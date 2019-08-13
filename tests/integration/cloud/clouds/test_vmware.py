@@ -37,15 +37,7 @@ class VMWareTest(ShellCase):
         Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
-        profile = os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.profiles.d',
-                PROVIDER_NAME + '.conf'
-            )
-
-        profile_config = cloud_config(profile)
-        disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
+        disk_datastore = self.config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
         instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
