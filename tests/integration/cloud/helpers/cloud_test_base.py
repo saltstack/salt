@@ -26,8 +26,6 @@ log = logging.getLogger(__name__)
 class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
-    __RE_RUN_DELAY = 15
-    __RE_TRIES = 12
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
@@ -149,7 +147,7 @@ class CloudTest(ShellCase):
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                    .format(self.PROVIDER)
+                .format(self.PROVIDER)
             )
 
         missing_conf_item = []

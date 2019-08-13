@@ -36,55 +36,8 @@ class ProfitBricksTest(ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
-
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(ProfitBricksTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'profitbricks-config'
-        providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf '
-                'files in tests/integration/files/conf/cloud.*.d/ to run '
-                'these tests.'.format(PROVIDER_NAME)
-            )
-
-        # check if credentials and datacenter_id present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        username = config[profile_str][DRIVER_NAME]['username']
-        password = config[profile_str][DRIVER_NAME]['password']
-        datacenter_id = config[profile_str][DRIVER_NAME]['datacenter_id']
-        self.datacenter_id = datacenter_id
-        if username in ('' or 'foo') or password in ('' or 'bar') or datacenter_id == '':
-            self.skipTest(
-                'A username, password, and an datacenter must be provided to '
-                'run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
-
-    def setUp(self):
-        super(ProfitBricksTest, self).setUp()
-        username = self.provider_config.get('username')
-        password = self.provider_config.get('password')
-
-        # A default username and password must be hard-coded as defaults as per issue #46265
-        # If they are 'foo' and 'bar' it is the same as not being set
-
-        self.skipTest('Conf items are missing that must be provided to run these tests:  username, password'
-                      '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
+    PROVIDER = 'profitbricks'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
 
     def test_list_images(self):
         '''

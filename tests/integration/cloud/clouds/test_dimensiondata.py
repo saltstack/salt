@@ -39,44 +39,8 @@ class DimensionDataTest(ShellCase):
     '''
     Integration tests for the Dimension Data cloud provider in Salt-Cloud
     '''
-
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(DimensionDataTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'dimensiondata-config'
-        providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
-            )
-
-        # check if user_id, key, and region are present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        user_id = config[profile_str][PROVIDER_NAME]['user_id']
-        key = config[profile_str][PROVIDER_NAME]['key']
-        region = config[profile_str][PROVIDER_NAME]['region']
-
-        if user_id == '' or key == '' or region == '':
-            self.skipTest(
-                'A user Id, password, and a region '
-                'must be provided to run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
+    PROVIDER = 'dimensiondata'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('key', 'region', 'user_id')
 
     def test_list_images(self):
         '''

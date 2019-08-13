@@ -36,41 +36,8 @@ class OneAndOneTest(ShellCase):
     '''
     Integration tests for the 1and1 cloud provider
     '''
-
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(OneAndOneTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'oneandone-config'
-        providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf '
-                'files in tests/integration/files/conf/cloud.*.d/ to run '
-                'these tests.'.format(PROVIDER_NAME)
-            )
-
-        # check if api_token present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        api_token = config[profile_str][DRIVER_NAME]['api_token']
-        if api_token == '':
-            self.skipTest(
-                'api_token must be provided to '
-                'run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
+    PROVIDER = 'oneandone'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('api_token',)
 
     def test_list_images(self):
         '''

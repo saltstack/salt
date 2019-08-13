@@ -8,7 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Libs
-from salt.config import cloud_providers_config, cloud_config
 from salt.ext import six
 
 # Import Salt Testing LIbs
@@ -30,51 +29,8 @@ class VMWareTest(ShellCase):
     '''
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
-
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'vmware-config'
-        providers = self.run_cloud('--list-providers')
-
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
-            )
-
-        # check if user, password, url and provider are present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        user = config[profile_str][PROVIDER_NAME]['user']
-        password = config[profile_str][PROVIDER_NAME]['password']
-        url = config[profile_str][PROVIDER_NAME]['url']
-
-        conf_items = [user, password, url]
-        missing_conf_item = []
-
-        for item in conf_items:
-            if item == '':
-                missing_conf_item.append(item)
-
-        if missing_conf_item:
-            self.skipTest(
-                'A user, password, and url must be provided to run these tests.'
-                'One or more of these elements is missing. Check'
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
+    PROVIDER = 'vmware'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('password', 'user', 'url')
 
     def test_instance(self):
         '''

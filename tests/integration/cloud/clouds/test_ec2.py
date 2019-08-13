@@ -33,90 +33,20 @@ class EC2Test(CloudTest):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
-
-    @staticmethod
-    def __fetch_installer():
-        # Determine the downloaded installer name by searching the files
-        # directory for the first file that looks like an installer.
-        for path, dirs, files in os.walk(FILES):
-            for file in files:
-                if file.startswith(win_installer.PREFIX):
-                    return file
-
-        # If the installer wasn't found in the previous steps, download the latest Windows installer executable
-        name = win_installer.latest_installer_name()
-        path = os.path.join(RUNTIME_VARS.FILES, name)
-        with salt.utils.files.fopen(path, 'wb') as fp:
-            win_installer.download_and_verify(fp, name)
-        return name
-
-    @property
-    def installer(self):
-        '''
-        Make sure the testing environment has a Windows installer executable.
-        '''
-        if not hasattr(self, '__installer'):
-            self.__installer = self.__fetch_installer()
-        return self._installer
-
-    @property
-    def installer(self):
-        '''
-        Make sure the testing environment has a Windows installer executable.
-        '''
-        # Determine the downloaded installer name by searching the files
-        # directory for the first file that looks like an installer.
-        for path, dirs, files in os.walk(FILES):
-            for file in files:
-                if file.startswith(win_installer.PREFIX):
-                    return file
-        # Download the latest Windows installer executable
-        name = win_installer.latest_installer_name()
-        path = os.path.join(FILES, name)
-        with salt.utils.files.fopen(path, 'wb') as fp:
-            win_installer.download_and_verify(fp, name)
-        return name
+    PROVIDER = 'ec2'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
 
     @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
         '''
-        super(EC2Test, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'ec2-config'
-        providers = self.run_cloud('--list-providers')
-
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
-            )
-
-        # check if id, key, keyname, securitygroup, private_key, location,
-        # and provider are present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        id_ = config[profile_str][PROVIDER_NAME]['id']
-        key = config[profile_str][PROVIDER_NAME]['key']
-        key_name = config[profile_str][PROVIDER_NAME]['keyname']
-        private_key = config[profile_str][PROVIDER_NAME]['private_key']
-        location = config[profile_str][PROVIDER_NAME]['location']
-        group_or_subnet = config[profile_str][PROVIDER_NAME].get('securitygroup', '')
+        group_or_subnet = self.provider_config.get('securitygroup')
         if not group_or_subnet:
-            group_or_subnet = config[profile_str][PROVIDER_NAME].get('subnetid', '')
+            group_or_subnet = self.provider_config.get('subnetid')
 
-        conf_items = [id_, key, key_name, private_key, location, group_or_subnet]
-        missing_conf_item = []
+        if not group_or_subnet:
+            self.skipTest('securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
 
         for item in conf_items:
             if item == '':

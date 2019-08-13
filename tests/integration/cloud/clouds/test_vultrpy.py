@@ -30,45 +30,8 @@ class VultrTest(ShellCase):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
     '''
-
-    @expensiveTest
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(VultrTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'vultr-config'
-        providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
-            )
-
-        # check if api_key, ssh_key_file, and ssh_key_names are present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        api_key = config[profile_str][PROVIDER_NAME]['api_key']
-        ssh_file = config[profile_str][PROVIDER_NAME]['ssh_key_file']
-        ssh_name = config[profile_str][PROVIDER_NAME]['ssh_key_name']
-
-        if api_key == '' or ssh_file == '' or ssh_name == '':
-            self.skipTest(
-                'An API key, an ssh key file, and an ssh key name '
-                'must be provided to run these tests. Check '
-                'tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
+    PROVIDER = 'vultr'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('api_key', 'ssh_key_file', 'ssh_key_name')
 
     def test_list_images(self):
         '''

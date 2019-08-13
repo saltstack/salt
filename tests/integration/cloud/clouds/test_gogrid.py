@@ -28,42 +28,8 @@ class GoGridTest(ShellCase):
     '''
     Integration tests for the GoGrid cloud provider in Salt-Cloud
     '''
-
-    def setUp(self):
-        '''
-        Sets up the test requirements
-        '''
-        super(GoGridTest, self).setUp()
-
-        # check if appropriate cloud provider and profile files are present
-        profile_str = 'gogrid-config'
-        providers = self.run_cloud('--list-providers')
-        if profile_str + ':' not in providers:
-            self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(PROVIDER_NAME)
-            )
-
-        # check if client_key and api_key are present
-        config = cloud_providers_config(
-            os.path.join(
-                RUNTIME_VARS.FILES,
-                'conf',
-                'cloud.providers.d',
-                PROVIDER_NAME + '.conf'
-            )
-        )
-
-        api = config[profile_str][PROVIDER_NAME]['apikey']
-        shared_secret = config[profile_str][PROVIDER_NAME]['sharedsecret']
-
-        if api == '' or shared_secret == '':
-            self.skipTest(
-                'An api key and shared secret must be provided to run these tests. '
-                'Check tests/integration/files/conf/cloud.providers.d/{0}.conf'
-                .format(PROVIDER_NAME)
-            )
+    PROVIDER = 'gogrid'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('apikey', 'sharedsecret')
 
     def test_instance(self):
         '''
