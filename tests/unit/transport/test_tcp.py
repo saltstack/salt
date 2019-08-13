@@ -29,7 +29,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import get_unused_localhost_port, flaky
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
-from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin
+from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
 
 log = logging.getLogger(__name__)
 
@@ -72,29 +72,22 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
-
         cls.io_loop = tornado.ioloop.IOLoop()
-
-        def run_loop_in_thread(loop):
-            loop.make_current()
-            loop.start()
-
+        cls.stop = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
-
-        cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls.io_loop,))
-        cls.server_thread.daemon = True
+        cls.server_thread = threading.Thread(
+            target=run_loop_in_thread,
+            args=(cls.io_loop, cls.stop,),
+        )
         cls.server_thread.start()
 
     @classmethod
     def tearDownClass(cls):
-        if not hasattr(cls, '_handle_payload'):
-            return
-        if hasattr(cls, 'io_loop'):
-            cls.io_loop.add_callback(cls.io_loop.stop)
-            cls.server_thread.join()
-            cls.process_manager.kill_children()
-            cls.server_channel.close()
-            del cls.server_channel
+        cls.server_channel.close()
+        cls.stop.set()
+        cls.server_thread.join()
+        cls.process_manager.kill_children()
+        del cls.server_channel
 
     @classmethod
     @tornado.gen.coroutine
@@ -195,16 +188,13 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         # we also require req server for auth
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
-
-        cls._server_io_loop = tornado.ioloop.IOLoop()
-        cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
-
-        def run_loop_in_thread(loop):
-            loop.make_current()
-            loop.start()
-
-        cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls._server_io_loop,))
-        cls.server_thread.daemon = True
+        cls.io_loop = tornado.ioloop.IOLoop()
+        cls.stop = threading.Event()
+        cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
+        cls.server_thread = threading.Thread(
+            target=run_loop_in_thread,
+            args=(cls.io_loop, cls.stop,),
+        )
         cls.server_thread.start()
 
     @classmethod
@@ -216,10 +206,11 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
 
     @classmethod
     def tearDownClass(cls):
-        cls._server_io_loop.add_callback(cls._server_io_loop.stop)
+        cls.req_server_channel.close()
+        cls.server_channel.close()
+        cls.stop.set()
         cls.server_thread.join()
         cls.process_manager.kill_children()
-        cls.req_server_channel.close()
         del cls.req_server_channel
 
     def setUp(self):
