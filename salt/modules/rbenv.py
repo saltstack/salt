@@ -121,7 +121,7 @@ def _install_rbenv(path, runas=None):
     if os.path.isdir(path):
         return True
 
-    cmd = ['git', 'clone', 'https://github.com/sstephenson/rbenv.git', path]
+    cmd = ['git', 'clone', 'https://github.com/rbenv/rbenv.git', path]
     return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == 0
 
 
@@ -131,7 +131,7 @@ def _install_ruby_build(path, runas=None):
         return True
 
     cmd = ['git', 'clone',
-           'https://github.com/sstephenson/ruby-build.git', path]
+           'https://github.com/rbenv/ruby-build.git', path]
     return __salt__['cmd.retcode'](cmd, runas=runas, python_shell=False) == 0
 
 
