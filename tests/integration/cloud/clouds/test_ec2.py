@@ -57,7 +57,7 @@ class EC2Test(CloudTest):
         '''
         if not hasattr(self, '__installer'):
             self.__installer = self.__fetch_installer()
-        return self._installer
+        return self.__installer
 
     @expensiveTest
     def setUp(self):
