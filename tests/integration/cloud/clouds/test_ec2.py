@@ -34,23 +34,30 @@ class EC2Test(CloudTest):
     PROVIDER = 'ec2'
     REQUIRED_PROVIDER_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
 
-    @property
-    def installer(self):
-        '''
-        Make sure the testing environment has a Windows installer executable.
-        '''
+    @staticmethod
+    def __fetch_installer():
         # Determine the downloaded installer name by searching the files
         # directory for the first file that looks like an installer.
         for path, dirs, files in os.walk(FILES):
             for file in files:
                 if file.startswith(win_installer.PREFIX):
                     return file
-        # Download the latest Windows installer executable
+
+        # If the installer wasn't found in the previous steps, download the latest Windows installer executable
         name = win_installer.latest_installer_name()
         path = os.path.join(FILES, name)
         with salt.utils.files.fopen(path, 'wb') as fp:
             win_installer.download_and_verify(fp, name)
         return name
+
+    @property
+    def installer(self):
+        '''
+        Make sure the testing environment has a Windows installer executable.
+        '''
+        if not hasattr(self, '__installer'):
+            self.__installer = self.__fetch_installer()
+        return self.__installer
 
     @expensiveTest
     def setUp(self):
@@ -147,7 +154,7 @@ class EC2Test(CloudTest):
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
-                'win_installer': self.copy_file(INSTALLER),
+                'win_installer': self.copy_file(self.installer),
             },
         )
         self._test_instance('ec2-win2012r2-test', debug=True)
@@ -162,7 +169,7 @@ class EC2Test(CloudTest):
             'ec2-win2012r2-test',
             {
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
-                'win_installer': self.copy_file(INSTALLER),
+                'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
                 'use_winrm': True,
             }
@@ -182,7 +189,7 @@ class EC2Test(CloudTest):
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
-                'win_installer': self.copy_file(INSTALLER),
+                'win_installer': self.copy_file(self.installer),
             },
         )
         self._test_instance('ec2-win2016-test', debug=True)
@@ -197,7 +204,7 @@ class EC2Test(CloudTest):
             'ec2-win2016-test',
             {
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
-                'win_installer': self.copy_file(INSTALLER),
+                'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
                 'use_winrm': True,
             }
