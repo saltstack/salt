@@ -32,6 +32,22 @@ import salt.loader
 from salt.utils.odict import OrderedDict
 
 
+def test_mode():
+    return patch.dict(zpool.__opts__, {'test': True})
+
+
+def patch_fn(fn_name, patch_with):
+    return patch.dict(zpool.__salt__, {'zpool.{}'.format(fn_name): patch_with})
+
+
+def patch_exists(exists):
+    return patch_fn('exists', MagicMock(return_value=exists))
+
+
+def patch_get(properties):
+    return patch_fn('get', MagicMock(return_value=properties))
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -56,11 +72,10 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': True,
-               'comment': 'storage pool myzpool is absent',
+               'comment': 'zpool is absent',
                'changes': {}}
 
-        mock_exists = MagicMock(return_value=False)
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
+        with patch_exists(False), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.absent('myzpool'), ret)
 
@@ -71,16 +86,15 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             'name': 'myzpool',
             'result': True,
-            'comment': 'storage pool myzpool was destroyed',
-            'changes': {'myzpool': 'destroyed'},
+            'comment': 'zpool was destroyed',
+            'changes': {'destroyed': 'myzpool'},
         }
 
-        mock_exists = MagicMock(return_value=True)
         mock_destroy = MagicMock(return_value=OrderedDict([
             ('destroyed', True),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.destroy': mock_destroy}), \
+        with patch_exists(True), \
+             patch_fn('destroy', mock_destroy), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.absent('myzpool'), ret)
 
@@ -91,16 +105,15 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ret = {
             'name': 'myzpool',
             'result': True,
-            'comment': 'storage pool myzpool was exported',
-            'changes': {'myzpool': 'exported'},
+            'comment': 'zpool was exported',
+            'changes': {'exported': 'myzpool'},
         }
 
-        mock_exists = MagicMock(return_value=True)
         mock_destroy = MagicMock(return_value=OrderedDict([
             ('exported', True),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.export': mock_destroy}), \
+        with patch_exists(True), \
+             patch_fn('export', mock_destroy), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.absent('myzpool', export=True), ret)
 
@@ -112,13 +125,13 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             'name': 'myzpool',
             'result': False,
             'comment': "\n".join([
+                "Failed to export zpool:",
                 "cannot unmount '/myzpool': Device busy",
                 "cannot export 'myzpool': pool is busy",
             ]),
             'changes': {},
         }
 
-        mock_exists = MagicMock(return_value=True)
         mock_destroy = MagicMock(return_value=OrderedDict([
             ('exported', False),
             ('error', "\n".join([
@@ -126,8 +139,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 "cannot export 'myzpool': pool is busy",
             ])),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.export': mock_destroy}), \
+        with patch_exists(True), \
+             patch_fn('export', mock_destroy), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.absent('myzpool', export=True), ret)
 
@@ -137,19 +150,18 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': True,
-               'comment': 'storage pool myzpool was imported',
-               'changes': {'myzpool': 'imported'}}
+               'comment': 'zpool was imported',
+               'changes': {'imported': 'myzpool'}}
 
         config = {
             'import': True,
         }
 
-        mock_exists = MagicMock(return_value=False)
         mock_import = MagicMock(return_value=OrderedDict([
             ('imported', True),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.import': mock_import}), \
+        with patch_exists(False), \
+             patch_fn('import', mock_import), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.present('myzpool', config=config), ret)
 
@@ -159,19 +171,18 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': False,
-               'comment': 'storage pool myzpool was not imported, no (valid) layout specified for creation',
+               'comment': 'zpool could not be imported and no (valid) layout was specified to create it',
                'changes': {}}
 
         config = {
             'import': True,
         }
 
-        mock_exists = MagicMock(return_value=False)
         mock_import = MagicMock(return_value=OrderedDict([
             ('imported', False),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.import': mock_import}), \
+        with patch_exists(False), \
+             patch_fn('import', mock_import), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.present('myzpool', config=config), ret)
 
@@ -181,8 +192,12 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': True,
-               'comment': 'storage pool myzpool was created',
-               'changes': {'myzpool': 'created'}}
+               'comment': 'zpool was created',
+               'changes': {'created': 'myzpool',
+               'properties': {
+                   'autoexpand': True,
+                   'quota': 5368709120,
+               }}}
 
         config = {
             'import': False,
@@ -198,7 +213,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             'quota': '5G',
         }
 
-        mock_exists = MagicMock(return_value=False)
         mock_create = MagicMock(return_value=OrderedDict([
             ('created', True),
             ('vdevs', OrderedDict([
@@ -206,8 +220,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ('mirror-1', ['/dev/dsk/disk2', '/dev/dsk/disk3']),
             ])),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.create': mock_create}), \
+        with patch_exists(False), \
+             patch_fn('create', mock_create), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(
                 zpool.present(
@@ -226,15 +240,14 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': False,
-               'comment': 'storage pool myzpool was not imported, no (valid) layout specified for creation',
+               'comment': 'zpool could not be imported and no (valid) layout was specified to create it',
                'changes': {}}
 
         config = {
             'import': False,
         }
 
-        mock_exists = MagicMock(return_value=False)
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
+        with patch_exists(False), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(zpool.present('myzpool', config=config), ret)
 
@@ -245,6 +258,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'name': 'myzpool',
                'result': False,
                'comment': "\n".join([
+                   'Failed to create zpool:',
                     "invalid vdev specification",
                     "use 'force=True' to override the following errors:",
                     "/data/salt/vdisk0 is part of exported pool 'zsalt'",
@@ -267,7 +281,6 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             'quota': '5G',
         }
 
-        mock_exists = MagicMock(return_value=False)
         mock_create = MagicMock(return_value=OrderedDict([
             ('created', False),
             ('error', "\n".join([
@@ -277,8 +290,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 "/data/salt/vdisk1 is part of exported pool 'zsalt'",
             ])),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.create': mock_create}), \
+        with patch_exists(False), \
+             patch_fn('create', mock_create), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(
                 zpool.present(
@@ -297,8 +310,8 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': True,
-               'comment': 'properties updated',
-               'changes': {'myzpool': {'autoexpand': False}}}
+               'comment': 'Properties updated',
+               'changes': {'autoexpand': {'new': False, 'old': True}}}
 
         config = {
             'import': False,
@@ -311,8 +324,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             'autoexpand': False,
         }
 
-        mock_exists = MagicMock(return_value=True)
-        mock_get = MagicMock(return_value=OrderedDict([
+        mock_properties = OrderedDict([
             ('comment', 'salt managed pool'),
             ('freeing', 0),
             ('listsnapshots', False),
@@ -354,13 +366,13 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             ('feature@edonr', 'enabled'),
             ('altroot', '-'),
             ('fragmentation', '0%'),
-        ]))
+        ])
         mock_set = MagicMock(return_value=OrderedDict([
             ('set', True),
         ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.get': mock_get}), \
-             patch.dict(zpool.__salt__, {'zpool.set': mock_set}), \
+        with patch_exists(True), \
+             patch_get(mock_properties), \
+             patch_fn('set', mock_set), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(
                 zpool.present(
@@ -378,7 +390,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = {'name': 'myzpool',
                'result': True,
-               'comment': 'no update needed',
+               'comment': 'zpool is up-to-date',
                'changes': {}}
 
         config = {
@@ -392,8 +404,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             'autoexpand': True,
         }
 
-        mock_exists = MagicMock(return_value=True)
-        mock_get = MagicMock(return_value=OrderedDict([
+        mock_properties = OrderedDict([
             ('comment', 'salt managed pool'),
             ('freeing', 0),
             ('listsnapshots', False),
@@ -435,9 +446,9 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
             ('feature@edonr', 'enabled'),
             ('altroot', '-'),
             ('fragmentation', '0%'),
-        ]))
-        with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
-             patch.dict(zpool.__salt__, {'zpool.get': mock_get}), \
+        ])
+        with patch_exists(True), \
+             patch_get(mock_properties), \
              patch.dict(zpool.__utils__, utils_patch):
             self.assertEqual(
                 zpool.present(
@@ -448,3 +459,59 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
                 ),
                 ret,
             )
+
+    def test_testmode_create_needed(self):
+        '''
+        Check that a pending creation in test mode returns the correct information
+        '''
+        ret = {
+            'name': 'test-zpool',
+            'result': None,
+            'comment': 'zpool will be created',
+            'changes': {},
+        }
+
+        with patch_exists(False), \
+             test_mode(), \
+             patch.dict(zpool.__utils__, utils_patch):
+            self.assertEqual(zpool.present('test-zpool', config={}, layout=[], properties={}), ret)
+
+    def test_testmode_no_changes(self):
+        '''
+        Check that an up-to-date zpool returns no changes in test mode
+        '''
+        ret = {
+            'name': 'test-zpool',
+            'result': True,
+            'comment': 'zpool is up-to-date',
+            'changes': {},
+        }
+
+        with patch_exists(True), \
+             patch_get({}), \
+             test_mode(), \
+             patch.dict(zpool.__utils__, utils_patch):
+            self.assertEqual(zpool.present('test-zpool', config={}, layout=[], properties={}), ret)
+
+    def test_testmode_properties_change(self):
+        '''
+        Check that pending property changes in test mode returns the correct
+        state changes
+        '''
+        ret = {
+            'name': 'test-zpool',
+            'result': None,
+            'comment': 'Properties will be updated',
+            'changes': {},
+        }
+
+        want_props = {
+            'foo': 'bar',
+        }
+        cur_props = {
+            'foo': 'baz',
+        }
+        with test_mode(), patch_get(cur_props), \
+             patch_exists(True), \
+             patch.dict(zpool.__utils__, utils_patch):
+            self.assertEqual(zpool.present('test-zpool', config={}, layout=[], properties=want_props), ret)
