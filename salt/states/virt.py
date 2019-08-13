@@ -389,8 +389,8 @@ def running(name,
 
     try:
         try:
-            __salt__['virt.vm_state'](name)
-            if __salt__['virt.vm_state'](name) != 'running':
+            domain_state = __salt__['virt.vm_state'](name)
+            if domain_state.get(name) != 'running':
                 action_msg = 'started'
                 if update:
                     status = __salt__['virt.update'](name,
