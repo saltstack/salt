@@ -637,6 +637,8 @@ def network_running(name,
                     forward,
                     vport=None,
                     tag=None,
+                    ipv4_config=None,
+                    ipv6_config=None,
                     autostart=True,
                     connection=None,
                     username=None,
@@ -644,6 +646,25 @@ def network_running(name,
     '''
     Defines and starts a new network with specified arguments.
 
+    :param bridge: Bridge name
+    :param forward: Forward mode(bridge, router, nat)
+    :param vport: Virtualport type (Default: ``'None'``)
+    :param tag: Vlan tag (Default: ``'None'``)
+    :param ipv4_config:
+        IPv4 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+
+        .. versionadded:: neon
+    :param ipv6_config:
+        IPv6 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+
+        .. versionadded:: neon
+    :param autostart: Network autostart (default ``'True'``)
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -669,6 +690,21 @@ def network_running(name,
             - tag: 180
             - autostart: True
 
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_define:
+            - bridge: natted
+            - forward: nat
+            - ipv4_config:
+                cidr: 192.168.42.0/24
+                dhcp_ranges:
+                  - start: 192.168.42.10
+                    end: 192.168.42.25
+                  - start: 192.168.42.100
+                    end: 192.168.42.150
+            - autostart: True
+
     '''
     ret = {'name': name,
            'changes': {},
@@ -691,6 +727,8 @@ def network_running(name,
                                             forward,
                                             vport=vport,
                                             tag=tag,
+                                            ipv4_config=ipv4_config,
+                                            ipv6_config=ipv6_config,
                                             autostart=autostart,
                                             start=True,
                                             connection=connection,
