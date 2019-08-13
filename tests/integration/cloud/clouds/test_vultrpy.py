@@ -17,7 +17,7 @@ class VultrTest(CloudTest):
     Integration tests for the Vultr cloud provider in Salt-Cloud
     '''
     PROVIDER = 'vultr'
-    REQUIRED_CONFIG_ITEMS = ('api_key', 'ssh_key_file', 'ssh_key_name')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('api_key', 'ssh_key_file', 'ssh_key_name')
 
     def test_list_images(self):
         '''

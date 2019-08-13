@@ -53,18 +53,19 @@ class EC2Test(CloudTest):
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
     PROVIDER = 'ec2'
-    REQUIRED_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
 
     @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
         '''
-        group_or_subnet = self.provider_config['securitygroup']
+        group_or_subnet = self.provider_config.get('securitygroup')
         if not group_or_subnet:
-            group_or_subnet = self.provider_config['subnetid']
+            group_or_subnet = self.provider_config.get('subnetid')
 
-        self.assertTrue(group_or_subnet, 'securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
+        if not group_or_subnet:
+            self.skipTest('securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
 
         super(EC2Test, self).setUp()
 

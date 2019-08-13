@@ -21,7 +21,7 @@ class JoyentTest(CloudTest):
     Integration tests for the Joyent cloud provider in Salt-Cloud
     '''
     PROVIDER = 'joyent'
-    REQUIRED_CONFIG_ITEMS = ('user', 'password', 'private_key', 'keyname')
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('user', 'password', 'private_key', 'keyname')
 
     def test_instance(self):
         '''
