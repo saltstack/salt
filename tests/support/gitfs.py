@@ -209,8 +209,7 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
             if hasattr(cls, credential_param):
                 cls.ext_opts[credential_param] = getattr(cls, credential_param)
 
-    @requires_system_grains
-    def spawn_server(self, grains):
+    def spawn_server(self):
         auth_enabled = hasattr(self, 'username') and hasattr(self, 'password')
         pillar = {'git_pillar': {'config_dir': self.config_dir,
                                  'git_dir': self.git_dir,
@@ -221,9 +220,9 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
                                  'auth_enabled': auth_enabled}}
 
         # Different libexec dir for git backend on Debian-based systems
-        git_core = '/usr/libexec/git-core' \
-            if grains['os_family'] in ('RedHat') \
-            else '/usr/lib/git-core'
+        git_core = '/usr/libexec/git-core'
+        if not os.path.exists(git_core):
+            git_core = '/usr/lib/git-core'
 
         pillar['git_pillar']['git-http-backend'] = os.path.join(
             git_core,
