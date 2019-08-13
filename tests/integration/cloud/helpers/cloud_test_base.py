@@ -69,7 +69,7 @@ class CloudTest(ShellCase):
             log.warning('Instance "{}" may not have been deleted properly'.format(self.instance_name))
 
         # By now it should all be over
-        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: {}'
+        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: `{}`'
                          .format(self.instance_name, delete_str))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
