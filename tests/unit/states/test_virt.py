@@ -229,7 +229,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                'result': True,
                'comment': 'myvm is running'}
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='stopped'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'stopped'}),
                     'virt.start': MagicMock(return_value=0),
                 }):
             ret.update({'changes': {'myvm': 'Domain started'},
@@ -322,7 +322,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                          password='supersecret')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='stopped'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'stopped'}),
                     'virt.start': MagicMock(side_effect=[self.mock_libvirt.libvirtError('libvirt error msg')])
                 }):
             ret.update({'changes': {}, 'result': False, 'comment': 'libvirt error msg'})
@@ -330,7 +330,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Working update case when running
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='running'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.update': MagicMock(return_value={'definition': True, 'cpu': True})
                 }):
             ret.update({'changes': {'myvm': {'definition': True, 'cpu': True}},
@@ -340,7 +340,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Working update case when stopped
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='stopped'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'stopped'}),
                     'virt.start': MagicMock(return_value=0),
                     'virt.update': MagicMock(return_value={'definition': True})
                 }):
@@ -351,7 +351,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Failed live update case
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='running'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.update': MagicMock(return_value={'definition': True, 'cpu': False, 'errors': ['some error']})
                 }):
             ret.update({'changes': {'myvm': {'definition': True, 'cpu': False, 'errors': ['some error']}},
@@ -361,7 +361,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Failed definition update case
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='running'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.update': MagicMock(side_effect=[self.mock_libvirt.libvirtError('error message')])
                 }):
             ret.update({'changes': {},
