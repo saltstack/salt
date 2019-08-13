@@ -295,11 +295,9 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
     # don't do anything because this is a test
     if __opts__['test']:
         ret['result'] = True
-        if __salt__['zpool.exists'](name):
-            ret['changes'][name] = 'uptodate'
-        else:
-            ret['changes'][name] = 'imported' if config['import'] else 'created'
-        ret['comment'] = 'storage pool {0} was {1}'.format(name, ret['changes'][name])
+        if not __salt__['zpool.exists'](name):
+            ret['result'] = None
+            ret['comment'] = 'zpool "{0}" will be created'.format(name)
 
     # update pool
     elif __salt__['zpool.exists'](name):
@@ -409,7 +407,8 @@ def absent(name, export=False, force=False):
 
         # NOTE: handle test
         if __opts__['test']:
-            ret['result'] = True
+            ret['result'] = None
+            ret['comment'] = 'zpool "{}" will be destroyed'.format(name)
 
         # NOTE: try to export the pool
         elif export:
