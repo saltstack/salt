@@ -670,7 +670,7 @@ def network_running(name,
     try:
         info = __salt__['virt.network_info'](name, connection=connection, username=username, password=password)
         if info:
-            if info['active']:
+            if info[name]['active']:
                 ret['comment'] = 'Network {0} exists and is running'.format(name)
             else:
                 __salt__['virt.network_start'](name, connection=connection, username=username, password=password)
@@ -761,7 +761,7 @@ def pool_running(name,
     try:
         info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
         if info:
-            if info['state'] == 'running':
+            if info[name]['state'] == 'running':
                 ret['comment'] = 'Pool {0} exists and is running'.format(name)
             else:
                 __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
