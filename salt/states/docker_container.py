@@ -1237,8 +1237,6 @@ def running(name,
           ``--net=none``). Not to be confused with Python's ``None``.
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
-        - Any name that identifies an existing network that might be created
-          with ``docker.network_present``.
 
           .. warning::
 
