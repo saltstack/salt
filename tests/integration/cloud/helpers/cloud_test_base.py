@@ -111,7 +111,7 @@ class CloudTest(ShellCase):
         super(CloudTest, self).setUp()
 
         if not self.PROVIDER:
-            self.fail('A PROVIDER_NAME must be defined for this test')
+            self.fail('A PROVIDER must be defined for this test')
 
         # check if appropriate cloud provider and profile files are present
         if self.profile_str + ':' not in self.providers:
@@ -128,7 +128,7 @@ class CloudTest(ShellCase):
 
         self.assertFalse(missing_conf_item, 'Conf items are missing that must be provided to run these tests:  {}'
                          .format(', '.join(missing_conf_item)) +
-                         'Check tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
+                         '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
         self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
