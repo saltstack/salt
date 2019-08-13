@@ -69,7 +69,7 @@ class ProfitBricksTest(CloudTest):
         cmd = '-f list_datacenters {0}'.format(self.PROVIDER)
         list_datacenters = self.run_cloud(cmd)
         self.assertIn(
-            self.datacenter_id,
+            self.provider_config['datacenter_id'],
             [i.strip() for i in list_datacenters]
         )
 
