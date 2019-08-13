@@ -27,33 +27,30 @@ HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
 
 
-def _fetch_installer():
-    '''
-    Make sure the testing environment has a Windows installer executable.
-    '''
-    # Determine the downloaded installer name by searching the files
-    # directory for the first file that looks like an installer.
-    for path, dirs, files in os.walk(FILES):
-        for file in files:
-            if file.startswith(win_installer.PREFIX):
-                return file
-    # Download the latest Windows installer executable
-    name = win_installer.latest_installer_name()
-    path = os.path.join(FILES, name)
-    with salt.utils.files.fopen(path, 'wb') as fp:
-        win_installer.download_and_verify(fp, name)
-    return name
-
-
-INSTALLER = _fetch_installer()
-
-
 class EC2Test(CloudTest):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
     '''
     PROVIDER = 'ec2'
     REQUIRED_PROVIDER_CONFIG_ITEMS = ('id', 'key', 'keyname', 'private_key', 'location')
+
+    @property
+    def installer(self):
+        '''
+        Make sure the testing environment has a Windows installer executable.
+        '''
+        # Determine the downloaded installer name by searching the files
+        # directory for the first file that looks like an installer.
+        for path, dirs, files in os.walk(FILES):
+            for file in files:
+                if file.startswith(win_installer.PREFIX):
+                    return file
+        # Download the latest Windows installer executable
+        name = win_installer.latest_installer_name()
+        path = os.path.join(FILES, name)
+        with salt.utils.files.fopen(path, 'wb') as fp:
+            win_installer.download_and_verify(fp, name)
+        return name
 
     @expensiveTest
     def setUp(self):
