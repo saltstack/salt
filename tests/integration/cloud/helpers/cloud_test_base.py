@@ -6,6 +6,7 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+from os import path
 from time import sleep
 
 # Import Salt Testing libs
@@ -14,9 +15,8 @@ from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
 
 # Import Salt Libs
-from salt.config import cloud_providers_config
+from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
-from salt.utils import path
 
 TIMEOUT = 500
 
@@ -82,14 +82,14 @@ class CloudTest(ShellCase):
 
     @property
     def providers(self):
-        if not hasattr(self, '_providers'):
-            self._providers = self.run_cloud('--list-providers')
-        return self._providers
+        if not hasattr(self, '__providers'):
+            self.__providers = self.run_cloud('--list-providers')
+        return self.__providers
 
     @property
     def provider_config(self):
-        if not hasattr(self, '_provider_config'):
-            self._provider_config = cloud_providers_config(
+        if not hasattr(self, '__provider_config'):
+            self.__provider_config = cloud_providers_config(
                 path.join(
                     FILES,
                     'conf',
@@ -97,7 +97,20 @@ class CloudTest(ShellCase):
                     self.PROVIDER + '.conf'
                 )
             )
-        return self._provider_config
+        return self.__provider_config[self.profile_str][self.PROVIDER]
+
+    @property
+    def config(self):
+        if not hasattr(self, '__config'):
+            self.__config = cloud_config(
+                path.join(
+                    FILES,
+                    'conf',
+                    'cloud.profiles.d',
+                    self.PROVIDER + '.conf'
+                )
+            )
+        return self.__config
 
     @property
     def profile_str(self):
@@ -117,18 +130,19 @@ class CloudTest(ShellCase):
         if self.profile_str + ':' not in self.providers:
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
+                .format(self.PROVIDER) +
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                 .format(self.profile_str)
             )
 
         missing_conf_item = []
         for att in self.REQUIRED_CONFIG_ITEMS:
-            if not self.provider_config[self.profile_str][self.PROVIDER][att]:
+            if not self.provider_config[att]:
                 missing_conf_item.append(att)
 
-        self.assertFalse(missing_conf_item, 'Conf items are missing that must be provided to run these tests:  {}'
-                         .format(', '.join(missing_conf_item)) +
-                         '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
+        if missing_conf_item:
+            self.skipTest('Conf items are missing that must be provided to run these tests:  {}'
+                          .format(', '.join(missing_conf_item)) +
+                          '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
         self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))
