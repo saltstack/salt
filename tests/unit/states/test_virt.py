@@ -582,7 +582,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                            password='secret')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.network_info': MagicMock(return_value={'active': True}),
+                    'virt.network_info': MagicMock(return_value={'mynet': {'active': True}}),
                     'virt.network_define': define_mock,
                 }):
             ret.update({'changes': {}, 'comment': 'Network mynet exists and is running'})
@@ -590,7 +590,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
         start_mock = MagicMock(return_value=True)
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.network_info': MagicMock(return_value={'active': False}),
+                    'virt.network_info': MagicMock(return_value={'mynet': {'active': False}}),
                     'virt.network_start': start_mock,
                     'virt.network_define': define_mock,
                 }):
@@ -672,7 +672,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               password='secret')
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.pool_info': MagicMock(return_value={'state': 'running'}),
+                    'virt.pool_info': MagicMock(return_value={'mypool': {'state': 'running'}}),
                 }):
             ret.update({'changes': {}, 'comment': 'Pool mypool exists and is running'})
             self.assertDictEqual(virt.pool_running('mypool',
@@ -683,7 +683,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
         for mock in mocks:
             mocks[mock].reset_mock()
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.pool_info': MagicMock(return_value={'state': 'stopped'}),
+                    'virt.pool_info': MagicMock(return_value={'mypool': {'state': 'stopped'}}),
                     'virt.pool_build': mocks['build'],
                     'virt.pool_start': mocks['start']
                 }):
