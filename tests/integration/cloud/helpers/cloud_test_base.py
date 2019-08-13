@@ -155,10 +155,9 @@ class CloudTest(ShellCase):
             if not self.provider_config[att]:
                 missing_conf_item.append(att)
 
-        if missing_conf_item:
-            self.skipTest('Conf items are missing that must be provided to run these tests:  {}'
-                          .format(', '.join(missing_conf_item)) +
-                          '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
+        self.assertFalse(missing_conf_item, 'Conf items are missing that must be provided to run these tests:  {}'
+                         .format(', '.join(missing_conf_item)) +
+                         '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
         self.assertFalse(self._instance_exists(),
                          'The instance "{}" exists before it was created by the test'.format(self.instance_name))

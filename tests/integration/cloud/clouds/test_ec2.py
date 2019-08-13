@@ -41,16 +41,11 @@ class EC2Test(CloudTest):
         '''
         Sets up the test requirements
         '''
-        group_or_subnet = self.provider_config['securitygroup']
+        group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER].get('securitygroup', '')
         if not group_or_subnet:
-            group_or_subnet = self.provider_config['subnetid']
+            group_or_subnet = self.provider_config[self.profile_str][self.PROVIDER].get('subnetid', '')
 
-        if not group_or_subnet:
-            self.skipTest('securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
-
-        for item in conf_items:
-            if item == '':
-                missing_conf_item.append(item)
+        self.assertTrue(group_or_subnet, 'securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
 
         if missing_conf_item:
             self.skipTest(

@@ -37,7 +37,7 @@ class VultrTest(ShellCase):
         '''
         Tests the return of running the --list-images command for Vultr
         '''
-        image_list = self.run_cloud('--list-images {0}'.format(PROVIDER_NAME))
+        image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
 
         self.assertIn(
             'Debian 8 x64 (jessie)',
@@ -48,7 +48,7 @@ class VultrTest(ShellCase):
         '''
         Tests the return of running the --list-locations command for Vultr
         '''
-        location_list = self.run_cloud('--list-locations {0}'.format(PROVIDER_NAME))
+        location_list = self.run_cloud('--list-locations {0}'.format(self.PROVIDER))
         self.assertIn(
             'New Jersey',
             [i.strip() for i in location_list]
@@ -58,7 +58,7 @@ class VultrTest(ShellCase):
         '''
         Tests the return of running the --list-sizes command for Vultr
         '''
-        size_list = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
+        size_list = self.run_cloud('--list-sizes {0}'.format(self.PROVIDER))
         self.assertIn(
             '32768 MB RAM,4x110 GB SSD,40.00 TB BW',
             [i.strip() for i in size_list]

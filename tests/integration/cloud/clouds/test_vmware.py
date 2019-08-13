@@ -5,17 +5,9 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
 # Import Salt Libs
 from salt.ext import six
-
-# Import Salt Testing LIbs
-from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import skipIf, WAR_ROOM_SKIP
-
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
@@ -37,7 +29,8 @@ class VMWareTest(ShellCase):
         Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
-        disk_datastore = self.config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
+        profile_config = cloud_config(self.provider_config)
+        disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
         instance = self.run_cloud('-p vmware-test {0}'.format(INSTANCE_NAME), timeout=TIMEOUT)
         ret_str = '{0}:'.format(INSTANCE_NAME)
