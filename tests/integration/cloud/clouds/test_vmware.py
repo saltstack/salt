@@ -26,8 +26,7 @@ class VMWareTest(CloudTest):
         Tests creating and deleting an instance on vmware and installing salt
         '''
         # create the instance
-        profile_config = cloud_config(self.provider_config)
-        disk_datastore = profile_config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
+        disk_datastore = self.config['vmware-test']['devices']['disk']['Hard disk 2']['datastore']
 
         ret_val = self.run_cloud('-p vmware-test {0}'.format(self.instance_name), timeout=TIMEOUT)
         disk_datastore_str = '                [{0}] {1}/Hard disk 2-flat.vmdk'.format(disk_datastore,
