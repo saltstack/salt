@@ -55,9 +55,9 @@ class EC2Test(CloudTest):
         '''
         Make sure the testing environment has a Windows installer executable.
         '''
-        if not hasattr(self, '__installer'):
-            self.__installer = self.__fetch_installer()
-        return self.__installer
+        if not hasattr(self, '_installer'):
+            self._installer = self.__fetch_installer()
+        return self._installer
 
     @expensiveTest
     def setUp(self):
