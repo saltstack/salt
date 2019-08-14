@@ -101,4 +101,4 @@ class VultrTest(CloudTest):
 
         # Vultr won't let us delete an instance less than 5 minutes old.
         time.sleep(300)
-        self._destroy_instance()
+        self.assertDestroyInstance()

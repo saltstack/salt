@@ -103,4 +103,4 @@ class DigitalOceanTest(CloudTest):
         ret_str = self.run_cloud('-p digitalocean-test {0}'.format(self.instance_name), timeout=TIMEOUT)
         self.assertInstanceExists(ret_str)
 
-        self._destroy_instance()
+        self.assertDestroyInstance()

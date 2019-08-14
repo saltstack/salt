@@ -36,7 +36,7 @@ class VMWareTest(CloudTest):
         self.assertIn(disk_datastore_str, ret_val,
                       msg='Hard Disk 2 did not use the Datastore {0} '.format(disk_datastore))
 
-        self._destroy_instance()
+        self.assertDestroyInstance()
 
     def test_snapshot(self):
         '''
@@ -56,4 +56,4 @@ class VMWareTest(CloudTest):
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
 
-        self._destroy_instance()
+        self.assertDestroyInstance()
