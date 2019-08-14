@@ -62,10 +62,9 @@ class EC2Test(ShellCase):
         '''
         Make sure the testing environment has a Windows installer executbale.
         '''
-        name = self._installer_name()
-        if name:
-            return name
-        return self._fetch_latest_installer()
+        if not hasattr(self, '_installer'):
+            self._installer = self.__fetch_installer()
+        return self._installer
 
     def setUp(self):
         '''
