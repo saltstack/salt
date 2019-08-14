@@ -2130,6 +2130,14 @@ def present(name,
 
       .. versionadded:: 2016.3.4
 
+    onlyif
+        A command to run as a check, run the named command only if the command
+        passed to the ``onlyif`` option returns true
+
+    unless
+        A command to run as a check, only run the named command if the command
+        passed to the ``unless`` option returns false
+
     output_encoding
         Use this option to specify which encoding to use to decode the output
         from any git commands which are run. This should not be needed in most
