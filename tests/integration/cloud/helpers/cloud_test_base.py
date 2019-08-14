@@ -78,23 +78,23 @@ class CloudTest(ShellCase):
 
     @property
     def instance_name(self):
-        if not hasattr(self, '__instance_name'):
+        if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
             subclass = self.__class__.__name__.strip('Test')
             # Use the first three letters of the subclass, fill with '-' if too short
-            self.__instance_name = generate_random_name('cloud-test-{:-<3}-'.format(subclass[:3])).lower()
-        return self.__instance_name
+            self._instance_name = generate_random_name('cloud-test-{:-<3}-'.format(subclass[:3])).lower()
+        return self._instance_name
 
     @property
     def providers(self):
-        if not hasattr(self, '__providers'):
-            self.__providers = self.run_cloud('--list-providers')
-        return self.__providers
+        if not hasattr(self, '_providers'):
+            self._providers = self.run_cloud('--list-providers')
+        return self._providers
 
     @property
     def provider_config(self):
-        if not hasattr(self, '__provider_config'):
-            self.__provider_config = cloud_providers_config(
+        if not hasattr(self, '_provider_config'):
+            self._provider_config = cloud_providers_config(
                 path.join(
                     FILES,
                     'conf',
@@ -102,12 +102,12 @@ class CloudTest(ShellCase):
                     self.PROVIDER + '.conf'
                 )
             )
-        return self.__provider_config[self.profile_str][self.PROVIDER]
+        return self._provider_config[self.profile_str][self.PROVIDER]
 
     @property
     def config(self):
-        if not hasattr(self, '__config'):
-            self.__config = cloud_config(
+        if not hasattr(self, '_config'):
+            self._config = cloud_config(
                 path.join(
                     FILES,
                     'conf',
@@ -115,7 +115,7 @@ class CloudTest(ShellCase):
                     self.PROVIDER + '.conf'
                 )
             )
-        return self.__config
+        return self._config
 
     @property
     def profile_str(self):
