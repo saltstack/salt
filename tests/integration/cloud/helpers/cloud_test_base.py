@@ -96,10 +96,10 @@ class CloudTest(ShellCase):
     def instance_name(self):
         if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
-            subclass = self.__class__.__name__.strip('Test')
+            subclass = self.__class__.__bases__[0].__name__.strip('Test')
             # Use the first three letters of the subclass, fill with '-' if too short
-            self._instance_name = generate_random_name('cloud-test-{:-<3}-'.format(subclass[:3])).lower()
-        return self._instance_name
+            self.__instance_name = generate_random_name('cloud-test-{:-<3}-'.format(subclass[:3])).lower()
+        return self.__instance_name
 
     @property
     def providers(self):
