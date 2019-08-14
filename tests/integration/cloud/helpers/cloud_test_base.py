@@ -88,22 +88,7 @@ class CloudTest(ShellCase):
 
     def assertDestroyInstance(self):
         delete_str = self._destroy_instance()
-
-        # It might take a while to register that deletion has happened with `salt-cloud --query`
-        query = self.query_instances()
-        for tries in range(self.__RE_TRIES):
-            # If the instance doesn't exist, then deletion was a success. Move on
-            if not self._instance_exists(self.instance_name, query):
-                log.debug('Instance "{}" reported as deleted after {} seconds'.format(self.instance_name,
-                                                                                      tries * self.__RE_RUN_DELAY))
-                break
-            else:
-                # Wait a bit and check again
-                sleep(self.__RE_RUN_DELAY)
-                query = self.query_instances()
-
-        # The instance should be reported as destroyed by the final query, otherwise fail
-        self.assertFalse(self._instance_exists(query), 'Could not destroy "{}".  Delete_str: `{}`'
+        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: `{}`'
                          .format(self.instance_name, delete_str))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 

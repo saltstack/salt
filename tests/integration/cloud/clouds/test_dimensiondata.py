@@ -131,8 +131,4 @@ class DimensionDataTest(ShellCase):
         except AssertionError:
             raise
 
-        # Final clean-up of created instance, in case something went wrong.
-        # This was originally in a tearDown function, but that didn't make sense
-        # To run this for each test when not all tests create instances.
-        if INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        self.assertDestroyInstance()

@@ -159,24 +159,5 @@ class VultrTest(ShellCase):
             raise
 
         # Vultr won't let us delete an instance less than 5 minutes old.
-        time.sleep(420)
-        # delete the instance
-        results = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        try:
-            self.assertIn(
-                'True',
-                [i.strip() for i in results]
-            )
-        except AssertionError:
-            raise
-
-        # Final clean-up of created instance, in case something went wrong.
-        # This was originally in a tearDown function, but that didn't make sense
-        # To run this for each test when not all tests create instances.
-        # Also, Vultr won't let instances be deleted unless they have been alive for 5 minutes.
-        # If we exceed 6 minutes and the instance is still there, quit
-        ct = 0
-        while ct < 12 and INSTANCE_NAME in [i.strip() for i in self.run_cloud('--query')]:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-            time.sleep(30)
-            ct = ct + 1
+        time.sleep(300)
+        self.assertDestroyInstance()

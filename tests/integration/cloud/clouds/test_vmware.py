@@ -104,12 +104,7 @@ class VMWareTest(ShellCase):
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
-
-        # check if deletion was performed appropriately
-        self.assertIn(ret_str, six.text_type(delete))
+        self.assertDestroyInstance()
 
     def test_snapshot(self):
         '''
@@ -135,19 +130,4 @@ class VMWareTest(ShellCase):
 
         self.assertIn(s_ret_str, six.text_type(create_snapshot))
 
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        ret_str = '{0}:\', \'            True'.format(INSTANCE_NAME)
-
-        self.assertIn(ret_str, six.text_type(delete))
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        query = self.run_cloud('--query')
-        ret_str = '        {0}:'.format(INSTANCE_NAME)
-
-        # if test instance is still present, delete it
-        if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
+        self.assertDestroyInstance()

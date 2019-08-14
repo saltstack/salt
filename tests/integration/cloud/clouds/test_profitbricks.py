@@ -195,42 +195,7 @@ class ProfitBricksTest(ShellCase):
         Test creating an instance on ProfitBricks
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud(
-                    '-p profitbricks-test {0}'.format(INSTANCE_NAME),
-                    timeout=500
-                )]
-            )
-        except AssertionError:
-            self.run_cloud(
-                '-d {0} --assume-yes'.format(INSTANCE_NAME),
-                timeout=500
-            )
-            raise
+        ret_str = self.run_cloud('-p profitbricks-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_str)
 
-        # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500
-                )]
-            )
-        except AssertionError:
-            raise
-
-    def tearDown(self):
-        '''
-        Clean up after tests
-        '''
-        query = self.run_cloud('--query')
-        ret = '        {0}:'.format(INSTANCE_NAME)
-
-        # if test instance is still present, delete it
-        if ret in query:
-            self.run_cloud(
-                '-d {0} --assume-yes'.format(INSTANCE_NAME),
-                timeout=500
-            )
+        self.assertDestroyInstance()

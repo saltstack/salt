@@ -164,11 +164,7 @@ class EC2Test(ShellCase):
         delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=timeout)
         ret_str = '                    shutting-down'
 
-        # check if deletion was performed appropriately
-        try:
-            self.assertIn(ret_str, delete)
-        except AssertionError:
-            raise
+        self.assertDestroyInstance()
 
     def test_instance_rename(self):
         '''
@@ -198,12 +194,7 @@ class EC2Test(ShellCase):
             self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
             raise
 
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(rename), timeout=TIMEOUT)
-        ret_str = '                    shutting-down'
-
-        # check if deletion was performed appropriately
-        self.assertIn(ret_str, delete)
+        self.assertDestroyInstance()
 
     def test_instance(self):
         '''

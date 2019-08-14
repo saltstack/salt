@@ -95,6 +95,4 @@ class GoGridTest(ShellCase):
         query = self.run_cloud('--query')
         ret_str = '        {0}:'.format(INSTANCE_NAME)
 
-        # if test instance is still present, delete it
-        if ret_str in query:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)
+        self.assertDestroyInstance()
