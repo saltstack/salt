@@ -32,7 +32,7 @@ class GCETest(CloudTest):
         # Let the instance exist for half a minute before destroying it
         sleep(30)
 
-        self._destroy_instance()
+        self.assertDestroyInstance()
 
     def test_instance_extra(self):
         '''
@@ -46,4 +46,4 @@ class GCETest(CloudTest):
         # Let the instance exist for half a minute before destroying it
         sleep(30)
 
-        self._destroy_instance()
+        self.assertDestroyInstance()

@@ -66,4 +66,4 @@ class AzureTest(CloudTest):
         ret_val = self.run_cloud('-p {0} {1}'.format(self.profile_str, self.instance_name), timeout=TIMEOUT)
         self.assertInstanceExists(ret_val)
 
-        self._destroy_instance()
+        self.assertDestroyInstance()

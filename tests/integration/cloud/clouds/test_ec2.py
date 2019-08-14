@@ -110,7 +110,7 @@ class EC2Test(CloudTest):
         self.assertInstanceExists(ret_val)
         # Let the instance exist for a bit before destroying it, otherwise the test will fail
 
-        self._destroy_instance()
+        self.assertDestroyInstance()
 
     def test_instance_rename(self):
         '''
@@ -133,7 +133,7 @@ class EC2Test(CloudTest):
         for result in exp_results:
             self.assertIn(result, check_rename[0])
 
-        self._destroy_instance()
+        self.assertDestroyInstance()
 
     def test_instance(self):
         '''

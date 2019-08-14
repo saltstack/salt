@@ -55,4 +55,4 @@ class DimensionDataTest(CloudTest):
         ret_val = self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)
         self.assertInstanceExists(ret_val)
 
-        self._destroy_instance()
+        self.assertDestroyInstance()
