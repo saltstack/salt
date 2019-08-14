@@ -2068,6 +2068,8 @@ def present(name,
             shared=None,
             user=None,
             password=None,
+            onlyif=None,
+            unless=None,
             output_encoding=None):
     '''
     Ensure that a repository exists in the given directory
@@ -2144,6 +2146,18 @@ def present(name,
     .. _`worktree`: http://git-scm.com/docs/git-worktree
     '''
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
+
+    run_check_cmd_kwargs = {'runas': user, 'password': password}
+    if 'shell' in __grains__:
+        run_check_cmd_kwargs['shell'] = __grains__['shell']
+
+    # check if git.latest should be applied
+    cret = mod_run_check(
+        run_check_cmd_kwargs, onlyif, unless
+    )
+    if isinstance(cret, dict):
+        ret.update(cret)
+        return ret
 
     # If the named directory is a git repo return True
     if os.path.isdir(name):
