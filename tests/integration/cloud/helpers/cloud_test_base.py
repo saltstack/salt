@@ -44,8 +44,8 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
         if creation_ret:
             self.assertIn(instance_name, [i.strip(': ') for i in creation_ret])
-        self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully'
-                        .format(instance_name))
+        self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully: `{}`'
+                        .format(instance_name, creation_ret))
 
     def _destroy_instance(self):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
