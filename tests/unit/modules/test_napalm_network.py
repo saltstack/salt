@@ -34,8 +34,8 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'file.file_exists': napalm_test_support.true,
                 'file.join': napalm_test_support.join,
                 'file.get_managed': napalm_test_support.get_managed_file,
-                'file.apply_template_on_contents': \
-                        napalm_test_support.apply_template_on_contents,
+                'file.apply_template_on_contents':
+                    napalm_test_support.apply_template_on_contents,
                 'random.hash': napalm_test_support.random_hash
             }
         }

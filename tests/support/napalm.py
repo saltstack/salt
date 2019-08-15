@@ -515,5 +515,6 @@ def join(*files):
 def get_managed_file(*args, **kwargs):
     return 'True'
 
+
 def apply_template_on_contents(*args, **kwargs):
     return 'new config'
