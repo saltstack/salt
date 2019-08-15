@@ -6,20 +6,13 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-from time import sleep
 
 # Import Salt Testing Libs
-from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest, generate_random_name, flaky
-from tests.support.unit import skipIf, WAR_ROOM_SKIP
+from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
 
 TIMEOUT = 500
 
-
-@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
-@expensiveTest
-class GCETest(ShellCase):
+class GCETest(CloudTest):
     '''
     Integration tests for the GCE cloud provider in Salt-Cloud
     '''
@@ -83,6 +76,7 @@ class GCETest(ShellCase):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
+
         self.assertDestroyInstance()
 
     @flaky
@@ -96,4 +90,5 @@ class GCETest(ShellCase):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
+
         self.assertDestroyInstance()
