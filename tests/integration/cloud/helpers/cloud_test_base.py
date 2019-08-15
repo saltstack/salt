@@ -27,11 +27,17 @@ class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
 
-    def _instance_exists(self, instance_name=None):
+    def _instance_exists(self, instance_name=None, query=None):
+        '''
+        :param instance_name: The name of the instance to check for in salt-cloud.
+        For example this is may used when a test temporarily renames an instance
+        :param query: The result of a salt-cloud --query run outside of this function
+        '''
         # salt-cloud -a show_instance myinstance
         if not instance_name:
             instance_name = self.instance_name
-        query = self.run_cloud('--query')
+        if not query:
+            query = self.run_cloud('--query')
         log.debug('Checking for "{}" in => {}'.format(instance_name, query))
         return any(instance_name == q.strip(': ') for q in query)
 
@@ -44,14 +50,16 @@ class CloudTest(ShellCase):
             instance_name = self.instance_name
 
         # Verify that the instance exists via query
-        self.assertTrue(self._instance_exists(instance_name), 'Instance "{}" was not created successfully: `{}`'
-                        .format(instance_name, creation_ret))
+        query = self.run_cloud('--query')
+        self.assertTrue(self._instance_exists(instance_name, query),
+                        'Instance "{}" was not created successfully: |\n\t\t{}\n\t\t|`'.format(
+                            instance_name, '\n\t\t'.join(creation_ret if creation_ret else query)))
 
         # If it exists but doesn't show up in the creation_ret, there was an error during creation
         if creation_ret:
             self.assertIn(instance_name, [i.strip(': ') for i in creation_ret],
-                          'An error occured during instance creation:  |\n\t\t{}'.format(
-                              '\n\t\t'.join(creation_ret)
+                          'An error occured during instance creation:  |\n\t\t{}\n\t\t|'.format(
+                              '\n\t\t'.join(creation_ret if creation_ret else query)
                           ))
 
     def _destroy_instance(self):
@@ -143,7 +151,7 @@ class CloudTest(ShellCase):
             self.skipTest(
                 'Configuration file for {0} was not found. Check {0}.conf files '
                 'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                .format(self.PROVIDER)
+                    .format(self.PROVIDER)
             )
 
         missing_conf_item = []
