@@ -6,16 +6,12 @@ Tests for the salt-run command
 
 # Import Python libs
 from __future__ import absolute_import
-import os
-import shutil
 
 # Import Salt Testing libs
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
-from tests.support.unit import skipIf
 
 # Import Salt libs
 import salt.utils.files

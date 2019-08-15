@@ -13,15 +13,13 @@ import getpass
 import os
 import sys
 import platform
-import signal
-import shutil
 import logging
 
 # Import Salt Testing libs
 import tests.integration.utils
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import CODE_DIR, TMP
+from tests.support.paths import CODE_DIR
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
 

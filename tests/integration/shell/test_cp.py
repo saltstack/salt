@@ -9,18 +9,14 @@
 
 # Import python libs
 from __future__ import absolute_import
-import errno
 import os
 import pipes
-import shutil
-import tempfile
 import logging
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils.platform

@@ -35,7 +35,8 @@ import salt.utils.user
 log = logging.getLogger(__name__)
 
 ROOT_DIR = 'c:\\salt' if salt.utils.platform.is_windows() else '/'
-DEFAULT_SCHEMES = ['tcp://', 'udp://', 'file://',]
+DEFAULT_SCHEMES = ['tcp://', 'udp://', 'file://']
+
 
 def zmq_version():
     '''
