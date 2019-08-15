@@ -35,6 +35,12 @@ class CloudTest(ShellCase):
         '''
         return set(x.strip(': ') for x in self.run_cloud('--query') if x.lstrip().lower().startswith('cloud-test-'))
 
+    def query_instances(self):
+        '''
+        Standardize the data returned from a query
+        '''
+        return set(x.strip(': ') for x in self.run_cloud('--query') if x.lower().startswith('cloud-test-'))
+
     def _instance_exists(self, instance_name=None, query=None):
         '''
         :param instance_name: The name of the instance to check for in salt-cloud.
@@ -47,7 +53,7 @@ class CloudTest(ShellCase):
         if not query:
             query = self.query_instances()
 
-        log.debug('Checking for "{}" in {}'.format(instance_name, query))
+        log.debug('Checking for "{}" in => {}'.format(instance_name, query))
         if isinstance(query, set):
             return instance_name in query
         return any(instance_name == q.strip(': ') for q in query)
@@ -62,19 +68,11 @@ class CloudTest(ShellCase):
 
         # Verify that the instance exists via query
         query = self.query_instances()
-        delay = 15
-        for tries in range(12):
-            if self._instance_exists(instance_name, query):
-                log.debug('Instance "{}" reported after {} seconds'.format(self.instance_name, tries * delay))
-                break
-            else:
-                sleep(delay)
-                query = self.query_instances()
-
-        # Assert that the last query was successful
         self.assertTrue(self._instance_exists(instance_name, query),
                         'Instance "{}" was not created successfully: |\n\t{}\n\t|`'.format(
                             instance_name, '\n\t'.join(creation_ret if creation_ret else query)))
+
+        log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
         log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
