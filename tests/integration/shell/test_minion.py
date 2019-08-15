@@ -42,7 +42,6 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     '''
     Various integration tests for the salt-minion executable.
     '''
-    _call_binary_ = 'salt-minion'
 
     _test_minions = (
         'minion',
