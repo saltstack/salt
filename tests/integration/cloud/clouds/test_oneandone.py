@@ -13,7 +13,6 @@ from tests.support.unit import skipIf
 # Import Third-Party Libs
 try:
     from oneandone.client import OneAndOneService  # pylint: disable=unused-import
-
     HAS_ONEANDONE = True
 except ImportError:
     HAS_ONEANDONE = False
