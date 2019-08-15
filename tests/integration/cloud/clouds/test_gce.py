@@ -6,14 +6,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-from time import sleep
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
-from tests.support.unit import skipIf
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')  # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
 class GCETest(CloudTest):
     '''
     Integration tests for the GCE cloud provider in Salt-Cloud
@@ -31,8 +28,6 @@ class GCETest(CloudTest):
 
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
-        # Let the instance exist for half a minute before destroying it
-        sleep(30)
 
         self.assertDestroyInstance()
 
@@ -45,7 +40,5 @@ class GCETest(CloudTest):
         ret_str = self.run_cloud('-p gce-test-extra {0}'.format(self.instance_name), timeout=TIMEOUT)
         # check if instance returned with salt installed
         self.assertInstanceExists(ret_str)
-        # Let the instance exist for half a minute before destroying it
-        sleep(30)
 
         self.assertDestroyInstance()
