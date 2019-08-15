@@ -34,6 +34,8 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
                 'file.file_exists': napalm_test_support.true,
                 'file.join': napalm_test_support.join,
                 'file.get_managed': napalm_test_support.get_managed_file,
+                'file.apply_template_on_contents': \
+                        napalm_test_support.apply_template_on_contents,
                 'random.hash': napalm_test_support.random_hash
             }
         }
@@ -114,6 +116,11 @@ class NapalmNetworkModuleTestCase(TestCase, LoaderModuleMockMixin):
         ret = napalm_network.load_template('set_ntp_peers',
                                            peers=['192.168.0.1'])
         assert ret['out'] is None
+
+    def test_load_template_source(self):
+        ret = napalm_network.load_template(
+                template_source='hostname {{hostname}}', hostname='edge01')
+        assert ret['result']
 
     def test_commit(self):
         ret = napalm_network.commit()

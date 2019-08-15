@@ -1914,7 +1914,7 @@ def load_template(template_name=None,
     salt_render_prefixes = ('salt://', 'http://', 'https://', 'ftp://')
     salt_render = False
     file_exists = False
-    if not isinstance(template_name, (tuple, list)):
+    if template_name and not isinstance(template_name, (tuple, list)):
         for salt_render_prefix in salt_render_prefixes:
             if not salt_render:
                 salt_render = salt_render or template_name.startswith(salt_render_prefix)
