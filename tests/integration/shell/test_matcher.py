@@ -2,15 +2,12 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
-import shutil
 import time
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import salt libs
