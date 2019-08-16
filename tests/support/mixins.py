@@ -215,6 +215,27 @@ class AdaptedConfigurationTestCaseMixin(object):
         '''
         return self.get_config('sub_minion')
 
+    @property
+    def mm_master_opts(self):
+        '''
+        Return the options used for the multimaster master
+        '''
+        return self.get_config('mm_master')
+
+    @property
+    def mm_sub_master_opts(self):
+        '''
+        Return the options used for the multimaster sub-master
+        '''
+        return self.get_config('mm_sub_master')
+
+    @property
+    def mm_minion_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return self.get_config('mm_minion')
+
 
 class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
     '''
