@@ -404,6 +404,7 @@ class Schedule(object):
     # an init for the singleton instance to call
     def __singleton_init__(self, opts, functions, returners=None, intervals=None, cleanup=None, proxy=None, utils=None):
         self.opts = opts
+        self.schedule = {}
         self.proxy = proxy
         self.functions = functions
         self.utils = utils
@@ -452,7 +453,17 @@ class Schedule(object):
             if not isinstance(opts_schedule, dict):
                 raise ValueError('Schedule must be of type dict.')
             schedule.update(opts_schedule)
-        return schedule
+
+        for job, data in six.iteritems(schedule):
+            if not isinstance(data, dict):
+                self.schedule.update({job: data})
+                continue
+            if job not in self.schedule:
+                self.schedule.update({job: data})
+                continue
+            if not all([self.schedule.get(job, {}).get(k) == v for k, v in six.iteritems(data)]):
+                self.schedule.update({job: data})
+        return self.schedule
 
     def persist(self):
         '''
