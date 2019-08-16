@@ -5,6 +5,7 @@ Set up the Salt multimaster test suite
 '''
 
 # Import Python libs
+from __future__ import absolute_import, print_function
 import copy
 import os
 import stat
