@@ -36,7 +36,7 @@ class WinLgpoTest(ModuleCase):
                             registry_value_vname,
                             expected_value_data):
         '''
-        Takes a registry based policy name and config and validates taht the
+        Takes a registry based policy name and config and validates that the
         expected registry value exists and has the correct data
 
         policy_name
@@ -638,11 +638,45 @@ class WinLgpoTest(ModuleCase):
                                  'Not Configured',
                                  [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
+    @destructiveTest
+    def test_set_computer_policy_AllowTelemetry(self):
+        '''
+        Tests that a the AllowTelemetry policy is applied correctly and that it
+        doesn't appear in subsequent group policy states as having changed
+        '''
+        valid_osreleases = ['10', '2016Server', '2019Server']
+        if self.osrelease not in valid_osreleases:
+            self.skipTest('Allow Telemetry policy is only applicable if the '
+                          'osrelease grain is {0}'.format(' or '.join(valid_osreleases)))
+        else:
+            self._testAdmxPolicy(
+                'Allow Telemetry',
+                {'AllowTelemetry': '1 - Basic'},
+                [r'Software\\Policies\\Microsoft\\Windows\\DataCollection[\s]*AllowTelemetry[\s]*DWORD:1'],
+                assert_true=True)
+            result = self.run_function(
+                'state.single',
+                ['lgpo.set'],
+                name='state',
+                computer_policy={
+                    'Disable pre-release features or settings': 'Disabled'
+                }
+            )
+            name = 'lgpo_|-state_|-state_|-set'
+            expected = {
+                'new': {
+                    'Computer Configuration': {
+                        'Windows Components\\Data Collection and Preview Builds\\Disable pre-release features or settings': 'Disabled'}},
+                'old': {'Computer Configuration': {}}}
+            self.assertDictEqual(result[name]['changes'], expected)
+
     def tearDown(self):
         '''
         tearDown method, runs after each test
         '''
-        ret = self.run_function('state.single',
-                                ('file.absent', 'c:\\windows\\system32\\grouppolicy\\machine\\registry.pol'))
-        ret = self.run_function('state.single',
-                                ('file.absent', 'c:\\windows\\system32\\grouppolicy\\user\\registry.pol'))
+        self.run_state(
+            'file.absent',
+            name='c:\\windows\\system32\\grouppolicy\\machine\\registry.pol')
+        self.run_state(
+            'file.absent',
+            name='c:\\windows\\system32\\grouppolicy\\user\\registry.pol')

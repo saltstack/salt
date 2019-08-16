@@ -669,22 +669,9 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         return instance
 
     def __init__(self, *args, **kwargs):
-        if (salt.utils.platform.is_windows() and
-                not hasattr(self, '_is_child') and
-                self.__setstate__.__code__ is
-                MultiprocessingProcess.__setstate__.__code__):
-            # On Windows, if a derived class hasn't defined __setstate__, that
-            # means the 'MultiprocessingProcess' version will be used. For this
-            # version, save a copy of the args and kwargs to use with its
-            # __setstate__ and __getstate__.
-            # We do this so that __init__ will be invoked on Windows in the
-            # child process so that a register_after_fork() equivalent will
-            # work on Windows. Note that this will only work if the derived
-            # class uses the exact same args and kwargs as this class. Hence
-            # this will also work for 'SignalHandlingMultiprocessingProcess'.
-            # However, many derived classes take params that they don't pass
-            # down (eg opts). Those classes need to override __setstate__ and
-            # __getstate__ themselves.
+        if salt.utils.platform.is_windows():
+            # On Windows, subclasses should call super if they define
+            # __setstate__ and/or __getstate__
             self._args_for_getstate = copy.copy(args)
             self._kwargs_for_getstate = copy.copy(kwargs)
 
@@ -706,42 +693,21 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         # 'log_queue' and 'log_queue_level' from kwargs.
         super(MultiprocessingProcess, self).__init__(*args, **kwargs)
 
-        if salt.utils.platform.is_windows():
-            # On Windows, the multiprocessing.Process object is reinitialized
-            # in the child process via the constructor. Due to this, methods
-            # such as ident() and is_alive() won't work properly. So we use
-            # our own creation '_is_child' for this purpose.
-            if hasattr(self, '_is_child'):
-                # On Windows, no need to call register_after_fork().
-                # register_after_fork() would only work on Windows if called
-                # from the child process anyway. Since we know this is the
-                # child process, call __setup_process_logging() directly.
-                self.__setup_process_logging()
-                multiprocessing.util.Finalize(
-                    self,
-                    salt.log.setup.shutdown_multiprocessing_logging,
-                    exitpriority=16
-                )
-        else:
-            multiprocessing.util.register_after_fork(
-                self,
-                MultiprocessingProcess.__setup_process_logging
-            )
-            multiprocessing.util.Finalize(
-                self,
-                salt.log.setup.shutdown_multiprocessing_logging,
-                exitpriority=16
-            )
+        self._after_fork_methods = [
+            (MultiprocessingProcess._setup_process_logging, [self], {}),
+        ]
+        self._finalize_methods = [
+            (salt.log.setup.shutdown_multiprocessing_logging, [], {})
+        ]
 
     # __setstate__ and __getstate__ are only used on Windows.
-    # We do this so that __init__ will be invoked on Windows in the child
-    # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         args = state['args']
         kwargs = state['kwargs']
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
+        self._after_fork_methods = self._after_fork_methods
+        self._finalize_methods = self._finalize_methods
 
     def __getstate__(self):
         args = self._args_for_getstate
@@ -755,12 +721,17 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
         del self._args_for_getstate
         del self._kwargs_for_getstate
         return {'args': args,
-                'kwargs': kwargs}
+                'kwargs': kwargs,
+                '_after_fork_methods': self._after_fork_methods,
+                '_finalize_methods': self._finalize_methods,
+                }
 
-    def __setup_process_logging(self):
+    def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
     def _run(self):
+        for method, args, kwargs in self._after_fork_methods:
+            method(*args, **kwargs)
         try:
             return self._original_run()
         except SystemExit:
@@ -774,29 +745,28 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             # sys.stderr and set the proper exitcode and we have already logged
             # it above.
             raise
+        finally:
+            for method, args, kwargs in self._finalize_methods:
+                method(*args, **kwargs)
 
 
 class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
     def __init__(self, *args, **kwargs):
         super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
-        if salt.utils.platform.is_windows():
-            if hasattr(self, '_is_child'):
-                # On Windows, no need to call register_after_fork().
-                # register_after_fork() would only work on Windows if called
-                # from the child process anyway. Since we know this is the
-                # child process, call __setup_signals() directly.
-                self.__setup_signals()
-        else:
-            multiprocessing.util.register_after_fork(
-                self,
-                SignalHandlingMultiprocessingProcess.__setup_signals
-            )
+        self._signal_handled = multiprocessing.Event()
+        self._after_fork_methods.append(
+            (SignalHandlingMultiprocessingProcess._setup_signals, [self], {})
+        )
 
-    def __setup_signals(self):
+    def signal_handled(self):
+        return self._signal_handled.is_set()
+
+    def _setup_signals(self):
         signal.signal(signal.SIGINT, self._handle_signals)
         signal.signal(signal.SIGTERM, self._handle_signals)
 
     def _handle_signals(self, signum, sigframe):
+        self._signal_handled.set()
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         msg = '{0} received a '.format(self.__class__.__name__)
@@ -808,7 +778,7 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
         log.debug(msg)
         if HAS_PSUTIL:
             try:
-                process = psutil.Process(self.pid)
+                process = psutil.Process(os.getpid())
                 if hasattr(process, 'children'):
                     for child in process.children(recursive=True):
                         try:

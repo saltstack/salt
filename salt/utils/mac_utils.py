@@ -154,6 +154,7 @@ def execute_return_success(cmd):
     '''
 
     ret = _run_all(cmd)
+    log.debug('Execute return success %s: %r', cmd, ret)
 
     if ret['retcode'] != 0 or 'not supported' in ret['stdout'].lower():
         msg = 'Command Failed: {0}\n'.format(cmd)
@@ -254,6 +255,10 @@ def confirm_updated(value, check_fun, normalize_ret=False, wait=5):
     '''
     for i in range(wait):
         state = validate_enabled(check_fun()) if normalize_ret else check_fun()
+        log.debug(
+            'Confirm update try: %d func:%r state:%s value:%s',
+            i, check_fun, state, value,
+        )
         if value in state:
             return True
         time.sleep(1)

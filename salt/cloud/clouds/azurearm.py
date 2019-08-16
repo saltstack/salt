@@ -1035,15 +1035,6 @@ def request_instance(vm_):
         default=False
     )
 
-    vm_password = salt.utils.stringutils.to_str(
-        config.get_cloud_config_value(
-            'ssh_password', vm_, __opts__, search_global=True,
-            default=config.get_cloud_config_value(
-                'win_password', vm_, __opts__, search_global=True
-            )
-        )
-    )
-
     os_kwargs = {}
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
@@ -1061,6 +1052,16 @@ def request_instance(vm_):
             ssh=sshconfiguration,
         )
         os_kwargs['linux_configuration'] = linuxconfiguration
+        vm_password = None
+    else:
+        vm_password = salt.utils.stringutils.to_str(
+            config.get_cloud_config_value(
+                'ssh_password', vm_, __opts__, search_global=True,
+                default=config.get_cloud_config_value(
+                    'win_password', vm_, __opts__, search_global=True
+                )
+            )
+        )
 
     if win_installer or (vm_password is not None and not disable_password_authentication):
         if not isinstance(vm_password, str):
@@ -1327,7 +1328,7 @@ def request_instance(vm_):
         ),
         network_profile=NetworkProfile(
             network_interfaces=[
-                NetworkInterfaceReference(vm_['iface_id']),
+                NetworkInterfaceReference(id=vm_['iface_id']),
             ],
         ),
         availability_set=availability_set,
