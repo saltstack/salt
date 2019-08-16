@@ -426,6 +426,7 @@ def service_name():
 class MinionBase(object):
     def __init__(self, opts):
         self.opts = opts
+        self.beacons_leader = opts.get('beacons_leader', True)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -991,10 +992,14 @@ class MinionManager(MinionBase):
         if (self.opts['master_type'] in ('failover', 'distributed')) or not isinstance(self.opts['master'], list):
             masters = [masters]
 
+        beacons_leader = True
         for master in masters:
             s_opts = copy.deepcopy(self.opts)
             s_opts['master'] = master
             s_opts['multimaster'] = True
+            s_opts['beacons_leader'] = beacons_leader
+            if beacons_leader:
+                beacons_leader = False
             minion = self._create_minion_object(s_opts,
                                                 s_opts['auth_timeout'],
                                                 False,
@@ -2125,6 +2130,8 @@ class Minion(MinionBase):
         '''
         Refresh the functions and returners.
         '''
+        if not self.beacons_leader:
+            return
         log.debug('Refreshing beacons.')
         self.beacons = salt.beacons.Beacon(self.opts, self.functions)
 
@@ -2193,6 +2200,9 @@ class Minion(MinionBase):
         '''
         Manage Beacons
         '''
+        if not self.beacons_leader:
+            return
+
         func = data.get('func', None)
         name = data.get('name', None)
         beacon_data = data.get('beacon_data', None)
@@ -2473,6 +2483,10 @@ class Minion(MinionBase):
                 key, salt.crypt.AsyncAuth.creds_map.get(key), data['creds']
             )
             salt.crypt.AsyncAuth.creds_map[tuple(data['key'])] = data['creds']
+        elif tag.startswith('__beacons_return'):
+            if self.connected:
+                log.debug('Firing beacons to master')
+                self._fire_master(events=data)
 
     def _fallback_cleanups(self):
         '''
@@ -2504,7 +2518,8 @@ class Minion(MinionBase):
             self.serial = salt.payload.Serial(self.opts)
             self.mod_opts = self._prep_mod_opts()
             self.matcher = Matcher(self.opts, self.functions)
-            self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+            if self.beacons_leader:
+                self.beacons = salt.beacons.Beacon(self.opts, self.functions)
             uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
             self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
             self.grains_cache = self.opts['grains']
@@ -2515,6 +2530,10 @@ class Minion(MinionBase):
         Set up the beacons.
         This is safe to call multiple times.
         '''
+        # In multimaster configuration the only one minion shall execute beacons
+        if not self.beacons_leader:
+            return
+
         self._setup_core()
 
         loop_interval = self.opts['loop_interval']
@@ -2530,8 +2549,11 @@ class Minion(MinionBase):
                     beacons = self.process_beacons(self.functions)
                 except Exception:
                     log.critical('The beacon errored: ', exc_info=True)
-                if beacons and self.connected:
-                    self._fire_master(events=beacons)
+                if beacons:
+                    with salt.utils.event.get_event('minion',
+                                                    opts=self.opts,
+                                                    listen=False) as event:
+                        event.fire_event(beacons, '__beacons_return')
 
             new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
                     handle_beacons, loop_interval * 1000)
@@ -3643,7 +3665,8 @@ class ProxyMinion(Minion):
         self.serial = salt.payload.Serial(self.opts)
         self.mod_opts = self._prep_mod_opts()
         self.matcher = Matcher(self.opts, self.functions)
-        self.beacons = salt.beacons.Beacon(self.opts, self.functions)
+        if self.beacons_leader:
+            self.beacons = salt.beacons.Beacon(self.opts, self.functions)
         uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
         self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
 
