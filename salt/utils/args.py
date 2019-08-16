@@ -198,7 +198,7 @@ def yamlify_arg(arg):
         elif arg is None \
                 or isinstance(arg, (list, float, six.integer_types, six.string_types)):
             # yaml.safe_load will load '|' as '', don't let it do that.
-            if arg == '' and original_arg in ('|',):
+            if arg == '' and original_arg in ('|', '!'):
                 return original_arg
             # yaml.safe_load will treat '#' as a comment, so a value of '#'
             # will become None. Keep this value from being stomped as well.
