@@ -201,6 +201,9 @@ def yamlify_arg(arg):
             # will become None. Keep this value from being stomped as well.
             elif arg is None and original_arg.strip().startswith('#'):
                 return original_arg
+            # The condition below happens in 2018.3 only. Do not merge-forward.
+            elif arg is None and original_arg == '!':
+                return original_arg
             else:
                 return arg
         else:
