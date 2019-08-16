@@ -44,7 +44,7 @@ import salt.utils.xdg
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.validate.path import is_writeable
-from salt.utils.verify import verify_files
+from salt.utils.verify import verify_log_files
 import salt.exceptions
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -736,10 +736,10 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         if self.config['verify_env'] and self.config['log_level'] not in ('quiet', ):
             # Verify the logfile if it was explicitly set but do not try to
             # verify the default
-            if logfile is not None and not logfile.startswith(('tcp://', 'udp://', 'file://')):
+            if logfile is not None:
                 # Logfile is not using Syslog, verify
                 with salt.utils.files.set_umask(0o027):
-                    verify_files([logfile], self.config['user'])
+                    verify_log_files([logfile], self.config['user'])
 
         if logfile is None:
             # Use the default setting if the logfile wasn't explicity set

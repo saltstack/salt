@@ -6,8 +6,6 @@ Tests for the salt-run command
 
 # Import Python libs
 from __future__ import absolute_import
-import os
-import shutil
 
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
@@ -15,7 +13,6 @@ from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root
-from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt libs
 import salt.utils.files
@@ -33,8 +30,6 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
     '''
     Test the salt-run command
     '''
-
-    _call_binary_ = 'salt-run'
 
     def _add_user(self):
         '''
@@ -92,51 +87,6 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         '''
         data = self.run_run('-d virt.list foo', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
-
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
-    def test_issue_7754(self):
-        '''
-        Skip on windows because syslog not available
-        '''
-        old_cwd = os.getcwd()
-        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        os.chdir(config_dir)
-
-        config_file_name = 'master'
-        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = salt.utils.yaml.safe_load(fhr)
-            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
-        ret = self.run_script(
-            self._call_binary_,
-            '--config-dir {0} -d'.format(
-                config_dir
-            ),
-            timeout=60,
-            catch_stderr=True,
-            with_retcode=True
-        )
-        try:
-            self.assertIn('doc.runner:', ret[0])
-            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
-            if os.path.exists('/dev/log') and ret[2] != 2:
-                # If there's a syslog device and the exit code was not 2,
-                # 'No such file or directory', raise the error
-                raise
-            self.assertIn(
-                'Failed to setup the Syslog logging handler',
-                '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
-        finally:
-            self.chdir(old_cwd)
-            if os.path.isdir(config_dir):
-                shutil.rmtree(config_dir)
 
     def test_exit_status_unknown_argument(self):
         '''
