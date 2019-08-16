@@ -958,7 +958,8 @@ class MinionManager(MinionBase):
 
     @tornado.gen.coroutine
     def handle_event(self, package):
-        yield [minion.handle_event(package) for minion in self.minions]
+        for minion in self.minions:
+            minion.handle_event(package)
 
     def _create_minion_object(self, opts, timeout, safe,
                               io_loop=None, loaded_base_name=None,
@@ -2321,12 +2322,12 @@ class Minion(MinionBase):
         elif tag.startswith('fire_master'):
             if self.connected:
                 log.debug('Forwarding master event tag=%s', data['tag'])
-                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'])
+                self._fire_master(data['data'], data['tag'], data['events'], data['pretag'], sync=False)
         elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
                 # not mine master, ignore
-                return
+                raise tornado.gen.Return()
             if tag.startswith(master_event(type='failback')):
                 # if the master failback event is not for the top master, raise an exception
                 if data['master'] != self.opts['master_list'][0]:
@@ -2464,7 +2465,7 @@ class Minion(MinionBase):
         elif tag.startswith('_salt_error'):
             if self.connected:
                 log.debug('Forwarding salt error event tag=%s', tag)
-                self._fire_master(data, tag)
+                self._fire_master(data, tag, sync=False)
         elif tag.startswith('salt/auth/creds'):
             key = tuple(data['key'])
             log.debug(

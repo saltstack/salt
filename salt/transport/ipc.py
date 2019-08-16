@@ -605,7 +605,7 @@ class IPCMessageSubscriber(IPCClient):
         except tornado.gen.TimeoutError:
             raise tornado.gen.Return(None)
 
-        log.debug('IPC Subscriber is starting reading')
+        log.trace('IPC Subscriber is starting reading')
         exc_to_raise = None
         ret = None
         try:
