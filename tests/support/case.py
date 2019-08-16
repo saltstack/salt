@@ -184,7 +184,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1} -ldebug '.format(self.config_dir, arg_str)
+        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
     def run_script(self,
