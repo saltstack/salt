@@ -1844,7 +1844,7 @@ def upgrade(name=None,
         .. versionadded:: 2019.2.0
 
     obsoletes : True
-        Controls wether yum/dnf should take obsoletes into account and remove them.
+        Controls whether yum/dnf should take obsoletes into account and remove them.
         If set to ``False`` yum will use ``update`` instead of ``upgrade``
         and dnf will be run with ``--obsoletes=False``
 
@@ -1903,7 +1903,7 @@ def upgrade(name=None,
         # do not force the removal of obsolete packages
         if _yum() == 'dnf':
             # for dnf we can just disable obsoletes
-            cmd.append('--obsoletes=False')
+            cmd.extend(['--setopt', 'obsoletes=False'])
             cmd.append('upgrade' if not minimal else 'upgrade-minimal')
         else:
             # for yum we have to use update instead of upgrade
