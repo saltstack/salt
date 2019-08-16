@@ -28,6 +28,17 @@ class ProfitBricksTest(CloudTest):
     PROVIDER = 'profitbricks'
     REQUIRED_PROVIDER_CONFIG_ITEMS = ('username', 'password', 'datacenter_id')
 
+    def setUp(self):
+        super(ProfitBricksTest, self).setUp()
+        username = self.provider_config.get('username')
+        password = self.provider_config.get('password')
+
+        # A default username and password must be hard-coded as defaults as per issue #46265
+        # If they are 'foo' and 'bar' it is the same as not being set
+
+        self.skipTest('Conf items are missing that must be provided to run these tests:  username, password'
+                      '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
+
     def test_list_images(self):
         '''
         Tests the return of running the --list-images command for ProfitBricks
