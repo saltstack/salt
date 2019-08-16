@@ -62,12 +62,13 @@ class CloudTest(ShellCase):
 
         # Verify that the instance exists via query
         query = self.query_instances()
-        for tries in range(self.__RE_TRIES):
+        delay = 15
+        for tries in range(12):
             if self._instance_exists(instance_name, query):
-                log.debug('Instance "{}" reported after {} seconds'.format(instance_name, tries * self.__RE_RUN_DELAY))
+                log.debug('Instance "{}" reported after {} seconds'.format(self.instance_name, tries * delay))
                 break
             else:
-                sleep(self.__RE_RUN_DELAY)
+                sleep(delay)
                 query = self.query_instances()
 
         # Assert that the last query was successful
