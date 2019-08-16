@@ -187,6 +187,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.states.test_match',
             'integration.states.test_renderers',
             'integration.wheel.test_client',
+            'multimaster.minion.test_event',
         )
         errors = []
 
