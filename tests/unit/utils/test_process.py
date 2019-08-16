@@ -415,4 +415,4 @@ class TestDup2(TestCase):
                 salt.utils.process.dup2(f1, f2)
             except io.UnsupportedOperation:
                 assert False, 'io.UnsupportedOperation was raised'
-        assert dup_mock.called == False
+        assert not dup_mock.called
