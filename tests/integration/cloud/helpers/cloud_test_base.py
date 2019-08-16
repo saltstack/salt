@@ -31,7 +31,7 @@ class CloudTest(ShellCase):
         '''
         Standardize the data returned from a salt-cloud --query
         '''
-        return set(x.strip(': ') for x in self.run_cloud('--query') if x.lower().startswith('cloud-test-'))
+        return set(x.strip(': ') for x in self.run_cloud('--query') if x.lstrip().lower().startswith('cloud-test-'))
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
