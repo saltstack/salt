@@ -107,7 +107,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ec2.get_imageid(vm), ami)
 
         # test ami-image
-        config.return_value = 'ami-1234'
+        config.return_value = ami
         self.assertEqual(ec2.get_imageid(vm), ami)
 
         # we should have only ran aws.query once when testing the aws filter
