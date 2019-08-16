@@ -26,6 +26,8 @@ log = logging.getLogger(__name__)
 class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
+    __RE_RUN_DELAY = 15
+    __RE_TRIES = 12
 
     def query_instances(self):
         '''
@@ -60,13 +62,12 @@ class CloudTest(ShellCase):
 
         # Verify that the instance exists via query
         query = self.query_instances()
-        delay = 15
-        for tries in range(12):
+        for tries in range(self.__RE_TRIES):
             if self._instance_exists(instance_name, query):
-                log.debug('Instance "{}" reported after {} seconds'.format(self.instance_name, tries * delay))
+                log.debug('Instance "{}" reported after {} seconds'.format(instance_name, tries * self.__RE_RUN_DELAY))
                 break
             else:
-                sleep(delay)
+                sleep(self.__RE_RUN_DELAY)
                 query = self.query_instances()
 
         # Assert that the last query was successful
@@ -108,7 +109,22 @@ class CloudTest(ShellCase):
 
     def assertDestroyInstance(self):
         delete_str = self._destroy_instance()
-        self.assertFalse(self._instance_exists(), 'Could not destroy "{}".  Delete_str: `{}`'
+
+        # It might take a while to register that deletion has happened with `salt-cloud --query`
+        query = self.query_instances()
+        for tries in range(self.__RE_TRIES):
+            # If the instance doesn't exist, then deletion was a success. Move on
+            if not self._instance_exists(self.instance_name, query):
+                log.debug('Instance "{}" reported as deleted after {} seconds'.format(self.instance_name,
+                                                                                      tries * self.__RE_RUN_DELAY))
+                break
+            else:
+                # Wait a bit and check again
+                sleep(self.__RE_RUN_DELAY)
+                query = self.query_instances()
+
+        # The instance should be reported as destroyed by the final query, otherwise fail
+        self.assertFalse(self._instance_exists(query), 'Could not destroy "{}".  Delete_str: `{}`'
                          .format(self.instance_name, delete_str))
         log.debug('Instance "{}" no longer exists'.format(self.instance_name))
 
