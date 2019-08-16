@@ -238,14 +238,15 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         return any([getattr(self.options, suite) for suite in suites])
 
     def _enable_suites(self, include_unit=False, include_cloud_provider=False,
-                       include_proxy=False, include_kitchen=False):
+                       include_proxy=False, include_kitchen=False, include_multimaster=False):
         '''
         Enable test suites for current test run
         '''
         suites = self._get_suites(include_unit=include_unit,
                                   include_cloud_provider=include_cloud_provider,
                                   include_proxy=include_proxy,
-                                  include_kitchen=include_kitchen)
+                                  include_kitchen=include_kitchen,
+                                  include_multimaster=include_multimaster)
 
         for suite in suites:
             setattr(self.options, suite, True)
@@ -587,7 +588,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                                            include_proxy=True,
                                            include_kitchen=True,
                                            include_multimaster=True):
-            self._enable_suites(include_unit=True)
+            self._enable_suites(include_unit=True, include_multimaster=True)
 
         self.start_coverage(
             branch=True,
