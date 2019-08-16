@@ -87,3 +87,28 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         )
         assert ret['passwordData'] == PASS_DATA
         assert ret['password'] == 'testp4ss!'
+
+    @patch('salt.cloud.clouds.ec2.config.get_cloud_config_value')
+    @patch('salt.cloud.clouds.ec2.get_location')
+    @patch('salt.cloud.clouds.ec2.get_provider')
+    @patch('salt.cloud.clouds.ec2.aws.query')
+    def test_get_imageid(self, aws_query, get_provider, get_location, config):
+        '''
+        test querying imageid function
+        '''
+        vm = {}
+        ami = 'ami-1234'
+        config.return_value = 'test/*'
+        get_location.return_value = 'us-west2'
+        get_provider.return_value = 'ec2'
+        aws_query.return_value = [{'imageId': ami}]
+
+        # test image filter
+        self.assertEqual(ec2.get_imageid(vm), ami)
+
+        # test ami-image
+        config.return_value = 'ami-1234'
+        self.assertEqual(ec2.get_imageid(vm), ami)
+
+        # we should have only ran aws.query once when testing the aws filter
+        aws_query.assert_called_once()
