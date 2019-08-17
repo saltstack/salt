@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 '''
-The setup script for salt
+The setup script for salt CI TEST
 '''
 
 # pylint: disable=file-perms,ungrouped-imports,wrong-import-order,wrong-import-position,repr-flag-used-in-string
