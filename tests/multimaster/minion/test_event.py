@@ -13,7 +13,7 @@ import salt.modules.iptables
 HAS_IPTABLES = salt.modules.iptables.__virtual__()
 
 
-@destructiveTest
+#@destructiveTest
 @skip_if_not_root
 @skipIf(not HAS_IPTABLES, 'iptables command is not available')
 class TestHandleEvents(MultimasterModuleCase, ShellTestCase, AdaptedConfigurationTestCaseMixin):
@@ -49,7 +49,8 @@ class TestHandleEvents(MultimasterModuleCase, ShellTestCase, AdaptedConfiguratio
                     master_tgt=1,
                     timeout=60,
                     )
-            self.assertTrue(res)
+            self.assertTrue(res, 'Minion is not responding to the second master after the first ' \
+                                 'one has gone. Check #50814 for details.')
         finally:
             # Remove the firewall rule taking master online back.
             # Since minion could be not responsive now use `salt-call --local` for this.
