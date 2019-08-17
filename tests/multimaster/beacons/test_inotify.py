@@ -51,14 +51,13 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 )
         self.assertEqual({
             'inotify': [{
-                    'files': {
-                        self.tmpdir: {
-                            'mask': ['create']
-                            }
+                'files': {
+                    self.tmpdir: {
+                        'mask': ['create']
                         }
-                    }]
-                }
-            , res)
+                    }
+                }]
+            }, res)
 
         file_path = os.path.join(self.tmpdir, 'tmpfile')
         try:
