@@ -29,7 +29,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
     Validate the inotify beacon in multimaster environment
     '''
     def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
+        self.tmpdir = salt.utils.stringutils.to_unicode(tempfile.mkdtemp())
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir, ignore_errors=True)
@@ -41,6 +41,24 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 master_tgt=0,
                 )
         self.assertTrue(res.get('result'))
+
+        # Ensure the beacon is added just for better diagnostic.
+        res = self.run_function(
+                'beacons.list',
+                (),
+                return_yaml=False,
+                master_tgt=0,
+                )
+        self.assertEqual({
+            'inotify': [{
+                    'files': {
+                        self.tmpdir: {
+                            'mask': ['create']
+                            }
+                        }
+                    }]
+                }
+            , res)
 
         file_path = os.path.join(self.tmpdir, 'tmpfile')
         try:
@@ -56,14 +74,15 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                     opts=self.mm_sub_master_opts)
 
             # We have to wait beacon first execution that would configure the inotify watch.
-            time.sleep(self.mm_minion_opts['loop_interval'] + 4)
+            # Waiting for 1 loop interval + some seconds to the hardware stupidity
+            time.sleep(self.mm_minion_opts['loop_interval'] + 6)
             with salt.utils.files.fopen(file_path, 'w') as f:
                 pass
 
             start = time.time()
             # Now in successful case this test will get results at most in 2 loop intervals.
-            # But we're adding a couple of seconds to be sure.
-            stop_at = start + self.mm_minion_opts['loop_interval'] * 2 + 3
+            # Waiting for 2 loops intervals + some seconds to the hardware stupidity.
+            stop_at = start + self.mm_minion_opts['loop_interval'] * 2 + 30
             event = sub_event = None
             while True:
                 if time.time() > stop_at:
@@ -105,8 +124,8 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                     'change': 'IN_CREATE',
                     'id': 'minion',
                     },
-                'tag': 'salt/beacon/minion/inotify/' + self.tmpdir,
+                'tag': salt.utils.stringutils.to_str('salt/beacon/minion/inotify/' + self.tmpdir),
                 }
 
         # It's better to compare both at once to see both responses in the error log.
-        self.assertEqual((event, sub_event), (expected, expected))
+        self.assertEqual((expected, expected), (event, sub_event))
