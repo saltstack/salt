@@ -35,14 +35,21 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
         shutil.rmtree(self.tmpdir, ignore_errors=True)
 
     def test_beacons_duplicate_53344(self):
+        # Also add a status beacon to use it for interval checks
         res = self.run_function(
                 'beacons.add',
                 ('inotify', [{'files': {self.tmpdir: {'mask': ['create']}}}]),
                 master_tgt=0,
                 )
         self.assertTrue(res.get('result'))
+        res = self.run_function(
+                'beacons.add',
+                 ('status', [{'time': ['all']}]),
+                master_tgt=0,
+                )
+        self.assertTrue(res.get('result'))
 
-        # Ensure the beacon is added just for better diagnostic.
+        # Ensure beacons are added.
         res = self.run_function(
                 'beacons.list',
                 (),
@@ -56,6 +63,9 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                         'mask': ['create']
                         }
                     }
+                }],
+            'status': [{
+                'time': ['all']
                 }]
             }, res)
 
@@ -73,15 +83,10 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                     opts=self.mm_sub_master_opts)
 
             # We have to wait beacon first execution that would configure the inotify watch.
-            # Waiting for 1 loop interval + some seconds to the hardware stupidity
-            time.sleep(self.mm_minion_opts['loop_interval'] + 10)
-            with salt.utils.files.fopen(file_path, 'w') as f:
-                pass
-
+            # Since beacons will be executed both together waiting for the first status beacon event
+            # which will mean the inotify beacon was executed too.
             start = time.time()
-            # Now in successful case this test will get results at most in 2 loop intervals.
-            # Waiting for 2 loops intervals + some seconds to the hardware stupidity.
-            stop_at = start + self.mm_minion_opts['loop_interval'] * 2 + 30
+            stop_at = start + self.mm_minion_opts['loop_interval'] * 3 + 60
             event = sub_event = None
             while True:
                 if time.time() > stop_at:
@@ -89,19 +94,45 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 if not event:
                     event = master_listener.get_event(
                             full=True,
-                            no_block=True,
+                            wait=1,
+                            tag='salt/beacon/minion/status',
+                            match_type='startswith',
+                            )
+                if sub_event is None:
+                    sub_event = sub_master_listener.get_event(
+                            full=True,
+                            wait=1,
+                            tag='salt/beacon/minion/status',
+                            match_type='startswith',
+                            )
+                if event and sub_event:
+                    break
+
+            with salt.utils.files.fopen(file_path, 'w') as f:
+                pass
+
+            start = time.time()
+            # Now in successful case this test will get results at most in 2 loop intervals.
+            # Waiting for 2 loops intervals + some seconds to the hardware stupidity.
+            stop_at = start + self.mm_minion_opts['loop_interval'] * 2 + 60
+            event = sub_event = None
+            while True:
+                if time.time() > stop_at:
+                    break
+                if not event:
+                    event = master_listener.get_event(
+                            full=True,
+                            wait=1,
                             tag='salt/beacon/minion/inotify/' + self.tmpdir,
                             match_type='startswith',
                             )
                 if sub_event is None:
-                    sub_event = master_listener.get_event(
+                    sub_event = sub_master_listener.get_event(
                             full=True,
-                            no_block=True,
+                            wait=1,
                             tag='salt/beacon/minion/inotify/' + self.tmpdir,
                             match_type='startswith',
                             )
-                if not event or not sub_event:
-                    time.sleep(1)
                 if event and sub_event:
                     break
         finally:
@@ -110,6 +141,8 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 ('inotify',),
                 master_tgt=0,
                 ))
+            master_listener.destroy()
+            sub_master_listener.destroy()
 
         # We can't determine the timestamp so remove it from results
         if event:
