@@ -638,7 +638,7 @@ class TestDaemon(object):
 
         self.sshd_pidfile = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
-            [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
+            [sshd, '-f', 'sshd_config', '-o', 'PidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
