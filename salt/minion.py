@@ -2559,7 +2559,7 @@ class Minion(MinionBase):
         elif tag.startswith('__beacons_return'):
             if self.connected:
                 log.debug('Firing beacons to master')
-                self._fire_master(events=data)
+                self._fire_master(events=data['beacons'])
 
     def _fallback_cleanups(self):
         '''
@@ -2627,7 +2627,7 @@ class Minion(MinionBase):
                     event = salt.utils.event.get_event('minion',
                                                        opts=self.opts,
                                                        listen=False)
-                    event.fire_event(beacons, '__beacons_return')
+                    event.fire_event({'beacons': beacons}, '__beacons_return')
                     event.destroy()
 
             new_periodic_callbacks['beacons'] = tornado.ioloop.PeriodicCallback(
