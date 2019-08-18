@@ -74,7 +74,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
 
             # We have to wait beacon first execution that would configure the inotify watch.
             # Waiting for 1 loop interval + some seconds to the hardware stupidity
-            time.sleep(self.mm_minion_opts['loop_interval'] + 6)
+            time.sleep(self.mm_minion_opts['loop_interval'] + 10)
             with salt.utils.files.fopen(file_path, 'w') as f:
                 pass
 
