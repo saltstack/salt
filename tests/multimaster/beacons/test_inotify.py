@@ -3,10 +3,10 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-import time
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import time
 try:
     import pyinotify  # pylint: disable=unused-import
     HAS_PYINOTIFY = True
@@ -21,6 +21,9 @@ from tests.support.unit import skipIf
 # Import salt libs
 import salt.version
 import salt.config
+
+import logging
+log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_PYINOTIFY, 'pyinotify is not available')
@@ -41,12 +44,14 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 ('inotify', [{'files': {self.tmpdir: {'mask': ['create']}}}]),
                 master_tgt=0,
                 )
+        log.debug('Inotify beacon add returned: %s', res)
         self.assertTrue(res.get('result'))
         res = self.run_function(
                 'beacons.add',
                  ('status', [{'time': ['all']}]),
                 master_tgt=0,
                 )
+        log.debug('Status beacon add returned: %s', res)
         self.assertTrue(res.get('result'))
 
         # Ensure beacons are added.
@@ -56,6 +61,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 return_yaml=False,
                 master_tgt=0,
                 )
+        log.debug('Beacons list: %s', res)
         self.assertEqual({
             'inotify': [{
                 'files': {
@@ -86,7 +92,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
             # Since beacons will be executed both together waiting for the first status beacon event
             # which will mean the inotify beacon was executed too.
             start = time.time()
-            stop_at = start + self.mm_minion_opts['loop_interval'] * 3 + 60
+            stop_at = start + self.mm_minion_opts['loop_interval'] * 2 + 60
             event = sub_event = None
             while True:
                 if time.time() > stop_at:
@@ -107,6 +113,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                             )
                 if event and sub_event:
                     break
+            log.debug('Status events received: %s, %s', event, sub_event)
 
             with salt.utils.files.fopen(file_path, 'w') as f:
                 pass
@@ -135,10 +142,16 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                             )
                 if event and sub_event:
                     break
+            log.debug('Inotify events received: %s, %s', event, sub_event)
         finally:
             self.assertTrue(self.run_function(
                 'beacons.delete',
                 ('inotify',),
+                master_tgt=0,
+                ))
+            self.assertTrue(self.run_function(
+                'beacons.delete',
+                ('status',),
                 master_tgt=0,
                 ))
             master_listener.destroy()
