@@ -2621,7 +2621,7 @@ class Minion(MinionBase):
                 # Make sure there is a chance for one iteration to occur before connect
                 handle_schedule()
 
-            self.add_periodic_callback('schedue', handle_schedule)
+            self.add_periodic_callback('schedule', handle_schedule)
 
     def add_periodic_callback(self, name, method, interval=1000):
         '''
@@ -2642,7 +2642,7 @@ class Minion(MinionBase):
         If a callback by the given name does not exist this method returns False
         '''
         callback = self.periodic_callbacks.pop(name, None)
-        if callbback is None:
+        if callback is None:
             return False
         callback.stop()
         return True
