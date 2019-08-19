@@ -6,7 +6,8 @@ Tests for the Openstack Cloud Provider
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
-from os import path
+import os
+import shutil
 from time import sleep
 
 # Import Salt Testing libs
@@ -28,6 +29,14 @@ class CloudTest(ShellCase):
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
     __RE_RUN_DELAY = 15
     __RE_TRIES = 3
+
+    def clean_cloud_dir(self, tmp_dir):
+        '''
+        Clean the cloud.providers.d tmp directory
+        '''
+        # make sure old provider configs are deleted
+        for i in os.listdir(tmp_dir):
+            os.remove(os.path.join(tmp_dir, i))
 
     def query_instances(self):
         '''
@@ -134,9 +143,8 @@ class CloudTest(ShellCase):
     def provider_config(self):
         if not hasattr(self, '_provider_config'):
             self._provider_config = cloud_providers_config(
-                path.join(
-                    FILES,
-                    'conf',
+                os.path.join(
+                    self.config_dir,
                     'cloud.providers.d',
                     self.PROVIDER + '.conf'
                 )
@@ -147,9 +155,8 @@ class CloudTest(ShellCase):
     def config(self):
         if not hasattr(self, '_config'):
             self._config = cloud_config(
-                path.join(
-                    FILES,
-                    'conf',
+                os.path.join(
+                    self.config_dir,
                     'cloud.profiles.d',
                     self.PROVIDER + '.conf'
                 )
@@ -169,6 +176,15 @@ class CloudTest(ShellCase):
 
         if not self.PROVIDER:
             self.fail('A PROVIDER must be defined for this test')
+
+        # clean up before setup
+        self.tmp_cloud_provider = os.path.join(self.config_dir, 'cloud.providers.d')
+        self.clean_cloud_dir(self.tmp_cloud_provider)
+
+        # add the provider config for only the cloud we are testing
+        provider_file = self.PROVIDER + '.conf'
+        shutil.copyfile(os.path.join(os.path.join(FILES, 'conf', 'cloud.providers.d'), provider_file),
+                        os.path.join(self.tmp_cloud_provider, provider_file))
 
         # check if appropriate cloud provider and profile files are present
         if self.profile_str + ':' not in self.providers:
@@ -196,13 +212,21 @@ class CloudTest(ShellCase):
         if the tearDown is where an instance is destroyed.
         '''
         # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
-        if self._instance_exists():
-            for _ in range(12):
-                sleep(30)
-                success, result_str = self._destroy_instance()
-                if success:
-                    self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
-                        self.instance_name))
+        try:
+            destroyed = False
+            if self._instance_exists():
+                for _ in range(3):
+                    sleep(30)
+                    success, result_str = self._destroy_instance()
+                    if success:
+                        self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
+                            self.instance_name))
+                    if not self._instance_exists():
+                        destroyed = True
+                        break
 
-            # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-            self.fail('The Instance "{}" was not deleted after multiple attempts'.format(self.instance_name))
+                if not destroyed:
+                    # Destroying instances in the tearDown is a contingency, not the way things should work by default.
+                    self.fail('The Instance "{}" was not deleted after multiple attempts'.format(self.instance_name))
+        finally:
+            self.clean_cloud_dir(self.tmp_cloud_provider)
