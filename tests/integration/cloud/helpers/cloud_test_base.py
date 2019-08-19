@@ -37,14 +37,6 @@ class CloudTest(ShellCase):
     __RE_RUN_DELAY = 15
     __RE_TRIES = 3
 
-    def clean_cloud_dir(self, tmp_dir):
-        '''
-        Clean the cloud.providers.d tmp directory
-        '''
-        # make sure old provider configs are deleted
-        for i in os.listdir(tmp_dir):
-            os.remove(os.path.join(tmp_dir, i))
-
     def query_instances(self):
         '''
         Standardize the data returned from a salt-cloud --query
@@ -96,7 +88,8 @@ class CloudTest(ShellCase):
 
             # Assert that the last query was successful
             self.assertTrue(self._instance_exists(instance_name, query),
-                            'Instance "{}" was not created successfully: '.format(', '.join(query)))
+                            'Instance "{}" was not created successfully: |\n\t{}\n\t|`'.format(
+                                instance_name, '\n\t'.join(creation_ret if creation_ret else query)))
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
@@ -107,6 +100,7 @@ class CloudTest(ShellCase):
         delete = safe_load('\n'.join(delete_str))
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
+        destroyed = False
         log.debug('Deletion status: {}'.format(delete_str))
 
         if any([x in delete_str for x in (
@@ -120,7 +114,6 @@ class CloudTest(ShellCase):
             '.delete',
             self.instance_name + '-DEL'
         )]):
-            sleep(shutdown_delay)
             destroyed = True
             log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
         else:
@@ -209,13 +202,6 @@ class CloudTest(ShellCase):
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
         delete_str = ''.join(delete)
 
-        # TODO assert that 'shutting-down' will be in the delete_str?
-        if 'shutting-down' in delete_str:
-            log.debug('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
-        else:
-            log.warning('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
-        self.assertEqual(self._instance_exists(), False)
-
     def tearDown(self):
         '''
         Clean up after tests, If the instance still exists for any reason, delete it.
@@ -224,21 +210,13 @@ class CloudTest(ShellCase):
         if the tearDown is where an instance is destroyed.
         '''
         # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
-        try:
-            destroyed = False
-            if self._instance_exists():
-                for _ in range(3):
-                    sleep(30)
-                    success, result_str = self._destroy_instance()
-                    if success:
-                        self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
-                            self.instance_name))
-                    if not self._instance_exists():
-                        destroyed = True
-                        break
+        if self._instance_exists():
+            for _ in range(12):
+                sleep(30)
+                success, result_str = self._destroy_instance()
+                if success:
+                    self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
+                        self.instance_name))
 
-                if not destroyed:
-                    # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-                    self.fail('The Instance "{}" was not deleted after multiple attempts'.format(self.instance_name))
-        finally:
-            self.clean_cloud_dir(self.tmp_cloud_provider)
+            # Destroying instances in the tearDown is a contingency, not the way things should work by default.
+            self.fail('The Instance "{}" was not deleted after multiple attempts'.format(self.instance_name))
