@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import io
 import os
 import sys
+import threading
 import time
 import signal
 import multiprocessing
@@ -416,3 +417,58 @@ class TestDup2(TestCase):
             except io.UnsupportedOperation:
                 assert False, 'io.UnsupportedOperation was raised'
         assert not dup_mock.called
+
+
+class TestProcessList(TestCase):
+
+    def null_target(self):
+        pass
+
+    def event_target(self, event):
+        while True:
+            if event.wait(5):
+                break
+
+    def wait_for_proc(self, proc, timeout=10):
+        start = time.time()
+        while proc.is_alive():
+            if time.time() - start > timeout:
+                raise TimeoutError("Process did not finishe before timeout")
+            time.sleep(.3)
+
+    def test_process_list_process(self):
+        plist = salt.utils.process.SubprocessList()
+        proc = multiprocessing.Process(target=self.null_target)
+        proc.start()
+        plist.add(proc)
+        assert proc in plist.processes
+        self.wait_for_proc(proc)
+        assert not proc.is_alive()
+        plist.cleanup()
+        assert proc not in plist.processes
+
+    def test_process_list_thread(self):
+        plist = salt.utils.process.SubprocessList()
+        thread = threading.Thread(target=self.null_target)
+        thread.start()
+        plist.add(thread)
+        assert thread in plist.processes
+        self.wait_for_proc(thread)
+        assert not thread.is_alive()
+        plist.cleanup()
+        assert thread not in plist.processes
+
+    def test_process_list_cleanup(self):
+        plist = salt.utils.process.SubprocessList()
+        event = multiprocessing.Event()
+        proc = multiprocessing.Process(target=self.event_target, args=[event])
+        proc.start()
+        plist.add(proc)
+        assert proc in plist.processes
+        plist.cleanup()
+        event.set()
+        assert proc in plist.processes
+        self.wait_for_proc(proc)
+        assert not proc.is_alive()
+        plist.cleanup()
+        assert proc not in plist.processes
