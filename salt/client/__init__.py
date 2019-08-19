@@ -387,7 +387,7 @@ class LocalClient(object):
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
-            if fun in minion_ret[minion]:
+            if minion_ret[minion] and fun in minion_ret[minion]:
                 f_tgt.append(minion)
             if len(f_tgt) >= sub:
                 break
