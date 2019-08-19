@@ -2,6 +2,7 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import io
 import os
 import sys
 import time
@@ -399,3 +400,19 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
             evt.set()
             proc2.join(30)
             proc.join(30)
+
+
+class TestDup2(TestCase):
+
+    def test_dup2_no_fileno(self):
+        'The dup2 method does not fail on streams without fileno support'
+        f1 = io.StringIO("some initial text data")
+        f2 = io.StringIO("some initial other text data")
+        with self.assertRaises(io.UnsupportedOperation):
+            f1.fileno()
+        with patch('os.dup2') as dup_mock:
+            try:
+                salt.utils.process.dup2(f1, f2)
+            except io.UnsupportedOperation:
+                assert False, 'io.UnsupportedOperation was raised'
+        assert not dup_mock.called

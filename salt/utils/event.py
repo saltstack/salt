@@ -543,7 +543,6 @@ class SaltEvent(object):
                 # IPCMessageSubscriber.read_sync() uses this type of timeout.
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-
                 raw = self.subscriber.read_sync(timeout=wait)
                 if raw is None:
                     break
@@ -625,6 +624,7 @@ class SaltEvent(object):
         request, it MUST subscribe the result to ensure the response is not lost
         should other regions of code call get_event for other purposes.
         '''
+        log.trace("Get event. tag: %s", tag)
         assert self._run_io_loop_sync
 
         match_func = self._get_match_func(match_type)
