@@ -60,16 +60,6 @@ class CloudTest(ShellCase):
         if not instance_name:
             instance_name = self.instance_name
 
-        # Verify that the instance exists via query
-        query = self.query_instances()
-        for tries in range(self.__RE_TRIES):
-            if self._instance_exists(instance_name, query):
-                log.debug('Instance "{}" reported after {} seconds'.format(instance_name, tries * self.__RE_RUN_DELAY))
-                break
-            else:
-                sleep(self.__RE_RUN_DELAY)
-                query = self.query_instances()
-
         # Assert that the last query was successful
         self.assertTrue(self._instance_exists(instance_name, query),
                         'Instance "{}" was not created successfully: |\n\t{}\n\t|`'.format(
@@ -83,6 +73,17 @@ class CloudTest(ShellCase):
                           'An error occured during instance creation:  |\n\t{}\n\t|'.format(
                               '\n\t'.join(creation_ret if creation_ret else query)
                           ))
+        else:
+            # Verify that the instance exists via query
+            query = self.query_instances()
+            for tries in range(self.__RE_TRIES):
+                if self._instance_exists(instance_name, query):
+                    log.debug(
+                        'Instance "{}" reported after {} seconds'.format(instance_name, tries * self.__RE_RUN_DELAY))
+                    break
+                else:
+                    sleep(self.__RE_RUN_DELAY)
+                    query = self.query_instances()
 
     def _destroy_instance(self):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
