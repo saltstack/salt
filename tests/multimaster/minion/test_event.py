@@ -11,6 +11,8 @@ from tests.support.unit import skipIf
 
 import salt.modules.iptables
 HAS_IPTABLES = salt.modules.iptables.__virtual__()
+if isinstance(HAS_IPTABLES, tuple):
+    HAS_IPTABLES = HAS_IPTABLES[0]
 
 
 @destructiveTest
