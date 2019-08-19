@@ -142,9 +142,57 @@ class CloudTest(ShellCase):
             self._instance_name = generate_random_name('cloud-test-').lower()
         return self._instance_name
 
-    def _instance_exists(self):
-        # salt-cloud -a show_instance myinstance
-        return '        {0}:'.format(self.INSTANCE_NAME) in self.run_cloud('--query')
+    @property
+    def providers(self):
+        if not hasattr(self, '_providers'):
+            self._providers = self.run_cloud('--list-providers')
+        return self._providers
+
+    @property
+    def provider_config(self):
+        if not hasattr(self, '_provider_config'):
+            self._provider_config = cloud_providers_config(
+                os.path.join(
+                    self.config_dir,
+                    'cloud.providers.d',
+                    self.PROVIDER + '.conf'
+                )
+            )
+        return self._provider_config[self.profile_str][self.PROVIDER]
+
+    @property
+    def config(self):
+        if not hasattr(self, '_config'):
+            self._config = cloud_config(
+                os.path.join(
+                    self.config_dir,
+                    'cloud.profiles.d',
+                    self.PROVIDER + '.conf'
+                )
+            )
+        return self._config
+
+    @property
+    def profile_str(self):
+        return self.PROVIDER + '-config'
+
+    @expensiveTest
+    def setUp(self):
+        '''
+        Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_CONFIG_ITEMS or this will fail
+        '''
+        super(CloudTest, self).setUp()
+
+        if not self.PROVIDER:
+            self.fail('A PROVIDER must be defined for this test')
+
+        # check if appropriate cloud provider and profile files are present
+        if self.profile_str + ':' not in self.providers:
+            self.skipTest(
+                'Configuration file for {0} was not found. Check {0}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
+                    .format(self.PROVIDER)
+            )
 
     def _destroy_instance(self):
         delete = self.run_cloud('-d {0} --assume-yes'.format(self.INSTANCE_NAME), timeout=TIMEOUT)
