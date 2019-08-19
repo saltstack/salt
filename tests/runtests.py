@@ -837,7 +837,8 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                                                  load_from_name=False)
                         status.append(results)
                         continue
-                    if name.startswith(('tests.unit.', 'unit.')):
+                    if name.startswith(('tests.unit.', 'unit.',
+                                        'tests.multimaster', 'multimaster')):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)
@@ -856,19 +857,12 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         if self.options.name:
             for test in self.options.name:
-                if test.startswith(('tests.unit.', 'unit.',
-                                    'test.kitchen.', 'kitchen.',
-                                    'test.integration.', 'integration.')):
-                    named_unit_test.append(test)
-                    continue
-                named_tests.append(test)
+                if test.startswith(('tests.multimaster.', 'multimaster.')):
+                    named_tests.append(test)
 
         # TODO: check 'from_filenames'
         if not self.options.multimaster and not named_tests:
-            # We're either not running any integration test suites, or we're
-            # only running unit tests by passing --unit or by passing only
-            # `unit.<whatever>` to --name.  We don't need the tests daemon
-            # running
+            # We're not running any multimaster test suites.
             return [True]
 
         if not salt.utils.platform.is_windows():
@@ -883,9 +877,6 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
             print_header(' * Setting up Salt daemons to execute tests', top=False)
 
         status = []
-        # Return an empty status if no tests have been enabled
-        if not self._check_enabled_suites(include_multimaster=True) and not self.options.name:
-            return status
 
         with MultimasterTestDaemon(self):
             if self.options.name:
@@ -896,7 +887,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     if os.path.isfile(name):
                         if not name.endswith('.py'):
                             continue
-                        if name.startswith(os.path.join('tests', 'unit')):
+                        if not name.startswith(os.path.join('tests', 'multimaster')):
                             continue
                         results = self.run_suite(os.path.dirname(name),
                                                  name,
@@ -904,7 +895,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                                                  load_from_name=False)
                         status.append(results)
                         continue
-                    if name.startswith(('tests.unit.', 'unit.')):
+                    if not name.startswith(('tests.multimaster.', 'multimaster.')):
                         continue
                     results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                     status.append(results)

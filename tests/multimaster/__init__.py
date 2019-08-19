@@ -293,6 +293,8 @@ class MultimasterTestDaemon(TestDaemon):
             )
             sys.stdout.flush()
 
+    start_tcp_daemons = start_zeromq_daemons
+
     def wait_for_minions(self, start, timeout, sleep=5):
         '''
         Ensure all minions and masters (including sub-masters) are connected.
