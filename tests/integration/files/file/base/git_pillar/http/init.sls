@@ -50,15 +50,3 @@ uwsgi:
         UWSGI_PROFILE: cgi
     - require:
       - virtualenv: {{ venv_dir }}
-
-start_uwsgi:
-  cmd.run:
-    - name: 'uwsgi --yaml {{ config_dir }}/uwsgi.yml'
-    - require:
-      - file: {{ config_dir }}/uwsgi.yml
-
-start_nginx:
-  cmd.run:
-    - name: 'nginx -c {{ config_dir }}/nginx.conf'
-    - require:
-      - file: {{ config_dir }}/nginx.conf
