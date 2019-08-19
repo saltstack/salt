@@ -113,7 +113,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
 
-    @skipIf(not _PKG_TARGETS, 'No pkg.install targets configured for this test')
     def test_pkg_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -359,7 +358,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(pre_grains and 'debian' not in pre_grains.like(), 'This test only runs on debian based distributions')
+    @skipIf(not pre_grains or ('debian' not in pre_grains.like()), 'This test only runs on debian based distributions')
     def test_pkg_011_latest_only_upgrade(self):
         '''
         WARNING: This test will pick a package with an available upgrade (if
@@ -378,8 +377,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.latest', name=target, refresh=False, only_upgrade=True)
         self.assertSaltFalseReturn(ret)
 
-        # Now look for updates and try to run the state on a package which is
-        # already up-to-date.
+        # Now look for updates and try to run the state on a package which is already up-to-date.
         installed_pkgs = self.run_function('pkg.list_pkgs')
         updates = self.run_function('pkg.list_upgrades', refresh=False)
 
@@ -458,7 +456,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(pre_grains and not any(x in pre_grains.like() for x in ('debian', 'redhat')), 'Comparison operator not specially implemented')
+    @skipIf(not pre_grains or not any(x in pre_grains.like() for x in ('debian', 'redhat')),
+            'Comparison operator not specially implemented')
     def test_pkg_013_installed_with_comparison_operator(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -493,7 +492,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(pre_grains and 'redhat' not in pre_grains.like(), 'Comparison operator not specially implemented')
+    @skipIf(not pre_grains or 'redhat' not in pre_grains.like(), 'Comparison operator not specially implemented')
     def test_pkg_014_installed_missing_release(self):
         '''
         Tests that a version number missing the release portion still resolves
@@ -519,7 +518,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(pre_grains and not any(x in pre_grains.like() for x in ('debian', 'redhat')), 'Test is for debian/redhat')
+    @skipIf(not pre_grains or not any(x in pre_grains.like() for x in ('debian', 'redhat')), 'Test is for debian/redhat')
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     def test_pkg_015_installed_held(self):
         '''
