@@ -22,7 +22,7 @@ from salt.ext.six.moves import map
 # Get logging started
 log = logging.getLogger(__name__)
 
-default_event_wait = 30
+default_event_wait = 60
 __func_alias__ = {
     'list_': 'list',
     'reload_': 'reload'
@@ -101,15 +101,18 @@ def list_available(return_yaml=True, **kwargs):
         salt '*' beacons.list_available
 
     '''
+    log.info('BEACONS.LIST_AVAILABLE started')
     beacons = None
 
     try:
         eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
         res = __salt__['event.fire']({'func': 'list_available'}, 'manage_beacons')
         if res:
+            log.info('BEACONS.LIST_AVAILABLE waiting response with timeout %s', default_event_wait)
             event_ret = eventer.get_event(
                 tag='/salt/minion/minion_beacons_list_available_complete',
                 wait=kwargs.get('timeout', default_event_wait))
+            log.info('BEACONS.LIST_AVAILABLE event_ret: %s', event_ret)
             if event_ret and event_ret['complete']:
                 beacons = event_ret['beacons']
     except KeyError:
@@ -117,16 +120,22 @@ def list_available(return_yaml=True, **kwargs):
         ret = {}
         ret['result'] = False
         ret['comment'] = 'Event module not available. Beacon add failed.'
+        log.info('BEACONS.LIST_AVAILABLE returning %s', ret)
         return ret
 
     if beacons:
         if return_yaml:
             tmp = {'beacons': beacons}
-            return salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
+            ret = salt.utils.yaml.safe_dump(tmp, default_flow_style=False)
+            log.info('BEACONS.LIST_AVAILABLE returning %s', ret)
+            return ret
         else:
+            log.info('BEACONS.LIST_AVAILABLE returning %s', beacons)
             return beacons
     else:
-        return {'beacons': {}}
+        ret = {'beacons': {}}
+        log.info('BEACONS.LIST_AVAILABLE returning %s', ret)
+        return ret
 
 
 def add(name, beacon_data, **kwargs):

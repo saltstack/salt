@@ -29,8 +29,12 @@ from salt.ext.six.moves import map
 # pylint: enable=import-error
 
 # Import third party libs
+log = logging.getLogger(__name__)
+
 try:
+    log.info('IMPORTING pyinotify')
     import pyinotify
+    log.info('IMPORTED pyinotify')
     HAS_PYINOTIFY = True
     DEFAULT_MASK = pyinotify.IN_CREATE | pyinotify.IN_DELETE | pyinotify.IN_MODIFY
     MASKS = {}
@@ -44,12 +48,13 @@ except ImportError:
 
 __virtualname__ = 'inotify'
 
-log = logging.getLogger(__name__)
-
 
 def __virtual__():
+    log.info('VIRTUAL: %s', HAS_PYINOTIFY)
     if HAS_PYINOTIFY:
+        log.info('VIRTUAL: %s', __virtualname__)
         return __virtualname__
+    log.info('VIRTUAL: %s', False)
     return False
 
 
