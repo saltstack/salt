@@ -433,7 +433,7 @@ class TestProcessList(TestCase):
         start = time.time()
         while proc.is_alive():
             if time.time() - start > timeout:
-                raise TimeoutError("Process did not finishe before timeout")
+                raise Exception("Process did not finishe before timeout")
             time.sleep(.3)
 
     def test_process_list_process(self):

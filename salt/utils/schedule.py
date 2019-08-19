@@ -44,7 +44,7 @@ import salt.minion
 import salt.payload
 import salt.syspaths
 import salt.exceptions
-import salt.log.setup as log_setup
+#import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 
@@ -660,9 +660,9 @@ class Schedule(object):
                 ret['jid']
             )
 
-        if multiprocessing_enabled and not salt.utils.platform.is_windows():
-            # Reconfigure multiprocessing logging after daemonizing
-            log_setup.setup_multiprocessing_logging()
+        # if multiprocessing_enabled and not salt.utils.platform.is_windows():
+        #     # Reconfigure multiprocessing logging after daemonizing
+        #     log_setup.setup_multiprocessing_logging()
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
@@ -1727,6 +1727,7 @@ class Schedule(object):
 
     def cleanup_subprocesses(self):
         self._subprocess_list.cleanup()
+
 
 def clean_proc_dir(opts):
 
