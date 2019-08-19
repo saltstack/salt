@@ -378,3 +378,24 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
         self.assertIn(pkg_latest, cmd_pkg)
+
+    @destructiveTest
+    @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is mac')
+    def test_pkg_update_on_yum_dnf(self):
+        '''
+        Check that pkg.update returns successfully regardless of changes for RedHat system,
+        validates yum/dnf upgrade called successfully
+        '''
+
+        func = 'pkg.update'
+        os_family = self.run_function('grains.get', ['os_family'])
+        if os_family != 'RedHat':
+            self.skipTest('Runs on RedHat family only')
+
+        ret = self.run_function(func)
+        if not isinstance(ret, dict):
+            self.assertNotIn('ERROR', ret)
+            self.assertEqual(ret, '')
+
+        self.assertIsInstance(ret, dict)

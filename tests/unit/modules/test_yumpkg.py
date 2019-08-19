@@ -467,6 +467,36 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 ignore_retcode=True,
                 python_shell=False)
 
+    def test_update_dnf_includes_obsoletes_flag(self):
+        '''
+        pkg.update should include --setopt obsoletes=False for DNF, but not in yum
+        '''
+        with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})), \
+                patch('salt.utils.systemd.has_scope', MagicMock(return_value=False)):
+
+            cmd = MagicMock(return_value={'retcode': 0})
+            # test yum
+            with patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd}):
+                yumpkg.update(
+                    refresh=False,
+                    branch='foo')
+                cmd.assert_called_once_with(
+                    ['yum', '--quiet', '-y', '--branch=foo',
+                     'update'], env={},
+                    output_loglevel='trace',
+                    python_shell=False)
+                # test with DNF
+                with patch.dict(yumpkg.__context__, {'yum_bin': 'dnf'}):
+                    yumpkg.update(
+                        refresh=False,
+                        branch='foo')
+                    cmd.assert_called_with(
+                        ['dnf', '--quiet', '-y', '--branch=foo',
+                         '--setopt', 'obsoletes=False', 'upgrade'],
+                        env={},
+                        output_loglevel='trace',
+                        python_shell=False)
+
     def test_refresh_db_with_options(self):
 
         with patch('salt.utils.pkg.clear_rtag', Mock()):
