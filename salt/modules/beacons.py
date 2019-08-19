@@ -22,7 +22,7 @@ from salt.ext.six.moves import map
 # Get logging started
 log = logging.getLogger(__name__)
 
-default_event_wait = 30
+default_event_wait = 60
 __func_alias__ = {
     'list_': 'list',
     'reload_': 'reload'
