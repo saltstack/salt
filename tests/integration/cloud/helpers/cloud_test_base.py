@@ -32,8 +32,8 @@ class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
     TMP_PROVIDER_DIR = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'cloud.providers.d')
-    __RE_RUN_DELAY = 30
-    __RE_TRIES = 12
+    __RE_RUN_DELAY = 15
+    __RE_TRIES = 3
 
     @staticmethod
     def clean_cloud_dir(tmp_dir):
@@ -186,6 +186,7 @@ class CloudTest(ShellCase):
         if not self.PROVIDER:
             self.fail('A PROVIDER must be defined for this test')
 
+
         # check if appropriate cloud provider and profile files are present
         if self.profile_str + ':' not in self.providers:
             self.skipTest(
@@ -216,18 +217,15 @@ class CloudTest(ShellCase):
         # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
         destroyed = False
         if self._instance_exists():
-            for tries in range(3):
-                try:
-                    self.assertDestroyInstance()
+            for _ in range(3):
+                sleep(30)
+                success, result_str = self._destroy_instance()
+                if success:
                     self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
                         self.instance_name))
-                except AssertionError as e:
-                    log.error('Failed to delete instance "{}". Tries: {}\n{}'.format(self.instance_name, tries, str(e)))
                 if not self._instance_exists():
                     destroyed = True
                     break
-                else:
-                    sleep(30)
 
             if not destroyed:
                 # Destroying instances in the tearDown is a contingency, not the way things should work by default.
@@ -235,12 +233,12 @@ class CloudTest(ShellCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+        cls.clean_cloud_dir(cls, cls.TMP_PROVIDER_DIR)
 
     @classmethod
     def setUpClass(cls):
         # clean up before setup
-        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+        cls.clean_cloud_dir(cls, cls.TMP_PROVIDER_DIR)
 
         # add the provider config for only the cloud we are testing
         provider_file = cls.PROVIDER + '.conf'
