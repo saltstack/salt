@@ -35,6 +35,13 @@ class TestHandleEvents(MultimasterModuleCase, ShellTestCase, AdaptedConfiguratio
                 ('filter', 'INPUT', disconnect_master_rule),
                 master_tgt=1,
                 )
+        # Workaround slow beacons.list_available response
+        if not res:
+            res = self.run_function(
+                    'iptables.append',
+                    ('filter', 'INPUT', disconnect_master_rule),
+                    master_tgt=1,
+                    )
         self.assertTrue(res)
         try:
             # Send an event. This would return okay.
