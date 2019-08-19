@@ -857,7 +857,7 @@ class SubprocessList(object):
     def add(self, proc):
         with self.lock:
             self.processes.append(proc)
-            log.warning('Subprocess %s added', proc.name)
+            log.debug('Subprocess %s added', proc.name)
 
     def cleanup(self):
         with self.lock:
@@ -866,4 +866,4 @@ class SubprocessList(object):
                     continue
                 proc.join()
                 self.processes.remove(proc)
-                log.warning('Subprocess %s cleaned up', proc.name)
+                log.debug('Subprocess %s cleaned up', proc.name)
