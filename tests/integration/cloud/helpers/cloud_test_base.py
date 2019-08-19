@@ -179,7 +179,6 @@ class CloudTest(ShellCase):
         if not self.PROVIDER:
             self.fail('A PROVIDER must be defined for this test')
 
-
         # check if appropriate cloud provider and profile files are present
         if self.profile_str + ':' not in self.providers:
             self.skipTest(
