@@ -14,9 +14,6 @@ from salt.exceptions import CommandExecutionError
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
-import logging
-log = logging.getLogger(__name__)
-
 
 class BeaconsAddDeleteTest(ModuleCase):
     '''
