@@ -112,6 +112,11 @@ def daemonize(redirect_out=True):
 
 
 def dup2(file1, file2):
+    '''
+    Duplicate file descriptor fd to fd2, closing the latter first if necessary.
+    This method is similar to os.dup2 but ignores streams that do not have a
+    supported fileno method.
+    '''
     if isinstance(file1, int):
         fno1 = file1
     else:
@@ -835,3 +840,30 @@ def default_signals(*signals):
         signal.signal(signum, old_signals[signum])
 
     del old_signals
+
+
+class SubprocessList(object):
+
+    def __init__(self, processes=None, lock=None):
+        if processes is None:
+            self.processes = []
+        else:
+            self.processes = processes
+        if lock is None:
+            self.lock = multiprocessing.Lock()
+        else:
+            self.lock = lock
+
+    def add(self, proc):
+        with self.lock:
+            self.processes.append(proc)
+            log.warning('Subprocess %s added', proc.name)
+
+    def cleanup(self):
+        with self.lock:
+            for proc in self.processes:
+                if proc.is_alive():
+                    continue
+                proc.join()
+                self.processes.remove(proc)
+                log.warning('Subprocess %s cleaned up', proc.name)

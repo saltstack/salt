@@ -331,6 +331,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 self.loop_interval = self.schedule.loop_interval
         except Exception as exc:
             log.error('Exception %s occurred in scheduled job', exc)
+        self.schedule.cleanup_subprocesses()
 
     def handle_presence(self, old_present):
         '''
