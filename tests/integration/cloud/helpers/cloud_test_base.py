@@ -30,10 +30,11 @@ class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
     TMP_PROVIDER_DIR = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'cloud.providers.d')
-    __RE_RUN_DELAY = 15
-    __RE_TRIES = 3
+    __RE_RUN_DELAY = 30
+    __RE_TRIES = 12
 
-    def clean_cloud_dir(self, tmp_dir):
+    @staticmethod
+    def clean_cloud_dir(tmp_dir):
         '''
         Clean the cloud.providers.d tmp directory
         '''
@@ -92,8 +93,7 @@ class CloudTest(ShellCase):
 
             # Assert that the last query was successful
             self.assertTrue(self._instance_exists(instance_name, query),
-                            'Instance "{}" was not created successfully: |\n\t{}\n\t|`'.format(
-                                instance_name, '\n\t'.join(creation_ret if creation_ret else query)))
+                            'Instance "{}" was not created successfully: '.format(', '.join(query)))
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
@@ -228,12 +228,12 @@ class CloudTest(ShellCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.clean_cloud_dir(cls, cls.TMP_PROVIDER_DIR)
+        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
 
     @classmethod
     def setUpClass(cls):
         # clean up before setup
-        cls.clean_cloud_dir(cls, cls.TMP_PROVIDER_DIR)
+        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
 
         # add the provider config for only the cloud we are testing
         provider_file = cls.PROVIDER + '.conf'
