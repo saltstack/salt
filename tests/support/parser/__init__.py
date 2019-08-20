@@ -848,12 +848,9 @@ class SaltTestingParser(optparse.OptionParser):
             if children:
                 log.info('Second run at terminating test suite child processes: %s', children)
                 helpers.terminate_process(children=children, kill_children=True)
-        log.info(
-            'Test suite execution finalized with exit code: {0}'.format(
-                exit_code
-            )
-        )
-        self.exit(exit_code)
+        exit_msg = 'Test suite execution finalized with exit code: {}'.format(exit_code)
+        log.info(exit_msg)
+        self.exit(status=exit_code, msg=exit_msg + '\n')
 
     def run_suite_in_docker(self):
         '''
