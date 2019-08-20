@@ -102,7 +102,7 @@ class CloudTest(ShellCase):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = yaml.safe_dump(delete)
+        delete_str = yaml.safe_dump(delete).strip()
         log.debug('Deletion status: |\n{}'.format(delete_str))
 
         if any([x in delete_str for x in (
@@ -114,15 +114,15 @@ class CloudTest(ShellCase):
         elif any([x in delete_str for x in (
             'shutting-down',
             '.delete',
+            self.instance_name + '-DEL'
         )]):
-            sleep(shutdown_delay)
             destroyed = True
             log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
         else:
+            # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
             sleep(shutdown_delay)
-            # It's not clear from the delete string that deletion was successful, ask salt-cloud
             query = self.query_instances()
-            destroyed = self.instance_name in query
+            destroyed = self.instance_name not in query
             delete_str += ' :: ' * bool(delete_str) + ', '.join(query)
 
         return destroyed, delete_str
