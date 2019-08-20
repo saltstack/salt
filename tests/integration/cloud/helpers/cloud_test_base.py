@@ -99,14 +99,14 @@ class CloudTest(ShellCase):
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
-    def assertDestroyInstance(self):
+    def _destroy_instance(self):
         shutdown_delay = 30
         log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
         delete = safe_load('\n'.join(delete_str))
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = yaml.safe_dump(delete)
-        log.debug('Deletion status: |\n{}'.format(delete_str))
+        delete_str = ''.join(delete)
+        log.debug('Deletion status: {}'.format(delete_str))
 
         if any([x in delete_str for x in (
             'True',
@@ -119,13 +119,14 @@ class CloudTest(ShellCase):
             '.delete',
             self.instance_name + '-DEL'
         )]):
+            sleep(shutdown_delay)
             destroyed = True
             log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
         else:
-            # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
             sleep(shutdown_delay)
+            # It's not clear from the delete string that deletion was successful, ask salt-cloud
             query = self.query_instances()
-            destroyed = self.instance_name not in query
+            destroyed = self.instance_name in query
             delete_str += ' :: ' * bool(delete_str) + ', '.join(query)
 
         return destroyed, delete_str
