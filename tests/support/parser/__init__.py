@@ -57,28 +57,51 @@ log = logging.getLogger(__name__)
 WEIRD_SIGNAL_NUM = -45654
 
 
-# Let's setup a global exception hook handler which will log all exceptions
-# Store a reference to the original handler
-__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
-
-
-def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
+def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
+                                       _logger=logging.getLogger(__name__),
+                                       _stderr=sys.__stderr__,
+                                       _format_exception=traceback.format_exception):
     '''
     This function will log all python exceptions.
     '''
+    if exc_type.__name__ == "KeyboardInterrupt":
+        # Call the original sys.excepthook
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
     # Log the exception
-    logging.getLogger(__name__).error(
-        'An un-handled exception was caught by salt-testing\'s global '
-        'exception handler:\n{0}: {1}\n{2}'.format(
-            exc_type.__name__,
-            exc_value,
-            ''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback
-            )).strip()
+    try:
+        msg = (
+            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n{}'.format(
+                exc_type.__name__,
+                exc_value,
+                ''.join(_format_exception(exc_type, exc_value, exc_traceback)).strip()
+            )
         )
-    )
+    except Exception:  # pylint: disable=broad-except
+        msg = (
+            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n'
+            '(UNABLE TO FORMAT TRACEBACK)'.format(
+                exc_type.__name__,
+                exc_value,
+            )
+        )
+    try:
+        _logger(__name__).error(msg)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and logging has been set to None already
+        try:
+            _stderr.write(msg + '\n')
+        except Exception:  # pylint: disable=broad-except
+            # We have also lost reference to sys.__stderr__ ?!
+            print(msg)
+
     # Call the original sys.excepthook
-    __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
+    try:
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and sys has been set to None already
+        pass
 
 
 # Set our own exception handler as the one to use
