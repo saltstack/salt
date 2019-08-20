@@ -105,22 +105,34 @@ class CloudTest(ShellCase):
         delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
         delete = safe_load('\n'.join(delete_str))
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        self.assertIn(self.profile_str, delete)
-        self.assertIn(self.PROVIDER, delete[self.profile_str])
-        self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
+        delete_str = yaml.safe_dump(delete).strip()
+        log.debug('Deletion status: |\n{}'.format(delete_str))
 
-        if delete_str:
-            delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
-            if isinstance(delete_status, str):
-                self.assertEquals(delete_status, 'True')
-            elif isinstance(delete_status, dict):
-                if delete_status.get('currentState'):
-                    self.assertEquals(delete_status.get('currentState').get('name'), 'shutting-down')
-                self.assertIn(delete_status.get('ACTION'), '{}.delete'.format(self.profile_str))
+        if any([x in delete_str for x in (
+            'True',
+            'was successfully deleted'
+        )]):
+            destroyed = True
+            log.debug('Instance "{}" was successfully deleted'.format(self.instance_name))
+        elif any([x in delete_str for x in (
+            'shutting-down',
+            '.delete',
+            self.instance_name + '-DEL'
+        )]):
+            destroyed = True
+            log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
         else:
             # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
             sleep(shutdown_delay)
-            self.assertIn(self.instance_name, self.query_instances())
+            query = self.query_instances()
+            destroyed = self.instance_name not in query
+            delete_str += ' :: ' * bool(delete_str) + ', '.join(query)
+
+        return destroyed, delete_str
+
+    def assertDestroyInstance(self):
+        success, delete_str = self._destroy_instance()
+        self.assertTrue(success, 'Instance "{}" was not deleted: {}'.format(self.instance_name, delete_str))
 
     @property
     def INSTANCE_NAME(self):
