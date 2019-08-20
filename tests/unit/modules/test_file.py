@@ -1128,9 +1128,9 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
-            with pytest.raises(CommandExecutionError) as cmd_err:
+            with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', mode=mode)
-            self.assertIn(err_msg, six.text_type(cmd_err))
+            self.assertIn(err_msg, six.text_type(exc_info.value))
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1140,10 +1140,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         for mode in ['insert', 'ensure', 'replace']:
-            with pytest.raises(CommandExecutionError) as cmd_err:
+            with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', mode=mode)
             self.assertIn('Content can only be empty if mode is "delete"',
-                          six.text_type(cmd_err))
+                          six.text_type(exc_info.value))
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1155,10 +1155,10 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         '''
         files_fopen = mock_open(read_data='test data')
         with patch('salt.utils.files.fopen', files_fopen):
-            with pytest.raises(CommandExecutionError) as cmd_err:
+            with pytest.raises(CommandExecutionError) as exc_info:
                 filemod.line('foo', content='test content', mode='insert')
             self.assertIn('"location" or "before/after"',
-                          six.text_type(cmd_err))
+                          six.text_type(exc_info.value))
 
     def test_util_starts_till(self):
         '''
@@ -1764,11 +1764,11 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('salt.utils.files.fopen', files_fopen):
                 atomic_opener = mock_open()
                 with patch('salt.utils.atomicfile.atomic_open', atomic_opener):
-                    with pytest.raises(CommandExecutionError) as cmd_err:
+                    with pytest.raises(CommandExecutionError) as exc_info:
                         filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
             self.assertIn(
                 'Found more than one line between boundaries "before" and "after"',
-                six.text_type(cmd_err))
+                six.text_type(exc_info))
 
     @with_tempfile()
     def test_line_delete(self, name):
