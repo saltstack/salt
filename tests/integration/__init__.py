@@ -179,6 +179,12 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                 log.exception(exc)
 
 
+class TestDaemonStartFailed(Exception):
+    '''
+    Simple exception to signal that a test daemon failed to start
+    '''
+
+
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
@@ -313,6 +319,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -349,6 +356,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -385,6 +393,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -422,6 +431,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -458,6 +468,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         if self.parser.options.proxy:
             self.minion_targets.add(self.proxy_opts['id'])
@@ -496,6 +507,7 @@ class TestDaemon(object):
                     ' * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}'.format(**self.colors)
                 )
                 sys.stdout.flush()
+                raise TestDaemonStartFailed()
 
     def start_raet_daemons(self):
         '''
@@ -1086,23 +1098,32 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        if hasattr(self.sub_minion_process, 'terminate'):
-            self.sub_minion_process.terminate()
-        else:
-            log.error('self.sub_minion_process can\'t be terminate.')
+        try:
+            if hasattr(self.sub_minion_process, 'terminate'):
+                self.sub_minion_process.terminate()
+            else:
+                log.error('self.sub_minion_process can\'t be terminate.')
+        except AttributeError:
+            pass
 
-        if hasattr(self.minion_process, 'terminate'):
-            self.minion_process.terminate()
-        else:
-            log.error('self.minion_process can\'t be terminate.')
+        try:
+            if hasattr(self.minion_process, 'terminate'):
+                self.minion_process.terminate()
+            else:
+                log.error('self.minion_process can\'t be terminate.')
+        except AttributeError:
+            pass
 
         if hasattr(self, 'proxy_process'):
             self.proxy_process.terminate()
 
-        if hasattr(self.master_process, 'terminate'):
-            self.master_process.terminate()
-        else:
-            log.error('self.master_process can\'t be terminate.')
+        try:
+            if hasattr(self.master_process, 'terminate'):
+                self.master_process.terminate()
+            else:
+                log.error('self.master_process can\'t be terminate.')
+        except AttributeError:
+            pass
 
         try:
             self.syndic_process.terminate()
@@ -1112,22 +1133,6 @@ class TestDaemon(object):
             self.smaster_process.terminate()
         except AttributeError:
             pass
-        #salt.utils.process.clean_proc(self.sub_minion_process, wait_for_kill=50)
-        #self.sub_minion_process.join()
-        #salt.utils.process.clean_proc(self.minion_process, wait_for_kill=50)
-        #self.minion_process.join()
-        #salt.utils.process.clean_proc(self.master_process, wait_for_kill=50)
-        #self.master_process.join()
-        #try:
-        #    salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
-        #    self.syndic_process.join()
-        #except AttributeError:
-        #    pass
-        #try:
-        #    salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
-        #    self.smaster_process.join()
-        #except AttributeError:
-        #    pass
         self.log_server.server_close()
         self.log_server.shutdown()
         self._exit_mockbin()
