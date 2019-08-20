@@ -5,10 +5,11 @@ Tests for the Openstack Cloud Provider
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+from ast import literal_eval
+from time import sleep
 import logging
 import os
 import shutil
-from time import sleep
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -19,7 +20,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt Libs
 from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
-from salt.utils import yaml
+from salt.utils.yaml import safe_load
 
 TIMEOUT = 500
 
@@ -46,7 +47,7 @@ class CloudTest(ShellCase):
         '''
         Standardize the data returned from a salt-cloud --query
         '''
-        return set(x.strip(': ') for x in self.run_cloud('--query') if x.lstrip().lower().startswith('cloud-test-'))
+        return literal_eval(self.run_cloud('--query --out=highstate')).keys()
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
@@ -97,39 +98,28 @@ class CloudTest(ShellCase):
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
-    def _destroy_instance(self):
+    def assertDestroyInstance(self):
         shutdown_delay = 30
         log.debug('Deleting instance "{}"'.format(self.instance_name))
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
+        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
+        delete = safe_load('\n'.join(delete_str))
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = yaml.safe_dump(delete).strip()
-        log.debug('Deletion status: |\n{}'.format(delete_str))
+        self.assertIn(self.profile_str, delete)
+        self.assertIn(self.PROVIDER, delete[self.profile_str])
+        self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
 
-        if any([x in delete_str for x in (
-            'True',
-            'was successfully deleted'
-        )]):
-            destroyed = True
-            log.debug('Instance "{}" was successfully deleted'.format(self.instance_name))
-        elif any([x in delete_str for x in (
-            'shutting-down',
-            '.delete',
-            self.instance_name + '-DEL'
-        )]):
-            destroyed = True
-            log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
+        if delete_str:
+            delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
+            if isinstance(delete_status, str):
+                self.assertEquals(delete_status, 'True')
+            elif isinstance(delete_status, dict):
+                if delete_status.get('currentState'):
+                    self.assertEquals(delete_status.get('currentState').get('name'), 'shutting-down')
+                self.assertIn(delete_status.get('ACTION'), '{}.delete'.format(self.profile_str))
         else:
             # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
             sleep(shutdown_delay)
-            query = self.query_instances()
-            destroyed = self.instance_name not in query
-            delete_str += ' :: ' * bool(delete_str) + ', '.join(query)
-
-        return destroyed, delete_str
-
-    def assertDestroyInstance(self):
-        success, delete_str = self._destroy_instance()
-        self.assertTrue(success, 'Instance "{}" was not deleted: {}'.format(self.instance_name, delete_str))
+            self.assertIn(self.instance_name, self.query_instances())
 
     @property
     def instance_name(self):
@@ -205,22 +195,25 @@ class CloudTest(ShellCase):
     def tearDown(self):
         '''
         Clean up after tests, If the instance still exists for any reason, delete it.
-        Instances should be destroyed before the tearDown, _destroy_instance() should be called exactly
+        Instances should be destroyed before the tearDown, assertDestroyInstance() should be called exactly
         one time in a test for each instance created.  This is a failSafe and something went wrong
         if the tearDown is where an instance is destroyed.
         '''
         # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
         destroyed = False
         if self._instance_exists():
-            for _ in range(3):
-                sleep(30)
-                success, result_str = self._destroy_instance()
-                if success:
+            for tries in range(3):
+                try:
+                    self.assertDestroyInstance()
                     self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
                         self.instance_name))
+                except AssertionError as e:
+                    log.error('Failed to delete instance "{}". Tries: {}\n{}'.format(self.instance_name, tries, str(e)))
                 if not self._instance_exists():
                     destroyed = True
                     break
+                else:
+                    sleep(30)
 
             if not destroyed:
                 # Destroying instances in the tearDown is a contingency, not the way things should work by default.
