@@ -110,11 +110,11 @@ class CloudTest(ShellCase):
         if delete_str:
             delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
             if isinstance(delete_status, str):
-                self.assertEquals(delete_status, 'True')
+                self.assertEqual(delete_status, 'True')
             elif isinstance(delete_status, dict):
                 if delete_status.get('currentState'):
-                    self.assertEquals(delete_status.get('currentState').get('name'), 'shutting-down')
-                self.assertTrue(delete_status.get('ACTION').endswith('.delete'))
+                    self.assertEqual(delete_status.get('currentState').get('name'), 'shutting-down')
+                self.assertTrue(delete_status.get('ACTION', '').endswith('.delete'))
         else:
             # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
             sleep(shutdown_delay)
