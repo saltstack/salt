@@ -176,10 +176,12 @@ class CloudTest(ShellCase):
     def tearDownClass(cls):
         cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
 
-                if 'shutting-down' in delete_str:
-                    log.debug('Instance "{}" was deleted properly'.format(self.INSTANCE_NAME))
-                    break
-                else:
-                    log.warning('Instance "{}" was not deleted'.format(self.INSTANCE_NAME))
-                    sleep(10)
-        self.assertEqual(self._instance_exists(), False)
+    @classmethod
+    def setUpClass(cls):
+        # clean up before setup
+        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+
+        # add the provider config for only the cloud we are testing
+        provider_file = cls.PROVIDER + '.conf'
+        shutil.copyfile(os.path.join(os.path.join(FILES, 'conf', 'cloud.providers.d'), provider_file),
+                        os.path.join(os.path.join(cls.TMP_PROVIDER_DIR, provider_file)))
