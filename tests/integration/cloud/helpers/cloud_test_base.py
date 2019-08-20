@@ -47,7 +47,7 @@ class CloudTest(ShellCase):
         '''
         Standardize the data returned from a salt-cloud --query
         '''
-        return literal_eval(self.run_cloud('--query --out=highstate')).keys()
+        return set(x.strip(': ') for x in self.run_cloud('--query') if x.lstrip().lower().startswith('cloud-test-'))
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
@@ -115,7 +115,7 @@ class CloudTest(ShellCase):
             elif isinstance(delete_status, dict):
                 if delete_status.get('currentState'):
                     self.assertEquals(delete_status.get('currentState').get('name'), 'shutting-down')
-                self.assertIn(delete_status.get('ACTION'), '{}.delete'.format(self.profile_str))
+                self.assertTrue(delete_status.get('ACTION').endswith('.delete'))
         else:
             # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
             sleep(shutdown_delay)
