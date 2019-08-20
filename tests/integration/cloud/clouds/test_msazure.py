@@ -126,53 +126,8 @@ class AzureTest(CloudTest):
         Test creating an instance on Azure
         '''
         # check if instance with salt installed returned
-        try:
-            self.assertIn(
-                INSTANCE_NAME,
-                [i.strip() for i in self.run_cloud(
-                    '-p {0} {1}'.format(
-                        PROFILE_NAME,
-                        INSTANCE_NAME
-                    ), timeout=TIMEOUT
-                )]
-            )
-        except AssertionError:
-            self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME),
-                           timeout=TIMEOUT)
-            raise
-
-        # Try up to 10 times to delete the instance since it might not be
-        # available for deletion right away.
-        for num_try in range(10):
-            # delete the instance
-            try:
-                self.assertIn(
-                    INSTANCE_NAME + ':',
-                    [i.strip() for i in self.run_cloud(
-                        '-d {0} --assume-yes'.format(
-                            INSTANCE_NAME
-                        ), timeout=TIMEOUT
-                    )]
-                )
-            except AssertionError:
-                # The deletion did not succeed, wait 10s and try again
-                if num_try < 9:
-                    log.warning('Unable to delete azure instance on try %d', num_try)
-                    time.sleep(10)
-                else:
-                    raise
-            else:
-                # The deletion succeeded
-                break
-
-    def test_instance(self):
-        '''
-        Clean up after tests
-        '''
-        # delete the instance
-        delete = self.run_cloud('-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
+        ret_val = self.run_cloud('-p azure-test {0}'.format(self.instance_name), timeout=TIMEOUT)
+        self.assertInstanceExists(ret_val)
 
         # check if deletion was performed appropriately
         self.assertIn(INSTANCE_NAME, delete_str)
