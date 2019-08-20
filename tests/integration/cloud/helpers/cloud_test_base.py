@@ -19,6 +19,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt Libs
 from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
+from salt.utils import yaml
 
 TIMEOUT = 500
 
@@ -101,8 +102,8 @@ class CloudTest(ShellCase):
         log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
         # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-        log.debug('Deletion status: {}'.format(delete_str))
+        delete_str = yaml.safe_dump(delete)
+        log.debug('Deletion status: |\n{}'.format(delete_str))
 
         if any([x in delete_str for x in (
             'True',
