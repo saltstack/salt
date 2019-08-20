@@ -1133,14 +1133,15 @@ class TestDaemon(object):
             self.smaster_process.terminate()
         except AttributeError:
             pass
-        self.log_server.server_close()
-        self.log_server.shutdown()
         self._exit_mockbin()
         self._exit_ssh()
-        self.log_server_process.join()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
+        # Shutdown the log server
+        self.log_server.server_close()
+        self.log_server.shutdown()
+        self.log_server_process.join()
 
     def pre_setup_minions(self):
         '''
