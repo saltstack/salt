@@ -472,11 +472,22 @@ def _grant_to_tokens(grant):
     exploded_grant = list(lex)
     grant_tokens = []
     multiword_statement = []
+    column_permissions = []
     position_tracker = 1  # Skip the initial 'GRANT' word token
     database = ''
     phrase = 'grants'
 
     for token in exploded_grant[position_tracker:]:
+
+        if token == '(' and phrase == 'grants':
+            phrase = 'column_perm'
+            position_tracker += 1
+            continue
+
+        if token == ')' and phrase == 'column_perm':
+            phrase = 'grants'
+            position_tracker += 1
+            continue
 
         if token == ',' and phrase == 'grants':
             position_tracker += 1
@@ -496,6 +507,17 @@ def _grant_to_tokens(grant):
             phrase = 'host'
             position_tracker += 1
             continue
+
+        if phrase == 'column_perm':
+            # Read-ahead to detect end of column_perm
+            if exploded_grant[position_tracker + 1] == ')':
+                column_permissions.append(token)
+                multiword_statement.append('( ' + ' , '.join(sorted(column_permissions)) + ' )')
+                grant_tokens.append(' '.join(multiword_statement))
+                multiword_statement = []
+                column_permissions = []
+            elif token != ',':
+                column_permissions.append(token)
 
         if phrase == 'grants':
             # Read-ahead
@@ -1738,6 +1760,11 @@ def __grant_normalize(grant):
     # grant_exists and grant_add ALL work correctly
     if grant == 'ALL':
         grant = 'ALL PRIVILEGES'
+
+    # If the grant contains column-specific definitions, reduce it to the
+    # base grant (e.g. SELECT instead of SELECT (column1, column2))
+    if '(' in grant and ')' in grant:
+        grant = re.sub(r'\(.*?\)', '', grant)
 
     # Grants are paste directly in SQL, must filter it
     exploded_grants = grant.split(",")
