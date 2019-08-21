@@ -119,7 +119,7 @@ class CloudTest(ShellCase):
                         return
         # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
         sleep(shutdown_delay)
-        self.assertNotIn(self.instance_name, self.query_instances())
+        self.assertIn(self.instance_name, self.query_instances())
 
     @property
     def INSTANCE_NAME(self):
