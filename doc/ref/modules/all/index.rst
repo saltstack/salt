@@ -127,6 +127,7 @@ execution modules
     debian_service
     debuild_pkgbuild
     defaults
+    devinfo
     devmap
     dig
     disk
