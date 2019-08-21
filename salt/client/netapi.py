@@ -31,16 +31,16 @@ class RunNetapi(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.__init__(
             state['opts'],
             state['fname'],
-            log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_queue=state['log_port'],
+            log_queue_level=state['log_level']
         )
 
     def __getstate__(self):
         return {
             'opts': self.opts,
             'fname': self.fname,
-            'log_queue': self.log_queue,
-            'log_queue_level': self.log_queue_level
+            'log_port': self.log_port,
+            'log_level': self.log_level
         }
 
     def run(self):
@@ -67,8 +67,8 @@ class NetapiClient(object):
 
         kwargs = {}
         if salt.utils.platform.is_windows():
-            kwargs['log_queue'] = salt.log.setup.get_multiprocessing_logging_queue()
-            kwargs['log_queue_level'] = salt.log.setup.get_multiprocessing_logging_level()
+            kwargs['log_port'] = salt.log.setup.get_multiprocessing_logging_port()
+            kwargs['log_level'] = salt.log.setup.get_multiprocessing_logging_level()
 
         for fun in self.netapi:
             if fun.endswith('.start'):

@@ -65,6 +65,7 @@ from salt.utils.process import (default_signals,
 import tornado.gen  # pylint: disable=F0401
 import tornado.ioloop  # pylint: disable=F0401
 
+
 log = logging.getLogger(__name__)
 
 

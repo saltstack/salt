@@ -473,7 +473,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = dict(self.master_config, ipc_mode='ipc', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
+            'log_port': salt.log.setup.get_multiprocessing_logging_port()
         })
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**server_channel.opts)
         send_num = 10000
@@ -557,7 +557,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                     pub_hwm=0, zmq_filtering=True, acceptance_wait_time=5)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
+            'log_port': salt.log.setup.get_multiprocessing_logging_port()
         })
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**server_channel.opts)
         send_num = 1
@@ -589,7 +589,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = dict(self.master_config, ipc_mode='tcp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
+            'log_port': salt.log.setup.get_multiprocessing_logging_port()
         })
         pub_uri = 'tcp://{interface}:{publish_port}'.format(**server_channel.opts)
         send_num = 10000
@@ -630,7 +630,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = dict(self.master_config, ipc_mode='tcp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
+            'log_port': salt.log.setup.get_multiprocessing_logging_port()
         })
         send_num = 10 * 4
         expect = []
@@ -661,7 +661,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = dict(self.master_config, ipc_mode='udp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
+            'log_port': salt.log.setup.get_multiprocessing_logging_port()
         })
         send_num = 10 * 4
         expect = []

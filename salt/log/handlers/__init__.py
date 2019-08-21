@@ -20,6 +20,13 @@ import logging.handlers
 from salt.log.mixins import NewStyleClassMixIn, ExcInfoOnLogLevelFormatMixIn
 from salt.ext.six.moves import queue
 
+import msgpack
+try:
+    import zmq
+    HAS_ZMQ = True
+except:
+    HAS_ZMQ = False
+
 log = logging.getLogger(__name__)
 
 
@@ -162,135 +169,28 @@ if sys.version_info > (2, 6):
         Watched file handler which properly handles exc_info on a per handler basis
         '''
 
+class ZMQHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
 
-if sys.version_info < (3, 2):
-    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
+    def __init__(self, host='127.0.0.1', port=3330):
+        logging.Handler.__init__(self)
+        self.context = zmq.Context()
+        self.sender = self.context.socket(zmq.PUSH)
+        self.sender.connect('tcp://{}:{}'.format(host, port))
+
+    def stop(self):
+        self.sender.close(0)
+        self.context.term()
+
+    def prepare(self, record):
+        return msgpack.dumps(record.__dict__, encoding='utf-8')
+
+    def emit(self, record):
         '''
-        This handler sends events to a queue. Typically, it would be used together
-        with a multiprocessing Queue to centralise logging to file in one process
-        (in a multi-process application), so as to avoid file write contention
-        between processes.
+        Emit a record.
 
-        This code is new in Python 3.2, but this class can be copy pasted into
-        user code for use with earlier Python versions.
+        Writes the LogRecord to the queue, preparing it for pickling first.
         '''
-
-        def __init__(self, queue):
-            '''
-            Initialise an instance, using the passed queue.
-            '''
-            logging.Handler.__init__(self)
-            self.queue = queue
-
-        def enqueue(self, record):
-            '''
-            Enqueue a record.
-
-            The base implementation uses put_nowait. You may want to override
-            this method if you want to use blocking, timeouts or custom queue
-            implementations.
-            '''
-            try:
-                self.queue.put_nowait(record)
-            except queue.Full:
-                sys.stderr.write('[WARNING ] Message queue is full, '
-                                 'unable to write "{0}" to log'.format(record))
-
-        def prepare(self, record):
-            '''
-            Prepares a record for queuing. The object returned by this method is
-            enqueued.
-            The base implementation formats the record to merge the message
-            and arguments, and removes unpickleable items from the record
-            in-place.
-            You might want to override this method if you want to convert
-            the record to a dict or JSON string, or send a modified copy
-            of the record while leaving the original intact.
-            '''
-            # The format operation gets traceback text into record.exc_text
-            # (if there's exception data), and also returns the formatted
-            # message. We can then use this to replace the original
-            # msg + args, as these might be unpickleable. We also zap the
-            # exc_info and exc_text attributes, as they are no longer
-            # needed and, if not None, will typically not be pickleable.
-            msg = self.format(record)
-            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
-            record = copy.copy(record)
-            record.message = msg
-            record.msg = msg
-            record.args = None
-            record.exc_info = None
-            record.exc_text = None
-            return record
-
-        def emit(self, record):
-            '''
-            Emit a record.
-
-            Writes the LogRecord to the queue, preparing it for pickling first.
-            '''
-            try:
-                self.enqueue(self.prepare(record))
-            except Exception:
-                self.handleError(record)
-elif sys.version_info < (3, 7):
-    # On python versions lower than 3.7, we sill subclass and overwrite prepare to include the fix for:
-    #  https://bugs.python.org/issue35726
-    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
-
-        def enqueue(self, record):
-            '''
-            Enqueue a record.
-
-            The base implementation uses put_nowait. You may want to override
-            this method if you want to use blocking, timeouts or custom queue
-            implementations.
-            '''
-            try:
-                self.queue.put_nowait(record)
-            except queue.Full:
-                sys.stderr.write('[WARNING ] Message queue is full, '
-                                 'unable to write "{0}" to log'.format(record))
-
-        def prepare(self, record):
-            '''
-            Prepares a record for queuing. The object returned by this method is
-            enqueued.
-            The base implementation formats the record to merge the message
-            and arguments, and removes unpickleable items from the record
-            in-place.
-            You might want to override this method if you want to convert
-            the record to a dict or JSON string, or send a modified copy
-            of the record while leaving the original intact.
-            '''
-            # The format operation gets traceback text into record.exc_text
-            # (if there's exception data), and also returns the formatted
-            # message. We can then use this to replace the original
-            # msg + args, as these might be unpickleable. We also zap the
-            # exc_info and exc_text attributes, as they are no longer
-            # needed and, if not None, will typically not be pickleable.
-            msg = self.format(record)
-            # bpo-35726: make copy of record to avoid affecting other handlers in the chain.
-            record = copy.copy(record)
-            record.message = msg
-            record.msg = msg
-            record.args = None
-            record.exc_info = None
-            record.exc_text = None
-            return record
-else:
-    class QueueHandler(ExcInfoOnLogLevelFormatMixIn, logging.handlers.QueueHandler):  # pylint: disable=no-member,E0240
-
-        def enqueue(self, record):
-            '''
-            Enqueue a record.
-
-            The base implementation uses put_nowait. You may want to override
-            this method if you want to use blocking, timeouts or custom queue
-            implementations.
-            '''
-            try:
-                self.queue.put_nowait(record)
-            except queue.Full:
-                sys.stderr.write('[WARNING ] Message queue is full, '
-                                 'unable to write "{0}" to log'.format(record))
+        try:
+            self.sender.send(self.prepare(record))
+        except Exception:
+            self.handleError(record)

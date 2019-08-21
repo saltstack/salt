@@ -35,6 +35,7 @@ from salt.utils.process import MultiprocessingProcess
 from salt.ext import six
 from salt.utils.zeromq import zmq
 
+
 log = logging.getLogger(__name__)
 
 
@@ -531,15 +532,15 @@ class CacheWorker(MultiprocessingProcess):
         self._is_child = True
         self.__init__(
             state['opts'],
-            log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_port=state['log_port'],
+            log_level=state['log_level']
         )
 
     def __getstate__(self):
         return {
             'opts': self.opts,
-            'log_queue': self.log_queue,
-            'log_queue_level': self.log_queue_level
+            'log_port': self.log_port,
+            'log_level': self.log_level
         }
 
     def run(self):
@@ -594,15 +595,15 @@ class ConnectedCache(MultiprocessingProcess):
         self._is_child = True
         self.__init__(
             state['opts'],
-            log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_port=state['log_port'],
+            log_level=state['log_level']
         )
 
     def __getstate__(self):
         return {
             'opts': self.opts,
-            'log_queue': self.log_queue,
-            'log_queue_level': self.log_queue_level
+            'log_port': self.log_port,
+            'log_level': self.log_level
         }
 
     def signal_handler(self, sig, frame):

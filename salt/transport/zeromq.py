@@ -844,14 +844,15 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
     def connect(self):
         return tornado.gen.sleep(5)
 
-    def _publish_daemon(self, log_queue=None):
+    def _publish_daemon(self, *args, **kwargs):
         '''
         Bind to the interface specified in the configuration file
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
-        if log_queue:
-            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
-            salt.log.setup.setup_multiprocessing_logging(log_queue)
+        log_port = kwargs.get('log_port', None)
+        if log_port:
+            salt.log.setup.set_multiprocessing_logging_port(log_port)
+            salt.log.setup.setup_multiprocessing_zmq_logging(log_port)
 
         # Set up the context
         context = zmq.Context(1)

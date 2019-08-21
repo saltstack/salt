@@ -371,6 +371,10 @@ VALID_OPTS = {
     # The number of minutes between mine updates.
     'mine_interval': int,
 
+    'mp_logging_port': int,
+
+    'mp_logging_consumer': bool,
+
     # The ipc strategy. (i.e., sockets versus tcp, etc)
     'ipc_mode': six.string_types,
 
@@ -1235,6 +1239,8 @@ DEFAULT_MINION_OPTS = {
     'master_alive_interval': 0,
     'master_failback': False,
     'master_failback_interval': 0,
+    'mp_logging_port': 4311,
+    'mp_logging_consumer': True,
     'verify_master_pubkey_sign': False,
     'sign_pub_messages': False,
     'always_verify_signature': False,
@@ -1836,6 +1842,8 @@ DEFAULT_MASTER_OPTS = {
     'master_sign_pubkey': False,
     'master_pubkey_signature': 'master_pubkey_signature',
     'master_use_pubkey_signature': False,
+    'mp_logging_port': 4321,
+    'mp_logging_consumer': True,
     'zmq_filtering': False,
     'zmq_monitor': False,
     'con_cache': False,
@@ -1900,6 +1908,8 @@ DEFAULT_PROXY_MINION_OPTS = {
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'proxy'),
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'proxy'),
     'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'proxy'),
+    'mp_logging_port': 4331,
+    'mp_logging_consumer': True,
 }
 # ----- Salt Cloud Configuration Defaults ----------------------------------->
 DEFAULT_CLOUD_OPTS = {

@@ -204,10 +204,12 @@ class TestDaemon(object):
         Start a master and minion
         '''
         # Setup the multiprocessing logging queue listener
-        salt_log_setup.setup_multiprocessing_logging_listener(
-            self.master_opts
+        tests_port = get_unused_localhost_port()
+        salt_log_setup.set_multiprocessing_logging_port(tests_port)
+        salt_log_setup.setup_multiprocessing_logging_zmq_listener(
+            self.master_opts,
+            tests_port
         )
-
         # Set up PATH to mockbin
         self._enter_mockbin()
 
@@ -983,6 +985,8 @@ class TestDaemon(object):
                 conf['log_handlers_dirs'] = []
             conf['log_handlers_dirs'].insert(0, LOG_HANDLERS_DIR)
             conf['runtests_log_port'] = SALT_LOG_PORT
+            conf['mp_logging_port'] = get_unused_localhost_port()
+            conf['mp_logging_consumer'] = True
             conf['runtests_log_level'] = os.environ.get('TESTS_MIN_LOG_LEVEL_NAME') or 'debug'
 
         # ----- Transcribe Configuration ---------------------------------------------------------------------------->
@@ -1136,12 +1140,12 @@ class TestDaemon(object):
         self._exit_mockbin()
         self._exit_ssh()
         # Shutdown the multiprocessing logging queue listener
-        salt_log_setup.shutdown_multiprocessing_logging()
-        salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
+        salt_log_setup.shutdown_multiprocessing_zmq_logging()
+        salt_log_setup.shutdown_multiprocessing_logging_zmq_listener(daemonizing=True)
         # Shutdown the log server
-        self.log_server.server_close()
-        self.log_server.shutdown()
-        self.log_server_process.join()
+        #self.log_server.server_close()
+        #self.log_server.shutdown()
+        #self.log_server_process.join()
 
     def pre_setup_minions(self):
         '''

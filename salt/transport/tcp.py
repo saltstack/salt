@@ -76,6 +76,7 @@ if USE_LOAD_BALANCER:
     import tornado.util
     from salt.utils.process import SignalHandlingMultiprocessingProcess
 
+
 log = logging.getLogger(__name__)
 
 
@@ -162,16 +163,16 @@ if USE_LOAD_BALANCER:
             self.__init__(
                 state['opts'],
                 state['socket_queue'],
-                log_queue=state['log_queue'],
-                log_queue_level=state['log_queue_level']
+                log_port=state['log_port'],
+                log_level=state['log_level']
             )
 
         def __getstate__(self):
             return {
                 'opts': self.opts,
                 'socket_queue': self.socket_queue,
-                'log_queue': self.log_queue,
-                'log_queue_level': self.log_queue_level
+                'log_port': self.log_port,
+                'log_level': self.log_level
             }
 
         def close(self):
@@ -1446,13 +1447,13 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
-        log_queue = kwargs.get('log_queue')
-        if log_queue is not None:
-            salt.log.setup.set_multiprocessing_logging_queue(log_queue)
-        log_queue_level = kwargs.get('log_queue_level')
-        if log_queue_level is not None:
-            salt.log.setup.set_multiprocessing_logging_level(log_queue_level)
-        salt.log.setup.setup_multiprocessing_logging(log_queue)
+        log_port = kwargs.get('log_port')
+        if log_port is not None:
+            salt.log.setup.set_multiprocessing_logging_port(log_port)
+        log_level = kwargs.get('log_level')
+        if log_level is not None:
+            salt.log.setup.set_multiprocessing_logging_level(log_level)
+        salt.log.setup.setup_multiprocessing_zmq_logging(log_port)
 
         # Check if io_loop was set outside
         if self.io_loop is None:

@@ -66,15 +66,15 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         self._is_child = True
         Reactor.__init__(
             self, state['opts'],
-            log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_port=state['log_port'],
+            log_level=state['log_level']
         )
 
     def __getstate__(self):
         return {
             'opts': self.opts,
-            'log_queue': self.log_queue,
-            'log_queue_level': self.log_queue_level
+            'log_port': self.log_port,
+            'log_level': self.log_level
         }
 
     def render_reaction(self, glob_ref, tag, data):

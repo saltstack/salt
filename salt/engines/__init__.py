@@ -93,8 +93,8 @@ class Engine(SignalHandlingMultiprocessingProcess):
             state['funcs'],
             state['runners'],
             state['proxy'],
-            log_queue=state['log_queue'],
-            log_queue_level=state['log_queue_level']
+            log_port=state['log_port'],
+            log_level=state['log_level']
         )
 
     def __getstate__(self):
@@ -105,8 +105,8 @@ class Engine(SignalHandlingMultiprocessingProcess):
             'funcs': self.funcs,
             'runners': self.runners,
             'proxy': self.proxy,
-            'log_queue': self.log_queue,
-            'log_queue_level': self.log_queue_level
+            'log_port': self.log_port,
+            'log_level': self.log_level
         }
 
     def run(self):

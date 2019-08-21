@@ -588,7 +588,8 @@ class SSH(object):
                         )
                 routine = MultiprocessingProcess(
                                 target=self.handle_routine,
-                                args=args)
+                                args=args,
+                                log_port=self.opts['mp_logging_port'])
                 routine.start()
                 running[host] = {'thread': routine}
                 continue
