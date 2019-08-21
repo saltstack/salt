@@ -124,13 +124,13 @@ class CloudTest(ShellCase):
         query = self.query_instances()
         # some instances take a while to report their destruction
         for tries in range(6):
-            if self._instance_exists(query):
+            if self._instance_exists(query=query):
                 sleep(30)
                 log.debug('Instance "{}" still found in query after {} tries: {}'
                           .format(self.instance_name, tries, query))
                 query = self.query_instances()
         # The last query should have been successful
-        self.assertNotIn(self.instance_name, self.query_instances(query))
+        self.assertNotIn(self.instance_name, self.query_instances())
 
     @property
     def instance_name(self):
