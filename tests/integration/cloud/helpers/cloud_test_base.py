@@ -109,17 +109,13 @@ class CloudTest(ShellCase):
                 self.assertEqual(delete_status, 'True')
                 return
             elif isinstance(delete_status, dict):
-                current_state = delete_status.get('currentState')
-                if current_state:
-                    if current_state.get('ACTION'):
-                        self.assertIn('.delete', current_state.get('ACTION'))
-                        return
-                    else:
-                        self.assertEqual(current_state.get('name'), 'shutting-down')
-                        return
-        # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
-        sleep(shutdown_delay)
-        self.assertIn(self.instance_name, self.query_instances())
+                if delete_status.get('currentState'):
+                    self.assertEqual(delete_status.get('currentState').get('name'), 'shutting-down')
+                self.assertIn('.delete', delete_status.get('ACTION', ''))
+        else:
+            # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
+            sleep(shutdown_delay)
+            self.assertIn(self.instance_name, self.query_instances())
 
     @property
     def INSTANCE_NAME(self):
