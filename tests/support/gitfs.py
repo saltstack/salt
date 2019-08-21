@@ -5,6 +5,7 @@ Base classes for gitfs/git_pillar integration tests
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import sys
 import copy
 import errno
 import logging
@@ -28,7 +29,7 @@ from salt.pillar import git_pillar
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.helpers import get_unused_localhost_port, requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import patch
@@ -108,7 +109,7 @@ def start_daemon(daemon_cli_script_name,
                         process.terminate()
                         if attempts >= max_attempts:
                             raise AssertionError(
-                                'The pytest {} has failed to confirm running status '
+                                'The {} has failed to confirm running status '
                                 'after {} attempts'.format(daemon_class.__name__, attempts))
                         continue
             except Exception as exc:  # pylint: disable=broad-except
@@ -277,7 +278,33 @@ class SshdDaemon(SaltDaemonScriptBase):
         return EV()
 
 
-class SSHDMixin(ModuleCase, SaltReturnAssertsMixin):
+class SaltClientMixin(ModuleCase):
+
+    client = None
+
+    @classmethod
+    def setUpClass(cls):
+        # Late import
+        import salt.client
+        mopts = AdaptedConfigurationTestCaseMixin.get_config('master', from_scratch=True)
+        cls.user = mopts['user']
+        cls.client = salt.client.get_local_client(mopts=mopts)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client = None
+
+    @classmethod
+    def cls_run_function(cls, function, *args, **kwargs):
+        orig = cls.client.cmd('minion',
+                              function,
+                              arg=args,
+                              timeout=300,
+                              kwarg=kwargs)
+        return orig['minion']
+
+
+class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
     '''
     Functions to stand up an SSHD server to serve up git repos for tests.
     '''
@@ -286,78 +313,79 @@ class SSHDMixin(ModuleCase, SaltReturnAssertsMixin):
     known_hosts_setup = False
 
     @classmethod
-    def prep_server(cls):
-        log.info('%s: prep_server()', cls.__name__)
-        cls.sshd_bin = salt.utils.path.which('sshd')
-        cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
-        cls.sshd_port = get_unused_localhost_port()
-        cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
-            username=cls.username,
-            port=cls.sshd_port)
-        cls.url_extra_repo = 'ssh://{username}@127.0.0.1:{port}/~/extra_repo.git'.format(
-            username=cls.username,
-            port=cls.sshd_port)
-        home = '/root/.ssh'
-        cls.ext_opts = {
-            'url': cls.url,
-            'url_extra_repo': cls.url_extra_repo,
-            'privkey_nopass': os.path.join(home, cls.id_rsa_nopass),
-            'pubkey_nopass': os.path.join(home, cls.id_rsa_nopass + '.pub'),
-            'privkey_withpass': os.path.join(home, cls.id_rsa_withpass),
-            'pubkey_withpass': os.path.join(home, cls.id_rsa_withpass + '.pub'),
-            'passphrase': cls.passphrase}
+    def setUpClass(cls):
+        super(SSHDMixin, cls).setUpClass()
+        try:
+            log.info('%s: prep_server()', cls.__name__)
+            cls.sshd_bin = salt.utils.path.which('sshd')
+            cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+            cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
+            cls.sshd_port = get_unused_localhost_port()
+            cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
+                username=cls.username,
+                port=cls.sshd_port)
+            cls.url_extra_repo = 'ssh://{username}@127.0.0.1:{port}/~/extra_repo.git'.format(
+                username=cls.username,
+                port=cls.sshd_port)
+            home = '/root/.ssh'
+            cls.ext_opts = {
+                'url': cls.url,
+                'url_extra_repo': cls.url_extra_repo,
+                'privkey_nopass': os.path.join(home, cls.id_rsa_nopass),
+                'pubkey_nopass': os.path.join(home, cls.id_rsa_nopass + '.pub'),
+                'privkey_withpass': os.path.join(home, cls.id_rsa_withpass),
+                'pubkey_withpass': os.path.join(home, cls.id_rsa_withpass + '.pub'),
+                'passphrase': cls.passphrase}
 
-    def spawn_server(self):
-        if self.prep_states_ran is False:
-            ret = self.run_function(
-                'state.apply',
-                mods='git_pillar.ssh',
-                pillar={'git_pillar': {'git_ssh': self.git_ssh,
-                                       'id_rsa_nopass': self.id_rsa_nopass,
-                                       'id_rsa_withpass': self.id_rsa_withpass,
-                                       'sshd_bin': self.sshd_bin,
-                                       'sshd_port': self.sshd_port,
-                                       'sshd_config_dir': self.sshd_config_dir,
-                                       'master_user': self.master_opts['user'],
-                                       'user': self.username}}
-            )
-            self.assertSaltTrueReturn(ret)
-            SSHDMixin.prep_states_ran = True
-            log.info('%s: States applied', self.__class__.__name__)
-        if self.sshd_proc is not None:
-            if not psutil.pid_exists(self.sshd_proc.pid):
-                log.info('%s: sshd started but appears to be dead now. Will try to restart it.',
-                         self.__class__.__name__)
-                SSHDMixin.sshd_proc = None
-        if self.sshd_proc is None:
-            SSHDMixin.sshd_proc = start_daemon(self.sshd_bin, self.sshd_config_dir, self.sshd_port, SshdDaemon)
-            log.info('%s: sshd started', self.__class__.__name__)
-        if self.known_hosts_setup is False:
-            known_hosts_ret = self.run_function(
+            if cls.prep_states_ran is False:
+                ret = cls.cls_run_function(
+                    'state.apply',
+                    mods='git_pillar.ssh',
+                    pillar={'git_pillar': {'git_ssh': cls.git_ssh,
+                                           'id_rsa_nopass': cls.id_rsa_nopass,
+                                           'id_rsa_withpass': cls.id_rsa_withpass,
+                                           'sshd_bin': cls.sshd_bin,
+                                           'sshd_port': cls.sshd_port,
+                                           'sshd_config_dir': cls.sshd_config_dir,
+                                           'master_user': cls.user,
+                                           'user': cls.username}}
+                )
+                assert next(six.itervalues(ret))['result'] is True
+                cls.prep_states_ran = True
+                log.info('%s: States applied', cls.__name__)
+            if cls.sshd_proc is not None:
+                if not psutil.pid_exists(cls.sshd_proc.pid):
+                    log.info('%s: sshd started but appears to be dead now. Will try to restart it.',
+                             cls.__name__)
+                    cls.sshd_proc = None
+            if cls.sshd_proc is None:
+                cls.sshd_proc = start_daemon(cls.sshd_bin, cls.sshd_config_dir, cls.sshd_port, SshdDaemon)
+                log.info('\n\n%s: sshd started\n\n\n\n', cls.__name__)
+        except AssertionError:
+            cls.tearDownClass()
+            six.reraise(*sys.exc_info())
+
+        if cls.known_hosts_setup is False:
+            known_hosts_ret = cls.cls_run_function(
                 'ssh.set_known_host',
-                user=self.master_opts['user'],
+                user=cls.user,
                 hostname='127.0.0.1',
-                port=self.sshd_port,
+                port=cls.sshd_port,
                 enc='ssh-rsa',
                 fingerprint='fd:6f:7f:5d:06:6b:f2:06:0d:26:93:9e:5a:b5:19:46',
                 hash_known_hosts=False,
                 fingerprint_hash_type='md5',
             )
             if 'error' in known_hosts_ret:
+                cls.tearDownClass()
                 raise AssertionError(
                     'Failed to add key to {0} user\'s known_hosts '
                     'file: {1}'.format(
-                        self.master_opts['user'],
+                        cls.master_opts['user'],
                         known_hosts_ret['error']
                     )
                 )
-            SSHDMixin.known_hosts_setup = True
-
-    @classmethod
-    def setUpClass(cls):
-        super(SSHDMixin, cls).setUpClass()
-        cls.prep_server()
+            cls.known_hosts_setup = True
 
     @classmethod
     def tearDownClass(cls):
@@ -366,12 +394,8 @@ class SSHDMixin(ModuleCase, SaltReturnAssertsMixin):
             terminate_process(cls.sshd_proc.pid, kill_children=True, slow_stop=True)
             log.info('[%s] %s stopped', cls.sshd_proc.log_prefix, cls.sshd_proc.__class__.__name__)
             cls.sshd_proc = None
-        client = RUNTIME_VARS.RUNTIME_CONFIGS.get('runtime_client')
-        if client is not None and cls.prep_states_ran:
-            ret = client.cmd('minion',
-                             'state.single',
-                             arg=['user.absent'],
-                             kwarg=dict(name=cls.username, purge=True))
+        if cls.prep_states_ran:
+            ret = cls.cls_run_function('state.single', 'user.absent', name=cls.username, purge=True)
             try:
                 if ret and 'minion' in ret:
                     ret_data = next(six.itervalues(ret['minion']))
@@ -380,9 +404,6 @@ class SSHDMixin(ModuleCase, SaltReturnAssertsMixin):
             except KeyError:
                 log.warning('Failed to delete test account. Salt return:\n%s',
                             pprint.pformat(ret))
-        elif cls.prep_states_ran is True:
-            log.warning('Test account %s was left behind since "RUNTIME_VARS.RUNTIME_CONFIGS" did not '
-                        'have an instantiated salt client.')
         for dirname in (cls.sshd_config_dir, cls.admin_repo, cls.bare_repo):
             if dirname is not None:
                 shutil.rmtree(dirname, ignore_errors=True)
@@ -397,9 +418,10 @@ class SSHDMixin(ModuleCase, SaltReturnAssertsMixin):
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
                     raise
+        super(SSHDMixin, cls).tearDownClass()
 
 
-class WebserverMixin(ModuleCase, SaltReturnAssertsMixin):
+class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
     '''
     Functions to stand up an nginx + uWSGI + git-http-backend webserver to
     serve up git repos for tests.
@@ -408,11 +430,12 @@ class WebserverMixin(ModuleCase, SaltReturnAssertsMixin):
     prep_states_ran = False
 
     @classmethod
-    def prep_server(cls):
+    def setUpClass(cls):
         '''
         Set up all the webserver paths. Designed to be run once in a
         setUpClass function.
         '''
+        super(WebserverMixin, cls).setUpClass()
         cls.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.config_dir = os.path.join(cls.root_dir, 'config')
         cls.nginx_conf = os.path.join(cls.config_dir, 'nginx.conf')
@@ -449,41 +472,38 @@ class WebserverMixin(ModuleCase, SaltReturnAssertsMixin):
             git_core = '/usr/lib/git-core'
 
         if not os.path.exists(git_core):
+            cls.tearDownClass()
             raise AssertionError(
                 '{} not found. Either git is not installed, or the test '
                 'class needs to be updated.'.format(git_core)
             )
 
         pillar['git_pillar']['git-http-backend'] = os.path.join(git_core, 'git-http-backend')
-        cls.pillar = pillar
-
-    def spawn_server(self):
-        if self.prep_states_ran is False:
-            ret = self.run_function('state.apply', mods='git_pillar.http', pillar=self.pillar)
-            self.assertSaltTrueReturn(ret)
-            WebserverMixin.prep_states_ran = True
-            log.info('%s: States applied', self.__class__.__name__)
-        if self.uwsgi_proc is not None:
-            if not psutil.pid_exists(self.uwsgi_proc.pid):
-                log.warning('%s: uWsgi started but appears to be dead now. Will try to restart it.',
-                            self.__class__.__name__)
-                WebserverMixin.uwsgi_proc = None
-        if self.uwsgi_proc is None:
-            WebserverMixin.uwsgi_proc = start_daemon(self.uwsgi_bin, self.config_dir, self.uwsgi_port, UwsgiDaemon)
-            log.info('%s: %s started', self.__class__.__name__, self.uwsgi_bin)
-        if self.nginx_proc is not None:
-            if not psutil.pid_exists(self.nginx_proc.pid):
-                log.warning('%s: nginx started but appears to be dead now. Will try to restart it.',
-                            self.__class__.__name__)
-                WebserverMixin.nginx_proc = None
-        if self.nginx_proc is None:
-            WebserverMixin.nginx_proc = start_daemon('nginx', self.config_dir, self.nginx_port, NginxDaemon)
-            log.info('%s: nginx started', self.__class__.__name__)
-
-    @classmethod
-    def setUpClass(cls):
-        super(WebserverMixin, cls).setUpClass()
-        cls.prep_server()
+        try:
+            if cls.prep_states_ran is False:
+                ret = cls.cls_run_function('state.apply', mods='git_pillar.http', pillar=pillar)
+                assert next(six.itervalues(ret))['result'] is True
+                cls.prep_states_ran = True
+                log.info('%s: States applied', cls.__name__)
+            if cls.uwsgi_proc is not None:
+                if not psutil.pid_exists(cls.uwsgi_proc.pid):
+                    log.warning('%s: uWsgi started but appears to be dead now. Will try to restart it.',
+                                cls.__name__)
+                    cls.uwsgi_proc = None
+            if cls.uwsgi_proc is None:
+                cls.uwsgi_proc = start_daemon(cls.uwsgi_bin, cls.config_dir, cls.uwsgi_port, UwsgiDaemon)
+                log.info('\n\n\n%s: %s started\n\n\n', cls.__name__, cls.uwsgi_bin)
+            if cls.nginx_proc is not None:
+                if not psutil.pid_exists(cls.nginx_proc.pid):
+                    log.warning('%s: nginx started but appears to be dead now. Will try to restart it.',
+                                cls.__name__)
+                    cls.nginx_proc = None
+            if cls.nginx_proc is None:
+                cls.nginx_proc = start_daemon('nginx', cls.config_dir, cls.nginx_port, NginxDaemon)
+                log.info('\n\n\n%s: nginx started\n\n\n', cls.__name__)
+        except AssertionError:
+            cls.tearDownClass()
+            six.reraise(*sys.exc_info())
 
     @classmethod
     def tearDownClass(cls):
@@ -498,7 +518,7 @@ class WebserverMixin(ModuleCase, SaltReturnAssertsMixin):
             log.info('[%s] %s stopped', cls.uwsgi_proc.log_prefix, cls.uwsgi_proc.__class__.__name__)
             cls.uwsgi_proc = None
         shutil.rmtree(cls.root_dir, ignore_errors=True)
-        cls.pillar = None
+        super(WebserverMixin, cls).tearDownClass()
 
 
 class GitTestBase(ModuleCase):
@@ -510,24 +530,6 @@ class GitTestBase(ModuleCase):
     maxDiff = None
     git_opts = '-c user.name="Foo Bar" -c user.email=foo@bar.com'
     ext_opts = {}
-
-    # We need to temporarily skip pygit2 tests on EL7 until the EPEL packager
-    # updates pygit2 to bring it up-to-date with libgit2.
-    @requires_system_grains
-    def is_el7(self, grains):
-        return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] == 7
-
-    # Cent OS 6 has too old a version of git to handle the make_repo code, as
-    # it lacks the -c option for git itself.
-    @requires_system_grains
-    def is_pre_el7(self, grains):
-        return grains['os_family'] == 'RedHat' and grains['osmajorrelease'] < 7
-
-    def setUp(self):
-        if self.is_pre_el7():  # pylint: disable=E1120
-            self.skipTest(
-                'RHEL < 7 has too old a version of git to run these tests')
-        self.spawn_server()
 
     def make_repo(self, root_dir, user='root'):
         raise NotImplementedError()
@@ -794,7 +796,6 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
     '''
     id_rsa_nopass = id_rsa_withpass = None
     git_ssh = '/tmp/git_ssh'
-    home_resolved = False
 
     def setUp(self):
         '''
@@ -802,17 +803,15 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         '''
         log.info('%s.setUp() started...', self.__class__.__name__)
         super(GitPillarSSHTestBase, self).setUp()
-        if self.username and self.home_resolved is False:
-            root_dir = os.path.expanduser('~{0}'.format(self.username))
-            if root_dir.startswith('~'):
-                raise AssertionError(
-                    'Unable to resolve homedir for user \'{0}\''.format(
-                        self.username
-                    )
+        root_dir = os.path.expanduser('~{0}'.format(self.username))
+        if root_dir.startswith('~'):
+            raise AssertionError(
+                'Unable to resolve homedir for user \'{0}\''.format(
+                    self.username
                 )
-            GitPillarSSHTestBase.home_resolved = True
-            self.make_repo(root_dir, user=self.username)
-            self.make_extra_repo(root_dir, user=self.username)
+            )
+        self.make_repo(root_dir, user=self.username)
+        self.make_extra_repo(root_dir, user=self.username)
         log.info('%s.setUp() complete.', self.__class__.__name__)
 
     def get_pillar(self, ext_pillar_conf):
