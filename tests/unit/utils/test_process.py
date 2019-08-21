@@ -327,7 +327,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
         log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
         with patch(sig_to_mock) as ma, patch(log_to_mock) as mb:
             self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
-            self.sh_proc._run()
+            self.sh_proc.run()
         ma.assert_called()
         mb.assert_called()
 
@@ -342,7 +342,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
         with patch(sig_to_mock):
             with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
                 self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
-                self.sh_proc._run()
+                self.sh_proc.run()
         ma.assert_called()
         mb.assert_called()
 
