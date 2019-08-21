@@ -1065,14 +1065,16 @@ def requires_system_grains(func):
     '''
     @functools.wraps(func)
     def decorator(cls):
-        if not hasattr(cls, 'run_function'):
-            raise RuntimeError(
-                '{0} does not have the \'run_function\' method which is '
-                'necessary to collect the system grains'.format(
-                    cls.__class__.__name__
+        if not hasattr(requires_system_grains, '__grains__'):
+            if not hasattr(cls, 'run_function'):
+                raise RuntimeError(
+                    '{0} does not have the \'run_function\' method which is '
+                    'necessary to collect the system grains'.format(
+                        cls.__class__.__name__
+                    )
                 )
-            )
-        return func(cls, grains=cls.run_function('grains.items'))
+            requires_system_grains.__grains__ = func(cls, grains=cls.run_function('grains.items'))
+        return requires_system_grains.__grains__
     return decorator
 
 
@@ -1100,11 +1102,23 @@ def requires_salt_modules(*names):
                         )
                     )
 
-                not_found_modules = self.run_function('runtests_helpers.modules_available', names)
-                if not_found_modules:
-                    if len(not_found_modules) == 1:
-                        self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                    self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
+                if not hasattr(requires_salt_modules, '__available_modules__'):
+                    requires_salt_modules.__available_modules__ = set()
+
+                _names = []
+                for name in names:
+                    if name not in requires_salt_modules.__available_modules__:
+                        _names.append(name)
+
+                if _names:
+                    not_found_modules = self.run_function('runtests_helpers.modules_available', _names)
+                    for name in _names:
+                        if name not in not_found_modules:
+                            requires_salt_modules.__available_modules__.add(name)
+                    if not_found_modules:
+                        if len(not_found_modules) == 1:
+                            self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
+                        self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
             return caller
 
@@ -1120,13 +1134,23 @@ def requires_salt_modules(*names):
                     )
                 )
 
-            for name in names:
-                if name not in cls.run_function('sys.doc', [name]):
-                    cls.skipTest(
-                        'Salt module {0!r} is not available'.format(name)
-                    )
-                    break
+            if not hasattr(requires_salt_modules, '__available_modules__'):
+                requires_salt_modules.__available_modules__ = set()
 
+            _names = []
+            for name in names:
+                if name not in requires_salt_modules.__available_modules__:
+                    _names.append(name)
+
+            if _names:
+                not_found_modules = cls.run_function('runtests_helpers.modules_available', _names)
+                for name in _names:
+                    if name not in not_found_modules:
+                        requires_salt_modules.__available_modules__.add(name)
+                if not_found_modules:
+                    if len(not_found_modules) == 1:
+                        cls.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
+                    cls.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             return caller(cls)
         return wrapper
     return decorator
