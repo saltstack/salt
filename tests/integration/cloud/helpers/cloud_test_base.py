@@ -97,37 +97,29 @@ class CloudTest(ShellCase):
         shutdown_delay = 30
         log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
-        delete = safe_load('\n'.join(delete_str))
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-        destroyed = False
-        log.debug('Deletion status: {}'.format(delete_str))
+        if delete_str:
+            delete = safe_load('\n'.join(delete_str))
+            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+            self.assertIn(self.profile_str, delete)
+            self.assertIn(self.PROVIDER, delete[self.profile_str])
+            self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
 
-        if any([x in delete_str for x in (
-            'True',
-            'was successfully deleted'
-        )]):
-            destroyed = True
-            log.debug('Instance "{}" was successfully deleted'.format(self.instance_name))
-        elif any([x in delete_str for x in (
-            'shutting-down',
-            '.delete',
-            self.instance_name + '-DEL'
-        )]):
-            destroyed = True
-            log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
-        else:
-            sleep(shutdown_delay)
-            # It's not clear from the delete string that deletion was successful, ask salt-cloud
-            query = self.query_instances()
-            destroyed = self.instance_name in query
-            delete_str += ' :: ' * bool(delete_str) + ', '.join(query)
-
-        return destroyed, delete_str
-
-    def assertDestroyInstance(self):
-        success, delete_str = self._destroy_instance()
-        self.assertTrue(success, 'Instance "{}" was not deleted: {}'.format(self.instance_name, delete_str))
+            delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
+            if isinstance(delete_status, str):
+                self.assertEqual(delete_status, 'True')
+                return
+            elif isinstance(delete_status, dict):
+                current_state = delete_status.get('currentState')
+                if current_state:
+                    if current_state.get('ACTION'):
+                        self.assertIn('.delete', current_state.get('ACTION'))
+                        return
+                    else:
+                        self.assertEqual(current_state.get('name'), 'shutting-down')
+                        return
+        # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
+        sleep(shutdown_delay)
+        self.assertNotIn(self.instance_name, self.query_instances())
 
     @property
     def INSTANCE_NAME(self):
