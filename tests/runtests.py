@@ -58,7 +58,7 @@ except ImportError as exc:
     pprint.pprint(sys.path)
     raise exc
 
-from tests.integration import TestDaemon  # pylint: disable=W0403
+from tests.integration import TestDaemon, TestDaemonStartFailed  # pylint: disable=W0403
 import salt.utils.platform
 
 if not salt.utils.platform.is_windows():
@@ -610,65 +610,68 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         except TypeError:
             print_header(' * Setting up Salt daemons for interactive use', top=False)
 
-        with TestDaemon(self):
-            print_header(' * Salt daemons started')
-            master_conf = TestDaemon.config('master')
-            minion_conf = TestDaemon.config('minion')
-            proxy_conf = TestDaemon.config('proxy')
-            sub_minion_conf = TestDaemon.config('sub_minion')
-            syndic_conf = TestDaemon.config('syndic')
-            syndic_master_conf = TestDaemon.config('syndic_master')
+        try:
+            with TestDaemon(self):
+                print_header(' * Salt daemons started')
+                master_conf = TestDaemon.config('master')
+                minion_conf = TestDaemon.config('minion')
+                proxy_conf = TestDaemon.config('proxy')
+                sub_minion_conf = TestDaemon.config('sub_minion')
+                syndic_conf = TestDaemon.config('syndic')
+                syndic_master_conf = TestDaemon.config('syndic_master')
 
-            print_header(' * Syndic master configuration values (MoM)', top=False)
-            print('interface: {0}'.format(syndic_master_conf['interface']))
-            print('publish port: {0}'.format(syndic_master_conf['publish_port']))
-            print('return port: {0}'.format(syndic_master_conf['ret_port']))
-            print('\n')
+                print_header(' * Syndic master configuration values (MoM)', top=False)
+                print('interface: {0}'.format(syndic_master_conf['interface']))
+                print('publish port: {0}'.format(syndic_master_conf['publish_port']))
+                print('return port: {0}'.format(syndic_master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Syndic configuration values', top=True)
-            print('interface: {0}'.format(syndic_conf['interface']))
-            print('syndic master: {0}'.format(syndic_conf['syndic_master']))
-            print('syndic master port: {0}'.format(syndic_conf['syndic_master_port']))
-            print('\n')
+                print_header(' * Syndic configuration values', top=True)
+                print('interface: {0}'.format(syndic_conf['interface']))
+                print('syndic master: {0}'.format(syndic_conf['syndic_master']))
+                print('syndic master port: {0}'.format(syndic_conf['syndic_master_port']))
+                print('\n')
 
-            print_header(' * Master configuration values', top=True)
-            print('interface: {0}'.format(master_conf['interface']))
-            print('publish port: {0}'.format(master_conf['publish_port']))
-            print('return port: {0}'.format(master_conf['ret_port']))
-            print('\n')
+                print_header(' * Master configuration values', top=True)
+                print('interface: {0}'.format(master_conf['interface']))
+                print('publish port: {0}'.format(master_conf['publish_port']))
+                print('return port: {0}'.format(master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Minion configuration values', top=True)
-            print('interface: {0}'.format(minion_conf['interface']))
-            print('master: {0}'.format(minion_conf['master']))
-            print('master port: {0}'.format(minion_conf['master_port']))
-            if minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Minion configuration values', top=True)
+                print('interface: {0}'.format(minion_conf['interface']))
+                print('master: {0}'.format(minion_conf['master']))
+                print('master port: {0}'.format(minion_conf['master_port']))
+                if minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' * Sub Minion configuration values', top=True)
-            print('interface: {0}'.format(sub_minion_conf['interface']))
-            print('master: {0}'.format(sub_minion_conf['master']))
-            print('master port: {0}'.format(sub_minion_conf['master_port']))
-            if sub_minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Sub Minion configuration values', top=True)
+                print('interface: {0}'.format(sub_minion_conf['interface']))
+                print('master: {0}'.format(sub_minion_conf['master']))
+                print('master port: {0}'.format(sub_minion_conf['master_port']))
+                if sub_minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' * Proxy Minion configuration values', top=True)
-            print('interface: {0}'.format(proxy_conf['interface']))
-            print('master: {0}'.format(proxy_conf['master']))
-            print('master port: {0}'.format(proxy_conf['master_port']))
-            if minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(proxy_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(proxy_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Proxy Minion configuration values', top=True)
+                print('interface: {0}'.format(proxy_conf['interface']))
+                print('master: {0}'.format(proxy_conf['master']))
+                print('master port: {0}'.format(proxy_conf['master_port']))
+                if minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(proxy_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(proxy_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
-            print('To access the minion: salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+                print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
+                print('To access the minion: salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
 
-            while True:
-                time.sleep(1)
+                while True:
+                    time.sleep(1)
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def set_filehandle_limits(self, limits='integration'):
         '''
@@ -768,36 +771,39 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not self._check_enabled_suites(include_cloud_provider=True, include_proxy=True) and not self.options.name:
             return status
 
-        with TestDaemon(self):
-            if self.options.name:
-                for name in self.options.name:
-                    name = name.strip()
-                    if not name:
-                        continue
-                    if os.path.isfile(name):
-                        if not name.endswith('.py'):
+        try:
+            with TestDaemon(self):
+                if self.options.name:
+                    for name in self.options.name:
+                        name = name.strip()
+                        if not name:
                             continue
-                        if name.startswith(os.path.join('tests', 'unit')):
+                        if os.path.isfile(name):
+                            if not name.endswith('.py'):
+                                continue
+                            if name.startswith(os.path.join('tests', 'unit')):
+                                continue
+                            results = self.run_suite(os.path.dirname(name),
+                                                     name,
+                                                     suffix=os.path.basename(name),
+                                                     failfast=self.options.failfast,
+                                                     load_from_name=False)
+                            status.append(results)
                             continue
-                        results = self.run_suite(os.path.dirname(name),
-                                                 name,
-                                                 suffix=os.path.basename(name),
-                                                 failfast=self.options.failfast,
-                                                 load_from_name=False)
+                        if name.startswith(('tests.unit.', 'unit.')):
+                            continue
+                        results = self.run_suite(
+                            '', name, suffix='test_*.py', load_from_name=True,
+                            failfast=self.options.failfast,
+                        )
                         status.append(results)
-                        continue
-                    if name.startswith(('tests.unit.', 'unit.')):
-                        continue
-                    results = self.run_suite(
-                        '', name, suffix='test_*.py', load_from_name=True,
-                        failfast=self.options.failfast,
-                    )
-                    status.append(results)
-                return status
-            for suite in TEST_SUITES:
-                if suite != 'unit' and getattr(self.options, suite):
-                    status.append(self.run_integration_suite(**TEST_SUITES[suite]))
-        return status
+                    return status
+                for suite in TEST_SUITES:
+                    if suite != 'unit' and getattr(self.options, suite):
+                        status.append(self.run_integration_suite(**TEST_SUITES[suite]))
+            return status
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def run_unit_tests(self):
         '''
