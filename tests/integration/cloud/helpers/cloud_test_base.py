@@ -93,12 +93,11 @@ class CloudTest(ShellCase):
 
             # Assert that the last query was successful
             self.assertTrue(self._instance_exists(instance_name, query),
-                            'Instance "{}" was not created successfully: '.format(', '.join(query)))
+                            'Instance "{}" was not created successfully: {}'.format(self.instance_name, ', '.join(query)))
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
     def assertDestroyInstance(self):
-        shutdown_delay = 30
         log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
         if delete_str:
@@ -122,8 +121,16 @@ class CloudTest(ShellCase):
                         self.assertEqual(current_state.get('name'), 'shutting-down')
                         return
         # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
-        sleep(shutdown_delay)
-        self.assertNotIn(self.instance_name, self.query_instances())
+        query = self.query_instances()
+        # some instances take a while to report their destruction
+        for tries in range(6):
+            if self._instance_exists(query):
+                sleep(30)
+                log.debug('Instance "{}" still found in query after {} tries: {}'
+                          .format(self.instance_name, tries, query))
+                query = self.query_instances()
+        # The last query should have been successful
+        self.assertNotIn(self.instance_name, self.query_instances(query))
 
     @property
     def instance_name(self):
