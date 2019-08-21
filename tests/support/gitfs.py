@@ -29,6 +29,7 @@ from salt.pillar import git_pillar
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.unit import SkipTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.helpers import get_unused_localhost_port, requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
@@ -283,7 +284,13 @@ class SaltClientMixin(ModuleCase):
     client = None
 
     @classmethod
-    def setUpClass(cls):
+    @requires_system_grains
+    def setUpClass(cls, grains=None):
+        # Cent OS 6 has too old a version of git to handle the make_repo code, as
+        # it lacks the -c option for git itself.
+        make_repo = getattr(cls, 'make_repo', None)
+        if callable(make_repo) and grains['os_family'] == 'RedHat' and grains['osmajorrelease'] < 7:
+            raise SkipTest('RHEL < 7 has too old a version of git to run these tests')
         # Late import
         import salt.client
         mopts = AdaptedConfigurationTestCaseMixin.get_config('master', from_scratch=True)
@@ -313,7 +320,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
     known_hosts_setup = False
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls):  # pylint: disable=arguments-differ
         super(SSHDMixin, cls).setUpClass()
         try:
             log.info('%s: prep_server()', cls.__name__)
@@ -428,7 +435,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
     prep_states_ran = False
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls):  # pylint: disable=arguments-differ
         '''
         Set up all the webserver paths. Designed to be run once in a
         setUpClass function.
