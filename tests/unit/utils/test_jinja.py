@@ -116,6 +116,7 @@ class TestSaltCacheLoader(TestCase):
             self.template_dir
         )
         self.opts = {
+            'file_buffer_size': 1048576,
             'cachedir': self.tempdir,
             'file_roots': {
                 'test': [self.template_dir]
@@ -267,6 +268,7 @@ class TestGetTemplate(TestCase):
             self.template_dir
         )
         self.local_opts = {
+            'file_buffer_size': 1048576,
             'cachedir': self.tempdir,
             'file_client': 'local',
             'file_ignore_regex': None,
@@ -600,6 +602,7 @@ class TestJinjaDefaultOptions(TestCase):
         TestCase.__init__(self, *args, **kws)
         self.local_opts = {
             'cachedir': CACHEDIR,
+            'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
@@ -661,6 +664,7 @@ class TestCustomExtensions(TestCase):
         super(TestCustomExtensions, self).__init__(*args, **kws)
         self.local_opts = {
             'cachedir': CACHEDIR,
+            'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
