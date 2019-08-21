@@ -105,13 +105,25 @@ class CloudTest(ShellCase):
             if isinstance(delete_status, str):
                 self.assertEqual(delete_status, 'True')
             elif isinstance(delete_status, dict):
-                if delete_status.get('currentState'):
-                    self.assertEqual(delete_status.get('currentState').get('name'), 'shutting-down')
-                self.assertTrue(delete_status.get('ACTION', '').endswith('.delete'))
-        else:
-            # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
-            sleep(shutdown_delay)
-            self.assertIn(self.instance_name, self.query_instances())
+                current_state = delete_status.get('currentState')
+                if current_state:
+                    if current_state.get('ACTION'):
+                        self.assertIn('.delete', current_state.get('ACTION'))
+                        return
+                    else:
+                        self.assertEqual(current_state.get('name'), 'shutting-down')
+                        return
+        # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
+        query = self.query_instances()
+        # some instances take a while to report their destruction
+        for tries in range(6):
+            if self._instance_exists(query=query):
+                sleep(30)
+                log.debug('Instance "{}" still found in query after {} tries: {}'
+                          .format(self.instance_name, tries, query))
+                query = self.query_instances()
+        # The last query should have been successful
+        self.assertNotIn(self.instance_name, self.query_instances())
 
     @property
     def INSTANCE_NAME(self):
