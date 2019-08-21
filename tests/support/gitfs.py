@@ -404,9 +404,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             except KeyError:
                 log.warning('Failed to delete test account. Salt return:\n%s',
                             pprint.pformat(ret))
-        for dirname in (cls.sshd_config_dir, cls.admin_repo, cls.bare_repo):
-            if dirname is not None:
-                shutil.rmtree(dirname, ignore_errors=True)
+        shutil.rmtree(cls.sshd_config_dir, ignore_errors=True)
         ssh_dir = os.path.expanduser('~/.ssh')
         for filename in (cls.id_rsa_nopass,
                          cls.id_rsa_nopass + '.pub',
@@ -526,7 +524,6 @@ class GitTestBase(ModuleCase):
     Base class for all gitfs/git_pillar tests. Must be subclassed and paired
     with either SSHDMixin or WebserverMixin to provide the server.
     '''
-    case = port = bare_repo = base_extra_repo = admin_repo = admin_extra_repo = None
     maxDiff = None
     git_opts = '-c user.name="Foo Bar" -c user.email=foo@bar.com'
     ext_opts = {}
@@ -556,6 +553,9 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
     '''
     Base class for all git_pillar tests
     '''
+    bare_repo = bare_repo_backup = bare_extra_repo = bare_extra_repo_backup = None
+    admin_repo = admin_repo_backup = admin_extra_repo = admin_extra_repo_backup = None
+
     @requires_system_grains
     def setup_loader_modules(self, grains):  # pylint: disable=W0221
         return {
@@ -591,10 +591,17 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
     def make_repo(self, root_dir, user='root'):
         log.info('Creating test Git repo....')
         self.bare_repo = os.path.join(root_dir, 'repo.git')
+        self.bare_repo_backup = '{}.backup'.format(self.bare_repo)
         self.admin_repo = os.path.join(root_dir, 'admin')
+        self.admin_repo_backup = '{}.backup'.format(self.admin_repo)
 
         for dirname in (self.bare_repo, self.admin_repo):
             shutil.rmtree(dirname, ignore_errors=True)
+
+        if os.path.exists(self.bare_repo_backup) and os.path.exists(self.admin_repo_backup):
+            shutil.copytree(self.bare_repo_backup, self.bare_repo)
+            shutil.copytree(self.admin_repo_backup, self.admin_repo)
+            return
 
         # Create bare repo
         self.run_function(
@@ -730,15 +737,24 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 - mounted.bar
             '''))
         _push('top_mounted', 'add top_mounted branch')
+        shutil.copytree(self.bare_repo, self.bare_repo_backup)
+        shutil.copytree(self.admin_repo, self.admin_repo_backup)
         log.info('Test Git repo created.')
 
     def make_extra_repo(self, root_dir, user='root'):
         log.info('Creating extra test Git repo....')
         self.bare_extra_repo = os.path.join(root_dir, 'extra_repo.git')
+        self.bare_extra_repo_backup = '{}.backup'.format(self.bare_extra_repo)
         self.admin_extra_repo = os.path.join(root_dir, 'admin_extra')
+        self.admin_extra_repo_backup = '{}.backup'.format(self.admin_extra_repo)
 
         for dirname in (self.bare_extra_repo, self.admin_extra_repo):
             shutil.rmtree(dirname, ignore_errors=True)
+
+        if os.path.exists(self.bare_extra_repo_backup) and os.path.exists(self.admin_extra_repo_backup):
+            shutil.copytree(self.bare_extra_repo_backup, self.bare_extra_repo)
+            shutil.copytree(self.admin_extra_repo_backup, self.admin_extra_repo)
+            return
 
         # Create bare extra repo
         self.run_function(
@@ -787,7 +803,23 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
             motd: The force will be with you. Always.
             '''))
         _push('master', 'initial commit')
+        shutil.copytree(self.bare_extra_repo, self.bare_extra_repo_backup)
+        shutil.copytree(self.admin_extra_repo, self.admin_extra_repo_backup)
         log.info('Extra test Git repo created.')
+
+    @classmethod
+    def tearDownClass(cls):
+        super(GitPillarTestBase, cls).tearDownClass()
+        for dirname in (cls.admin_repo,
+                        cls.admin_repo_backup,
+                        cls.admin_extra_repo,
+                        cls.admin_extra_repo_backup,
+                        cls.bare_repo,
+                        cls.bare_repo_backup,
+                        cls.bare_extra_repo,
+                        cls.bare_extra_repo_backup):
+            if dirname is not None:
+                shutil.rmtree(dirname, ignore_errors=True)
 
 
 class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
