@@ -5,7 +5,6 @@ Tests for the Openstack Cloud Provider
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from ast import literal_eval
 from time import sleep
 import logging
 import os
@@ -47,7 +46,7 @@ class CloudTest(ShellCase):
         '''
         Standardize the data returned from a salt-cloud --query
         '''
-        return literal_eval(self.run_cloud('--query --out=highstate')).keys()
+        return set(x.strip(': ') for x in self.run_cloud('--query') if x.lstrip().lower().startswith('cloud-test-'))
 
     def _instance_exists(self, instance_name=None, query=None):
         '''
@@ -102,24 +101,29 @@ class CloudTest(ShellCase):
         shutdown_delay = 30
         log.debug('Deleting instance "{}"'.format(self.instance_name))
         delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
-        delete = safe_load('\n'.join(delete_str))
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        self.assertIn(self.profile_str, delete)
-        self.assertIn(self.PROVIDER, delete[self.profile_str])
-        self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
-
         if delete_str:
+            delete = safe_load('\n'.join(delete_str))
+            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+            self.assertIn(self.profile_str, delete)
+            self.assertIn(self.PROVIDER, delete[self.profile_str])
+            self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
+
             delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
             if isinstance(delete_status, str):
-                self.assertEquals(delete_status, 'True')
+                self.assertEqual(delete_status, 'True')
+                return
             elif isinstance(delete_status, dict):
-                if delete_status.get('currentState'):
-                    self.assertEquals(delete_status.get('currentState').get('name'), 'shutting-down')
-                self.assertIn(delete_status.get('ACTION'), '{}.delete'.format(self.profile_str))
-        else:
-            # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
-            sleep(shutdown_delay)
-            self.assertIn(self.instance_name, self.query_instances())
+                current_state = delete_status.get('currentState')
+                if current_state:
+                    if current_state.get('ACTION'):
+                        self.assertIn('.delete', current_state.get('ACTION'))
+                        return
+                    else:
+                        self.assertEqual(current_state.get('name'), 'shutting-down')
+                        return
+        # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
+        sleep(shutdown_delay)
+        self.assertNotIn(self.instance_name, self.query_instances())
 
     @property
     def instance_name(self):
