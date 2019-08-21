@@ -201,7 +201,7 @@ def latest_version(*names, **kwargs):
         .. versionadded:: 2016.11.0
 
         Skip refreshing the package database if refresh has already occurred within
-        <value> seconds
+        <value> seconds. Default is pkg.cache_valid_time in minion config.
 
     CLI Example:
 
@@ -218,7 +218,6 @@ def latest_version(*names, **kwargs):
             'The \'repo\' argument is invalid, use \'fromrepo\' instead'
         )
     fromrepo = kwargs.pop('fromrepo', None)
-    cache_valid_time = kwargs.pop('cache_valid_time', 0)
 
     if not names:
         return ''
@@ -232,7 +231,7 @@ def latest_version(*names, **kwargs):
 
     # Refresh before looking for the latest version available
     if refresh:
-        refresh_db(cache_valid_time)
+        refresh_db(kwargs.pop('cache_valid_time'))
 
     for name in names:
         cmd = ['apt-cache', '-q', 'policy', name]
@@ -294,7 +293,7 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
-def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
+def refresh_db(cache_valid_time=None, failhard=False, **kwargs):
     '''
     Updates the APT database to latest packages based upon repositories
 
@@ -310,7 +309,7 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
         .. versionadded:: 2016.11.0
 
         Skip refreshing the package database if refresh has already occurred within
-        <value> seconds
+        <value> seconds. Default is pkg.cache_valid_time in minion config.
 
     failhard
 
@@ -330,6 +329,9 @@ def refresh_db(cache_valid_time=0, failhard=False, **kwargs):
     failhard = salt.utils.data.is_true(failhard)
     ret = {}
     error_repos = list()
+
+    if cache_valid_time is None:
+        cache_valid_time = __opts__['pkg.cache_valid_time']
 
     if cache_valid_time:
         try:
@@ -428,7 +430,7 @@ def install(name=None,
         .. versionadded:: 2016.11.0
 
         Skip refreshing the package database if refresh has already occurred within
-        <value> seconds
+        <value> seconds. Default is pkg.cache_valid_time in minion config.
 
     fromrepo
         Specify a package repository to install from
@@ -741,9 +743,8 @@ def install(name=None,
     if not cmds:
         ret = {}
     else:
-        cache_valid_time = kwargs.pop('cache_valid_time', 0)
         if _refresh_db:
-            refresh_db(cache_valid_time)
+            refresh_db(kwargs.pop('cache_valid_time'))
 
         env = _parse_env(kwargs.get('env'))
         env.update(DPKG_ENV_VARS.copy())
@@ -1014,7 +1015,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         .. versionadded:: 2016.11.0
 
         Skip refreshing the package database if refresh has already occurred within
-        <value> seconds
+        <value> seconds. Default is pkg.cache_valid_time in minion config.
 
     download_only
         Only download the packages, don't unpack or install them
@@ -1032,9 +1033,8 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
 
         salt '*' pkg.upgrade
     '''
-    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.data.is_true(refresh):
-        refresh_db(cache_valid_time)
+        refresh_db(kwargs.pop('cache_valid_time'))
 
     old = list_pkgs()
     if 'force_conf_new' in kwargs and kwargs['force_conf_new']:
@@ -1374,7 +1374,7 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
         .. versionadded:: 2016.11.0
 
         Skip refreshing the package database if refresh has already occurred within
-        <value> seconds
+        <value> seconds. Default is pkg.cache_valid_time in minion config.
 
     dist_upgrade
         Whether to list the upgrades using dist-upgrade vs upgrade.  Default is
@@ -1386,9 +1386,8 @@ def list_upgrades(refresh=True, dist_upgrade=True, **kwargs):
 
         salt '*' pkg.list_upgrades
     '''
-    cache_valid_time = kwargs.pop('cache_valid_time', 0)
     if salt.utils.data.is_true(refresh):
-        refresh_db(cache_valid_time)
+        refresh_db(kwargs.pop('cache_valid_time'))
     return _get_upgradable(dist_upgrade, **kwargs)
 
 

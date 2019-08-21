@@ -3556,3 +3556,17 @@ global pillar data.
 
 If set to ``False`` only the overriding pillar data will be available
 to the ``showpillar`` state.
+
+Pkg Configuration
+====================
+
+.. conf_minion:: pkg.cache_valid_time
+
+``pkg.cache_valid_time``
+----------------------
+.. versionadded:: TBD
+
+Default: ``0``
+
+This parameter sets the default value in seconds after which the pkg cache is
+marked as invalid, and a cache update is necessary.

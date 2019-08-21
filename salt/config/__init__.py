@@ -1220,6 +1220,9 @@ VALID_OPTS = immutabletypes.freeze({
 
     # Disable requisites during State runs
     'disabled_requisites': (six.string_types, list),
+
+    # pkg cache_valid_lifetime default
+    'pkg.cache_valid_time': int,
 })
 
 # default configurations
@@ -1523,6 +1526,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'ssh_merge_pillar': True,
     'server_id_use_crc': False,
     'disabled_requisites': [],
+    'pkg.cache_valid_time': 0,
 })
 
 DEFAULT_MASTER_OPTS = immutabletypes.freeze({
