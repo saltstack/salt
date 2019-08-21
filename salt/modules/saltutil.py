@@ -999,7 +999,7 @@ def is_running(fun):
     ret = []
     for data in run:
         function_data = data.get('fun', '')
-        if isinstance(functionData, list):
+        if isinstance(function_data, list):
             for function_item in function_data:
                 if fnmatch.fnmatch(function_item, fun):
                     ret.append(data)
