@@ -44,7 +44,6 @@ import salt.minion
 import salt.payload
 import salt.syspaths
 import salt.exceptions
-#import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 
@@ -659,10 +658,6 @@ class Schedule(object):
                 salt.minion.get_proc_dir(self.opts['cachedir']),
                 ret['jid']
             )
-
-        # if multiprocessing_enabled and not salt.utils.platform.is_windows():
-        #     # Reconfigure multiprocessing logging after daemonizing
-        #     log_setup.setup_multiprocessing_logging()
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
