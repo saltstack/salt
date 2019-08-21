@@ -172,6 +172,7 @@ def runas(cmdLine, username, password=None, cwd=None):
     # Create the environment for the user
     env = win32profile.CreateEnvironmentBlock(user_token, False)
 
+    hProcess = None
     try:
         # Start the process in a suspended state.
         process_info = salt.platform.win.CreateProcessWithTokenW(
@@ -216,7 +217,8 @@ def runas(cmdLine, username, password=None, cwd=None):
             stderr = f_err.read()
             ret['stderr'] = stderr
     finally:
-        salt.platform.win.kernel32.CloseHandle(hProcess)
+        if hProcess is not None:
+            salt.platform.win.kernel32.CloseHandle(hProcess)
         win32api.CloseHandle(th)
         win32api.CloseHandle(user_token)
         if impersonation_token:
