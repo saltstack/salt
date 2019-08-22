@@ -391,7 +391,7 @@ class MockNapalmDevice(object):
     def get_arp_table(self):
         return TEST_ARP_TABLE
 
-    def get(self, key, default=None, *args, **kwargs):
+    def get(self, key, *args, default=None, **kwargs):
         try:
             if key == 'DRIVER':
                 return self
