@@ -28,9 +28,10 @@ class LogrotateTestMakeFile(TestCase, LoaderModuleMockMixin):
         return {logrotate: {}}
 
     def test_make_file(self):
+        with_block_support = Mock(__enter__=Mock(), __exit__=Mock())
         with patch.dict(logrotate.__opts__, {'test': True}, clear=True):
             with patch.object(logrotate.os.path, 'isfile', return_value=False) as isfile:
-                with patch.object(logrotate.salt.utils.files, 'fopen', return_value=Mock()) as fopen:
+                with patch.object(logrotate.salt.utils.files, 'fopen', return_value=with_block_support) as fopen:
                     with patch.dict(logrotate.__salt__, {'logrotate.get': Mock(return_value=None)}, clear=True):
                         ret = logrotate.set_('logrotate-wtmp-rotate',
                                              '/var/log/wtmp',
