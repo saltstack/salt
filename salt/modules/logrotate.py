@@ -209,7 +209,7 @@ def set_(key, value, setting=None, conf_file=_DEFAULT_CONF):
     and make changes in the appropriate file.
     '''
     conf = _parse_conf(conf_file)
-    for include in conf['include files']:
+    for include in conf.setdefault('include files', {}):
         if key in conf['include files'][include]:
             conf_file = os.path.join(conf['include'], include)
 
