@@ -54,7 +54,6 @@ class CloudTest(ShellCase):
         For example this is may used when a test temporarily renames an instance
         :param query: The result of a salt-cloud --query run outside of this function
         '''
-        # salt-cloud -a show_instance myinstance
         if not instance_name:
             instance_name = self.instance_name
         if not query:
@@ -93,21 +92,23 @@ class CloudTest(ShellCase):
 
             # Assert that the last query was successful
             self.assertTrue(self._instance_exists(instance_name, query),
-                            'Instance "{}" was not created successfully: {}'.format(self.instance_name, ', '.join(query)))
+                            'Instance "{}" was not created successfully: {}'.format(self.instance_name,
+                                                                                    ', '.join(query)))
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
-    def assertDestroyInstance(self):
-        log.debug('Deleting instance "{}"'.format(self.instance_name))
-        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
+    def assertDestroyInstance(self, instance_name=None):
+        if not instance_name:
+            instance_name = self.instance_name
+        log.debug('Deleting instance "{}"'.format(instance_name))
+        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=TIMEOUT)
         if delete_str:
             delete = safe_load('\n'.join(delete_str))
-            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
             self.assertIn(self.profile_str, delete)
             self.assertIn(self.PROVIDER, delete[self.profile_str])
-            self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
+            self.assertIn(instance_name, delete[self.profile_str][self.PROVIDER])
 
-            delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
+            delete_status = delete[self.profile_str][self.PROVIDER][instance_name]
             if isinstance(delete_status, str):
                 self.assertEqual(delete_status, 'True')
                 return
@@ -127,10 +128,10 @@ class CloudTest(ShellCase):
             if self._instance_exists(query=query):
                 sleep(30)
                 log.debug('Instance "{}" still found in query after {} tries: {}'
-                          .format(self.instance_name, tries, query))
+                          .format(instance_name, tries, query))
                 query = self.query_instances()
         # The last query should have been successful
-        self.assertNotIn(self.instance_name, self.query_instances())
+        self.assertNotIn(instance_name, self.query_instances())
 
     @property
     def instance_name(self):
@@ -203,23 +204,32 @@ class CloudTest(ShellCase):
                           .format(', '.join(missing_conf_item)) +
                           '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
-    def tearDown(self):
+    def _alt_name(self):
         '''
-        Clean up after tests, If the instance still exists for any reason, delete it.
-        Instances should be destroyed before the tearDown, assertDestroyInstance() should be called exactly
-        one time in a test for each instance created.  This is a failSafe and something went wrong
-        if the tearDown is where an instance is destroyed.
+        Check for an instance that was renamed to be longer
         '''
-        # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
+        query = self.query_instances()
+        for q in query:
+            if q.startswith(self.instance_name) and not q == self.instance_name:
+                return q
+
+    def __ensure_deletion(self, instance_name=None):
+        '''
+        Make sure that the instance absolutely gets deleted, but fail the test if it happens in the tearDown
+        :return True if an instance was deleted, False if no instance was deleted; and a message
+        '''
         destroyed = False
-        if self._instance_exists():
+        if not instance_name:
+            instance_name = self.instance_name
+
+        if self._instance_exists(instance_name):
             for tries in range(3):
                 try:
-                    self.assertDestroyInstance()
-                    self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
-                        self.instance_name))
+                    self.assertDestroyInstance(instance_name)
+                    return False, 'The instance "{}" was deleted during the tearDown, not the test.'.format(
+                        instance_name)
                 except AssertionError as e:
-                    log.error('Failed to delete instance "{}". Tries: {}\n{}'.format(self.instance_name, tries, str(e)))
+                    log.error('Failed to delete instance "{}". Tries: {}\n{}'.format(instance_name, tries, str(e)))
                 if not self._instance_exists():
                     destroyed = True
                     break
@@ -228,7 +238,24 @@ class CloudTest(ShellCase):
 
             if not destroyed:
                 # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-                self.fail('The Instance "{}" was not deleted after multiple attempts'.format(self.instance_name))
+                return False, 'The Instance "{}" was not deleted after multiple attempts'.format(instance_name)
+
+        return True, 'The instance "{}" cleaned up properly after the test'.format(instance_name)
+
+    def tearDown(self):
+        '''
+        Clean up after tests, If the instance still exists for any reason, delete it.
+        Instances should be destroyed before the tearDown, assertDestroyInstance() should be called exactly
+        one time in a test for each instance created.  This is a failSafe and something went wrong
+        if the tearDown is where an instance is destroyed.
+        '''
+        instance_destroyed, destroy_message = self.__ensure_deletion()
+        alt_name = self._alt_name_exists()
+        if alt_name:
+            alt_destroyed, alt_destroy_message = self.__ensure_deletion(alt_name)
+            self.assertTrue(instance_destroyed and alt_destroyed, destroy_message + ' :: ' + alt_destroy_message)
+        else:
+            self.assertTrue(instance_destroyed, destroy_message)
 
     @classmethod
     def tearDownClass(cls):
