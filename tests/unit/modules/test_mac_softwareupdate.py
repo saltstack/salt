@@ -103,14 +103,14 @@ class MacSoftwareUpdateCatalinaTestCase(TestCase, LoaderModuleMockMixin):
 
     @patch('salt.utils.mac_utils.execute_return_result')
     def test_list_available(self, mock_execute):
-            mock_execute.return_value = CATALINA_LIST_OUTPUT
-            result = mac_softwareupdate.list_available()
-            expected = {
-                "Command Line Tools beta 5 for Xcode-11.0": "11.0",
-                "macOS Catalina Developer Beta-6": "5",
-                "BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689",
-                "iCal-1.0.2": "1.0.2"}
-            self.assertEqual(result, expected)
+        mock_execute.return_value = CATALINA_LIST_OUTPUT
+        result = mac_softwareupdate.list_available()
+        expected = {
+            "Command Line Tools beta 5 for Xcode-11.0": "11.0",
+            "macOS Catalina Developer Beta-6": "5",
+            "BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689",
+            "iCal-1.0.2": "1.0.2"}
+        self.assertEqual(result, expected)
 
     @patch('salt.utils.mac_utils.execute_return_result')
     def test_list_recommended(self, mock_execute):
@@ -136,4 +136,3 @@ class MacSoftwareUpdateCatalinaTestCase(TestCase, LoaderModuleMockMixin):
         result = mac_softwareupdate.list_available(shut_down=True)
         expected = {"BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689"}
         self.assertEqual(result, expected)
-

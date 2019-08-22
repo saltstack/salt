@@ -57,7 +57,7 @@ def _get_available(recommended=False, restart=False, shut_down=False):
         #     Title: iCal, Version: 1.0.2, Size: 6520K,
         rexp = re.compile(
             r'(?m)'  # Turn on multiline matching
-            r'^\s*[*-] Label: ' # Name lines start with * or - and "Label: "
+            r'^\s*[*-] Label: '  # Name lines start with * or - and "Label: "
             r'(?P<name>[^ ].*)[\r\n]'  # Capture the rest of that line; this is the update name.
             r'.*Version: (?P<version>[^,]*), '  # Grab the version number.
             r'Size: (?P<size>[^,]*),\s*'  # Grab the size; unused at this time.
