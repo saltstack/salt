@@ -213,7 +213,7 @@ class CloudTest(ShellCase):
             if q.startswith(self.instance_name) and not q == self.instance_name:
                 return q
 
-    def __ensure_deletion(self, instance_name=None):
+    def _ensure_deletion(self, instance_name=None):
         '''
         Make sure that the instance absolutely gets deleted, but fail the test if it happens in the tearDown
         :return True if an instance was deleted, False if no instance was deleted; and a message
@@ -249,10 +249,10 @@ class CloudTest(ShellCase):
         one time in a test for each instance created.  This is a failSafe and something went wrong
         if the tearDown is where an instance is destroyed.
         '''
-        instance_destroyed, destroy_message = self.__ensure_deletion()
-        alt_name = self._alt_name_exists()
+        instance_destroyed, destroy_message = self._ensure_deletion()
+        alt_name = self._alt_name()
         if alt_name:
-            alt_destroyed, alt_destroy_message = self.__ensure_deletion(alt_name)
+            alt_destroyed, alt_destroy_message = self._ensure_deletion(alt_name)
             self.assertTrue(instance_destroyed and alt_destroyed, destroy_message + ' :: ' + alt_destroy_message)
         else:
             self.assertTrue(instance_destroyed, destroy_message)
