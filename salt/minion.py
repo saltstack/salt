@@ -3308,7 +3308,6 @@ class ProxyMinionManager(MinionManager):
 
 
 def _metaproxy_call(opts, fn_name):
-    log.debug('=== here ====')
     metaproxy = salt.loader.metaproxy(opts)
     try:
         metaproxy_name = opts['metaproxy']
