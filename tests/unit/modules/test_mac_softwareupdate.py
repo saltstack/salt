@@ -83,12 +83,12 @@ class MacSoftwareUpdatePreCatalinaTestCase(TestCase, LoaderModuleMockMixin):
             "macOS 10.14.1 Update": "10.14.1"}
         self.assertEqual(result, expected)
 
-    # @patch('salt.utils.mac_utils.execute_return_result')
-    # def test_list_shut_down(self, mock_execute):
-    #     mock_execute.return_value = MOJAVE_LIST_OUTPUT
-    #     result = mac_softwareupdate.list_available()
-    #     expected = {}
-    #     self.assertEqual(result, expected)
+    @patch('salt.utils.mac_utils.execute_return_result')
+    def test_list_shut_down(self, mock_execute):
+        mock_execute.return_value = MOJAVE_LIST_OUTPUT
+        result = mac_softwareupdate.list_available(shut_down=True)
+        expected = {"BridgeOSUpdateCustomer": "10.14.4.1.1.1555388607"}
+        self.assertEqual(result, expected)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -130,11 +130,10 @@ class MacSoftwareUpdateCatalinaTestCase(TestCase, LoaderModuleMockMixin):
             "macOS Catalina Developer Beta-6": "5"}
         self.assertEqual(result, expected)
 
-    # @patch('salt.utils.mac_utils.execute_return_result')
-    # def test_list_shutdown(self, mock_execute):
-    #     # TODO: There's no way to target these currently.
-    #     mock_execute.return_value = CATALINA_LIST_OUTPUT
-    #     result = mac_softwareupdate.list_available()
-    #     expected = {"BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689"}
-    #     self.assertEqual(result, expected)
+    @patch('salt.utils.mac_utils.execute_return_result')
+    def test_list_shut_down(self, mock_execute):
+        mock_execute.return_value = CATALINA_LIST_OUTPUT
+        result = mac_softwareupdate.list_available(shut_down=True)
+        expected = {"BridgeOSUpdateCustomer": "10.15.0.1.1.1560926689"}
+        self.assertEqual(result, expected)
 

@@ -31,7 +31,7 @@ def __virtual__():
     return __virtualname__
 
 
-def _get_available(recommended=False, restart=False):
+def _get_available(recommended=False, restart=False, shut_down=False):
     '''
     Utility function to get all available update packages.
 
@@ -62,7 +62,7 @@ def _get_available(recommended=False, restart=False):
             r'.*Version: (?P<version>[^,]*), '  # Grab the version number.
             r'Size: (?P<size>[^,]*),\s*'  # Grab the size; unused at this time.
             r'(?P<recommended>Recommended: YES,)?\s*'  # Optionally grab the recommended flag.
-            r'(?P<action>Action: restart|shut down,)?'  # Optionally grab an action.
+            r'(?P<action>Action: (?:restart|shut down),)?'  # Optionally grab an action.
         )
     else:
         # Example output:
@@ -84,7 +84,7 @@ def _get_available(recommended=False, restart=False):
             r'(?P<name>[^ ].*)[\r\n]'  # The rest of that line is the name.
             r'.*\((?P<version>[^\)]+)'  # Capture the last parenthesized value on the next line.
             r'[^\r\n\[]*(?P<recommended>\[recommended\])?\s?'  # Capture [recommended] if there.
-            r'(?P<action>\[restart|shut down\])?'  # Capture an action if present.
+            r'(?P<action>\[(?:restart|shut down)\])?'  # Capture an action if present.
         )
 
     # Build a list of lambda funcs to apply to matches to filter based
@@ -94,8 +94,7 @@ def _get_available(recommended=False, restart=False):
         conditions.append(lambda m: m.group('recommended'))
     if salt.utils.data.is_true(restart):
         conditions.append(lambda m: 'restart' in (m.group('action') or ''))
-    # TODO: Handle "shut down" items by adding an arg.
-    if salt.utils.data.is_true(False):
+    if salt.utils.data.is_true(shut_down):
         conditions.append(lambda m: 'shut down' in (m.group('action') or ''))
 
     return {
@@ -104,7 +103,7 @@ def _get_available(recommended=False, restart=False):
         if all(f(m) for f in conditions)}
 
 
-def list_available(recommended=False, restart=False):
+def list_available(recommended=False, restart=False, shut_down=False):
     '''
     List all available updates.
 
@@ -121,7 +120,7 @@ def list_available(recommended=False, restart=False):
 
        salt '*' softwareupdate.list_available
     '''
-    return _get_available(recommended, restart)
+    return _get_available(recommended, restart, shut_down)
 
 
 def ignore(name):
