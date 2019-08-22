@@ -8,29 +8,27 @@ Introduction
 Before using these modules you need to register an account with Venafi, and
 configure it in your ``master`` configuration file.
 
-First, you need to add a placeholder to the ``master`` file. This is because
-the module will not load unless it finds an ``api_key`` setting, valid or not.
+First, you need to add configuration to the ``master`` file. This is because
+all fuctions in the module require configured ``api_key`` (for Cloud) or
+``ttp_user``, ``tpp_password`` and ``base_url`` (for Trust Platform) settings.
 Open up ``/etc/salt/master`` and add:
 
 .. code-block:: yaml
 
     venafi:
-      api_key: None
+      base_url: "https://tpp.example.com/"
+      tpp_user: admin
+      tpp_password: "Str0ngPa$$w0rd"
+      zone: Default
 
-Then register your email address with Venafi using the following command:
-
-.. code-block:: bash
-
-    salt-run venafi.register <youremail@yourdomain.com>
-
-This command will not return an ``api_key`` to you; that will be send to you
-via email from Venafi. Once you have received that key, open up your ``master``
-file and set the ``api_key`` to it:
+or
 
 .. code-block:: yaml
 
     venafi:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
+      base_url: "https://cloud.venafi.example.com/" (optional)
+      zone: Default
 
 To enable the ability for creating keys and certificates it is necessary to enable the
 external pillars.  Open the ``/etc/salt/master`` file and add:
@@ -164,29 +162,6 @@ Request a new certificate. Analogous to:
 :param str company_id=None: Optional, but may be configured in ``master`` file
     instead.
 
-register
---------
-
-Register a new user account
-
-.. code-block:: bash
-
-  salt-run venafi.register username@example.com
-
-:param str email: Required. The email address to use for the new Venafi account.
-
-
-show_company
-------------
-
-Show company information, especially the company id
-
-.. code-block:: bash
-
-  salt-run venafi.show_company example.com
-
-:param str domain: Required. The domain name to look up information for.
-
 
 show_csrs
 ---------
@@ -196,19 +171,6 @@ Show certificate requests for the configured API key.
 .. code-block:: bash
 
   salt-run venafi.show_csrs
-
-
-show_zones
-----------
-
-Show zones for the specified company id.
-
-.. code-block:: bash
-
-  salt-run venafi.show_zones
-
-:param str company_id: Optional. The company id to show the zones for.
-
 
 pickup, show_cert
 -----------------

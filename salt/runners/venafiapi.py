@@ -67,7 +67,7 @@ def _init_connection():
     base_url = __opts__.get('venafi', {}).get('base_url')
     tpp_user = __opts__.get('venafi', {}).get('tpp_user')
     tpp_password = __opts__.get('venafi', {}).get('tpp_password')
-    zone = __opts__.get('venafi', {}).get('venafi_zone')
+    zone = __opts__.get('venafi', {}).get('zone')
 
     return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
 
@@ -78,109 +78,19 @@ def __virtual__():
     return __virtualname__
 
 
-def gen_key(minion_id, dns_name=None, zone='default', password=None):
-    '''
-    Generate and return an private_key. If a ``dns_name`` is passed in, the
-    private_key will be cached under that name. The type of key and the
-    parameters used to generate the key are based on the default certificate
-    use policy associated with the specified zone.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.gen_key <minion_id> [dns_name] [zone] [password]
-    '''
-    # Get the default certificate use policy associated with the zone
-    # so we can generate keys that conform with policy
-
-    conn = _init_connection()
-    request = vcert.common.CertificateRequest(common_name=dns_name, key_password=password)
-    zone_config = conn.read_zone_conf(zone)
-    request.update_from_zone_config(zone_config)  # todo: update key configuration in sdk
-    request.build_csr()
-    private_key = request.private_key_pem
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    try:
-        data = cache.fetch(CACHE_BANK_NAME, dns_name)
-        data['private_key'] = private_key
-        data['minion_id'] = minion_id
-    except TypeError:
-        data = {'private_key': private_key,
-                'minion_id': minion_id}
-    cache.store(CACHE_BANK_NAME, dns_name, data)
-
-    return private_key
-
-
-def gen_csr(
-        minion_id,
-        dns_name,
-        zone='default',
-        country=None,
-        state=None,
-        loc=None,
-        org=None,
-        org_unit=None,
-        password=None,
-    ):
-    '''
-    Generate a csr using the host's private_key.
-    Analogous to:
-
-    .. code-block:: bash
-
-        VCert gencsr -cn [CN Value] -o "Beta Organization" -ou "Beta Group" \
-            -l "Palo Alto" -st "California" -c US
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.gen_csr <minion_id> <dns_name>
-    '''
-
-    conn = _init_connection()
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    data = cache.fetch(CACHE_BANK_NAME, dns_name)
-    if data is None:
-        data = {}
-    private_key = data.get("private_key")
-
-    request = vcert.common.CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                              organization=org, organizational_unit=org_unit, key_password=password,
-                                              private_key=private_key)
-    zone_config = conn.read_zone_conf(zone)
-    request.update_from_zone_config(zone_config)
-    request.build_csr()
-
-    data['minion_id'] = minion_id
-    data['private_key'] = request.private_key_pem
-    data['csr'] = request.csr
-    cache.store(CACHE_BANK_NAME, dns_name, data)
-    return request.csr
-
-
 def request(
         minion_id,
         dns_name=None,
         zone='default',
-        request_id=None,
         country='US',
         state='California',
         loc='Palo Alto',
-        org='Beta Organization',
+        org='Venafi',
         org_unit='Beta Group',
         password=None,
     ):
     '''
     Request a new certificate
-
-    Uses the following command:
-
-    .. code-block:: bash
-
-        VCert enroll -z <zone> -k <api key> -cn <domain name>
 
     CLI Example:
 
@@ -191,15 +101,9 @@ def request(
     if password is not None:
         if password.startswith('sdb://'):
             password = __salt__['sdb.get'](password)
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    data = cache.fetch(CACHE_BANK_NAME, dns_name)
-    if data is None:
-        data = {}
-    private_key = data.get("private_key")
     conn = _init_connection()
     request = vcert.common.CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                              organization=org, organizational_unit=org_unit, key_password=password,
-                                              private_key=private_key)
+                                              organization=org, organizational_unit=org_unit, key_password=password)
 
     conn.request_cert(request, zone)
     csr = request.csr
@@ -209,22 +113,7 @@ def request(
         cert = conn.retrieve_cert(request)
         if cert:
             break
-
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-    data = cache.fetch(CACHE_BANK_NAME, dns_name)
-    if data is None:
-        data = {}
-    data.update({
-        'minion_id': minion_id,
-        'request_id': request_id,
-        'private_key': private_key,
-        'zone': zone,
-        'csr': csr,
-    })
-    cache.store(CACHE_BANK_NAME, dns_name, data)
-    _id_map(minion_id, dns_name)
-
-    return
+    return cert.cert, private_key
 
 
 # Request and renew are the same, so far as this module is concerned
@@ -243,58 +132,6 @@ def _id_map(minion_id, dns_name):
     if dns_name not in dns_names:
         dns_names.append(dns_name)
     cache.store(CACHE_BANK_NAME, minion_id, dns_names)
-
-
-def show_company(domain):
-    '''
-    Show company information, especially the company id
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.show_company example.com
-    '''
-    return "Not supported"
-
-
-def show_csrs():
-    '''
-    Show certificate requests for this API key
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.show_csrs
-    '''
-    return "Not supported"
-
-
-def show_policies():
-    '''
-    Show zone details for the API key owner's company
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.show_zones
-    '''
-    return "Not supported"
-
-
-def show_zones():
-    '''
-    Show zone details for the API key owner's company
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.show_zones
-    '''
-    return  "Not supported"
 
 
 def show_cert(dns_name):
@@ -321,24 +158,6 @@ def show_cert(dns_name):
 
 
 pickup = show_cert
-
-
-def show_rsa(minion_id, dns_name):
-    '''
-    Show a private RSA key
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt-run venafi.show_rsa myminion domain.example.com
-    '''
-    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-
-    data = cache.fetch(
-        CACHE_BANK_NAME, dns_name
-    )
-    return data['private_key']
 
 
 def list_domain_cache():
