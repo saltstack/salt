@@ -39,6 +39,6 @@ class LogrotateTestMakeFile(ModuleCase):
                 raise FileExistsError('%s should exist' % file_name)
 
         self.assertEqual(ret['name'], 'logrotate-wtmp-rotate')
-        self.assertEquals(ret['changes'], {'old': False, 'new': 2})
-        self.assertEquals(ret['comment'], 'Set block \'/var/log/wtmp\' command \'rotate\' value: 2')
+        self.assertEqual(ret['changes'], {'old': False, 'new': 2})
+        self.assertEqual(ret['comment'], 'Set block \'/var/log/wtmp\' command \'rotate\' value: 2')
         self.assertTrue(ret['result'])
