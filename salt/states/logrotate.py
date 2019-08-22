@@ -8,9 +8,11 @@ Module for managing logrotate.
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os.path
 
 # Import Salt libs
 from salt.ext import six
+import salt.utils.files
 
 _DEFAULT_CONF = '/etc/logrotate.conf'
 
@@ -48,7 +50,7 @@ def _convert_if_int(value):
     return value
 
 
-def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
+def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF, make_file=False):
     '''
     Set a new value for a specific configuration line.
 
@@ -56,6 +58,7 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
     :param str value: The command value or command of the block specified by the key parameter.
     :param str setting: The command value for the command specified by the value parameter.
     :param str conf_file: The logrotate configuration file.
+    :param bool make_file: makes the conf file if the conf file does not exist.
 
     Example of usage with only the required arguments:
 
@@ -81,6 +84,15 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
            'changes': dict(),
            'comment': six.text_type(),
            'result': None}
+
+    if make_file and not os.path.isfile(conf_file):
+        conf_file_handler = salt.utils.files.fopen(conf_file, 'w')
+        conf_file_handler.close()
+    elif not os.path.isfile(conf_file):
+        ret['comment'] = '%s can not be found!' % conf_file
+        if not __opts__['test']:
+            ret['result'] = False
+        return ret
 
     try:
         if setting is None:
