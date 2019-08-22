@@ -830,7 +830,9 @@ class TestDaemon(TestProgram):
                     if not salt.utils.platform.is_windows():
                         pinfo = proc.as_dict()
                         log.error('Unable to access process %s, '
-                                  'running command %s as user %s, status %s',
+                                  'running command %s as user %s, '
+                                  'cmdline %s '
+                                  'status %s',
                                   pinfo['pid'],
                                   pinfo['name'],
                                   pinfo['username'],
