@@ -89,7 +89,7 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF, make_file=Fals
         conf_file_handler = salt.utils.files.fopen(conf_file, 'w')
         conf_file_handler.close()
     elif not os.path.isfile(conf_file):
-        ret['comment'] = '%s can not be found!' % conf_file
+        ret['comment'] = '{0} can not be found!'.format(conf_file)
         if not __opts__['test']:
             ret['result'] = False
         return ret

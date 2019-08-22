@@ -33,10 +33,9 @@ class LogrotateTestMakeFile(ModuleCase):
                                  conf_file=file_name,
                                  make_file=True)['logrotate_|-logrotate-wtmp-rotate_|-logrotate-wtmp-rotate_|-set']
         finally:
-            if os.path.isfile(file_name):
-                os.remove(file_name)
-            else:
-                raise FileExistsError('%s should exist' % file_name)
+            # file should be found
+            self.assertTrue(os.path.isfile(file_name))
+            os.remove(file_name)
 
         self.assertEqual(ret['name'], 'logrotate-wtmp-rotate')
         self.assertEqual(ret['changes'], {'old': False, 'new': 2})

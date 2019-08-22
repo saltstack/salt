@@ -11,7 +11,6 @@ import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    MagicMock,
     Mock,
     patch,
     NO_MOCK,
