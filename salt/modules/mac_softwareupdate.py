@@ -41,48 +41,67 @@ def _get_available(recommended=False, restart=False):
     cmd = ['softwareupdate', '--list']
     out = salt.utils.mac_utils.execute_return_result(cmd)
 
-    # rexp parses lines that look like the following:
-    #    * Safari6.1.2MountainLion-6.1.2
-    #         Safari (6.1.2), 51679K [recommended]
-    #    - iCal-1.0.2
-    #         iCal, 1.0.2, 6520K
-    rexp = re.compile('(?m)^   [*|-] '
-                      r'([^ ].*)[\r\n].*\(([^\)]+)')
+    if __grains__['osrelease_info'][1] >= 15:
+        # Example output:
+        # Software Update Tool
+        #
+        # Finding available software
+        # Software Update found the following new or updated software:
+        # * Label: Command Line Tools beta 5 for Xcode-11.0
+        #     Title: Command Line Tools beta 5 for Xcode, Version: 11.0, Size: 224804K, Recommended: YES,
+        # * Label: macOS Catalina Developer Beta-6
+        #     Title: macOS Catalina Public Beta, Version: 5, Size: 3084292K, Recommended: YES, Action: restart,
+        # * Label: BridgeOSUpdateCustomer
+        #     Title: BridgeOSUpdateCustomer, Version: 10.15.0.1.1.1560926689, Size: 390674K, Recommended: YES, Action: shut down,
+        # - Label: iCal-1.0.2
+        #     Title: iCal, Version: 1.0.2, Size: 6520K,
+        rexp = re.compile(
+            r'(?m)'  # Turn on multiline matching
+            r'^\s*[*-] Label: ' # Name lines start with * or - and "Label: "
+            r'(?P<name>[^ ].*)[\r\n]'  # Capture the rest of that line; this is the update name.
+            r'.*Version: (?P<version>[^,]*), '  # Grab the version number.
+            r'Size: (?P<size>[^,]*),\s*'  # Grab the size; unused at this time.
+            r'(?P<recommended>Recommended: YES,)?\s*'  # Optionally grab the recommended flag.
+            r'(?P<action>Action: restart|shut down,)?'  # Optionally grab an action.
+        )
+    else:
+        # Example output:
+        # Software Update Tool
+        #
+        # Finding available software
+        # Software Update found the following new or updated software:
+        #    * Command Line Tools (macOS Mojave version 10.14) for Xcode-10.3
+        #        Command Line Tools (macOS Mojave version 10.14) for Xcode (10.3), 199140K [recommended]
+        #    * macOS 10.14.1 Update
+        #        macOS 10.14.1 Update (10.14.1), 199140K [recommended] [restart]
+        #    * BridgeOSUpdateCustomer
+        #        BridgeOSUpdateCustomer (10.14.4.1.1.1555388607), 328394K, [recommended] [shut down]
+        #    - iCal-1.0.2
+        #        iCal, (1.0.2), 6520K
+        rexp = re.compile(
+            r'(?m)'  # Turn on multiline matching
+            r'^\s+[*-] '  # Name lines start with 3 spaces and either a * or a -.
+            r'(?P<name>[^ ].*)[\r\n]'  # The rest of that line is the name.
+            r'.*\((?P<version>[^\)]+)'  # Capture the last parenthesized value on the next line.
+            r'[^\r\n\[]*(?P<recommended>\[recommended\])?\s?'  # Capture [recommended] if there.
+            r'(?P<action>\[restart|shut down\])?'  # Capture an action if present.
+        )
 
+    # Build a list of lambda funcs to apply to matches to filter based
+    # on our args.
+    conditions = []
     if salt.utils.data.is_true(recommended):
-        # rexp parses lines that look like the following:
-        #    * Safari6.1.2MountainLion-6.1.2
-        #         Safari (6.1.2), 51679K [recommended]
-        rexp = re.compile('(?m)^   [*] '
-                          r'([^ ].*)[\r\n].*\(([^\)]+)')
+        conditions.append(lambda m: m.group('recommended'))
+    if salt.utils.data.is_true(restart):
+        conditions.append(lambda m: 'restart' in (m.group('action') or ''))
+    # TODO: Handle "shut down" items by adding an arg.
+    if salt.utils.data.is_true(False):
+        conditions.append(lambda m: 'shut down' in (m.group('action') or ''))
 
-    keys = ['name', 'version']
-    _get = lambda l, k: l[keys.index(k)]
-
-    updates = rexp.findall(out)
-
-    ret = {}
-    for line in updates:
-        name = _get(line, 'name')
-        version_num = _get(line, 'version')
-        ret[name] = version_num
-
-    if not salt.utils.data.is_true(restart):
-        return ret
-
-    # rexp parses lines that look like the following:
-    #    * Safari6.1.2MountainLion-6.1.2
-    #         Safari (6.1.2), 51679K [recommended] [restart]
-    rexp1 = re.compile('(?m)^   [*|-] '
-                       r'([^ ].*)[\r\n].*restart*')
-
-    restart_updates = rexp1.findall(out)
-    ret_restart = {}
-    for update in ret:
-        if update in restart_updates:
-            ret_restart[update] = ret[update]
-
-    return ret_restart
+    return {
+        m.group('name'): m.group('version')
+        for m in rexp.finditer(out)
+        if all(f(m) for f in conditions)}
 
 
 def list_available(recommended=False, restart=False):
