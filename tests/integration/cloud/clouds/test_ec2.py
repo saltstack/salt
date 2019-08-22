@@ -115,20 +115,19 @@ class EC2Test(CloudTest):
         '''
         Tests creating and renaming an instance on EC2 (classic)
         '''
-        # Start with a name that is different from usual so that it will get deleted normally after the test
-        changed_name = self.instance_name + '-changed'
         # create the instance
-        ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(changed_name), timeout=TIMEOUT)
-
+        ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(self.instance_name), timeout=TIMEOUT)
         # check if instance returned
-        self.assertInstanceExists(ret_val, changed_name)
+        self.assertInstanceExists(ret_val)
 
-        rename_result = self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(changed_name, self.instance_name),
-                       timeout=TIMEOUT)
-        self.assertFalse(self._instance_exists(changed_name), 'Instance wasn\'t renamed: |\n{}'.format(rename_result))
-        self.assertInstanceExists()
+        changed_name = self.instance_name + '-changed'
 
-        self.assertDestroyInstance()
+        rename_result = self.run_cloud(
+            '-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
+        self.assertFalse(self._instance_exists(), 'Instance wasn\'t renamed: |\n{}'.format(rename_result))
+        self.assertInstanceExists(instance_name=changed_name)
+
+        self.assertDestroyInstance(changed_name)
 
     def test_instance(self):
         '''
