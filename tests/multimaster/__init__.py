@@ -7,12 +7,13 @@ Set up the Salt multimaster test suite
 # Import Python libs
 from __future__ import absolute_import, print_function
 import copy
+import logging
 import os
-import stat
 import shutil
+import stat
 import sys
-import time
 import threading
+import time
 
 # Import salt tests support dirs
 from tests.support.paths import (
@@ -32,6 +33,7 @@ from tests.integration import (
         SALT_LOG_PORT,
         SocketServerRequestHandler,
         TestDaemon,
+        TestDaemonStartFailed,
         ThreadedSocketServer,
         get_unused_localhost_port,
         )
@@ -42,6 +44,8 @@ from salt.utils.verify import verify_env
 
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion
+
+log = logging.getLogger(__name__)
 
 
 class MultimasterTestDaemon(TestDaemon):
@@ -121,18 +125,47 @@ class MultimasterTestDaemon(TestDaemon):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
-        self.minion_process.terminate()
-        self.sub_master_process.terminate()
-        self.master_process.terminate()
-        self.log_server.server_close()
-        self.log_server.shutdown()
+        try:
+            if hasattr(self.sub_minion_process, 'terminate'):
+                self.sub_minion_process.terminate()
+            else:
+                log.error('self.sub_minion_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
+        try:
+            if hasattr(self.minion_process, 'terminate'):
+                self.minion_process.terminate()
+            else:
+                log.error('self.minion_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
+        try:
+            if hasattr(self.sub_master_process, 'terminate'):
+                self.sub_master_process.terminate()
+            else:
+                log.error('self.sub_master_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
+        try:
+            if hasattr(self.master_process, 'terminate'):
+                self.master_process.terminate()
+            else:
+                log.error('self.master_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
         self._exit_mockbin()
         self._exit_ssh()
-        self.log_server_process.join()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
+        # Shutdown the log server
+        self.log_server.server_close()
+        self.log_server.shutdown()
+        self.log_server_process.join()
 
     def start_zeromq_daemons(self):
         '''
@@ -177,6 +210,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         # Clone the master key to sub-master's pki dir
         for keyfile in ('master.pem', 'master.pub'):
@@ -220,6 +254,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_RED}Starting second salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -256,6 +291,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -292,6 +328,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
     start_tcp_daemons = start_zeromq_daemons
 

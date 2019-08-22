@@ -5,18 +5,21 @@ Tests for the Openstack Cloud Provider
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
-from os import path
 from time import sleep
+import logging
+import os
+import shutil
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name, expensiveTest
 from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
+from salt.utils.yaml import safe_load
 
 TIMEOUT = 500
 
@@ -26,8 +29,18 @@ log = logging.getLogger(__name__)
 class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
-    __RE_RUN_DELAY = 15
+    TMP_PROVIDER_DIR = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'cloud.providers.d')
+    __RE_RUN_DELAY = 30
     __RE_TRIES = 12
+
+    @staticmethod
+    def clean_cloud_dir(tmp_dir):
+        '''
+        Clean the cloud.providers.d tmp directory
+        '''
+        # make sure old provider configs are deleted
+        for i in os.listdir(tmp_dir):
+            os.remove(os.path.join(tmp_dir, i))
 
     def query_instances(self):
         '''
@@ -60,73 +73,64 @@ class CloudTest(ShellCase):
         if not instance_name:
             instance_name = self.instance_name
 
-        # Verify that the instance exists via query
-        query = self.query_instances()
-        for tries in range(self.__RE_TRIES):
-            if self._instance_exists(instance_name, query):
-                log.debug('Instance "{}" reported after {} seconds'.format(instance_name, tries * self.__RE_RUN_DELAY))
-                break
-            else:
-                sleep(self.__RE_RUN_DELAY)
-                query = self.query_instances()
-
-        # Assert that the last query was successful
-        self.assertTrue(self._instance_exists(instance_name, query),
-                        'Instance "{}" was not created successfully: |\n\t{}\n\t|`'.format(
-                            instance_name, '\n\t'.join(creation_ret if creation_ret else query)))
-
-        log.debug('Instance exists and was created: "{}"'.format(instance_name))
-
         # If it exists but doesn't show up in the creation_ret, there was probably an error during creation
         if creation_ret:
             self.assertIn(instance_name, [i.strip(': ') for i in creation_ret],
                           'An error occured during instance creation:  |\n\t{}\n\t|'.format(
-                              '\n\t'.join(creation_ret if creation_ret else query)
+                              '\n\t'.join(creation_ret)
                           ))
-
-    def _destroy_instance(self):
-        log.debug('Deleting instance "{}"'.format(self.instance_name))
-        delete = self.run_cloud('-d {0} --assume-yes'.format(self.instance_name), timeout=TIMEOUT)
-        # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
-        delete_str = ''.join(delete)
-        log.debug('Deletion status: {}'.format(delete_str))
-
-        if any([x in delete_str for x in (
-            'True',
-            'was successfully deleted'
-        )]):
-            log.debug('Instance "{}" was successfully deleted'.format(self.instance_name))
-        elif any([x in delete_str for x in (
-            'shutting-down',
-            '.delete',
-        )]):
-            log.debug('Instance "{}" is cleaning up'.format(self.instance_name))
-            sleep(30)
         else:
-            log.warning('Instance "{}" may not have been deleted properly'.format(self.instance_name))
+            # Verify that the instance exists via query
+            query = self.query_instances()
+            for tries in range(self.__RE_TRIES):
+                if self._instance_exists(instance_name, query):
+                    log.debug(
+                        'Instance "{}" reported after {} seconds'.format(instance_name, tries * self.__RE_RUN_DELAY))
+                    break
+                else:
+                    sleep(self.__RE_RUN_DELAY)
+                    query = self.query_instances()
 
-        return delete_str
+            # Assert that the last query was successful
+            self.assertTrue(self._instance_exists(instance_name, query),
+                            'Instance "{}" was not created successfully: {}'.format(self.instance_name, ', '.join(query)))
+
+            log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
     def assertDestroyInstance(self):
-        delete_str = self._destroy_instance()
+        log.debug('Deleting instance "{}"'.format(self.instance_name))
+        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(self.instance_name), timeout=TIMEOUT)
+        if delete_str:
+            delete = safe_load('\n'.join(delete_str))
+            # example response: ['gce-config:', '----------', '    gce:', '----------', 'cloud-test-dq4e6c:', 'True', '']
+            self.assertIn(self.profile_str, delete)
+            self.assertIn(self.PROVIDER, delete[self.profile_str])
+            self.assertIn(self.instance_name, delete[self.profile_str][self.PROVIDER])
 
-        # It might take a while to register that deletion has happened with `salt-cloud --query`
+            delete_status = delete[self.profile_str][self.PROVIDER][self.instance_name]
+            if isinstance(delete_status, str):
+                self.assertEqual(delete_status, 'True')
+                return
+            elif isinstance(delete_status, dict):
+                current_state = delete_status.get('currentState')
+                if current_state:
+                    if current_state.get('ACTION'):
+                        self.assertIn('.delete', current_state.get('ACTION'))
+                        return
+                    else:
+                        self.assertEqual(current_state.get('name'), 'shutting-down')
+                        return
+        # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
         query = self.query_instances()
-        for tries in range(self.__RE_TRIES):
-            # If the instance doesn't exist, then deletion was a success. Move on
-            if not self._instance_exists(self.instance_name, query):
-                log.debug('Instance "{}" reported as deleted after {} seconds'.format(self.instance_name,
-                                                                                      tries * self.__RE_RUN_DELAY))
-                break
-            else:
-                # Wait a bit and check again
-                sleep(self.__RE_RUN_DELAY)
+        # some instances take a while to report their destruction
+        for tries in range(6):
+            if self._instance_exists(query=query):
+                sleep(30)
+                log.debug('Instance "{}" still found in query after {} tries: {}'
+                          .format(self.instance_name, tries, query))
                 query = self.query_instances()
-
-        # The instance should be reported as destroyed by the final query, otherwise fail
-        self.assertFalse(self._instance_exists(query), 'Could not destroy "{}".  Delete_str: `{}`'
-                         .format(self.instance_name, delete_str))
-        log.debug('Instance "{}" no longer exists'.format(self.instance_name))
+        # The last query should have been successful
+        self.assertNotIn(self.instance_name, self.query_instances())
 
     @property
     def instance_name(self):
@@ -147,9 +151,8 @@ class CloudTest(ShellCase):
     def provider_config(self):
         if not hasattr(self, '_provider_config'):
             self._provider_config = cloud_providers_config(
-                path.join(
-                    FILES,
-                    'conf',
+                os.path.join(
+                    self.config_dir,
                     'cloud.providers.d',
                     self.PROVIDER + '.conf'
                 )
@@ -160,9 +163,8 @@ class CloudTest(ShellCase):
     def config(self):
         if not hasattr(self, '_config'):
             self._config = cloud_config(
-                path.join(
-                    FILES,
-                    'conf',
+                os.path.join(
+                    self.config_dir,
                     'cloud.profiles.d',
                     self.PROVIDER + '.conf'
                 )
@@ -201,27 +203,43 @@ class CloudTest(ShellCase):
                           .format(', '.join(missing_conf_item)) +
                           '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
-        self.assertFalse(self._instance_exists(),
-                         'The instance "{}" exists before it was created by the test'.format(self.instance_name))
-
     def tearDown(self):
         '''
         Clean up after tests, If the instance still exists for any reason, delete it.
-        Instances should be destroyed before the tearDown, _destroy_instance() should be called exactly
+        Instances should be destroyed before the tearDown, assertDestroyInstance() should be called exactly
         one time in a test for each instance created.  This is a failSafe and something went wrong
         if the tearDown is where an instance is destroyed.
         '''
         # Make sure that the instance for sure gets deleted, but fail the test if it happens in the tearDown
-        instance_deleted_before_teardown = True
-        for _ in range(12):
-            if self._instance_exists():
-                sleep(30)
-                instance_deleted_before_teardown = False
-                self._destroy_instance()
+        destroyed = False
+        if self._instance_exists():
+            for tries in range(3):
+                try:
+                    self.assertDestroyInstance()
+                    self.fail('The instance "{}" was deleted during the tearDown, not the test.'.format(
+                        self.instance_name))
+                except AssertionError as e:
+                    log.error('Failed to delete instance "{}". Tries: {}\n{}'.format(self.instance_name, tries, str(e)))
+                if not self._instance_exists():
+                    destroyed = True
+                    break
+                else:
+                    sleep(30)
 
-        self.assertFalse(self._instance_exists(), 'Instance exists after multiple attempts to delete: {}'
-                         .format(self.instance_name))
+            if not destroyed:
+                # Destroying instances in the tearDown is a contingency, not the way things should work by default.
+                self.fail('The Instance "{}" was not deleted after multiple attempts'.format(self.instance_name))
 
-        # Destroying instances in the tearDown is a contingency, not the way things should work by default.
-        self.assertTrue(instance_deleted_before_teardown,
-                        'The Instance "{}" was deleted during the tearDown, not the test.'.format(self.instance_name))
+    @classmethod
+    def tearDownClass(cls):
+        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+
+    @classmethod
+    def setUpClass(cls):
+        # clean up before setup
+        cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
+
+        # add the provider config for only the cloud we are testing
+        provider_file = cls.PROVIDER + '.conf'
+        shutil.copyfile(os.path.join(os.path.join(FILES, 'conf', 'cloud.providers.d'), provider_file),
+                        os.path.join(os.path.join(cls.TMP_PROVIDER_DIR, provider_file)))

@@ -58,7 +58,7 @@ except ImportError as exc:
     pprint.pprint(sys.path)
     raise exc
 
-from tests.integration import TestDaemon  # pylint: disable=W0403
+from tests.integration import TestDaemon, TestDaemonStartFailed  # pylint: disable=W0403
 from tests.multimaster import MultimasterTestDaemon
 import salt.utils.platform
 
@@ -628,65 +628,68 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         except TypeError:
             print_header(' * Setting up Salt daemons for interactive use', top=False)
 
-        with TestDaemon(self):
-            print_header(' * Salt daemons started')
-            master_conf = TestDaemon.config('master')
-            minion_conf = TestDaemon.config('minion')
-            proxy_conf = TestDaemon.config('proxy')
-            sub_minion_conf = TestDaemon.config('sub_minion')
-            syndic_conf = TestDaemon.config('syndic')
-            syndic_master_conf = TestDaemon.config('syndic_master')
+        try:
+            with TestDaemon(self):
+                print_header(' * Salt daemons started')
+                master_conf = TestDaemon.config('master')
+                minion_conf = TestDaemon.config('minion')
+                proxy_conf = TestDaemon.config('proxy')
+                sub_minion_conf = TestDaemon.config('sub_minion')
+                syndic_conf = TestDaemon.config('syndic')
+                syndic_master_conf = TestDaemon.config('syndic_master')
 
-            print_header(' * Syndic master configuration values (MoM)', top=False)
-            print('interface: {0}'.format(syndic_master_conf['interface']))
-            print('publish port: {0}'.format(syndic_master_conf['publish_port']))
-            print('return port: {0}'.format(syndic_master_conf['ret_port']))
-            print('\n')
+                print_header(' * Syndic master configuration values (MoM)', top=False)
+                print('interface: {0}'.format(syndic_master_conf['interface']))
+                print('publish port: {0}'.format(syndic_master_conf['publish_port']))
+                print('return port: {0}'.format(syndic_master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Syndic configuration values', top=True)
-            print('interface: {0}'.format(syndic_conf['interface']))
-            print('syndic master: {0}'.format(syndic_conf['syndic_master']))
-            print('syndic master port: {0}'.format(syndic_conf['syndic_master_port']))
-            print('\n')
+                print_header(' * Syndic configuration values', top=True)
+                print('interface: {0}'.format(syndic_conf['interface']))
+                print('syndic master: {0}'.format(syndic_conf['syndic_master']))
+                print('syndic master port: {0}'.format(syndic_conf['syndic_master_port']))
+                print('\n')
 
-            print_header(' * Master configuration values', top=True)
-            print('interface: {0}'.format(master_conf['interface']))
-            print('publish port: {0}'.format(master_conf['publish_port']))
-            print('return port: {0}'.format(master_conf['ret_port']))
-            print('\n')
+                print_header(' * Master configuration values', top=True)
+                print('interface: {0}'.format(master_conf['interface']))
+                print('publish port: {0}'.format(master_conf['publish_port']))
+                print('return port: {0}'.format(master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Minion configuration values', top=True)
-            print('interface: {0}'.format(minion_conf['interface']))
-            print('master: {0}'.format(minion_conf['master']))
-            print('master port: {0}'.format(minion_conf['master_port']))
-            if minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Minion configuration values', top=True)
+                print('interface: {0}'.format(minion_conf['interface']))
+                print('master: {0}'.format(minion_conf['master']))
+                print('master port: {0}'.format(minion_conf['master_port']))
+                if minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' * Sub Minion configuration values', top=True)
-            print('interface: {0}'.format(sub_minion_conf['interface']))
-            print('master: {0}'.format(sub_minion_conf['master']))
-            print('master port: {0}'.format(sub_minion_conf['master_port']))
-            if sub_minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Sub Minion configuration values', top=True)
+                print('interface: {0}'.format(sub_minion_conf['interface']))
+                print('master: {0}'.format(sub_minion_conf['master']))
+                print('master port: {0}'.format(sub_minion_conf['master_port']))
+                if sub_minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' * Proxy Minion configuration values', top=True)
-            print('interface: {0}'.format(proxy_conf['interface']))
-            print('master: {0}'.format(proxy_conf['master']))
-            print('master port: {0}'.format(proxy_conf['master_port']))
-            if minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(proxy_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(proxy_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Proxy Minion configuration values', top=True)
+                print('interface: {0}'.format(proxy_conf['interface']))
+                print('master: {0}'.format(proxy_conf['master']))
+                print('master port: {0}'.format(proxy_conf['master_port']))
+                if minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(proxy_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(proxy_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
-            print('To access the minion: salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
+                print_header(' Your client configuration is at {0}'.format(TestDaemon.config_location()))
+                print('To access the minion: salt -c {0} minion test.ping'.format(TestDaemon.config_location()))
 
-            while True:
-                time.sleep(1)
+                while True:
+                    time.sleep(1)
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def start_multimaster_daemons_only(self):
         if not salt.utils.platform.is_windows():
@@ -699,49 +702,52 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         except TypeError:
             print_header(' * Setting up Salt daemons for interactive use', top=False)
 
-        with MultimasterTestDaemon(self):
-            print_header(' * Salt daemons started')
-            master_conf = MultimasterTestDaemon.config('mm_master')
-            sub_master_conf = MultimasterTestDaemon.config('mm_sub_master')
-            minion_conf = MultimasterTestDaemon.config('mm_minion')
-            sub_minion_conf = MultimasterTestDaemon.config('mm_sub_minion')
+        try:
+            with MultimasterTestDaemon(self):
+                print_header(' * Salt daemons started')
+                master_conf = MultimasterTestDaemon.config('mm_master')
+                sub_master_conf = MultimasterTestDaemon.config('mm_sub_master')
+                minion_conf = MultimasterTestDaemon.config('mm_minion')
+                sub_minion_conf = MultimasterTestDaemon.config('mm_sub_minion')
 
-            print_header(' * Master configuration values', top=True)
-            print('interface: {0}'.format(master_conf['interface']))
-            print('publish port: {0}'.format(master_conf['publish_port']))
-            print('return port: {0}'.format(master_conf['ret_port']))
-            print('\n')
+                print_header(' * Master configuration values', top=True)
+                print('interface: {0}'.format(master_conf['interface']))
+                print('publish port: {0}'.format(master_conf['publish_port']))
+                print('return port: {0}'.format(master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Second master configuration values', top=True)
-            print('interface: {0}'.format(sub_master_conf['interface']))
-            print('publish port: {0}'.format(sub_master_conf['publish_port']))
-            print('return port: {0}'.format(sub_master_conf['ret_port']))
-            print('\n')
+                print_header(' * Second master configuration values', top=True)
+                print('interface: {0}'.format(sub_master_conf['interface']))
+                print('publish port: {0}'.format(sub_master_conf['publish_port']))
+                print('return port: {0}'.format(sub_master_conf['ret_port']))
+                print('\n')
 
-            print_header(' * Minion configuration values', top=True)
-            print('interface: {0}'.format(minion_conf['interface']))
-            print('masters: {0}'.format(', '.join(minion_conf['master'])))
-            if minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Minion configuration values', top=True)
+                print('interface: {0}'.format(minion_conf['interface']))
+                print('masters: {0}'.format(', '.join(minion_conf['master'])))
+                if minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(minion_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(minion_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' * Sub Minion configuration values', top=True)
-            print('interface: {0}'.format(sub_minion_conf['interface']))
-            print('masters: {0}'.format(', '.join(sub_minion_conf['master'])))
-            if sub_minion_conf['ipc_mode'] == 'tcp':
-                print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
-                print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
-            print('\n')
+                print_header(' * Sub Minion configuration values', top=True)
+                print('interface: {0}'.format(sub_minion_conf['interface']))
+                print('masters: {0}'.format(', '.join(sub_minion_conf['master'])))
+                if sub_minion_conf['ipc_mode'] == 'tcp':
+                    print('tcp pub port: {0}'.format(sub_minion_conf['tcp_pub_port']))
+                    print('tcp pull port: {0}'.format(sub_minion_conf['tcp_pull_port']))
+                print('\n')
 
-            print_header(' Your client configurations are at {0}'.format(
-                ', '.join(MultimasterTestDaemon.config_location())))
-            print('To access minions from different masters use:')
-            for location in MultimasterTestDaemon.config_location():
-                print('    salt -c {0} minion test.ping'.format(location))
+                print_header(' Your client configurations are at {0}'.format(
+                    ', '.join(MultimasterTestDaemon.config_location())))
+                print('To access minions from different masters use:')
+                for location in MultimasterTestDaemon.config_location():
+                    print('    salt -c {0} minion test.ping'.format(location))
 
-            while True:
-                time.sleep(1)
+                while True:
+                    time.sleep(1)
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def set_filehandle_limits(self, limits='integration'):
         '''
@@ -843,37 +849,41 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         if not self._check_enabled_suites(include_cloud_provider=True, include_proxy=True) and not self.options.name:
             return status
 
-        with TestDaemon(self):
-            if self.options.name:
-                for name in self.options.name:
-                    name = name.strip()
-                    if not name:
-                        continue
-                    if os.path.isfile(name):
-                        if not name.endswith('.py'):
+        try:
+            with TestDaemon(self):
+                if self.options.name:
+                    for name in self.options.name:
+                        name = name.strip()
+                        if not name:
                             continue
-                        if name.startswith(os.path.join('tests', 'unit')):
+                        if os.path.isfile(name):
+                            if not name.endswith('.py'):
+                                continue
+                            if name.startswith((os.path.join('tests', 'unit'),
+                                                os.path.join('tests', 'multimaster'))):
+                                continue
+                            results = self.run_suite(os.path.dirname(name),
+                                                     name,
+                                                     suffix=os.path.basename(name),
+                                                     failfast=self.options.failfast,
+                                                     load_from_name=False)
+                            status.append(results)
                             continue
-                        results = self.run_suite(os.path.dirname(name),
-                                                 name,
-                                                 suffix=os.path.basename(name),
-                                                 failfast=self.options.failfast,
-                                                 load_from_name=False)
+                        if name.startswith(('tests.unit.', 'unit.',
+                                            'tests.multimaster.', 'multimaster.')):
+                            continue
+                        results = self.run_suite(
+                            '', name, suffix='test_*.py', load_from_name=True,
+                            failfast=self.options.failfast,
+                        )
                         status.append(results)
-                        continue
-                    if name.startswith(('tests.unit.', 'unit.',
-                                        'tests.multimaster', 'multimaster')):
-                        continue
-                    results = self.run_suite(
-                        '', name, suffix='test_*.py', load_from_name=True,
-                        failfast=self.options.failfast,
-                    )
-                    status.append(results)
-                return status
-            for suite in TEST_SUITES:
-                if suite != 'unit' and suite != 'multimaster' and getattr(self.options, suite):
-                    status.append(self.run_integration_suite(**TEST_SUITES[suite]))
-        return status
+                    return status
+                for suite in TEST_SUITES:
+                    if suite != 'unit' and suite != 'multimaster' and getattr(self.options, suite):
+                        status.append(self.run_integration_suite(**TEST_SUITES[suite]))
+            return status
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def run_multimaster_tests(self):
         '''
@@ -905,30 +915,33 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         status = []
 
-        with MultimasterTestDaemon(self):
-            if self.options.name:
-                for name in self.options.name:
-                    name = name.strip()
-                    if not name:
-                        continue
-                    if os.path.isfile(name):
-                        if not name.endswith('.py'):
+        try:
+            with MultimasterTestDaemon(self):
+                if self.options.name:
+                    for name in self.options.name:
+                        name = name.strip()
+                        if not name:
                             continue
-                        if not name.startswith(os.path.join('tests', 'multimaster')):
+                        if os.path.isfile(name):
+                            if not name.endswith('.py'):
+                                continue
+                            if not name.startswith(os.path.join('tests', 'multimaster')):
+                                continue
+                            results = self.run_suite(os.path.dirname(name),
+                                                     name,
+                                                     suffix=os.path.basename(name),
+                                                     load_from_name=False)
+                            status.append(results)
                             continue
-                        results = self.run_suite(os.path.dirname(name),
-                                                 name,
-                                                 suffix=os.path.basename(name),
-                                                 load_from_name=False)
+                        if not name.startswith(('tests.multimaster.', 'multimaster.')):
+                            continue
+                        results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
                         status.append(results)
-                        continue
-                    if not name.startswith(('tests.multimaster.', 'multimaster.')):
-                        continue
-                    results = self.run_suite('', name, suffix='test_*.py', load_from_name=True)
-                    status.append(results)
-                return status
-            status.append(self.run_integration_suite(**TEST_SUITES['multimaster']))
-        return status
+                    return status
+                status.append(self.run_integration_suite(**TEST_SUITES['multimaster']))
+            return status
+        except TestDaemonStartFailed:
+            self.exit(status=2)
 
     def run_unit_tests(self):
         '''
