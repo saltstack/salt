@@ -210,7 +210,9 @@ class CloudTest(ShellCase):
         '''
         query = self.query_instances()
         for q in query:
-            if q.startswith(self.instance_name) and not q == self.instance_name:
+            # Verify but this is a new name and not a shutting down ec2 instance
+            if q.startswith(self.instance_name) and not (q == self.instance_name) \
+               and not (q.split('-')[-1].startswith('DEL')):
                 return q
 
     def _ensure_deletion(self, instance_name=None):
