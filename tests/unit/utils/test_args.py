@@ -256,6 +256,10 @@ class ArgsTestCase(TestCase):
         item = '|'
         self.assertIs(_yamlify_arg(item), item)
 
+        # Make sure we don't load '!' as something else (None in 2018.3, '' in newer)
+        item = '!'
+        self.assertIs(_yamlify_arg(item), item)
+
         # Make sure we load ints, floats, and strings correctly
         self.assertEqual(_yamlify_arg('123'), 123)
         self.assertEqual(_yamlify_arg('45.67'), 45.67)
