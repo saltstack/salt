@@ -1,81 +1,136 @@
-timeout(time: 6, unit: 'HOURS') {
-    node('kitchen-slave') {
-        timestamps {
+// Define the maximum time, in hours, that a test run should run for
+def testrun_timeout = 6
+// Now define a global pipeline timeout. This is the test run timeout with one(1) additional
+// hour to allow for artifacts to be downloaded, if possible.
+def global_timeout = testrun_timeout + 1;
+
+def distro_name = 'ubuntu'
+def distro_version = '1604'
+def python_version = 'py3'
+def salt_target_branch = '2019.2'
+def golden_images_branch = '2019.2'
+
+properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
+    parameters([
+        booleanParam(defaultValue: false, description: 'Run full test suite', name: 'runFull')
+    ])
+])
+
+node('kitchen-slave') {
+    timeout(time: global_timeout, unit: 'HOURS') {
+        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                          accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                          credentialsId: 'AWS_ACCESS_KEY_ID',
+                          secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
             ansiColor('xterm') {
-                withEnv([
-                    'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/platforms.yml',
-                    'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
-                    'PATH=/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
-                    'RBENV_VERSION=2.4.2',
-                    'TEST_SUITE=py3',
-                    'TEST_PLATFORM=ubuntu-1604',
-                    'PY_COLORS=1',
-                ]) {
-                    stage('checkout-scm') {
-                        cleanWs notFailBuild: true
-                        checkout scm
-                    }
-                    try {
-                        stage('github-pending') {
-                            githubNotify credentialsId: 'test-jenkins-credentials',
-                                description: "running ${TEST_SUITE}-${TEST_PLATFORM}...",
-                                status: 'PENDING',
-                                context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                timestamps {
+                    withEnv([
+                        'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/platforms.yml',
+                        'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/verifier.yml',
+                        'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
+                        'NOX_ENV_NAME=runtests-zeromq',
+                        'NOX_ENABLE_FROM_FILENAMES=true',
+                        'NOX_PASSTHROUGH_OPTS=--ssh-tests',
+                        "SALT_TARGET_BRANCH=${salt_target_branch}",
+                        "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
+                        "CODECOV_FLAGS=${distro_name}${distro_version},${python_version}",
+                        'PATH=~/.rbenv/shims:/usr/local/rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
+                        'RBENV_VERSION=2.4.2',
+                        "TEST_SUITE=${python_version}",
+                        "TEST_PLATFORM=${distro_name}-${distro_version}",
+                        "FORCE_FULL=${params.runFull}",
+                    ]) {
+                        // Set the GH status even before cloning the repo
+                        if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                            stage('github-pending') {
+                                githubNotify credentialsId: 'test-jenkins-credentials',
+                                    description: "running ${TEST_SUITE}-${TEST_PLATFORM}...",
+                                    status: 'PENDING',
+                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                            }
                         }
+                        // Checkout the repo
+                        stage('checkout-scm') {
+                            cleanWs notFailBuild: true
+                            checkout scm
+                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
+                        }
+
+                        // Setup the kitchen required bundle
                         stage('setup-bundle') {
-                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
-                            sh 'bundle install --with ec2 windows --without opennebula docker'
+                            sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
+                        }
+
+                        stage('Create VM') {
+                            retry(3) {
+                                sh '''
+                                t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
+                                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"
+                                '''
+                            }
                         }
                         try {
-                            stage('run kitchen') {
-                                withCredentials([
-                                    [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
-                                ]) {
-                                    sshagent(credentials: ['jenkins-testing-ssh-key']) {
-                                        sh 'ssh-add ~/.ssh/jenkins-testing.pem'
-                                        sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM || bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM'
-                                        sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
+                            sshagent(credentials: ['jenkins-testing-ssh-key']) {
+                                sh 'ssh-add ~/.ssh/jenkins-testing.pem || ssh-add ~/.ssh/kitchen.pem'
+                                try {
+                                    timeout(time: testrun_timeout, unit: 'HOURS') {
+                                        stage('Converge VM') {
+                                            sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                                        }
+                                        stage('Run Tests') {
+                                            sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                                        }
                                     }
-                                }
-                            }
-                        } finally {
-                            stage('cleanup kitchen') {
-                                script {
-                                    withCredentials([
-                                        [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
-                                    ]) {
-                                        sshagent(credentials: ['jenkins-testing-ssh-key']) {
-                                            sh 'ssh-add ~/.ssh/jenkins-testing.pem'
-                                            sh 'bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM'
+                                } finally {
+                                    try {
+                                        archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
+                                        junit 'artifacts/xml-unittests-output/*.xml'
+                                    } finally {
+                                        stage('Cleanup') {
+                                            sh '''
+                                            bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?;"
+                                            '''
+                                        }
+                                        stage('Upload Coverage') {
+                                            script {
+                                                withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
+                                                  sh '''
+                                                  if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
+                                                      curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}"
+                                                  fi
+                                                  '''
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                                archiveArtifacts artifacts: 'artifacts/xml-unittests-output/*.xml'
-                                archiveArtifacts artifacts: 'artifacts/logs/minion'
-                                archiveArtifacts artifacts: 'artifacts/logs/salt-runtests.log'
                             }
-                        }
-                    } catch (Exception e) {
-                        currentBuild.result = 'FAILURE'
-                    } finally {
-                        try {
-                            junit 'artifacts/xml-unittests-output/*.xml'
+                        } catch (Exception e) {
+                            currentBuild.result = 'FAILURE'
                         } finally {
                             cleanWs notFailBuild: true
-                            def currentResult = currentBuild.result ?: 'SUCCESS'
-                            if (currentResult == 'SUCCESS') {
-                                githubNotify credentialsId: 'test-jenkins-credentials',
-                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
-                                    status: 'SUCCESS',
-                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                            if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                        description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
+                                        status: 'SUCCESS',
+                                        context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                                }
                             } else {
-                                githubNotify credentialsId: 'test-jenkins-credentials',
-                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
-                                    status: 'FAILURE',
-                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
-                                slackSend channel: "#jenkins-prod-pr", 
-                                    color: '#FF0000', 
-                                    message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                if (env.NODE_NAME.startsWith('jenkins-pr-')) {
+                                    githubNotify credentialsId: 'test-jenkins-credentials',
+                                        description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
+                                        status: 'FAILURE',
+                                        context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+                                }
+                                try {
+                                  slackSend channel: "#jenkins-prod-pr",
+                                      color: '#FF0000',
+                                      message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
+                                } catch (Exception e) {
+                                  sh 'echo Failed to send the Slack notification'
+                                }
                             }
                         }
                     }
@@ -84,3 +139,5 @@ timeout(time: 6, unit: 'HOURS') {
         }
     }
 }
+
+// vim: ft=groovy

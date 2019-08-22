@@ -87,3 +87,20 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         )
         assert ret['passwordData'] == PASS_DATA
         assert ret['password'] == 'testp4ss!'
+
+    @patch('salt.cloud.clouds.ec2.get_location')
+    @patch('salt.cloud.clouds.ec2.get_provider')
+    @patch('salt.utils.aws.query')
+    def test__get_imageid_by_name(self, query, get_provider, get_location):
+        # Trimmed list and stripped dictionary keys for brevity
+        query.return_value = [
+            {u'creationDate': '2019-01-30T23:40:58.000Z', u'imageId': 'ami-02eac2c0129f6376b'},
+            {u'creationDate': '2019-03-15T00:08:05.000Z', u'imageId': 'ami-089ccd342f0be98ab'},
+            {u'creationDate': '2018-05-14T17:19:51.000Z', u'imageId': 'ami-4b6bff34'},
+            {u'creationDate': '2018-01-12T20:33:32.000Z', u'imageId': 'ami-4bf3d731'}]
+        get_location.return_value = 'us-west2'
+        get_provider.return_value = 'ec2'
+
+        # Mock makes argument irrelevant; illustrates value used to obtain mock
+        imageid = ec2._get_imageid_from_image_name('CentOS Linux 7*')
+        assert imageid == 'ami-089ccd342f0be98ab'
