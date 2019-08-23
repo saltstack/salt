@@ -17,7 +17,6 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.paths import TMP, CODE_DIR
-from tests.support.helpers import TestsLoggingHandler
 from tests.support.mock import patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 import tests.integration as integration
@@ -175,11 +174,10 @@ class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 'start_action': 'start', 'parallel': False, 'sock_dir':
                 '/tmp/sock_dir', 'conf_file': '/tmp/conf_file', 'keep_tmp': False,
                 'sudo_password': 'passwd'}
-        with TestsLoggingHandler() as handler:
-            with patch.dict(cloud.__opts__, {'sock_dir': os.path.join(integration.TMP, 'test-socks')}):
-                cloud.bootstrap(vm_, opts)
-                for ret in events.call_args_list:
-                    arg, kwarg = ret
-                    event_kwargs = kwarg['args']['kwargs']
-                    assert 'vm_' not in event_kwargs
-                    assert 'sudo_password' not in event_kwargs
+        with patch.dict(cloud.__opts__, {'sock_dir': os.path.join(integration.TMP, 'test-socks')}):
+            cloud.bootstrap(vm_, opts)
+            for ret in events.call_args_list:
+                arg, kwarg = ret
+                event_kwargs = kwarg['args']['kwargs']
+                assert 'vm_' not in event_kwargs
+                assert 'sudo_password' not in event_kwargs
