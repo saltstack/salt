@@ -41,9 +41,11 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     client = 'runner'
     tag_prefix = 'run'
 
-    def __init__(self, opts):
+    def __init__(self, opts, context=None):
         self.opts = opts
-        self.context = {}
+        if context is None:
+            context = {}
+        self.context = context
 
     @property
     def functions(self):
@@ -160,9 +162,9 @@ class Runner(RunnerClient):
     '''
     Execute the salt runner interface
     '''
-    def __init__(self, opts):
-        super(Runner, self).__init__(opts)
-        self.returners = salt.loader.returners(opts, self.functions)
+    def __init__(self, opts, context=None):
+        super(Runner, self).__init__(opts, context=context)
+        self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
 
     def print_docs(self):
