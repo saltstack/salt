@@ -20,6 +20,7 @@ import salt.ext.six as six
 # Import Salt libs
 import salt.minion
 import salt.config
+import salt.runner
 import salt.utils.files
 import salt.utils.platform
 
@@ -138,24 +139,24 @@ def salt_opts():
 
 
 @pytest.fixture(scope='session')
-def minion_loader_context_dictionary():
+def loader_context_dictionary():
     return {}
 
 
 @pytest.fixture(scope='session')
-def sminion(salt_opts, minion_loader_context_dictionary):
+def _salt_minion(salt_opts, loader_context_dictionary):
     log.info('Instantiating salt.minion.SMinion')
-    _sminion = salt.minion.SMinion(salt_opts.copy(), context=minion_loader_context_dictionary)
+    __salt_minion = salt.minion.SMinion(salt_opts.copy(), context=loader_context_dictionary)
     for name in ('utils', 'functions', 'serializers', 'returners', 'proxy', 'states', 'rend', 'matchers', 'executors'):
-        _attr_dict(getattr(_sminion, name))
+        _attr_dict(getattr(__salt_minion, name))
     log.info('Instantiating salt.minion.SMinion completed')
-    return _sminion
+    return __salt_minion
 
 
 @pytest.fixture(autouse=True)
-def __minion_loader_cleanup(sminion,
+def __minion_loader_cleanup(_salt_minion,
                             salt_opts,
-                            minion_loader_context_dictionary,
+                            loader_context_dictionary,
                             utils,
                             functions,
                             serializers,
@@ -168,10 +169,10 @@ def __minion_loader_cleanup(sminion,
     # Run tests
     yield
     # Clear the context after running the tests
-    minion_loader_context_dictionary.clear()
+    loader_context_dictionary.clear()
     # Reset the options dictionary
     salt_opts_copy = salt_opts.copy()
-    sminion.opts = salt_opts_copy
+    _salt_minion.opts = salt_opts_copy
     utils.opts = salt_opts_copy
     functions.opts = salt_opts_copy
     serializers.opts = salt_opts_copy
@@ -184,23 +185,23 @@ def __minion_loader_cleanup(sminion,
 
 
 @pytest.fixture
-def grains(sminion):
-    return sminion.opts['grains'].copy()
+def grains(_salt_minion):
+    return _salt_minion.opts['grains'].copy()
 
 
 @pytest.fixture
-def pillar(sminion):
-    return sminion.opts['pillar'].copy()
+def pillar(_salt_minion):
+    return _salt_minion.opts['pillar'].copy()
 
 
 @pytest.fixture
-def utils(sminion):
-    return sminion.utils
+def utils(_salt_minion):
+    return _salt_minion.utils
 
 
 @pytest.fixture
-def functions(sminion):
-    _functions = sminion.functions
+def functions(_salt_minion):
+    _functions = _salt_minion.functions
     # Make sure state.sls and state.single returns are StateReturn instances for easier comparissons
     _functions.state.sls = StateCallWrapper(_functions.state.sls)
     _functions.state.single = StateCallWrapper(_functions.state.single)
@@ -213,38 +214,50 @@ def modules(functions):
 
 
 @pytest.fixture
-def serializers(sminion):
-    return sminion.serializers
+def serializers(_salt_minion):
+    return _salt_minion.serializers
 
 
 @pytest.fixture
-def returners(sminion):
-    return sminion.returners
+def returners(_salt_minion):
+    return _salt_minion.returners
 
 
 @pytest.fixture
-def proxy(sminion):
-    return sminion.proxy
+def proxy(_salt_minion):
+    return _salt_minion.proxy
 
 
 @pytest.fixture
-def states(sminion):
-    return sminion.states
+def states(_salt_minion):
+    return _salt_minion.states
 
 
 @pytest.fixture
-def rend(sminion):
-    return sminion.rend
+def rend(_salt_minion):
+    return _salt_minion.rend
 
 
 @pytest.fixture
-def matchers(sminion):
-    return sminion.matchers
+def matchers(_salt_minion):
+    return _salt_minion.matchers
 
 
 @pytest.fixture
-def executors(sminion):
-    return sminion.executors
+def executors(_salt_minion):
+    return _salt_minion.executors
+
+
+@pytest.fixture
+def _runner_client(salt_opts, loader_context_dictionary):
+    _runners = salt.runner.RunnerClient(salt_opts.copy(), context=loader_context_dictionary)
+    return _runners
+
+
+@pytest.fixture
+def runners(_runner_client, loader_context_dictionary):
+    yield _runner_client.functions
+    loader_context_dictionary.clear()
 
 
 def pytest_assertrepr_compare(config, op, left, right):
