@@ -129,6 +129,7 @@ __MP_LOGGING_LISTENER_CONFIGURED = False
 __MP_LOGGING_CONFIGURED = False
 __MP_LOGGING_QUEUE = None
 __MP_LOGGING_PORT = None
+__MP_LOGGING_HOST = '127.0.0.1'
 __MP_LOGGING_LEVEL = GARBAGE
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
@@ -858,15 +859,25 @@ def get_multiprocessing_logging_queue():
     return __MP_LOGGING_QUEUE
 
 
+def get_multiprocessing_logging_host():
+    return __MP_LOGGING_HOST
+
+
 def get_multiprocessing_logging_port():
     if __MP_LOGGING_PORT is None:
-        raise Exception("LOGGING PORT NOT SET")
+        raise RuntimeError("Logging port not set")
     return __MP_LOGGING_PORT
+
+
+def set_multiprocessing_logging_host(host):
+    global __MP_LOGGING_HOST
+    __MP_LOGGING_HOST = host
+
 
 def set_multiprocessing_logging_port(port):
     global __MP_LOGGING_PORT
-    if __MP_LOGGING_PORT is not port:
-        __MP_LOGGING_PORT = port
+    __MP_LOGGING_PORT = port
+
 
 def set_multiprocessing_logging_queue(queue):
     global __MP_LOGGING_QUEUE
@@ -900,6 +911,7 @@ def set_multiprocessing_logging_level_by_opts(opts):
         )
 
     __MP_LOGGING_LEVEL = min(log_levels)
+
 
 def setup_multiprocessing_logging_zmq_listener(opts, port=None):
     global __MP_LOGGING_ZMQ_PROCESS
@@ -1004,7 +1016,6 @@ def setup_multiprocessing_zmq_logging(port=None):
         time.sleep(0.0001)
     finally:
         logging._releaseLock()  # pylint: disable=protected-access
-        pass
 
 
 def setup_multiprocessing_logging(queue=None):
@@ -1059,7 +1070,6 @@ def setup_multiprocessing_logging(queue=None):
         time.sleep(0.0001)
     finally:
         logging._releaseLock()  # pylint: disable=protected-access
-        pass
 
 
 def shutdown_console_logging():
@@ -1144,8 +1154,8 @@ def shutdown_multiprocessing_logging():
     finally:
         logging._releaseLock()
 
+
 def shutdown_multiprocessing_logging_zmq_listener(daemonizing=False):
-    global __MP_LOGGING_PORT
     global __MP_LOGGING_ZMQ_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
 
@@ -1168,13 +1178,13 @@ def shutdown_multiprocessing_logging_zmq_listener(daemonizing=False):
 
     if __MP_LOGGING_ZMQ_PROCESS.is_alive():
         logging.getLogger(__name__).debug('Stopping the multiprocessing logging queue listener')
-        host = '127.0.0.1'
+        host = get_multiprocessing_logging_host()
         port = get_multiprocessing_logging_port()
         context = zmq.Context()
-        sender = self.context.socket(zmq.PUSH)
+        sender = context.socket(zmq.PUSH)
         sender.connect('tcp://{}:{}'.format(host, port))
         try:
-            self.sender.send(msgpack.dumps(None))
+            sender.send(msgpack.dumps(None))
         except IOError:
             # We were unable to deliver the sentinel to the queue
             # carry on...
