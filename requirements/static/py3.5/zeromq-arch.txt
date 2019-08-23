@@ -5,6 +5,7 @@
 #    pip-compile -o requirements/static/py3.5/zeromq-arch.txt -v requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/arch.in
 #
 apache-libcloud==2.0.0
+argh==0.26.2              # via watchdog
 asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
@@ -51,6 +52,7 @@ moto==1.3.7
 msgpack-python==0.5.6
 msgpack==0.6.1
 pathlib2==2.3.3           # via pytest
+pathtools==0.1.2          # via watchdog
 pbr==5.1.3                # via mock
 pluggy==0.9.0             # via pytest
 portend==2.4              # via cherrypy
@@ -63,6 +65,7 @@ pycparser==2.19           # via cffi
 # Next line explicitly commented out by pip-tools-compile because of the following regex: '^pycrypto==(.*)$'
 # pycrypto==2.6.1 ; sys_platform != "win32"
 pycryptodome==3.8.1
+pygit2==0.28.2
 pyinotify==0.9.6
 pyopenssl==19.0.0
 pytest-cov==2.6.1
@@ -88,7 +91,7 @@ s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 setproctitle==1.1.10
 singledispatch==3.4.0.3   # via tornado
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pathlib2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
@@ -96,6 +99,7 @@ timelib==0.2.4
 tornado==4.5.3 ; python_version >= "3.4"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
+watchdog==0.9.0
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.2          # via moto
 wrapt==1.11.1             # via aws-xray-sdk

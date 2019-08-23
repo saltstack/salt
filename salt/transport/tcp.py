@@ -613,10 +613,17 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     raise exc
             self._socket.close()
             self._socket = None
-        if hasattr(self.req_server, 'stop'):
+        if hasattr(self.req_server, 'shutdown'):
+            try:
+                self.req_server.shutdown()
+            except Exception as exc:
+                log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
+        elif hasattr(self.req_server, 'stop'):
             try:
                 self.req_server.stop()
-            except Exception as exc:
+            except socket.error as exc:
+                if exc.errno != 9:
+                    raise
                 log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
     def __del__(self):
@@ -662,7 +669,8 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     self._socket.setblocking(0)
                     self._socket.bind((self.opts['interface'], int(self.opts['ret_port'])))
                 self.req_server = SaltMessageServer(self.handle_message,
-                                                    ssl_options=self.opts.get('ssl'))
+                                                    ssl_options=self.opts.get('ssl'),
+                                                    io_loop=self.io_loop)
                 self.req_server.add_socket(self._socket)
                 self._socket.listen(self.backlog)
         salt.transport.mixins.auth.AESReqServerMixin.post_fork(self, payload_handler, io_loop)
@@ -748,11 +756,12 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
     messages that are sent through to us
     '''
     def __init__(self, message_handler, *args, **kwargs):
+        io_loop = kwargs.pop('io_loop', None) or tornado.ioloop.IOLoop.current()
         super(SaltMessageServer, self).__init__(*args, **kwargs)
-        self.io_loop = tornado.ioloop.IOLoop.current()
-
+        self.io_loop = io_loop
         self.clients = []
         self.message_handler = message_handler
+        self._shutting_down = False
 
     @tornado.gen.coroutine
     def handle_stream(self, stream, address):
@@ -776,20 +785,34 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
 
         except tornado.iostream.StreamClosedError:
             log.trace('req client disconnected %s', address)
-            self.clients.remove((stream, address))
+            self.remove_client((stream, address))
         except Exception as e:
             log.trace('other master-side exception: %s', e)
-            self.clients.remove((stream, address))
+            self.remove_client((stream, address))
             stream.close()
+
+    def remove_client(self, client):
+        try:
+            self.clients.remove(client)
+        except ValueError:
+            log.trace("Message server client was not in list to remove")
 
     def shutdown(self):
         '''
         Shutdown the whole server
         '''
+        if self._shutting_down:
+            return
+        self._shutting_down = True
         for item in self.clients:
             client, address = item
             client.close()
-            self.clients.remove(item)
+            self.remove_client(item)
+        try:
+            self.stop()
+        except socket.error as exc:
+            if exc.errno != 9:
+                raise
 
 
 if USE_LOAD_BALANCER:
@@ -933,6 +956,10 @@ class SaltMessageClient(object):
         self._stream_return_future = tornado.concurrent.Future()
         self.io_loop.spawn_callback(self._stream_return)
 
+    def _stop_io_loop(self):
+        if self.io_loop is not None:
+            self.io_loop.stop()
+
     # TODO: timeout inflight sessions
     def close(self):
         if self._closing:
@@ -957,15 +984,20 @@ class SaltMessageClient(object):
                     # 'StreamClosedError' when the stream is closed.
                     if self._read_until_future.done():
                         self._read_until_future.exception()
-                    elif self.io_loop != tornado.ioloop.IOLoop.current(instance=False):
+                    if (self.io_loop != tornado.ioloop.IOLoop.current(instance=False)
+                            or not self._stream_return_future.done()):
                         self.io_loop.add_future(
                             self._stream_return_future,
-                            lambda future: self.io_loop.stop()
+                            lambda future: self._stop_io_loop()
                         )
                         self.io_loop.start()
+            except Exception as e:
+                log.info('Exception caught in SaltMessageClient.close: %s', str(e))
             finally:
                 orig_loop.make_current()
         self._tcp_client.close()
+        self.io_loop = None
+        self._read_until_future = None
         # Clear callback references to allow the object that they belong to
         # to be deleted.
         self.connect_callback = None
@@ -1021,7 +1053,8 @@ class SaltMessageClient(object):
                                                                   **kwargs)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as e:
+            except Exception as exc:
+                log.warn('TCP Message Client encountered an exception %r', exc)
                 yield tornado.gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(e)
 

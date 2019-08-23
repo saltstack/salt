@@ -7,6 +7,7 @@ integration tests for mac_system
 from __future__ import absolute_import, unicode_literals, print_function
 import random
 import string
+import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -17,6 +18,9 @@ from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
 import salt.utils.path
 import salt.utils.platform
 from salt.ext.six.moves import range
+
+
+log = logging.getLogger(__name__)
 
 
 def __random_string(size=6):
@@ -44,7 +48,6 @@ class MacSystemModuleTest(ModuleCase):
     ATRUN_ENABLED = False
     REMOTE_LOGIN_ENABLED = False
     REMOTE_EVENTS_ENABLED = False
-    COMPUTER_NAME = ''
     SUBNET_NAME = ''
     KEYBOARD_DISABLED = False
 
@@ -55,7 +58,6 @@ class MacSystemModuleTest(ModuleCase):
         self.ATRUN_ENABLED = self.run_function('service.enabled', ['com.apple.atrun'])
         self.REMOTE_LOGIN_ENABLED = self.run_function('system.get_remote_login')
         self.REMOTE_EVENTS_ENABLED = self.run_function('system.get_remote_events')
-        self.COMPUTER_NAME = self.run_function('system.get_computer_name')
         self.SUBNET_NAME = self.run_function('system.get_subnet_name')
         self.KEYBOARD_DISABLED = self.run_function('system.get_disable_keyboard_on_lock')
 
@@ -69,7 +71,6 @@ class MacSystemModuleTest(ModuleCase):
 
         self.run_function('system.set_remote_login', [self.REMOTE_LOGIN_ENABLED])
         self.run_function('system.set_remote_events', [self.REMOTE_EVENTS_ENABLED])
-        self.run_function('system.set_computer_name', [self.COMPUTER_NAME])
         self.run_function('system.set_subnet_name', [self.SUBNET_NAME])
         self.run_function('system.set_disable_keyboard_on_lock',
                           [self.KEYBOARD_DISABLED])
@@ -127,18 +128,6 @@ class MacSystemModuleTest(ModuleCase):
         self.assertIn(
             'Invalid String Value for Enabled',
             self.run_function('system.set_remote_events', ['spongebob']))
-
-    @destructiveTest
-    def test_get_set_computer_name(self):
-        '''
-        Test system.get_computer_name
-        Test system.set_computer_name
-        '''
-        self.assertTrue(
-            self.run_function('system.set_computer_name', [SET_COMPUTER_NAME]))
-        self.assertEqual(
-            self.run_function('system.get_computer_name'),
-            SET_COMPUTER_NAME)
 
     @destructiveTest
     def test_get_set_subnet_name(self):
@@ -246,3 +235,33 @@ class MacSystemModuleTest(ModuleCase):
         self.assertIn(
             'Invalid value passed for arch',
             self.run_function('system.set_boot_arch', ['spongebob']))
+
+
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
+class MacSystemComputerNameTest(ModuleCase):
+
+    def setUp(self):
+        self.COMPUTER_NAME = self.run_function('system.get_computer_name')
+        self.wait_for_all_jobs()
+
+    def tearDown(self):
+        self.run_function('system.set_computer_name', [self.COMPUTER_NAME])
+        self.wait_for_all_jobs()
+
+    # A similar test used to be skipped on py3 due to 'hanging', if we see
+    # something similar again we may want to skip this gain until we
+    # investigate
+    #@skipIf(salt.utils.platform.is_darwin() and six.PY3, 'This test hangs on OS X on Py3.  Skipping until #53566 is merged.')
+    @destructiveTest
+    def test_get_set_computer_name(self):
+        '''
+        Test system.get_computer_name
+        Test system.set_computer_name
+        '''
+        log.debug("Set name is %s", SET_COMPUTER_NAME)
+        self.assertTrue(
+            self.run_function('system.set_computer_name', [SET_COMPUTER_NAME]))
+        self.assertEqual(
+            self.run_function('system.get_computer_name'),
+            SET_COMPUTER_NAME)

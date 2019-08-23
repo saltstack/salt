@@ -1077,15 +1077,25 @@ def requires_system_grains(func):
     case.
     '''
     @functools.wraps(func)
-    def decorator(cls):
-        if not hasattr(cls, 'run_function'):
-            raise RuntimeError(
-                '{0} does not have the \'run_function\' method which is '
-                'necessary to collect the system grains'.format(
-                    cls.__class__.__name__
-                )
-            )
-        return func(cls, grains=cls.run_function('grains.items'))
+    def decorator(*args, **kwargs):
+        if not hasattr(requires_system_grains, '__grains__'):
+            import salt.config
+            root_dir = tempfile.mkdtemp(dir=TMP)
+            defaults = salt.config.DEFAULT_MINION_OPTS.copy()
+            defaults.pop('conf_file')
+            defaults.update({
+                'root_dir': root_dir,
+                'cachedir': 'cachedir',
+                'sock_dir': 'sock',
+                'pki_dir': 'pki',
+                'log_file': 'logs/minion',
+                'pidfile': 'pids/minion.pid'
+            })
+            opts = salt.config.minion_config(None, defaults=defaults)
+            requires_system_grains.__grains__ = salt.loader.grains(opts)
+            shutil.rmtree(root_dir, ignore_errors=True)
+        kwargs['grains'] = requires_system_grains.__grains__
+        return func(*args, **kwargs)
     return decorator
 
 
@@ -1113,11 +1123,23 @@ def requires_salt_modules(*names):
                         )
                     )
 
-                not_found_modules = self.run_function('runtests_helpers.modules_available', names)
-                if not_found_modules:
-                    if len(not_found_modules) == 1:
-                        self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                    self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
+                if not hasattr(requires_salt_modules, '__available_modules__'):
+                    requires_salt_modules.__available_modules__ = set()
+
+                _names = []
+                for name in names:
+                    if name not in requires_salt_modules.__available_modules__:
+                        _names.append(name)
+
+                if _names:
+                    not_found_modules = self.run_function('runtests_helpers.modules_available', _names)
+                    for name in _names:
+                        if name not in not_found_modules:
+                            requires_salt_modules.__available_modules__.add(name)
+                    if not_found_modules:
+                        if len(not_found_modules) == 1:
+                            self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
+                        self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
             return caller
 
@@ -1133,13 +1155,23 @@ def requires_salt_modules(*names):
                     )
                 )
 
-            for name in names:
-                if name not in cls.run_function('sys.doc', [name]):
-                    cls.skipTest(
-                        'Salt module {0!r} is not available'.format(name)
-                    )
-                    break
+            if not hasattr(requires_salt_modules, '__available_modules__'):
+                requires_salt_modules.__available_modules__ = set()
 
+            _names = []
+            for name in names:
+                if name not in requires_salt_modules.__available_modules__:
+                    _names.append(name)
+
+            if _names:
+                not_found_modules = cls.run_function('runtests_helpers.modules_available', _names)
+                for name in _names:
+                    if name not in not_found_modules:
+                        requires_salt_modules.__available_modules__.add(name)
+                if not_found_modules:
+                    if len(not_found_modules) == 1:
+                        cls.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
+                    cls.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             return caller(cls)
         return wrapper
     return decorator
@@ -1227,6 +1259,8 @@ def _terminate_process_list(process_list, kill=False, slow_stop=False):
                 cmdline = process.cmdline()
             except psutil.AccessDenied:
                 # OSX is more restrictive about the above information
+                cmdline = None
+            except OSError:
                 cmdline = None
             if not cmdline:
                 try:

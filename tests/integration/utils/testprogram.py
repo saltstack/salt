@@ -399,6 +399,11 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
         cmd_env = dict(os.environ)
         cmd_env.update(env_delta)
 
+        if salt.utils.platform.is_windows() and six.PY2:
+            for k, v in cmd_env.items():
+                if isinstance(k, six.text_type) or isinstance(v, six.text_type):
+                    cmd_env[k.encode('ascii')] = v.encode('ascii')
+
         popen_kwargs = {
             'shell': self.shell,
             'stdout': subprocess.PIPE,
@@ -822,7 +827,12 @@ class TestDaemon(TestProgram):
                     continue
                 except psutils.AccessDenied:
                     # We might get access denied if not running as root
-                    continue
+                    if not salt.utils.platform.is_windows():
+                        pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
+                        log.error('Unable to access process %s, '
+                                  'running command %s as user %s',
+                                  pinfo['pid'], pinfo['name'], pinfo['username'])
+                        raise
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
                         for n in range(len(proc_cmdline) - cmd_len + 1)):
                     ret.append(proc)

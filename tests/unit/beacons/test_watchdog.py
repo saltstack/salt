@@ -1,9 +1,7 @@
 # coding: utf-8
 
 # Python libs
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 import tempfile
@@ -82,6 +80,9 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_file_modified(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
+        # Create triggers a modify event along with the create event in Py3
+        # So, let's do this before configuring the beacon
+        create(path)
 
         config = [{'directories': {self.tmpdir: {'mask': ['modify']}}}]
         self.assertValid(config)
@@ -90,11 +91,22 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         create(path, 'some content')
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(ret[0]['path'], os.path.dirname(path))
-        self.assertEqual(ret[0]['change'], 'modified')
-        self.assertEqual(ret[1]['path'], path)
-        self.assertEqual(ret[1]['change'], 'modified')
+
+        modified = False
+        for event in ret:
+            # "modified" requires special handling
+            # A modification sometimes triggers 2 modified events depending on
+            # the OS and the python version
+            # When the "modified" event triggers on modify, it will have the
+            # path to the temp file (path), other modified events will contain
+            # the path minus "tmpfile" and will not match. That's how we'll
+            # distinguish the two
+            if event['change'] == 'modified':
+                if event['path'] == path:
+                    modified = True
+
+        # Check results of the for loop to validate modified
+        self.assertTrue(modified)
 
     def test_file_deleted(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -127,7 +139,7 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret[0]['change'], 'moved')
 
     def test_file_create_in_directory(self):
-        config = [{'directories': {self.tmpdir: {'mask': ['create', 'modify']}}}]
+        config = [{'directories': {self.tmpdir: {'mask': ['create']}}}]
         self.assertValid(config)
         self.assertEqual(watchdog.beacon(config), [])
 
@@ -135,11 +147,9 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         create(path)
 
         ret = check_events(config)
-        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0]['path'], path)
         self.assertEqual(ret[0]['change'], 'created')
-        self.assertEqual(ret[1]['path'], self.tmpdir)
-        self.assertEqual(ret[1]['change'], 'modified')
 
     def test_trigger_all_possible_events(self):
         path = os.path.join(self.tmpdir, 'tmpfile')
@@ -160,30 +170,39 @@ class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
         # delete
         os.remove(moved)
 
+        # Give the events time to load into the queue
+        time.sleep(1)
+
         ret = check_events(config)
 
-        self.assertEqual(len(ret), 8)
+        events = {'created': '',
+                  'deleted': '',
+                  'moved': ''}
+        modified = False
+        for event in ret:
+            if event['change'] == 'created':
+                self.assertEqual(event['path'], path)
+                events.pop('created', '')
+            if event['change'] == 'moved':
+                self.assertEqual(event['path'], path)
+                events.pop('moved', '')
+            if event['change'] == 'deleted':
+                self.assertEqual(event['path'], moved)
+                events.pop('deleted', '')
+            # "modified" requires special handling
+            # All events [created, moved, deleted] also trigger a "modified"
+            # event on Linux
+            # Only the "created" event triggers a modified event on Py3 Windows
+            # When the "modified" event triggers on modify, it will have the
+            # path to the temp file (path), other modified events will contain
+            # the path minus "tmpfile" and will not match. That's how we'll
+            # distinguish the two
+            if event['change'] == 'modified':
+                if event['path'] == path:
+                    modified = True
 
-        # create
-        self.assertEqual(ret[0]['path'], path)
-        self.assertEqual(ret[0]['change'], 'created')
-        self.assertEqual(ret[1]['path'], self.tmpdir)
-        self.assertEqual(ret[1]['change'], 'modified')
+        # Check results of the for loop to validate modified
+        self.assertTrue(modified)
 
-        # modify
-        self.assertEqual(ret[2]['path'], path)
-        self.assertEqual(ret[2]['change'], 'modified')
-        self.assertEqual(ret[3]['path'], path)
-        self.assertEqual(ret[3]['change'], 'modified')
-
-        # move
-        self.assertEqual(ret[4]['path'], path)
-        self.assertEqual(ret[4]['change'], 'moved')
-        self.assertEqual(ret[5]['path'], self.tmpdir)
-        self.assertEqual(ret[5]['change'], 'modified')
-
-        # delete
-        self.assertEqual(ret[6]['path'], moved)
-        self.assertEqual(ret[6]['change'], 'deleted')
-        self.assertEqual(ret[7]['path'], self.tmpdir)
-        self.assertEqual(ret[7]['change'], 'modified')
+        # Make sure all events were checked
+        self.assertDictEqual(events, {})

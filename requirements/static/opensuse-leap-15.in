@@ -23,6 +23,7 @@ psutil
 # PyCrypto, if pulled, will be removed from the generated static requirements
 pycryptodome
 pyinotify
+pygit2
 pyopenssl
 python-etcd>0.4.2
 python-gnupg
@@ -37,3 +38,4 @@ supervisor==3.3.5; python_version < '3'
 timelib
 tornado<5.0
 virtualenv
+watchdog

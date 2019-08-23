@@ -179,11 +179,17 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                 log.exception(exc)
 
 
+class TestDaemonStartFailed(Exception):
+    '''
+    Simple exception to signal that a test daemon failed to start
+    '''
+
+
 class TestDaemon(object):
     '''
     Set up the master and minion daemons, and run related cases
     '''
-    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 500
+    MINIONS_CONNECT_TIMEOUT = MINIONS_SYNC_TIMEOUT = 600
 
     def __init__(self, parser):
         self.parser = parser
@@ -313,6 +319,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -349,6 +356,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -385,6 +393,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting sub salt-minion ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -422,6 +431,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting syndic salt-master ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         try:
             sys.stdout.write(
@@ -458,6 +468,7 @@ class TestDaemon(object):
                 ' * {LIGHT_RED}Starting salt-syndic ... FAILED!\n{ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            raise TestDaemonStartFailed()
 
         if self.parser.options.proxy:
             self.minion_targets.add(self.proxy_opts['id'])
@@ -496,6 +507,7 @@ class TestDaemon(object):
                     ' * {LIGHT_RED}Starting salt-proxy ... FAILED!\n{ENDC}'.format(**self.colors)
                 )
                 sys.stdout.flush()
+                raise TestDaemonStartFailed()
 
     def start_raet_daemons(self):
         '''
@@ -672,7 +684,7 @@ class TestDaemon(object):
 
         self.sshd_pidfile = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'sshd.pid')
         self.sshd_process = subprocess.Popen(
-            [sshd, '-f', 'sshd_config', '-oPidFile={0}'.format(self.sshd_pidfile)],
+            [sshd, '-f', 'sshd_config', '-o', 'PidFile={0}'.format(self.sshd_pidfile)],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             close_fds=True,
@@ -736,6 +748,8 @@ class TestDaemon(object):
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
+        if not os.path.exists(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
@@ -823,10 +837,14 @@ class TestDaemon(object):
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
         proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir-proxy', 'cache')
+        if not os.path.exists(proxy_opts['cachedir']):
+            os.makedirs(proxy_opts['cachedir'])
         # proxy_opts['user'] = running_tests_user
         proxy_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir-proxy')
         proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir-proxy', 'pki')
+        if not os.path.exists(proxy_opts['pki_dir']):
+            os.makedirs(proxy_opts['pki_dir'])
         proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
         proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
 
@@ -1080,11 +1098,33 @@ class TestDaemon(object):
         '''
         Kill the minion and master processes
         '''
-        self.sub_minion_process.terminate()
-        self.minion_process.terminate()
+        try:
+            if hasattr(self.sub_minion_process, 'terminate'):
+                self.sub_minion_process.terminate()
+            else:
+                log.error('self.sub_minion_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
+        try:
+            if hasattr(self.minion_process, 'terminate'):
+                self.minion_process.terminate()
+            else:
+                log.error('self.minion_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
         if hasattr(self, 'proxy_process'):
             self.proxy_process.terminate()
-        self.master_process.terminate()
+
+        try:
+            if hasattr(self.master_process, 'terminate'):
+                self.master_process.terminate()
+            else:
+                log.error('self.master_process can\'t be terminate.')
+        except AttributeError:
+            pass
+
         try:
             self.syndic_process.terminate()
         except AttributeError:
@@ -1093,30 +1133,15 @@ class TestDaemon(object):
             self.smaster_process.terminate()
         except AttributeError:
             pass
-        #salt.utils.process.clean_proc(self.sub_minion_process, wait_for_kill=50)
-        #self.sub_minion_process.join()
-        #salt.utils.process.clean_proc(self.minion_process, wait_for_kill=50)
-        #self.minion_process.join()
-        #salt.utils.process.clean_proc(self.master_process, wait_for_kill=50)
-        #self.master_process.join()
-        #try:
-        #    salt.utils.process.clean_proc(self.syndic_process, wait_for_kill=50)
-        #    self.syndic_process.join()
-        #except AttributeError:
-        #    pass
-        #try:
-        #    salt.utils.process.clean_proc(self.smaster_process, wait_for_kill=50)
-        #    self.smaster_process.join()
-        #except AttributeError:
-        #    pass
-        self.log_server.server_close()
-        self.log_server.shutdown()
         self._exit_mockbin()
         self._exit_ssh()
-        self.log_server_process.join()
         # Shutdown the multiprocessing logging queue listener
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
+        # Shutdown the log server
+        self.log_server.server_close()
+        self.log_server.shutdown()
+        self.log_server_process.join()
 
     def pre_setup_minions(self):
         '''
