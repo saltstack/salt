@@ -24,9 +24,19 @@ import salt.utils.files
 import salt.utils.platform
 
 # Import testing libs
+from tests.support.comparables import StateReturn
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+
+class StateCallWrapper(object):
+    def __init__(self, function):
+        self._function = function
+
+    def __call__(self, *args, **kwargs):
+        result = self._function(*args, **kwargs)
+        return StateReturn(result)
 
 
 def _attr_dict(mod_dict):
@@ -190,7 +200,11 @@ def utils(sminion):
 
 @pytest.fixture
 def functions(sminion):
-    return sminion.functions
+    _functions = sminion.functions
+    # Make sure state.sls and state.single returns are StateReturn instances for easier comparissons
+    _functions.state.sls = StateCallWrapper(_functions.state.sls)
+    _functions.state.single = StateCallWrapper(_functions.state.single)
+    return _functions
 
 
 @pytest.fixture
@@ -231,3 +245,18 @@ def matchers(sminion):
 @pytest.fixture
 def executors(sminion):
     return sminion.executors
+
+
+def pytest_assertrepr_compare(config, op, left, right):
+    if op not in ('==', '!='):
+        # Don't even bother, our special assertions involve equality
+        return
+    explanation = []
+    if isinstance(left, StateReturn) or isinstance(right, StateReturn):
+        if not isinstance(left, StateReturn):
+            left = StateReturn(left)
+        if not isinstance(right, StateReturn):
+            right = StateReturn(right)
+        explanation.extend(left.explain_comparisson_with(right))
+    if explanation:
+        return explanation

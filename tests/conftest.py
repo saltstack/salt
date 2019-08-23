@@ -233,7 +233,6 @@ def pytest_configure(config):
             continue
         if dirname != 'tests':
             config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
-    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
     config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/kitchen'))
     # pylint: disable=protected-access
 
