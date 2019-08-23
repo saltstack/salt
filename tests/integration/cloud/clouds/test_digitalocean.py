@@ -5,17 +5,12 @@ Integration tests for DigitalOcean APIv2
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import base64
-import hashlib
-from Crypto.PublicKey import RSA
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 
-# Import Salt Libs
-from salt.ext.six.moves import range
-import salt.utils.stringutils
 
+# Import Salt Libs
 
 class DigitalOceanTest(CloudTest):
     '''
@@ -58,19 +53,16 @@ class DigitalOceanTest(CloudTest):
         '''
         Test key management
         '''
-        do_key_name = self.instance_name + '-key'
+        pub = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAQQDDHr/jh2Jy4yALcK4JyWbVkPRaWmhck3IgCoeOO3z1e2dBowLh64QAM+Qb72pxekALga2oi4GvT+TlWNhzPH4V example'
+        finger_print = '3b:16:bf:e4:8b:00:8b:b8:59:8c:a9:d3:f0:19:45:fa'
 
-        _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(PROVIDER_NAME, pub))
+        _key = self.run_cloud('-f create_key {0} name="MyPubKey" public_key="{1}"'.format(self.PROVIDER, pub))
 
-        try:
-            _key = self.run_cloud('-f create_key {0} name="{1}" public_key="{2}"'.format(self.PROVIDER,
-                                                                                         do_key_name, pub))
-
-            # Upload public key
-            self.assertIn(
-                finger_print,
-                [i.strip() for i in _key]
-            )
+        # Upload public key
+        self.assertIn(
+            finger_print,
+            [i.strip() for i in _key]
+        )
 
         try:
             # List all keys
@@ -82,7 +74,8 @@ class DigitalOceanTest(CloudTest):
             )
 
             # List key
-            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(self.PROVIDER, do_key_name))
+            show_keypair = self.run_cloud('-f show_keypair {0} keyname={1}'.format(self.PROVIDER, 'MyPubKey'))
+
             self.assertIn(
                 finger_print,
                 [i.strip() for i in show_keypair]
@@ -91,9 +84,9 @@ class DigitalOceanTest(CloudTest):
             # Delete the public key if the above assertions fail
             self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print))
             raise
-        finally:
-            # Delete public key
-            self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
+
+        # Delete public key
+        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(self.PROVIDER, finger_print)))
 
     def test_instance(self):
         '''

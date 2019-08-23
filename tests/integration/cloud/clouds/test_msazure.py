@@ -5,7 +5,6 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import TIMEOUT, CloudTest
@@ -13,7 +12,6 @@ from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.utils.versions import LooseVersion
-from salt.ext.six.moves import range
 
 TIMEOUT = 1000
 
