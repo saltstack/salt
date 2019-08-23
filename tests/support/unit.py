@@ -66,7 +66,7 @@ if sys.version_info < (2, 7):
             TestResult as _TestResult,
             TextTestResult as __TextTestResult
         )
-        from unittest2.case import _id
+        from unittest2.case import _id, SkipTest
         # pylint: enable=import-error
 
         class NewStyleClassMixin(object):
@@ -110,7 +110,7 @@ else:
         TestResult,
         TextTestResult as _TextTestResult
     )
-    from unittest.case import _id
+    from unittest.case import _id, SkipTest
 
 
 class TestSuite(_TestSuite):
