@@ -7,7 +7,7 @@ Functions to interact with Hashicorp Vault.
 :platform:      all
 
 
-:note: If you see the following error, you'll need to upgrade ``requests`` to atleast 2.4.2
+:note: If you see the following error, you'll need to upgrade ``requests`` to at least 2.4.2
 
 .. code-block:: text
 
