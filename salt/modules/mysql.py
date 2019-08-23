@@ -1552,7 +1552,7 @@ def user_chpass(user,
     args['user'] = user
     args['host'] = host
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password_sql)s;"
     else:
         qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
                ' WHERE User=%(user)s AND Host = %(host)s;')
