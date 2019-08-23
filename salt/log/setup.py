@@ -189,10 +189,10 @@ LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
 LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 
 
-#class SaltLogQueueHandler(QueueHandler):
-#    '''
-#    Subclassed just to differentiate when debugging
-#    '''
+class SaltLogQueueHandler(QueueHandler):
+    '''
+    Subclassed just to differentiate when debugging
+    '''
 
 
 class SaltLogRecord(logging.LogRecord):
@@ -1262,7 +1262,7 @@ def patch_python_logging_handlers():
 def __process_multiprocessing_logging_zmq(opts, port):
     # Avoid circular import
     import salt.utils.process
-    salt.utils.process.appendproctitle('MultiprocessingLoggingQueue')
+    salt.utils.process.appendproctitle('MultiprocessingLoggingZMQ')
 
     # Assign UID/GID of user to proc if set
     from salt.utils.verify import check_user
@@ -1291,14 +1291,9 @@ def __process_multiprocessing_logging_zmq(opts, port):
         )
         setup_extended_logging(opts)
 
-    import traceback
     context = zmq.Context()
     puller = context.socket(zmq.PULL)
-    try:
-        puller.bind('tcp://127.0.0.1:{}'.format(port))
-    except Exception:
-        print("MP LOGGING TB %s" %('\n'.join(traceback.format_stack())))
-        raise
+    puller.bind('tcp://127.0.0.1:{}'.format(port))
     try:
         while True:
             try:
