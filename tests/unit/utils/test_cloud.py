@@ -17,6 +17,10 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.paths import TMP, CODE_DIR
+from tests.support.helpers import TestsLoggingHandler
+from tests.support.mock import patch, MagicMock
+from tests.support.mixins import LoaderModuleMockMixin
+import tests.integration as integration
 
 # Import salt libs
 import salt.utils.cloud as cloud
@@ -67,7 +71,10 @@ except ImportError:
 os.chdir(CODE_DIR)
 
 
-class CloudUtilsTestCase(TestCase):
+class CloudUtilsTestCase(TestCase, LoaderModuleMockMixin):
+
+    def setup_loader_modules(self):
+        return {cloud: {'__opts__': {}}}
 
     def test_ssh_password_regex(self):
         '''Test matching ssh password patterns'''
@@ -139,3 +146,40 @@ class CloudUtilsTestCase(TestCase):
 
         # tmp file removed
         self.assertFalse(cloud.check_key_path_and_mode('foo', key_file))
+
+    @skipIf(salt.utils.platform.is_windows(), 'Not applicable to Windows')
+    @patch('os.path.isfile', MagicMock(return_value=True))
+    @patch('salt.utils.cloud.os_script', MagicMock(return_value=''))
+    @patch('salt.utils.cloud.deploy_script', MagicMock(return_value=True))
+    @patch('salt.utils.cloud.fire_event')
+    def test_check_password_key_bootstrap(self, events):
+        '''
+        verify we do not include passwords in debug log
+        '''
+        vm_ = {'profile': 'ec2-test',
+               'securitygroupname': 'test',
+               'image': 'test-image',
+               'key_filename': '/root/test.pem',
+               'id': 'test_id',
+               'driver': 'ec2',
+               'deploy': True,
+               'name': 'test-name',
+               'pub_key': 'pubkey',
+               'priv_key': 'privkey',
+               'provider': 'ec2-config',
+               'key': 'supersecretkey',
+               'win_passwd': 'password'}
+        opts = {'profiles': {'ec2-test': {'profile': 'ec2-test', 'provider': 'ec2-config'}},
+                'providers': {'ec2-config': {'ec2': {'delete_root': True}}},
+                'deploy_scripts_search_path': '/tmp/test/bootstrap',
+                'start_action': 'start', 'parallel': False, 'sock_dir':
+                '/tmp/sock_dir', 'conf_file': '/tmp/conf_file', 'keep_tmp': False,
+                'sudo_password': 'passwd'}
+        with TestsLoggingHandler() as handler:
+            with patch.dict(cloud.__opts__, {'sock_dir': os.path.join(integration.TMP, 'test-socks')}):
+                cloud.bootstrap(vm_, opts)
+                for ret in events.call_args_list:
+                    arg, kwarg = ret
+                    event_kwargs = kwarg['args']['kwargs']
+                    assert 'vm_' not in event_kwargs
+                    assert 'sudo_password' not in event_kwargs

@@ -235,11 +235,11 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=None, cloud_log='debug'):
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
+        arg_str = '-c {0} {1} -l{2}'.format(self.config_dir, arg_str, cloud_log)
         return self.run_script('salt-cloud', arg_str, catch_stderr, timeout)
 
     def run_script(self,
@@ -645,11 +645,11 @@ class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixi
         log.debug('Result of run_call for command \'%s\': %s', arg_str, ret)
         return ret
 
-    def run_cloud(self, arg_str, catch_stderr=False, timeout=RUN_TIMEOUT):
+    def run_cloud(self, arg_str, catch_stderr=False, timeout=RUN_TIMEOUT, cloud_log='debug'):
         '''
         Execute salt-cloud
         '''
-        arg_str = '-c {0} {1}'.format(self.config_dir, arg_str)
+        arg_str = '-c {0} {1} -l{2}'.format(self.config_dir, arg_str, cloud_log)
         ret = self.run_script('salt-cloud',
                               arg_str,
                               catch_stderr,

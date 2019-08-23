@@ -94,15 +94,13 @@ class EC2Test(CloudTest):
                 dfp.write(sfp.read())
         return dst
 
-    def _test_instance(self, profile, debug):
+    def _test_instance(self, profile):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
 
         # create the instance
         cmd = ['-p', profile]
-        if debug:
-            cmd.extend(['-l', 'debug'])
         cmd.append(self.instance_name)
         ret_val = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
 
@@ -133,7 +131,7 @@ class EC2Test(CloudTest):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
-        self._test_instance('ec2-test', debug=False)
+        self._test_instance('ec2-test')
 
     def test_win2012r2_psexec(self):
         '''
@@ -151,7 +149,7 @@ class EC2Test(CloudTest):
                 'win_installer': self.copy_file(self.installer),
             },
         )
-        self._test_instance('ec2-win2012r2-test', debug=True)
+        self._test_instance('ec2-win2012r2-test')
 
     @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2012r2_winrm(self):
@@ -169,7 +167,7 @@ class EC2Test(CloudTest):
             }
 
         )
-        self._test_instance('ec2-win2012r2-test', debug=True)
+        self._test_instance('ec2-win2012r2-test')
 
     def test_win2016_psexec(self):
         '''
@@ -186,7 +184,7 @@ class EC2Test(CloudTest):
                 'win_installer': self.copy_file(self.installer),
             },
         )
-        self._test_instance('ec2-win2016-test', debug=True)
+        self._test_instance('ec2-win2016-test')
 
     @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2016_winrm(self):
@@ -204,4 +202,4 @@ class EC2Test(CloudTest):
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True)
+        self._test_instance('ec2-win2016-test')

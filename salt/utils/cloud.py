@@ -616,6 +616,7 @@ def bootstrap(vm_, opts=None):
     del event_kwargs['minion_pem']
     del event_kwargs['minion_pub']
     del event_kwargs['sudo_password']
+    del event_kwargs['vm_']
     if 'password' in event_kwargs:
         del event_kwargs['password']
     ret['deploy_kwargs'] = event_kwargs
