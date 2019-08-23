@@ -2722,6 +2722,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_pool_data = [
             {
                 'name': 'pool0',
+                'state': self.mock_libvirt.VIR_STORAGE_POOL_RUNNING,
                 'volumes': [
                     {
                         'key': '/key/of/vol0',
@@ -2734,6 +2735,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             },
             {
                 'name': 'pool1',
+                'state': self.mock_libvirt.VIR_STORAGE_POOL_RUNNING,
                 'volumes': [
                     {
                         'key': '/key/of/vol1',
@@ -2756,6 +2758,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         for pool_data in mock_pool_data:
             mock_pool = MagicMock()
             mock_pool.name.return_value = pool_data['name']  # pylint: disable=no-member
+            mock_pool.info.return_value = [pool_data['state']]
             mock_volumes = []
             for vol_data in pool_data['volumes']:
                 mock_volume = MagicMock()
@@ -2784,6 +2787,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 # pylint: enable=no-member
             mock_pool.listAllVolumes.return_value = mock_volumes  # pylint: disable=no-member
             mock_pools.append(mock_pool)
+
+        inactive_pool = MagicMock()
+        inactive_pool.name.return_value = 'pool2'
+        inactive_pool.info.return_value = [self.mock_libvirt.VIR_STORAGE_POOL_INACTIVE]
+        inactive_pool.listAllVolumes.side_effect = self.mock_libvirt.libvirtError('pool is inactive')
+        mock_pools.append(inactive_pool)
 
         self.mock_conn.listAllStoragePools.return_value = mock_pools  # pylint: disable=no-member
 
