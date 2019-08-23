@@ -35,6 +35,8 @@ __virtualname__ = 'salt_runtests'
 
 
 def __virtual__():
+    if __opts__['__role'] != 'master':
+        return False
     return 'runtests_conn_check_port' in __opts__  # pylint: disable=undefined-variable
 
 
