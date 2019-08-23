@@ -317,7 +317,7 @@ def present(name,
         doesn't already exist.
 
         .. warning::
-            Not supported on Windows or Mac OS.
+            Not supported on Windows.
 
             Additionally, parent directories will *not* be created. The parent
             directory for ``home`` must already exist.
@@ -480,8 +480,8 @@ def present(name,
     if other is not None:
         other = salt.utils.data.decode(other)
 
-    # createhome not supported on Windows or Mac
-    if __grains__['kernel'] in ('Darwin', 'Windows'):
+    # createhome not supported on Windows
+    if __grains__['kernel'] == 'Windows':
         createhome = False
 
     ret = {'name': name,
