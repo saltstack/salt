@@ -48,12 +48,14 @@ def _attr_dict(mod_dict):
 
 @pytest.fixture(scope='session')
 def salt_opts():
+    minion_id = 'functional-tests-minion'
     log.info('Generating functional testing minion configuration')
     root_dir = os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'functional')
     conf_dir = os.path.join(root_dir, 'conf')
     conf_file = os.path.join(conf_dir, 'minion')
 
     minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))  # pylint: disable=protected-access
+    minion_opts['id'] = minion_id
     minion_opts['conf_file'] = conf_file
     minion_opts['root_dir'] = root_dir
     minion_opts['cachedir'] = 'cache'
@@ -122,7 +124,7 @@ def salt_opts():
         salt.utils.yaml.safe_dump(minion_opts, fp_, default_flow_style=False)
 
     log.info('Generating functional testing minion configuration completed.')
-    return salt.config.minion_config(conf_file)
+    return salt.config.minion_config(conf_file, minion_id=minion_id)
 
 
 @pytest.fixture(scope='session')
