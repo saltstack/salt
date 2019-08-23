@@ -255,9 +255,11 @@ def _runner_client(salt_opts, loader_context_dictionary):
 
 
 @pytest.fixture
-def runners(_runner_client, loader_context_dictionary):
+def runners(_runner_client, salt_opts, loader_context_dictionary):
     yield _runner_client.functions
+    # Cleanup
     loader_context_dictionary.clear()
+    _runner_client.opts = _runner_client.opts = salt_opts.copy()
 
 
 def pytest_assertrepr_compare(config, op, left, right):
