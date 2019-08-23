@@ -5247,7 +5247,9 @@ def _get_all_volumes_paths(conn):
 
     :param conn: libvirt connection to use
     '''
-    volumes = [vol for l in [obj.listAllVolumes() for obj in conn.listAllStoragePools()] for vol in l]
+    volumes = [vol for l in
+                [obj.listAllVolumes() for obj in conn.listAllStoragePools()
+                    if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING] for vol in l]
     return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
             for vol in volumes if _is_valid_volume(vol)}
 
@@ -5306,7 +5308,8 @@ def volume_infos(pool=None, volume=None, **kwargs):
                 'used_by': used_by,
             }
 
-        pools = [obj for obj in conn.listAllStoragePools() if pool is None or obj.name() == pool]
+        pools = [obj for obj in conn.listAllStoragePools()
+                    if (pool is None or obj.name() == pool) and obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING]
         vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
                                   for vol in pool_obj.listAllVolumes()
                                   if (volume is None or vol.name() == volume) and _is_valid_volume(vol)}
