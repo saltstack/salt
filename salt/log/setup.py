@@ -45,6 +45,7 @@ from salt.log.handlers import (TemporaryLoggingHandler,
                                FileHandler,
                                WatchedFileHandler,
                                RotatingFileHandler,
+                               QueueHandler,
                                ZMQHandler)
 from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
 
