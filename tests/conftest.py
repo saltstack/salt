@@ -18,6 +18,8 @@ import pprint
 import shutil
 import socket
 import logging
+import textwrap
+from contextlib import contextmanager
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -613,6 +615,33 @@ else:
     def mock_open(mock=None, read_data=''):
         _mock = pytest.importorskip('mock', minversion='2.0.0')
         return _mock.mock_open(mock=mock, read_data=read_data)
+
+
+@pytest.helpers.register
+@contextmanager
+def temp_state_file(name, contents, saltenv='base'):
+
+    if saltenv == 'base':
+        state_tree_path = RUNTIME_VARS.TMP_STATE_TREE
+    elif saltenv == 'prod':
+        state_tree_path = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+    else:
+        raise RuntimeError('"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv))
+    state_path = os.path.join(state_tree_path, name + '.sls')
+    state_contents = textwrap.dedent(contents)
+
+    try:
+        with salt.utils.files.fopen(state_path, 'w') as wfh:
+            wfh.write(state_contents)
+
+        yield
+
+    except Exception:
+        try:
+            os.unlink(state_path)
+        except OSError:
+            # Already deleted
+            pass
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------
 
 
@@ -1154,6 +1183,6 @@ def grains(request):
         'log_file': 'logs/minion',
         'pidfile': 'pids/minion.pid'
     })
-    opts = salt.config.minion_config(None, defaults=defaults)
+    opts = salt.config.minion_config(None, defaults=defaults, minion_id='grains-fixture-minion-conf')
     return salt.loader.grains(opts)
 # <---- Custom Fixtures ----------------------------------------------------------------------------------------------
