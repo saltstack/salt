@@ -182,6 +182,13 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMix
         self.context.term()
 
     def prepare(self, record):
+        msg = self.format(record)
+        record = copy.copy(record)
+        record.message = msg
+        record.msg = msg
+        record.args = None
+        record.exc_info = None
+        record.exc_text = None
         return msgpack.dumps(record.__dict__, encoding='utf-8')
 
     def emit(self, record):

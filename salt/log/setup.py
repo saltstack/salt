@@ -1304,7 +1304,7 @@ def __process_multiprocessing_logging_zmq(opts, port):
                     break
                 # Just log everything, filtering will happen on the main process
                 # logging handlers
-                record = logger.makeRecord(record_dict)
+                record = logging.makeLogRecord(record_dict)
                 logger = logging.getLogger(record.name)
                 logger.handle(record)
             except (EOFError, KeyboardInterrupt, SystemExit):
