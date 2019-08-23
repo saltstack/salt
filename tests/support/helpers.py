@@ -1066,7 +1066,9 @@ def requires_system_grains(func):
     @functools.wraps(func)
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, '__grains__'):
+            # Late import
             import salt.config
+            minion_id = 'requires_system_grains_minion_id'
             root_dir = tempfile.mkdtemp(dir=TMP)
             defaults = salt.config.DEFAULT_MINION_OPTS.copy()
             defaults.pop('conf_file')
@@ -1078,7 +1080,7 @@ def requires_system_grains(func):
                 'log_file': 'logs/minion',
                 'pidfile': 'pids/minion.pid'
             })
-            opts = salt.config.minion_config(None, defaults=defaults)
+            opts = salt.config.minion_config(None, defaults=defaults, minion_id=minion_id)
             requires_system_grains.__grains__ = salt.loader.grains(opts)
             shutil.rmtree(root_dir, ignore_errors=True)
         kwargs['grains'] = requires_system_grains.__grains__
