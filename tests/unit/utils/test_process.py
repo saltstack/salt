@@ -421,15 +421,18 @@ class TestDup2(TestCase):
 
 class TestProcessList(TestCase):
 
-    def null_target(self):
+    @staticmethod
+    def null_target():
         pass
 
-    def event_target(self, event):
+    @staticmethod
+    def event_target(event):
         while True:
             if event.wait(5):
                 break
 
-    def wait_for_proc(self, proc, timeout=10):
+    @staticmethod
+    def wait_for_proc(proc, timeout=10):
         start = time.time()
         while proc.is_alive():
             if time.time() - start > timeout:
