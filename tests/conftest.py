@@ -1020,39 +1020,6 @@ def session_proxy_default_options(request, tempdir):
         return opts
 
 
-@pytest.fixture(scope='session')
-def reap_stray_processes():
-    # Run tests
-    yield
-
-    children = psutil.Process(os.getpid()).children(recursive=True)
-    if not children:
-        log.info('No astray processes found')
-        return
-
-    def on_terminate(proc):
-        log.debug('Process %s terminated with exit code %s', proc, proc.returncode)
-
-    if children:
-        # Reverse the order, sublings first, parents after
-        children.reverse()
-        log.warning(
-            'Test suite left %d astray processes running. Killing those processes:\n%s',
-            len(children),
-            pprint.pformat(children)
-        )
-
-        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
-        for child in alive:
-            child.kill()
-
-        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
-        if alive:
-            # Give up
-            for child in alive:
-                log.warning('Process %s survived SIGKILL, giving up:\n%s', child, pprint.pformat(child.as_dict()))
-
-
 @pytest.fixture(scope='session', autouse=True)
 def bridge_pytest_and_runtests(reap_stray_processes,
                                session_root_dir,
@@ -1140,6 +1107,39 @@ _pytest.skipping.MarkEvaluator = GrainsMarkEvaluator
 
 
 # ----- Custom Fixtures --------------------------------------------------------------------------------------------->
+@pytest.fixture(scope='session')
+def reap_stray_processes():
+    # Run tests
+    yield
+
+    children = psutil.Process(os.getpid()).children(recursive=True)
+    if not children:
+        log.info('No astray processes found')
+        return
+
+    def on_terminate(proc):
+        log.debug('Process %s terminated with exit code %s', proc, proc.returncode)
+
+    if children:
+        # Reverse the order, sublings first, parents after
+        children.reverse()
+        log.warning(
+            'Test suite left %d astray processes running. Killing those processes:\n%s',
+            len(children),
+            pprint.pformat(children)
+        )
+
+        _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
+        for child in alive:
+            child.kill()
+
+        _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
+        if alive:
+            # Give up
+            for child in alive:
+                log.warning('Process %s survived SIGKILL, giving up:\n%s', child, pprint.pformat(child.as_dict()))
+
+
 @pytest.fixture(scope='session')
 def grains(request):
     cachedir = request.config.cache._cachedir
