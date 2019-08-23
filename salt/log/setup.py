@@ -973,9 +973,7 @@ def setup_multiprocessing_zmq_logging(port=None):
         # Let's set it to true as fast as possible
         __MP_LOGGING_CONFIGURED = True
 
-        if os.getpid() in zmq_handlers:
-        #if __MP_LOGGING_ZMQ_HANDLER is not None:
-            print("SKIP LOGGIN BECAUSE HANDLER EXISTS %d" %(os.getpid()))
+        if __MP_LOGGING_ZMQ_HANDLER is not None:
             return
 
         # The temp null and temp queue logging handlers will store messages.
@@ -987,7 +985,6 @@ def setup_multiprocessing_zmq_logging(port=None):
         # Let's add a queue handler to the logging root handlers
         #print("SET UP LOGGING %d %d" % ( os.getpid(), port or get_multiprocessing_logging_port()))
         handler = ZMQHandler(port or get_multiprocessing_logging_port())
-#        zmq_handlers[os.getpid()] = handler
         __MP_LOGGING_ZMQ_HANDLER = handler
         logging.root.addHandler(handler)
         # Set the logging root level to the lowest needed level to get all
@@ -1026,7 +1023,7 @@ def setup_multiprocessing_logging(queue=None):
         return
 
     try:
-    #    logging._acquireLock()  # pylint: disable=protected-access
+        logging._acquireLock()  # pylint: disable=protected-access
 
         if __MP_LOGGING_CONFIGURED is True:
             return
@@ -1060,7 +1057,7 @@ def setup_multiprocessing_logging(queue=None):
         # A small sleep will allow us not to hit that futex wait lock condition.
         time.sleep(0.0001)
     finally:
-    #    logging._releaseLock()  # pylint: disable=protected-access
+        logging._releaseLock()  # pylint: disable=protected-access
         pass
 
 
@@ -1421,7 +1418,6 @@ def __remove_temp_logging_handler():
     This function will run once logging has been configured. It just removes
     the temporary stream Handler from the logging handlers.
     '''
-    return
     if is_logging_configured():
         # In this case, the temporary logging handler has been removed, return!
         return
