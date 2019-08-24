@@ -62,7 +62,6 @@ integration.modules.test_win_pkg
 integration.modules.test_win_servermanager
 integration.reactor.test_reactor
 integration.renderers.test_pydsl
-integration.returners.test_librato_return
 integration.runners.test_jobs
 integration.runners.test_manage
 integration.runners.test_runner_returns
