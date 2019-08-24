@@ -261,6 +261,23 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual('', ret['workphone'])
             self.assertEqual('', ret['homephone'])
 
+    @skipIf(salt.utils.platform.is_windows(), 'windows minon does not support createhome')
+    def test_user_present_home_directory_created(self):
+        '''
+        This is a DESTRUCTIVE TEST it creates a new user on the minion.
+
+        It ensures that the home directory is created.
+        '''
+        ret = self.run_state(
+            'user.present',
+            name=self.user_name,
+            createhome=True
+        )
+        self.assertSaltTrueReturn(ret)
+
+        user_info = self.run_function('user.info', [self.user_name])
+        self.assertTrue(os.path.exists(user_info['home']))
+
     def tearDown(self):
         if salt.utils.platform.is_darwin():
             check_user = self.run_function('user.list_users')
