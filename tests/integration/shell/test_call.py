@@ -174,7 +174,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             '--config-dir {0} cmd.run "echo foo"'.format(
                 config_dir
             ),
-            timeout=60,
+            timeout=120,
             catch_stderr=True,
             with_retcode=True
         )
