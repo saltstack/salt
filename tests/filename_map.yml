@@ -4,6 +4,14 @@
   - unit.test_virtualname
   - integration.modules.test_sysmod
 
+salt/log/setup.py:
+  - integration.logging.test_jid_logging
+  - integration.logging.test_zmq_logging
+
+salt/log/handlers/*:
+  - integration.logging.test_jid_logging
+  - integration.logging.test_zmq_logging
+
 salt/modules/(apkpkg|aptpkg|ebuildpkg|dpkg_lowpkg|freebsdpkg|mac_brew_pkg|mac_ports_pkg|openbsdpkg|opkg|pacmanpkg|pkgin|pkgng|pkg_resource|rpm_lowpkg|solarisipspkg|solarispkg|win_pkg|xbpspkg|yumpkg|zypperpkg)\.py:
   - unit.states.test_pkg
   - integration.modules.test_pkg
