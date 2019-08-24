@@ -24,7 +24,7 @@ import msgpack
 try:
     import zmq
     HAS_ZMQ = True
-except:
+except ImportError:
     HAS_ZMQ = False
 
 log = logging.getLogger(__name__)
@@ -169,6 +169,7 @@ if sys.version_info > (2, 6):
         Watched file handler which properly handles exc_info on a per handler basis
         '''
 
+
 class ZMQHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMixIn):
 
     def __init__(self, host='127.0.0.1', port=3330):
@@ -198,7 +199,8 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMix
         Writes the LogRecord to the queue, preparing it for pickling first.
         '''
         try:
-            self.sender.send(self.prepare(record))
+            msg = self.prepare(record)
+            self.sender.send(msg)
         except Exception:
             self.handleError(record)
 

@@ -272,6 +272,7 @@ class OptionParser(optparse.OptionParser, object):
             log.shutdown_multiprocessing_logging()
             # Stop the logging queue listener process
             log.shutdown_multiprocessing_logging_listener(daemonizing=True)
+            log.shutdown_multiprocessing_logging_zmq_listener(daemonizing=True)
         if isinstance(msg, six.string_types) and msg and msg[-1] != '\n':
             msg = '{0}\n'.format(msg)
         optparse.OptionParser.exit(self, status, msg)
