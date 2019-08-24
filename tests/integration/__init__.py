@@ -104,6 +104,7 @@ def get_unused_localhost_port():
 
     DARWIN = True if sys.platform.startswith('darwin') else False
     BSD = True if 'bsd' in sys.platform else False
+    WIN = True if sys.platform.startswith('win') else False
 
     if DARWIN and port in _RUNTESTS_PORTS:
         port = get_unused_localhost_port()
@@ -112,7 +113,7 @@ def get_unused_localhost_port():
 
     _RUNTESTS_PORTS[port] = usock
 
-    if DARWIN or BSD:
+    if DARWIN or BSD or WIN:
         usock.close()
 
     return port

@@ -139,6 +139,12 @@ __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
 __MP_MAINPROCESS_ID = None
 
 
+class LoggingException(RuntimeError):
+    '''
+    Raised when we encounter an error while logging
+    '''
+
+
 class __NullLoggingHandler(TemporaryLoggingHandler):
     '''
     This class exists just to better identify which temporary logging
@@ -1301,7 +1307,10 @@ def _process_multiprocessing_logging_zmq(opts, port, dbg=False):
 
     context = zmq.Context()
     puller = context.socket(zmq.PULL)
-    puller.bind('tcp://127.0.0.1:{}'.format(port))
+    try:
+        puller.bind('tcp://127.0.0.1:{}'.format(port))
+    except zmq.ZMQError as exc:
+        raise LoggingException('Unable to bind to puller port: {}'.format(port))
     try:
         while True:
             try:
