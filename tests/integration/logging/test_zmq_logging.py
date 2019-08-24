@@ -7,7 +7,6 @@ import logging
 import multiprocessing
 import threading
 import time
-from unittest import TestCase
 
 import zmq
 import msgpack
@@ -16,6 +15,7 @@ import salt.log.setup
 import salt.log.handlers
 
 from tests.integration import get_unused_localhost_port
+from tests.support.unit import TestCase
 
 
 class TestLogHandler(logging.NullHandler):
@@ -35,14 +35,16 @@ def test_target(host, port):
     log.addHandler(handler)
 
     def foo():
-        object().foo
+        # This will raise an exception
+        foo = object().foo
 
     def bar():
+        # Wrap the exception in multiple methods too make the stack bigger
         foo()
 
     try:
         foo()
-    except:
+    except AttributeError:
         log.exception("TEST")
 
 
@@ -56,7 +58,7 @@ class TestZMQLogging(TestCase):
             'log_datefmt_logfile': '%Y-%m-%d %H:%M:%S',
             'log_file': 'test.log',
         }
-        self.port = 4221
+        self.port = get_unused_localhost_port()
         self.host = '127.0.0.1'
         self.logger = logging.getLogger('test_zmq_logging')
         self.handler = TestLogHandler(level='DEBUG')
