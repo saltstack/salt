@@ -1006,6 +1006,9 @@ def setup_multiprocessing_zmq_logging(port=None):
         # Let's add a queue handler to the logging root handlers
         handler = ZMQHandler(port or get_multiprocessing_logging_port())
         __MP_LOGGING_ZMQ_HANDLER = handler
+        if __MP_IN_MAINPROCESS is True:
+            for handler in logging.root.handlers:
+                logging.root.removeHandler(handler)
         logging.root.addHandler(handler)
         # Set the logging root level to the lowest needed level to get all
         # desired messages.
