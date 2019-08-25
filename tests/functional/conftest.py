@@ -11,17 +11,22 @@ PyTest boilerplate code for Salt functional testing
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
+import time
 import shutil
 import logging
+import threading
 
 # Import 3rd-party libs
 import pytest
+import tornado.gen
+import tornado.ioloop
 import salt.ext.six as six
 
 # Import Salt libs
 import salt.minion
 import salt.config
 import salt.runner
+import salt.utils.event
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.verify
@@ -31,6 +36,83 @@ from tests.support.comparables import StateReturn
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
+
+
+class FunctionalMinion(salt.minion.SMinion):
+
+    def __init__(self, opts, context=None):
+        if context is None:
+            context = {}
+        super(FunctionalMinion, self).__init__(opts, context=context)
+        self.__context = context
+        self.__loop = None
+        self.__listener_thread = None
+        self.__event = None
+        self.__event_publisher = None
+
+    def start_event_listener(self):
+        if self.__listener_thread is None:
+            self.__loop = ioloop = tornado.ioloop.IOLoop()
+            self.__listener_thread = threading.Thread(target=self._start_event_listener, args=(ioloop,))
+            self.__listener_thread.start()
+
+    def _start_event_listener(self, io_loop=None):
+        io_loop.make_current()
+        time.sleep(0.25)
+        # start up the event publisher, so we can see events during startup
+        if self.__event_publisher is None:
+            self.__event_publisher = salt.utils.event.AsyncEventPublisher(
+                self.opts,
+                io_loop=io_loop,
+            )
+        if self.__event is None:
+            self.__event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=io_loop)
+        self.__event.subscribe('')
+        self.__event.set_event_handler(self.handle_event)
+        io_loop.start()
+
+    def stop_event_listenter(self):
+        if self.__event is not None:
+            self.__event.remove_event_handler(self.handle_event)
+            self.__event.unsubscribe('')
+            self.__event.destroy()
+            self.__event = None
+        if self.__event_publisher is not None:
+            self.__event_publisher.close()
+            self.__event_publisher = None
+        if self.__loop is not None:
+            self.__loop.add_callback(self.__loop.stop)
+            self.__listener_thread.join()
+            self.__listener_thread = None
+            self.__loop.close(all_fds=True)
+            self.__loop = None
+
+    @tornado.gen.coroutine
+    def handle_event(self, package):
+        '''
+        Handle an event from the epull_sock (all local minion events)
+        '''
+        tag, _ = salt.utils.event.SaltEvent.unpack(package)
+        log.debug(
+            'Minion  \'%s\' is handling event tag \'%s\'',
+            self.opts['id'], tag
+        )
+        handled_tags = (
+            'beacons_refresh',
+            'grains_refresh',
+            'matchers_refresh',
+            'manage_schedule',
+            'manage_beacons',
+            '_minion_mine',
+            'module_refresh',
+            'pillar_refresh'
+        )
+
+        # Run the appropriate function
+        for tag_function in handled_tags:
+            if tag.startswith(tag_function):
+                self.gen_modules(context=self.__context)
+                break
 
 
 class StateCallWrapper(object):
@@ -178,7 +260,7 @@ def loader_context_dictionary():
 @pytest.fixture(scope='session')
 def sminion(salt_opts, loader_context_dictionary):
     log.info('Instantiating salt.minion.SMinion')
-    _sminion = salt.minion.SMinion(salt_opts.copy(), context=loader_context_dictionary)
+    _sminion = FunctionalMinion(salt_opts.copy(), context=loader_context_dictionary)
     for name in ('utils', 'functions', 'serializers', 'returners', 'proxy', 'states', 'rend', 'matchers', 'executors'):
         _attr_dict(getattr(_sminion, name))
     log.info('Instantiating salt.minion.SMinion completed')
@@ -217,23 +299,30 @@ def __minion_loader_cleanup(sminion,
 
 
 @pytest.fixture
-def grains(sminion):
-    return sminion.opts['grains'].copy()
+def minion(sminion):
+    sminion.start_event_listener()
+    yield sminion
+    sminion.stop_event_listenter()
 
 
 @pytest.fixture
-def pillar(sminion):
-    return sminion.opts['pillar'].copy()
+def grains(minion):
+    return minion.opts['grains'].copy()
 
 
 @pytest.fixture
-def utils(sminion):
-    return sminion.utils
+def pillar(minion):
+    return minion.opts['pillar'].copy()
 
 
 @pytest.fixture
-def functions(sminion):
-    _functions = sminion.functions
+def utils(minion):
+    return minion.utils
+
+
+@pytest.fixture
+def functions(minion):
+    _functions = minion.functions
     # Make sure state.sls and state.single returns are StateReturn instances for easier comparissons
     _functions.state.sls = StateCallWrapper(_functions.state.sls)
     _functions.state.single = StateCallWrapper(_functions.state.single)
@@ -246,38 +335,38 @@ def modules(functions):
 
 
 @pytest.fixture
-def serializers(sminion):
-    return sminion.serializers
+def serializers(minion):
+    return minion.serializers
 
 
 @pytest.fixture
-def returners(sminion):
-    return sminion.returners
+def returners(minion):
+    return minion.returners
 
 
 @pytest.fixture
-def proxy(sminion):
-    return sminion.proxy
+def proxy(minion):
+    return minion.proxy
 
 
 @pytest.fixture
-def states(sminion):
-    return sminion.states
+def states(minion):
+    return minion.states
 
 
 @pytest.fixture
-def rend(sminion):
-    return sminion.rend
+def rend(minion):
+    return minion.rend
 
 
 @pytest.fixture
-def matchers(sminion):
-    return sminion.matchers
+def matchers(minion):
+    return minion.matchers
 
 
 @pytest.fixture
-def executors(sminion):
-    return sminion.executors
+def executors(minion):
+    return minion.executors
 
 
 @pytest.fixture
