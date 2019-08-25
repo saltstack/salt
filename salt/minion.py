@@ -860,6 +860,9 @@ class SMinion(MinionBase):
 
             salt '*' sys.reload_modules
         '''
+        if initial_load is False:
+            self.opts['grains'] = salt.loader.grains(self.opts)
+
         self.opts['pillar'] = salt.pillar.get_pillar(
             self.opts,
             self.opts['grains'],
