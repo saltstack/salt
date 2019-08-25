@@ -11,6 +11,7 @@ PyTest boilerplate code for Salt functional testing
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 import sys
+import shutil
 import logging
 
 # Import 3rd-party libs
@@ -23,6 +24,7 @@ import salt.config
 import salt.runner
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.verify
 
 # Import testing libs
 from tests.support.comparables import StateReturn
@@ -95,6 +97,18 @@ def salt_opts():
         ]
     }
 
+    # We need to copy the extension modules into the new master root_dir or
+    # it will be prefixed by it
+    extension_modules_path = os.path.join(root_dir, 'extension_modules')
+    if not os.path.exists(extension_modules_path):
+        shutil.copytree(
+            os.path.join(
+                RUNTIME_VARS.FILES, 'extension_modules'
+            ),
+            extension_modules_path
+        )
+    minion_opts['extension_modules'] = extension_modules_path
+
     # Under windows we can't seem to properly create a virtualenv off of another
     # virtualenv, we can on linux but we will still point to the virtualenv binary
     # outside the virtualenv running the test suite, if that's the case.
@@ -135,7 +149,25 @@ def salt_opts():
         salt.utils.yaml.safe_dump(minion_opts, fp_, default_flow_style=False)
 
     log.info('Generating functional testing minion configuration completed.')
-    return salt.config.minion_config(conf_file, minion_id=minion_id)
+    minion_opts = salt.config.minion_config(conf_file, minion_id=minion_id)
+    salt.utils.verify.verify_env(
+        [
+            os.path.join(minion_opts['pki_dir'], 'accepted'),
+            os.path.join(minion_opts['pki_dir'], 'rejected'),
+            os.path.join(minion_opts['pki_dir'], 'pending'),
+            os.path.dirname(minion_opts['log_file']),
+            minion_opts['extension_modules'],
+            minion_opts['cachedir'],
+            minion_opts['sock_dir'],
+            RUNTIME_VARS.TMP_STATE_TREE,
+            RUNTIME_VARS.TMP_PILLAR_TREE,
+            RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
+            RUNTIME_VARS.TMP,
+        ],
+        RUNTIME_VARS.RUNNING_TESTS_USER,
+        root_dir=root_dir
+    )
+    return minion_opts
 
 
 @pytest.fixture(scope='session')
@@ -144,17 +176,17 @@ def loader_context_dictionary():
 
 
 @pytest.fixture(scope='session')
-def _salt_minion(salt_opts, loader_context_dictionary):
+def sminion(salt_opts, loader_context_dictionary):
     log.info('Instantiating salt.minion.SMinion')
-    __salt_minion = salt.minion.SMinion(salt_opts.copy(), context=loader_context_dictionary)
+    _sminion = salt.minion.SMinion(salt_opts.copy(), context=loader_context_dictionary)
     for name in ('utils', 'functions', 'serializers', 'returners', 'proxy', 'states', 'rend', 'matchers', 'executors'):
-        _attr_dict(getattr(__salt_minion, name))
+        _attr_dict(getattr(_sminion, name))
     log.info('Instantiating salt.minion.SMinion completed')
-    return __salt_minion
+    return _sminion
 
 
 @pytest.fixture(autouse=True)
-def __minion_loader_cleanup(_salt_minion,
+def __minion_loader_cleanup(sminion,
                             salt_opts,
                             loader_context_dictionary,
                             utils,
@@ -172,7 +204,7 @@ def __minion_loader_cleanup(_salt_minion,
     loader_context_dictionary.clear()
     # Reset the options dictionary
     salt_opts_copy = salt_opts.copy()
-    _salt_minion.opts = salt_opts_copy
+    sminion.opts = salt_opts_copy
     utils.opts = salt_opts_copy
     functions.opts = salt_opts_copy
     serializers.opts = salt_opts_copy
@@ -185,23 +217,23 @@ def __minion_loader_cleanup(_salt_minion,
 
 
 @pytest.fixture
-def grains(_salt_minion):
-    return _salt_minion.opts['grains'].copy()
+def grains(sminion):
+    return sminion.opts['grains'].copy()
 
 
 @pytest.fixture
-def pillar(_salt_minion):
-    return _salt_minion.opts['pillar'].copy()
+def pillar(sminion):
+    return sminion.opts['pillar'].copy()
 
 
 @pytest.fixture
-def utils(_salt_minion):
-    return _salt_minion.utils
+def utils(sminion):
+    return sminion.utils
 
 
 @pytest.fixture
-def functions(_salt_minion):
-    _functions = _salt_minion.functions
+def functions(sminion):
+    _functions = sminion.functions
     # Make sure state.sls and state.single returns are StateReturn instances for easier comparissons
     _functions.state.sls = StateCallWrapper(_functions.state.sls)
     _functions.state.single = StateCallWrapper(_functions.state.single)
@@ -214,38 +246,38 @@ def modules(functions):
 
 
 @pytest.fixture
-def serializers(_salt_minion):
-    return _salt_minion.serializers
+def serializers(sminion):
+    return sminion.serializers
 
 
 @pytest.fixture
-def returners(_salt_minion):
-    return _salt_minion.returners
+def returners(sminion):
+    return sminion.returners
 
 
 @pytest.fixture
-def proxy(_salt_minion):
-    return _salt_minion.proxy
+def proxy(sminion):
+    return sminion.proxy
 
 
 @pytest.fixture
-def states(_salt_minion):
-    return _salt_minion.states
+def states(sminion):
+    return sminion.states
 
 
 @pytest.fixture
-def rend(_salt_minion):
-    return _salt_minion.rend
+def rend(sminion):
+    return sminion.rend
 
 
 @pytest.fixture
-def matchers(_salt_minion):
-    return _salt_minion.matchers
+def matchers(sminion):
+    return sminion.matchers
 
 
 @pytest.fixture
-def executors(_salt_minion):
-    return _salt_minion.executors
+def executors(sminion):
+    return sminion.executors
 
 
 @pytest.fixture
