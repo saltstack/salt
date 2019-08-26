@@ -15,7 +15,12 @@ from datetime import datetime
 import logging
 
 # Import salt libs
+# pylint: disable=import-error,no-name-in-module,redefined-builtin,3rd-party-module-not-gated
+from salt.six.moves import map as _map
+from salt.six.moves import range as _range
+# pylint: enable=import-error,no-name-in-module,redefined-builtin,3rd-party-module-not-gated
 import salt.utils.files
+
 
 # Import Third Party Libs
 try:
@@ -34,8 +39,8 @@ __virtualname__ = 'cert_info'
 def __virtual__():
     if HAS_OPENSSL is False:
         return False
-    else:
-        return __virtualname__
+
+    return __virtualname__
 
 
 def validate(config):
@@ -43,7 +48,7 @@ def validate(config):
     Validate the beacon configuration
     '''
     _config = {}
-    list(map(_config.update, config))
+    list(_map(_config.update, config))
 
     # Configuration for cert_info beacon should be a list of dicts
     if not isinstance(config, list):
@@ -74,32 +79,33 @@ def beacon(config):
     '''
     ret = []
     certificates = []
-    CryptoError = crypto.Error
+    CryptoError = crypto.Error  # pylint: disable=invalid-name
 
     _config = {}
-    list(map(_config.update, config))
+    list(_map(_config.update, config))
 
     notify_days = _config.get('notify_days', DEFAULT_NOTIFY_DAYS)
 
     for cert_path in _config.get('files', []):
         try:
-            cert = crypto.load_certificate(crypto.FILETYPE_PEM, salt.utils.files.fopen(cert_path).read())
+            with salt.utils.files.fopen(cert_path) as fp_:
+                cert = crypto.load_certificate(crypto.FILETYPE_PEM, fp_.read())
         except (IOError, CryptoError) as exc:
             log.error('Unable to load certificate %s (%s)', cert_path, exc)
             continue
 
-        cert_date = datetime.strptime(cert.get_notAfter(),"%Y%m%d%H%M%SZ")
+        cert_date = datetime.strptime(cert.get_notAfter(), "%Y%m%d%H%M%SZ")
         date_diff = (cert_date - datetime.today()).days
         log.debug('Certificate %s expires in %s days.', cert_path, date_diff)
 
         if notify_days < 0 or date_diff <= notify_days:
             log.debug('Certificate %s triggered beacon due to %s day notification threshold.', cert_path, notify_days)
             extensions = []
-            for e in range(0, cert.get_extension_count()):
+            for ext in _range(0, cert.get_extension_count()):
                 extensions.append(
                     {
-                        'ext_name': cert.get_extension(e).get_short_name(),
-                        'ext_data': str(cert.get_extension(e))
+                        'ext_name': cert.get_extension(ext).get_short_name(),
+                        'ext_data': str(cert.get_extension(ext))
                     }
                 )
 
@@ -112,7 +118,8 @@ def beacon(config):
                     'notAfter_raw': cert.get_notAfter(),
                     'notAfter': cert_date.strftime("%Y-%m-%d %H:%M:%SZ"),
                     'notBefore_raw': cert.get_notBefore(),
-                    'notBefore': datetime.strptime(cert.get_notBefore(),"%Y%m%d%H%M%SZ").strftime("%Y-%m-%d %H:%M:%SZ"),
+                    'notBefore': datetime.strptime(
+                                     cert.get_notBefore(), "%Y%m%d%H%M%SZ").strftime("%Y-%m-%d %H:%M:%SZ"),
                     'serial_number': cert.get_serial_number(),
                     'signature_algorithm': cert.get_signature_algorithm(),
                     'subject': ','.join(['{0}="{1}"'.format(t[0], t[1]) for t in cert.get_subject().get_components()]),

@@ -96,7 +96,7 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                             'notAfter_raw': '20290531205922Z',
                             'notBefore': '2019-06-03 20:59:22Z',
                             'notBefore_raw': '20190603205922Z',
-                            'serial_number': 9515119675852487647L,
+                            'serial_number': 9515119675852487647,
                             'signature_algorithm': 'sha256WithRSAEncryption',
                             'subject': 'CN="salttest-01.example.local"',
                             'subject_dict': {'CN': 'salttest-01.example.local'},
