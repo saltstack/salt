@@ -59,4 +59,4 @@ class AzureTest(CloudTest):
         # check if instance with salt installed returned
         ret_val = self.run_cloud('-p azure-test {0}'.format(self.instance_name), timeout=TIMEOUT)
         self.assertInstanceExists(ret_val)
-        self.assertDestroyInstance()
+        self.assertDestroyInstance(timeout=TIMEOUT)
