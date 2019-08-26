@@ -40,15 +40,14 @@ except ImportError:
     HAS_PYVMOMI = False
 
 try:
-    from com.vmware.vapi.std_client import DynamicID
-
+    from com.vmware.vapi.std_client import (
+        DynamicID )  # pylint: disable=unused-import
     HAS_VSPHERE_SDK = True
 except ImportError:
     HAS_VSPHERE_SDK = False
 
 import salt.utils.args
 import salt.utils.vmware
-from functools import wraps
 
 # Globals
 HOST = '1.2.3.4'
