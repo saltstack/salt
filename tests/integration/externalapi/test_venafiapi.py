@@ -32,8 +32,8 @@ def with_random_name(func):
     return wrapper
 
 
-@destructiveTest
-@expensiveTest
+# @destructiveTest
+# @expensiveTest
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner

@@ -993,6 +993,11 @@ class SaltTestingParser(optparse.OptionParser):
                 '-{0}'.format('v' * (self.options.verbosity - 1))
             )
 
+        if self.options.name:
+            calling_args.append(
+                '--name={0}'.format(self.options.name[0])
+            )
+
         sys.stdout.write(' * Docker command: {0}\n'.format(' '.join(calling_args)))
         sys.stdout.write(' * Running the tests suite under the {0!r} docker '
                          'container. CID: '.format(container))
