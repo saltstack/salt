@@ -1951,6 +1951,7 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not HAS_VSPHERE_SDK, 'The \'vsphere-automation-sdk\' library is missing')
 class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
     '''
     Tests for:

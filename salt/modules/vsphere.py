@@ -42,6 +42,27 @@ version currently listed in PyPi, run the following:
 The 5.5.0.2014.1.1 is a known stable version that this original vSphere Execution
 Module was developed against.
 
+vSphere Automation SDK
+-------
+
+vSphere Automation SDK can be installed via pip:
+
+.. code-block:: bash
+
+    pip install --upgrade pip setuptools
+    pip install --upgrade git+https://github.com/vmware/vsphere-automation-sdk-python.git
+
+.. note::
+
+    The SDK also requires OpenSSL 1.0.1+ if you want to connect to vSphere 6.5+ in order to support
+    TLS1.1 & 1.2.
+
+    In order to use the tagging functions in this module, vSphere Automation SDK is necessary to
+    install.
+
+The module is currently in version 1.0.3
+(as of 8/26/2019)
+
 ESXCLI
 ------
 

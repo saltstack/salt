@@ -20,7 +20,6 @@ supervisor; python_version < '3'
 kubernetes<4.0
 psutil
 pyvmomi
-vSphere-Automation-SDK
 setproctitle
 cherrypy>=3.2.2,<18.0.0; python_version < '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
 cherrypy>=3.2.2; python_version >= '3.5' and sys.platform != 'win32' and sys.platform != 'darwin'
