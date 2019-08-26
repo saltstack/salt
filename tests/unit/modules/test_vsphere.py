@@ -40,8 +40,8 @@ except ImportError:
     HAS_PYVMOMI = False
 
 try:
-    from com.vmware.vapi.std_client import (
-        DynamicID )  # pylint: disable=unused-import
+    # pylint: disable=unused-import
+    from com.vmware.vapi.std_client import DynamicID
     HAS_VSPHERE_SDK = True
 except ImportError:
     HAS_VSPHERE_SDK = False
