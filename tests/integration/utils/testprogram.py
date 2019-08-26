@@ -832,7 +832,7 @@ class TestDaemon(TestProgram):
                         log.error('Unable to access process %s, '
                                   'running command %s as user %s',
                                   pinfo['pid'], pinfo['name'], pinfo['username'])
-                        raise
+                        continue
                 if any((cmdline == proc_cmdline[n:n + cmd_len])
                         for n in range(len(proc_cmdline) - cmd_len + 1)):
                     ret.append(proc)
