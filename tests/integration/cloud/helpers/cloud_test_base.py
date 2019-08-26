@@ -97,11 +97,13 @@ class CloudTest(ShellCase):
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
-    def assertDestroyInstance(self, instance_name=None):
+    def assertDestroyInstance(self, instance_name=None, timeout=None):
+        if timeout is None:
+            timeout = TIMEOUT
         if not instance_name:
             instance_name = self.instance_name
         log.debug('Deleting instance "{}"'.format(instance_name))
-        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=TIMEOUT)
+        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=timeout)
         if delete_str:
             delete = safe_load('\n'.join(delete_str))
             self.assertIn(self.profile_str, delete)
