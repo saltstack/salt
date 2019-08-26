@@ -240,15 +240,20 @@ except ImportError:
 
 # vSphere SDK Automation
 try:
-    from com.vmware.cis.tagging_client import Category, CategoryModel
-    from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
-    from com.vmware.vcenter_client import Cluster
-    from com.vmware.vapi.std_client import DynamicID
+    from com.vmware.cis.tagging_client import (
+        Category, CategoryModel )  # pylint: disable=unused-import
+    from com.vmware.cis.tagging_client import (
+        Tag, TagModel, TagAssociation )  # pylint: disable=unused-import
+    from com.vmware.vcenter_client import (
+        Cluster )  # pylint: disable=unused-import
+    from com.vmware.vapi.std_client import (
+        DynamicID )  # pylint: disable=unused-import
 
     # Error Handling
     from com.vmware.vapi.std.errors_client import (
-        AlreadyExists, InvalidArgument, NotFound, Unauthenticated, Unauthorized
-    )
+        AlreadyExists, InvalidArgument,
+        NotFound, Unauthenticated, Unauthorized
+    ) # pylint: disable=unused-import
     vsphere_errors = (AlreadyExists, InvalidArgument,
                       NotFound, Unauthenticated, Unauthorized,)
     HAS_VSPHERE_SDK = True
