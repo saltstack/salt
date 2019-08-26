@@ -69,6 +69,11 @@ class PostfixTestCase(TestCase, LoaderModuleMockMixin):
                                            MagicMock(return_value='A\nB')}):
             self.assertEqual(postfix.show_queue(), [])
 
+        # Test if get an extra newline in the output
+        with patch.dict(postfix.__salt__, {'cmd.run':
+                                           MagicMock(return_value='A\nB\n')}):
+            self.assertEqual(postfix.show_queue(), [])
+
     def test_delete(self):
         '''
         Test for delete message(s) from the mail queue
