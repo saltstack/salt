@@ -419,17 +419,17 @@ class TestDup2(TestCase):
         assert not dup_mock.called
 
 
+def null_target():
+    pass
+
+
+def event_target(event):
+    while True:
+        if event.wait(5):
+            break
+
+
 class TestProcessList(TestCase):
-
-    @staticmethod
-    def null_target():
-        pass
-
-    @staticmethod
-    def event_target(event):
-        while True:
-            if event.wait(5):
-                break
 
     @staticmethod
     def wait_for_proc(proc, timeout=10):
@@ -441,7 +441,7 @@ class TestProcessList(TestCase):
 
     def test_process_list_process(self):
         plist = salt.utils.process.SubprocessList()
-        proc = multiprocessing.Process(target=self.null_target)
+        proc = multiprocessing.Process(target=null_target)
         proc.start()
         plist.add(proc)
         assert proc in plist.processes
@@ -452,7 +452,7 @@ class TestProcessList(TestCase):
 
     def test_process_list_thread(self):
         plist = salt.utils.process.SubprocessList()
-        thread = threading.Thread(target=self.null_target)
+        thread = threading.Thread(target=null_target)
         thread.start()
         plist.add(thread)
         assert thread in plist.processes
@@ -464,7 +464,7 @@ class TestProcessList(TestCase):
     def test_process_list_cleanup(self):
         plist = salt.utils.process.SubprocessList()
         event = multiprocessing.Event()
-        proc = multiprocessing.Process(target=self.event_target, args=[event])
+        proc = multiprocessing.Process(target=event_target, args=[event])
         proc.start()
         plist.add(proc)
         assert proc in plist.processes
