@@ -77,6 +77,7 @@ class TestZMQLogging(TestCase):
         context = zmq.Context()
         sender = context.socket(zmq.PUSH)
         sender.connect('tcp://{}:{}'.format(self.host, self.port))
+        time.sleep(5)
         try:
             sender.send(msgpack.dumps(None))
         finally:
