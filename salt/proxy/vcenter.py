@@ -191,7 +191,6 @@ import os
 import salt.exceptions
 from salt.config.schemas.vcenter import VCenterProxySchema
 from salt.utils.dictupdate import merge
-from salt.utils.vmware import get_vsphere_client
 
 # This must be present or the Salt loader won't load this module.
 __proxyenabled__ = ['vcenter']
