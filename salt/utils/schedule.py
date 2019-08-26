@@ -44,7 +44,6 @@ import salt.minion
 import salt.payload
 import salt.syspaths
 import salt.exceptions
-import salt.log.setup as log_setup
 import salt.defaults.exitcodes
 from salt.utils.odict import OrderedDict
 
@@ -130,7 +129,8 @@ class Schedule(object):
                            cleanup=None,
                            proxy=None,
                            standalone=False,
-                           utils=None):
+                           utils=None,
+                           _subprocess_list=None):
         self.opts = opts
         self.proxy = proxy
         self.functions = functions
@@ -158,6 +158,10 @@ class Schedule(object):
         if cleanup:
             for prefix in cleanup:
                 self.delete_job_prefix(prefix)
+        if _subprocess_list is None:
+            self._subprocess_list = salt.utils.process.SubprocessList()
+        else:
+            self._subprocess_list = _subprocess_list
 
     def __getnewargs__(self):
         return self.opts, self.functions, self.returners, self.intervals, None
@@ -654,14 +658,6 @@ class Schedule(object):
                 salt.minion.get_proc_dir(self.opts['cachedir']),
                 ret['jid']
             )
-
-        if multiprocessing_enabled and not salt.utils.platform.is_windows():
-            # Reconfigure multiprocessing logging after daemonizing
-            log_setup.setup_multiprocessing_logging()
-
-        if multiprocessing_enabled:
-            # Don't *BEFORE* to go into try to don't let it triple execute the finally section.
-            salt.utils.process.daemonize_if(self.opts)
 
         # TODO: Make it readable! Splt to funcs, remove nested try-except-finally sections.
         try:
@@ -1710,16 +1706,22 @@ class Schedule(object):
                     # Reset current signals before starting the process in
                     # order not to inherit the current signal handlers
                     proc.start()
-                proc.join()
+                    proc.name = '{}-Schedule-{}'.format(proc.name, data['name'])
+                    self._subprocess_list.add(proc)
             else:
                 proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
                 proc.start()
+                proc.name = '{}-Schedule-{}'.format(proc.name, data['name'])
+                self._subprocess_list.add(proc)
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
                 # Restore our function references.
                 self.functions = functions
                 self.returners = returners
                 self.utils = utils
+
+    def cleanup_subprocesses(self):
+        self._subprocess_list.cleanup()
 
 
 def clean_proc_dir(opts):
