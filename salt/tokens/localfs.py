@@ -10,9 +10,10 @@ import hashlib
 import os
 import logging
 
+import salt.exceptions
+import salt.payload
 import salt.utils.files
 import salt.utils.path
-import salt.payload
 
 from salt.ext import six
 
