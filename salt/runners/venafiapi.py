@@ -63,6 +63,7 @@ log = logging.getLogger(__name__)
 
 
 def _init_connection():
+    log.info("init venafi connection")
     api_key = __opts__.get('venafi', {}).get('api_key')
     base_url = __opts__.get('venafi', {}).get('base_url')
     tpp_user = __opts__.get('venafi', {}).get('tpp_user')

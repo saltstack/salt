@@ -120,3 +120,8 @@ peer_run:
   - vault.generate_token
 sdbvault:
   driver: vault
+osenv:
+  driver: env
+venafi:
+  api_key: "sdb://osenv/VENAFI_CLOUD_API_KEY"
+  base_url: "https://api.dev12.qa.venafi.io/"

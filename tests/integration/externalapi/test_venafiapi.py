@@ -44,10 +44,10 @@ class VenafiTest(ShellCase):
         '''
         venafi.request
         '''
+        print(self.master_opts['venafi'])
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id='{0}.example.com'.format(name),
                                 dns_name='{0}.example.com'.format(name),
-                                country='US', state='Utah', loc='Salt Lake City',
-                                org='Salt Stack Inc.', org_unit='Testing',
-                                zone='Internet', password='SecretSauce')
-        self.assertTrue('request_id' in ret['return'])
+                                zone='Default')
+        print("ret is:",ret['return'])
+        # self.assertTrue('request_id' in ret['return'])
