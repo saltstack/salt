@@ -97,11 +97,13 @@ class CloudTest(ShellCase):
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
-    def assertDestroyInstance(self, instance_name=None):
+    def assertDestroyInstance(self, instance_name=None, timeout=None):
+        if timeout is None:
+            timeout = TIMEOUT
         if not instance_name:
             instance_name = self.instance_name
         log.debug('Deleting instance "{}"'.format(instance_name))
-        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=TIMEOUT)
+        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=timeout)
         if delete_str:
             delete = safe_load('\n'.join(delete_str))
             self.assertIn(self.profile_str, delete)
@@ -204,16 +206,18 @@ class CloudTest(ShellCase):
                           .format(', '.join(missing_conf_item)) +
                           '\nCheck tests/integration/files/conf/cloud.providers.d/{0}.conf'.format(self.PROVIDER))
 
-    def _alt_name(self):
+    def _alt_names(self):
         '''
-        Check for an instance that was renamed to be longer
+        Check for an instances created alongside this test's instance that weren't cleaned up
         '''
         query = self.query_instances()
+        instances = set()
         for q in query:
             # Verify but this is a new name and not a shutting down ec2 instance
-            if q.startswith(self.instance_name) and not (q == self.instance_name) \
-               and not q.split('-')[-1].startswith('DEL'):
-                return q
+            if q.startswith(self.instance_name) and not q.split('-')[-1].startswith('DEL'):
+                instances.add(q)
+                log.debug('Adding "{}" to the set of instances that needs to be deleted'.format(q))
+        return instances
 
     def _ensure_deletion(self, instance_name=None):
         '''
@@ -251,13 +255,17 @@ class CloudTest(ShellCase):
         one time in a test for each instance created.  This is a failSafe and something went wrong
         if the tearDown is where an instance is destroyed.
         '''
-        instance_destroyed, destroy_message = self._ensure_deletion()
-        alt_name = self._alt_name()
-        if alt_name:
-            alt_destroyed, alt_destroy_message = self._ensure_deletion(alt_name)
-            self.assertTrue(instance_destroyed and alt_destroyed, destroy_message + ' :: ' + alt_destroy_message)
-        else:
-            self.assertTrue(instance_destroyed, destroy_message)
+        success = True
+        fail_messages = []
+        alt_names = self._alt_names()
+        for instance in alt_names:
+            alt_destroyed, alt_destroy_message = self._ensure_deletion(instance)
+            if not alt_destroyed:
+                success = False
+                fail_messages.append(alt_destroy_message)
+                log.error('Failed to destroy instance "{}": {}'.format(instance, alt_destroy_message))
+        self.assertTrue(success, '\n'.join(fail_messages))
+        self.assertFalse(alt_names, 'Cleanup should happen in the test, not the TearDown')
 
     @classmethod
     def tearDownClass(cls):
