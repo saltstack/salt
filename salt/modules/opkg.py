@@ -1025,7 +1025,7 @@ def list_pkgs(versions_as_list=False, **kwargs):
         salt '*' pkg.list_pkgs versions_as_list=True
     '''
     errors = []
-    ret = _execute_list_pkgs(errors, versions_as_list)
+    ret = _execute_list_pkgs(errors, versions_as_list, **kwargs)
 
     if errors:
         raise CommandExecutionError(
