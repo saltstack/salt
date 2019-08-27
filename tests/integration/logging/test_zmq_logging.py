@@ -30,7 +30,7 @@ class TestLogHandler(logging.NullHandler):
 
 def test_target(host, port):
     log = logging.getLogger('test_zmq_logging')
-    #log.handlers = []
+    log.handlers = []
     handler = salt.log.handlers.ZMQHandler(host=host, port=port)
     log.addHandler(handler)
 
@@ -45,7 +45,8 @@ def test_target(host, port):
     try:
         foo()
     except AttributeError:
-        log.exception("TEST")
+        log.exception("TEST-ü")
+    time.sleep(5)
 
 
 class TestZMQLogging(TestCase):
@@ -77,10 +78,11 @@ class TestZMQLogging(TestCase):
         context = zmq.Context()
         sender = context.socket(zmq.PUSH)
         sender.connect('tcp://{}:{}'.format(self.host, self.port))
-        time.sleep(5)
+        time.sleep(1)
         try:
             sender.send(msgpack.dumps(None))
         finally:
+            time.sleep(5)
             sender.close(1)
             context.term()
 
@@ -95,7 +97,7 @@ class TestZMQLogging(TestCase):
         )
         proc.start()
         proc.join()
-        assert len(self.handler.messages) == 1
+        assert len(self.handler.messages) == 1, len(self.handler.messages)
         record = self.handler.messages[0]
-        assert 'TEST' in record.msg
+        assert 'TEST-ü' in record.msg
         assert 'Traceback' in record.msg

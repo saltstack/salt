@@ -942,7 +942,6 @@ def setup_multiprocessing_logging_zmq_listener(opts, port=None):
         target=_process_multiprocessing_logging_zmq,
         args=(opts, port or get_multiprocessing_logging_port(),)
     )
-    __MP_LOGGING_ZMQ_PROCESS.daemon = True
     __MP_LOGGING_ZMQ_PROCESS.start()
     __MP_LOGGING_LISTENER_CONFIGURED = True
 
@@ -1318,7 +1317,10 @@ def _process_multiprocessing_logging_zmq(opts, port, dbg=False):
         while True:
             try:
                 msg = puller.recv()
-                record_dict = msgpack.loads(msg)
+                if msgpack.version >= (0, 5, 2):
+                    record_dict = msgpack.loads(msg, raw=False)
+                else:
+                    record_dict = msgpack.loads(msg, encoding='utf-8')
                 if record_dict is None:
                     # A sentinel to stop processing the queue
                     break

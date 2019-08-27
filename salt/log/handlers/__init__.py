@@ -190,7 +190,7 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixIn, logging.Handler, NewStyleClassMix
         record.args = None
         record.exc_info = None
         record.exc_text = None
-        return msgpack.dumps(record.__dict__, encoding='utf-8')
+        return msgpack.dumps(record.__dict__, use_bin_type=True)
 
     def emit(self, record):
         '''
