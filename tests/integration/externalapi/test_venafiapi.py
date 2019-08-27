@@ -40,47 +40,6 @@ class VenafiTest(ShellCase):
     '''
 
     @with_random_name
-    def test_gen_key_password(self, name):
-        '''
-        venafi.gen_key
-        '''
-        ret = self.run_run_plus(fun='venafi.gen_key',
-                                minion_id='{0}.test.saltstack.com'.format(name),
-                                dns_name='{0}.test.saltstack.com'.format(name),
-                                zone='Internet',
-                                password='SecretSauce')
-        self.assertEqual(ret['out'][0], '-----BEGIN RSA PRIVATE KEY-----')
-        self.assertEqual(ret['out'][1], 'Proc-Type: 4,ENCRYPTED')
-        self.assertEqual(ret['out'][-1], '-----END RSA PRIVATE KEY-----')
-
-    @with_random_name
-    def test_gen_key_without_password(self, name):
-        '''
-        venafi.gen_key
-        '''
-        ret = self.run_run_plus(fun='venafi.gen_key',
-                                minion_id='{0}.test.saltstack.com'.format(name),
-                                dns_name='{0}.test.saltstack.com'.format(name),
-                                zone='Internet')
-        self.assertEqual(ret['out'][0], '-----BEGIN RSA PRIVATE KEY-----')
-        self.assertNotEqual(ret['out'][1], 'Proc-Type: 4,ENCRYPTED')
-        self.assertEqual(ret['out'][-1], '-----END RSA PRIVATE KEY-----')
-
-    @with_random_name
-    def test_gen_csr(self, name):
-        '''
-        venafi.gen_csr
-        '''
-        ret = self.run_run_plus(fun='venafi.gen_csr',
-                                minion_id='{0}.test.saltstack.com'.format(name),
-                                dns_name='{0}.test.saltstack.com'.format(name),
-                                country='US', state='Utah', loc='Salt Lake City',
-                                org='Salt Stack Inc.', org_unit='Testing',
-                                zone='Internet', password='SecretSauce')
-        self.assertEqual(ret['out'][0], '-----BEGIN CERTIFICATE REQUEST-----')
-        self.assertEqual(ret['out'][-1], '-----END CERTIFICATE REQUEST-----')
-
-    @with_random_name
     def test_request(self, name):
         '''
         venafi.request

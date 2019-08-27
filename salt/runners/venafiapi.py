@@ -67,8 +67,6 @@ def _init_connection():
     base_url = __opts__.get('venafi', {}).get('base_url')
     tpp_user = __opts__.get('venafi', {}).get('tpp_user')
     tpp_password = __opts__.get('venafi', {}).get('tpp_password')
-    zone = __opts__.get('venafi', {}).get('zone')
-
     return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
 
 def __virtual__():
@@ -81,7 +79,7 @@ def __virtual__():
 def request(
         minion_id,
         dns_name=None,
-        zone='default',
+        zone='Default',
         country='US',
         state='California',
         loc='Palo Alto',
@@ -104,7 +102,8 @@ def request(
     conn = _init_connection()
     request = vcert.common.CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
                                               organization=org, organizational_unit=org_unit, key_password=password)
-
+    zone_config = conn.read_zone_conf(zone)
+    request.update_from_zone_config(zone_config)
     conn.request_cert(request, zone)
     csr = request.csr
     private_key = request.private_key_pem
@@ -113,6 +112,14 @@ def request(
         cert = conn.retrieve_cert(request)
         if cert:
             break
+
+    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    data = {
+        'minion_id': minion_id,
+        'cert': cert.cert,
+        'chain': cert.chain
+    }
+    cache.store(CACHE_BANK_NAME, dns_name, data)
     return cert.cert, private_key
 
 
@@ -136,7 +143,7 @@ def _id_map(minion_id, dns_name):
 
 def show_cert(dns_name):
     '''
-    Show certificate requests for this API key
+    Show issued certificate for domain
 
     CLI Example:
 
@@ -145,19 +152,10 @@ def show_cert(dns_name):
         salt-run venafi.show_cert example.com
     '''
 
-    conn = _init_connection()
-    cert = conn.retrieve_cert(vcert.common.CertificateRequest(common_name=dns_name))
-
-    if not cert.key:
-        cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
-        domain_data = cache.fetch(CACHE_BANK_NAME, dns_name)
-        if domain_data is None:
-            domain_data = {}
-        cert.key = domain_data.get('private_key')
+    cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
+    domain_data = cache.fetch(CACHE_BANK_NAME, dns_name) or {}
+    cert = domain_data.get('cert')
     return cert
-
-
-pickup = show_cert
 
 
 def list_domain_cache():
