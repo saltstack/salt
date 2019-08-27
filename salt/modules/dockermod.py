@@ -6824,6 +6824,8 @@ def sls(name, mods=None, **kwargs):
     if pillar_override and isinstance(pillar_override, dict):
         pillar.update(pillar_override)
 
+    sls_opts['grains'].update(grains)
+    sls_opts['pillar'].update(pillar)
     trans_tar = _prepare_trans_tar(
         name,
         sls_opts,
