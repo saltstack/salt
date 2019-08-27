@@ -123,5 +123,5 @@ sdbvault:
 osenv:
   driver: env
 venafi:
-  api_key: "sdb://osenv/VENAFI_CLOUD_API_KEY"
-  base_url: "https://api.dev12.qa.venafi.io/"
+  api_key: "sdb://osenv/CLOUDAPIKEY"
+  base_url: "sdb://osenv/CLOUDURL"
