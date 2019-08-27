@@ -445,6 +445,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.tarfile', MagicMock())
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.access', MagicMock(return_value=True))
     @patch('salt.utils.thin.os.chdir', MagicMock())
     @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock())
     @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
@@ -485,6 +486,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.tarfile', MagicMock())
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.access', MagicMock(return_value=True))
     @patch('salt.utils.thin.os.chdir', MagicMock())
     @patch('salt.utils.thin.os.close', MagicMock())
     @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
@@ -529,6 +531,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.tarfile', _tarfile(None))
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.access', MagicMock(return_value=True))
     @patch('salt.utils.thin.os.chdir', MagicMock())
     @patch('salt.utils.thin.os.close', MagicMock())
     @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
@@ -581,6 +584,7 @@ class SSHThinTestCase(TestCase):
     @patch('salt.utils.thin.tarfile', _tarfile(None))
     @patch('salt.utils.thin.zipfile', MagicMock())
     @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.access', MagicMock(return_value=True))
     @patch('salt.utils.thin.os.chdir', MagicMock())
     @patch('salt.utils.thin.os.close', MagicMock())
     @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
@@ -651,3 +655,51 @@ class SSHThinTestCase(TestCase):
             tops=tops, extended_cfg=ext_cfg)).strip().split(os.linesep)
         for t_line in ['second-system-effect:2:7', 'solar-interference:2:6']:
             self.assertIn(t_line, out)
+
+    @patch('salt.exceptions.SaltSystemExit', Exception)
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.makedirs', MagicMock())
+    @patch('salt.utils.files.fopen', MagicMock())
+    @patch('salt.utils.thin._get_salt_call', MagicMock())
+    @patch('salt.utils.thin._get_ext_namespaces', MagicMock())
+    @patch('salt.utils.thin.get_tops', MagicMock(return_value=['/foo3', '/bar3']))
+    @patch('salt.utils.thin.get_ext_tops', MagicMock(return_value={}))
+    @patch('salt.utils.thin.os.path.isfile', MagicMock())
+    @patch('salt.utils.thin.os.path.isdir', MagicMock(return_value=False))
+    @patch('salt.utils.thin.log', MagicMock())
+    @patch('salt.utils.thin.os.remove', MagicMock())
+    @patch('salt.utils.thin.os.path.exists', MagicMock())
+    @patch('salt.utils.path.os_walk', MagicMock(return_value=[]))
+    @patch('salt.utils.thin.subprocess.Popen',
+           _popen(None, side_effect=[(bts('2.7'), bts('')), (bts('["/foo27", "/bar27"]'), bts(''))]))
+    @patch('salt.utils.thin.tarfile', MagicMock())
+    @patch('salt.utils.thin.zipfile', MagicMock())
+    @patch('salt.utils.thin.os.getcwd', MagicMock())
+    @patch('salt.utils.thin.os.access', MagicMock(return_value=False))
+    @patch('salt.utils.thin.os.chdir', MagicMock())
+    @patch('salt.utils.thin.os.close', MagicMock())
+    @patch('salt.utils.thin.tempfile.mkdtemp', MagicMock(return_value=''))
+    @patch('salt.utils.thin.tempfile.mkstemp', MagicMock(return_value=(3, ".temporary")))
+    @patch('salt.utils.thin.shutil', MagicMock())
+    @patch('salt.utils.thin._six.PY3', True)
+    @patch('salt.utils.thin._six.PY2', False)
+    @patch('salt.utils.thin.sys.version_info', _version_info(None, 3, 6))
+    def test_gen_thin_control_files_written_access_denied_cwd(self):
+        '''
+        Test thin.gen_thin function if control files are written (version, salt-call etc)
+        when the current working directory is inaccessible, eg. Salt is configured to run as
+        a non-root user but the command is executed in a directory that the user does not
+        have permissions to.  Issue #54317.
+
+        NOTE: Py2 version of this test is not required, as code shares the same spot across the versions.
+
+        :return:
+        '''
+        thin.gen_thin('')
+        arc_name, arc_mode = thin.tarfile.method_calls[0][1]
+        self.assertEqual(arc_name, ".temporary")
+        self.assertEqual(arc_mode, 'w:gz')
+        for idx, fname in enumerate(['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']):
+            name = thin.tarfile.open().method_calls[idx + 4][1][0]
+            self.assertEqual(name, fname)
+        thin.tarfile.open().close.assert_called()

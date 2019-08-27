@@ -553,7 +553,7 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     for fname in ['version', '.thin-gen-py-version', 'salt-call', 'supported-versions', 'code-checksum']:
         tfp.add(fname)
 
-    if start_dir:
+    if start_dir and os.access(start_dir, os.R_OK) and os.access(start_dir, os.X_OK):
         os.chdir(start_dir)
     tfp.close()
 
