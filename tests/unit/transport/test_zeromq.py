@@ -114,7 +114,6 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         time.sleep(2)  # Give the procs a chance to fully close before we stop the io_loop
         cls.server_channel.close()
         del cls.server_channel
-        del cls.stop_loop
         del cls.process_manager
         del cls.server_thread
         del cls.master_config
@@ -259,7 +258,6 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel.close()
         cls._server_io_loop.stop()
         del cls.server_channel
-        del cls.stop_loop
         del cls.process_manager
         del cls.server_thread
         del cls.master_config
