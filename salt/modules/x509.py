@@ -590,7 +590,7 @@ def read_certificate(certificate):
 
 def read_certificates(glob_path):
     '''
-    Returns a dict containing details of a all certificates matching a glob
+    Returns a dict containing details of all certificates matching a glob
 
     glob_path:
         A path to certificates to be read and returned.
@@ -651,8 +651,8 @@ def read_crl(crl):
 
     :depends:   - OpenSSL command line tool
 
-    csl:
-        A path or PEM encoded string containing the CSL to read.
+    crl:
+        A path or PEM encoded string containing the CRL to read.
 
     CLI Example:
 
@@ -747,17 +747,17 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         PEM string input to be written out.
 
     path:
-        Path of the file to write the pem out to.
+        Path of the file to write the PEM out to.
 
     overwrite:
-        If True(default), write_pem will overwrite the entire pem file.
+        If ``True`` (default), write_pem will overwrite the entire PEM file.
         Set False to preserve existing private keys and dh params that may
-        exist in the pem file.
+        exist in the PEM file.
 
     pem_type:
         The PEM type to be saved, for example ``CERTIFICATE`` or
         ``PUBLIC KEY``. Adding this will allow the function to take
-        input that may contain multiple pem types.
+        input that may contain multiple PEM types.
 
     CLI Example:
 
@@ -871,7 +871,7 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
     :depends:   - PyOpenSSL Python module
 
     path:
-        Path to write the crl to.
+        Path to write the CRL to.
 
     text:
         If ``True``, return the PEM text without writing to a file.
@@ -879,14 +879,14 @@ def create_crl(  # pylint: disable=too-many-arguments,too-many-locals
 
     signing_private_key:
         A path or string of the private key in PEM format that will be used
-        to sign this crl. This is required.
+        to sign the CRL. This is required.
 
     signing_private_key_passphrase:
         Passphrase to decrypt the private key.
 
     signing_cert:
         A certificate matching the private key that will be used to sign
-        this crl. This is required.
+        the CRL. This is required.
 
     revoked:
         A list of dicts containing all the certificates to revoke. Each dict
@@ -1119,9 +1119,9 @@ def create_certificate(
         Default ``False``.
 
     overwrite:
-        If True(default), create_certificate will overwrite the entire pem
+        If ``True`` (default), create_certificate will overwrite the entire PEM
         file. Set False to preserve existing private keys and dh params that
-        may exist in the pem file.
+        may exist in the PEM file.
 
     kwargs:
         Any of the properties below can be included as additional
@@ -1131,7 +1131,7 @@ def create_certificate(
         Request a remotely signed certificate from ca_server. For this to
         work, a ``signing_policy`` must be specified, and that same policy
         must be configured on the ca_server (name or list of ca server). See ``signing_policy`` for
-        details. Also the salt master must permit peers to call the
+        details. Also, the salt master must permit peers to call the
         ``sign_remote_certificate`` function.
 
         Example:
@@ -1192,7 +1192,7 @@ def create_certificate(
 
     public_key:
         The public key to be included in this certificate. This can be sourced
-        from a public key, certificate, csr or private key. If a private key
+        from a public key, certificate, CSR or private key. If a private key
         is used, the matching public key from the private key will be
         generated before any processing is done. This means you can request a
         certificate from a remote CA using a private key file as your
@@ -1256,7 +1256,7 @@ def create_certificate(
             X509v3 Subject Alternative Name
 
         crlDistributionPoints:
-            X509v3 CRL distribution points
+            X509v3 CRL Distribution points
 
         issuingDistributionPoint:
             X509v3 Issuing Distribution Point
@@ -1316,7 +1316,7 @@ def create_certificate(
     signing_policy:
         A signing policy that should be used to create this certificate.
         Signing policies should be defined in the minion configuration, or in
-        a minion pillar. It should be a yaml formatted list of arguments
+        a minion pillar. It should be a YAML formatted list of arguments
         which will override any arguments passed to this function. If the
         ``minions`` key is included in the signing policy, only minions
         matching that pattern (see match.glob and match.compound) will be
@@ -1717,7 +1717,7 @@ def verify_private_key(private_key, public_key, passphrase=None):
 
     public_key:
         The public key to verify, can be a string or path to a PEM formatted
-        certificate, csr, or another private key.
+        certificate, CSR, or another private key.
 
     passphrase:
         Passphrase to decrypt the private key.
@@ -1743,7 +1743,7 @@ def verify_signature(certificate, signing_pub_key=None,
 
     signing_pub_key:
         The public key to verify, can be a string or path to a PEM formatted
-        certificate, csr, or private key.
+        certificate, CSR, or private key.
 
     signing_pub_key_passphrase:
         Passphrase to the signing_pub_key if it is an encrypted private key.
@@ -1883,7 +1883,7 @@ def will_expire(certificate, days):
             ret['cn'] = _parse_subject(cert.get_subject())['CN']
             ret['will_expire'] = _expiration_date.strftime(ts_pt) <= _check_time.strftime(ts_pt)
         except ValueError as err:
-            log.debug('Unable to return details of a sertificate expiration: %s', err)
+            log.debug('Unable to return details of a certificate expiration: %s', err)
             log.trace(err, exc_info=True)
 
     return ret
