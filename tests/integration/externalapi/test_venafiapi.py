@@ -28,7 +28,7 @@ def with_random_name(func):
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         name = _random_name(prefix='salt_')
-        return func(self, _random_name(prefix='salt_test_'), *args, **kwargs)
+        return func(self, _random_name(prefix='salt-test-'), *args, **kwargs)
     return wrapper
 
 
@@ -44,10 +44,10 @@ class VenafiTest(ShellCase):
         '''
         venafi.request
         '''
-        print(self.master_opts['venafi'])
+        print("Using venafi config:",self.master_opts['venafi'])
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id='{0}.example.com'.format(name),
                                 dns_name='{0}.example.com'.format(name),
                                 zone='Default')
-        print("ret is:",ret['return'])
+        print("ret is:\n",ret)
         # self.assertTrue('request_id' in ret['return'])
