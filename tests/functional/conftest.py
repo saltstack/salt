@@ -171,7 +171,10 @@ def loader_context_dictionary():
 def sminion(loader_context_dictionary):
     sminion = create_sminion(minion_id='functional-tests-minion',
                              sminion_cls=FunctionalMinion,
-                             loader_context=loader_context_dictionary)
+                             loader_context=loader_context_dictionary,
+                             # We don't actually need this minion cached.
+                             # It will last for the whole testing session
+                             cache_sminion=False)
     return sminion
 
 

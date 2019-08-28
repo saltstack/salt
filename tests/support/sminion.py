@@ -26,10 +26,11 @@ log = logging.getLogger(__name__)
 def create_sminion(minion_id=None,
                    root_dir=None,
                    initial_conf_file=None,
-                   skip_cached_minion=False,
                    sminion_cls=salt.minion.SMinion,
                    loader_context=None,
                    minion_opts_overrides=None,
+                   skip_cached_minion=False,
+                   cache_sminion=True,
                    **kwargs):
     if minion_id is None:
         minion_id = 'pytest-internal-sminion'
@@ -170,6 +171,8 @@ def create_sminion(minion_id=None,
         RUNTIME_VARS.RUNNING_TESTS_USER,
         root_dir=root_dir
     )
-    log.info('Instantiating, caching and returning a testing %s(%s)', sminion_cls.__name__, minion_id)
-    create_sminion.__cached_minions__[minion_id] = sminion_cls(minion_opts, context=loader_context)
-    return create_sminion.__cached_minions__[minion_id]
+    log.info('Instantiating a testing %s(%s)', sminion_cls.__name__, minion_id)
+    sminion = sminion_cls(minion_opts, context=loader_context)
+    if cache_sminion:
+        create_sminion.__cached_minions__[minion_id] = sminion
+    return sminion
