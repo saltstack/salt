@@ -17,6 +17,7 @@ import stat
 import pprint
 import shutil
 import socket
+import fnmatch
 import logging
 import textwrap
 from contextlib import contextmanager
@@ -258,6 +259,10 @@ def pytest_configure(config):
         'requires_network(only_local_network=False): Skip if no networking is set up. '
         'If \'only_local_network\' is \'True\', only the local network is checked.'
     )
+    config.addinivalue_line(
+        'markers',
+        'requires_salt_modules(*required_module_names): Skip if at least one module is not available. '
+    )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
 
@@ -464,6 +469,39 @@ def pytest_runtest_setup(item):
                 continue
             else:
                 pytest.skip('No internet network connection was detected')
+
+    requires_salt_modules_marker = item.get_closest_marker('requires_salt_modules')
+    if requires_salt_modules_marker is not None:
+        required_salt_modules = requires_salt_modules_marker.args
+        if len(required_salt_modules) == 1 and isinstance(required_salt_modules[0], (list, tuple, set)):
+            required_salt_modules = required_salt_modules[0]
+        required_salt_modules = set(required_salt_modules)
+        sminion = create_sminion()
+        available_modules = list(sminion.functions)
+        not_available_modules = set()
+        try:
+            cached_not_available_modules = sminion.__not_availiable_modules__
+        except AttributeError:
+            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
+
+        if cached_not_available_modules:
+            for not_available_module in cached_not_available_modules:
+                if not_available_module in required_salt_modules:
+                    not_available_modules.add(not_available_module)
+                    required_salt_modules.remove(not_available_module)
+
+        for required_module_name in required_salt_modules:
+            search_name = required_module_name
+            if '.' not in search_name:
+                search_name += '.*'
+                if not fnmatch.filter(available_modules, search_name):
+                    not_available_modules.add(required_module_name)
+                    cached_not_available_modules.add(required_module_name)
+
+        if not_available_modules:
+            if len(not_available_modules) == 1:
+                pytest.skip('Salt module \'{}\' is not available'.format(*not_available_modules))
+            pytest.skip('Salt modules not available: {}'.format(', '.join(not_available_modules)))
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
 
