@@ -62,15 +62,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(delattr, self, 'mock_libvirt')
         self.addCleanup(delattr, self, 'mock_conn')
         self.addCleanup(delattr, self, 'mock_popen')
-        mock_subprocess = MagicMock()
-        mock_subprocess.Popen.return_value = self.mock_popen  # pylint: disable=no-member
+        self.mock_subprocess = MagicMock()
+        self.mock_subprocess.return_value = self.mock_subprocess  # pylint: disable=no-member
+        self.mock_subprocess.Popen.return_value = self.mock_popen  # pylint: disable=no-member
         loader_globals = {
             '__salt__': {
                 'config.get': config.get,
                 'config.option': config.option,
             },
             'libvirt': self.mock_libvirt,
-            'subprocess': mock_subprocess
+            'subprocess': self.mock_subprocess
         }
         return {virt: loader_globals, config: loader_globals}
 
@@ -2660,6 +2661,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.getInfo = MagicMock(return_value=['x86_64', 4096, 8, 2712, 1, 2, 4, 2])
 
         actual = virt.full_info()
+
+        # Check that qemu-img was called with the proper parameters
+        qemu_img_call = [call for call in self.mock_subprocess.Popen.call_args_list if 'qemu-img' in call[0][0]][0]
+        self.assertIn('info', qemu_img_call[0][0])
+        self.assertIn('-U', qemu_img_call[0][0])
 
         # Test the hypervisor infos
         self.assertEqual(2816, actual['freemem'])
