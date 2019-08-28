@@ -12,7 +12,6 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt libs
 import salt.config
 import salt.netapi
-import salt.log.setup
 
 
 class NetapiClientTest(TestCase):
@@ -27,8 +26,6 @@ class NetapiClientTest(TestCase):
         Set up a NetapiClient instance
         '''
         opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
-        #import pprint
-        #pprint.pprint(opts)
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):
