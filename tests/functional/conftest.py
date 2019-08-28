@@ -35,6 +35,7 @@ import salt.utils.verify
 # Import testing libs
 from tests.support.comparables import StateReturn
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
 
 log = logging.getLogger(__name__)
 
@@ -162,126 +163,16 @@ class StateModuleCallWrapper(object):
 
 
 @pytest.fixture(scope='session')
-def salt_opts():
-    minion_id = 'functional-tests-minion'
-    log.info('Generating functional testing minion configuration')
-    root_dir = os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'functional')
-    conf_dir = os.path.join(root_dir, 'conf')
-    conf_file = os.path.join(conf_dir, 'minion')
-
-    minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))  # pylint: disable=protected-access
-    minion_opts['id'] = minion_id
-    minion_opts['conf_file'] = conf_file
-    minion_opts['root_dir'] = root_dir
-    minion_opts['cachedir'] = 'cache'
-    minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-    minion_opts['pki_dir'] = 'pki'
-    minion_opts['hosts.file'] = os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'hosts')
-    minion_opts['aliases.file'] = os.path.join(RUNTIME_VARS.TMP_ROOT_DIR, 'aliases')
-    minion_opts['file_client'] = 'local'
-    minion_opts['server_id_use_crc'] = 'adler32'
-    minion_opts['pillar_roots'] = {
-        'base': [
-            RUNTIME_VARS.TMP_PILLAR_TREE,
-            os.path.join(RUNTIME_VARS.FILES, 'pillar', 'base'),
-        ]
-    }
-    minion_opts['file_roots'] = {
-        'base': [
-            os.path.join(RUNTIME_VARS.FILES, 'file', 'base'),
-            # Let's support runtime created files that can be used like:
-            #   salt://my-temp-file.txt
-            RUNTIME_VARS.TMP_STATE_TREE
-        ],
-        # Alternate root to test __env__ choices
-        'prod': [
-            os.path.join(RUNTIME_VARS.FILES, 'file', 'prod'),
-            RUNTIME_VARS.TMP_PRODENV_STATE_TREE
-        ]
-    }
-
-    # We need to copy the extension modules into the new master root_dir or
-    # it will be prefixed by it
-    extension_modules_path = os.path.join(root_dir, 'extension_modules')
-    if not os.path.exists(extension_modules_path):
-        shutil.copytree(
-            os.path.join(
-                RUNTIME_VARS.FILES, 'extension_modules'
-            ),
-            extension_modules_path
-        )
-    minion_opts['extension_modules'] = extension_modules_path
-
-    # Under windows we can't seem to properly create a virtualenv off of another
-    # virtualenv, we can on linux but we will still point to the virtualenv binary
-    # outside the virtualenv running the test suite, if that's the case.
-    try:
-        real_prefix = sys.real_prefix
-        # The above attribute exists, this is a virtualenv
-        if salt.utils.platform.is_windows():
-            virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
-        else:
-            # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
-            # from within the virtualenv, we don't want that
-            path = os.environ.get('PATH')
-            if path is not None:
-                path_items = path.split(os.pathsep)
-                for item in path_items[:]:
-                    if item.startswith(sys.base_prefix):
-                        path_items.remove(item)
-                os.environ['PATH'] = os.pathsep.join(path_items)
-            virtualenv_binary = salt.utils.which('virtualenv')
-            if path is not None:
-                # Restore previous environ PATH
-                os.environ['PATH'] = path
-            if not virtualenv_binary.startswith(real_prefix):
-                virtualenv_binary = None
-        if virtualenv_binary and not os.path.exists(virtualenv_binary):
-            # It doesn't exist?!
-            virtualenv_binary = None
-    except AttributeError:
-        # We're not running inside a virtualenv
-        virtualenv_binary = None
-    if virtualenv_binary:
-        minion_opts['venv_bin'] = virtualenv_binary
-
-    if not os.path.exists(conf_dir):
-        os.makedirs(conf_dir)
-
-    with salt.utils.files.fopen(conf_file, 'w') as fp_:
-        salt.utils.yaml.safe_dump(minion_opts, fp_, default_flow_style=False)
-
-    log.info('Generating functional testing minion configuration completed.')
-    minion_opts = salt.config.minion_config(conf_file, minion_id=minion_id, cache_minion_id=True)
-    salt.utils.verify.verify_env(
-        [
-            os.path.join(minion_opts['pki_dir'], 'accepted'),
-            os.path.join(minion_opts['pki_dir'], 'rejected'),
-            os.path.join(minion_opts['pki_dir'], 'pending'),
-            os.path.dirname(minion_opts['log_file']),
-            minion_opts['extension_modules'],
-            minion_opts['cachedir'],
-            minion_opts['sock_dir'],
-            RUNTIME_VARS.TMP_STATE_TREE,
-            RUNTIME_VARS.TMP_PILLAR_TREE,
-            RUNTIME_VARS.TMP_PRODENV_STATE_TREE,
-            RUNTIME_VARS.TMP,
-        ],
-        RUNTIME_VARS.RUNNING_TESTS_USER,
-        root_dir=root_dir
-    )
-    return minion_opts
-
-
-@pytest.fixture(scope='session')
 def loader_context_dictionary():
     return {}
 
 
 @pytest.fixture(scope='session')
-def sminion(salt_opts, loader_context_dictionary):
-    log.info('Instantiating salt.minion.SMinion')
-    return FunctionalMinion(salt_opts.copy(), context=loader_context_dictionary)
+def sminion(loader_context_dictionary):
+    sminion = create_sminion(minion_id='functional-tests-minion',
+                             sminion_cls=FunctionalMinion,
+                             loader_context=loader_context_dictionary)
+    return sminion
 
 
 @pytest.fixture(autouse=True)
@@ -384,8 +275,8 @@ def executors(minion):
 
 
 @pytest.fixture
-def _runner_client(salt_opts, loader_context_dictionary):
-    _runners = salt.runner.RunnerClient(salt_opts.copy(), context=loader_context_dictionary)
+def _runner_client(sminion, loader_context_dictionary):
+    _runners = salt.runner.RunnerClient(sminion.opts.copy(), context=loader_context_dictionary)
     return _runners
 
 
