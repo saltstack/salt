@@ -28,7 +28,7 @@ class TestLogHandler(logging.NullHandler):
         self.messages.append(record)
 
 
-def test_target(host, port):
+def logging_target(host, port):
     log = logging.getLogger('test_zmq_logging')
     log.handlers = []
     handler = salt.log.handlers.ZMQHandler(host=host, port=port)
@@ -46,7 +46,8 @@ def test_target(host, port):
         foo()
     except AttributeError:
         log.exception("TEST-ü")
-    time.sleep(5)
+    finally:
+        time.sleep(1)
 
 
 class TestZMQLogging(TestCase):
@@ -78,11 +79,9 @@ class TestZMQLogging(TestCase):
         context = zmq.Context()
         sender = context.socket(zmq.PUSH)
         sender.connect('tcp://{}:{}'.format(self.host, self.port))
-        time.sleep(1)
         try:
             sender.send(msgpack.dumps(None))
         finally:
-            time.sleep(5)
             sender.close(1)
             context.term()
 
@@ -92,7 +91,7 @@ class TestZMQLogging(TestCase):
 
     def test_zmq_logging(self):
         proc = multiprocessing.Process(
-            target=test_target,
+            target=logging_target,
             args=(self.host, self.port),
         )
         proc.start()
