@@ -68,10 +68,6 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       load_balancer_id: <ID>
       # Monitoring policy ID
       monitoring_policy_id: <ID>
-      # Baremetal model ID
-      baremetal_model_id: <ID>
-      # Server type
-      server_type: <cloud or baremetal> - default cloud
 
 Set ``deploy`` to False if Salt should not be installed on the node.
 
@@ -93,25 +89,6 @@ Create a block storage
     sudo salt-cloud -f create_block_storage my-oneandone-config name='SaltTest2'
     description='SaltTestDescription' size=50 datacenter_id='5091F6D8CBFEF9C26ACE957C652D5D49'
 
-Create a firewall policy
-
-.. code-block:: bash
-
-    sudo salt-cloud -f create_firewall_policy oneandone name='1salttest'
-    description='salt_test_desc' rules='[{"protocol":"TCP", "port":"80", "description":"salt_fw_rule_desc"}]'
-
-List baremetal models
-
-.. code-block:: bash
-
-    sudo salt-cloud -f baremetal_models oneandone
-
-List baremetal images
-
-.. code-block:: bash
-
-    sudo salt-cloud -f avail_baremetal_images oneandone
-
 '''
 
 # Import python libs
@@ -120,7 +97,6 @@ import logging
 import os
 import pprint
 import time
-import json
 
 # Import salt libs
 import salt.config as config
@@ -140,7 +116,7 @@ from salt.ext import six
 
 try:
     from oneandone.client import (
-        OneAndOneService, FirewallPolicy, FirewallPolicyRule, Server, Hdd, SshKey, BlockStorage
+        OneAndOneService, Server, Hdd, BlockStorage, SshKey
     )
     HAS_ONEANDONE = True
 except ImportError:
@@ -269,8 +245,8 @@ def create_block_storage(kwargs=None, call=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The create_block_storage function must be called with '
-            '-f or --function'
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
         )
 
     conn = get_conn()
@@ -333,8 +309,8 @@ def create_ssh_key(kwargs=None, call=None):
     '''
     if call == 'action':
         raise SaltCloudSystemExit(
-            'The create_ssh_key function must be called with '
-            '-f or --function'
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
         )
 
     conn = get_conn()
@@ -345,64 +321,6 @@ def create_ssh_key(kwargs=None, call=None):
     data = conn.create_ssh_key(ssh_key=ssh_key)
 
     return {'SshKey': data}
-
-
-def _get_firewall_policy(kwargs):
-    '''
-    Construct FirewallPolicy and FirewallPolicy instances from passed arguments
-    '''
-    fp_name = kwargs.get('name', None)
-    fp_description = kwargs.get('description', None)
-    firewallPolicy = FirewallPolicy(
-        name=fp_name,
-        description=fp_description
-    )
-
-    fpr_json = kwargs.get('rules', None)
-    jdata = json.loads(fpr_json)
-    rules = []
-    for fwpr in jdata:
-        firewallPolicyRule = FirewallPolicyRule()
-        if 'protocol' in fwpr:
-            firewallPolicyRule.rule_set['protocol'] = fwpr['protocol']
-        if 'port_from' in fwpr:
-            firewallPolicyRule.rule_set['port_from'] = fwpr['port_from']
-        if 'port_to' in fwpr:
-            firewallPolicyRule.rule_set['port_to'] = fwpr['port_to']
-        if 'source' in fwpr:
-            firewallPolicyRule.rule_set['source'] = fwpr['source']
-        if 'action' in fwpr:
-            firewallPolicyRule.rule_set['action'] = fwpr['action']
-        if 'description' in fwpr:
-            firewallPolicyRule.rule_set['description'] = fwpr['description']
-        if 'port' in fwpr:
-            firewallPolicyRule.rule_set['port'] = fwpr['port']
-        rules.append(firewallPolicyRule)
-
-    return {'firewall_policy': firewallPolicy, 'firewall_policy_rules': rules}
-
-
-def create_firewall_policy(kwargs=None, call=None):
-    '''
-    Create a firewall policy
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The create_firewall_policy function must be called with '
-            '-f or --function'
-        )
-
-    conn = get_conn()
-
-    # Assemble the composite FirewallPolicy and FirewallPolicyRule[] objects.
-    getFwpResult = _get_firewall_policy(kwargs)
-
-    data = conn.create_firewall_policy(
-        firewall_policy=getFwpResult['firewall_policy'],
-        firewall_policy_rules=getFwpResult['firewall_policy_rules']
-    )
-
-    return {'FirewallPolicy': data}
 
 
 def avail_images(conn=None, call=None):
@@ -426,27 +344,6 @@ def avail_images(conn=None, call=None):
     return ret
 
 
-def avail_baremetal_images(conn=None, call=None):
-    '''
-    Return a list of the baremetal server appliances that are on the provider
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The avail_baremetal_images function must be called with '
-            '-f or --function'
-        )
-
-    if not conn:
-        conn = get_conn()
-
-    ret = {}
-
-    for appliance in conn.list_appliances(q='BAREMETAL'):
-        ret[appliance['name']] = appliance
-
-    return ret
-
-
 def avail_sizes(call=None):
     '''
     Return a dict of all available VM sizes on the cloud provider with
@@ -463,23 +360,6 @@ def avail_sizes(call=None):
     sizes = conn.fixed_server_flavors()
 
     return sizes
-
-
-def baremetal_models(call=None):
-    '''
-    Return a dict of all available baremetal models with relevant data.
-    '''
-    if call == 'action':
-        raise SaltCloudSystemExit(
-            'The baremetal_models function must be called with '
-            '-f or --function'
-        )
-
-    conn = get_conn()
-
-    bmodels = conn.list_baremetal_models()
-
-    return bmodels
 
 
 def script(vm_):
@@ -604,20 +484,16 @@ def _get_server(vm_):
 
     ssh_key = load_public_key(vm_)
 
-    server_type = config.get_cloud_config_value(
-        'server_type', vm_, __opts__, default='cloud',
-        search_global=False
-    )
     vcore = None
     cores_per_processor = None
     ram = None
     fixed_instance_size_id = None
-    baremetal_model_id = None
 
     if 'fixed_instance_size' in vm_:
         fixed_instance_size = get_size(vm_)
         fixed_instance_size_id = fixed_instance_size['id']
-    elif 'vm_core' in vm_ and 'cores_per_processor' in vm_ and 'ram' in vm_ and 'hdds' in vm_:
+    elif (vm_['vcore'] and vm_['cores_per_processor'] and
+              vm_['ram'] and vm_['hdds']):
         vcore = config.get_cloud_config_value(
             'vcore', vm_, __opts__, default=None,
             search_global=False
@@ -630,16 +506,9 @@ def _get_server(vm_):
             'ram', vm_, __opts__, default=None,
             search_global=False
         )
-    elif 'baremetal_model_id' in vm_ and server_type == 'baremetal':
-        baremetal_model_id = config.get_cloud_config_value(
-            'baremetal_model_id', vm_, __opts__, default=None,
-            search_global=False
-        )
     else:
-        raise SaltCloudConfigError("'fixed_instance_size' or 'vcore', "
-                                   "'cores_per_processor', 'ram', and 'hdds' "
-                                   "must be provided for 'cloud' server. "
-                                   "For 'baremetal' server, 'baremetal_model_id'"
+        raise SaltCloudConfigError("'fixed_instance_size' or 'vcore',"
+                                   "'cores_per_processor', 'ram', and 'hdds'"
                                    "must be provided.")
 
     appliance_id = config.get_cloud_config_value(
@@ -688,7 +557,7 @@ def _get_server(vm_):
     )
 
     public_key = config.get_cloud_config_value(
-        'public_key_ids', vm_, __opts__, default=None,
+        'public_key_ids', vm_, __opts__, default=True,
         search_global=False
     )
 
@@ -710,9 +579,7 @@ def _get_server(vm_):
         datacenter_id=datacenter_id,
         rsa_key=ssh_key,
         private_network_id=private_network_id,
-        public_key=public_key,
-        server_type=server_type,
-        baremetal_model_id=baremetal_model_id
+        public_key=public_key
     )
 
 
@@ -760,8 +627,7 @@ def create(vm_):
     # Assemble the composite server object.
     server = _get_server(vm_)
 
-    if not bool(server.specs['hardware']['fixed_instance_size_id'])\
-        and not bool(server.specs['server_type'] == 'baremetal'):
+    if not bool(server.specs['hardware']['fixed_instance_size_id']):
         # Assemble the hdds object.
         hdds = _get_hdds(vm_)
 

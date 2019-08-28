@@ -58,9 +58,8 @@ Tested on:
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
-import os
-import sys
 import uuid
+import os
 
 from xml.etree import ElementTree
 
@@ -466,10 +465,10 @@ def create(vm_):
         )
 
         return ret
-    except Exception:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         do_cleanup(cleanup)
         # throw the root cause after cleanup
-        six.reraise(*sys.exc_info())
+        raise e
 
 
 def do_cleanup(cleanup):
