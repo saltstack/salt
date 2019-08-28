@@ -131,23 +131,21 @@ SALT_LOG_PORT = get_unused_localhost_port()
 
 
 class ThreadingMixIn(socketserver.ThreadingMixIn):
-    daemon_threads = True
+    daemon_threads = False
 
 
-class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer):
+class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer, object):
 
     allow_reuse_address = True
 
     def server_activate(self):
         self.shutting_down = threading.Event()
-        socketserver.TCPServer.server_activate(self)
-        #super(ThreadedSocketServer, self).server_activate()
+        super(ThreadedSocketServer, self).server_activate()
 
     def server_close(self):
         if hasattr(self, 'shutting_down'):
             self.shutting_down.set()
-        socketserver.TCPServer.server_close(self)
-        #super(ThreadedSocketServer, self).server_close()
+        super(ThreadedSocketServer, self).server_close()
 
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
@@ -282,7 +280,6 @@ class TestDaemon(object):
         '''
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
-        self.log_server_process.daemon = True
         self.log_server_process.start()
         try:
             sys.stdout.write(
@@ -1139,8 +1136,8 @@ class TestDaemon(object):
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
         # Shutdown the log server
-        self.log_server.server_close()
         self.log_server.shutdown()
+        self.log_server.server_close()
         self.log_server_process.join()
 
     def pre_setup_minions(self):

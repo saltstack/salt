@@ -163,8 +163,8 @@ class MultimasterTestDaemon(TestDaemon):
         salt_log_setup.shutdown_multiprocessing_logging()
         salt_log_setup.shutdown_multiprocessing_logging_listener(daemonizing=True)
         # Shutdown the log server
-        self.log_server.server_close()
         self.log_server.shutdown()
+        self.log_server.server_close()
         self.log_server_process.join()
 
     def start_zeromq_daemons(self):
@@ -173,7 +173,6 @@ class MultimasterTestDaemon(TestDaemon):
         '''
         self.log_server = ThreadedSocketServer(('localhost', SALT_LOG_PORT), SocketServerRequestHandler)
         self.log_server_process = threading.Thread(target=self.log_server.serve_forever)
-        self.log_server_process.daemon = True
         self.log_server_process.start()
         try:
             sys.stdout.write(
