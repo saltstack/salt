@@ -96,7 +96,6 @@ integration.spm.test_remove
 integration.spm.test_repo
 integration.states.test_host
 integration.states.test_pip_state
-integration.states.test_pkg
 integration.states.test_reg
 integration.states.test_renderers
 integration.states.test_file
