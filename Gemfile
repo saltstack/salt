@@ -4,7 +4,7 @@ source 'https://rubygems.org'
 
 # Point this back at the test-kitchen package after >1.2.5 is relased
 gem 'test-kitchen', :git => 'https://github.com/dwoz/test-kitchen.git', :branch => 'keepalive_maxcount'
-gem 'kitchen-salt', :git => 'https://github.com/s0undt3ch/kitchen-salt.git', :branch => 'features/nox'
+gem 'kitchen-salt', :git => 'https://github.com/saltstack/kitchen-salt.git'
 gem 'kitchen-sync'
 gem 'git'
 
