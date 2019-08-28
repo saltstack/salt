@@ -1113,19 +1113,25 @@ class GrainsMarkEvaluator(MarkEvaluator):
         if GrainsMarkEvaluator._cached_grains is None:
             cachedir = self.item.config.cache._cachedir
             root_dir = cachedir / 'salt'
+            minion_id = 'grains-mark-evaluator-minion'
             defaults = salt.config.DEFAULT_MINION_OPTS.copy()
             defaults.pop('conf_file')
             defaults.update({
+                'id': minion_id,
                 'root_dir': str(root_dir),
                 'cachedir': 'cachedir',
                 'sock_dir': 'sock',
                 'pki_dir': 'pki',
                 'log_file': 'logs/minion',
-                'pidfile': 'pids/minion.pid'
+                'pidfile': 'pids/minion.pid',
+                'server_id_use_crc': 'adler32'
             })
-            opts = salt.config.minion_config(None, defaults=defaults)
-            GrainsMarkEvaluator._grains = salt.loader.grains(opts)
-        item_globals['grains'] = GrainsMarkEvaluator._grains.copy()
+            opts = salt.config.minion_config(None,
+                                             defaults=defaults,
+                                             minion_id=minion_id,
+                                             cache_minion_id=True)
+            GrainsMarkEvaluator._cached_grains = salt.loader.grains(opts)
+        item_globals['grains'] = GrainsMarkEvaluator._cached_grains.copy()
         return item_globals
 
 
