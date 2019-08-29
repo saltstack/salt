@@ -816,6 +816,14 @@ class TestDaemon(TestProgram):
                     # Process exited between when process_iter was invoked and
                     # when we tried to invoke this instance's cmdline() func.
                     continue
+                except psutils.AccessDenied:
+                    # We might get access denied if not running as root
+                    if not salt.utils.platform.is_windows():
+                        pinfo = proc.as_dict(attrs=['pid', 'name', 'username'])
+                        log.error('Unable to access process %s, '
+                                  'running command %s as user %s',
+                                  pinfo['pid'], pinfo['name'], pinfo['username'])
+                        continue
         else:
             cmd_len = len(cmdline)
             for proc in psutils.process_iter():
