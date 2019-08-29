@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Packet Cloud Module Using Packet's Python API Client
-===========================================
+====================================================
 
 The Packet cloud module is used to control access to the Packet VPS system.
 
