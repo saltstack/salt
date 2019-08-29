@@ -565,6 +565,34 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             for typ in managed_files:
                 os.remove(managed_files[typ])
 
+    def test_managed_contents_with_contents_newline(self):
+        '''
+        test file.managed with contents by using the default content_newline
+        flag.
+        '''
+        contents = r'test_managed_contents_with_newline_one'
+        name = os.path.join(RUNTIME_VARS.TMP, 'foo')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents, contents_newline=True)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual((contents + os.linesep), last_line)
+
+    def test_managed_contents_with_contents_newline_false(self):
+        '''
+        test file.managed with contents by using the non default content_newline
+        flag.
+        '''
+        contents = 'test_managed_contents_with_newline_one'
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents, contents_newline=False)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual((contents), last_line)
+
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
     @skipIf(not salt.utils.path.which('visudo'), 'sudo is missing')
