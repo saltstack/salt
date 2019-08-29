@@ -14,6 +14,8 @@ import pprint
 import shutil
 import tempfile
 import textwrap
+import threading
+import subprocess
 import time
 
 # Import 3rd-party libs
@@ -34,7 +36,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModule
 from tests.support.helpers import get_unused_localhost_port, requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import patch
-from pytestsalt.utils import SaltDaemonScriptBase, terminate_process
+from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase, terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -142,6 +144,37 @@ def start_daemon(daemon_cli_script_name,
                 attempts-1
             )
         )
+
+
+class SaltDaemonScriptBase(_SaltDaemonScriptBase):
+
+    def start(self):
+        '''
+        Start the daemon subprocess
+        '''
+        # Late import
+        log.info('[%s][%s] Starting DAEMON in CWD: %s', self.log_prefix, self.cli_display_name, self.cwd)
+        proc_args = [
+            self.get_script_path(self.cli_script_name)
+        ] + self.get_base_script_args() + self.get_script_args()
+
+        if sys.platform.startswith('win'):
+            # Windows needs the python executable to come first
+            proc_args.insert(0, sys.executable)
+
+        log.info('[%s][%s] Running \'%s\'...', self.log_prefix, self.cli_display_name, ' '.join(proc_args))
+
+        self.init_terminal(proc_args,
+                           env=self.environ,
+                           cwd=self.cwd,
+                           stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE)
+        self._running.set()
+        if self._process_cli_output_in_thread:
+            process_output_thread = threading.Thread(target=self._process_output_in_thread)
+            process_output_thread.daemon = True
+            process_output_thread.start()
+        return True
 
 
 class UwsgiDaemon(SaltDaemonScriptBase):
@@ -367,7 +400,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     cls.sshd_proc = None
             if cls.sshd_proc is None:
                 cls.sshd_proc = start_daemon(cls.sshd_bin, cls.sshd_config_dir, cls.sshd_port, SshdDaemon)
-                log.info('\n\n%s: sshd started\n\n\n\n', cls.__name__)
+                log.info('%s: sshd started', cls.__name__)
         except AssertionError:
             cls.tearDownClass()
             six.reraise(*sys.exc_info())
@@ -497,7 +530,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     cls.uwsgi_proc = None
             if cls.uwsgi_proc is None:
                 cls.uwsgi_proc = start_daemon(cls.uwsgi_bin, cls.config_dir, cls.uwsgi_port, UwsgiDaemon)
-                log.info('\n\n\n%s: %s started\n\n\n', cls.__name__, cls.uwsgi_bin)
+                log.info('%s: %s started', cls.__name__, cls.uwsgi_bin)
             if cls.nginx_proc is not None:
                 if not psutil.pid_exists(cls.nginx_proc.pid):
                     log.warning('%s: nginx started but appears to be dead now. Will try to restart it.',
@@ -505,7 +538,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                     cls.nginx_proc = None
             if cls.nginx_proc is None:
                 cls.nginx_proc = start_daemon('nginx', cls.config_dir, cls.nginx_port, NginxDaemon)
-                log.info('\n\n\n%s: nginx started\n\n\n', cls.__name__)
+                log.info('%s: nginx started', cls.__name__)
         except AssertionError:
             cls.tearDownClass()
             six.reraise(*sys.exc_info())
