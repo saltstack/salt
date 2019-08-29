@@ -20,6 +20,7 @@ import time
 import logging
 import random
 import getpass
+from salt.exceptions import SaltInvocationError
 from salt.ext.six.moves import input
 from salt.ext import six
 
@@ -100,10 +101,14 @@ class LoadAuth(object):
         _valid = ['username', 'password', 'eauth', 'token']
         _load = {key: value for (key, value) in load.items() if key in _valid}
 
-        fcall = salt.utils.args.format_call(
-            self.auth[fstr],
-            _load,
-            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        try:
+            fcall = salt.utils.args.format_call(
+                self.auth[fstr],
+                load,
+                expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        except SaltInvocationError as sie:
+            log.error("'format_call' failed: %r", sie)
+            return False
         try:
             if 'kwargs' in fcall:
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
@@ -147,10 +152,14 @@ class LoadAuth(object):
         fstr = '{0}.acl'.format(mod)
         if fstr not in self.auth:
             return None
-        fcall = salt.utils.args.format_call(
-            self.auth[fstr],
-            load,
-            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        try:
+            fcall = salt.utils.args.format_call(
+                self.auth[fstr],
+                load,
+                expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        except SaltInvocationError as sie:
+            log.error("'format_call' failed: %r", sie)
+            return None
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except Exception as e:
@@ -183,10 +192,14 @@ class LoadAuth(object):
         fstr = '{0}.groups'.format(load['eauth'])
         if fstr not in self.auth:
             return False
-        fcall = salt.utils.args.format_call(
-            self.auth[fstr],
-            load,
-            expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        try:
+            fcall = salt.utils.args.format_call(
+                self.auth[fstr],
+                load,
+                expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
+        except SaltInvocationError as sie:
+            log.error("'format_call' failed: %r", sie)
+            return False
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
