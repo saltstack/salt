@@ -69,7 +69,7 @@ def list_(return_yaml=True,
             if res:
                 event_ret = event_bus.get_event(
                     tag='/salt/minion/minion_beacons_list_complete',
-                    wait=default_event_wait,
+                    wait=kwargs.get('timeout', default_event_wait),
                 )
                 log.debug('event_ret %s', event_ret)
                 if event_ret and event_ret['complete']:
@@ -118,7 +118,7 @@ def list_available(return_yaml=True, **kwargs):
             if res:
                 event_ret = event_bus.get_event(
                     tag='/salt/minion/minion_beacons_list_available_complete',
-                    wait=default_event_wait,
+                    wait=kwargs.get('timeout', default_event_wait),
                 )
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
@@ -195,7 +195,7 @@ def add(name, beacon_data, **kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                        tag='/salt/minion/minion_beacon_validation_complete',
-                       wait=default_event_wait,
+                       wait=kwargs.get('timeout', default_event_wait),
                     )
                     valid = event_ret['valid']
                     vcomment = event_ret['vcomment']
@@ -220,7 +220,7 @@ def add(name, beacon_data, **kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_add_complete',
-                        wait=default_event_wait,
+                        wait=kwargs.get('timeout', default_event_wait),
                     )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
@@ -282,8 +282,9 @@ def modify(name, beacon_data, **kwargs):
                                              'manage_beacons')
                 if res:
                     event_ret = event_bus.get_event(
-                            tag='/salt/minion/minion_beacon_validation_complete',
-                            wait=default_event_wait)
+                        tag='/salt/minion/minion_beacon_validation_complete',
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     valid = event_ret['valid']
                     vcomment = event_ret['vcomment']
 
@@ -334,7 +335,7 @@ def modify(name, beacon_data, **kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_modify_complete',
-                        wait=default_event_wait)
+                        wait=kwargs.get('timeout', default_event_wait))
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         if name in beacons and beacons[name] == beacon_data:
@@ -392,7 +393,8 @@ def delete(name, **kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_delete_complete',
-                        wait=default_event_wait)
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         if name not in beacons:
@@ -479,7 +481,10 @@ def enable(**kwargs):
             with salt.utils.event.get_event('minion', opts=__opts__, listen=True) as event_bus:
                 res = __salt__['event.fire']({'func': 'enable'}, 'manage_beacons')
                 if res:
-                    event_ret = event_bus.get_event(tag='/salt/minion/minion_beacons_enabled_complete', wait=default_event_wait)
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_beacons_enabled_complete',
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         if 'enabled' in beacons and beacons['enabled']:
@@ -522,7 +527,10 @@ def disable(**kwargs):
             with salt.utils.event.get_event('minion', opts=__opts__, listen=True) as event_bus:
                 res = __salt__['event.fire']({'func': 'disable'}, 'manage_beacons')
                 if res:
-                    event_ret = event_bus.get_event(tag='/salt/minion/minion_beacons_disabled_complete', wait=default_event_wait)
+                    event_ret = event_bus.get_event(
+                        tag='/salt/minion/minion_beacons_disabled_complete',
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     log.debug('event_ret %s', event_ret)
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
@@ -595,7 +603,8 @@ def enable_beacon(name, **kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_enabled_complete',
-                        wait=default_event_wait)
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         beacon_config_dict = _get_beacon_config_dict(beacons[name])
@@ -669,7 +678,8 @@ def disable_beacon(name, **kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_disabled_complete',
-                        wait=default_event_wait)
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         beacon_config_dict = _get_beacon_config_dict(beacons[name])
@@ -722,7 +732,8 @@ def reset(**kwargs):
                 if res:
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_reset_complete',
-                        wait=default_event_wait)
+                        wait=kwargs.get('timeout', default_event_wait),
+                    )
                     if event_ret and event_ret['complete']:
                         ret['result'] = True
                         ret['comment'] = 'Beacon configuration reset.'

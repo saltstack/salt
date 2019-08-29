@@ -17,7 +17,7 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 import tests.integration as integration
 
 # Import Salt libs
@@ -46,7 +46,7 @@ DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 JOB_FUNCTION = 'test.ping'
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the scheduler

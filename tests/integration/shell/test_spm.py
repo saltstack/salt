@@ -5,11 +5,11 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 from tests.support.case import ShellCase, SPMCase
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class SPMTest(ShellCase, SPMCase):
     '''
     Test spm script

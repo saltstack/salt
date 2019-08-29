@@ -9,14 +9,14 @@ import salt.master
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 from tests.support.mock import (
     patch,
     MagicMock,
 )
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ClearFuncsTestCase(TestCase):
     '''
     TestCase for salt.master.ClearFuncs class

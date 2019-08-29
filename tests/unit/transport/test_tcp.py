@@ -25,7 +25,7 @@ from salt.ext.six.moves import range
 from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import get_unused_localhost_port, flaky
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
@@ -316,21 +316,21 @@ class SaltMessageClientPoolTest(AsyncTestCase):
             test_connect(self)
 
 
-@skipIf(salt.utils.platform.is_windows(), 'WAR ROOM TEMPORARY SKIP')
-# This test hangs on Windows
 class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def setUp(self):
+        self.listen_on = '127.0.0.1'
         self.port = get_unused_localhost_port()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind(('localhost', self.port))
+        self.sock.bind((self.listen_on, self.port))
         self.sock.listen(1)
 
     def tearDown(self):
         self.sock.close()
         del self.sock
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_message_client(self):
         '''
         test message client cleanup on close
@@ -338,7 +338,7 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
         orig_loop = tornado.ioloop.IOLoop()
         orig_loop.make_current()
         opts = self.get_temp_config('master')
-        client = SaltMessageClient(opts, 'localhost', self.port)
+        client = SaltMessageClient(opts, self.listen_on, self.port)
 
         # Mock the io_loop's stop method so we know when it has been called.
         orig_loop.real_stop = orig_loop.stop

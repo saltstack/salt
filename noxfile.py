@@ -142,7 +142,7 @@ def _install_system_packages(session):
             '/usr/lib/python{py_version}/dist-packages/*apt*'
         ]
     }
-    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
+    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9', 'debian-10'):
         system_python_packages[key] = system_python_packages['__debian_based_distros__']
 
     distro = _get_distro_info(session)
@@ -722,7 +722,7 @@ def pytest_cloud(session, coverage):
         '--no-print-logs',
         '-ra',
         '-s',
-        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud', 'providers')
+        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud')
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 

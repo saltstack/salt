@@ -15,7 +15,7 @@ from salt.ext import six
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 
 # Create the cloud instance name to be used throughout the tests
@@ -24,7 +24,7 @@ PROVIDER_NAME = 'vmware'
 TIMEOUT = 500
 
 
-@skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @expensiveTest
 class VMWareTest(ShellCase):
     '''

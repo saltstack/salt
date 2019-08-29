@@ -10,7 +10,7 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
@@ -25,7 +25,7 @@ from salt.ext import six
 
 @destructiveTest
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests

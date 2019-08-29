@@ -8,7 +8,7 @@ import string
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt libs
@@ -154,7 +154,7 @@ class BotoLambdaStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         session_instance.client.return_value = self.conn
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class BotoLambdaFunctionTestCase(BotoLambdaStateTestCaseBase, BotoLambdaTestCaseMixin):
     '''
     TestCase for salt.modules.boto_lambda state.module
