@@ -35,7 +35,7 @@ import salt.utils.verify
 # Import testing libs
 from tests.support.comparables import StateReturn
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
+from tests.support.sminion import build_minion_opts, create_sminion
 
 log = logging.getLogger(__name__)
 
@@ -170,6 +170,7 @@ def loader_context_dictionary():
 @pytest.fixture(scope='session')
 def sminion(loader_context_dictionary):
     sminion = create_sminion(minion_id='functional-tests-minion',
+                             initial_conf_file=os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'),
                              sminion_cls=FunctionalMinion,
                              loader_context=loader_context_dictionary,
                              # We don't actually need this minion cached.
@@ -277,18 +278,24 @@ def executors(minion):
     return minion.executors
 
 
-@pytest.fixture
-def _runner_client(sminion, loader_context_dictionary):
-    _runners = salt.runner.RunnerClient(sminion.opts.copy(), context=loader_context_dictionary)
-    return _runners
+@pytest.fixture(scope='session')
+def _runner_client(loader_context_dictionary):
+    runner_opts = build_minion_opts(minion_id='functional-tests-runner',
+                                    initial_conf_file=os.path.join(RUNTIME_VARS.CONF_DIR, 'master'),
+                                    # We don't actually need these options cached.
+                                    # They will last for the whole testing session
+                                    cache_opts=False)
+    return salt.runner.RunnerClient(runner_opts, context=loader_context_dictionary)
 
 
 @pytest.fixture
-def runners(_runner_client, salt_opts, loader_context_dictionary):
+def runners(_runner_client, loader_context_dictionary):
+    # Keep a copy of the runner clients options to restore after the test finishes
+    runner_opts_copy = _runner_client.opts.copy()
     yield _runner_client.functions
     # Cleanup
     loader_context_dictionary.clear()
-    _runner_client.opts = _runner_client.opts = salt_opts.copy()
+    _runner_client.opts = _runner_client._functions.opts = runner_opts_copy
 
 
 def pytest_assertrepr_compare(config, op, left, right):

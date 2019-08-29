@@ -23,25 +23,22 @@ from tests.support.runtests import RUNTIME_VARS
 log = logging.getLogger(__name__)
 
 
-def create_sminion(minion_id=None,
-                   root_dir=None,
-                   initial_conf_file=None,
-                   sminion_cls=salt.minion.SMinion,
-                   loader_context=None,
-                   minion_opts_overrides=None,
-                   skip_cached_minion=False,
-                   cache_sminion=True,
-                   **kwargs):
+def build_minion_opts(minion_id=None,
+                      root_dir=None,
+                      initial_conf_file=None,
+                      minion_opts_overrides=None,
+                      skip_cached_opts=False,
+                      cache_opts=True):
     if minion_id is None:
         minion_id = 'pytest-internal-sminion'
-    if skip_cached_minion is False:
+    if skip_cached_opts is False:
         try:
-            minions_cache = create_sminion.__cached_minions__
+            opts_cache = build_minion_opts.__cached_opts__
         except AttributeError:
-            create_sminion.__cached_minions__ = {}
-        cached_minion = create_sminion.__cached_minions__.get(minion_id)
-        if cached_minion:
-            return cached_minion
+            opts_cache = build_minion_opts.__cached_opts__ = {}
+        cached_opts = opts_cache.get(minion_id)
+        if cached_opts:
+            return cached_opts
 
     log.info('Generating testing minion %r configuration...', minion_id)
     if root_dir is None:
@@ -171,8 +168,45 @@ def create_sminion(minion_id=None,
         RUNTIME_VARS.RUNNING_TESTS_USER,
         root_dir=root_dir
     )
+    if cache_opts:
+        try:
+            opts_cache = build_minion_opts.__cached_opts__
+        except AttributeError:
+            opts_cache = build_minion_opts.__cached_opts__ = {}
+        opts_cache[minion_id] = minion_opts
+    return minion_opts
+
+
+def create_sminion(minion_id=None,
+                   root_dir=None,
+                   initial_conf_file=None,
+                   sminion_cls=salt.minion.SMinion,
+                   loader_context=None,
+                   minion_opts_overrides=None,
+                   skip_cached_minion=False,
+                   cache_sminion=True):
+    if minion_id is None:
+        minion_id = 'pytest-internal-sminion'
+    if skip_cached_minion is False:
+        try:
+            minions_cache = create_sminion.__cached_minions__
+        except AttributeError:
+            create_sminion.__cached_minions__ = {}
+        cached_minion = create_sminion.__cached_minions__.get(minion_id)
+        if cached_minion:
+            return cached_minion
+    minion_opts = build_minion_opts(minion_id=minion_id,
+                                    root_dir=root_dir,
+                                    initial_conf_file=initial_conf_file,
+                                    minion_opts_overrides=minion_opts_overrides,
+                                    skip_cached_opts=skip_cached_minion,
+                                    cache_opts=cache_sminion)
     log.info('Instantiating a testing %s(%s)', sminion_cls.__name__, minion_id)
     sminion = sminion_cls(minion_opts, context=loader_context)
     if cache_sminion:
-        create_sminion.__cached_minions__[minion_id] = sminion
+        try:
+            minions_cache = create_sminion.__cached_minions__
+        except AttributeError:
+            minions_cache = create_sminion.__cached_minions__ = {}
+        minions_cache[minion_id] = sminion
     return sminion
