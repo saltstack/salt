@@ -130,6 +130,7 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
+    'tornado.ioloop.IOLoop',
     'tornado.iostream',
     'tornado.netutil',
     'tornado.simple_httpclient',
@@ -188,6 +189,7 @@ MOCK_MODULES = [
     'rpmUtils',
     'rpmUtils.arch',
     'salt.ext.six.moves.winreg',
+    'salt.ext.six.reraise',
     'twisted',
     'twisted.internet',
     'twisted.internet.protocol',
@@ -215,6 +217,7 @@ sys.modules['msgpack'].version = (1, 0, 0)
 sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['tornado'].version_info = (0, 0, 0)
+sys.modules['tornado'].version = '0.0.0'
 sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
 

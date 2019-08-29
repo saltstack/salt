@@ -216,8 +216,13 @@ class IOLoop(object):
             return self._ioloop._running
 
 
-if IOLoop.seed_loop is None:
-    IOLoop.seed_loop = IOLoop()
+try:
+    if IOLoop.seed_loop is None:
+        IOLoop.seed_loop = IOLoop()
+except AttributeError as exc:
+    # When running under sphinx builds the tornaod stuff is mocked so an
+    # attribute error is raised. Under normal operation this won't happen.
+    log.warn('IOLoop attribute error encountered out of context')
 
 
 class SyncWrapper(object):
