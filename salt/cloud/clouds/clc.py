@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 CenturyLink Cloud Module
-===================
+========================
 
 .. versionadded:: Oyxgen
 
@@ -29,7 +29,8 @@ clc-sdk can be installed via pip:
   For sdk reference see: https://github.com/CenturyLinkCloud/clc-python-sdk
 
 Flask
--------
+-----
+
 flask can be installed via pip:
 .. code-block:: bash
     pip install flask
