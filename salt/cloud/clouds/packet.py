@@ -4,9 +4,7 @@ Packet Cloud Module Using Packet's Python API Client
 ====================================================
 
 The Packet cloud module is used to control access to the Packet VPS system.
-
 Use of this module only requires the ``token`` parameter.
-
 Set up the cloud configuration at ``/etc/salt/cloud.providers`` or ``/etc/salt/cloud.providers.d/packet.conf``:
 
 The Packet profile requires ``size``, ``image``, ``location``,  ``project_id``

@@ -32,7 +32,9 @@ Flask
 -----
 
 flask can be installed via pip:
+
 .. code-block:: bash
+
     pip install flask
 
 Configuration

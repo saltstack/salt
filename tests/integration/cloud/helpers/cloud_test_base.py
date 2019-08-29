@@ -38,6 +38,10 @@ class CloudTest(ShellCase):
         '''
         Clean the cloud.providers.d tmp directory
         '''
+        if not os.path.exists(tmp_dir):
+            os.makedirs(tmp_dir)
+            return
+
         # make sure old provider configs are deleted
         for i in os.listdir(tmp_dir):
             os.remove(os.path.join(tmp_dir, i))
