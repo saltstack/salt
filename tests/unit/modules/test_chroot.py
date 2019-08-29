@@ -150,7 +150,12 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
             utils_mock['thin.gen_thin'].assert_called_once()
             salt_mock['config.option'].assert_called()
             salt_mock['archive.tar'].assert_called_once()
-            salt_mock['cmd.run_chroot'].assert_called_once()
+            salt_mock['cmd.run_chroot'].assert_called_with(
+                '/chroot',
+                ['python{}'.format(sys.version_info[0]), '/tmp01/salt-call',
+                 '--metadata', '--local',
+                 '--log-file', '/tmp01/log', '--cachedir', '/tmp01/cache',
+                 '--out', 'json', '-l', 'quiet', '--', 'test.ping'])
             utils_mock['files.rm_rf'].assert_called_once()
 
     @patch('salt.modules.chroot.exist')
@@ -181,7 +186,12 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
             utils_mock['thin.gen_thin'].assert_called_once()
             salt_mock['config.option'].assert_called()
             salt_mock['archive.tar'].assert_called_once()
-            salt_mock['cmd.run_chroot'].assert_called_once()
+            salt_mock['cmd.run_chroot'].assert_called_with(
+                '/chroot',
+                ['python{}'.format(sys.version_info[0]), '/tmp01/salt-call',
+                 '--metadata', '--local',
+                 '--log-file', '/tmp01/log', '--cachedir', '/tmp01/cache',
+                 '--out', 'json', '-l', 'quiet', '--', 'test.ping'])
             utils_mock['files.rm_rf'].assert_called_once()
 
     @patch('salt.modules.chroot.exist')
