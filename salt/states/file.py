@@ -2712,9 +2712,18 @@ def managed(name,
             contents = ''
             for part in validated_contents:
                 for line in part.splitlines():
-                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
-            if contents_newline and not contents.endswith(os.linesep):
-                contents += os.linesep
+                    if not (line == validated_contents[-1]):
+                        # So long as we havent reached the end strip out the
+                        # newline and carriage return and add a platform
+                        # specific line ending with os.linesep
+                        contents += line.rstrip('\n').rstrip('\r') + os.linesep
+                    else:
+                        # Were at the last line decide if a newline needs to
+                        # go in or not
+                        contents += line.rstrip('\n').rstrip('\r')
+                        if contents_newline:
+                            contents += os.linesep
+
         except UnicodeDecodeError:
             # Either something terrible happened, or we have binary data.
             if template:
