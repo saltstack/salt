@@ -10,9 +10,7 @@ PyTest boilerplate code for Salt functional testing
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
-import sys
 import time
-import shutil
 import logging
 import functools
 import threading
@@ -21,7 +19,6 @@ import threading
 import pytest
 import tornado.gen
 import tornado.ioloop
-import salt.ext.six as six
 
 # Import Salt libs
 import salt.minion
