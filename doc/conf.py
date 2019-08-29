@@ -130,7 +130,6 @@ MOCK_MODULES = [
     'tornado.httpserver',
     'tornado.httputil',
     'tornado.ioloop',
-    'tornado.ioloop.IOLoop',
     'tornado.iostream',
     'tornado.netutil',
     'tornado.simple_httpclient',
