@@ -106,6 +106,9 @@ def build_minion_opts(minion_id=None,
         )
     minion_opts['extension_modules'] = extension_modules_path
 
+    # Custom grains
+    minion_opts.setdefault('grains', {}).update({'role': 'functional-testing'})
+
     # Under windows we can't seem to properly create a virtualenv off of another
     # virtualenv, we can on linux but we will still point to the virtualenv binary
     # outside the virtualenv running the test suite, if that's the case.
