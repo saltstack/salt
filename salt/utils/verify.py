@@ -35,7 +35,6 @@ import salt.utils.user
 log = logging.getLogger(__name__)
 
 ROOT_DIR = 'c:\\salt' if salt.utils.platform.is_windows() else '/'
-DEFAULT_SCHEMES = ['tcp://', 'udp://', 'file://']
 
 
 def zmq_version():
@@ -145,28 +144,6 @@ def verify_socket(interface, pub_port, ret_port):
             sock.close()
 
     return True
-
-
-def verify_logs_filter(files):
-    to_verify = []
-    for filename in files:
-        verify_file = True
-        for scheme in DEFAULT_SCHEMES:
-            if filename.startswith(scheme):
-                verify_file = False
-                break
-        if verify_file:
-            to_verify.append(filename)
-    return to_verify
-
-
-def verify_log_files(files, user):
-    '''
-    Verify the log files exist and are owned by the named user.  Filenames that
-    begin with tcp:// and udp:// will be filtered out. Filenames that begin
-    with file:// are handled correctly
-    '''
-    return verify_files(verify_logs_filter(files), user)
 
 
 def verify_files(files, user):
