@@ -28,7 +28,8 @@ def build_minion_opts(minion_id=None,
                       initial_conf_file=None,
                       minion_opts_overrides=None,
                       skip_cached_opts=False,
-                      cache_opts=True):
+                      cache_opts=True,
+                      minion_role=None):
     if minion_id is None:
         minion_id = 'pytest-internal-sminion'
     if skip_cached_opts is False:
@@ -105,6 +106,12 @@ def build_minion_opts(minion_id=None,
             extension_modules_path
         )
     minion_opts['extension_modules'] = extension_modules_path
+
+    # Custom grains
+    if 'grains' not in minion_opts:
+        minion_opts['grains'] = {}
+    if minion_role is not None:
+        minion_opts['grains']['role'] = minion_role
 
     # Under windows we can't seem to properly create a virtualenv off of another
     # virtualenv, we can on linux but we will still point to the virtualenv binary
