@@ -252,64 +252,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('state.run_request')
         self.assertEqual(ret, {})
 
-    @with_tempdir()
-    def test_issue_1896_file_append_source(self, base_dir):
-        '''
-        Verify that we can append a file's contents
-        '''
-        testfile = os.path.join(base_dir, 'test.append')
-
-        ret = self.run_state('file.touch', name=testfile)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            'file.append',
-            name=testfile,
-            source='salt://testappend/firstif')
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            'file.append',
-            name=testfile,
-            source='salt://testappend/secondif')
-        self.assertSaltTrueReturn(ret)
-
-        with salt.utils.files.fopen(testfile, 'r') as fp_:
-            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
-
-        contents = textwrap.dedent('''\
-            # set variable identifying the chroot you work in (used in the prompt below)
-            if [ -z "$debian_chroot" ] && [ -r /etc/debian_chroot ]; then
-                debian_chroot=$(cat /etc/debian_chroot)
-            fi
-
-            # enable bash completion in interactive shells
-            if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-                . /etc/bash_completion
-            fi
-            ''')
-
-        if salt.utils.platform.is_windows():
-            new_contents = contents.splitlines()
-            contents = os.linesep.join(new_contents)
-            contents += os.linesep
-
-        self.assertMultiLineEqual(contents, testfile_contents)
-
-        ret = self.run_state(
-            'file.append',
-            name=testfile,
-            source='salt://testappend/secondif')
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state(
-            'file.append',
-            name=testfile,
-            source='salt://testappend/firstif')
-        self.assertSaltTrueReturn(ret)
-
-        with salt.utils.files.fopen(testfile, 'r') as fp_:
-            testfile_contents = salt.utils.stringutils.to_unicode(fp_.read())
-
-        self.assertMultiLineEqual(contents, testfile_contents)
-
     def test_issue_1876_syntax_error(self):
         '''
         verify that we catch the following syntax error::
