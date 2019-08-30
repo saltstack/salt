@@ -6,7 +6,11 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import locke libs
 from tests.support.comparables import (ComparableSubDict,
                                        ComparableStateEntry,
-                                       StateReturn)
+                                       StateReturn,
+                                       StateReturnError)
+
+# Import 3rd-party libs
+import pytest
 
 
 def test_comparable_sub_dict_against_empty_other():
@@ -138,3 +142,19 @@ def test_state_return_status_matching():
     assert a != b
     b = {'state_entries': [{'status': 'compliant'}, {'status': 'noncompliant'}]}
     assert a != b
+
+
+def test_state_return_error():
+    a = StateReturnError(['A recursive requisite was found, SLS "recurse_fail" ID "/etc/mysql/my.cnf" ID "mysql"'])
+    # Direct match
+    assert a == 'A recursive requisite was found, SLS "recurse_fail" ID "/etc/mysql/my.cnf" ID "mysql"'
+    # Regex matching
+    assert a == 'A recursive requisite was found'
+    with pytest.raises(AssertionError):
+        assert a != 'A recursive requisite was found'
+    assert a != 'A recursive requisite was founds'
+    assert 'A recursive requisite was found' in a
+    with pytest.raises(AssertionError):
+        assert 'A recursive requisite was found' not in a
+    with pytest.raises(AssertionError):
+        assert 'A recursive requisite was founds' in a

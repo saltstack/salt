@@ -240,3 +240,90 @@ class StateReturn(ComparableSubDict):
     @property
     def result(self):
         return all([state['result'] for state in self.get('state_entries') or ()])
+
+    def items(self):
+        _items = {}
+        for state_entry in self.get('state_entries', ()):
+            state_entry_copy = state_entry.copy()
+            _items[state_entry_copy.pop('__state_entry_name__')] = state_entry_copy
+        return _items.items()
+
+    def keys(self):
+        _keys = []
+        for state_entry in self.get('state_entries', ()):
+            _keys.append(state_entry['__state_entry_name__'])
+        return _keys
+
+    def values(self):
+        _values = []
+        for _, value in self.items():
+            _values.append(value)
+        return _values
+
+
+class StateReturnError(list):
+
+    def construct_comparable_instance(self, data):
+        if not isinstance(data, list):
+            data = [data]
+        return self.__class__(data)
+
+    def __repr__(self):
+        return '<{} {}>'.format(self.__class__.__name__, list.__repr__(self))
+
+    def __eq__(self, other):
+        return self.compare_with(other, explain=False) is True
+
+    def __ne__(self, other):
+        return self.compare_with(other, explain=False) is False
+
+    def __contains__(self, other):
+        return self.compare_with(other, explain=False) is True
+
+    def explain_comparisson_with(self, other):
+        return self.compare_with(other, explain=True)
+
+    def compare_with(self, other, explain=False):
+        if not isinstance(other, self.__class__):
+            other = self.construct_comparable_instance(other)
+
+        if explain:
+            explanation = ['Comparing instances of {}:'.format(self.__class__.__name__)]
+
+        #if self == other:
+        #    # They match directly, return fast
+        #    return True
+
+        if self and not other or not self and other:
+            # Make sure comparissons are not run if one of the lists is empty but not both
+            if explain:
+                explanation.append(
+                    '  - Cannot compare instances of {} against an empty comparable counterpart'.format(
+                        self.__class__.__name__
+                    )
+                )
+                return explanation
+            return False
+
+        # pylint: disable=repr-flag-used-in-string
+        comparisson_matched = self.compare_errors(other)
+        if not comparisson_matched:
+            if explain:
+                explanation.append('  - The state errors do not match:')
+                explanation.append('     {!r} != {!r}'.format(self, other))
+            else:
+                return False
+            # pylint: enable=repr-flag-used-in-string
+        if explain:
+            return explanation
+        return True
+
+    def compare_errors(self, other_value):
+        '''
+        We support regex matching on comparissons
+        '''
+        this_value = '\n'.join(self)
+        other_value = '\n'.join(other_value)
+        if this_value == other_value:
+            return True
+        return re.match(other_value, this_value, re.DOTALL) is not None

@@ -30,7 +30,7 @@ import salt.utils.platform
 import salt.utils.verify
 
 # Import testing libs
-from tests.support.comparables import StateReturn
+from tests.support.comparables import StateReturn, StateReturnError
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.sminion import build_minion_opts, create_sminion
 
@@ -156,6 +156,8 @@ class StateModuleCallWrapper(object):
 
     def __call__(self, *args, **kwargs):
         result = self._function(*args, **kwargs)
+        if isinstance(result, list):
+            return StateReturnError(result)
         return StateReturn(result)
 
 
@@ -296,9 +298,6 @@ def runners(_runner_client, loader_context_dictionary):
 
 
 def pytest_assertrepr_compare(config, op, left, right):
-    if op not in ('==', '!='):
-        # Don't even bother, our special assertions involve equality
-        return
     explanation = []
     if isinstance(left, StateReturn) or isinstance(right, StateReturn):
         if not isinstance(left, StateReturn):
@@ -306,5 +305,7 @@ def pytest_assertrepr_compare(config, op, left, right):
         if not isinstance(right, StateReturn):
             right = StateReturn(right)
         explanation.extend(left.explain_comparisson_with(right))
+    if isinstance(left, StateReturnError) or isinstance(right, StateReturnError):
+        explanation.extend(right.explain_comparisson_with(left))
     if explanation:
         return explanation
