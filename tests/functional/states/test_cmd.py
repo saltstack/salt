@@ -91,7 +91,7 @@ def test_run_unless(modules,
         - unless: echo cheese > {1}
     '''.format(run_redirect_test_tmp_path, run_redirect_test_file)
 
-    with pytest.helpers.temp_state_file(run_redirect_state_name, state_file_contents):
+    with pytest.helpers.temp_state_file(run_redirect_state_name + '.sls', state_file_contents):
         ret = modules.state.sls(run_redirect_state_name)
     assert ret.result is True
     expected_changes = {}
@@ -114,7 +114,7 @@ def test_run_unless_multiple_cmds(modules):
           - "$(which true)"
           - "$(which false)"
     '''
-    with pytest.helpers.temp_state_file(state_name, state_contents) as f:
+    with pytest.helpers.temp_state_file(state_name + '.sls', state_contents) as f:
         log.warning('F\n\n\n: %s', f)
         ret = modules.state.sls(state_name)
 
@@ -139,7 +139,7 @@ def test_run_creates_exists(modules,
       cmd.run:
         - creates: {0}
     '''.format(run_redirect_test_file)
-    with pytest.helpers.temp_state_file(run_redirect_state_name, state_contents):
+    with pytest.helpers.temp_state_file(run_redirect_state_name + '.sls', state_contents):
         ret = modules.state.sls(run_redirect_state_name)
 
     assert ret.result is True
@@ -160,7 +160,7 @@ def test_run_creates_new(modules,
       cmd.run:
         - creates: {0}
     '''.format(run_redirect_test_file)
-    with pytest.helpers.temp_state_file(run_redirect_state_name, state_contents):
+    with pytest.helpers.temp_state_file(run_redirect_state_name + '.sls', state_contents):
         ret = modules.state.sls(run_redirect_state_name)
 
     assert ret.result is True
@@ -179,7 +179,7 @@ def test_run_redirect(modules,
     echo test > {0}:
       cmd.run
     '''.format(run_redirect_test_file)
-    with pytest.helpers.temp_state_file(run_redirect_state_name, state_contents):
+    with pytest.helpers.temp_state_file(run_redirect_state_name + '.sls', state_contents):
         ret = modules.state.sls(run_redirect_state_name)
 
     assert ret.result is True

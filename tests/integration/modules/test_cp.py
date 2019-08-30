@@ -289,6 +289,3 @@ class CPModuleTest(ModuleCase):
             self.assertTrue(os.path.isfile(tgt_cache_file), 'File was not cached on the master')
         finally:
             os.unlink(tgt_cache_file)
-
-    def test_envs(self):
-        self.assertEqual(sorted(self.run_function('cp.envs')), sorted(['base', 'prod']))

@@ -106,6 +106,9 @@ class FunctionalMinion(salt.minion.SMinion):
         # Make sure state.sls and state.single returns are StateReturn instances for easier comparissons
         self.functions.state.sls = StateModuleCallWrapper(self.functions.state.sls)
         self.functions.state.single = StateModuleCallWrapper(self.functions.state.single)
+        self.functions.state.template = StateModuleCallWrapper(self.functions.state.template)
+        self.functions.state.template_str = StateModuleCallWrapper(self.functions.state.template_str)
+        self.functions.state.highstate = StateModuleCallWrapper(self.functions.state.highstate)
 
         # For state execution modules, because we'd have to almost copy/paste what salt.modules.state.single
         # does, we actually "proxy" the call through salt.modules.state.single instead of calling the state
@@ -335,7 +338,9 @@ def pytest_assertrepr_compare(config, op, left, right):
         if not isinstance(right, StateReturn):
             right = StateReturn(right)
         explanation.extend(left.explain_comparisson_with(right))
-    if isinstance(left, StateReturnError) or isinstance(right, StateReturnError):
+    if isinstance(left, StateReturnError):
+        explanation.extend(left.explain_comparisson_with(right))
+    if isinstance(right, StateReturnError):
         explanation.extend(right.explain_comparisson_with(left))
     if explanation:
         return explanation

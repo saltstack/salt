@@ -102,9 +102,17 @@ class ComparableSubDict(dict):
 
             if not comparisson_matched:
                 if explain:
+                    if isinstance(comparable_self_value, StateReturn):
+                        comparable_self_value_repr = dict(comparable_self_value.items())
+                    else:
+                        comparable_self_value_repr = comparable_self_value
+                    if isinstance(comparable_other_value, StateReturn):
+                        comparable_other_value_repr = dict(comparable_other_value.items())
+                    else:
+                        comparable_other_value_repr = comparable_other_value
                     explanation.extend(pprint.pformat(comparable_other_value).splitlines())
                     explanation.append('  - The values for the \'{}\' key do not match:'.format(key))
-                    explanation.append('     {!r} != {!r}'.format(comparable_self_value, comparable_other_value))
+                    explanation.append('     {!r} != {!r}'.format(comparable_self_value_repr, comparable_other_value_repr))
                 else:
                     return False
             # pylint: enable=repr-flag-used-in-string
@@ -244,7 +252,7 @@ class StateReturn(ComparableSubDict):
 
     def construct_comparable_instance(self, data):
         for key, value in data.items():
-            if ('_|-' in key or key in ('*', '.*') or '__sls__' in value) and '__run_num__' not in value:
+            if ('_|-' in key or key in ('*', '.*') or key.startswith('RE:') or '__sls__' in value) and '__run_num__' not in value:
                 value['__run_num__'] = 0
         return super(StateReturn, self).construct_comparable_instance(data)
 
