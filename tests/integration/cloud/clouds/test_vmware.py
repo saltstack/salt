@@ -13,7 +13,7 @@ from salt.ext import six
 
 # Import Salt Testing LIbs
 from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
 
 
@@ -23,12 +23,12 @@ PROVIDER_NAME = 'vmware'
 TIMEOUT = 500
 
 
-@expensiveTest
 class VMWareTest(ShellCase):
     '''
     Integration tests for the vmware cloud provider in Salt-Cloud
     '''
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -48,7 +48,7 @@ class VMWareTest(ShellCase):
         # check if user, password, url and provider are present
         config = cloud_providers_config(
             os.path.join(
-                RUNTIME_VARS.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
@@ -80,7 +80,7 @@ class VMWareTest(ShellCase):
         '''
         # create the instance
         profile = os.path.join(
-                RUNTIME_VARS.FILES,
+                FILES,
                 'conf',
                 'cloud.profiles.d',
                 PROVIDER_NAME + '.conf'

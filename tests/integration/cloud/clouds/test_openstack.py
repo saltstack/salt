@@ -10,7 +10,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import destructiveTest, expensiveTest, generate_random_name
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -46,7 +46,6 @@ DRIVER_NAME = 'openstack'
     'Please install keystoneclient and a keystone server before running'
     'openstack integration tests.'
 )
-@expensiveTest
 class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
@@ -54,6 +53,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     endpoint = 'http://localhost:35357/v2.0'
     token = 'administrator'
 
+    @destructiveTest
     def test_aaa_setup_keystone_endpoint(self):
         ret = self.run_state('keystone.service_present',
                              name='keystone',
@@ -176,12 +176,12 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
-@expensiveTest
 class RackspaceTest(ShellCase):
     '''
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -201,7 +201,7 @@ class RackspaceTest(ShellCase):
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                RUNTIME_VARS.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

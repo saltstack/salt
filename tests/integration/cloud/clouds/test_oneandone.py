@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest, generate_random_name
 
@@ -31,12 +31,12 @@ DRIVER_NAME = 'oneandone'
 
 
 @skipIf(HAS_ONEANDONE is False, 'salt-cloud requires >= 1and1 1.2.0')
-@expensiveTest
 class OneAndOneTest(ShellCase):
     '''
     Integration tests for the 1and1 cloud provider
     '''
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -56,7 +56,7 @@ class OneAndOneTest(ShellCase):
         # check if api_token present
         config = cloud_providers_config(
             os.path.join(
-                RUNTIME_VARS.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

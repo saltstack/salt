@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import FILES
 from tests.support.helpers import expensiveTest, generate_random_name
 
 # Import Salt Libs
@@ -20,12 +20,12 @@ INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'joyent'
 
 
-@expensiveTest
 class JoyentTest(ShellCase):
     '''
     Integration tests for the Joyent cloud provider in Salt-Cloud
     '''
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -45,7 +45,7 @@ class JoyentTest(ShellCase):
         # check if user, password, private_key, and keyname are present
         config = cloud_providers_config(
             os.path.join(
-                RUNTIME_VARS.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'

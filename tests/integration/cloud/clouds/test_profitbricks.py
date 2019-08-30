@@ -9,7 +9,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import FILES
 from tests.support.unit import skipIf
 from tests.support.helpers import expensiveTest, generate_random_name
 
@@ -31,12 +31,12 @@ DRIVER_NAME = 'profitbricks'
 
 
 @skipIf(HAS_PROFITBRICKS is False, 'salt-cloud requires >= profitbricks 4.1.0')
-@expensiveTest
 class ProfitBricksTest(ShellCase):
     '''
     Integration tests for the ProfitBricks cloud provider
     '''
 
+    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -56,7 +56,7 @@ class ProfitBricksTest(ShellCase):
         # check if credentials and datacenter_id present
         config = cloud_providers_config(
             os.path.join(
-                RUNTIME_VARS.FILES,
+                FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
