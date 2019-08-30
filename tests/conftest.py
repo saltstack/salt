@@ -19,6 +19,7 @@ import shutil
 import socket
 import fnmatch
 import logging
+import tempfile
 import textwrap
 from contextlib import contextmanager
 TESTS_DIR = os.path.dirname(
@@ -657,29 +658,62 @@ else:
 
 @pytest.helpers.register
 @contextmanager
-def temp_state_file(name, contents, saltenv='base'):
-
-    if saltenv == 'base':
-        state_tree_path = RUNTIME_VARS.TMP_STATE_TREE
-    elif saltenv == 'prod':
-        state_tree_path = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+def temp_directory(name=None):
+    if name is not None:
+        directory_path = os.path.join(RUNTIME_VARS.TMP, name)
     else:
-        raise RuntimeError('"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv))
-    state_path = os.path.join(state_tree_path, name + '.sls')
-    state_contents = textwrap.dedent(contents)
+        directory_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+
+    yield directory_path
+
+    shutil.rmtree(directory_path, ignore_errors=True)
+
+
+@pytest.helpers.register
+@contextmanager
+def temp_file(name, contents=None, directory=None, strip_first_newline=True):
+    if directory is None:
+        directory = RUNTIME_VARS.TMP
+
+    file_path = os.path.join(directory, name)
+    file_directory = os.path.dirname(file_path)
+    if contents is not None:
+        if contents:
+            if contents.startswith('\n') and strip_first_newline:
+                contents = contents[1:]
+            file_contents = textwrap.dedent(contents)
+        else:
+            file_contents = contents
 
     try:
-        with salt.utils.files.fopen(state_path, 'w') as wfh:
-            wfh.write(state_contents)
+        if not os.path.isdir(file_directory):
+            os.makedirs(file_directory)
+        if contents is not None:
+            with salt.utils.files.fopen(file_path, 'w') as wfh:
+                wfh.write(file_contents)
 
-        yield
+        yield file_path
 
     except Exception:
         try:
-            os.unlink(state_path)
+            os.unlink(file_path)
         except OSError:
             # Already deleted
             pass
+        log.exception('Exception raised while writing :%s', file_path, exc_info=True)
+        raise
+
+
+@pytest.helpers.register
+def temp_state_file(name, contents, saltenv='base', strip_first_newline=True):
+
+    if saltenv == 'base':
+        directory = RUNTIME_VARS.TMP_STATE_TREE
+    elif saltenv == 'prod':
+        directory = RUNTIME_VARS.TMP_PRODENV_STATE_TREE
+    else:
+        raise RuntimeError('"saltenv" can only be "base" or "prod", not "{}"'.format(saltenv))
+    return temp_file(name, contents, directory=directory, strip_first_newline=strip_first_newline)
 # <---- Pytest Helpers -----------------------------------------------------------------------------------------------
 
 
