@@ -66,6 +66,20 @@ class MacSoftwareUpdatePreCatalinaTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result, expected)
 
     @patch('salt.utils.mac_utils.execute_return_result')
+    def test_list_available(self, mock_execute):
+        """Ensure the regex works with trailing whitespace in labels"""
+        # This also tests for no version number returning an empty str.
+        # This example's label will not install without the trailing space.
+        mock_execute.return_value = (
+            "Software Update Tool\n\nFinding available software\n"
+            "Software Update found the following new or updated software:\n"
+            "   * macOS Mojave 10.14.6 Supplemental Update- \n"
+            "    macOS Mojave 10.14.6 Supplemental Update ( ), 1581834K [recommended] [restart]")
+        result = mac_softwareupdate.list_available()
+        expected = {"macOS Mojave 10.14.6 Supplemental Update- ": ""}
+        self.assertEqual(result, expected)
+
+    @patch('salt.utils.mac_utils.execute_return_result')
     def test_list_recommended(self, mock_execute):
         mock_execute.return_value = MOJAVE_LIST_OUTPUT
         result = mac_softwareupdate.list_available(recommended=True)

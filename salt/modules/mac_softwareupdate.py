@@ -81,8 +81,8 @@ def _get_available(recommended=False, restart=False, shut_down=False):
         rexp = re.compile(
             r'(?m)'  # Turn on multiline matching
             r'^\s+[*-] '  # Name lines start with 3 spaces and either a * or a -.
-            r'(?P<name>[^ ].*)[\r\n]'  # The rest of that line is the name.
-            r'.*\((?P<version>[^\)]+)'  # Capture the last parenthesized value on the next line.
+            r'(?P<name>.*)[\r\n]'  # The rest of that line is the name.
+            r'.*\((?P<version>[^ \)]*)'  # Capture the last parenthesized value on the next line.
             r'[^\r\n\[]*(?P<recommended>\[recommended\])?\s?'  # Capture [recommended] if there.
             r'(?P<action>\[(?:restart|shut down)\])?'  # Capture an action if present.
         )
