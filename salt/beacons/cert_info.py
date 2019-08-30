@@ -66,6 +66,8 @@ def beacon(config):
 
     Specify a notification threshold in days and only emit a beacon if any certificates are
     expiring within that timeframe or if `notify_days` equals `-1` (always report information).
+    The default notification threshold is 45 days and can be overridden at the beacon level and
+    at an individual certificate level.
 
     .. code-block:: yaml
 
@@ -73,6 +75,9 @@ def beacon(config):
           cert_info:
             - files:
                 - /etc/pki/tls/certs/mycert.pem
+                - /etc/pki/tls/certs/yourcert.pem:
+                    notify_days: 15
+                - /etc/pki/tls/certs/ourcert.pem
             - notify_days: 45
             - interval: 86400
 
@@ -84,9 +89,19 @@ def beacon(config):
     _config = {}
     list(_map(_config.update, config))
 
-    notify_days = _config.get('notify_days', DEFAULT_NOTIFY_DAYS)
+    global_notify_days = _config.get('notify_days', DEFAULT_NOTIFY_DAYS)
 
     for cert_path in _config.get('files', []):
+        notify_days = global_notify_days
+
+        if isinstance(cert_path, dict):
+            try:
+                notify_days = cert_path[cert_path.keys()[0]].get('notify_days', global_notify_days)
+                cert_path = cert_path.keys()[0]
+            except IndexError as exc:
+                log.error('Unable to load certificate %s (%s)', cert_path, exc)
+                continue
+
         try:
             with salt.utils.files.fopen(cert_path) as fp_:
                 cert = crypto.load_certificate(crypto.FILETYPE_PEM, fp_.read())
