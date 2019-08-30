@@ -796,6 +796,9 @@ class IPCMessageSubscriber(IPCClient):
                 log.error("Read future returned exception %r", exc)
         if self.stream:
             self.stream.close()
+        # De-reference the io_loop object so allow it to get GC'ed quicker when
+        # running under a salt.utils.asynchronous.SyncWrapper instance.
+        self.io_loop = None
 
     # pylint: disable=W1701
     def __del__(self):
