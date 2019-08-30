@@ -228,6 +228,25 @@ def version(*names, **kwargs):
     return __salt__['pkg_resource.version'](*names, **kwargs)
 
 
+def _call_opkg(args, **kwargs):
+    '''
+    Call opkg utility.
+    '''
+    params = {
+        'output_loglevel': 'trace',
+        'python_shell': False,
+    }
+    params.update(kwargs)
+    for _ in range(5):
+        cmd_ret = __salt__['cmd.run_all'](args, **params)
+        stderr = cmd_ret.get('stderr', '')
+        if 'opkg_lock: Could not lock /run/opkg.lock' in stderr:
+            import time
+            time.sleep(2)
+            continue
+        return cmd_ret
+
+
 def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     '''
     Updates the opkg database to latest packages based upon repositories
@@ -259,11 +278,7 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     cmd = ['opkg', 'update']
     # opkg returns a non-zero retcode when there is a failure to refresh
     # from one or more repos. Due to this, ignore the retcode.
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False,
-                                   ignore_retcode=True,
-                                   redirect_stderr=True)
+    call = _call_opkg(cmd, ignore_retcode=True, redirect_stderr=True)
 
     out = call['stdout']
     prev_line = ''
@@ -363,11 +378,7 @@ def _execute_install_command(cmd, parse_output, errors, parsed_packages):
     If the command succeeds and parse_output is true, updated packages will be appended
     to the parsed_packages dictionary.
     '''
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
+    out = _call_opkg(cmd)
     if out['retcode'] != 0:
         if out['stderr']:
             errors.append(out['stderr'])
@@ -565,11 +576,7 @@ def install(name=None,
             for pkgfile in to_install:
                 # Convert from file name to package name.
                 cmd = ['opkg', 'info', pkgfile]
-                out = __salt__['cmd.run_all'](
-                    cmd,
-                    output_loglevel='trace',
-                    python_shell=False
-                )
+                out = _call_opkg(cmd)
                 if out['retcode'] == 0:
                     # Just need the package name.
                     pkginfo_dict = _process_info_installed_output(
@@ -679,11 +686,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
         cmd.append('--autoremove')
     cmd.extend(targets)
 
-    out = __salt__['cmd.run_all'](
-        cmd,
-        output_loglevel='trace',
-        python_shell=False
-    )
+    out = _call_opkg(cmd)
     if out['retcode'] != 0:
         if out['stderr']:
             errors = [out['stderr']]
@@ -786,9 +789,7 @@ def upgrade(refresh=True, **kwargs):  # pylint: disable=unused-argument
         )
 
     cmd = ['opkg', 'upgrade']
-    result = __salt__['cmd.run_all'](cmd,
-                                     output_loglevel='trace',
-                                     python_shell=False)
+    result = _call_opkg(cmd)
     __context__.pop('pkg.list_pkgs', None)
     new = _execute_list_pkgs(list_pkgs_errors, False)
     if not list_pkgs_errors:
@@ -1059,7 +1060,7 @@ def _execute_list_pkgs(errors, versions_as_list=False, **kwargs):
 
     cmd = ['opkg', 'list-installed']
     ret = {}
-    out_dict = __salt__['cmd.run_all'](cmd, output_loglevel='trace', python_shell=False)
+    out_dict = _call_opkg(cmd)
 
     if out_dict['retcode'] != 0:
         if out_dict['stderr']:
@@ -1101,9 +1102,7 @@ def list_upgrades(refresh=True, **kwargs):  # pylint: disable=unused-argument
         refresh_db()
 
     cmd = ['opkg', 'list-upgradable']
-    call = __salt__['cmd.run_all'](cmd,
-                                   output_loglevel='trace',
-                                   python_shell=False)
+    call = _call_opkg(cmd)
 
     if call['retcode'] != 0:
         comment = ''
@@ -1222,9 +1221,7 @@ def info_installed(*names, **kwargs):
         # Specific list of names of installed packages
         for name in names:
             cmd = ['opkg', 'status', name]
-            call = __salt__['cmd.run_all'](cmd,
-                                           output_loglevel='trace',
-                                           python_shell=False)
+            call = _call_opkg(cmd)
             if call['retcode'] != 0:
                 comment = ''
                 if call['stderr']:
@@ -1237,9 +1234,7 @@ def info_installed(*names, **kwargs):
     else:
         # All installed packages
         cmd = ['opkg', 'status']
-        call = __salt__['cmd.run_all'](cmd,
-                                       output_loglevel='trace',
-                                       python_shell=False)
+        call = _call_opkg(cmd)
         if call['retcode'] != 0:
             comment = ''
             if call['stderr']:
@@ -1650,9 +1645,7 @@ def file_dict(*packages, **kwargs):  # pylint: disable=unused-argument
         files = []
         cmd = cmd_files[:]
         cmd.append(package)
-        out = __salt__['cmd.run_all'](cmd,
-                                      output_loglevel='trace',
-                                      python_shell=False)
+        out = _call_opkg(cmd)
         for line in out['stdout'].splitlines():
             if line.startswith('/'):
                 files.append(line)
