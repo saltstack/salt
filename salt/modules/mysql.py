@@ -739,7 +739,7 @@ def query(database, query, **connection_args):
         return ret
 
 
-def file_query(database, file_name, **connection_args):
+def file_query(database, file_name, no_parse=False, **connection_args):
     '''
     Run an arbitrary SQL query from the specified file and return the
     the number of affected rows.
@@ -753,6 +753,14 @@ def file_query(database, file_name, **connection_args):
     file_name
 
         File name of the script.  This can be on the minion, or a file that is reachable by the fileserver
+
+    no_parse
+
+        Defaults to False. Submit the entire file to MySQL, rather than attempting to run each query
+        separately. This could be useful for complex files, but results in inaccurate row affected
+        results in the salt return.
+
+        .. versionadded neon
 
     CLI Example:
 
@@ -780,30 +788,53 @@ def file_query(database, file_name, **connection_args):
 
     query_string = ""
     ret = {'rows returned': 0, 'columns': [], 'results': [], 'rows affected': 0, 'query time': {'raw': 0}}
-    for line in contents.splitlines():
-        if re.match(r'--', line):  # ignore sql comments
-            continue
-        if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ;
-            query_string = query_string + line
-        else:
-            query_string = query_string + line  # append lines that end with ; and run query
-            query_result = query(database, query_string, **connection_args)
-            query_string = ""
 
-            if query_result is False:
-                # Fail out on error
-                return False
+    if no_parse:
+        # Submit the entire file to query function
+        query_result = query(database, contents, **connection_args)
 
-            if 'query time' in query_result:
-                ret['query time']['raw'] += float(query_result['query time']['raw'])
-            if 'rows returned' in query_result:
-                ret['rows returned'] += query_result['rows returned']
-            if 'columns' in query_result:
-                ret['columns'].append(query_result['columns'])
-            if 'results' in query_result:
-                ret['results'].append(query_result['results'])
-            if 'rows affected' in query_result:
-                ret['rows affected'] += query_result['rows affected']
+        if query_result is False:
+            # Fail out on error
+            return False
+
+        if 'query time' in query_result:
+            ret['query time']['raw'] = float(query_result['query time']['raw'])
+        if 'rows returned' in query_result:
+            ret['rows returned'] = query_result['rows returned']
+        if 'columns' in query_result:
+            ret['columns'] = query_result['columns']
+        if 'results' in query_result:
+            ret['results'] = query_result['results']
+        if 'rows affected' in query_result:
+            ret['rows affected'] = query_result['rows affected']
+    else:
+        # Remove comments which might affect line by line parsing
+        contents = re.sub(r'--.*', '', contents)
+        contents = re.sub(r'#.*', '', contents)
+        # Walk the each line of the sql file to get accurate row affected results
+        for line in contents.splitlines():
+            if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ;
+                query_string = query_string + line
+            else:
+                query_string = query_string + line  # append lines that end with ; and run query
+                query_result = query(database, query_string, **connection_args)
+                query_string = ""
+
+                if query_result is False:
+                    # Fail out on error
+                    return False
+
+                if 'query time' in query_result:
+                    ret['query time']['raw'] += float(query_result['query time']['raw'])
+                if 'rows returned' in query_result:
+                    ret['rows returned'] += query_result['rows returned']
+                if 'columns' in query_result:
+                    ret['columns'].append(query_result['columns'])
+                if 'results' in query_result:
+                    ret['results'].append(query_result['results'])
+                if 'rows affected' in query_result:
+                    ret['rows affected'] += query_result['rows affected']
+
     ret['query time']['human'] = six.text_type(round(float(ret['query time']['raw']), 2)) + 's'
     ret['query time']['raw'] = round(float(ret['query time']['raw']), 5)
 
