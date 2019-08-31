@@ -192,6 +192,12 @@ class ComparableStateEntry(ComparableSubDict,
     def compare___sls__(self, this_value, other_value):
         return self.compare_name(this_value, other_value)
 
+    def compare__saltfunc__(self, this_value, other_value):
+        return self.compare_name(this_value, other_value)
+
+    def compare__state_entry_name__(self, this_value, other_value):
+        return self.compare_name(this_value, other_value)
+
     def compare_status(self, this_value, other_value):
         return this_value == other_value
 
@@ -214,8 +220,11 @@ class StateReturn(ComparableSubDict):
         for key in list(self):
             if not isinstance(self[key], dict):
                 continue
-            if '_|-' in key or key in ('*', '.*') or '__sls__' in self[key]:
-                state_entries[key] = self.pop(key)
+            if '_|-' in key or key.startswith('RE:') or key in ('*', '.*') or '__sls__' in self[key]:
+                new_key = None
+                if key.startswith('RE:'):
+                    new_key = key[3:]
+                state_entries[new_key or key] = self.pop(key)
         for key, value in sorted(state_entries.items(), key=lambda kv: kv[1]['__run_num__']):
             value['__state_entry_name__'] = key
             self['state_entries'].append(ComparableStateEntry(value))

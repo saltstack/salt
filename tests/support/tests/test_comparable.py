@@ -208,6 +208,160 @@ def test_state_return_matching_num_run():
     assert result == expected
 
 
+def test_state_return_matching___saltfunc__():
+    result = StateReturn(
+        {u'cmd_|-A_|-echo A_|-run': {u'__id__': u'A',
+                                     u'__run_num__': 2,
+                                     u'__saltfunc__': u'cmd.run',
+                                     u'__sls__': u'mixed-simple',
+                                     u'changes': {u'pid': 10375,
+                                                  u'retcode': 0,
+                                                  u'stderr': u'',
+                                                  u'stdout': u'A'},
+                                     u'comment': u'Command "echo A" run',
+                                     u'duration': 260.0000000093132,
+                                     u'name': u'echo A',
+                                     u'result': True,
+                                     u'start_time': '09:35:04.116521'},
+         u'cmd_|-B_|-echo B_|-run': {u'__id__': u'B',
+                                     u'__run_num__': 1,
+                                     u'__saltfunc__': u'cmd.run',
+                                     u'__sls__': u'mixed-simple',
+                                     u'changes': {u'pid': 10176,
+                                                  u'retcode': 0,
+                                                  u'stderr': u'',
+                                                  u'stdout': u'B'},
+                                     u'comment': u'Command "echo B" run',
+                                     u'duration': 250.0,
+                                     u'name': u'echo B',
+                                     u'result': True,
+                                     u'start_time': '09:35:03.858900'},
+         u'cmd_|-C_|-echo C_|-run': {u'__id__': u'C',
+                                     u'__run_num__': 0,
+                                     u'__saltfunc__': u'cmd.run',
+                                     u'__sls__': u'mixed-simple',
+                                     u'changes': {u'pid': 9974,
+                                                  u'retcode': 0,
+                                                  u'stderr': u'',
+                                                  u'stdout': u'C'},
+                                     u'comment': u'Command "echo C" run',
+                                     u'duration': 260.0000000093132,
+                                     u'name': u'echo C',
+                                     u'result': True,
+                                     u'start_time': '09:35:03.594101'}})
+    expected = {
+        'cmd_|-A_|-echo A_|-run': {
+            '__run_num__': 2,
+            '__saltfunc__': 'cmd.run',
+            'comment': 'Command "echo A" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        },
+        'cmd_|-B_|-echo B_|-run': {
+            '__run_num__': 1,
+            '__saltfunc__': r'cmd\..*',
+            'comment': 'Command "echo B" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        },
+        'cmd_|-C_|-echo C_|-run': {
+            '__run_num__': 0,
+            '__saltfunc__': r'cmd\..*',
+            'comment': 'Command "echo C" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        }
+    }
+    assert result == expected
+
+
+def test_state_return_regex_match_state_key():
+    result = StateReturn(
+        {u'cmd_|-A_|-echo A_|-run': {u'__id__': u'A',
+                                     u'__run_num__': 2,
+                                     u'__saltfunc__': u'cmd.run',
+                                     u'__sls__': u'mixed-simple',
+                                     u'changes': {u'pid': 10375,
+                                                  u'retcode': 0,
+                                                  u'stderr': u'',
+                                                  u'stdout': u'A'},
+                                     u'comment': u'Command "echo A" run',
+                                     u'duration': 260.0000000093132,
+                                     u'name': u'echo A',
+                                     u'result': True,
+                                     u'start_time': '09:35:04.116521'},
+         u'cmd_|-B_|-echo B_|-run': {u'__id__': u'B',
+                                     u'__run_num__': 1,
+                                     u'__saltfunc__': u'cmd.run',
+                                     u'__sls__': u'mixed-simple',
+                                     u'changes': {u'pid': 10176,
+                                                  u'retcode': 0,
+                                                  u'stderr': u'',
+                                                  u'stdout': u'B'},
+                                     u'comment': u'Command "echo B" run',
+                                     u'duration': 250.0,
+                                     u'name': u'echo B',
+                                     u'result': True,
+                                     u'start_time': '09:35:03.858900'},
+         u'cmd_|-C_|-echo C_|-run': {u'__id__': u'C',
+                                     u'__run_num__': 0,
+                                     u'__saltfunc__': u'cmd.run',
+                                     u'__sls__': u'mixed-simple',
+                                     u'changes': {u'pid': 9974,
+                                                  u'retcode': 0,
+                                                  u'stderr': u'',
+                                                  u'stdout': u'C'},
+                                     u'comment': u'Command "echo C" run',
+                                     u'duration': 260.0000000093132,
+                                     u'name': u'echo C',
+                                     u'result': True,
+                                     u'start_time': '09:35:03.594101'}})
+    # Confirm it matches with proper state id
+    expected = {
+        'cmd_|-A_|-echo A_|-run': {
+            '__run_num__': 2,
+            'comment': 'Command "echo A" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        },
+        'cmd_|-B_|-echo B_|-run': {
+            '__run_num__': 1,
+            'comment': 'Command "echo B" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        },
+        'cmd_|-C_|-echo C_|-run': {
+            '__run_num__': 0,
+            'comment': 'Command "echo C" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        }
+    }
+    assert result == expected
+    # And now with a regex for the state name
+    expected = {
+        'RE:.*echo A.*': {
+            '__run_num__': 2,
+            'comment': 'Command "echo A" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        },
+        '.*': {
+            '__run_num__': 1,
+            'comment': 'Command "echo B" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        },
+        '*': {
+            '__run_num__': 0,
+            'comment': 'Command "echo C" run',
+            'result': True,
+            'changes': {'retcode': 0}
+        }
+    }
+    assert result == expected
+
+
 def test_state_return_error():
     a = StateReturnError(['A recursive requisite was found, SLS "recurse_fail" ID "/etc/mysql/my.cnf" ID "mysql"'])
     # Direct match
