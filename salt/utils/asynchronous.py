@@ -238,13 +238,11 @@ class SyncWrapper(object):
             async_methods = []
         if close_methods is None:
             close_methods = []
-        self.args = args
-        self.kwargs = kwargs
         self.loop_kwarg = loop_kwarg
         self.cls = cls
-        if self.loop_kwarg:
-            self.kwargs[self.loop_kwarg] = self.io_loop
-        self.obj = cls(*args, **self.kwargs)
+        if loop_kwarg:
+            kwargs[self.loop_kwarg] = self.io_loop
+        self.obj = cls(*args, **kwargs)
         self._async_methods = list(
             set(async_methods + getattr(self.obj, 'async_methods', []))
         )
@@ -281,9 +279,8 @@ class SyncWrapper(object):
             except Exception:
                 log.exception("Exception encountered while running stop method")
         io_loop = self.io_loop
-        self.io_loop = None
-        io_loop.close()
-        del io_loop
+        io_loop.stop()
+        io_loop.close(all_fds=True)
 
     def __getattr__(self, key):
         if key in self._async_methods:

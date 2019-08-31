@@ -1156,13 +1156,11 @@ class AsyncReqMessageClient(object):
 
         self.send_timeout_map = {}  # message -> timeout
         self._closing = False
-        self.io_loop.spawn_callback(self._internal_send_recv)
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
         if self._closing:
             return
-
         self._closing = True
         if hasattr(self, 'stream') and self.stream is not None:
             if ZMQ_VERSION_INFO < (14, 3, 0):
@@ -1225,10 +1223,7 @@ class AsyncReqMessageClient(object):
 
     @tornado.gen.coroutine
     def _internal_send_recv(self):
-        while not self._closing:
-            if not self.send_queue:
-                yield tornado.gen.sleep(.01)
-                continue
+        while len(self.send_queue) > 0:
             message = self.send_queue[0]
             future = self.send_future_map.get(message, None)
             if future is None:
@@ -1313,9 +1308,13 @@ class AsyncReqMessageClient(object):
         if timeout is not None:
             send_timeout = self.io_loop.call_later(timeout, self.timeout_message, message)
             self.send_timeout_map[message] = send_timeout
-
+        if len(self.send_queue) == 0:
+            add_cb = True
+        else:
+            add_cb = False
         self.send_queue.append(message)
-
+        if add_cb:
+            self.io_loop.spawn_callback(self._internal_send_recv)
         return future
 
 
