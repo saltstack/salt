@@ -574,7 +574,8 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(RUNTIME_VARS.TMP, 'foo')
 
         # Create a file named foo with contents as above but with a \n at EOF
-        self.run_state('file.managed', name=name, contents=contents, contents_newline=True)
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=True)
         with salt.utils.files.fopen(name, 'r') as fp_:
             last_line = fp_.read()
             self.assertEqual((contents + os.linesep), last_line)
@@ -588,10 +589,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         name = os.path.join(RUNTIME_VARS.TMP, 'bar')
 
         # Create a file named foo with contents as above but with a \n at EOF
-        self.run_state('file.managed', name=name, contents=contents, contents_newline=False)
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=False)
         with salt.utils.files.fopen(name, 'r') as fp_:
             last_line = fp_.read()
-            self.assertEqual((contents), last_line)
+            self.assertEqual(contents, last_line)
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')

@@ -2362,8 +2362,10 @@ def managed(name,
 
         If ``True``, files managed using ``contents``, ``contents_pillar``, or
         ``contents_grains`` will have a newline added to the end of the file if
-        one is not present. Setting this option to ``False`` will omit this
-        final newline.
+        one is not present. Setting this option to ``False`` will ensure the
+        final line, or entry, does not contain a new line. If the last line, or
+        entry in the file does contain a new line already, this option will not
+        remove it.
 
     contents_delimiter
         .. versionadded:: 2015.8.4
