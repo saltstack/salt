@@ -228,7 +228,7 @@ class StateReturn(ComparableSubDict):
 
     def construct_comparable_instance(self, data):
         for key, value in data.items():
-            if '_|-' in key or key in ('*', '.*') or '__sls__' in value and '__run_num__' not in value:
+            if ('_|-' in key or key in ('*', '.*') or '__sls__' in value) and '__run_num__' not in value:
                 value['__run_num__'] = 0
         return super(StateReturn, self).construct_comparable_instance(data)
 
