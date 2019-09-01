@@ -445,7 +445,7 @@ def get_file_str(path, saltenv='base'):
     if isinstance(fn_, six.string_types):
         try:
             with salt.utils.files.fopen(fn_, 'r') as fp_:
-                return fp_.read()
+                return salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             return False
     return fn_
