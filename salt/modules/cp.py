@@ -423,6 +423,8 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
         log.error('Unable to fetch file %s from saltenv %s.',
                   salt.utils.url.redact_http_basic_auth(path),
                   saltenv)
+    if result:
+        return salt.utils.stringutils.to_unicode(result)
     return result
 
 
