@@ -809,8 +809,9 @@ def file_query(database, file_name, no_parse=False, **connection_args):
             ret['rows affected'] = query_result['rows affected']
     else:
         # Remove comments which might affect line by line parsing
-        contents = re.sub(r'--.*', '', contents)
-        contents = re.sub(r'#.*', '', contents)
+        # Regex should remove any text begining with # (or --) not inside of ' or "
+        contents = re.sub(r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|#[^\n]*""", lambda m: m.group(1) or '', contents, re.S)
+        contents = re.sub(r"""(['"](?:[^'"]+|(?<=\\)['"])*['"])|--[^\n]*""", lambda m: m.group(1) or '', contents, re.S)
         # Walk the each line of the sql file to get accurate row affected results
         for line in contents.splitlines():
             if not re.search(r'[^-;]+;', line):  # keep appending lines that don't end in ;
