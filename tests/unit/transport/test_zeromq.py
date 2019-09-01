@@ -95,7 +95,7 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
 
-        cls.io_loop = salt.utils.asynchronous.IOLoop()
+        cls.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
         cls.evt = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls.io_loop, cls.evt))
@@ -241,7 +241,6 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.req_server_channel.pre_fork(cls.process_manager)
 
         cls._server_io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
-        cls._server_io_loop = salt.utils.asynchronous.IOLoop()
         cls.evt = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
         cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt))
