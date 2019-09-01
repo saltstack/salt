@@ -10,10 +10,8 @@ PyTest boilerplate code for Salt functional testing
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import os
-import time
 import logging
 import functools
-import threading
 
 # Import 3rd-party libs
 import pytest
@@ -44,22 +42,12 @@ class FunctionalMinion(salt.minion.SMinion):
             context = {}
         super(FunctionalMinion, self).__init__(opts, context=context)
         self.__context = context
-        self.__loop = None
-        self.__listener_thread = None
         self.__event = None
         self.__event_publisher = None
 
-    def start_event_listener(self):
-        if self.__listener_thread is None:
-            self.__loop = ioloop = tornado.ioloop.IOLoop()
-            self.__listener_thread = threading.Thread(target=self._start_event_listener, args=(ioloop,))
-            self.__listener_thread.start()
-
-    def _start_event_listener(self, io_loop=None):
+    def start_event_listener(self, io_loop=None):
         log.info('Starting %r minion event listener', self.opts['id'])
-        io_loop.make_current()
-        time.sleep(0.025)
-        # start up the event publisher, so we can see events during startup
+        # start up the event publisher, so we can see and react to events
         if self.__event_publisher is None:
             self.__event_publisher = salt.utils.event.AsyncEventPublisher(
                 self.opts,
@@ -68,34 +56,22 @@ class FunctionalMinion(salt.minion.SMinion):
         if self.__event is None:
             self.__event = salt.utils.event.get_event('minion', opts=self.opts, io_loop=io_loop)
         self.__event.subscribe('')
-        self.__event.set_event_handler(self.handle_event)
+        # event.set_event_handler returns a tornado coroutine, make sure we run it
+        io_loop.add_future(self.__event.set_event_handler(self.handle_event), lambda future: future.result())
         io_loop.add_callback(log.info, 'Started %r minion event listener', self.opts['id'])
-        io_loop.start()
-        try:
-            io_loop.close(all_fds=True)
-        except ValueError:
-            pass
 
     def stop_event_listenter(self):
         log.info('Stopping %r minion event listener', self.opts['id'])
         if self.__event is not None:
             event = self.__event
             self.__event = None
-            self.__loop.add_callback(event.remove_event_handler, self.handle_event)
-            self.__loop.add_callback(event.unsubscribe, '')
-            self.__loop.add_callback(event.destroy)
+            event.remove_event_handler(self.handle_event)
+            event.unsubscribe('')
+            event.destroy()
         if self.__event_publisher is not None:
             event_publisher = self.__event_publisher
             self.__event_publisher = None
-            self.__loop.add_callback(event_publisher.close)
-        if self.__loop is not None:
-            loop = self.__loop
-            self.__loop = None
-            loop.add_callback(loop.stop)
-        if self.__listener_thread is not None:
-            self.__listener_thread.join()
-            self.__listener_thread = None
-            self.__loop = None
+            event_publisher.close()
         log.info('Stopped %r minion event listener', self.opts['id'])
 
     @tornado.gen.coroutine
@@ -161,6 +137,50 @@ class StateModuleCallWrapper(object):
         return StateReturn(result)
 
 
+@pytest.fixture
+def io_loop():
+    '''
+    This is the IOLoop that will run the minion's event system while running tests.
+    Some tests also use the tornado http backend(salt.utils.http), this is also the
+    loop that will be used
+    '''
+    io_loop = tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    yield io_loop
+    io_loop.clear_current()
+    io_loop.close(all_fds=True)
+
+
+def get_test_timeout(pyfuncitem):
+    # Default value is 10 seconds
+    timeout = 1
+    marker = pyfuncitem.get_closest_marker("timeout")
+    if marker:
+        timeout = marker.kwargs.get("seconds", timeout)
+    return timeout
+
+
+@pytest.mark.tryfirst
+def pytest_pyfunc_call(pyfuncitem):
+    '''
+    Because we need an IOLoop running, we change how pytest runs the test function in case
+    the io_loop fixture is present
+    '''
+    io_loop = pyfuncitem.funcargs.get('io_loop')
+    if io_loop is None:
+        # Let pytest run the test as it usually does
+        return
+
+    funcargs = pyfuncitem.funcargs
+    testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
+
+    io_loop.run_sync(
+        lambda: pyfuncitem.obj(**testargs), timeout=get_test_timeout(pyfuncitem)
+    )
+    # prevent other pyfunc calls from executing
+    return True
+
+
 @pytest.fixture(scope='session')
 def loader_context_dictionary():
     return {}
@@ -210,8 +230,8 @@ def __minion_loader_cleanup(sminion,
 
 
 @pytest.fixture
-def minion(sminion):
-    sminion.start_event_listener()
+def minion(sminion, io_loop):
+    sminion.start_event_listener(io_loop)
     yield sminion
     sminion.stop_event_listenter()
 
