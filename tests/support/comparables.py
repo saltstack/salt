@@ -176,7 +176,7 @@ class ComparableStateEntry(ComparableSubDict,
     because we want to allow pytest to run specific assertions
     against the contents.
     '''
-    __comparable_keys__ = ('__id__', '__sls__', 'changes', 'comment', 'name', 'result', 'status')
+    __comparable_keys__ = ('__id__', '__sls__', 'changes', 'comment', 'name', 'result', 'status', 'duration')
 
     def compare_name(self, this_value, other_value):
         '''
@@ -200,6 +200,13 @@ class ComparableStateEntry(ComparableSubDict,
 
     def compare_status(self, this_value, other_value):
         return this_value == other_value
+
+    def compare_duration(self, this_value, other_value):
+        # Duration's are floats
+        if this_value == other_value:
+            return True
+        # Cast to string for regex matching
+        return self.compare_name(str(this_value), str(other_value))
 
 
 class StateReturn(ComparableSubDict):
