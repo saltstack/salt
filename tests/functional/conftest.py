@@ -214,6 +214,16 @@ def __minion_loader_cleanup(sminion,
     salt_opts_copy = sminion.opts.copy()
     # Run tests
     yield
+    # Make sure we haven't left any temp state tree states or pillar behind
+    # Tests should clean them up
+    for path in (RUNTIME_VARS.TMP_STATE_TREE,
+                 RUNTIME_VARS.TMP_PILLAR_TREE,
+                 RUNTIME_VARS.TMP_PRODENV_STATE_TREE):
+        path_entries = os.listdir(path)
+        if path_entries != []:
+            pytest.fail(
+                'Files left behind in \'{}\': {}'.format(path, path_entries)
+            )
     # Clear the context after running the tests
     loader_context_dictionary.clear()
     # Reset the options dictionary

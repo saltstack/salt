@@ -694,14 +694,12 @@ def temp_file(name, contents=None, directory=None, strip_first_newline=True):
 
         yield file_path
 
-    except Exception:
+    finally:
         try:
             os.unlink(file_path)
         except OSError:
             # Already deleted
             pass
-        log.exception('Exception raised while writing :%s', file_path, exc_info=True)
-        raise
 
 
 @pytest.helpers.register
