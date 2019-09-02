@@ -1467,7 +1467,12 @@ def install(name=None,
             if advisory_id not in cur_patches:
                 raise CommandExecutionError('Advisory id "{0}" not found'.format(advisory_id))
             else:
-                targets.append('patch:{}'.format(advisory_id))
+                # If we add here the `patch:` prefix, the
+                # `_find_types` helper will take the patches into the
+                # list of packages. Usually this is the correct thing
+                # to do, but we can break software the depends on the
+                # old behaviour.
+                targets.append(advisory_id)
     else:
         targets = pkg_params
 
@@ -1498,6 +1503,16 @@ def install(name=None,
         cmd_install.append('--no-recommends')
 
     errors = []
+
+    # If the type is 'advisory', we manually add the 'patch:'
+    # prefix. This kind of package will not appear in pkg_list in this
+    # way.
+    #
+    # Note that this enable a different mechanism to install a patch;
+    # if the name of the package is already prefixed with 'patch:' we
+    # can avoid listing them in the `advisory_ids` field.
+    if pkg_type == 'advisory':
+        targets = ['patch:{}'.format(t) for t in targets]
 
     # Split the targets into batches of 500 packages each, so that
     # the maximal length of the command line is not broken
