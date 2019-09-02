@@ -45,7 +45,7 @@ def _cmd_run(cmd):
 
     if cmd_ret['retcode'] != 0:
         log.debug('Unable to execute command: %s\nError: %s', cmd,
-                   cmd_ret['stderr'])
+                  cmd_ret['stderr'])
 
     return cmd_ret['stdout']
 
@@ -251,8 +251,8 @@ def list_repos(config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     log.debug('Found repositories: %s', len(repos))
 
     for name in repos:
-        ret[name] = get_repo(name=name, config_path=config_path,
-                             with_packages=with_packages)
+        ret[name] = __salt__['aptly.get_repo'](name=name, config_path=config_path,
+                                               with_packages=with_packages)
     return ret
 
 
@@ -276,7 +276,6 @@ def get_repo(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
     _validate_config(config_path)
     with_packages = six.text_type(bool(with_packages)).lower()
 
-    ret = dict()
     cmd = ['repo', 'show', '-config={}'.format(config_path),
            '-with-packages={}'.format(with_packages), name]
 
@@ -614,8 +613,6 @@ def get_published(name, config_path=_DEFAULT_CONFIG_PATH, endpoint='', prefix=No
     '''
     _validate_config(config_path)
 
-    ret = dict()
-    sources = list()
     cmd = ['publish', 'show', '-config={}'.format(config_path), name]
 
     if prefix:
@@ -735,8 +732,6 @@ def get_snapshot(name, config_path=_DEFAULT_CONFIG_PATH, with_packages=False):
         salt '*' aptly.get_snapshot name="test-repo"
     '''
     _validate_config(config_path)
-
-    sources = list()
 
     cmd = ['snapshot', 'show', '-config={}'.format(config_path),
            '-with-packages={}'.format(str(with_packages).lower()),
