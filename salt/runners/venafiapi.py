@@ -36,6 +36,7 @@ import tempfile
 
 try:
     from M2Crypto import RSA
+
     HAS_M2 = True
 except ImportError:
     HAS_M2 = False
@@ -56,7 +57,6 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 import vcert
 
-
 CACHE_BANK_NAME = 'venafi/domains'
 __virtualname__ = 'venafi'
 log = logging.getLogger(__name__)
@@ -68,7 +68,12 @@ def _init_connection():
     base_url = __opts__.get('venafi', {}).get('base_url')
     tpp_user = __opts__.get('venafi', {}).get('tpp_user')
     tpp_password = __opts__.get('venafi', {}).get('tpp_password')
-    return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
+    trust_bundle = __opts__.get('venafi', {}).get('trust_bundle')
+    if trust_bundle:
+        return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password,
+                                http_request_kwargs=trust_bundle)
+    else:
+        return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
 
 def __virtual__():
     '''
@@ -78,16 +83,16 @@ def __virtual__():
 
 
 def request(
-        minion_id,
-        dns_name=None,
-        zone='Default',
-        country='US',
-        state='California',
-        loc='Palo Alto',
-        org='Venafi',
-        org_unit='Beta Group',
-        password=None,
-    ):
+    minion_id,
+    dns_name=None,
+    zone='Default',
+    country='US',
+    state='California',
+    loc='Palo Alto',
+    org='Venafi',
+    org_unit='Beta Group',
+    password=None,
+):
     '''
     Request a new certificate
 
