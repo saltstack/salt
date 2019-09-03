@@ -43,7 +43,7 @@ class WriteTokenTest(TestCase):
         assert 'token' in tdata
         t_path = os.path.join(tmpdir, tdata['token'])
         temp_t_path = '{}.tmp'.format(t_path)
-        assert len(fopen.called_with) == 1, len(fopen_called_with)
+        assert len(fopen.called_with) == 1, len(fopen.called_with)
         assert fopen.called_with == [
             ((temp_t_path, 'w+b'), {})
         ], fopen.called_with
