@@ -36,9 +36,8 @@ def ext_pillar(minion_id, pillar, conf):
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
 
     ret = {}
-    dns_names = cache.fetch('venafi/minions', minion_id)
-    for dns_name in dns_names:
+    for dns_name in cache.list('venafi/domains'):
         data = cache.fetch('venafi/domains', dns_name)
-        ret[dns_name] = data
-        del ret[dns_name]['csr']
+        if data['minion_id'] == minion_id:
+            ret[dns_name] = data
     return {'venafi': ret}
