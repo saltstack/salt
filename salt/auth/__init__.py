@@ -25,7 +25,9 @@ from salt.ext import six
 
 # Import salt libs
 import salt.config
+import salt.exceptions
 import salt.loader
+import salt.payload
 import salt.transport.client
 import salt.utils.args
 import salt.utils.dictupdate
@@ -34,7 +36,6 @@ import salt.utils.minions
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.zeromq
-import salt.payload
 
 log = logging.getLogger(__name__)
 
@@ -242,16 +243,24 @@ class LoadAuth(object):
         Return the name associated with the token, or False if the token is
         not valid
         '''
-        tdata = self.tokens["{0}.get_token".format(self.opts['eauth_tokens'])](self.opts, tok)
-        if not tdata:
-            return {}
+        tdata = {}
+        try:
+            tdata = self.tokens["{0}.get_token".format(self.opts['eauth_tokens'])](self.opts, tok)
+        except salt.exceptions.SaltDeserializationError:
+            log.warning("Failed to load token %r - removing broken/empty file.", tok)
+            rm_tok = True
+        else:
+            if not tdata:
+                return {}
+            rm_tok = False
 
-        rm_tok = False
-        if 'expire' not in tdata:
-            # invalid token, delete it!
+        if tdata.get('expire', 0) < time.time():
+            # If expire isn't present in the token it's invalid and needs
+            # to be removed. Also, if it's present and has expired - in
+            # other words, the expiration is before right now, it should
+            # be removed.
             rm_tok = True
-        if tdata.get('expire', '0') < time.time():
-            rm_tok = True
+
         if rm_tok:
             self.rm_token(tok)
 
