@@ -57,7 +57,7 @@ class WriteTokenTest(TestCase):
         ], rename.called_with
 
 
-class TestLocalFS(unittest.TestCase):
+class TestLocalFS(TestCase):
     def setUp(self):
         # Default expected data
         self.expected_data = {'this': 'is', 'some': 'token data'}
@@ -79,7 +79,7 @@ class TestLocalFS(unittest.TestCase):
             opts=opts,
             tdata=self.expected_data,
         )['token']
-        with open(os.path.join(tempdir, tok), 'w') as f:
+        with salt.utils.files.fopen(os.path.join(tempdir, tok), 'w') as f:
             f.truncate()
         with self.assertRaises(salt.exceptions.SaltDeserializationError) as e:
             salt.tokens.localfs.get_token(opts=opts, tok=tok)
@@ -91,7 +91,7 @@ class TestLocalFS(unittest.TestCase):
             opts=opts,
             tdata=self.expected_data,
         )['token']
-        with open(os.path.join(tempdir, tok), 'w') as f:
+        with salt.utils.files.fopen(os.path.join(tempdir, tok), 'w') as f:
             f.truncate()
             f.write('this is not valid msgpack data')
         with self.assertRaises(salt.exceptions.SaltDeserializationError) as e:
