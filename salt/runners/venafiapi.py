@@ -85,12 +85,12 @@ def __virtual__():
 def request(
     minion_id,
     dns_name=None,
-    zone='Default',
-    country='US',
-    state='California',
-    loc='Palo Alto',
-    org='Venafi',
-    org_unit='Beta Group',
+    zone=None,
+    country=None,
+    state=None,
+    loc=None,
+    org=None,
+    org_unit=None,
     password=None,
 ):
     '''
