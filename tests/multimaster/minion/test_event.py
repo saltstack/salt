@@ -2,6 +2,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing libs
 from tests.support.case import MultimasterModuleCase, ShellTestCase
@@ -13,6 +14,8 @@ import salt.modules.iptables
 HAS_IPTABLES = salt.modules.iptables.__virtual__()
 if isinstance(HAS_IPTABLES, tuple):
     HAS_IPTABLES = HAS_IPTABLES[0]
+
+log = logging.getLogger(__name__)
 
 
 @destructiveTest
@@ -64,8 +67,30 @@ class TestHandleEvents(MultimasterModuleCase, ShellTestCase, AdaptedConfiguratio
             # Remove the firewall rule taking master online back.
             # Since minion could be not responsive now use `salt-call --local` for this.
             res = self.run_call(
+                    "iptables.get_rules",
+                    local=True)
+            log.debug('TEST IPTABLES rules after the test pass: %s', res)
+
+            res = self.run_call(
                     "iptables.delete filter INPUT rule='{0}'".format(disconnect_master_rule),
                     local=True)
+            log.debug('TEST IPTABLES salt-call iptables.delete reutrned: %s', res)
+
+            res = self.run_call(
+                    "iptables.get_rules",
+                    local=True)
+            log.debug('TEST IPTABLES rules after the rule removed: %s', res)
+
+            res = self.run_call(
+                    "iptables.delete filter INPUT rule='{0}'".format(disconnect_master_rule),
+                    local=True)
+            log.debug('TEST IPTABLES salt-call iptables.delete 2 reutrned: %s', res)
+
+            res = self.run_call(
+                    "iptables.get_rules",
+                    local=True)
+            log.debug('TEST IPTABLES rules after the rule removed 2: %s', res)
+
             res = self.run_call(
                     "iptables.check filter INPUT rule='{0}'".format(disconnect_master_rule),
                     local=True)
