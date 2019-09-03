@@ -126,7 +126,26 @@ Delete a domain from this master's cache.
 
 .. code-block:: bash
 
-  salt-run venafi.delete_domain_cache example.com
+  salt-run venafi.del_cached_domain example.com
 
 :param str domains: A domain name, or a comma-separated list of domain names,
     to delete from this master's cache.
+
+Transfer certificate to pillar
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To transfer cached certificate to minion you can use venafi pillar.
+
+Example state file:
+
+.. code-block:: yml
+
+    /etc/ssl/cert/minion.example.com.pem:
+      file.managed:
+          - contents_pillar: venafi:minion.example.com:cert
+          - replace: True
+
+    /etc/ssl/cert/minion.example.com.key.pem:
+      file.managed:
+          - contents_pillar: venafi:minion.example.com:pkey
+          - replace: True
