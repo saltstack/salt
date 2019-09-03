@@ -123,7 +123,8 @@ def request(
     data = {
         'minion_id': minion_id,
         'cert': cert.cert,
-        'chain': cert.chain
+        'chain': cert.chain,
+        'pkey': private_key
     }
     cache.store(CACHE_BANK_NAME, dns_name, data)
     return cert.cert, private_key
