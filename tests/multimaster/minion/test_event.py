@@ -66,7 +66,13 @@ class TestHandleEvents(MultimasterModuleCase, ShellTestCase, AdaptedConfiguratio
             res = self.run_call(
                     "iptables.delete filter INPUT rule='{0}'".format(disconnect_master_rule),
                     local=True)
-            self.assertEqual(res, ['local:'])
+            res = self.run_call(
+                    "iptables.check filter INPUT rule='{0}'".format(disconnect_master_rule),
+                    local=True)
+            self.assertEqual(
+                    res,
+                    ['local:',
+                     '    iptables: Bad rule (does a matching rule exist in that chain?).'])
             # Ensure the master is back.
             res = self.run_function(
                     'event.send',
