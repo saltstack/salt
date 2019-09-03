@@ -55,6 +55,7 @@ class VenafiTest(ShellCase):
                                 minion_id=cn,
                                 dns_name=cn,
                                 zone='Default')
+        print("Ret is:\n",ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
