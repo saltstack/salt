@@ -11,6 +11,10 @@ import logging
 import re
 import os
 import socket
+import time
+
+from multiprocessing.pool import ThreadPool
+
 
 # Import salt libs
 import salt.utils.decorators.path
@@ -1887,3 +1891,59 @@ def iphexval(ip):
     a = ip.split('.')
     hexval = ['%02X' % int(x) for x in a]  # pylint: disable=E1321
     return ''.join(hexval)
+
+
+def fqdns():
+    '''
+    Return all known FQDNs for the system by enumerating all interfaces and
+    then trying to reverse resolve them (excluding 'lo' interface).
+    '''
+    # Provides:
+    # fqdns
+
+    # Possible value for h_errno defined in netdb.h
+    HOST_NOT_FOUND = 1
+    NO_DATA = 4
+
+    grains = {}
+    fqdns = set()
+
+    def _lookup_fqdn(ip):
+        try:
+            name, aliaslist, addresslist = socket.gethostbyaddr(ip)
+            return [socket.getfqdn(name)] + [als for als in aliaslist if salt.utils.network.is_fqdn(als)]
+        except socket.herror as err:
+            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
+                # No FQDN for this IP address, so we don't need to know this all the time.
+                log.debug("Unable to resolve address %s: %s", ip, err)
+            else:
+                log.error(err_message, err)
+        except (socket.error, socket.gaierror, socket.timeout) as err:
+            log.error(err_message, err)
+
+    start = time.time()
+
+    addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=salt.utils.network._get_interfaces())
+    addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=salt.utils.network._get_interfaces()))
+    err_message = 'Exception during resolving address: %s'
+
+    # Create a ThreadPool to process the underlying calls to 'socket.gethostbyaddr' in parallel.
+    # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
+    # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
+
+    try:
+       pool = ThreadPool(8)
+       results = pool.map(_lookup_fqdn, addresses)
+       pool.close()
+       pool.join()
+    except Exception as exc:
+       log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
+
+    for item in results:
+        if item:
+            fqdns.update(item)
+
+    elapsed = time.time() - start
+    log.debug('Elapsed time getting FQDNs: {} seconds'.format(elapsed))
+
+    return {"fqdns": sorted(list(fqdns))}

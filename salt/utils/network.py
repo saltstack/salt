@@ -55,6 +55,18 @@ except (ImportError, OSError, AttributeError, TypeError):
 # pylint: disable=C0103
 
 
+_INTERFACES = {}
+def _get_interfaces(): #! function
+    '''
+    Provide a dict of the connected interfaces and their ip addresses
+    '''
+
+    global _INTERFACES
+    if not _INTERFACES:
+        _INTERFACES = interfaces()
+    return _INTERFACES
+
+
 def sanitize_host(host):
     '''
     Sanitize host string.

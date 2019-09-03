@@ -33,6 +33,7 @@ import salt.utils.network
 import salt.utils.platform
 import salt.utils.path
 import salt.grains.core as core
+import salt.modules.network
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -976,6 +977,40 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 
+
+    def test_enablefqdnsFalse(self):
+        '''
+        tests enable_fqdns_grains is set to False
+        '''
+        with patch.dict('salt.grains.core.__opts__', {'enable_fqdns_grains':False}):
+            assert core.fqdns() == {"fqdns": []}
+
+
+    def test_enablefqdnsTrue(self):
+        '''
+        testing that grains uses network.fqdns module
+        '''
+        with patch.dict('salt.grains.core.__salt__', {'network.fqdns': MagicMock(return_value="my.fake.domain")}):
+            with patch.dict('salt.grains.core.__opts__', {'enable_fqdns_grains':True}):
+                assert core.fqdns() == 'my.fake.domain'
+
+
+    def test_enablefqdnsNone(self):
+        '''
+        testing default fqdns grains is returned when enable_fqdns_grains is None
+        '''
+        with patch.dict('salt.grains.core.__opts__', {'enable_fqdns_grains':None}):
+             assert core.fqdns() == {"fqdns": []}
+
+
+    def test_enablefqdnswithoutpaching(self):
+        '''
+        testing fqdns grains is enabled by default
+        '''
+        with patch.dict('salt.grains.core.__salt__', {'network.fqdns': MagicMock(return_value="my.fake.domain")}):
+            assert core.fqdns() == 'my.fake.domain'
+
+
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
@@ -992,11 +1027,36 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
                                ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
         ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
-        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
-            fqdns = core.fqdns()
-            self.assertIn('fqdns', fqdns)
-            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
-            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+        with patch.dict(core.__salt__, {'network.fqdns': salt.modules.network.fqdns}):
+            with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+                fqdns = core.fqdns()
+                assert "fqdns" in fqdns
+                assert len(fqdns['fqdns']) == len(ret['fqdns'])
+                assert set(fqdns['fqdns']) == set(ret['fqdns'])
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils.platform, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
+    def test_fqdns_aliases(self):
+        '''
+        FQDNs aliases
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', ["throwmeaway", "this.is.valid.alias"], ['1.2.3.4']),
+                               ('rinzler.evil-corp.com', ["false-hostname", "badaliass"], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', ["alias.bluesniff.foo.bar"], ['fe80::a8b2:93ff:dead:beef'])]
+        with patch.dict(core.__salt__, {'network.fqdns': salt.modules.network.fqdns}):
+            with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+                fqdns = core.fqdns()
+                assert "fqdns" in fqdns
+                for alias in ["this.is.valid.alias", "alias.bluesniff.foo.bar"]:
+                    assert alias in fqdns["fqdns"]
+
+                for alias in ["throwmeaway", "false-hostname", "badaliass"]:
+                    assert alias not in fqdns["fqdns"]
 
     def test_core_virtual(self):
         '''
