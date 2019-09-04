@@ -47,6 +47,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def tearDownClass(cls):
         cls.webserver.stop()
+        cls.webserver = None
 
     def setUp(self):
         self._clear_archive_dir()

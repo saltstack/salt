@@ -1534,6 +1534,7 @@ class Webserver(object):
         except AttributeError:
             raise ValueError('root must be a string')
 
+        self._using_random_port = port is None
         self.port = port
         self.wait = wait
         self.handler = handler \
@@ -1551,6 +1552,9 @@ class Webserver(object):
             [(r'/(.*)', self.handler, {'path': self.root})])
         self.application.listen(self.port)
         self.ioloop.start()
+        self.ioloop.clear_current()
+        self.ioloop.close(all_fds=True)
+        self.ioloop = None
 
     @property
     def listening(self):
@@ -1583,13 +1587,45 @@ class Webserver(object):
         '''
         Starts the webserver
         '''
+        attempts = 3
+        current_attempt = 1
+        while current_attempt <= attempts:
+            started = self._start()
+            if started is False:
+                self.stop()
+                time.sleep(1)
+                current_attempt += 1
+                continue
+            break
+        else:
+            raise AssertionError(
+                'Failed to start webserver after {} attemps, each waiting {} seconds for '
+                'it to be up'.format(
+                    attempts,
+                    self.wait
+                )
+            )
+
+    def stop(self):
+        '''
+        Stops the webserver
+        '''
+        if self.ioloop is not None:
+            self.ioloop.add_callback(self.ioloop.stop)
+            self.server_thread.join()
+            self.server_thread = None
+
+    def _start(self):
+        '''
+        Starts the webserver
+        '''
         if self.port is None:
             self.port = get_unused_localhost_port()
 
-        self.web_root = 'http://127.0.0.1:{0}'.format(self.port)
+        port = self.port
+        self.web_root = 'http://127.0.0.1:{0}'.format(port)
 
         self.server_thread = threading.Thread(target=self.target)
-        self.server_thread.daemon = True
         self.server_thread.start()
 
         for idx in range(self.wait + 1):
@@ -1598,17 +1634,14 @@ class Webserver(object):
             if idx != self.wait:
                 time.sleep(1)
         else:
-            raise Exception(
-                'Failed to start tornado webserver on 127.0.0.1:{0} within '
-                '{1} seconds'.format(self.port, self.wait)
+            if self._using_random_port:
+                self.port = None
+            log.warning(
+                'Failed to start tornado webserver on 127.0.0.1:%s within '
+                '%s seconds', port, self.wait
             )
-
-    def stop(self):
-        '''
-        Stops the webserver
-        '''
-        self.ioloop.add_callback(self.ioloop.stop)
-        self.server_thread.join()
+            return False
+        return True
 
 
 def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,

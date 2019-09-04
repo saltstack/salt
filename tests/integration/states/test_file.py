@@ -4032,6 +4032,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def tearDownClass(cls):
         cls.webserver.stop()
+        cls.webserver = None
 
     @with_tempfile(create=False)
     def setUp(self, name):  # pylint: disable=arguments-differ
