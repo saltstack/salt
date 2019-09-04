@@ -484,6 +484,16 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 pass
 
 
+class MultiMasterTestShellCase(ShellTestCase):
+    '''
+    Execute a test for a shell command when running multi-master tests
+    '''
+
+    @property
+    def config_dir(self):
+        return RUNTIME_VARS.TMP_MM_CONF_DIR
+
+
 class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
     '''
     Execute a test for a shell command
