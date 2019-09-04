@@ -41,7 +41,15 @@ from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,r
 try:
     from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
 except ImportError:
-    from tests.integration import get_unused_localhost_port
+    def get_unused_localhost_port():
+        '''
+        Return a random unused port on localhost
+        '''
+        usock = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        usock.bind(('127.0.0.1', 0))
+        port = usock.getsockname()[1]
+        usock.close()
+        return port
 
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id

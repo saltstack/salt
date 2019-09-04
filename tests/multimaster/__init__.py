@@ -30,6 +30,7 @@ from tests.support.processes import start_daemon
 
 # Import Salt libs
 from tests.integration import (
+        SALT_LOG_PORT,
         SocketServerRequestHandler,
         TestDaemon,
         TestDaemonStartFailed,
@@ -45,9 +46,6 @@ from salt.utils.verify import verify_env
 from tests.support.processes import SaltMaster, SaltMinion
 
 log = logging.getLogger(__name__)
-
-
-SALT_LOG_PORT = get_unused_localhost_port()
 
 
 class MultimasterTestDaemon(TestDaemon):
