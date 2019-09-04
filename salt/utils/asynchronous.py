@@ -250,6 +250,12 @@ class SyncWrapper(object):
             set(close_methods + getattr(self.obj, 'close_methods', []))
         )
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self):
+        self.close()
+
     def _populate_async_methods(self):
         '''
         We need the '_coroutines' attribute on classes until we can depricate
