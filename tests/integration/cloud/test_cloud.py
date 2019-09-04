@@ -29,12 +29,12 @@ class CloudClientTestCase(CloudTest):
         # configured correctly before running any tests.
         images = self.run_cloud('--list-images {0}'.format(self.PROVIDER))
 
-        if self.image_name not in [i.strip() for i in images]:
+        if self.IMAGE_NAME not in [i.strip() for i in images]:
             self.skipTest(
                 'Image \'{0}\' was not found in image search. Is the {1} provider '
                 'configured correctly for this test?'.format(
                     self.PROVIDER,
-                    self.image_name
+                    self.IMAGE_NAME
                 )
             )
 
