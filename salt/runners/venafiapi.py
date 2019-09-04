@@ -46,6 +46,7 @@ except ImportError:
         from Crypto.PublicKey import RSA
 
 # Import Salt libs
+import sys
 import salt.cache
 import salt.syspaths as syspaths
 import salt.utils.files
@@ -92,6 +93,7 @@ def request(
     org=None,
     org_unit=None,
     password=None,
+    csr_path=None,
 ):
     '''
     Request a new certificate
@@ -106,10 +108,20 @@ def request(
         if password.startswith('sdb://'):
             password = __salt__['sdb.get'](password)
     conn = _init_connection()
-    request = vcert.common.CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
+    request = vcert.common.CertificateRequest
+    if csr_path is not None:
+        log.info("Will use generated CSR")
+        try:
+            csr = open(csr_path, "rb").read()
+            request.csr = csr
+        except Exception as e:
+            log.error(msg=str(e))
+            sys.exit(1)
+    else:
+        request(common_name=dns_name, country=country, province=state, locality=loc,
                                               organization=org, organizational_unit=org_unit, key_password=password)
-    zone_config = conn.read_zone_conf(zone)
-    request.update_from_zone_config(zone_config)
+        zone_config = conn.read_zone_conf(zone)
+        request.update_from_zone_config(zone_config)
     conn.request_cert(request, zone)
     csr = request.csr
     private_key = request.private_key_pem
