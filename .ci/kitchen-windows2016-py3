@@ -15,7 +15,7 @@ def golden_images_branch = 'neon'
 
 // While we don't move the Branch job to Pytest
 def nox_passthrough_opts
-def tests_runner = 'runtests'
+def tests_runner = 'pytest'
 
 if (tests_runner == 'runtests') {
     nox_passthrough_opts = '--unit'
