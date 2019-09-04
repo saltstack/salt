@@ -286,7 +286,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.master_process = start_daemon(
+            self.master_process = start_salt_daemon(
                 daemon_name='salt-master',
                 daemon_id=self.master_opts['id'],
                 daemon_log_prefix='salt-master/{}'.format(self.master_opts['id']),
@@ -323,7 +323,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting salt-minion ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.minion_process = start_daemon(
+            self.minion_process = start_salt_daemon(
                 daemon_name='salt-minion',
                 daemon_id=self.master_opts['id'],
                 daemon_log_prefix='salt-minion/{}'.format(self.minion_opts['id']),
@@ -360,7 +360,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting sub salt-minion ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.sub_minion_process = start_daemon(
+            self.sub_minion_process = start_salt_daemon(
                 daemon_name='sub salt-minion',
                 daemon_id=self.master_opts['id'],
                 daemon_log_prefix='sub-salt-minion/{}'.format(self.sub_minion_opts['id']),
@@ -398,7 +398,7 @@ class TestDaemon(object):
             )
             sys.stdout.flush()
             self.prep_syndic()
-            self.smaster_process = start_daemon(
+            self.smaster_process = start_salt_daemon(
                 daemon_name='salt-smaster',
                 daemon_id=self.syndic_master_opts['id'],
                 daemon_log_prefix='salt-smaster/{}'.format(self.syndic_master_opts['id']),
@@ -435,7 +435,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting salt-syndic ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.syndic_process = start_daemon(
+            self.syndic_process = start_salt_daemon(
                 daemon_name='salt-syndic',
                 daemon_id=self.syndic_opts['id'],
                 daemon_log_prefix='salt-syndic/{}'.format(self.syndic_opts['id']),
@@ -474,7 +474,7 @@ class TestDaemon(object):
                     ' * {LIGHT_YELLOW}Starting salt-proxy ... {ENDC}'.format(**self.colors)
                 )
                 sys.stdout.flush()
-                self.proxy_process = start_daemon(
+                self.proxy_process = start_salt_daemon(
                     daemon_name='salt-proxy',
                     daemon_id=self.proxy_opts['id'],
                     daemon_log_prefix='salt-proxy/{}'.format(self.proxy_opts['id']),

@@ -14,9 +14,6 @@ import pprint
 import shutil
 import tempfile
 import textwrap
-import threading
-import subprocess
-import time
 
 # Import 3rd-party libs
 import psutil
@@ -36,7 +33,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModule
 from tests.support.helpers import get_unused_localhost_port, requires_system_grains
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import patch
-from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase, terminate_process
+from tests.support.processes import SaltDaemonScriptBase, start_test_daemon, terminate_process
 
 log = logging.getLogger(__name__)
 
@@ -74,107 +71,6 @@ _OPTS = {
     'git_pillar_includes': True,
 }
 PROC_TIMEOUT = 10
-
-
-def start_daemon(daemon_cli_script_name,
-                 daemon_config_dir,
-                 daemon_check_port,
-                 daemon_class,
-                 fail_hard=False,
-                 start_timeout=10,
-                 slow_stop=True,
-                 environ=None,
-                 cwd=None,
-                 max_attempts=3,
-                 **kwargs):
-    '''
-    Returns a running process daemon
-    '''
-    log.info('[%s] Starting %s', daemon_class.log_prefix, daemon_class.__name__)
-    attempts = 0
-    process = None
-    while attempts <= max_attempts:  # pylint: disable=too-many-nested-blocks
-        attempts += 1
-        process = daemon_class(str(daemon_config_dir),
-                               daemon_check_port,
-                               cli_script_name=daemon_cli_script_name,
-                               slow_stop=slow_stop,
-                               environ=environ,
-                               cwd=cwd,
-                               **kwargs)
-        process.start()
-        if process.is_alive():
-            try:
-                connectable = process.wait_until_running(timeout=start_timeout)
-                if connectable is False:
-                    connectable = process.wait_until_running(timeout=start_timeout/2)
-                    if connectable is False:
-                        process.terminate()
-                        if attempts >= max_attempts:
-                            raise AssertionError(
-                                'The {} has failed to confirm running status '
-                                'after {} attempts'.format(daemon_class.__name__, attempts))
-                        continue
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception('[%s] %s', daemon_class.log_prefix, exc, exc_info=True)
-                terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-                if attempts >= max_attempts:
-                    raise AssertionError(str(exc))
-                continue
-            # A little breathing before returning the process
-            time.sleep(0.5)
-            log.info(
-                '[%s] The %s is running after %d attempts',
-                daemon_class.log_prefix,
-                daemon_class.__name__,
-                attempts
-            )
-            return process
-        else:
-            terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-            time.sleep(1)
-            continue
-    else:   # pylint: disable=useless-else-on-loop
-            # Wrong, we have a return, its not useless
-        if process is not None:
-            terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-        raise AssertionError(
-            'The {} has failed to start after {} attempts'.format(
-                daemon_class.__name__,
-                attempts-1
-            )
-        )
-
-
-class SaltDaemonScriptBase(_SaltDaemonScriptBase):
-
-    def start(self):
-        '''
-        Start the daemon subprocess
-        '''
-        # Late import
-        log.info('[%s][%s] Starting DAEMON in CWD: %s', self.log_prefix, self.cli_display_name, self.cwd)
-        proc_args = [
-            self.get_script_path(self.cli_script_name)
-        ] + self.get_base_script_args() + self.get_script_args()
-
-        if sys.platform.startswith('win'):
-            # Windows needs the python executable to come first
-            proc_args.insert(0, sys.executable)
-
-        log.info('[%s][%s] Running \'%s\'...', self.log_prefix, self.cli_display_name, ' '.join(proc_args))
-
-        self.init_terminal(proc_args,
-                           env=self.environ,
-                           cwd=self.cwd,
-                           stdout=subprocess.PIPE,
-                           stderr=subprocess.PIPE)
-        self._running.set()
-        if self._process_cli_output_in_thread:
-            process_output_thread = threading.Thread(target=self._process_output_in_thread)
-            process_output_thread.daemon = True
-            process_output_thread.start()
-        return True
 
 
 class UwsgiDaemon(SaltDaemonScriptBase):
@@ -399,7 +295,7 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
                              cls.__name__)
                     cls.sshd_proc = None
             if cls.sshd_proc is None:
-                cls.sshd_proc = start_daemon(cls.sshd_bin, cls.sshd_config_dir, cls.sshd_port, SshdDaemon)
+                cls.sshd_proc = start_test_daemon(cls.sshd_bin, cls.sshd_config_dir, cls.sshd_port, SshdDaemon)
                 log.info('%s: sshd started', cls.__name__)
         except AssertionError:
             cls.tearDownClass()
@@ -529,7 +425,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                                 cls.__name__)
                     cls.uwsgi_proc = None
             if cls.uwsgi_proc is None:
-                cls.uwsgi_proc = start_daemon(cls.uwsgi_bin, cls.config_dir, cls.uwsgi_port, UwsgiDaemon)
+                cls.uwsgi_proc = start_test_daemon(cls.uwsgi_bin, cls.config_dir, cls.uwsgi_port, UwsgiDaemon)
                 log.info('%s: %s started', cls.__name__, cls.uwsgi_bin)
             if cls.nginx_proc is not None:
                 if not psutil.pid_exists(cls.nginx_proc.pid):
@@ -537,7 +433,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
                                 cls.__name__)
                     cls.nginx_proc = None
             if cls.nginx_proc is None:
-                cls.nginx_proc = start_daemon('nginx', cls.config_dir, cls.nginx_port, NginxDaemon)
+                cls.nginx_proc = start_test_daemon('nginx', cls.config_dir, cls.nginx_port, NginxDaemon)
                 log.info('%s: nginx started', cls.__name__)
         except AssertionError:
             cls.tearDownClass()

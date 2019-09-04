@@ -26,7 +26,7 @@ from tests.support.paths import (
         )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.parser import PNUM, print_header
-from tests.support.processes import start_daemon
+from tests.support.processes import start_salt_daemon
 
 # Import Salt libs
 from tests.integration import (
@@ -181,7 +181,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_YELLOW}Starting salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.master_process = start_daemon(
+            self.master_process = start_salt_daemon(
                 daemon_name='salt-master',
                 daemon_id=self.mm_master_opts['id'],
                 daemon_log_prefix='salt-master/{}'.format(self.mm_master_opts['id']),
@@ -225,7 +225,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_YELLOW}Starting second salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.sub_master_process = start_daemon(
+            self.sub_master_process = start_salt_daemon(
                 daemon_name='sub salt-master',
                 daemon_id=self.mm_master_opts['id'],
                 daemon_log_prefix='sub-salt-master/{}'.format(self.mm_sub_master_opts['id']),
@@ -262,7 +262,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_YELLOW}Starting salt-minion ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.minion_process = start_daemon(
+            self.minion_process = start_salt_daemon(
                 daemon_name='salt-minion',
                 daemon_id=self.mm_master_opts['id'],
                 daemon_log_prefix='salt-minion/{}'.format(self.mm_minion_opts['id']),
@@ -299,7 +299,7 @@ class MultimasterTestDaemon(TestDaemon):
                 ' * {LIGHT_YELLOW}Starting sub salt-minion ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
-            self.sub_minion_process = start_daemon(
+            self.sub_minion_process = start_salt_daemon(
                 daemon_name='sub salt-minion',
                 daemon_id=self.mm_master_opts['id'],
                 daemon_log_prefix='sub-salt-minion/{}'.format(self.mm_sub_minion_opts['id']),
