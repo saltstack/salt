@@ -4,7 +4,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.case import MultimasterModuleCase, ShellTestCase
+from tests.support.case import MultimasterModuleCase, MultiMasterTestShellCase
 from tests.support.helpers import skip_if_not_root, destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
@@ -18,7 +18,7 @@ if isinstance(HAS_IPTABLES, tuple):
 @destructiveTest
 @skip_if_not_root
 @skipIf(not HAS_IPTABLES, 'iptables command is not available')
-class TestHandleEvents(MultimasterModuleCase, ShellTestCase, AdaptedConfigurationTestCaseMixin):
+class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the events handling in multimaster environment
     '''
