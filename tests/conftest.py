@@ -18,7 +18,6 @@ import pprint
 import shutil
 import socket
 import logging
-import textwrap
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -57,7 +56,6 @@ import salt.utils.path
 import salt.log.setup
 import salt.log.mixins
 import salt.utils.platform
-from salt.utils.odict import OrderedDict
 from salt.utils.immutabletypes import freeze
 
 # Import Pytest Salt libs
@@ -368,7 +366,7 @@ def pytest_runtest_setup(item):
         if os.getuid() != 0:
             pytest.skip('You must be logged in as root to run this test')
 
-    skip_if_binaries_missing_marker = item.get_marker('skip_if_binaries_missing')
+    skip_if_binaries_missing_marker = item.get_closest_marker('skip_if_binaries_missing')
     if skip_if_binaries_missing_marker is not None:
         binaries = skip_if_binaries_missing_marker.args
         if len(binaries) == 1:
@@ -393,7 +391,7 @@ def pytest_runtest_setup(item):
                 )
             )
 
-    requires_network_marker = item.get_marker('requires_network')
+    requires_network_marker = item.get_closest_marker('requires_network')
     if requires_network_marker is not None:
         only_local_network = requires_network_marker.kwargs.get('only_local_network', False)
         has_local_network = False
