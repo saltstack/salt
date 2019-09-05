@@ -143,6 +143,16 @@ except Exception as exc:
     if not isinstance(exc, ImportError):
         log.exception('Failed to import pygit2')
 
+try:
+    import dulwich
+    DULWICH_VERSION = dulwich.__version__
+except ImportError:
+    DULWICH_VERSION = None
+    log.exception("dulwich is not installed")
+except Exception as exc:
+    DULWICH_VERSION = None
+    log.exception("dulwich faild to import!\n{0}".format(str(exc)))
+
 # pylint: enable=import-error
 
 # Minimum versions for backend providers
@@ -2074,9 +2084,44 @@ class Pygit2(GitProvider):
             fp_.write(blob.data)
 
 
+class Dulwich(GitProvider):
+    def __init__(self, opts, remote, per_remote_defaults, per_remote_only,
+                 override_params, cache_root, role='gitfs'):
+        self.provider = 'dulwich'
+        super(Dulwich, self).__init__(
+            opts, remote, per_remote_defaults, per_remote_only,
+            override_params, cache_root, role
+        )
+
+    def checkout(self):
+        pass
+
+    def dir_list(self, tgt_env):
+        pass
+
+    def _fetch(self):
+        pass
+
+    def envs(self):
+        pass
+
+    def file_list(self, tgt_env):
+        pass
+
+    def find_file(self, path, tgt_env):
+        pass
+
+    def write_file(self, blob, dest):
+        pass
+
+    def init_remote(self):
+        pass
+
+
 GIT_PROVIDERS = {
     'pygit2': Pygit2,
     'gitpython': GitPython,
+    'dulwich': Dulwich
 }
 
 
