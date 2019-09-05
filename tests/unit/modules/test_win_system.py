@@ -6,7 +6,7 @@
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 import types
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -246,14 +246,21 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.win_system.set_system_date_time',
                    MagicMock(side_effect=[False, True])):
             self.assertFalse(win_system.set_system_time("11:31:15 AM"))
+            # TODO rewrite test! This does nothing!!!!! A'lot of test do nothing in this!!!
             self.assertTrue(win_system.set_system_time("11:31:15 AM"))
 
     def test_get_system_date(self):
         '''
             Test to get system date
         '''
-        date = datetime.strftime(datetime.now(), "%m/%d/%Y")
-        self.assertEqual(win_system.get_system_date(), date)
+        datetime_today = datetime.now()
+        datetime_tomorrow = datetime_today + timedelta(days=1)
+        today = datetime.strftime(datetime_today, "%m/%d/%Y")
+        tomorrow = datetime.strftime(datetime_tomorrow, "%m/%d/%Y")
+
+        # we include tomorrow just in case the day changes
+
+        self.assertTrue(win_system.get_system_date() in (today, tomorrow))
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_system_date(self):
