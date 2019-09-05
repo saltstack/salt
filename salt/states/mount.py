@@ -329,6 +329,8 @@ def mounted(name,
             if label_device and label_device not in device_list:
                 device_list.append(label_device)
             if opts:
+                opts.sort()
+
                 mount_invisible_options = [
                     '_netdev',
                     'actimeo',
@@ -594,6 +596,7 @@ def mounted(name,
             else:
                 ret['comment'] = '{0} not mounted'.format(name)
 
+    log.debug('=== here ===')
     if persist:
         if '/etc/fstab' == config:
             # Override default for Mac OS

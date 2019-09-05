@@ -727,6 +727,7 @@ def set_fstab(
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
 
+    log.debug('=== here ===')
     # Fix the opts type if it is a list
     if isinstance(opts, list):
         opts = ','.join(opts)
@@ -763,6 +764,9 @@ def set_fstab(
             'securityfs',
             'devtmpfs',
             'cgroup',
+            'nfs',
+            'nfs4',
+            'glusterfs',
             'btrfs'])
 
         if fstype in specialFSes:
