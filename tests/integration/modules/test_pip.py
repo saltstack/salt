@@ -17,7 +17,7 @@ import tempfile
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import skip_if_not_root, patched_environ
+from tests.support.helpers import patched_environ
 
 # Import salt libs
 import salt.utils.files

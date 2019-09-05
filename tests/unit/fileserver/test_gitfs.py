@@ -149,6 +149,9 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                     raise
 
     def test_per_saltenv_config(self):
+        tmp_file_uri = 'file://'
+        if salt.utils.platform.is_windows():
+            tmp_file_uri += '/'
         opts_override = textwrap.dedent('''
             gitfs_root: salt
 
@@ -172,7 +175,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
                 - saltenv:
                   - baz:
                     - mountpoint: abc
-        '''.format(TMP_FILE_URI))
+        '''.format(tmp_file_uri))
         with patch.dict(gitfs.__opts__, salt.utils.yaml.safe_load(opts_override)):
             git_fs = salt.utils.gitfs.GitFS(
                 gitfs.__opts__,

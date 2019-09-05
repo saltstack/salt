@@ -12,7 +12,6 @@ import logging
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky
-from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.ext import six

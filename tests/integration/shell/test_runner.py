@@ -8,7 +8,6 @@ Tests for the salt-run command
 from __future__ import absolute_import
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin

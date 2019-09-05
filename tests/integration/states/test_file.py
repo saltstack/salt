@@ -465,7 +465,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         file.managed test interface
         '''
-        name = os.path.join(TMP, 'grail_not_scene33')
+        name = os.path.join(RUNTIME_VARS.TMP, 'grail_not_scene33')
         with salt.utils.files.fopen(name, 'wb') as fp_:
             fp_.write(b'test_managed_show_changes_false\n')
 
@@ -1034,7 +1034,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Ensure the file.directory state produces no changes when rerun.
         '''
-        name = os.path.join(TMP, 'a_dir_twice')
+        name = os.path.join(RUNTIME_VARS.TMP, 'a_dir_twice')
 
         if IS_WINDOWS:
             username = os.environ.get('USERNAME', 'Administrators')
@@ -2796,11 +2796,11 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test to ensure we can handle a file with escaped double-quotes
         '''
-        name = os.path.join(TMP, 'issue_51208.txt')
+        name = os.path.join(RUNTIME_VARS.TMP, 'issue_51208.txt')
         ret = self.run_state(
             'file.managed', name=name, source='salt://issue-51208/vimrc.stub'
         )
-        src = os.path.join(BASE_FILES, 'issue-51208', 'vimrc.stub')
+        src = os.path.join(RUNTIME_VARS.BASE_FILES, 'issue-51208', 'vimrc.stub')
         with salt.utils.files.fopen(src, 'r') as fp_:
             master_data = fp_.read()
         with salt.utils.files.fopen(name, 'r') as fp_:
