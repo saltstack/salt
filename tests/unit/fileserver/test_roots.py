@@ -179,7 +179,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 self.opts['file_roots'] = orig_file_roots
 
     def test_dynamic_file_roots(self):
-        dyn_root_dir = tempfile.mkdtemp(dir=TMP)
+        dyn_root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         top_sls = os.path.join(dyn_root_dir, 'top.sls')
         with salt.utils.files.fopen(top_sls, 'w') as fp_:
             fp_.write("{{saltenv}}:\n  '*':\n    - dynamo\n")

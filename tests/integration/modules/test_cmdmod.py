@@ -338,7 +338,7 @@ class CMDModuleTest(ModuleCase):
         or not runas is in use.
         '''
         cmd = 'pwd'
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.chmod(tmp_cwd, 0o711)
 
         cwd_normal = self.run_function('cmd.run_stdout', [cmd], cwd=tmp_cwd).rstrip('\n')
@@ -377,7 +377,7 @@ class CMDModuleTest(ModuleCase):
         buggy behaviour, but its purpose is to ensure that the greater bug of
         running commands after failing to cd does not occur.
         '''
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.chmod(tmp_cwd, 0o700)
 
         with self._ensure_user_exists(self.runas_usr):
