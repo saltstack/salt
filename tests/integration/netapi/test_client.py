@@ -14,6 +14,9 @@ import salt.config
 import salt.netapi
 
 
+CALL_TIMEOUT = 300
+
+
 class NetapiClientTest(TestCase):
     eauth_creds = {
         'username': 'saltdev_auto',
@@ -32,7 +35,12 @@ class NetapiClientTest(TestCase):
         del self.netapi
 
     def test_local(self):
-        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
+        low = {
+            'client': 'local',
+            'tgt': '*',
+            'fun': 'test.ping',
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -44,7 +52,12 @@ class NetapiClientTest(TestCase):
         self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
     def test_local_batch(self):
-        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
+        low = {
+            'client': 'local_batch',
+            'tgt': '*',
+            'fun': 'test.ping',
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -55,7 +68,12 @@ class NetapiClientTest(TestCase):
         self.assertIn({'minion': True}, rets)
 
     def test_local_async(self):
-        low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
+        low = {
+            'client': 'local_async',
+            'tgt': '*',
+            'fun': 'test.ping',
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -75,7 +93,11 @@ class NetapiClientTest(TestCase):
         self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
 
     def test_wheel(self):
-        low = {'client': 'wheel', 'fun': 'key.list_all'}
+        low = {
+            'client': 'wheel',
+            'fun': 'key.list_all',
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -100,7 +122,11 @@ class NetapiClientTest(TestCase):
     def test_wheel_async(self):
         # Give this test a little breathing room
         time.sleep(3)
-        low = {'client': 'wheel_async', 'fun': 'key.list_all'}
+        low = {
+            'client': 'wheel_async',
+            'fun': 'key.list_all',
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -114,14 +140,23 @@ class NetapiClientTest(TestCase):
         # this is problematic for the runnerclient's master_call method if the
         # runner is quick
         #low = {'client': 'runner', 'fun': 'cache.grains'}
-        low = {'client': 'runner', 'fun': 'test.sleep', 'arg': [2]}
+        low = {
+            'client': 'runner',
+            'fun': 'test.sleep',
+            'arg': [2],
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
 
     @skipIf(True, 'This is not testing anything. Skipping for now.')
     def test_runner_async(self):
-        low = {'client': 'runner', 'fun': 'cache.grains'}
+        low = {
+            'client': 'runner',
+            'fun': 'cache.grains',
+            'kwargs': {'timeout': CALL_TIMEOUT},
+        }
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
