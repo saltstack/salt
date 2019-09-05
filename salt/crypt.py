@@ -701,7 +701,6 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
-
         sign_in_payload = self.minion_sign_in_payload()
         try:
             payload = yield channel.send(
@@ -1303,8 +1302,6 @@ class SAuth(AsyncAuth):
             if safe:
                 log.warning('SaltReqTimeoutError: %s', e)
                 return 'retry'
-            if close_channel:
-                channel.close()
             raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
 
         if 'load' in payload:
@@ -1317,8 +1314,6 @@ class SAuth(AsyncAuth):
                             'for this minion on the Salt Master.\nThe Salt '
                             'Minion will attempt to to re-authenicate.'
                         )
-                        if close_channel:
-                            channel.close()
                         return 'retry'
                     else:
                         log.critical(
@@ -1328,13 +1323,9 @@ class SAuth(AsyncAuth):
                             'minion.\nOr restart the Salt Master in open mode to '
                             'clean out the keys. The Salt Minion will now exit.'
                         )
-                        if close_channel:
-                            channel.close()
                         sys.exit(salt.defaults.exitcodes.EX_NOPERM)
                 # has the master returned that its maxed out with minions?
                 elif payload['load']['ret'] == 'full':
-                    if close_channel:
-                        channel.close()
                     return 'full'
                 else:
                     log.error(
@@ -1346,8 +1337,6 @@ class SAuth(AsyncAuth):
                         'to re-authenticate.',
                         self.opts['id'], self.opts['acceptance_wait_time']
                     )
-                    if close_channel:
-                        channel.close()
                     return 'retry'
         auth['aes'] = self.verify_master(payload, master_pub='token' in sign_in_payload)
         if not auth['aes']:
@@ -1360,8 +1349,6 @@ class SAuth(AsyncAuth):
                 'Salt Minion.\nThe master public key can be found '
                 'at:\n%s', salt.version.__version__, m_pub_fn
             )
-            if close_channel:
-                channel.close()
             sys.exit(42)
         if self.opts.get('syndic_master', False):  # Is syndic
             syndic_finger = self.opts.get('syndic_finger', self.opts.get('master_finger', False))
