@@ -1,9 +1,8 @@
 ========================================
-In Progress: Salt 2019.2.1 Release Notes
+Salt 2019.2.1 Release Notes
 ========================================
 
-Version 2019.2.1 is an **unreleased** bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
-This release is still in progress and has not been released yet.
+Version 2019.2.1 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 
 Change to YAML Renderer
 =======================
