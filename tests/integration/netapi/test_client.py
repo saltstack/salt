@@ -39,7 +39,7 @@ class NetapiClientTest(TestCase):
             'client': 'local',
             'tgt': '*',
             'fun': 'test.ping',
-            'kwargs': {'timeout': CALL_TIMEOUT},
+            'timeout': CALL_TIMEOUT,
         }
         low.update(self.eauth_creds)
 
@@ -56,7 +56,7 @@ class NetapiClientTest(TestCase):
             'client': 'local_batch',
             'tgt': '*',
             'fun': 'test.ping',
-            'kwargs': {'timeout': CALL_TIMEOUT},
+            'timeout': CALL_TIMEOUT,
         }
         low.update(self.eauth_creds)
 
@@ -72,7 +72,7 @@ class NetapiClientTest(TestCase):
             'client': 'local_async',
             'tgt': '*',
             'fun': 'test.ping',
-            'kwargs': {'timeout': CALL_TIMEOUT},
+            'timeout': CALL_TIMEOUT,
         }
         low.update(self.eauth_creds)
 
@@ -96,7 +96,6 @@ class NetapiClientTest(TestCase):
         low = {
             'client': 'wheel',
             'fun': 'key.list_all',
-            'kwargs': {'timeout': CALL_TIMEOUT},
         }
         low.update(self.eauth_creds)
 
@@ -125,7 +124,7 @@ class NetapiClientTest(TestCase):
         low = {
             'client': 'wheel_async',
             'fun': 'key.list_all',
-            'kwargs': {'timeout': CALL_TIMEOUT},
+            'timeout': CALL_TIMEOUT,
         }
         low.update(self.eauth_creds)
 
@@ -144,7 +143,7 @@ class NetapiClientTest(TestCase):
             'client': 'runner',
             'fun': 'test.sleep',
             'arg': [2],
-            'kwargs': {'timeout': CALL_TIMEOUT},
+            'timeout': CALL_TIMEOUT,
         }
         low.update(self.eauth_creds)
 
@@ -155,7 +154,7 @@ class NetapiClientTest(TestCase):
         low = {
             'client': 'runner',
             'fun': 'cache.grains',
-            'kwargs': {'timeout': CALL_TIMEOUT},
+            'timeout': CALL_TIMEOUT,
         }
         low.update(self.eauth_creds)
 
