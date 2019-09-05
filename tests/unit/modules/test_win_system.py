@@ -229,14 +229,14 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
             Test to get system time
         '''
-        tm = datetime.strftime(datetime.now(), "%I:%M:%S %p")
+        current_time = datetime.now()
         win_tm = win_system.get_system_time()
-        try:
-            self.assertEqual(win_tm, tm)
-        except AssertionError:
-            # handle race condition
-            import re
-            self.assertTrue(re.search(r'^\d{2}:\d{2} \w{2}$', win_tm))
+
+        times = [current_time]
+        for s in range(1, 11):
+            times.append(current_time + timedelta(seconds=s))
+
+        self.assertTrue(win_tm in [datetime.strftime(tm, "%I:%M:%S %p") for tm in times])
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_system_time(self):
