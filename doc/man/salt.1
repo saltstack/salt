@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "SALT" "1" "Jan 08, 2019" "2019.2.0" "Salt"
+.TH "SALT" "1" "Sep 05, 2019" "2019.2.1" "Salt"
 .SH NAME
 salt \- salt
 .
@@ -37,9 +37,9 @@ salt \(aq*\(aq [ options ] sys.doc
 .sp
 salt \-E \(aq.*\(aq [ options ] sys.doc cmd
 .sp
-salt \-G \(aqos:Arch.*\(aq [ options ] test.ping
+salt \-G \(aqos:Arch.*\(aq [ options ] test.version
 .sp
-salt \-C \fI\%\(aqG@os\fP:Arch.* and webserv* or \fI\%G@kernel\fP:FreeBSD\(aq [ options ] test.ping
+salt \-C \fI\%\(aqG@os\fP:Arch.* and webserv* or \fI\%G@kernel\fP:FreeBSD\(aq [ options ] test.version
 .UNINDENT
 .UNINDENT
 .SH DESCRIPTION
@@ -259,14 +259,11 @@ Pass in an alternative outputter to display the return of data. This
 outputter can be any of the available outputters:
 .INDENT 7.0
 .INDENT 3.5
-\fBgrains\fP, \fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP
+\fBhighstate\fP, \fBjson\fP, \fBkey\fP, \fBoverstatestage\fP, \fBpprint\fP, \fBraw\fP, \fBtxt\fP, \fByaml\fP, and many others\&.
 .UNINDENT
 .UNINDENT
 .sp
-Some outputters are formatted only for data returned from specific
-functions; for instance, the \fBgrains\fP outputter will not work for non\-grains
-data.
-.sp
+Some outputters are formatted only for data returned from specific functions.
 If an outputter is used that does not support the data passed into it, then
 Salt will fall back on the \fBpprint\fP outputter and display the return data
 using the Python \fBpprint\fP standard library module.
