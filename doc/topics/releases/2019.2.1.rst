@@ -43,7 +43,7 @@ Statistics
 - Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_, `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_, `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_, `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_, `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_, `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_, `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_, `waynew`_, `weswhet`_, `xuhcc`_)
 
 Changelog for v2019.2.0..v2019.2.1
-=================================================================
+==================================
 
 *Generated at: 2019-09-05 20:16:31 UTC*
 
