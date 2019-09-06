@@ -1932,12 +1932,12 @@ def fqdns():
     # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
 
     try:
-       pool = ThreadPool(8)
-       results = pool.map(_lookup_fqdn, addresses)
-       pool.close()
-       pool.join()
+        pool = ThreadPool(8)
+        results = pool.map(_lookup_fqdn, addresses)
+        pool.close()
+        pool.join()
     except Exception as exc:
-       log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
+        log.error("Exception while creating a ThreadPool for resolving FQDNs: %s", exc)
 
     for item in results:
         if item:

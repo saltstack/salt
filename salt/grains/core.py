@@ -20,7 +20,6 @@ import platform
 import logging
 import locale
 import uuid
-import time
 from errno import EACCES, EPERM
 import datetime
 import warnings
@@ -105,7 +104,6 @@ if salt.utils.platform.is_windows():
 HAS_UNAME = True
 if not hasattr(os, 'uname'):
     HAS_UNAME = False
-
 
 
 def _windows_cpudata():
@@ -2193,7 +2191,7 @@ def fqdns():
     To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
     '''
     opt = {"fqdns": []}
-    if __opts__.get('enable_fqdns_grains', True) == True:
+    if __opts__.get('enable_fqdns_grains', True) is True:
         opt = __salt__['network.fqdns']()
     return opt
 
