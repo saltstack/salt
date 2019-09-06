@@ -298,13 +298,14 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Ensure gen_modules is called with the correct arguments #54429
         '''
         mock_opts = self.get_config('minion', from_scratch=True)
-        mock_opts['master_uri'] = 'master' #, 'tcp://master:9090'
         io_loop = tornado.ioloop.IOLoop()
         io_loop.make_current()
         minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
-        class MockPillarCompiler():
+
+        class MockPillarCompiler(object):
             def compile_pillar(self):
                 return {}
+
         try:
             with patch('salt.pillar.get_pillar', return_value=MockPillarCompiler()):
                 with patch('salt.loader.executors') as execmock:
@@ -312,7 +313,6 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             assert execmock.called_with(minion.opts, minion.functions)
         finally:
             minion.destroy()
-
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
