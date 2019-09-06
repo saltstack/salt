@@ -797,10 +797,24 @@ def session_master_default_options(request, session_root_dir):
 
 @pytest.fixture(scope='session')
 def session_master_config_overrides(session_root_dir):
+    ext_pillar = []
     if salt.utils.platform.is_windows():
-        ext_pillar = {'cmd_yaml': 'type {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+        ext_pillar.append(
+            {'cmd_yaml': 'type {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+        )
     else:
-        ext_pillar = {'cmd_yaml': 'cat {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+        ext_pillar.append(
+            {'cmd_yaml': 'cat {0}'.format(os.path.join(RUNTIME_VARS.FILES, 'ext.yaml'))}
+        )
+    ext_pillar.append(
+        {'file_tree':
+            {
+                'root_dir':  os.path.join(RUNTIME_VARS.PILLAR_DIR, 'base', 'file_tree'),
+                'follow_dir_links': False,
+                'keep_newline': True
+            }
+        }
+    )
 
     # We need to copy the extension modules into the new master root_dir or
     # it will be prefixed by it
@@ -829,7 +843,7 @@ def session_master_config_overrides(session_root_dir):
 
     return {
         'pillar_opts': True,
-        'ext_pillar': [ext_pillar],
+        'ext_pillar': ext_pillar,
         'extension_modules': extension_modules_path,
         'file_roots': {
             'base': [
