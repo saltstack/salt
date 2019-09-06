@@ -74,13 +74,14 @@ class BaseTCPReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.process_manager = salt.utils.process.ProcessManager(name='ReqServer_ProcessManager')
 
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
-        cls.server_channel.pre_fork(cls.process_manager)
+        def run_in_thread():
+            cls.server_channel.pre_fork(cls.process_manager)
         cls.io_loop = tornado.ioloop.IOLoop()
         cls.stop = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(
             target=run_loop_in_thread,
-            args=(cls.io_loop, cls.stop,),
+            args=(cls.io_loop, cls.stop, [run_in_thread]),
         )
         cls.server_thread.start()
 
