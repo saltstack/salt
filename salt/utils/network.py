@@ -56,7 +56,7 @@ except (ImportError, OSError, AttributeError, TypeError):
 
 
 _INTERFACES = {}
-def _get_interfaces(): #! function
+def _get_interfaces():
     '''
     Provide a dict of the connected interfaces and their ip addresses
     '''
