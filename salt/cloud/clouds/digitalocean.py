@@ -343,7 +343,6 @@ def create(vm_):
 
     if ssh_interface in ['private', 'public']:
         log.info("ssh_interface: Setting interface for ssh to %s", ssh_interface)
-        kwargs['ssh_interface'] = ssh_interface
     else:
         raise SaltCloudConfigError(
             "The DigitalOcean driver requires ssh_interface to be defined as 'public' or 'private'."
