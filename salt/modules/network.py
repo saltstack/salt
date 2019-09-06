@@ -1931,6 +1931,7 @@ def fqdns():
     # This avoid blocking the execution when the "fqdn" is not defined for certains IP addresses, which was causing
     # that "socket.timeout" was reached multiple times secuencially, blocking execution for several seconds.
 
+    results = []
     try:
         pool = ThreadPool(8)
         results = pool.map(_lookup_fqdn, addresses)
