@@ -63,7 +63,7 @@ def base64_encodebytes(instr):
     )
 
 
-def base64_decodestring(instr):
+def base64_decodebytes(instr):
     '''
     Decode a base64-encoded byte-like object using the "modern" Python interface.
     '''
