@@ -27,12 +27,12 @@ class HashutilTestCase(ModuleCase):
         minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         self.hashutil = salt.loader.raw_mod(minion_opts, 'hashutil', None)
 
-    def test_base64_encodestring(self):
-        ret = self.hashutil['hashutil.base64_encodestring'](self.the_string)
+    def test_base64_encodebytes(self):
+        ret = self.hashutil['hashutil.base64_encodebytes'](self.the_string)
         self.assertEqual(ret, self.the_string_base64)
 
-    def test_base64_decodestring(self):
-        ret = self.hashutil['hashutil.base64_decodestring'](self.the_string_base64)
+    def test_base64_decodebytes(self):
+        ret = self.hashutil['hashutil.base64_decodebytes'](self.the_string_base64)
         self.assertEqual(ret, self.the_string)
 
     def test_md5_digest(self):

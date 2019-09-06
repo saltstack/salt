@@ -18,7 +18,7 @@ class HashutilsTestCase(TestCase):
     # raised on Python 2.
     str = 'спам'
     str_b64encode_result = '0YHQv9Cw0Lw='
-    str_encodestring_result = '0YHQv9Cw0Lw=\n'
+    str_encodebytes_result = '0YHQv9Cw0Lw=\n'
     str_md5 = 'a035ac08ab2f03556f9b3ee640052e5c'
     str_sha256 = '095291ffa3d361436d4617879e22c1da06c6ab61a3fb081321ec854a27a091ac'
     str_sha512 = '12efd90e507289f1f21e5dcfe2e92cf0bb4904abccb55c3ce9177670c711981501054b32b807c37058675590d1c484bd2b72a4215a2fa397aa4f2b12f298b1f0'
@@ -28,7 +28,7 @@ class HashutilsTestCase(TestCase):
     # 16 bytes of random data
     bytes = b'b\x19\xf6\x86\x0e\x1a\x1cs\x0c\xda&zv\xfc\xa2\xdd'
     bytes_b64encode_result = 'Yhn2hg4aHHMM2iZ6dvyi3Q=='
-    bytes_encodestring_result = 'Yhn2hg4aHHMM2iZ6dvyi3Q==\n'
+    bytes_encodebytes_result = 'Yhn2hg4aHHMM2iZ6dvyi3Q==\n'
     bytes_md5 = '4d064241724791641dc15930c65f75c8'
     bytes_sha256 = '25711a31c2673a48f3d1f29b25add574697872968e546d266f441de63b17954a'
     bytes_sha512 = '69f1524e602c1599fc374e1e3e2941e6f6949f4f7fe7321304e4e67bb850f3204dd5cbf9c13e231814540c2f5cd370c24ea257771d9fbf311d8f6085bad12b24'
@@ -64,32 +64,32 @@ class HashutilsTestCase(TestCase):
             self.bytes
         )
 
-    def test_base64_encodestring(self):
+    def test_base64_encodebytes(self):
         '''
         Ensure that this function converts the value passed to bytes before
         attempting to encode, avoiding a UnicodeEncodeError on Python 2 and a
         TypeError on Python 3.
         '''
         self.assertEqual(
-            salt.utils.hashutils.base64_encodestring(self.str),
-            self.str_encodestring_result
+            salt.utils.hashutils.base64_encodebytes(self.str),
+            self.str_encodebytes_result
         )
         self.assertEqual(
-            salt.utils.hashutils.base64_encodestring(self.bytes),
-            self.bytes_encodestring_result
+            salt.utils.hashutils.base64_encodebytes(self.bytes),
+            self.bytes_encodebytes_result
         )
 
-    def test_base64_decodestring(self):
+    def test_base64_decodebytes(self):
         '''
         Ensure that this function converts the value passed to a unicode type
         (if possible) on Python 2, and a str type (if possible) on Python 3.
         '''
         self.assertEqual(
-            salt.utils.hashutils.base64_decodestring(self.str_encodestring_result),
+            salt.utils.hashutils.base64_decodebytes(self.str_encodebytes_result),
             self.str
         )
         self.assertEqual(
-            salt.utils.hashutils.base64_decodestring(self.bytes_encodestring_result),
+            salt.utils.hashutils.base64_decodebytes(self.bytes_encodebytes_result),
             self.bytes
         )
 

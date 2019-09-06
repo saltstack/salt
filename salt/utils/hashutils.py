@@ -49,31 +49,26 @@ def base64_b64decode(instr):
         return decoded
 
 
-def base64_encodestring(instr):
+def base64_encodebytes(instr):
     '''
-    Encode a string as base64 using the "legacy" Python interface.
+    Encode a byte-like object as base64 using the "modern" Python interface.
 
-    Among other possible differences, the "legacy" encoder includes
+    Among other possible differences, the "modern" encoder includes
     a newline ('\\n') character after every 76 characters and always
     at the end of the encoded string.
     '''
     return salt.utils.stringutils.to_unicode(
-        base64.encodestring(salt.utils.stringutils.to_bytes(instr)),
+        base64.encodebytes(salt.utils.stringutils.to_bytes(instr)),
         encoding='utf8' if salt.utils.platform.is_windows() else None
     )
 
 
 def base64_decodestring(instr):
     '''
-    Decode a base64-encoded string using the "legacy" Python interface.
+    Decode a base64-encoded byte-like object using the "modern" Python interface.
     '''
-    b = salt.utils.stringutils.to_bytes(instr)
-    try:
-        # PY3
-        decoded = base64.decodebytes(b)
-    except AttributeError:
-        # PY2
-        decoded = base64.decodestring(b)
+    bvalue = salt.utils.stringutils.to_bytes(instr)
+    decoded = base64.decodebytes(bvalue)
     try:
         return salt.utils.stringutils.to_unicode(
             decoded,

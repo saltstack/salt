@@ -113,23 +113,23 @@ def base64_b64decode(instr):
     return salt.utils.hashutils.base64_b64decode(instr)
 
 
-def base64_encodestring(instr):
+def base64_encodebytes(instr):
     '''
-    Encode a string as base64 using the "legacy" Python interface.
+    Encode a byte-like object as base64 using the "modern" Python interface.
 
-    Among other possible differences, the "legacy" encoder includes
+    Among other possible differences, the "modern" encoder includes
     a newline ('\\n') character after every 76 characters and always
-    at the end of the encoded string.
+    at the end of the encoded byte-like object.
 
-    .. versionadded:: 2014.7.0
+    .. versionadded:: Sodium
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_encodestring 'get salted'
+        salt '*' hashutil.base64_encodebytes 'get salted'
     '''
-    return salt.utils.hashutils.base64_encodestring(instr)
+    return salt.utils.hashutils.base64_encodebytes(instr)
 
 
 def base64_encodefile(fname):
@@ -165,20 +165,20 @@ def base64_encodefile(fname):
     return salt.utils.stringutils.to_str(encoded_f.read())
 
 
-def base64_decodestring(instr):
+def base64_decodebytes(instr):
     '''
-    Decode a base64-encoded string using the "legacy" Python interface
+    Decode a base64-encoded byte-like object using the "modern" Python interface
 
-    .. versionadded:: 2014.7.0
+    .. versionadded:: Sodium
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_decodestring instr='Z2V0IHNhbHRlZAo='
+        salt '*' hashutil.base64_decodebytes instr='Z2V0IHNhbHRlZAo='
 
     '''
-    return salt.utils.hashutils.base64_decodestring(instr)
+    return salt.utils.hashutils.base64_decodebytes(instr)
 
 
 def base64_decodefile(instr, outfile):
