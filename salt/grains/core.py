@@ -2344,7 +2344,7 @@ def fqdns():
     # Provides:
     # fqdns
     opt = {"fqdns": []}
-    if __opts__.get("enable_fqdns_grains", True) == True:
+    if __opts__.get("enable_fqdns_grains", True) is True:
         opt = __salt__["network.fqdns"]()
     return opt
 
