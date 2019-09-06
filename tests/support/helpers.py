@@ -207,15 +207,14 @@ def flaky(caller=None, condition=True, attempts=4):
                     if callable(setup):
                         setup()
                 return caller(cls)
-            except SkipTest as exc:
-                cls.skipTest(exc.args[0])
             except Exception as exc:
+                exc_info = sys.exc_info()
                 if not isinstance(exc, (AssertionError, SkipTest)) and log.isEnabledFor(logging.DEBUG):
-                    log.exception(exc, exc_info=True)
+                    log.exception(exc, exc_info=exc_info)
                 if attempt >= attempts -1:
                     # We won't try to run tearDown once the attempts are exhausted
                     # because the regular test runner will do that for us
-                    sys.reraise(*sys.exc_info())
+                    six.reraise(*exc_info)
                 # Run through tearDown again
                 teardown = getattr(cls, 'tearDown', None)
                 if callable(teardown):
