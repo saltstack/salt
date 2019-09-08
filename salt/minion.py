@@ -4,7 +4,7 @@ Routines to set up a minion
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, with_statement, unicode_literals
-import functools
+#import functools
 import os
 import sys
 import copy
@@ -32,7 +32,7 @@ from salt.utils.zeromq import zmq, ZMQ_VERSION_INFO
 import salt.transport.client
 import salt.defaults.exitcodes
 
-from salt.utils.ctx import RequestContext
+#from salt.utils.ctx import RequestContext
 
 # pylint: enable=no-name-in-module,redefined-builtin
 import tornado
@@ -755,6 +755,14 @@ class MinionBase(object):
                         yield pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
+                    if hasattr(self, 'job_q'):
+                        self.job_q.put(
+                            {
+                                'kind': 'master_uri',
+                                'data': self.opts['master_uri'],
+                            }
+                        )
+                        self.is_ready.set()
                     raise tornado.gen.Return((opts['master'], pub_channel))
                 except SaltClientError:
                     if attempts == tries:
@@ -1099,7 +1107,7 @@ class Minion(MinionBase):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None, proc_man=True):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -1112,6 +1120,7 @@ class Minion(MinionBase):
         self.win_proc = []
         self.subprocess_list = salt.utils.process.SubprocessList()
         self.loaded_base_name = loaded_base_name
+        self.is_ready = multiprocessing.Event()
         self.connected = False
         self.restart = False
         # Flag meaning minion has finished initialization including first connect to the master.
@@ -1153,6 +1162,8 @@ class Minion(MinionBase):
                     'for proxy minions. Setting to False'
                 )
                 self.opts['scheduler_before_connect'] = False
+        if not proc_man:
+            return
 
         log.info('Creating minion process manager')
 
@@ -1181,6 +1192,16 @@ class Minion(MinionBase):
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
+        self.job_q = multiprocessing.Queue()
+        self.job_spawner_proc = multiprocessing.Process(
+            target=self.job_spawner,
+            args=(
+                self.job_q,
+                self.opts,
+                self.is_ready,
+            ),
+        )
+        self.job_spawner_proc.start()
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -1592,10 +1613,39 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        with tornado.stack_context.StackContext(functools.partial(RequestContext,
-                                                                  {'data': data, 'opts': opts})):
-            with tornado.stack_context.StackContext(minion_instance.ctx):
-                run_func(minion_instance, opts, data)
+        #with tornado.stack_context.StackContext(functools.partial(RequestContext,
+        #                                                          {'data': data, 'opts': opts})):
+        #    with tornado.stack_context.StackContext(minion_instance.ctx):
+        run_func(minion_instance, opts, data)
+
+    @classmethod
+    def job_spawner(cls, queue, opts, is_ready):
+        minion_instance = cls(opts, proc_man=False)
+        minion_instance._setup_core()
+        payload = queue.get()
+        if payload['kind'] != 'master_uri':
+            raise Exception("NOT MASTER URI")
+        minion_instance.opts['master_uri'] = payload['data']
+        minion_instance.connected = True
+        minion_instance.gen_modules(True)
+        last = time.time()
+        while True:
+            payload = queue.get()
+            if 'kind' not in payload:
+                log.error("Expect kind")
+            if payload['kind'] == 'pillar_update':
+                minion_instance.opts['pillar'] = payload['data']['pillar']
+                minion_instance.opts['grains'] = payload['data']['grains']
+                minion_instance.grains_cache = minion_instance.opts['grains']
+                minion_instance.matchers_refresh()
+                minion_instance.beacons_refresh()
+            elif payload['kind'] == 'payload':
+                minion_instance.handle_payload(payload['data'])
+            else:
+                log.error("unrecognized spawn kind %s", payload['kind'])
+            if time.time() - last >= 10:
+                minion_instance.cleanup_subprocesses()
+                last = time.time()
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -2209,6 +2259,16 @@ class Minion(MinionBase):
                           'One or more masters may be down!')
             finally:
                 async_pillar.destroy()
+        if hasattr(self, 'job_q'):
+            self.job_q.put(
+                {
+                    'kind': 'pillar_update',
+                    'data': {
+                        'pillar': self.opts['pillar'],
+                        'grains': self.opts['grains'],
+                    }
+                }
+            )
         self.matchers_refresh()
         self.beacons_refresh()
         evt = salt.utils.event.get_event('minion', opts=self.opts)
@@ -2552,9 +2612,9 @@ class Minion(MinionBase):
         Clean up subprocesses and spawned threads.
         '''
         # Add an extra fallback in case a forked process leaks through
-        multiprocessing.active_children()
+        #multiprocessing.active_children()
         self.subprocess_list.cleanup()
-        if self.schedule:
+        if hasattr(self, 'schedule') and self.schedule:
             self.schedule.cleanup_subprocesses()
 
     def _setup_core(self):
@@ -2709,7 +2769,7 @@ class Minion(MinionBase):
 
         self.setup_beacons()
         self.setup_scheduler()
-        self.add_periodic_callback('cleanup', self.cleanup_subprocesses)
+        #self.add_periodic_callback('cleanup', self.cleanup_subprocesses)
 
         # schedule the stuff that runs every interval
         ping_interval = self.opts.get('ping_interval', 0) * 60
@@ -2754,6 +2814,11 @@ class Minion(MinionBase):
                 self.destroy()
 
     def _handle_payload(self, payload):
+        self.job_q.put(
+                {'kind': 'payload', 'data': payload}
+        )
+
+    def handle_payload(self, payload):
         if payload is not None and payload['enc'] == 'aes':
             if self._target_load(payload['load']):
                 self._handle_decoded_payload(payload['load'])
@@ -2838,6 +2903,20 @@ class Syndic(Minion):
         self.jids = {}
         self.raw_events = []
         self.pub_future = None
+
+    def _handle_payload(self, payload):
+        if payload is not None and payload['enc'] == 'aes':
+            if self._target_load(payload['load']):
+                self._handle_decoded_payload(payload['load'])
+            elif self.opts['zmq_filtering']:
+                # In the filtering enabled case, we'd like to know when minion sees something it shouldnt
+                log.trace(
+                    'Broadcast message received not for this minion, Load: %s',
+                    payload['load']
+                )
+        # If it's not AES, and thus has not been verified, we do nothing.
+        # In the future, we could add support for some clearfuncs, but
+        # the minion currently has no need.
 
     def _handle_decoded_payload(self, data):
         '''

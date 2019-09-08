@@ -24,6 +24,7 @@ def run_loop_in_thread(loop, evt, run_methods=None):
     loop.make_current()
     for method in run_methods or []:
         method()
+
     @tornado.gen.coroutine
     def stopper():
         while True:
@@ -31,6 +32,7 @@ def run_loop_in_thread(loop, evt, run_methods=None):
                 loop.stop()
                 break
             yield tornado.gen.sleep(.3)
+
     loop.add_callback(stopper)
     try:
         loop.start()

@@ -132,7 +132,7 @@ class IOLoop(object):
             loop._salt_pid = os.getpid()
             loop._salt_close_called = False
         # TODO: We should not have to do this, it's happening because we're
-        # instaniating the loop in a different thread thand where we start it.
+        # instaniating the loop in a different thread than where we start it.
         #if hasattr(loop, '_callbacks') and loop._callbacks is None:
         #    loop._callbacks = []
         return loop
@@ -250,12 +250,6 @@ class SyncWrapper(object):
             set(close_methods + getattr(self.obj, 'close_methods', []))
         )
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, tb):
-        self.close()
-
     def _populate_async_methods(self):
         '''
         We need the '_coroutines' attribute on classes until we can depricate
@@ -322,5 +316,5 @@ class SyncWrapper(object):
     def __enter__(self):
         return self
 
-    def __exit__(self):
+    def __exit__(self, exc_type, exc_val, tb):
         self.stop()

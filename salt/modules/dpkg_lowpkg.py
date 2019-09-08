@@ -266,7 +266,7 @@ def _get_pkg_info(*packages, **kwargs):
     if kwargs:
         salt.utils.args.invalid_kwargs(kwargs)
 
-    if __grains__['os'] == 'Ubuntu' and __grains__['osrelease_info'] < (12, 4):
+    if __grains__['os'] == 'Ubuntu' and tuple(__grains__['osrelease_info']) < (12, 4):
         bin_var = '${binary}'
     else:
         bin_var = '${Package}'

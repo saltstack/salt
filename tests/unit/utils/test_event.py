@@ -40,54 +40,6 @@ if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
     NO_LONG_IPC = True
 
 
-@contextmanager
-def eventpublisher_process():
-    proc = salt.utils.event.EventPublisher({'sock_dir': SOCK_DIR})
-    proc.start()
-    try:
-        if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
-            # Travis is slow
-            time.sleep(10)
-        else:
-            time.sleep(2)
-        yield
-    finally:
-        proc.close()
-        clean_proc(proc)
-
-
-class EventSender(Process):
-    def __init__(self, data, tag, wait):
-        super(EventSender, self).__init__()
-        self.data = data
-        self.tag = tag
-        self.wait = wait
-
-    def run(self):
-        me = salt.utils.event.MasterEvent(SOCK_DIR, listen=False)
-        try:
-            time.sleep(self.wait)
-            me.fire_event(self.data, self.tag)
-            # Wait a few seconds before tearing down the zmq context
-            if os.environ.get('TRAVIS_PYTHON_VERSION', None) is not None:
-                # Travis is slow
-                time.sleep(10)
-            else:
-                time.sleep(2)
-        finally:
-            me.destroy()
-
-
-@contextmanager
-def eventsender_process(data, tag, wait=0):
-    proc = EventSender(data, tag, wait)
-    proc.start()
-    try:
-        yield
-    finally:
-        clean_proc(proc)
-
-
 @skipIf(NO_LONG_IPC, "This system does not support long IPC paths. Skipping event tests!")
 class TestSaltEvent(TestCase):
     def setUp(self):
@@ -323,7 +275,7 @@ class TestSaltEvent(TestCase):
     def test_event_many_backlog(self):
         '''Test a large number of events, send all then recv all'''
         with eventpublisher_process(self.sock_dir):
-            with salt.utils.event.MasterEvent(SOCK_DIR, listen=True) as me:
+            with salt.utils.event.MasterEvent(self.sock_dir, listen=True) as me:
                 try:
                     # Must not exceed zmq HWM
                     for i in range(500):

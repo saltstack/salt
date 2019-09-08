@@ -20,13 +20,6 @@ class LocalChannel(ReqChannel):
         self.kwargs = kwargs
         self.tries = 0
 
-    def close(self):
-        '''
-        Close the local channel.
-
-        Currently a NOOP
-        '''
-
     def send(self, load, tries=3, timeout=60, raw=False):
 
         if self.tries == 0:
@@ -57,6 +50,7 @@ class LocalChannel(ReqChannel):
 
     def close(self):
         '''
-        No-op close method, exists for api compatability with other req channels
+        No-op close method, exists for api compatability with other req
+        channels.
         '''
         pass

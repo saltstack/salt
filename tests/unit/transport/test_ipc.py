@@ -49,7 +49,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
             self.socket_path,
-            io_loop=salt.utils.asynchronous.IOLoop(),
+            io_loop=self.io_loop,
             payload_handler=self._handle_payload,
         )
         self.server_channel.start()
@@ -94,7 +94,7 @@ class IPCMessageClient(BaseIPCReqCase):
         if not hasattr(self, 'channel') or self.channel is None:
             self.channel = salt.transport.ipc.IPCMessageClient(
                 socket_path=self.socket_path,
-                io_loop=salt.utils.asynchronous.IOLoop(),
+                io_loop=self.io_loop,
             )
             self.channel.connect(callback=self.stop)
             self.wait()
@@ -184,6 +184,9 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
     '''
     Test all of the clear msg stuff
     '''
+    def get_new_ioloop(self):
+        return salt.utils.asynchronous.IOLoop()
+
     def setUp(self):
         super(IPCMessagePubSubCase, self).setUp()
         self.opts = {'ipc_write_buffer': 0}
@@ -225,6 +228,7 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
         os.unlink(self.socket_path)
         del self.pub_channel
         del self.sub_channel
+        self.io_loop.real_close()
 
     def test_multi_client_reading(self):
         # To be completely fair let's create 2 clients.
