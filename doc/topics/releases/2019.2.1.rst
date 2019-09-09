@@ -4008,7 +4008,7 @@ Changelog for v2019.2.0..v2019.2.1
 
             * 64d8451 Use default file module
 
-            * 886ef19 Fix name of makedirs_ method
+            * 886ef19 Fix name of makedirs\_ method
 
             * 4cc5f77 Check for path to be a symlink
 
