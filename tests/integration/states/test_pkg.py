@@ -470,21 +470,27 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    def test_pkg_009_latest_with_epoch(self):
+    @requires_system_grains
+    def test_pkg_009_latest_with_epoch(self, grains=None):
         '''
         This tests for the following issue:
         https://github.com/saltstack/salt/issues/31014
 
         This is a destructive test as it installs a package
         '''
+        test_name = 'bash-completion'
+        if grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2:
+            test_name = 'bash-doc'
+
         ret = self.run_state('pkg.installed',
-                             name='bash-completion',
+                             name=test_name,
                              refresh=False)
         self.assertSaltTrueReturn(ret)
 
     @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @requires_salt_modules('pkg.info_installed')
-    def test_pkg_010_latest_with_epoch_and_info_installed(self):
+    @requires_system_grains
+    def test_pkg_010_latest_with_epoch_and_info_installed(self, grains=None):
         '''
         Need to check to ensure the package has been
         installed after the pkg_latest_epoch sls
@@ -493,6 +499,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         decorator to only the pkg.info_installed command.
         '''
         package = 'bash-completion'
+        if grains.get('os') == 'Amazon' and grains.get('osmajorrelease') != 2:
+            package = 'bash-doc'
+
         pkgquery = 'version'
 
         ret = self.run_function('pkg.info_installed', [package])

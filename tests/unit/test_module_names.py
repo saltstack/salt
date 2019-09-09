@@ -116,6 +116,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'unit.test_virtualname',
             'unit.test_simple',
             'unit.test_zypp_plugins',
+            'unit.test_proxy_minion',
             'unit.cache.test_cache',
             'unit.serializers.test_serializers',
             'unit.states.test_postgres',
@@ -191,6 +192,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.states.test_match',
             'integration.states.test_renderers',
             'integration.wheel.test_client',
+            'multimaster.minion.test_event',
         )
         errors = []
 

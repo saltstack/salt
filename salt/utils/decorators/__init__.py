@@ -132,7 +132,7 @@ class Depends(object):
         return retcode
 
     @classmethod
-    def enforce_dependencies(cls, functions, kind):
+    def enforce_dependencies(cls, functions, kind, tgt_mod):
         '''
         This is a class global method to enforce the dependencies that you
         currently know about.
@@ -141,6 +141,8 @@ class Depends(object):
         '''
         for dependency, dependent_dict in six.iteritems(cls.dependency_dict[kind]):
             for (mod_name, func_name), (frame, params) in six.iteritems(dependent_dict):
+                if mod_name != tgt_mod:
+                    continue
                 if 'retcode' in params or 'nonzero_retcode' in params:
                     try:
                         retcode = cls.run_command(dependency, mod_name, func_name)

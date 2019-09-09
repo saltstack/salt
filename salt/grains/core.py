@@ -24,6 +24,7 @@ import zlib
 from errno import EACCES, EPERM
 import datetime
 import warnings
+import time
 
 # pylint: disable=import-error
 try:
@@ -2154,8 +2155,17 @@ def locale_info():
         grains['locale_info']['defaultlanguage'] = 'unknown'
         grains['locale_info']['defaultencoding'] = 'unknown'
     grains['locale_info']['detectedencoding'] = __salt_system_encoding__
+
+    grains['locale_info']['timezone'] = 'unknown'
     if _DATEUTIL_TZ:
-        grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
+        try:
+            grains['locale_info']['timezone'] = datetime.datetime.now(dateutil.tz.tzlocal()).tzname()
+        except UnicodeDecodeError:
+            # Because the method 'tzname' is not a part of salt the decoding error cant be fixed.
+            # The error is in datetime in the python2 lib
+            if salt.utils.platform.is_windows():
+                grains['locale_info']['timezone'] = time.tzname[0].decode('mbcs')
+
     return grains
 
 
@@ -2227,7 +2237,7 @@ def fqdns():
 
     addresses = salt.utils.network.ip_addrs(include_loopback=False, interface_data=_get_interfaces())
     addresses.extend(salt.utils.network.ip_addrs6(include_loopback=False, interface_data=_get_interfaces()))
-    err_message = 'Exception during resolving address: %s'
+    err_message = 'An exception occurred resolving address \'%s\': %s'
     for ip in addresses:
         try:
             name, aliaslist, addresslist = socket.gethostbyaddr(ip)
@@ -2237,9 +2247,9 @@ def fqdns():
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
-                log.error(err_message, err)
+                log.error(err_message, ip, err)
         except (socket.error, socket.gaierror, socket.timeout) as err:
-            log.error(err_message, err)
+            log.error(err_message, ip, err)
 
     return {"fqdns": sorted(list(fqdns))}
 

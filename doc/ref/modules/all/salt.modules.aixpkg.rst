@@ -1,5 +1,6 @@
-salt.modules.aixpkg module
-==========================
+===================
+salt.modules.aixpkg
+===================
 
 .. automodule:: salt.modules.aixpkg
     :members:

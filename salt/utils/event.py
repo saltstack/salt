@@ -380,9 +380,9 @@ class SaltEvent(object):
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 if self.subscriber is None:
                     self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                    self.puburi,
-                    io_loop=self.io_loop
-                )
+                        self.puburi,
+                        io_loop=self.io_loop
+                    )
                 try:
                     self.io_loop.run_sync(
                         lambda: self.subscriber.connect(timeout=timeout))
@@ -392,9 +392,9 @@ class SaltEvent(object):
         else:
             if self.subscriber is None:
                 self.subscriber = salt.transport.ipc.IPCMessageSubscriber(
-                self.puburi,
-                io_loop=self.io_loop
-            )
+                    self.puburi,
+                    io_loop=self.io_loop
+                )
 
             # For the asynchronous case, the connect will be defered to when
             # set_event_handler() is invoked.
@@ -557,7 +557,6 @@ class SaltEvent(object):
                 # IPCMessageSubscriber.read_sync() uses this type of timeout.
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-
                 raw = self.subscriber.read_sync(timeout=wait)
                 if raw is None:
                     break
@@ -639,6 +638,7 @@ class SaltEvent(object):
         request, it MUST subscribe the result to ensure the response is not lost
         should other regions of code call get_event for other purposes.
         '''
+        log.trace("Get event. tag: %s", tag)
         assert self._run_io_loop_sync
 
         match_func = self._get_match_func(match_type)
@@ -1277,7 +1277,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 # potentially huge dataset to a string
                 if log.level <= logging.DEBUG:
                     log.debug('Event data that caused an exception: %s',
-                              self.event_queue)
+                        self.event_queue)
         else:
             log.error('Could not store return for event(s) - returner '
                       '\'%s\' not found.', event_return)

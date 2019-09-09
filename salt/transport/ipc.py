@@ -171,11 +171,16 @@ class IPCServer(object):
                 return return_message
             else:
                 return _null
-        if six.PY2:
-            encoding = None
+        # msgpack deprecated `encoding` starting with version 0.5.2
+        if msgpack.version >= (0, 5, 2):
+            # Under Py2 we still want raw to be set to True
+            msgpack_kwargs = {'raw': six.PY2}
         else:
-            encoding = 'utf-8'
-        unpacker = msgpack.Unpacker(encoding=encoding)
+            if six.PY2:
+                msgpack_kwargs = {'encoding': None}
+            else:
+                msgpack_kwargs = {'encoding': 'utf-8'}
+        unpacker = msgpack.Unpacker(**msgpack_kwargs)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -261,11 +266,16 @@ class IPCClient(object):
         self.socket_path = socket_path
         self._closing = False
         self.stream = None
-        if six.PY2:
-            encoding = None
+        # msgpack deprecated `encoding` starting with version 0.5.2
+        if msgpack.version >= (0, 5, 2):
+            # Under Py2 we still want raw to be set to True
+            msgpack_kwargs = {'raw': six.PY2}
         else:
-            encoding = 'utf-8'
-        self.unpacker = msgpack.Unpacker(encoding=encoding)
+            if six.PY2:
+                msgpack_kwargs = {'encoding': None}
+            else:
+                msgpack_kwargs = {'encoding': 'utf-8'}
+        self.unpacker = msgpack.Unpacker(**msgpack_kwargs)
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -623,7 +633,6 @@ class IPCMessageSubscriber(IPCClient):
         except tornado.gen.TimeoutError:
             raise tornado.gen.Return(None)
 
-        log.debug('IPC Subscriber is starting reading')
         exc_to_raise = None
         ret = None
         try:

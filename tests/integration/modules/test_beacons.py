@@ -199,6 +199,16 @@ class BeaconsTest(ModuleCase):
         else:
             self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}]})
 
+    def test_list_available(self):
+        '''
+        Test listing the beacons
+        '''
+        # list beacons
+        ret = self.run_function('beacons.list_available',
+                                return_yaml=False,
+                                f_timeout=300)
+        self.assertTrue(ret)
+
 
 class BeaconsWithBeaconTypeTest(ModuleCase):
     '''

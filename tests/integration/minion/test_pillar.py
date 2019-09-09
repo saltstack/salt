@@ -139,13 +139,45 @@ secrets:
 GPG_PILLAR_ENCRYPTED = {
     'secrets': {
         'vault': {
-            'foo': '-----BEGIN PGP MESSAGE-----\n\nhQEMAw2B674HRhwSAQgAhTrN8NizwUv/VunVrqa4/X8t6EUulrnhKcSeb8sZS4th\nW1Qz3K2NjL4lkUHCQHKZVx/VoZY7zsddBIFvvoGGfj8+2wjkEDwFmFjGE4DEsS74\nZLRFIFJC1iB/O0AiQ+oU745skQkU6OEKxqavmKMrKo3rvJ8ZCXDC470+i2/Hqrp7\n+KWGmaDOO422JaSKRm5D9bQZr9oX7KqnrPG9I1+UbJyQSJdsdtquPWmeIpamEVHb\nVMDNQRjSezZ1yKC4kCWm3YQbBF76qTHzG1VlLF5qOzuGI9VkyvlMaLfMibriqY73\nzBbPzf6Bkp2+Y9qyzuveYMmwS4sEOuZL/PetqisWe9JGAWD/O+slQ2KRu9hNww06\nKMDPJRdyj5bRuBVE4hHkkP23KrYr7SuhW2vpe7O/MvWEJ9uDNegpMLhTWruGngJh\niFndxegN9w==\n=bAuo\n-----END PGP MESSAGE-----\n',
+            'foo': '-----BEGIN PGP MESSAGE-----\n'
+                   '\n'
+                   'hQEMAw2B674HRhwSAQgAhTrN8NizwUv/VunVrqa4/X8t6EUulrnhKcSeb8sZS4th\n'
+                   'W1Qz3K2NjL4lkUHCQHKZVx/VoZY7zsddBIFvvoGGfj8+2wjkEDwFmFjGE4DEsS74\n'
+                   'ZLRFIFJC1iB/O0AiQ+oU745skQkU6OEKxqavmKMrKo3rvJ8ZCXDC470+i2/Hqrp7\n'
+                   '+KWGmaDOO422JaSKRm5D9bQZr9oX7KqnrPG9I1+UbJyQSJdsdtquPWmeIpamEVHb\n'
+                   'VMDNQRjSezZ1yKC4kCWm3YQbBF76qTHzG1VlLF5qOzuGI9VkyvlMaLfMibriqY73\n'
+                   'zBbPzf6Bkp2+Y9qyzuveYMmwS4sEOuZL/PetqisWe9JGAWD/O+slQ2KRu9hNww06\n'
+                   'KMDPJRdyj5bRuBVE4hHkkP23KrYr7SuhW2vpe7O/MvWEJ9uDNegpMLhTWruGngJh\n'
+                   'iFndxegN9w==\n'
+                   '=bAuo\n'
+                   '-----END PGP MESSAGE-----\n',
             'bar': 'this was unencrypted already',
-            'baz': '-----BEGIN PGP MESSAGE-----\n\nhQEMAw2B674HRhwSAQf+Ne+IfsP2IcPDrUWct8sTJrga47jQvlPCmO+7zJjOVcqz\ngLjUKvMajrbI/jorBWxyAbF+5E7WdG9WHHVnuoywsyTB9rbmzuPqYCJCe+ZVyqWf\n9qgJ+oUjcvYIFmH3h7H68ldqbxaAUkAOQbTRHdr253wwaTIC91ZeX0SCj64HfTg7\nIzwk383CRWonEktXJpientApQFSUWNeLUWagEr/YPNFA3vzpPF5/Ia9X8/z/6oO2\nq+D5W5mVsns3i2HHbg2A8Y+pm4TWnH6mTSh/gdxPqssi9qIrzGQ6H1tEoFFOEq1V\nkJBe0izlfudqMq62XswzuRB4CYT5Iqw1c97T+1RqENJCASG0Wz8AGhinTdlU5iQl\nJkLKqBxcBz4L70LYWyHhYwYROJWjHgKAywX5T67ftq0wi8APuZl9olnOkwSK+wrY\n1OZi\n=7epf\n-----END PGP MESSAGE-----\n',
+            'baz': '-----BEGIN PGP MESSAGE-----\n'
+                   '\n'
+                   'hQEMAw2B674HRhwSAQf+Ne+IfsP2IcPDrUWct8sTJrga47jQvlPCmO+7zJjOVcqz\n'
+                   'gLjUKvMajrbI/jorBWxyAbF+5E7WdG9WHHVnuoywsyTB9rbmzuPqYCJCe+ZVyqWf\n'
+                   '9qgJ+oUjcvYIFmH3h7H68ldqbxaAUkAOQbTRHdr253wwaTIC91ZeX0SCj64HfTg7\n'
+                   'Izwk383CRWonEktXJpientApQFSUWNeLUWagEr/YPNFA3vzpPF5/Ia9X8/z/6oO2\n'
+                   'q+D5W5mVsns3i2HHbg2A8Y+pm4TWnH6mTSh/gdxPqssi9qIrzGQ6H1tEoFFOEq1V\n'
+                   'kJBe0izlfudqMq62XswzuRB4CYT5Iqw1c97T+1RqENJCASG0Wz8AGhinTdlU5iQl\n'
+                   'JkLKqBxcBz4L70LYWyHhYwYROJWjHgKAywX5T67ftq0wi8APuZl9olnOkwSK+wrY\n'
+                   '1OZi\n'
+                   '=7epf\n'
+                   '-----END PGP MESSAGE-----\n',
             'qux': [
                 'foo',
                 'bar',
-                '-----BEGIN PGP MESSAGE-----\n\nhQEMAw2B674HRhwSAQgAg1YCmokrweoOI1c9HO0BLamWBaFPTMblOaTo0WJLZoTS\nksbQ3OJAMkrkn3BnnM/djJc5C7vNs86ZfSJ+pvE8Sp1Rhtuxh25EKMqGOn/SBedI\ngR6N5vGUNiIpG5Tf3DuYAMNFDUqw8uY0MyDJI+ZW3o3xrMUABzTH0ew+Piz85FDA\nYrVgwZfqyL+9OQuu6T66jOIdwQNRX2NPFZqvon8liZUPus5VzD8E5cAL9OPxQ3sF\nf7/zE91YIXUTimrv3L7eCgU1dSxKhhfvA2bEUi+AskMWFXFuETYVrIhFJAKnkFmE\nuZx+O9R9hADW3hM5hWHKH9/CRtb0/cC84I9oCWIQPdI+AaPtICxtsD2N8Q98hhhd\n4M7I0sLZhV+4ZJqzpUsOnSpaGyfh1Zy/1d3ijJi99/l+uVHuvmMllsNmgR+ZTj0=\n=LrCQ\n-----END PGP MESSAGE-----\n'
+                '-----BEGIN PGP MESSAGE-----\n'
+                '\n'
+                'hQEMAw2B674HRhwSAQgAg1YCmokrweoOI1c9HO0BLamWBaFPTMblOaTo0WJLZoTS\n'
+                'ksbQ3OJAMkrkn3BnnM/djJc5C7vNs86ZfSJ+pvE8Sp1Rhtuxh25EKMqGOn/SBedI\n'
+                'gR6N5vGUNiIpG5Tf3DuYAMNFDUqw8uY0MyDJI+ZW3o3xrMUABzTH0ew+Piz85FDA\n'
+                'YrVgwZfqyL+9OQuu6T66jOIdwQNRX2NPFZqvon8liZUPus5VzD8E5cAL9OPxQ3sF\n'
+                'f7/zE91YIXUTimrv3L7eCgU1dSxKhhfvA2bEUi+AskMWFXFuETYVrIhFJAKnkFmE\n'
+                'uZx+O9R9hADW3hM5hWHKH9/CRtb0/cC84I9oCWIQPdI+AaPtICxtsD2N8Q98hhhd\n'
+                '4M7I0sLZhV+4ZJqzpUsOnSpaGyfh1Zy/1d3ijJi99/l+uVHuvmMllsNmgR+ZTj0=\n'
+                '=LrCQ\n'
+                '-----END PGP MESSAGE-----\n'
             ],
         },
     },
@@ -415,7 +447,15 @@ class DecryptGPGPillarTest(_CommonBase):
             'Failed to decrypt pillar key \'secrets:vault\': Decryption '
             'renderer \'asdf\' is not available'
         ]
-        self.assertEqual(ret, expected)
+        self.assertEqual(ret['_errors'], expected['_errors'])
+        self.assertEqual(ret['secrets']['vault']['foo'],
+                         expected['secrets']['vault']['foo'])
+        self.assertEqual(ret['secrets']['vault']['bar'],
+                         expected['secrets']['vault']['bar'])
+        self.assertEqual(ret['secrets']['vault']['baz'],
+                         expected['secrets']['vault']['baz'])
+        self.assertEqual(ret['secrets']['vault']['qux'],
+                         expected['secrets']['vault']['qux'])
 
     @requires_system_grains
     def test_decrypt_pillar_invalid_renderer(self, grains=None):
@@ -440,4 +480,12 @@ class DecryptGPGPillarTest(_CommonBase):
             'Failed to decrypt pillar key \'secrets:vault\': \'gpg\' is '
             'not a valid decryption renderer. Valid choices are: foo, bar'
         ]
-        self.assertEqual(ret, expected)
+        self.assertEqual(ret['_errors'], expected['_errors'])
+        self.assertEqual(ret['secrets']['vault']['foo'],
+                         expected['secrets']['vault']['foo'])
+        self.assertEqual(ret['secrets']['vault']['bar'],
+                         expected['secrets']['vault']['bar'])
+        self.assertEqual(ret['secrets']['vault']['baz'],
+                         expected['secrets']['vault']['baz'])
+        self.assertEqual(ret['secrets']['vault']['qux'],
+                         expected['secrets']['vault']['qux'])

@@ -86,10 +86,6 @@ class NonBlockingPopen(subprocess.Popen):
                 self._stderr_logger_name_.format(pid=self.pid)
             )
 
-        self._stderr_logger = logging.getLogger(
-            self._stderr_logger_name_.format(pid=self.pid)
-        )
-
         log.info(
             'Running command under pid %s: \'%s\'',
             self.pid,

@@ -2,8 +2,6 @@
 
 # Import python libs
 from __future__ import absolute_import
-import os
-import shutil
 import time
 
 # Import Salt Testing libs
@@ -27,7 +25,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt matchers
     '''
-    _call_binary_ = 'salt'
 
     def test_list(self):
         '''
@@ -153,6 +150,23 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt("-N multiline_nodegroup test.ping")
         self.assertTrue(minion_in_returns('minion', data))
         self.assertTrue(minion_in_returns('sub_minion', data))
+
+    def test_nodegroup_list(self):
+        data = self.run_salt('-N list_group test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N list_group2 test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N one_list_group test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N one_minion_list test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
 
     def test_glob(self):
         '''
@@ -347,44 +361,3 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_salt('-d minion salt ldap.search "filter=ou=People"', catch_stderr=True)
         self.assertIn('You can only get documentation for one method at one time', '\n'.join(data[1]))
-
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
-    def test_issue_7754(self):
-        '''
-        Skip on Windows because Syslog is not installed
-        '''
-        old_cwd = os.getcwd()
-        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        os.chdir(config_dir)
-
-        config_file_name = 'master'
-        with salt.utils.files.fopen(self.get_config_file_path(config_file_name), 'r') as fhr:
-            config = salt.utils.yaml.safe_load(fhr)
-            config['log_file'] = 'file:///dev/log/LOG_LOCAL3'
-            with salt.utils.files.fopen(os.path.join(config_dir, config_file_name), 'w') as fhw:
-                salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
-        ret = self.run_script(
-            self._call_binary_,
-            '--config-dir {0} minion test.ping'.format(
-                config_dir
-            ),
-            timeout=60,
-            catch_stderr=True,
-            with_retcode=True
-        )
-        try:
-            self.assertIn('minion', '\n'.join(ret[0]))
-            self.assertFalse(os.path.isdir(os.path.join(config_dir, 'file:')))
-        except AssertionError:
-            # We now fail when we're unable to properly set the syslog logger
-            self.assertIn(
-                'Failed to setup the Syslog logging handler', '\n'.join(ret[1])
-            )
-            self.assertEqual(ret[2], 2)
-        finally:
-            self.chdir(old_cwd)
-            if os.path.isdir(config_dir):
-                shutil.rmtree(config_dir)

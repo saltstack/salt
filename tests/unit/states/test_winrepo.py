@@ -46,6 +46,8 @@ class MockRunnerClient(object):
             '''
                 Mock cmd method
             '''
+            # TODO: Figure out how to have this return an empty dict or a dict
+            # TODO: with expected data
             return []
 
 
@@ -64,29 +66,54 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to refresh the winrepo.p file of the repository
         '''
-        ret = {'name': 'salt',
-               'changes': {},
-               'result': False,
-               'comment': ''}
-        ret.update({'comment': '{0} is missing'.format(
-            os.sep.join([BASE_FILE_ROOTS_DIR, 'win', 'repo']))})
-        self.assertDictEqual(winrepo.genrepo('salt'), ret)
+        expected = {'name': 'salt',
+                    'changes': {},
+                    'result': False,
+                    'comment': ''}
+        mock_config = MagicMock(return_value={'winrepo_dir': 'salt',
+                                              'winrepo_cachefile': 'abc'})
+        mock_stat = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
+        mock_empty_list = MagicMock(return_value=[])
+        with patch.object(salt.config, 'master_config', mock_config), \
+                patch.object(os, 'stat', mock_stat), \
+                patch.object(salt.utils.path, 'os_walk', mock_empty_list), \
+                patch.dict(winrepo.__opts__, {'test': True}):
+            # With test=True
+            expected.update({'comment': '', 'result': None})
+            self.assertDictEqual(winrepo.genrepo('salt'), expected)
 
-        mock = MagicMock(return_value={'winrepo_dir': 'salt',
-                                       'winrepo_cachefile': 'abc'})
-        with patch.object(salt.config, 'master_config', mock):
-            mock = MagicMock(return_value=[0, 1, 2, 3, 4, 5, 6, 7, 8])
-            with patch.object(os, 'stat', mock):
-                mock = MagicMock(return_value=[])
-                with patch.object(salt.utils.path, 'os_walk', mock):
-                    with patch.dict(winrepo.__opts__, {'test': True}):
-                        ret.update({'comment': '', 'result': None})
-                        self.assertDictEqual(winrepo.genrepo('salt'), ret)
+            with patch.dict(winrepo.__opts__, {'test': False}):
+                # With test=False
+                expected.update({'result': True})
+                self.assertDictEqual(winrepo.genrepo('salt'), expected)
 
-                    with patch.dict(winrepo.__opts__, {'test': False}):
-                        ret.update({'result': True})
-                        self.assertDictEqual(winrepo.genrepo('salt'), ret)
+                # Now with no changes, existing winrepo.p
+                expected.update({'changes': {'winrepo': []}})
+                self.assertDictEqual(winrepo.genrepo('salt', True), expected)
 
-                        ret.update({'changes': {'winrepo': []}})
-                        self.assertDictEqual(winrepo.genrepo('salt', True),
-                                             ret)
+    def test_genrepo_no_dir(self):
+        '''
+        Test genrepo when the dir does not exist
+        '''
+        expected = {'name': 'salt',
+                    'changes': {},
+                    'result': False,
+                    'comment': '{0} is missing'.format(
+                        os.sep.join([BASE_FILE_ROOTS_DIR, 'win', 'repo']))}
+        with patch.dict(winrepo.__opts__, {'test': False}), \
+                patch('os.path.exists', MagicMock(return_value=False)):
+            ret = winrepo.genrepo('salt')
+            self.assertDictEqual(ret, expected)
+
+    def test_genrepo_no_dir_force(self):
+        '''
+        Test genrepo when the dir does not exist and force=True
+        '''
+        expected = {'name': 'salt',
+                    'changes': {'winrepo': []},
+                    'result': True,
+                    'comment': ''}
+        with patch.dict(winrepo.__opts__, {'test': False}), \
+                patch('os.path.exists', MagicMock(return_value=False)):
+            ret = winrepo.genrepo('salt', force=True)
+            self.assertDictEqual(ret, expected)

@@ -47,6 +47,37 @@ TARGET_REX = re.compile(
     )
 
 
+def _nodegroup_regex(nodegroup, words, opers):
+    opers_set = set(opers)
+    ret = words
+    if (set(ret) - opers_set) == set(ret):
+        # No compound operators found in nodegroup definition. Check for
+        # group type specifiers
+        group_type_re = re.compile('^[A-Z]@')
+        regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
+        if not [x for x in ret if '*' in x or group_type_re.match(x)]:
+            # No group type specifiers and no wildcards.
+            # Treat this as an expression.
+            if [x for x in ret if x in [x for y in regex_chars if y in x]]:
+                joined = 'E@' + ','.join(ret)
+                log.debug(
+                    'Nodegroup \'%s\' (%s) detected as an expression. '
+                    'Assuming compound matching syntax of \'%s\'',
+                    nodegroup, ret, joined
+                )
+            else:
+                # Treat this as a list of nodenames.
+                joined = 'L@' + ','.join(ret)
+                log.debug(
+                    'Nodegroup \'%s\' (%s) detected as list of nodenames. '
+                    'Assuming compound matching syntax of \'%s\'',
+                    nodegroup, ret, joined
+                )
+            # Return data must be a list of compound matching components
+            # to be fed into compound matcher. Enclose return data in list.
+            return [joined]
+
+
 def parse_target(target_expression):
     '''Parse `target_expressing` splitting it into `engine`, `delimiter`,
      `pattern` - returns a dict'''
@@ -141,36 +172,16 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     # Only return list form if a nodegroup was expanded. Otherwise return
     # the original string to conserve backwards compat
     if expanded_nodegroup or not first_call:
+        if not first_call:
+            joined = _nodegroup_regex(nodegroup, words, opers)
+            if joined:
+                return joined
         return ret
     else:
-        opers_set = set(opers)
         ret = words
-        if (set(ret) - opers_set) == set(ret):
-            # No compound operators found in nodegroup definition. Check for
-            # group type specifiers
-            group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
-            if not [x for x in ret if '*' in x or group_type_re.match(x)]:
-                # No group type specifiers and no wildcards.
-                # Treat this as an expression.
-                if [x for x in ret if x in [x for y in regex_chars if y in x]]:
-                    joined = 'E@' + ','.join(ret)
-                    log.debug(
-                        'Nodegroup \'%s\' (%s) detected as an expression. '
-                        'Assuming compound matching syntax of \'%s\'',
-                        nodegroup, ret, joined
-                    )
-                else:
-                    # Treat this as a list of nodenames.
-                    joined = 'L@' + ','.join(ret)
-                    log.debug(
-                        'Nodegroup \'%s\' (%s) detected as list of nodenames. '
-                        'Assuming compound matching syntax of \'%s\'',
-                        nodegroup, ret, joined
-                    )
-                # Return data must be a list of compound matching components
-                # to be fed into compound matcher. Enclose return data in list.
-                return [joined]
+        joined = _nodegroup_regex(nodegroup, ret, opers)
+        if joined:
+            return joined
 
         log.debug(
             'No nested nodegroups detected. Using original nodegroup '

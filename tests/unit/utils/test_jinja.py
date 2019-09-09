@@ -123,6 +123,7 @@ class TestSaltCacheLoader(TestCase):
             self.template_dir
         )
         self.opts = {
+            'file_buffer_size': 1048576,
             'cachedir': self.tempdir,
             'master_uri': 'localhost',
             'file_client': 'local',
@@ -281,6 +282,7 @@ class TestGetTemplate(TestCase):
             self.template_dir
         )
         self.local_opts = {
+            'file_buffer_size': 1048576,
             'cachedir': self.tempdir,
             'master_uri': 'localhost',
             'file_client': 'local',
@@ -618,6 +620,7 @@ class TestJinjaDefaultOptions(TestCase):
         TestCase.__init__(self, *args, **kws)
         self.local_opts = {
             'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
+            'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
@@ -679,6 +682,7 @@ class TestCustomExtensions(TestCase):
         super(TestCustomExtensions, self).__init__(*args, **kws)
         self.local_opts = {
             'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
+            'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,

@@ -351,6 +351,12 @@ class TokenAuthenticationError(SaltException):
     '''
 
 
+class SaltDeserializationError(SaltException):
+    '''
+    Thrown when salt cannot deserialize data.
+    '''
+
+
 class AuthorizationError(SaltException):
     '''
     Thrown when runner or wheel execution fails due to permissions

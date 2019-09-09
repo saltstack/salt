@@ -771,7 +771,6 @@ def _check_directory(name,
         fchange = _check_dir_meta(name, user, group, rootdir_mode, follow_symlinks)
         if fchange:
             changes[name] = fchange
-
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
 

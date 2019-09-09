@@ -22,6 +22,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.win_system as win_system
 import salt.utils.stringutils
+import salt.utils.platform
 
 try:
     import wmi
@@ -142,6 +143,7 @@ class Mockwinapi(object):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_WMI, 'WMI only available on Windows')
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.win_system

@@ -298,7 +298,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
     if tmplstr.endswith(os.linesep):
-        newline = True
+        newline = os.linesep
+    elif tmplstr.endswith('\n'):
+        newline = '\n'
 
     if not saltenv:
         if tmplpath:
@@ -443,7 +445,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
     if newline:
-        output += os.linesep
+        output += newline
 
     return output
 

@@ -32,13 +32,17 @@ from tests.support.helpers import (
     RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
 )
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
-from tests.support.paths import INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 from tests.support.cli_scripts import ScriptPathMixin
+from tests.support.mixins import (
+        AdaptedConfigurationTestCaseMixin,
+        SaltClientTestCaseMixin,
+        SaltMultimasterClientTestCaseMixin,
+        )
+from tests.support.paths import INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
 
 # Import 3rd-party libs
 from salt.ext import six
-from salt.ext.six.moves import cStringIO  # pylint: disable=import-error
+from salt.ext.six.moves import cStringIO, range  # pylint: disable=import-error
 
 STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
@@ -84,7 +88,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
             os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'),
             arg_str
         )
-        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True)
+        return self.run_script('salt-ssh', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr, raw=True, timeout=timeout)
 
     def run_run(self,
                 arg_str,
@@ -425,6 +429,16 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                 pass
 
 
+class MultiMasterTestShellCase(ShellTestCase):
+    '''
+    Execute a test for a shell command when running multi-master tests
+    '''
+
+    @property
+    def config_dir(self):
+        return RUNTIME_VARS.TMP_MM_CONF_DIR
+
+
 class ShellCase(ShellTestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
     '''
     Execute a test for a shell command
@@ -758,7 +772,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=None, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -777,11 +791,12 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
             kwargs['arg'] = kwargs.pop('f_arg')
         if 'f_timeout' in kwargs:
             kwargs['timeout'] = kwargs.pop('f_timeout')
-        orig = self.client.cmd(minion_tgt,
-                               function,
-                               arg,
-                               timeout=timeout,
-                               kwarg=kwargs)
+        client = self.client if master_tgt is None else self.clients[master_tgt]
+        orig = client.cmd(minion_tgt,
+                          function,
+                          arg,
+                          timeout=timeout,
+                          kwarg=kwargs)
 
         if RUNTIME_VARS.PYTEST_SESSION:
             fail_or_skip_func = self.fail
@@ -807,6 +822,16 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         orig[minion_tgt] = self._check_state_return(orig[minion_tgt])
 
         return orig[minion_tgt]
+
+    def run_function_all_masters(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
+        '''
+        Run a single salt function from all the masters in multimaster environment
+        and condition the return down to match the behavior of the raw function call
+        '''
+        ret = []
+        for master in range(len(self.clients)):
+            ret.append(self.run_function(function, arg, minion_tgt, timeout, master_tgt=master, **kwargs))
+        return ret
 
     def run_state(self, function, **kwargs):
         '''
@@ -850,18 +875,79 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         return ret
 
 
+class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
+    '''
+    Execute a module function
+    '''
+
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=0, **kwargs):
+        '''
+        Run a single salt function and condition the return down to match the
+        behavior of the raw function call
+        '''
+        known_to_return_none = (
+            'data.get',
+            'file.chown',
+            'file.chgrp',
+            'pkg.refresh_db',
+            'ssh.recv_known_host_entries',
+            'time.sleep'
+        )
+        if minion_tgt == 'sub_minion':
+            known_to_return_none += ('mine.update',)
+        if 'f_arg' in kwargs:
+            kwargs['arg'] = kwargs.pop('f_arg')
+        if 'f_timeout' in kwargs:
+            kwargs['timeout'] = kwargs.pop('f_timeout')
+        orig = self.clients[master_tgt].cmd(minion_tgt,
+                                            function,
+                                            arg,
+                                            timeout=timeout,
+                                            kwarg=kwargs)
+
+        if minion_tgt not in orig:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
+                'from the minion \'{0}\'. Command output: {1}'.format(
+                    minion_tgt, orig
+                )
+            )
+        elif orig[minion_tgt] is None and function not in known_to_return_none:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
+                'the minion \'{1}\'. Command output: {2}'.format(
+                    function, minion_tgt, orig
+                )
+            )
+
+        # Try to match stalled state functions
+        orig[minion_tgt] = self._check_state_return(orig[minion_tgt])
+
+        return orig[minion_tgt]
+
+    def run_function_all_masters(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
+        '''
+        Run a single salt function from all the masters in multimaster environment
+        and condition the return down to match the behavior of the raw function call
+        '''
+        ret = []
+        for master in range(len(self.clients)):
+            ret.append(self.run_function(function, arg, minion_tgt, timeout, master_tgt=master, **kwargs))
+        return ret
+
+
 class SyndicCase(TestCase, SaltClientTestCaseMixin):
     '''
     Execute a syndic based execution test
     '''
     _salt_client_config_file_name_ = 'syndic_master'
 
-    def run_function(self, function, arg=()):
+    def run_function(self, function, arg=(), timeout=90):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        orig = self.client.cmd('minion', function, arg, timeout=25)
+        orig = self.client.cmd('minion', function, arg, timeout=timeout)
         if RUNTIME_VARS.PYTEST_SESSION:
             fail_or_skip_func = self.fail
         else:

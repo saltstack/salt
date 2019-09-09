@@ -2,17 +2,12 @@
 '''
 Integration tests for the beacon states
 '''
-
-# Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import logging
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf, WAR_ROOM_SKIP
-
-log = logging.getLogger(__name__)
 
 
 @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')

@@ -69,7 +69,6 @@ log = logging.getLogger(__name__)
 
 
 def post_master_init(self, master):
-
     log.debug("subclassed LazyLoaded _post_master_init")
     if self.connected:
         self.opts['master'] = master
@@ -338,15 +337,6 @@ def thread_return(cls, minion_instance, opts, data):
     '''
     fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
 
-    if opts['multiprocessing'] and not salt.utils.platform.is_windows():
-        # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
-
-        salt.utils.process.daemonize_if(opts)
-
-        # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
-
     salt.utils.process.appendproctitle('{0}._thread_return {1}'.format(cls.__name__, data['jid']))
 
     sdata = {'pid': os.getpid()}
@@ -561,15 +551,6 @@ def thread_multi_return(cls, minion_instance, opts, data):
     '''
     fn_ = os.path.join(minion_instance.proc_dir, data['jid'])
 
-    if opts['multiprocessing'] and not salt.utils.platform.is_windows():
-        # Shutdown the multiprocessing before daemonizing
-        salt.log.setup.shutdown_multiprocessing_logging()
-
-        salt.utils.process.daemonize_if(opts)
-
-        # Reconfigure multiprocessing logging after daemonizing
-        salt.log.setup.setup_multiprocessing_logging()
-
     salt.utils.process.appendproctitle('{0}._thread_multi_return {1}'.format(cls.__name__, data['jid']))
 
     sdata = {'pid': os.getpid()}
@@ -770,13 +751,8 @@ def handle_decoded_payload(self, data):
             process.start()
     else:
         process.start()
-
-    # TODO: remove the windows specific check?
-    if multiprocessing_enabled and not salt.utils.platform.is_windows():
-        # we only want to join() immediately if we are daemonizing a process
-        process.join()
-    else:
-        self.win_proc.append(process)
+    process.name = '{}-Job-{}'.format(process.name, data['jid'])
+    self.subprocess_list.add(process)
 
 
 def target_load(self, load):

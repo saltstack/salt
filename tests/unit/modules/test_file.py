@@ -478,7 +478,6 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                  content=new_content,
                                  backup=False,
                                  append_if_not_found=True)
-
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertIn(salt.utils.stringutils.to_bytes(
                 os.linesep.join([
@@ -516,7 +515,6 @@ class FileBlockReplaceTestCase(TestCase, LoaderModuleMockMixin):
                                  content=new_content,
                                  backup=False,
                                  insert_after_match='malesuada')
-
         with salt.utils.files.fopen(self.tfile.name, 'rb') as fp:
             self.assertIn(salt.utils.stringutils.to_bytes(
                 os.linesep.join([
@@ -1393,7 +1391,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         for mode, err_msg in [(None, 'How to process the file'), ('nonsense', 'Unknown mode')]:
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', mode=mode)
-            self.assertIn(err_msg, six.text_type(cmd_err))
+            self.assertIn(err_msg, six.text_type(cmd_err.value))
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1406,7 +1404,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', mode=mode)
             self.assertIn('Content can only be empty if mode is "delete"',
-                          six.text_type(cmd_err))
+                          six.text_type(cmd_err.value))
 
     @patch('os.path.realpath', MagicMock(wraps=lambda x: x))
     @patch('os.path.isfile', MagicMock(return_value=True))
@@ -1421,7 +1419,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with pytest.raises(CommandExecutionError) as cmd_err:
                 filemod.line('foo', content='test content', mode='insert')
             self.assertIn('"location" or "before/after"',
-                          six.text_type(cmd_err))
+                          six.text_type(cmd_err.value))
 
     def test_util_starts_till(self):
         '''
@@ -2031,7 +2029,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                         filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
             self.assertIn(
                 'Found more than one line between boundaries "before" and "after"',
-                six.text_type(cmd_err))
+                six.text_type(cmd_err.value))
 
     @with_tempfile()
     def test_line_delete(self, name):
@@ -2664,3 +2662,258 @@ class FileSelinuxTestCase(TestCase, LoaderModuleMockMixin):
             result = filemod.check_perms(self.tfile3.name, {}, 'root', 'root', 644, seuser=None,
                                         serole=None, setype='lost_found_t', serange=None)
             self.assertEqual(result, expected_result)
+
+
+# This should create a merge conflict with ChattrVersionTests when
+# a merge forward to develop happens. Develop's changes are made
+# obsolete by this ChattrTests class, and should be removed in favor
+# of this change.
+class ChattrTests(TestCase, LoaderModuleMockMixin):
+    def setup_loader_modules(self):
+        return {
+            filemod: {
+                '__salt__': {
+                    'cmd.run': cmdmod.run,
+                },
+                '__opts__': {
+                    'test': False,
+                },
+            },
+        }
+
+    def run(self, result=None):
+        patch_aix = patch(
+            'salt.utils.platform.is_aix',
+            Mock(return_value=False),
+        )
+        patch_exists = patch(
+            'os.path.exists',
+            Mock(return_value=True),
+        )
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='some/tune2fs'),
+        )
+        with patch_aix, patch_exists, patch_which:
+            super(ChattrTests, self).run(result)
+
+    def test_chattr_version_returns_None_if_no_tune2fs_exists(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value=''),
+        )
+        with patch_which:
+            actual = filemod._chattr_version()
+            self.assertIsNone(actual)
+
+    def test_on_aix_chattr_version_should_be_None_even_if_tune2fs_exists(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        patch_aix = patch(
+            'salt.utils.platform.is_aix',
+            Mock(return_value=True),
+        )
+        mock_run = MagicMock(return_value='fnord')
+        patch_run = patch.dict(filemod.__salt__, {'cmd.run': mock_run})
+        with patch_which, patch_aix, patch_run:
+            actual = filemod._chattr_version()
+            self.assertIsNone(actual)
+            mock_run.assert_not_called()
+
+    def test_chattr_version_should_return_version_from_tune2fs(self):
+        expected = '1.43.4'
+        sample_output = textwrap.dedent(
+            '''
+            tune2fs 1.43.4 (31-Jan-2017)
+            Usage: tune2fs [-c max_mounts_count] [-e errors_behavior] [-f] [-g group]
+            [-i interval[d|m|w]] [-j] [-J journal_options] [-l]
+            [-m reserved_blocks_percent] [-o [^]mount_options[,...]]
+            [-p mmp_update_interval] [-r reserved_blocks_count] [-u user]
+            [-C mount_count] [-L volume_label] [-M last_mounted_dir]
+            [-O [^]feature[,...]] [-Q quota_options]
+            [-E extended-option[,...]] [-T last_check_time] [-U UUID]
+            [-I new_inode_size] [-z undo_file] device
+            '''
+        )
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(return_value=sample_output)},
+        )
+        with patch_which, patch_run:
+            actual = filemod._chattr_version()
+            self.assertEqual(actual, expected)
+
+    def test_if_tune2fs_has_no_version_version_should_be_None(self):
+        patch_which = patch(
+            'salt.utils.path.which',
+            Mock(return_value='fnord'),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(return_value='fnord')},
+        )
+        with patch_which, patch_run:
+            actual = filemod._chattr_version()
+            self.assertIsNone(actual)
+
+    def test_chattr_has_extended_attrs_should_return_False_if_chattr_version_is_None(self):
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=None),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert not actual, actual
+
+    def test_chattr_has_extended_attrs_should_return_False_if_version_is_too_low(self):
+        below_expected = '0.1.1'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=below_expected),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert not actual, actual
+
+    def test_chattr_has_extended_attrs_should_return_False_if_version_is_equal_threshold(self):
+        threshold = '1.41.12'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=threshold),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert not actual, actual
+
+    def test_chattr_has_extended_attrs_should_return_True_if_version_is_above_threshold(self):
+        higher_than = '1.41.13'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=higher_than),
+        )
+        with patch_chattr:
+            actual = filemod._chattr_has_extended_attrs()
+            assert actual, actual
+
+    # We're skipping this on Windows as it tests the check_perms function in
+    # file.py which is specifically for Linux. The Windows version resides in
+    # win_file.py
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    def test_check_perms_should_report_no_attr_changes_if_there_are_none(self):
+        filename = '/path/to/fnord'
+        attrs = 'aAcCdDeijPsStTu'
+
+        higher_than = '1.41.13'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=higher_than),
+        )
+        patch_exists = patch(
+            'os.path.exists',
+            Mock(return_value=True),
+        )
+        patch_stats = patch(
+            'salt.modules.file.stats',
+            Mock(return_value={
+                'user': 'foo',
+                'group': 'bar',
+                'mode': '123',
+            }),
+        )
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(return_value='--------- '+filename)},
+        )
+        with patch_chattr, patch_exists, patch_stats, patch_run:
+            actual_ret, actual_perms = filemod.check_perms(
+                name=filename,
+                ret=None,
+                user='foo',
+                group='bar',
+                mode='123',
+                attrs=attrs,
+                follow_symlinks=False,
+            )
+            assert actual_ret.get('changes', {}).get('attrs')is None, actual_ret
+
+    # We're skipping this on Windows as it tests the check_perms function in
+    # file.py which is specifically for Linux. The Windows version resides in
+    # win_file.py
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    def test_check_perms_should_report_attrs_new_and_old_if_they_changed(self):
+        filename = '/path/to/fnord'
+        attrs = 'aAcCdDeijPsStTu'
+        existing_attrs = 'aeiu'
+        expected = {
+            'attrs': {
+                'old': existing_attrs,
+                'new': attrs,
+            },
+        }
+
+        higher_than = '1.41.13'
+        patch_chattr = patch(
+            'salt.modules.file._chattr_version',
+            Mock(return_value=higher_than),
+        )
+        patch_stats = patch(
+            'salt.modules.file.stats',
+            Mock(return_value={
+                'user': 'foo',
+                'group': 'bar',
+                'mode': '123',
+            }),
+        )
+        patch_cmp = patch(
+            'salt.modules.file._cmp_attrs',
+            MagicMock(side_effect=[
+                filemod.AttrChanges(
+                    added='aAcCdDeijPsStTu',
+                    removed='',
+                ),
+                filemod.AttrChanges(
+                    None,
+                    None,
+                ),
+            ]),
+        )
+        patch_chattr = patch(
+            'salt.modules.file.chattr',
+            MagicMock(),
+        )
+
+        def fake_cmd(cmd, *args, **kwargs):
+            if cmd == ['lsattr', '/path/to/fnord']:
+                return textwrap.dedent(
+                    '''
+                    {}---- {}
+                    '''.format(existing_attrs, filename)
+                ).strip()
+            else:
+                assert False, "not sure how to handle {}".format(cmd)
+
+        patch_run = patch.dict(
+            filemod.__salt__,
+            {'cmd.run': MagicMock(side_effect=fake_cmd)},
+        )
+        patch_ver = patch(
+            'salt.modules.file._chattr_has_extended_attrs',
+            MagicMock(return_value=True),
+        )
+        with patch_chattr, patch_stats, patch_cmp, patch_run, patch_ver:
+            actual_ret, actual_perms = filemod.check_perms(
+                name=filename,
+                ret=None,
+                user='foo',
+                group='bar',
+                mode='123',
+                attrs=attrs,
+                follow_symlinks=False,
+            )
+            self.assertDictEqual(actual_ret['changes'], expected)

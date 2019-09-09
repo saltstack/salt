@@ -70,14 +70,22 @@ nodegroups:
   min: minion
   sub_min: sub_minion
   mins: N@min or N@sub_min
+  list_nodegroup:
+    - 'minion'
+    - 'sub_minion'
   multiline_nodegroup:
     - 'minion'
     - 'or'
     - 'sub_minion'
+  one_minion_list:
+    - 'minion'
   redundant_minions: N@min or N@mins
   nodegroup_loop_a: N@nodegroup_loop_b
   nodegroup_loop_b: N@nodegroup_loop_a
   missing_minion: L@minion,ghostminion
+  list_group: N@multiline_nodegroup
+  one_list_group: N@one_minion_list
+  list_group2: N@list_nodegroup
 
 
 mysql.host: localhost

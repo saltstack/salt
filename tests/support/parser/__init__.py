@@ -58,33 +58,50 @@ log = logging.getLogger(__name__)
 WEIRD_SIGNAL_NUM = -45654
 
 
-# Let's setup a global exception hook handler which will log all exceptions
-# Store a reference to the original handler
-__GLOBAL_EXCEPTION_HANDLER = sys.excepthook
-
-
 def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
-                                       logging=logging,
-                                       global_exc_handler=__GLOBAL_EXCEPTION_HANDLER):
+                                       _logger=logging.getLogger(__name__),
+                                       _stderr=sys.__stderr__,
+                                       _format_exception=traceback.format_exception):
     '''
     This function will log all python exceptions.
     '''
-    try:
-        # Log the exception
-        logging.getLogger(__name__).error(
-            'An un-handled exception was caught by salt-testing\'s global '
-            'exception handler:\n%s: %s\n%s',
-            exc_type.__name__,
-            exc_value,
-            ''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback
-            )).strip()
-        )
+    if exc_type.__name__ == "KeyboardInterrupt":
         # Call the original sys.excepthook
-        global_exc_handler(exc_type, exc_value, exc_traceback)
-    except (AttributeError, NameError):
-        # Python is probably shutting down and has set objects to None
-        # Carry on
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    # Log the exception
+    try:
+        msg = (
+            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n{}'.format(
+                exc_type.__name__,
+                exc_value,
+                ''.join(_format_exception(exc_type, exc_value, exc_traceback)).strip()
+            )
+        )
+    except Exception:  # pylint: disable=broad-except
+        msg = (
+            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n'
+            '(UNABLE TO FORMAT TRACEBACK)'.format(
+                exc_type.__name__,
+                exc_value,
+            )
+        )
+    try:
+        _logger(__name__).error(msg)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and logging has been set to None already
+        try:
+            _stderr.write(msg + '\n')
+        except Exception:  # pylint: disable=broad-except
+            # We have also lost reference to sys.__stderr__ ?!
+            print(msg)
+
+    # Call the original sys.excepthook
+    try:
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+    except Exception:  # pylint: disable=broad-except
+        # Python is shutting down and sys has been set to None already
         pass
 
 
@@ -423,13 +440,14 @@ class SaltTestingParser(optparse.OptionParser):
             ret.update(
                 x for x in
                 ['.'.join(('unit', mod_relname)),
-                 '.'.join(('integration', mod_relname))]
+                 '.'.join(('integration', mod_relname)),
+                 '.'.join(('multimaster', mod_relname))]
                 if x in self._test_mods
             )
 
         # First, try a path match
         for path in files:
-            match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
+            match = re.match(r'^(salt/|tests/(unit|integration|multimaster)/)(.+\.py)$', path)
             if match:
                 comps = match.group(3).split('/')
                 if len(comps) < 2:
@@ -870,11 +888,9 @@ class SaltTestingParser(optparse.OptionParser):
             if children:
                 log.info('Second run at terminating test suite child processes: %s', children)
                 helpers.terminate_process(children=children, kill_children=True)
-        log.info(
-            'Test suite execution finalized with exit code: %s',
-            exit_code
-        )
-        self.exit(exit_code)
+        exit_msg = 'Test suite execution finalized with exit code: {}'.format(exit_code)
+        log.info(exit_msg)
+        self.exit(status=exit_code, msg=exit_msg + '\n')
 
     def run_suite_in_docker(self):
         '''

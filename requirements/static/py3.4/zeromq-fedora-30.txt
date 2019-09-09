@@ -5,6 +5,7 @@
 #    pip-compile -o requirements/static/py3.4/zeromq-fedora-30.txt -v requirements/base.txt requirements/zeromq.txt requirements/pytest.txt requirements/static/fedora-30.in
 #
 apache-libcloud==2.0.0
+argh==0.26.2              # via watchdog
 asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
