@@ -3666,7 +3666,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * d3f4c9d Merge pull request `#52314`_ from twangboy/fix_beacon_tests
 
-  * a5fa99a Add missing **kwargs
+  * a5fa99a Add missing \*\*kwargs
 
   * 7e88d04 Add the ability to pass a timeout to beacons
 
@@ -4008,7 +4008,7 @@ Changelog for v2019.2.0..v2019.2.1
 
             * 64d8451 Use default file module
 
-            * 886ef19 Fix name of makedirs_ method
+            * 886ef19 Fix name of makedirs\_ method
 
             * 4cc5f77 Check for path to be a symlink
 
