@@ -35,16 +35,71 @@ configurations to be able to support the older YAML renderer.  Using the option
 Statistics
 ==========
 
-- Total Merges: **536**
-- Total Issue References: **69**
-- Total PR References: **350**
+- Total Merges: **541**
+- Total Issue References: **70**
+- Total PR References: **355**
 
 - Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_, `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_, `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_, `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_, `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_, `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_, `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_, `waynew`_, `weswhet`_, `xuhcc`_)
 
 Changelog for v2019.2.0..v2019.2.1
 ==================================
 
-*Generated at: 2019-09-05 20:16:31 UTC*
+*Generated at: 2019-09-09 19:56:22 UTC*
+
+* **ISSUE** `#54429`_: (`frogunder`_) [2019.2.1] Sudo user error (refs: `#54433`_)
+
+* **PR** `#54433`_: (`dwoz`_) Re-gen executors with proper arguments
+  @ *2019-09-09 19:14:05 UTC*
+
+  * 62fc61c Merge pull request `#54433`_ from dwoz/sudo_minion
+
+  * e08eb19 Merge branch '2019.2.1' into sudo_minion
+
+* **PR** `#54434`_: (`frogunder`_) fix_docs
+  @ *2019-09-09 18:55:28 UTC*
+
+  * 76fac57 Merge pull request `#54434`_ from frogunder/fix_doc
+
+  * 2d22d73 fix_docs error
+
+  * a266a5c fix_docs
+
+  * db5464a Fix linter warts
+
+  * 144a600 Re-gen executors with proper arguments
+
+* **PR** `#54424`_: (`frogunder`_) remove in progress from release_notes 2019.2.1
+  @ *2019-09-05 23:11:03 UTC*
+
+  * 4071dcb Merge pull request `#54424`_ from frogunder/releasenotes_201921_new
+
+  * b66436f Update 2019.2.1.rst
+
+  * bcfef11 remove in progress from release_notes 2019.2.1
+
+* **PR** `#54416`_: (`frogunder`_) Update man_pages for 2019.2.1
+  @ *2019-09-05 22:48:51 UTC*
+
+  * c1587cc Merge pull request `#54416`_ from frogunder/man_pages_201921
+
+  * 6f7c4ee Update man_pages for 2019.2.1
+
+* **PR** `#54419`_: (`frogunder`_) releasenotes 2019.2.1
+  @ *2019-09-05 22:48:42 UTC*
+
+  * 3118e2f Merge pull request `#54419`_ from frogunder/release_notes_201921
+
+  * 2caee96 Update doc/topics/releases/2019.2.1.rst
+
+  * ffabde2 Update 2019.2.1.rst
+
+  * dd6426d Update doc/topics/releases/2019.2.1.rst
+
+  * 9d4239c Update doc/topics/releases/2019.2.1.rst
+
+  * 8c60ae4 Update doc/topics/releases/2019.2.1.rst
+
+  * 72cb24c releasenotes 2019.2.1
 
 * **PR** `#54409`_: (`dwoz`_) Point salt-call to correct multi-master configs
   @ *2019-09-04 20:08:24 UTC*
