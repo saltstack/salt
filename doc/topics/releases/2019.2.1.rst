@@ -6773,6 +6773,12 @@ Changelog for v2019.2.0..v2019.2.1
 .. _`#54388`: https://github.com/saltstack/salt/pull/54388
 .. _`#54396`: https://github.com/saltstack/salt/pull/54396
 .. _`#54409`: https://github.com/saltstack/salt/pull/54409
+.. _`#54416`: https://github.com/saltstack/salt/pull/54416
+.. _`#54419`: https://github.com/saltstack/salt/pull/54419
+.. _`#54424`: https://github.com/saltstack/salt/pull/54424
+.. _`#54429`: https://github.com/saltstack/salt/issues/54429
+.. _`#54433`: https://github.com/saltstack/salt/pull/54433
+.. _`#54434`: https://github.com/saltstack/salt/pull/54434
 .. _`#5`: https://github.com/saltstack/salt/issues/5
 .. _`#6`: https://github.com/saltstack/salt/issues/6
 .. _`#7745`: https://github.com/saltstack/salt/issues/7745
