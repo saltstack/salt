@@ -444,6 +444,8 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             except KeyError:
                 log.warning('Failed to delete test account. Salt return:\n%s',
                             pprint.pformat(ret))
+            cls.prep_states_ran = False
+            cls.known_hosts_setup = False
         shutil.rmtree(cls.sshd_config_dir, ignore_errors=True)
         ssh_dir = os.path.expanduser('~/.ssh')
         for filename in (cls.id_rsa_nopass,
@@ -556,6 +558,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
             log.info('[%s] %s stopped', cls.uwsgi_proc.log_prefix, cls.uwsgi_proc.__class__.__name__)
             cls.uwsgi_proc = None
         shutil.rmtree(cls.root_dir, ignore_errors=True)
+        cls.prep_states_ran = False
         super(WebserverMixin, cls).tearDownClass()
 
 
