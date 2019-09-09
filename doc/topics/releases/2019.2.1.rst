@@ -1,50 +1,71 @@
-===========================
-Salt 2019.2.1 Release Notes
-===========================
-
-Version 2019.2.1 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
-
-Change to YAML Renderer
-=======================
-
-.. code-block:: jinja
-
-    /etc/foo.conf:
-      file.managed:
-        - source: salt://foo.conf.jinja
-        - template: jinja
-        - context:
-            data: {{ data }}
-
-In 2019.2.0, the above SLS will result in an error message following changes to
-the YAML renderer that now require the new Jinja filter `tojson`.
-
-.. code-block:: jinja
-
-    /etc/foo.conf:
-      file.managed:
-        - source: salt://foo.conf.jinja
-        - template: jinja
-        - context:
-            data: {{ data|tojson }}
-
-In 2019.2.1, we introduce a new configuration option for both the Salt master and Salt minion
-configurations to be able to support the older YAML renderer.  Using the option
-`use_yamlloader_old` will allow the YAML renderer to function as before.
-
 Statistics
 ==========
 
-- Total Merges: **536**
-- Total Issue References: **69**
-- Total PR References: **350**
+- Total Merges: **541**
+- Total Issue References: **70**
+- Total PR References: **355**
 
 - Contributors: **49** (`Akm0d`_, `Ch3LL`_, `DmitryKuzmenko`_, `Ethyling`_, `FireGrace`_, `KChandrashekhar`_, `ScoreUnder`_, `amendlik`_, `aplanas`_, `arsiesys`_, `bbinet`_, `bryceml`_, `cbosdo`_, `cdalvaro`_, `chdamianos`_, `cmcmarrow`_, `cro`_, `damianosSemmle`_, `dmurphy18`_, `doesitblend`_, `dwoz`_, `felippeb`_, `frogunder`_, `garethgreenaway`_, `github-abcde`_, `isbm`_, `jfindlay`_, `lomeroe`_, `mattLLVW`_, `mattp-`_, `mirceaulinic`_, `nicholasmhughes`_, `rbthomp`_, `rombert`_, `rsmekala`_, `s0undt3ch`_, `sathieu`_, `sbrennan4`_, `sdodsley`_, `simonflood`_, `sjorge`_, `soer7022`_, `stratusjerry`_, `tanlingyun2005`_, `terminalmage`_, `twangboy`_, `waynew`_, `weswhet`_, `xuhcc`_)
 
 Changelog for v2019.2.0..v2019.2.1
 ==================================
 
-*Generated at: 2019-09-05 20:16:31 UTC*
+*Generated at: 2019-09-09 19:56:22 UTC*
+
+* **ISSUE** `#54429`_: (`frogunder`_) [2019.2.1] Sudo user error (refs: `#54433`_)
+
+* **PR** `#54433`_: (`dwoz`_) Re-gen executors with proper arguments
+  @ *2019-09-09 19:14:05 UTC*
+
+  * 62fc61c Merge pull request `#54433`_ from dwoz/sudo_minion
+
+  * e08eb19 Merge branch '2019.2.1' into sudo_minion
+
+* **PR** `#54434`_: (`frogunder`_) fix_docs
+  @ *2019-09-09 18:55:28 UTC*
+
+  * 76fac57 Merge pull request `#54434`_ from frogunder/fix_doc
+
+  * 2d22d73 fix_docs error
+
+  * a266a5c fix_docs
+
+  * db5464a Fix linter warts
+
+  * 144a600 Re-gen executors with proper arguments
+
+* **PR** `#54424`_: (`frogunder`_) remove in progress from release_notes 2019.2.1
+  @ *2019-09-05 23:11:03 UTC*
+
+  * 4071dcb Merge pull request `#54424`_ from frogunder/releasenotes_201921_new
+
+  * b66436f Update 2019.2.1.rst
+
+  * bcfef11 remove in progress from release_notes 2019.2.1
+
+* **PR** `#54416`_: (`frogunder`_) Update man_pages for 2019.2.1
+  @ *2019-09-05 22:48:51 UTC*
+
+  * c1587cc Merge pull request `#54416`_ from frogunder/man_pages_201921
+
+  * 6f7c4ee Update man_pages for 2019.2.1
+
+* **PR** `#54419`_: (`frogunder`_) releasenotes 2019.2.1
+  @ *2019-09-05 22:48:42 UTC*
+
+  * 3118e2f Merge pull request `#54419`_ from frogunder/release_notes_201921
+
+  * 2caee96 Update doc/topics/releases/2019.2.1.rst
+
+  * ffabde2 Update 2019.2.1.rst
+
+  * dd6426d Update doc/topics/releases/2019.2.1.rst
+
+  * 9d4239c Update doc/topics/releases/2019.2.1.rst
+
+  * 8c60ae4 Update doc/topics/releases/2019.2.1.rst
+
+  * 72cb24c releasenotes 2019.2.1
 
 * **PR** `#54409`_: (`dwoz`_) Point salt-call to correct multi-master configs
   @ *2019-09-04 20:08:24 UTC*
@@ -60,16 +81,16 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 104e0a0 Use different logging port for multimaster tests
 
-* **ISSUE** `#54256`_: (`sleminov-tc`_) Empty salt api token file breaks maintenance process. (refs: `#54325`_, `#54324`_, `#54388`_, `#54376`_)
+* **ISSUE** `#54256`_: (`sleminov-tc`_) Empty salt api token file breaks maintenance process. (refs: `#54388`_, `#54376`_, `#54324`_, `#54325`_)
 
-* **ISSUE** `#37945`_: (`gstachowiak`_) Missing exception handling in salt.master.Maintenance. Process never completes. (refs: `#54325`_, `#54324`_, `#54388`_, `#54376`_)
+* **ISSUE** `#37945`_: (`gstachowiak`_) Missing exception handling in salt.master.Maintenance. Process never completes. (refs: `#54388`_, `#54376`_, `#54324`_, `#54325`_)
 
 * **PR** `#54388`_: (`dwoz`_) 54256 re fix empty api token 2019.2.1
   @ *2019-09-03 23:19:20 UTC*
 
   * **PR** `#54325`_: (`waynew`_) Delete bad API token files (refs: `#54388`_)
 
-  * **PR** `#54324`_: (`waynew`_) Delete bad API token files (refs: `#54325`_, `#54388`_)
+  * **PR** `#54324`_: (`waynew`_) Delete bad API token files (refs: `#54388`_, `#54325`_)
 
   * 730a007 Merge pull request `#54388`_ from dwoz/54256-re-fix-empty-api-token-2019.2.1
 
@@ -77,9 +98,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 982ed3d Delete bad API token files
 
-* **ISSUE** `#54256`_: (`sleminov-tc`_) Empty salt api token file breaks maintenance process. (refs: `#54325`_, `#54324`_, `#54388`_, `#54376`_)
+* **ISSUE** `#54256`_: (`sleminov-tc`_) Empty salt api token file breaks maintenance process. (refs: `#54388`_, `#54376`_, `#54324`_, `#54325`_)
 
-* **ISSUE** `#37945`_: (`gstachowiak`_) Missing exception handling in salt.master.Maintenance. Process never completes. (refs: `#54325`_, `#54324`_, `#54388`_, `#54376`_)
+* **ISSUE** `#37945`_: (`gstachowiak`_) Missing exception handling in salt.master.Maintenance. Process never completes. (refs: `#54388`_, `#54376`_, `#54324`_, `#54325`_)
 
 * **PR** `#54376`_: (`dwoz`_) Move tokens in place with an atomic operation
   @ *2019-09-03 20:40:50 UTC*
@@ -188,9 +209,9 @@ Changelog for v2019.2.0..v2019.2.1
 
 * **ISSUE** `#50814`_: (`doesitblend`_) Minion continues trying down master (refs: `#54239`_, `#53417`_)
 
-* **ISSUE** `#49680`_: (`doesitblend`_) Beacon events handled differently than event.send (refs: `#53344`_, `#54239`_)
+* **ISSUE** `#49680`_: (`doesitblend`_) Beacon events handled differently than event.send (refs: `#54239`_, `#53344`_)
 
-* **ISSUE** `#49663`_: (`doesitblend`_) Beacon only fires to single random master in HA mode (refs: `#53344`_, `#54239`_)
+* **ISSUE** `#49663`_: (`doesitblend`_) Beacon only fires to single random master in HA mode (refs: `#54239`_, `#53344`_)
 
 * **PR** `#54247`_: (`DmitryKuzmenko`_) 2019.2.1 with multimaster bb fixes
   @ *2019-08-23 20:19:19 UTC*
@@ -1398,7 +1419,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 450d23d Merge branch '2019.2.1' into cherry-pick-pr-53370
 
-* **ISSUE** `#53411`_: (`cro`_) Events can grow stale when event_listen_queue is set. (refs: `#53587`_, `#53412`_)
+* **ISSUE** `#53411`_: (`cro`_) Events can grow stale when event_listen_queue is set. (refs: `#53412`_, `#53587`_)
 
 * **PR** `#53587`_: (`cro`_) Forward port from 2018.3 Add event_listen_queue_max_seconds to fix `#53411`_
   @ *2019-06-28 16:49:46 UTC*
@@ -1438,9 +1459,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 013e04c Recurse kwarg of state.directory state shall be a list of None
 
-* **ISSUE** `#52926`_: (`waynew`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent - Beacon "diskusage" is not available (refs: `#53493`_, `#53466`_)
+* **ISSUE** `#52926`_: (`waynew`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent - Beacon "diskusage" is not available (refs: `#53466`_, `#53493`_)
 
-* **ISSUE** `#52245`_: (`twangboy`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent (refs: `#53493`_, `#53466`_)
+* **ISSUE** `#52245`_: (`twangboy`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent (refs: `#53466`_, `#53493`_)
 
 * **PR** `#53466`_: (`dwoz`_) More robust beacon state test
   @ *2019-06-27 23:17:01 UTC*
@@ -1724,9 +1745,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * a8d8174 Merge branch '2019.2.1' into fix-chattr-problems
 
-* **ISSUE** `#52926`_: (`waynew`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent - Beacon "diskusage" is not available (refs: `#53493`_, `#53466`_)
+* **ISSUE** `#52926`_: (`waynew`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent - Beacon "diskusage" is not available (refs: `#53466`_, `#53493`_)
 
-* **ISSUE** `#52245`_: (`twangboy`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent (refs: `#53493`_, `#53466`_)
+* **ISSUE** `#52245`_: (`twangboy`_) integration.states.test_beacon.BeaconStateTestCase.test_present_absent (refs: `#53466`_, `#53493`_)
 
 * **PR** `#53493`_: (`dwoz`_) Cherry-pick and merge beacon event change
   @ *2019-06-14 20:36:10 UTC*
@@ -2890,7 +2911,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * **PR** `#51597`_: (`sathieu`_) git_pillar: Fix all_saltenvs on base env (refs: `#51661`_)
 
-  * **PR** `#50768`_: (`sathieu`_) git_pillar: Add support for all_saltenvs parameter (refs: `#51597`_, `#51661`_)
+  * **PR** `#50768`_: (`sathieu`_) git_pillar: Add support for all_saltenvs parameter (refs: `#51661`_, `#51597`_)
 
   * c6b4986 Merge pull request `#52615`_ from twangboy/gitfs_2019.2.1
 
@@ -3666,7 +3687,7 @@ Changelog for v2019.2.0..v2019.2.1
 
   * d3f4c9d Merge pull request `#52314`_ from twangboy/fix_beacon_tests
 
-  * a5fa99a Add missing \*\*kwargs
+  * a5fa99a Add missing **kwargs
 
   * 7e88d04 Add the ability to pass a timeout to beacons
 
@@ -4008,7 +4029,7 @@ Changelog for v2019.2.0..v2019.2.1
 
             * 64d8451 Use default file module
 
-            * 886ef19 Fix name of makedirs\_ method
+            * 886ef19 Fix name of makedirs_ method
 
             * 4cc5f77 Check for path to be a symlink
 
@@ -6718,6 +6739,12 @@ Changelog for v2019.2.0..v2019.2.1
 .. _`#54388`: https://github.com/saltstack/salt/pull/54388
 .. _`#54396`: https://github.com/saltstack/salt/pull/54396
 .. _`#54409`: https://github.com/saltstack/salt/pull/54409
+.. _`#54416`: https://github.com/saltstack/salt/pull/54416
+.. _`#54419`: https://github.com/saltstack/salt/pull/54419
+.. _`#54424`: https://github.com/saltstack/salt/pull/54424
+.. _`#54429`: https://github.com/saltstack/salt/issues/54429
+.. _`#54433`: https://github.com/saltstack/salt/pull/54433
+.. _`#54434`: https://github.com/saltstack/salt/pull/54434
 .. _`#5`: https://github.com/saltstack/salt/issues/5
 .. _`#6`: https://github.com/saltstack/salt/issues/6
 .. _`#7745`: https://github.com/saltstack/salt/issues/7745
