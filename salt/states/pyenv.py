@@ -61,6 +61,9 @@ def _check_pyenv(ret, user=None):
     if not __salt__['pyenv.is_installed'](user):
         ret['result'] = False
         ret['comment'] = 'pyenv is not installed.'
+    else:
+        ret['result'] = True
+        ret['comment'] = 'pyenv is installed.'
     return ret
 
 
