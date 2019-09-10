@@ -113,7 +113,7 @@ def base64_b64decode(instr):
     return salt.utils.hashutils.base64_b64decode(instr)
 
 
-def base64_encodebytes(instr):
+def base64_encodestring(instr):
     '''
     Encode a byte-like object as base64 using the "modern" Python interface.
 
@@ -127,9 +127,9 @@ def base64_encodebytes(instr):
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_encodebytes 'get salted'
+        salt '*' hashutil.base64_encodestring 'get salted'
     '''
-    return salt.utils.hashutils.base64_encodebytes(instr)
+    return salt.utils.hashutils.base64_encodestring(instr)
 
 
 def base64_encodefile(fname):
@@ -165,7 +165,7 @@ def base64_encodefile(fname):
     return salt.utils.stringutils.to_str(encoded_f.read())
 
 
-def base64_decodebytes(instr):
+def base64_decodestring(instr):
     '''
     Decode a base64-encoded byte-like object using the "modern" Python interface
 
@@ -175,10 +175,10 @@ def base64_decodebytes(instr):
 
     .. code-block:: bash
 
-        salt '*' hashutil.base64_decodebytes instr='Z2V0IHNhbHRlZAo='
+        salt '*' hashutil.base64_decodestring instr='Z2V0IHNhbHRlZAo='
 
     '''
-    return salt.utils.hashutils.base64_decodebytes(instr)
+    return salt.utils.hashutils.base64_decodestring(instr)
 
 
 def base64_decodefile(instr, outfile):
