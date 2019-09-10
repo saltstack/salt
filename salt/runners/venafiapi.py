@@ -65,13 +65,20 @@ log = logging.getLogger(__name__)
 
 
 def _init_connection():
-    log.info("init venafi connection")
-    api_key = __opts__.get('venafi', {}).get('api_key')
-    base_url = __opts__.get('venafi', {}).get('base_url')
-    tpp_user = __opts__.get('venafi', {}).get('tpp_user')
-    tpp_password = __opts__.get('venafi', {}).get('tpp_password')
-    trust_bundle = __opts__.get('venafi', {}).get('trust_bundle')
+    log.info("Init venafi connection")
+    api_key = __opts__.get('venafi', {}).get('api_key', '')
+    log.info("Using config: %s", api_key)
+    base_url = __opts__.get('venafi', {}).get('base_url', '')
+    log.info("Using config: %s", base_url)
+    tpp_user = __opts__.get('venafi', {}).get('tpp_user', '')
+    log.info("Using config: %s", tpp_user)
+    tpp_password = __opts__.get('venafi', {}).get('tpp_password', '')
+    log.info("Using config: %s", tpp_password)
+    trust_bundle = __opts__.get('venafi', {}).get('trust_bundle', '')
+    log.info("Using config: %s", trust_bundle)
+    log.info("Finished config processing")
     if trust_bundle:
+        log.info("Will use trust bundle from %s", trust_bundle)
         return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password,
                                 http_request_kwargs=trust_bundle)
     else:
@@ -105,6 +112,11 @@ def request(
 
         salt-run venafi.request <minion_id> <dns_name>
     '''
+
+    if zone is None:
+        log.error(msg=str("Missing zone parameter"))
+        sys.exit(1)
+
     if password is not None:
         if password.startswith('sdb://'):
             password = __salt__['sdb.get'](password)
@@ -112,15 +124,16 @@ def request(
 
     if csr_path is not None:
         log.info("Will use generated CSR")
+        log.info("Using CN ", dns_name)
         try:
             csr = open(csr_path).read()
-            request = CertificateRequest(csr=csr)
+            request = CertificateRequest(common_name=dns_name, csr=csr)
         except Exception as e:
             log.error(msg=str(e))
             sys.exit(1)
     else:
         request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                              organization=org, organizational_unit=org_unit, key_password=password)
+                                     organization=org, organizational_unit=org_unit, key_password=password)
         zone_config = conn.read_zone_conf(zone)
         request.update_from_zone_config(zone_config)
     conn.request_cert(request, zone)
