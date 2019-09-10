@@ -323,7 +323,7 @@ class SaltClientMixin(ModuleCase):
 
     @classmethod
     @requires_system_grains
-    def setUpClass(cls, grains=None):
+    def setUpClass(cls, grains=None): # pylint: disable=arguments-differ
         # Cent OS 6 has too old a version of git to handle the make_repo code, as
         # it lacks the -c option for git itself.
         make_repo = getattr(cls, 'make_repo', None)

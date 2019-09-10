@@ -43,19 +43,6 @@ class DummyStat(object):
     st_ctime = 1552661253
 
 
-class DummyStat(object):
-    st_mode = 33188
-    st_ino = 115331251
-    st_dev = 44
-    st_nlink = 1
-    st_uid = 99200001
-    st_gid = 99200001
-    st_size = 41743
-    st_atime = 1552661253
-    st_mtime = 1552661253
-    st_ctime = 1552661253
-
-
 WindowsVersion = namedtuple('WinowsVersion', 'major minor')
 winver = WindowsVersion(major=10, minor=0)
 

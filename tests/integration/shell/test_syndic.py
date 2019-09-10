@@ -13,7 +13,6 @@ import logging
 from collections import OrderedDict
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf, WAR_ROOM_SKIP

@@ -635,7 +635,6 @@ def get_system_info():
         if ret['processor_cores_enabled'] == 0:
             ret.pop('processor_cores_enabled', False)
 
-
         bios = conn.Win32_BIOS()[0]
         ret.update({'hardware_serial': bios.SerialNumber,
                     'bios_manufacturer': bios.Manufacturer,

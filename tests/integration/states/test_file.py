@@ -64,6 +64,9 @@ IS_WINDOWS = salt.utils.platform.is_windows()
 
 BINARY_FILE = b'GIF89a\x01\x00\x01\x00\x80\x00\x00\x05\x04\x04\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
 
+TEST_SYSTEM_USER = 'test_system_user'
+TEST_SYSTEM_GROUP = 'test_system_group'
+
 
 def _test_managed_file_mode_keep_helper(testcase, local=False):
     '''

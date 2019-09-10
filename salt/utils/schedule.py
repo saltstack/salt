@@ -1713,17 +1713,13 @@ class Schedule(object):
                         # Reset current signals before starting the process in
                         # order not to inherit the current signal handlers
                         proc.start()
-                    proc.join()
+                        proc.name = '{}-Schedule-{}'.format(proc.name, data['name'])
+                        self._subprocess_list.add(proc)
                 else:
                     proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, _func, _data))
                     proc.start()
                     proc.name = '{}-Schedule-{}'.format(proc.name, data['name'])
                     self._subprocess_list.add(proc)
-            else:
-                proc = thread_cls(target=self.handle_func, args=(multiprocessing_enabled, func, data))
-                proc.start()
-                proc.name = '{}-Schedule-{}'.format(proc.name, data['name'])
-                self._subprocess_list.add(proc)
         finally:
             if multiprocessing_enabled and salt.utils.platform.is_windows():
                 # Restore our function references.

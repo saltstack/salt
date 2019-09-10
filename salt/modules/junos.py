@@ -103,29 +103,6 @@ def timeoutDecorator(function):
     return wrapper
 
 
-def timeoutDecorator(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        if 'dev_timeout' in kwargs:
-            conn = __proxy__['junos.conn']()
-            restore_timeout = conn.timeout
-            conn.timeout = kwargs.pop('dev_timeout', None)
-            try:
-                result = function(*args, **kwargs)
-                conn.timeout = restore_timeout
-                return result
-            except Exception:
-                conn.timeout = restore_timeout
-                raise
-        else:
-            try:
-                return function(*args, **kwargs)
-            except Exception:
-                raise
-
-    return wrapper
-
-
 def facts_refresh():
     '''
     Reload the facts dictionary from the device. Usually only needed if,

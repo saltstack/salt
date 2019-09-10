@@ -17,6 +17,7 @@ from tests.support.helpers import (
     this_user,
 )
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import salt libs

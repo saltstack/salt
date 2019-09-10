@@ -13,6 +13,7 @@ import logging
 import os
 import re
 import shutil
+from datetime import datetime
 import sys
 
 # Import Salt Testing libs
