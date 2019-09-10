@@ -977,35 +977,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
 
-    def test_enablefqdnsFalse(self):
-        '''
-        tests enable_fqdns_grains is set to False
-        '''
-        with patch.dict('salt.grains.core.__opts__', {'enable_fqdns_grains': False}):
-            assert core.fqdns() == {"fqdns": []}
-
-    def test_enablefqdnsTrue(self):
-        '''
-        testing that grains uses network.fqdns module
-        '''
-        with patch.dict('salt.grains.core.__salt__', {'network.fqdns': MagicMock(return_value="my.fake.domain")}):
-            with patch.dict('salt.grains.core.__opts__', {'enable_fqdns_grains': True}):
-                assert core.fqdns() == 'my.fake.domain'
-
-    def test_enablefqdnsNone(self):
-        '''
-        testing default fqdns grains is returned when enable_fqdns_grains is None
-        '''
-        with patch.dict('salt.grains.core.__opts__', {'enable_fqdns_grains': None}):
-            assert core.fqdns() == {"fqdns": []}
-
-    def test_enablefqdnswithoutpaching(self):
-        '''
-        testing fqdns grains is enabled by default
-        '''
-        with patch.dict('salt.grains.core.__salt__', {'network.fqdns': MagicMock(return_value="my.fake.domain")}):
-            assert core.fqdns() == 'my.fake.domain'
-
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
