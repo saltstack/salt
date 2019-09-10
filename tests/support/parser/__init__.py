@@ -576,8 +576,7 @@ class SaltTestingParser(optparse.OptionParser):
         self._setup_logging()
 
         # This is temporary for the WAR ROOM
-        if self.options.no_war_skips:
-            tests.support.unit.WAR_ROOM_SKIP = False
+        tests.support.unit.WAR_ROOM_SKIP = False
 
         try:
             return (self.options, self.args)

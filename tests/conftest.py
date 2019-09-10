@@ -221,8 +221,7 @@ def pytest_configure(config):
     and all plugins and initial conftest files been loaded.
     '''
     # This is temporary for the WAR ROOM
-    if config.getoption('--no-war-room-skips'):
-        tests.support.unit.WAR_ROOM_SKIP = False
+    tests.support.unit.WAR_ROOM_SKIP = False
     for dirname in os.listdir(CODE_DIR):
         if not os.path.isdir(dirname):
             continue
