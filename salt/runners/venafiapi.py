@@ -120,11 +120,11 @@ def request(
     conn = _init_connection()
 
     if csr_path is not None:
-        log.info("Will use generated CSR")
-        log.info("Using CN ", dns_name)
+        log.info("Will use generated CSR from %s", csr_path)
+        log.info("Using CN %s", dns_name)
         try:
             csr = open(csr_path).read()
-            request = CertificateRequest(common_name=dns_name, csr=csr)
+            request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
             log.error(msg=str(e))
             sys.exit(1)
@@ -134,7 +134,10 @@ def request(
         zone_config = conn.read_zone_conf(zone)
         request.update_from_zone_config(zone_config)
     conn.request_cert(request, zone)
-    private_key = request.private_key_pem
+    if csr_path is None:
+        private_key = request.private_key_pem
+    else:
+        private_key = None
     while True:
         time.sleep(5)
         cert = conn.retrieve_cert(request)
