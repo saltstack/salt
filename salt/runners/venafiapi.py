@@ -67,20 +67,17 @@ log = logging.getLogger(__name__)
 def _init_connection():
     log.info("Init venafi connection")
     api_key = __opts__.get('venafi', {}).get('api_key', '')
-    log.info("Using config: %s", api_key)
     base_url = __opts__.get('venafi', {}).get('base_url', '')
-    log.info("Using config: %s", base_url)
+    log.info("Using base_url: %s", base_url)
     tpp_user = __opts__.get('venafi', {}).get('tpp_user', '')
-    log.info("Using config: %s", tpp_user)
+    log.info("Using tpp_user: %s", tpp_user)
     tpp_password = __opts__.get('venafi', {}).get('tpp_password', '')
-    log.info("Using config: %s", tpp_password)
     trust_bundle = __opts__.get('venafi', {}).get('trust_bundle', '')
-    log.info("Using config: %s", trust_bundle)
     log.info("Finished config processing")
     if trust_bundle:
-        log.info("Will use trust bundle from %s", trust_bundle)
+        log.info("Will use trust bundle from file %s", trust_bundle)
         return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password,
-                                http_request_kwargs=trust_bundle)
+                                http_request_kwargs={"verify": trust_bundle})
     else:
         return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
 
