@@ -8,9 +8,10 @@ Introduction
 Before using these modules you need to register an account with Venafi, and
 configure it in your ``master`` configuration file.
 
-First, you need to add configuration to the ``master`` file. This is because
-all fuctions in the module require configured ``api_key`` (for Cloud) or
-``ttp_user``, ``tpp_password`` and ``base_url`` (for Trust Platform) settings.
+First, you need to configure the ``master`` file. This is because
+all module functions require either a configured ``api_key`` (for Cloud) or
+``a ttp_user`` with a ``tpp_password`` and a ``base_url`` (for Trust Platform).
+
 Open up ``/etc/salt/master`` and add:
 
 .. code-block:: yaml
@@ -48,7 +49,7 @@ in ``/etc/salt/master`` and add the base_url information following under the
 
 Example Usage
 ~~~~~~~~~~~~~
-Request certificate from Venafi Cloud or Trust Platform, using the ``Internet``
+Request a certificate from Venafi Cloud or Trust Platform, using the ``Internet``
 zone for minion ``minion.example.com``:
 
 .. code-block:: bash
@@ -74,7 +75,7 @@ Request a new certificate. Analogous to:
 :param str dns_name: Required.
 
 :param str zone="Default": Optional. The zone in Venafi Cloud
-    or Venafi Trust Platform that the certificate request will be submitted to.
+    or a policy folder in Venafi Trust Platform.
 
 :param str country=None: Optional. The two-letter ISO abbreviation for your
     country.
@@ -133,8 +134,7 @@ Delete a domain from this master's cache.
 
 Transfer certificate to pillar
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To transfer cached certificate to minion you can use venafi pillar.
+To transfer a cached certificate to a minion, you can use Venafi pillar.
 
 Example state file:
 

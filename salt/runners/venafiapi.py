@@ -65,7 +65,7 @@ log = logging.getLogger(__name__)
 
 
 def _init_connection():
-    log.info("Init venafi connection")
+    log.info("Initializing Venafi Trust Platform or Venafi Cloud connection")
     api_key = __opts__.get('venafi', {}).get('api_key', '')
     base_url = __opts__.get('venafi', {}).get('base_url', '')
     log.info("Using base_url: %s", base_url)
@@ -161,7 +161,7 @@ renew = request
 
 def _id_map(minion_id, dns_name):
     '''
-    Maintain a relationship between a minion and a dns name
+    Maintain a relationship between a minion and a DNS name
     '''
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
