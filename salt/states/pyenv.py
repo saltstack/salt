@@ -220,7 +220,7 @@ def install_pyenv(name, user=None):
         return ret
 
     ret =  _check_pyenv(ret, user)
-    if not ret['result'] is True:
+    if not ret['result']:
         if __salt__['pyenv.install'](user):
             ret['result'] = True
             ret['comment'] = 'Successfully installed pyenv'
