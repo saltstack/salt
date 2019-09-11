@@ -1192,7 +1192,7 @@ def file_copy(src=None, dest=None):
 
     .. code-block:: bash
 
-        salt 'device_name' junos.file_copy salt:://info.txt /var/tmp/info_copy.txt
+        salt 'device_name' junos.file_copy /home/m2/info.txt info_copy.txt
     '''
     conn = __proxy__['junos.conn']()
     ret = {}
@@ -1285,7 +1285,7 @@ def load(path=None, **kwargs):
     Loads the configuration from the file provided onto the device.
 
     path (required)
-        Path where the configuration/template file is present on the master. If the file has
+        Path where the configuration/template file is present. If the file has
         a ``.conf`` extension, the content is treated as text format. If the
         file has a ``.xml`` extension, the content is treated as XML format. If
         the file has a ``.set`` extension, the content is treated as Junos OS
@@ -1359,8 +1359,6 @@ def load(path=None, **kwargs):
         template_vars = op["template_vars"]
 
     try:
-        # Cannot use cache here as the template needs to be
-        # rendered every time. And get_template requires a destination
         template_cached_path = salt.utils.files.mkstemp()
         __salt__['cp.get_template'](
             path,
@@ -1424,10 +1422,6 @@ def load(path=None, **kwargs):
         ret['out'] = False
         return ret
     finally:
-        # Have to remove the generated temp file
-
-        # TODO: Salt templates can be pretty complex to figure out without debug logs
-        # If we don't remove it can be used for debugging purpose
         salt.utils.files.safe_rm(template_cached_path)
 
     return ret
@@ -1509,8 +1503,6 @@ def get_table(table, table_file, path=None, target=None, key=None, key_items=Non
     if template_args is not None and isinstance(template_args, dict):
         get_kvargs['args'] = template_args
     pyez_tables_path = os.path.dirname(os.path.abspath(tables_dir.__file__))
-
-    # First copy the tablefile here
     try:
         if path is not None:
             file_loc = glob.glob(os.path.join(path, '{}'.format(table_file)))
