@@ -596,7 +596,6 @@ def mounted(name,
             else:
                 ret['comment'] = '{0} not mounted'.format(name)
 
-    log.debug('=== here ===')
     if persist:
         if '/etc/fstab' == config:
             # Override default for Mac OS

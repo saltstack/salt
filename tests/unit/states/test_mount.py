@@ -53,14 +53,6 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         superopts3 = ['uid=510', 'gid=100', 'username=jfs2user',
                       'domain=jfs2sdomain']
 
-        name4 = os.path.realpath('/mnt/nfs1')
-        device = os.path.realpath('localhost:/mnt/nfsshare')
-        fstype = 'nfs4'
-
-        name5 = os.path.realpath('/mnt/nfs2')
-        device = os.path.realpath('localhost:/mnt/nfsshare')
-        fstype = 'nfs4'
-
         ret = {'name': name,
                'result': False,
                'comment': '',
@@ -1070,15 +1062,15 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         Test to verify that a device is mounted.
         '''
         name = os.path.realpath('/mnt/nfs1')
-        device = os.path.realpath('localhost:/mnt/nfsshare')
+        device = 'localhost:/mnt/nfsshare'
         fstype = 'nfs4'
 
         name2 = os.path.realpath('/mnt/nfs2')
-        device2 = os.path.realpath('localhost:/mnt/nfsshare')
+        device2 = 'localhost:/mnt/nfsshare'
         fstype2 = 'nfs4'
 
         name3 = os.path.realpath('/mnt/glusterfs1')
-        device3 = os.path.realpath('localhost:/mnt/gluster_share')
+        device3 = 'localhost:/mnt/gluster_share'
         fstype3 = 'glusterfs'
 
         ret = {'name': name,
@@ -1102,14 +1094,14 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test no change for uid provided as a name #25293
         with patch.dict(mount.__grains__, {'os': 'CentOS'}):
-            with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
-                                             'mount.mount': mock_str,
-                                             'mount.umount': mock_f,
-                                             'mount.read_mount_cache': mock_read_cache,
-                                             'mount.write_mount_cache': mock_write_cache,
-                                             'user.info': mock_user,
-                                             'group.info': mock_group}):
-                with patch.dict(mount.__opts__, {'test': False}):
+            with patch.dict(mount.__opts__, {'test': True}):
+                with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
+                                                 'mount.mount': mock_str,
+                                                 'mount.umount': mock_f,
+                                                 'mount.read_mount_cache': mock_read_cache,
+                                                 'mount.write_mount_cache': mock_write_cache,
+                                                 'user.info': mock_user,
+                                                 'group.info': mock_group}):
                     with patch.object(os.path, 'exists', mock_t):
                        comt = '/mnt/nfs2 would be mounted'
                        ret.update({'name': name2, 'result': None})
