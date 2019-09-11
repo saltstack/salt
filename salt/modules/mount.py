@@ -727,7 +727,6 @@ def set_fstab(
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     '''
 
-    log.debug('=== here ===')
     # Fix the opts type if it is a list
     if isinstance(opts, list):
         opts = ','.join(opts)
