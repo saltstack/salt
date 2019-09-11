@@ -984,8 +984,12 @@ def _parse_conf(conf_file=None, in_mem=False, family='ipv4'):
 
     rules = ''
     if conf_file:
-        with salt.utils.files.fopen(conf_file, 'r') as ifile:
-            rules = ifile.read()
+        try:
+            with salt.utils.files.fopen(conf_file, 'r') as ifile:
+                rules = ifile.read()
+        except IOError:
+            # Fix GitHub Issue #54459
+            return _parse_conf(conf_file=None, in_mem=True, family=family)
     elif in_mem:
         cmd = '{0}-save' . format(_iptables_cmd(family))
         rules = __salt__['cmd.run'](cmd)
