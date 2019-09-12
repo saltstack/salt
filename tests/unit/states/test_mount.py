@@ -13,12 +13,10 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
-    mock_open,
     patch)
 
 # Import Salt Libs
 import salt.states.mount as mount
-import salt.utils.files
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -1103,10 +1101,10 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                                                  'user.info': mock_user,
                                                  'group.info': mock_group}):
                     with patch.object(os.path, 'exists', mock_t):
-                       comt = '/mnt/nfs2 would be mounted'
-                       ret.update({'name': name2, 'result': None})
-                       ret.update({'comment': comt, 'changes': {}})
-                       self.assertDictEqual(mount.mounted(name2, device2,
-                                                          fstype2,
-                                                          opts=[]),
+                        comt = '/mnt/nfs2 would be mounted'
+                        ret.update({'name': name2, 'result': None})
+                        ret.update({'comment': comt, 'changes': {}})
+                        self.assertDictEqual(mount.mounted(name2, device2,
+                                                           fstype2,
+                                                           opts=[]),
                                             ret)
