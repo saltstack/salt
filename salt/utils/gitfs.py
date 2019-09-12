@@ -2112,16 +2112,25 @@ class Dulwich(GitProvider):
         pass
 
     def write_file(self, blob, dest):
-        pass
+        '''
+        Using the blob object, write the file to the destination path
+        '''
+        with salt.utils.files.fopen(dest, 'wb+') as fp_:
+            fp_.write(blob.data)
 
     def init_remote(self):
         pass
 
-
+'''
 GIT_PROVIDERS = {
     'pygit2': Pygit2,
     'gitpython': GitPython,
     'dulwich': Dulwich
+}'''
+
+GIT_PROVIDERS = {
+    'pygit2': Pygit2,
+    'gitpython': GitPython
 }
 
 
