@@ -168,7 +168,7 @@ def subvolume_created(
     if __opts__["test"]:
         ret["result"] = None
         if not exists:
-            ret["comment"].append("Subvolume {} will be created".format(name))
+            ret["changes"][name] = "Subvolume {} will be created".format(name)
         return ret
 
     if not exists:
@@ -234,7 +234,7 @@ def subvolume_deleted(name, device, commit=False, __dest=None):
     if __opts__["test"]:
         ret["result"] = None
         if exists:
-            ret["comment"].append("Subvolume {} will be removed".format(name))
+            ret["changes"][name] = "Subvolume {} will be removed".format(name)
         return ret
 
     # If commit is set, we wait until all is over
@@ -347,10 +347,10 @@ def properties(name, device, use_default=False, __dest=None, **properties):
     if __opts__["test"]:
         ret["result"] = None
         if properties_to_set:
-            msg = "Properties {} will be changed in {}".format(properties_to_set, name)
+            ret["changes"] = properties_to_set
         else:
             msg = "No properties will be changed in {}".format(name)
-        ret["comment"].append(msg)
+            ret["comment"].append(msg)
         return ret
 
     if properties_to_set:
