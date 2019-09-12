@@ -811,8 +811,8 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
                                     device='/dev/sda1', ro=True) == {
                 'name': '@/var',
                 'result': None,
-                'changes': {},
-                'comment': ["Properties {'ro': 'true'} will be changed in @/var"],
+                'changes': {'ro': 'true'},
+                'comment': [],
             }
             salt_mock['btrfs.properties'].assert_called_with('/tmp/xxx/@/var')
             mount.assert_called_once()
