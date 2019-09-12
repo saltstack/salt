@@ -449,3 +449,57 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
 
         self.assertDictEqual(mount.mod_watch(name, sfun='unmount'), ret)
+
+    def test_mounted_multiple_mounts(self):
+        '''
+        Test to verify that a device is mounted.
+        '''
+        name = os.path.realpath('/mnt/nfs1')
+        device = 'localhost:/mnt/nfsshare'
+        fstype = 'nfs4'
+
+        name2 = os.path.realpath('/mnt/nfs2')
+        device2 = 'localhost:/mnt/nfsshare'
+        fstype2 = 'nfs4'
+
+        name3 = os.path.realpath('/mnt/glusterfs1')
+        device3 = 'localhost:/mnt/gluster_share'
+        fstype3 = 'glusterfs'
+
+        ret = {'name': name,
+               'result': False,
+               'comment': '',
+               'changes': {}}
+
+        mock = MagicMock(side_effect=['new', 'present', 'new', 'change',
+                                      'bad config', 'salt', 'present'])
+        mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=False)
+        mock_ret = MagicMock(return_value={'retcode': 1})
+        mock_mnt = MagicMock(return_value={name: {'device': device, 'opts': [],
+                                                  'superopts': []}})
+        mock_read_cache = MagicMock(return_value={})
+        mock_write_cache = MagicMock(return_value=True)
+        mock_user = MagicMock(return_value={'uid': 510})
+        mock_group = MagicMock(return_value={'gid': 100})
+        mock_str = MagicMock(return_value='salt')
+        mock_fstab_config = ['localhost:/mnt/nfsshare		/mnt/nfs1	nfs	defaults	0 0']
+
+        # Test no change for uid provided as a name #25293
+        with patch.dict(mount.__grains__, {'os': 'CentOS'}):
+            with patch.dict(mount.__opts__, {'test': True}):
+                with patch.dict(mount.__salt__, {'mount.active': mock_mnt,
+                                                 'mount.mount': mock_str,
+                                                 'mount.umount': mock_f,
+                                                 'mount.read_mount_cache': mock_read_cache,
+                                                 'mount.write_mount_cache': mock_write_cache,
+                                                 'user.info': mock_user,
+                                                 'group.info': mock_group}):
+                    with patch.object(os.path, 'exists', mock_t):
+                        comt = '/mnt/nfs2 would be mounted'
+                        ret.update({'name': name2, 'result': None})
+                        ret.update({'comment': comt, 'changes': {}})
+                        self.assertDictEqual(mount.mounted(name2, device2,
+                                                           fstype2,
+                                                           opts=[]),
+                                            ret)
