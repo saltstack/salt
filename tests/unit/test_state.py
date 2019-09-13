@@ -326,6 +326,82 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret, [("somestuff", "cmd")])
 
 
+class MultiEnvHighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+    def setUp(self):
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.base_state_tree_dir = os.path.join(root_dir, "base")
+        self.other_state_tree_dir = os.path.join(root_dir, "other")
+        cache_dir = os.path.join(root_dir, "cachedir")
+        for dpath in (
+            root_dir,
+            self.base_state_tree_dir,
+            self.other_state_tree_dir,
+            cache_dir,
+        ):
+            if not os.path.isdir(dpath):
+                os.makedirs(dpath)
+        shutil.copy(
+            os.path.join(RUNTIME_VARS.BASE_FILES, "top.sls"), self.base_state_tree_dir
+        )
+        shutil.copy(
+            os.path.join(RUNTIME_VARS.BASE_FILES, "core.sls"), self.base_state_tree_dir
+        )
+        shutil.copy(
+            os.path.join(RUNTIME_VARS.BASE_FILES, "test.sls"), self.other_state_tree_dir
+        )
+        overrides = {}
+        overrides["root_dir"] = root_dir
+        overrides["state_events"] = False
+        overrides["id"] = "match"
+        overrides["file_client"] = "local"
+        overrides["file_roots"] = dict(
+            base=[self.base_state_tree_dir], other=[self.other_state_tree_dir]
+        )
+        overrides["cachedir"] = cache_dir
+        overrides["test"] = False
+        self.config = self.get_temp_config("minion", **overrides)
+        self.addCleanup(delattr, self, "config")
+        self.highstate = salt.state.HighState(self.config)
+        self.addCleanup(delattr, self, "highstate")
+        self.highstate.push_active()
+
+    def tearDown(self):
+        self.highstate.pop_active()
+
+    def test_lazy_avail_states_base(self):
+        # list_states not called yet
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": None})
+        # After getting 'base' env available states
+        self.highstate.avail["base"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+
+    def test_lazy_avail_states_other(self):
+        # list_states not called yet
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": None})
+        # After getting 'other' env available states
+        self.highstate.avail["other"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, True)
+        self.assertEqual(self.highstate.avail._avail, {"base": None, "other": ["test"]})
+
+    def test_lazy_avail_states_multi(self):
+        # list_states not called yet
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": None})
+        # After getting 'base' env available states
+        self.highstate.avail["base"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, False)
+        self.assertEqual(self.highstate.avail._avail, {"base": ["core", "top"]})
+        # After getting 'other' env available states
+        self.highstate.avail["other"]  # pylint: disable=pointless-statement
+        self.assertEqual(self.highstate.avail._filled, True)
+        self.assertEqual(
+            self.highstate.avail._avail, {"base": ["core", "top"], "other": ["test"]}
+        )
+
+
 @skipIf(pytest is None, "PyTest is missing")
 class StateReturnsTestCase(TestCase):
     """

@@ -3275,6 +3275,49 @@ class State(object):
         return self.call_high(high)
 
 
+class LazyAvailStates(object):
+    """
+    The LazyAvailStates lazily loads the list of states of available
+    environments.
+
+    This is particularly usefull when top_file_merging_strategy=same and there
+    are many environments.
+    """
+
+    def __init__(self, hs):
+        self._hs = hs
+        self._avail = {"base": None}
+        self._filled = False
+
+    def _fill(self):
+        if self._filled:
+            return
+        for saltenv in self._hs._get_envs():
+            if saltenv not in self._avail:
+                self._avail[saltenv] = None
+        self._filled = True
+
+    def __contains__(self, saltenv):
+        if saltenv == "base":
+            return True
+        self._fill()
+        return saltenv in self._avail
+
+    def __getitem__(self, saltenv):
+        if saltenv != "base":
+            self._fill()
+        if self._avail[saltenv] is None:
+            self._avail[saltenv] = self._hs.client.list_states(saltenv)
+        return self._avail[saltenv]
+
+    def items(self):
+        self._fill()
+        ret = []
+        for saltenv, states in self._avail:
+            ret.append((saltenv, self.__getitem__(saltenv)))
+        return ret
+
+
 class BaseHighState(object):
     """
     The BaseHighState is an abstract base class that is the foundation of
@@ -3293,12 +3336,9 @@ class BaseHighState(object):
 
     def __gather_avail(self):
         """
-        Gather the lists of available sls data from the master
+        Lazily gather the lists of available sls data from the master
         """
-        avail = {}
-        for saltenv in self._get_envs():
-            avail[saltenv] = self.client.list_states(saltenv)
-        return avail
+        return LazyAvailStates(self)
 
     def __gen_opts(self, opts):
         """
