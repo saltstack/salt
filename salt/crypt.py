@@ -367,7 +367,8 @@ class MasterKeys(dict):
                                                   opts['master_sign_key_name'] + '.pub')
                 self.rsa_sign_path = os.path.join(self.opts['pki_dir'],
                                                   opts['master_sign_key_name'] + '.pem')
-                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'])
+                self.sign_key = self.__get_keys(name=opts['master_sign_key_name'], 
+                                                passphrase=key_pass)
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # some of the member variables correspond to Cython objects which are
