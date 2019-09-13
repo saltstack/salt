@@ -5336,11 +5336,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
