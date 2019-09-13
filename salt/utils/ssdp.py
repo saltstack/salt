@@ -114,11 +114,18 @@ class SSDPFactory(SSDPBase):
 
         :param config:
         '''
+        log = logging.getLogger(__name__)
         for attr in (self.SIGNATURE, self.ANSWER):
             setattr(self, attr, config.get(attr, self.DEFAULTS[attr]))
         self.disable_hidden = False
         self.transport = None
         self.my_ip = socket.gethostbyname(socket.gethostname())
+        log.critical('Troubleshooting socket error')
+        log.critical(socket.gethostname())
+        with open('/etc/hosts', 'r') as f_:
+            log.critical(f_.read())
+        with open('/etc/hostname', 'r') as f_:
+            log.critical(f_.read())
 
     def __call__(self, *args, **kwargs):
         '''
