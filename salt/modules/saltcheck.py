@@ -97,7 +97,7 @@ Saltcheck Keywords
     returns a dictionary as a result, the ``assertion_section`` value is used to lookup a specific value
     in that return for the assertion comparison.
 **assertion_section_delimiter:**
-    (str) Optional delimiter to use when splitting a neseted structure.
+    (str) Optional delimiter to use when splitting a nested structure.
     Defaults to ':'
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
