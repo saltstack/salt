@@ -256,6 +256,7 @@ def running(name,
             username=None,
             password=None,
             os_type=None,
+            serial_type=None,
             arch=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
@@ -346,6 +347,8 @@ def running(name,
         Only used when creating a new virtual machine.
 
         .. versionadded:: Neon
+    :param serial_type: Serial device type. One of ``'pty'``, ``'tcp'``
+        (Default: ``None``)
     :param arch:
         architecture of the virtual machine. The default value is taken from the host capabilities,
         but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
@@ -455,6 +458,7 @@ def running(name,
                                   cpu=cpu,
                                   mem=mem,
                                   os_type=os_type,
+                                  serial_type=serial_type,
                                   arch=arch,
                                   image=image,
                                   hypervisor=vm_type,
