@@ -386,9 +386,9 @@ def running(name,
                 type: network
                 source: admin
             - graphics:
-              - type: spice
+                type: spice
                 listen:
-                  - type: address
+                    type: address
                     address: 192.168.0.125
 
     '''
