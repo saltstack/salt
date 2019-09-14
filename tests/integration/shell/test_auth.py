@@ -16,7 +16,7 @@ import random
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import destructiveTest, skip_if_not_root
 
 # Import Salt libs
@@ -50,7 +50,7 @@ def gen_password():
 @skip_if_not_root
 @skipIf(pwd is None, 'Skip if no pwd module exists')
 @destructiveTest
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class AuthTest(ShellCase):
     '''
     Test auth mechanisms

@@ -16,14 +16,14 @@ from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.modules.cmdmod
-from tests.support.unit import skipIf  # WAR ROOM temp import
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.platform
 
 
 log = logging.getLogger(__name__)
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class DocTestCase(TestCase):
     '''
     Unit test case for testing doc files and strings.

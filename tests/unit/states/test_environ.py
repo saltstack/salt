@@ -6,7 +6,7 @@ import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     MagicMock,
     patch
@@ -52,7 +52,7 @@ class TestEnvironState(TestCase, LoaderModuleMockMixin):
         ret = envstate.setenv('test', 'other')
         self.assertEqual(ret['changes'], {})
 
-    @skipIf(True, 'WAR ROOM TEMPORARY SKIP')
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not salt.utils.platform.is_windows(), 'Windows only')
     def test_setenv_permanent(self):
         '''

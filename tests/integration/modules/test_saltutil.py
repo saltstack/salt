@@ -16,7 +16,7 @@ import datetime
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt Libs
 import salt.config
@@ -72,7 +72,7 @@ class SaltUtilModuleTest(ModuleCase):
         self.assertIn('priv', ret['return'])
 
 
-@skipIf(True, "WAR ROOM TEMPORARY SKIP")
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class SaltUtilSyncModuleTest(ModuleCase):
     '''
     Testcase for the saltutil sync execution module
