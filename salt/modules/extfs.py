@@ -145,7 +145,7 @@ def tune(device, **kwargs):
     * **journal**: set to True to create a journal (default on ext3/4)
     * **journal_opts**: options for the fs journal (comma separated)
     * **label**: label to apply to the file system
-    * **reserved**: percentage of blocks reserved for super-user
+    * **reserved_percentage**: percentage of blocks reserved for super-user
     * **last_dir**: last mounted directory
     * **opts**: mount options (comma separated)
     * **feature**: set or clear a feature (comma separated)
@@ -169,6 +169,7 @@ def tune(device, **kwargs):
                  'journal': 'j',
                  'journal_opts': 'J',
                  'label': 'L',
+                 'reserved_percentage': 'm',
                  'last_dir': 'M',
                  'opts': 'o',
                  'feature': 'O',
