@@ -18,6 +18,7 @@ import pprint
 import shutil
 import socket
 import logging
+import tempfile
 TESTS_DIR = os.path.dirname(
     os.path.normpath(os.path.abspath(__file__))
 )
@@ -116,11 +117,25 @@ logging.root.setLevel(logging.WARNING)
 log = logging.getLogger('salt.testsuite')
 
 
+# ----- PyTest Tempdir Plugin Hooks --------------------------------------------------------------------------------->
+def pytest_tempdir_temproot():
+    # Taken from https://github.com/saltstack/salt/blob/v2019.2.0/tests/support/paths.py
+    # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
+    # for unix sockets: ``error: AF_UNIX path too long``
+    # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+    if not sys.platform.startswith('darwin'):
+        tempdir = os.environ.get('TMPDIR') or tempfile.gettempdir()
+    else:
+        tempdir = '/tmp'
+    return os.path.abspath(os.path.realpath(tempdir))
+
+
 def pytest_tempdir_basename():
     '''
     Return the temporary directory basename for the salt test suite.
     '''
     return 'salt-tests-tmpdir'
+# <---- PyTest Tempdir Plugin Hooks ----------------------------------------------------------------------------------
 
 
 # ----- CLI Options Setup ------------------------------------------------------------------------------------------->
