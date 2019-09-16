@@ -93,9 +93,9 @@ def _get_available(recommended=False, restart=False, shut_down=False):
     if salt.utils.data.is_true(recommended):
         conditions.append(lambda m: m.group('recommended'))
     if salt.utils.data.is_true(restart):
-        conditions.append(lambda m: 'restart' in (m.group('action') or ''))
+        conditions.append(lambda m: 'restart' in (m.group('action') or ''))  # pylint: disable=superfluous-parens
     if salt.utils.data.is_true(shut_down):
-        conditions.append(lambda m: 'shut down' in (m.group('action') or ''))
+        conditions.append(lambda m: 'shut down' in (m.group('action') or ''))  # pylint: disable=superfluous-parens
 
     return {
         m.group('name'): m.group('version')

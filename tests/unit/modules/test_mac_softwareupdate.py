@@ -66,7 +66,7 @@ class MacSoftwareUpdatePreCatalinaTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(result, expected)
 
     @patch('salt.utils.mac_utils.execute_return_result')
-    def test_list_available(self, mock_execute):
+    def test_list_available_trailing_ws(self, mock_execute):
         """Ensure the regex works with trailing whitespace in labels"""
         # This also tests for no version number returning an empty str.
         # This example's label will not install without the trailing space.
