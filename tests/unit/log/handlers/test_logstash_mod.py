@@ -25,6 +25,9 @@ class DatagramLogstashHandlerTest(TestCase):
         self.logger.setLevel(logging.DEBUG)
         self.logger.addHandler(DatagramLogstashHandler("127.0.0.1", port))
 
+    def tearDown(self):
+        self.test_server.close()
+
     def test_log_pickling(self):
         # given
         the_log = "test message"
@@ -43,16 +46,20 @@ class DatagramLogstashHandlerTest(TestCase):
 
 class ZMQLogstashHanderTest(TestCase):
     def setUp(self):
-        context = zmq.Context()
+        self.context = zmq.Context()
         port = get_unused_localhost_port()
 
-        self.zmq_server = context.socket(zmq.SUB)
+        self.zmq_server = self.context.socket(zmq.SUB)
         self.zmq_server.setsockopt(zmq.SUBSCRIBE, b"")
         self.zmq_server.bind("tcp://127.0.0.1:{}".format(port))
 
         self.logger = logging.getLogger("test_logstash_logger")
         self.logger.setLevel(logging.DEBUG)
         self.logger.addHandler(ZMQLogstashHander("tcp://127.0.0.1:{}".format(port)))
+
+    def tearDown(self):
+        self.zmq_server.close()
+        self.context.term()
 
     def test_log_pickling(self):
         # given
