@@ -267,7 +267,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
 
 def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None, profile=None):
     '''
-    .. versionadded:: develop
+    .. versionadded:: Sodium
 
     Return Elasticsearch cluster settings.
 
@@ -291,7 +291,7 @@ def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None
 
 def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=None):
     '''
-    .. versionadded:: develop
+    .. versionadded:: Sodium
 
     Set Elasticsearch cluster settings.
 
