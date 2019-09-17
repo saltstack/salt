@@ -97,7 +97,7 @@ def request(
     loc=None,
     org=None,
     org_unit=None,
-    password=None,
+    key_password=None,
     csr_path=None,
 ):
     '''
@@ -114,9 +114,9 @@ def request(
         log.error(msg=str("Missing zone parameter"))
         sys.exit(1)
 
-    if password is not None:
-        if password.startswith('sdb://'):
-            password = __salt__['sdb.get'](password)
+    if key_password is not None:
+        if key_password.startswith('sdb://'):
+            key_password = __salt__['sdb.get'](key_password)
     conn = _init_connection()
 
     if csr_path is not None:
@@ -130,7 +130,7 @@ def request(
             sys.exit(1)
     else:
         request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                     organization=org, organizational_unit=org_unit, key_password=password)
+                                     organization=org, organizational_unit=org_unit, key_password=key_password)
         zone_config = conn.read_zone_conf(zone)
         request.update_from_zone_config(zone_config)
     conn.request_cert(request, zone)

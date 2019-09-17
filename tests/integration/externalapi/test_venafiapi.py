@@ -58,6 +58,7 @@ class VenafiTest(ShellCase):
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 dns_name=cn,
+                                key_password='secretPassword',
                                 zone='Default')
         print("Ret is:\n", ret)
         cert_output = ret['return'][0]
@@ -78,7 +79,8 @@ class VenafiTest(ShellCase):
         if not pkey_output:
             pytest.fail('venafi_private key not found in output_value')
 
-        pkey = serialization.load_pem_private_key(pkey_output.encode(), password=None, backend=default_backend())
+        pkey = serialization.load_pem_private_key(pkey_output.encode(), password=b'secretPassword',
+                                                  backend=default_backend())
 
         pkey_public_key_pem = pkey.public_key().public_bytes(
             encoding=serialization.Encoding.PEM,
