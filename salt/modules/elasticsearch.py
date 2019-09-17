@@ -265,6 +265,59 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve cluster stats, server returned code {0} with message {1}".format(e.status_code, e.error))
 
 
+def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: develop
+
+    Return Elasticsearch cluster settings.
+
+    flat_settings
+        Return settings in flat format.
+
+    include_defaults
+        Whether to return all default clusters setting.
+
+    CLI example::
+
+        salt myminion elasticsearch.cluster_get_settings
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.cluster.get_settings(flat_settings=flat_settings, include_defaults=include_defaults)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve cluster settings, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
+def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: develop
+
+    Set Elasticsearch cluster settings.
+
+    body
+        The settings to be updated. Can be either 'transient' or 'persistent' (survives cluster restart)
+        http://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-update-settings.html
+
+    flat_settings
+        Return settings in flat format.
+
+    CLI example::
+
+        salt myminion elasticsearch.cluster_put_settings '{"persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}'
+        salt myminion elasticsearch.cluster_put_settings '{"transient": {"indices.recovery.max_bytes_per_sec": "50mb"}}'
+    '''
+    if not body:
+        message = 'You must provide a body with settings'
+        raise SaltInvocationError(message)
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.cluster.put_settings(body=body, flat_settings=flat_settings)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot update cluster settings, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
 def alias_create(indices, alias, hosts=None, body=None, profile=None, source=None):
     '''
     Create an alias for a specific index/indices
