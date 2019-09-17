@@ -2336,7 +2336,7 @@ class ElasticsearchTestCase(TestCase):
             '''
             cluster = MockElasticCluster()
 
-        body= {"transient": {}, "persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}
+        body = {"transient": {}, "persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}
         ret_body = {"acknowledged": True,
                     "transient": {},
                     "persistent": {"indices": {"recovery": {"max_bytes_per_sec": "50mb"}}}
@@ -2365,7 +2365,7 @@ class ElasticsearchTestCase(TestCase):
             '''
             cluster = MockElasticCluster()
 
-        body= {"transient": {}, "persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}
+        body = {"transient": {}, "persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}
         with patch.object(elasticsearch, '_get_instance',
                           MagicMock(return_value=MockElastic())):
             self.assertRaises(CommandExecutionError, elasticsearch.cluster_put_settings, body)
