@@ -19,6 +19,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
+    call,
     patch,
     NO_MOCK,
     NO_MOCK_REASON,
@@ -402,3 +403,132 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.win_iis.get_container_setting',
                        MagicMock(return_value={'managedPipelineMode': 'Integrated'})):
             self.assertTrue(win_iis.set_container_setting(**kwargs))
+
+    def test_get_webconfiguration_settings_no_settings(self):
+        self.assertEqual(win_iis.get_webconfiguration_settings('salt', {}, ''), {})
+
+    def test_get_webconfiguration_settings_pass(self):
+        settings = [{'name': 'enabled',
+                     'filter': 'system.webServer/security/authentication/anonymousAuthentication'}]
+
+        ps_cmd_validate = ['Get-WebConfigurationProperty',
+                           '-PSPath',
+                           "'salt'",
+                           '-Filter',
+                           "'system.webServer/security/authentication/anonymousAuthentication'",
+                           '-Name',
+                           "'enabled'",
+                           '-Location',
+                           "''",
+                           '-ErrorAction',
+                           'Stop',
+                           '|',
+                           'Out-Null;']
+
+        ps_cmd = ['$Settings = New-Object System.Collections.ArrayList;',
+                  "$Property = Get-WebConfigurationProperty -PSPath 'salt'",
+                  "-Name 'enabled' -Filter 'system.webServer/security/authentication/anonymousAuthentication' -Location '' -ErrorAction Stop;",
+                  'if (([String]::IsNullOrEmpty($Property) -eq $False) -and',
+                  "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
+                  '$Property = $Property | Select-Object',
+                  '-ExpandProperty Value };',
+                  "$Settings.add(@{filter='system.webServer/security/authentication/anonymousAuthentication';name='enabled';location='';value=[String] $Property})| Out-Null;",
+                  '$Property = $Null;',
+                  '$Settings']
+
+        func_ret = {'name': 'enabled', 'value': True}
+        with patch.object(win_iis, '_srvmgr', return_value={'retcode': 0, 'stdout': 'json data'}) as _srvmgr:
+            with patch.object(win_iis.salt.utils.json, 'loads', return_value=func_ret) as loads:
+                ret = win_iis.get_webconfiguration_settings('salt', settings)
+
+                self.assertEqual(_srvmgr.call_count, 2)
+                self.assertEqual(_srvmgr.mock_calls[0], call(cmd=ps_cmd_validate, return_json=True))
+                self.assertEqual(_srvmgr.mock_calls[1], call(cmd=ps_cmd, return_json=True))
+
+                loads.assert_called_once_with('json data', strict=False)
+                self.assertEqual(func_ret, ret)
+
+    def test_set_webconfiguration_settings_no_settings(self):
+        self.assertEqual(win_iis.set_webconfiguration_settings('salt', {}, ''), False)
+
+    def test_set_webconfiguration_settings_pass(self):
+        settings = [{'name': 'enabled',
+                     'filter': 'system.webServer/security/authentication/anonymousAuthentication',
+                     'value': False}]
+
+        current_settings = [{'name': 'enabled',
+                             'filter': 'system.webServer/security/authentication/anonymousAuthentication',
+                             'value': True}]
+
+        new_settings = [{'name': 'enabled',
+                         'filter': 'system.webServer/security/authentication/anonymousAuthentication',
+                         'value': False}]
+
+        ps_cmd = ['Set-WebConfigurationProperty',
+                  '-PSPath',
+                  "'salt'",
+                  '-Filter',
+                  "'system.webServer/security/authentication/anonymousAuthentication'",
+                  '-Name',
+                  "'enabled'",
+                  '-Location',
+                  "''",
+                  '-Value',
+                  "'False';"]
+
+        with patch.object(win_iis, 'get_webconfiguration_settings', side_effect=[current_settings, new_settings]) as get_webconfiguration_settings:
+            with patch.object(win_iis, '_srvmgr', return_value={'retcode': 0}) as _srvmgr:
+                ret = win_iis.set_webconfiguration_settings('salt', settings, '')
+
+                self.assertEqual(get_webconfiguration_settings.call_count, 2)
+                self.assertEqual(get_webconfiguration_settings.mock_calls[0], call(name='salt',
+                                                                                   settings=settings,
+                                                                                   location=''))
+                self.assertEqual(get_webconfiguration_settings.mock_calls[1], call(name='salt',
+                                                                                   settings=settings,
+                                                                                   location=''))
+
+                _srvmgr.assert_called_once_with(ps_cmd)
+
+                self.assertTrue(ret)
+
+    def test_set_webconfiguration_settings_fail(self):
+        settings = [{'name': 'enabled',
+                     'filter': 'system.webServer/security/authentication/anonymousAuthentication',
+                     'value': False}]
+
+        current_settings = [{'name': 'enabled',
+                             'filter': 'system.webServer/security/authentication/anonymousAuthentication',
+                             'value': True}]
+
+        new_settings = [{'name': 'enabled',
+                         'filter': 'system.webServer/security/authentication/anonymousAuthentication',
+                         'value': True}]
+
+        ps_cmd = ['Set-WebConfigurationProperty',
+                  '-PSPath',
+                  "'salt'",
+                  '-Filter',
+                  "'system.webServer/security/authentication/anonymousAuthentication'",
+                  '-Name',
+                  "'enabled'",
+                  '-Location',
+                  "''",
+                  '-Value',
+                  "'False';"]
+
+        with patch.object(win_iis, 'get_webconfiguration_settings', side_effect=[current_settings, new_settings]) as get_webconfiguration_settings:
+            with patch.object(win_iis, '_srvmgr', return_value={'retcode': 0}) as _srvmgr:
+                ret = win_iis.set_webconfiguration_settings('salt', settings, '')
+
+                self.assertEqual(get_webconfiguration_settings.call_count, 2)
+                self.assertEqual(get_webconfiguration_settings.mock_calls[0], call(name='salt',
+                                                                                   settings=settings,
+                                                                                   location=''))
+                self.assertEqual(get_webconfiguration_settings.mock_calls[1], call(name='salt',
+                                                                                   settings=settings,
+                                                                                   location=''))
+
+                _srvmgr.assert_called_once_with(ps_cmd)
+
+                self.assertFalse(ret)
