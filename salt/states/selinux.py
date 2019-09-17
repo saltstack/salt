@@ -483,7 +483,7 @@ def fcontext_policy_applied(name, recursive=False):
 
 def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Makes sure an SELinux port policy for a given port, protocol and SELinux context type is present.
 
@@ -538,7 +538,7 @@ def port_policy_present(name, sel_type, protocol=None, port=None, sel_range=None
 
 def port_policy_absent(name, sel_type=None, protocol=None, port=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Makes sure an SELinux port policy for a given port, protocol and SELinux context type is absent.
 

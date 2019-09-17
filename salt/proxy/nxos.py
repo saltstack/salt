@@ -42,123 +42,132 @@ To configure the proxy minon for nxapi:
       verify: False
       no_save_config: True
 
-proxytype:
-    (REQUIRED) Use this proxy minion `nxos`
+``proxytype``
 
-connection:
-    (REQUIRED) connection transport type.
-    Choices: `ssh, nxapi`
-    Default: `ssh`
+- (REQUIRED) Use this proxy minion `nxos`
 
-host:
-    (REQUIRED) login ip address or dns hostname.
+``connection``
 
-username:
-    (REQUIRED) login username.
+- (REQUIRED) connection transport type.
+- Choices: `ssh, nxapi`
+- Default: `ssh`
 
-password:
-    (REQUIRED) login password.
+``host``
 
-no_save_config:
-    If False, 'copy running-config starting-config' is issues for every
-        configuration command.
-    If True, Running config is not saved to startup config
-    Default: False
+- (REQUIRED) login ip address or dns hostname.
 
-    The recommended approach is to use the `save_running_config` function
-    instead of this option to improve performance.  The default behavior
-    controlled by this option is preserved for backwards compatibility.
+``username``
 
-Conection SSH Args:
+- (REQUIRED) login username.
 
-    prompt_name:
-        (REQUIRED when `connection` is `ssh`)
-        (REQUIRED, this or `prompt_regex` below, but not both)
-        The name in the prompt on the switch.  Recommended to use your
-        device's hostname.
+``password``
+- (REQUIRED) login password.
 
-    prompt_regex:
-        (REQUIRED when `connection` is `ssh`)
-        (REQUIRED, this or `prompt_name` above, but not both)
-        A regular expression that matches the prompt on the switch
-        and any other possible prompt at which you need the proxy minion
-        to continue sending input.  This feature was specifically developed
-        for situations where the switch may ask for confirmation.  `prompt_name`
-        above would not match these, and so the session would timeout.
+``no_save_config``
 
-        Example:
+- If False, 'copy running-config starting-config' is issues for every
+  configuration command.
 
-        .. code-block:: yaml
+- If True, Running config is not saved to startup config (Default: False)
 
-            nxos-switch#.*|\(y\/n\)\?.*
+- The recommended approach is to use the `save_running_config` function instead
+  of this option to improve performance.  The default behavior controlled by
+  this option is preserved for backwards compatibility.
 
-        This should match
+**Connection SSH Args**
 
-        .. code-block:: shell
+``prompt_name``
 
-            nxos-switch#
+- (REQUIRED when `connection` is `ssh`)
+- (REQUIRED, this or `prompt_regex` below, but not both)
+- The name in the prompt on the switch. Recommended to use your device's
+  hostname.
 
-        or
+``prompt_regex``
 
-        .. code-block:: shell
+- (REQUIRED when ``connection`` is ``ssh``)
+- (REQUIRED, this or ``prompt_name`` above, but not both)
+- A regular expression that matches the prompt on the switch and any other
+  possible prompt at which you need the proxy minion to continue sending input.
+  This feature was specifically developed for situations where the switch may
+  ask for confirmation. ``prompt_name`` above would not match these, and so the
+  session would timeout.
 
-            Flash complete.  Reboot this switch (y/n)? [n]
+  Example:
+
+  .. code-block:: yaml
+
+      nxos-switch#.*|\(y\/n\)\?.*
+
+  This should match
+
+  .. code-block:: shell
+
+      nxos-switch#
+
+  or
+
+  .. code-block:: shell
+
+      Flash complete.  Reboot this switch (y/n)? [n]
 
 
-        If neither `prompt_name` nor `prompt_regex` is specified the prompt will be
-        defaulted to
+  If neither ``prompt_name`` nor ``prompt_regex`` is specified the prompt will
+  be defaulted to
 
-        .. code-block:: shell
+  .. code-block:: shell
 
-            .+#$
+      .+#$
 
-        which should match any number of characters followed by a `#` at the end
-        of the line.  This may be far too liberal for most installations.
+  which should match any number of characters followed by a `#` at the end of
+  the line. This may be far too liberal for most installations.
 
-    ssh_args:
-        Extra optional arguments used for connecting to switch.
+``ssh_args``
 
-    key_accept:
-        Wheather or not to accept the host key of the switch on initial login.
-        Default: `False`
+- Extra optional arguments used for connecting to switch.
 
-Connection NXAPI Args:
+``key_accept``
 
-    transport:
-        (REQUIRED) when `connection` is `nxapi`.
-        Choices: `http, https`
-        Default: `https`
+- Wheather or not to accept the host key of the switch on initial login.
+  (Default: `False`)
 
-    port:
-        (REQUIRED) when `connection` is `nxapi`.
-        Default: `80`
+**Connection NXAPI Args**
 
-    verify:
-        (REQUIRED) when `connection` is `nxapi`.
-        Either a boolean, in which case it controls whether we verify the NX-API
-        TLS certificate, or a string, in which case it must be a path to a CA bundle
-        to use.
-        Default: `True`
+``transport``
 
-        When there is no certificate configuration on the device and this option is
-        set as ``True`` (default), the commands will fail with the following error:
-        ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed (_ssl.c:581)``.
-        In this case, you either need to configure a proper certificate on the
-        device (*recommended*), or bypass the checks setting this argument as ``False``
-        with all the security risks considered.
+- (REQUIRED) when `connection` is `nxapi`.
+- Choices: `http, https`
+- Default: `https`
 
-        Check https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus3000/sw/programmability/6_x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_chapter_01.html
-        to see how to properly configure the certificate.
+``port``
 
+- (REQUIRED) when `connection` is `nxapi`.
+- Default: `80`
+
+``verify``
+
+- (REQUIRED) when `connection` is `nxapi`.
+- Either a boolean, in which case it controls whether we verify the NX-API TLS
+  certificate, or a string, in which case it must be a path to a CA bundle to
+  use.
+- When there is no certificate configuration on the device and this option is
+  set as ``True`` (default), the commands will fail with the following error:
+  ``SSLError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed
+  (_ssl.c:581)``.  In this case, you either need to configure a proper
+  certificate on the device (*recommended*), or bypass the checks setting this
+  argument as ``False`` with all the security risks considered.
+- Check
+  https://www.cisco.com/c/en/us/td/docs/switches/datacenter/nexus3000/sw/programmability/6_x/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide/b_Cisco_Nexus_3000_Series_NX-OS_Programmability_Guide_chapter_01.html
+  to see how to properly configure the certificate.
 
 The functions from the proxy minion can be run from the salt commandline using
 the :mod:`salt.modules.nxos<salt.modules.nxos>` execution module.
 
 .. note:
-    If `multiprocessing: True` is set for the proxy minion config, each forked
-    worker will open up a new connection to the Cisco NX OS Switch.  If you
-    only want one consistent connection used for everything, use
-    `multiprocessing: False`
+    If ``multiprocessing: True`` is set for the proxy minion config, each
+    forked worker will open up a new connection to the Cisco NX OS Switch. If
+    you only want one consistent connection used for everything, use
+    ``multiprocessing: False``
 
 '''
 
@@ -167,12 +176,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import multiprocessing
 import copy
+import re
 
 # Import Salt libs
 import salt.utils.nxos
 from salt.utils.vt_helper import SSHConnection
 from salt.utils.vt import TerminalException
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import (NxosCliError, CommandExecutionError)
 
 log = logging.getLogger(__file__)
 
@@ -213,7 +223,7 @@ def init(opts=None):
         log.info('NXOS PROXY: Initialize nxapi proxy connection')
         return _init_nxapi(opts)
     else:
-        log.error('Unknown Connection Type: {0}'.format(CONNECTION))
+        log.error('Unknown Connection Type: %s', CONNECTION)
         return False
 
 
@@ -251,7 +261,7 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     '''
-    import __main__ as main
+    import __main__ as main  # pylint: disable=unused-import
     if not DEVICE_DETAILS['grains_cache']:
         data = sendline('show version')
         if CONNECTION == 'nxapi':
@@ -259,7 +269,7 @@ def grains(**kwargs):
         ret = salt.utils.nxos.system_info(data)
         log.debug(ret)
         DEVICE_DETAILS['grains_cache'].update(ret['nxos'])
-    return DEVICE_DETAILS['grains_cache']
+    return {'nxos': DEVICE_DETAILS['grains_cache']}
 
 
 def grains_refresh(**kwargs):
@@ -284,7 +294,7 @@ def shutdown(opts):
         return _shutdown_nxapi(opts)
 
 
-def sendline(command, method='cli_show_ascii'):
+def sendline(command, method='cli_show_ascii', **kwargs):
     '''
     Send arbitrary show or config commands to the NX-OS device.
 
@@ -308,12 +318,12 @@ def sendline(command, method='cli_show_ascii'):
     '''
     try:
         if CONNECTION == 'ssh':
-            result = _sendline_ssh(command)
+            result = _sendline_ssh(command, **kwargs)
         elif CONNECTION == 'nxapi':
-            result = _nxapi_request(command, method)
-    except (TerminalException, CommandExecutionError) as e:
+            result = _nxapi_request(command, method, **kwargs)
+    except (TerminalException, NxosCliError) as e:
         log.error(e)
-        return 'Command {0} failed'.format(command)
+        raise
     return result
 
 
@@ -360,9 +370,9 @@ def proxy_config(commands, **kwargs):
             for each in ret:
                 if 'Failure' in each:
                     log.error(each)
-    except (TerminalException, CommandExecutionError) as e:
+    except CommandExecutionError as e:
         log.error(e)
-        return [commands, repr(e)]
+        raise
     return [commands, ret]
 
 
@@ -393,10 +403,14 @@ def _init_ssh(opts):
             ssh_args=opts['proxy'].get('ssh_args', ''),
             prompt=this_prompt)
         out, err = DEVICE_DETAILS[_worker_name()].sendline('terminal length 0')
-        log.info('SSH session establised for process {}'.format(_worker_name()))
-    except TerminalException as e:
-        log.error(e)
-        return False
+        log.info('SSH session establised for process %s', _worker_name())
+    except Exception as ex:
+        log.error('Unable to connect to %s', opts['proxy']['host'])
+        log.error('Please check the following:\n')
+        log.error('-- Verify that "feature ssh" is enabled on your NX-OS device: %s', opts['proxy']['host'])
+        log.error('-- Exception Generated: %s', ex)
+        log.error(ex)
+        exit()
     DEVICE_DETAILS['initialized'] = True
     DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
 
@@ -419,13 +433,36 @@ def _shutdown_ssh(opts):
     DEVICE_DETAILS[_worker_name()].close_connection()
 
 
-def _sendline_ssh(command):
+def _sendline_ssh(command, **kwargs):
     if _ping_ssh() is False:
         _init_ssh(None)
     out, err = DEVICE_DETAILS[_worker_name()].sendline(command)
     _, out = out.split('\n', 1)
     out, _, _ = out.rpartition('\n')
+    _parse_output_for_errors(out, command, **kwargs)
     return out
+
+
+def _parse_output_for_errors(data, command, **kwargs):
+    '''
+    Helper method to parse command output for error information
+    '''
+    if re.search('% Invalid', data):
+        raise CommandExecutionError({
+            'rejected_input': command,
+            'message': 'CLI excution error',
+            'code': '400',
+            'cli_error': data.lstrip(),
+        })
+    if kwargs.get('error_pattern') is not None:
+        for re_line in kwargs.get('error_pattern'):
+            if re.search(re_line, data):
+                raise CommandExecutionError({
+                    'rejected_input': command,
+                    'message': 'CLI excution error',
+                    'code': '400',
+                    'cli_error': data.lstrip(),
+                })
 
 
 def _worker_name():
@@ -458,10 +495,14 @@ def _init_nxapi(opts):
         DEVICE_DETAILS['initialized'] = True
         DEVICE_DETAILS['up'] = True
         DEVICE_DETAILS['no_save_config'] = opts['proxy'].get('no_save_config', False)
-    except CommandExecutionError:
-        log.error('Unable to connect to %s', conn_args['host'], exc_info=True)
-        raise
-    log.info('nxapi DEVICE_DETAILS info: {}'.format(DEVICE_DETAILS))
+    except Exception as ex:
+        log.error('Unable to connect to %s', conn_args['host'])
+        log.error('Please check the following:\n')
+        log.error('-- Verify that "feature nxapi" is enabled on your NX-OS device: %s', conn_args['host'])
+        log.error('-- Verify that nxapi settings on the NX-OS device and proxy minion config file match')
+        log.error('-- Exception Generated: %s', ex)
+        exit()
+    log.info('nxapi DEVICE_DETAILS info: %s', DEVICE_DETAILS)
     return True
 
 

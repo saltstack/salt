@@ -21,10 +21,10 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import TestCase
 from tests.support.mock import patch
-from tests.support.paths import TMP
 
 # Import Salt libs
 import salt.config
@@ -76,12 +76,12 @@ class LazyLoaderTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['grains'] = salt.loader.grains(cls.opts)
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
         # Setup the module
-        self.module_dir = tempfile.mkdtemp(dir=TMP)
+        self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
         with salt.utils.files.fopen(self.module_file, 'w') as fh:
@@ -330,17 +330,13 @@ class LazyLoaderSingleItem(TestCase):
         '''
         Checks that a KeyError is raised when the function key does not contain a '.'
         '''
+        key = 'testing_no_dot'
+        expected = "The key '{0}' should contain a '.'".format(key)
         with self.assertRaises(KeyError) as err:
             inspect.isfunction(self.loader['testing_no_dot'])
 
-        if six.PY2:
-            self.assertEqual(err.exception[0],
-                             'The key \'%s\' should contain a \'.\'')
-        else:
-            self.assertEqual(
-                six.text_type(err.exception),
-                six.text_type(("The key '%s' should contain a '.'", 'testing_no_dot'))
-            )
+        result = err.exception.args[0]
+        assert result == expected, result
 
 
 module_template = '''
@@ -378,11 +374,11 @@ class LazyLoaderReloadingTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['grains'] = salt.loader.grains(cls.opts)
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         self.count = 0
         opts = copy.deepcopy(self.opts)
@@ -521,11 +517,11 @@ class LazyLoaderVirtualAliasTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['grains'] = salt.loader.grains(cls.opts)
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         opts = copy.deepcopy(self.opts)
         dirs = salt.loader._module_dirs(opts, 'modules', 'module')
         dirs.append(self.tmp_dir)
@@ -608,11 +604,11 @@ class LazyLoaderSubmodReloadingTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['grains'] = salt.loader.grains(cls.opts)
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.makedirs(self.module_dir)
 
         self.count = 0
@@ -781,11 +777,11 @@ class LazyLoaderModulePackageTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['grains'] = salt.loader.grains(cls.opts)
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         dirs = salt.loader._module_dirs(copy.deepcopy(self.opts), 'modules', 'module')
         dirs.append(self.tmp_dir)
@@ -886,11 +882,11 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
         cls.opts['grains'] = salt.loader.grains(cls.opts)
-        if not os.path.isdir(TMP):
-            os.makedirs(TMP)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
 
     def setUp(self):
-        self.tmp_dir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         os.makedirs(self.module_dir)
 
         self.lib_count = collections.defaultdict(int)  # mapping of path -> count
@@ -1005,25 +1001,25 @@ class LoaderGlobalsTest(ModuleCase):
         Verify that the globals listed in the doc string (from the test) are in these modules
         '''
         # find the globals
-        global_vars = []
+        global_vars = {}
         for val in six.itervalues(mod_dict):
             # only find salty globals
             if val.__module__.startswith('salt.loaded'):
                 if hasattr(val, '__globals__'):
-                    if '__wrapped__' in val.__globals__:
-                        global_vars.append(sys.modules[val.__module__].__dict__)
+                    if hasattr(val, '__wrapped__') or '__wrapped__' in val.__globals__:
+                        global_vars[val.__module__] = sys.modules[val.__module__].__dict__
                     else:
-                        global_vars.append(val.__globals__)
+                        global_vars[val.__module__] = val.__globals__
 
         # if we couldn't find any, then we have no modules -- so something is broken
-        self.assertNotEqual(global_vars, [], msg='No modules were loaded.')
+        self.assertNotEqual(global_vars, {}, msg='No modules were loaded.')
 
         # get the names of the globals you should have
         func_name = inspect.stack()[1][3]
         names = next(six.itervalues(salt.utils.yaml.safe_load(getattr(self, func_name).__doc__)))
 
         # Now, test each module!
-        for item in global_vars:
+        for item in six.itervalues(global_vars):
             for name in names:
                 self.assertIn(name, list(item.keys()))
 
@@ -1165,7 +1161,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
 
     def setUp(self):
         # Setup the module
-        self.module_dir = tempfile.mkdtemp(dir=TMP)
+        self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.module_file = os.path.join(self.module_dir,
                                         '{0}.py'.format(self.module_name))
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage SNS Topics
-
+=================
 
 Create and destroy SNS topics. Be aware that this interacts with Amazon's
 services, and so may incur charges.
@@ -40,13 +40,21 @@ passed in as a dict, or as a string to pull from pillars or minion config:
             - keyid: GKTADJGHEIQSXMKKRBJ08H
             - key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    # Using a profile from pillars
+Using a profile from pillars
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: yaml
+
     mytopic:
         boto3_sns.topic_present:
             - region: us-east-1
             - profile: mysnsprofile
 
-    # Passing in a profile
+Passing in a profile
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: yaml
+
     mytopic:
         boto3_sns.topic_present:
             - region: us-east-1
@@ -111,6 +119,7 @@ def topic_present(name, subscriptions=None, attributes=None,
     attributes
         Dictionary of attributes to set on the SNS topic
         Valid attribute keys are:
+
           - Policy:  the JSON serialization of the topic's access control policy
           - DisplayName:  the human-readable name used in the "From" field for notifications
                 to email and email-json endpoints
@@ -208,7 +217,8 @@ def topic_present(name, subscriptions=None, attributes=None,
             subscribe += [sub]
     for sub in curr_subs:
         if {'Protocol': sub['Protocol'], 'Endpoint': sub['Endpoint']} not in want_obfuscated:
-            unsubscribe += [sub['SubscriptionArn']]
+            if sub['SubscriptionArn'].startswith('arn:aws:sns:'):
+                unsubscribe += [sub['SubscriptionArn']]
     for sub in subscribe:
         ret = _create_or_update_subscription(ret, sub, curr_subs, mutable_attrs, TopicArn,
                                                 region, key, keyid, profile)
@@ -277,6 +287,13 @@ def _create_or_update_subscription(ret, sub, curr_subs, attrs, topic, region, ke
             ret['result'] = False
         return ret
     # Set requested subscriptions attributes if their current values differ...
+    if sub_arn == 'PendingConfirmation':
+        # The API won't let you do anything with subscriptions in pending status...
+        msg = 'Ignoring PendingConfirmation subscription {} {} on topic {}'.format(
+                curr_attrs['Protocol'], curr_attrs['Endpoint'], curr_attrs['TopicArn'])
+        log.warning(msg)
+        ret['comment'] += ' {}'.format(msg)
+        return ret
     for attr in attrs:
         if attr in sub and not _json_objs_equal(curr_attrs.get(attr), sub[attr]):
             fixed = sub[attr] if isinstance(sub[attr],

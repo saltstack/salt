@@ -25,6 +25,7 @@ import traceback
 import re
 import time
 import random
+import collections
 
 # Import salt libs
 import salt.loader
@@ -40,10 +41,12 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack as msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
 import salt.syspaths as syspaths
+import salt.transport.client
 from salt.serializers.msgpack import serialize as msgpack_serialize, deserialize as msgpack_deserialize
 from salt.template import compile_template, compile_template_str
 from salt.exceptions import (
@@ -55,7 +58,6 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
-import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
@@ -71,6 +73,7 @@ STATE_REQUISITE_KEYWORDS = frozenset([
     'onchanges_any',
     'onfail',
     'onfail_any',
+    'onfail_all',
     'onfail_stop',
     'prereq',
     'prerequired',
@@ -116,8 +119,11 @@ STATE_RUNTIME_KEYWORDS = frozenset([
     '__orchestration_jid__',
     '__pub_user',
     '__pub_arg',
+    '__pub_id',
     '__pub_jid',
     '__pub_fun',
+    '__pub_fun_args',
+    '__pub_schedule',
     '__pub_tgt',
     '__pub_ret',
     '__pub_pid',
@@ -879,20 +885,43 @@ class State(object):
             low_data_onlyif = [low_data['onlyif']]
         else:
             low_data_onlyif = low_data['onlyif']
-        for entry in low_data_onlyif:
-            if not isinstance(entry, six.string_types):
-                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
+
+        def _check_cmd(cmd):
             if cmd != 0 and ret['result'] is False:
                 ret.update({'comment': 'onlyif condition is false',
                             'skip_watch': True,
                             'result': True})
-                return ret
             elif cmd == 0:
                 ret.update({'comment': 'onlyif condition is true', 'result': False})
+
+        for entry in low_data_onlyif:
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                _check_cmd(cmd)
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
+                if self.state_con.get('retcode', 0):
+                    _check_cmd(self.state_con['retcode'])
+                elif not result:
+                    ret.update({'comment': 'onlyif condition is false',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'onlyif condition is true',
+                                'result': False})
+
+            else:
+                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
         return ret
 
     def _run_check_unless(self, low_data, cmd_opts):
@@ -905,20 +934,41 @@ class State(object):
             low_data_unless = [low_data['unless']]
         else:
             low_data_unless = low_data['unless']
-        for entry in low_data_unless:
-            if not isinstance(entry, six.string_types):
-                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
+
+        def _check_cmd(cmd):
             if cmd == 0 and ret['result'] is False:
                 ret.update({'comment': 'unless condition is true',
                             'skip_watch': True,
                             'result': True})
             elif cmd != 0:
                 ret.update({'comment': 'unless condition is false', 'result': False})
-                return ret
+
+        for entry in low_data_unless:
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                _check_cmd(cmd)
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in unless: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+
+                if 'args' in entry:
+                    result = self.functions[entry.pop('fun')](*entry.pop('args'), **entry)
+                else:
+                    result = self.functions[entry.pop('fun')](**entry)
+                if self.state_con.get('retcode', 0):
+                    _check_cmd(self.state_con['retcode'])
+                elif result:
+                    ret.update({'comment': 'unless condition is true',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'unless condition is false',
+                                'result': False})
+            else:
+                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
 
         # No reason to stop, return ret
         return ret
@@ -956,7 +1006,7 @@ class State(object):
             self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners, proxy?
         else:
             self.states = salt.loader.states(self.opts, self.functions, self.utils,
-                                             self.serializers, proxy=self.proxy)
+                                             self.serializers, context=self.state_con, proxy=self.proxy)
 
     def load_modules(self, data=None, proxy=None):
         '''
@@ -990,7 +1040,7 @@ class State(object):
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
         self.rend = salt.loader.render(self.opts, self.functions,
-                                       states=self.states, proxy=self.proxy)
+                                       states=self.states, proxy=self.proxy, context=self.state_con)
 
     def module_refresh(self):
         '''
@@ -1357,8 +1407,9 @@ class State(object):
                 names = []
                 if state.startswith('__'):
                     continue
-                chunk = {'state': state,
-                         'name': name}
+                chunk = OrderedDict()
+                chunk['state'] = state
+                chunk['name'] = name
                 if orchestration_jid is not None:
                     chunk['__orchestration_jid__'] = orchestration_jid
                 if '__sls__' in body:
@@ -1537,7 +1588,7 @@ class State(object):
                     if isinstance(arg, dict):
                         # It is not a function, verify that the arg is a
                         # requisite in statement
-                        if len(arg) < 1:
+                        if not arg:
                             # Empty arg dict
                             # How did we get this far?
                             continue
@@ -1615,7 +1666,7 @@ class State(object):
                                                             found = True
                                         if not found:
                                             continue
-                                if len(ind) < 1:
+                                if not ind:
                                     continue
                                 pstate = next(iter(ind))
                                 pname = ind[pstate]
@@ -1755,14 +1806,15 @@ class State(object):
         try:
             ret = self.states[cdata['full']](*cdata['args'],
                                              **cdata['kwargs'])
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             ret = {
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
 
         utc_finish_time = datetime.datetime.utcnow()
@@ -1938,12 +1990,18 @@ class State(object):
                         ret = self.call_parallel(cdata, low)
                     else:
                         self.format_slots(cdata)
-                        ret = self.states[cdata['full']](*cdata['args'],
-                                                         **cdata['kwargs'])
+                        if cdata['full'].split('.')[-1] == '__call__':
+                            # __call__ requires OrderedDict to preserve state order
+                            # kwargs are also invalid overall
+                            ret = self.states[cdata['full']](cdata['args'], module=None, state=cdata['kwargs'])
+                        else:
+                            ret = self.states[cdata['full']](*cdata['args'], **cdata['kwargs'])
                 self.states.inject_globals = {}
             if 'check_cmd' in low and '{0[state]}.mod_run_check_cmd'.format(low) not in self.states:
                 ret.update(self._run_check_cmd(low))
-        except Exception:
+        except Exception as exc:
+            log.debug('An exception occurred in this state: %s', exc,
+                      exc_info_on_loglevel=logging.DEBUG)
             trb = traceback.format_exc()
             # There are a number of possibilities to not have the cdata
             # populated with what we might have expected, so just be smart
@@ -1958,8 +2016,7 @@ class State(object):
                 'result': False,
                 'name': name,
                 'changes': {},
-                'comment': 'An exception occurred in this state: {0}'.format(
-                    trb)
+                'comment': 'An exception occurred in this state: {0}'.format(trb)
             }
         finally:
             if low.get('__prereq__'):
@@ -2068,24 +2125,96 @@ class State(object):
                         'test.arg(\'arg\', kw=\'kwarg\')')
             return slot
         log.debug('Calling slot: %s(%s, %s)', fun, args, kwargs)
-        return self.functions[fun](*args, **kwargs)
+        slot_return = self.functions[fun](*args, **kwargs)
+
+        # Given input  __slot__:salt:test.arg(somekey="value").not.exist ~ /appended
+        # slot_text should be __slot...).not.exist
+        # append_data should be ~ /appended
+        slot_text = fmt[2].split('~')[0]
+        append_data = fmt[2].split('~', 1)[1:]
+        log.debug('slot_text: %s', slot_text)
+        log.debug('append_data: %s', append_data)
+
+        # Support parsing slot dict response
+        # return_get should result in a kwargs.nested.dict path by getting
+        # everything after first closing paren: )
+        return_get = None
+        try:
+            return_get = slot_text[slot_text.rindex(')')+1:]
+        except ValueError:
+            pass
+        if return_get:
+            #remove first period
+            return_get = return_get.split('.', 1)[1].strip()
+            log.debug('Searching slot result %s for %s', slot_return, return_get)
+            slot_return = salt.utils.data.traverse_dict_and_list(slot_return,
+                                                                 return_get,
+                                                                 default=None,
+                                                                 delimiter='.'
+                                                                )
+
+        if append_data:
+            if isinstance(slot_return, six.string_types):
+                # Append text to slot string result
+                append_data = ' '.join(append_data).strip()
+                log.debug('appending to slot result: %s', append_data)
+                slot_return += append_data
+            else:
+                log.error('Ignoring slot append, slot result is not a string')
+
+        return slot_return
 
     def format_slots(self, cdata):
         '''
         Read in the arguments from the low level slot syntax to make a last
         minute runtime call to gather relevant data for the specific routine
+
+        Will parse strings, first level of dictionary values, and strings and
+        first level dict values inside of lists
         '''
         # __slot__:salt.cmd.run(foo, bar, baz=qux)
+        SLOT_TEXT = '__slot__:'
         ctx = (('args', enumerate(cdata['args'])),
                ('kwargs', cdata['kwargs'].items()))
         for atype, avalues in ctx:
             for ind, arg in avalues:
                 arg = salt.utils.data.decode(arg, keep=True)
-                if not isinstance(arg, six.text_type) \
-                        or not arg.startswith('__slot__:'):
+                if isinstance(arg, dict):
+                    # Search dictionary values for __slot__:
+                    for key, value in arg.items():
+                        try:
+                            if value.startswith(SLOT_TEXT):
+                                log.trace("Slot processsing dict value %s", value)
+                                cdata[atype][ind][key] = self.__eval_slot(value)
+                        except AttributeError:
+                            # Not a string/slot
+                            continue
+                elif isinstance(arg, list):
+                    for idx, listvalue in enumerate(arg):
+                        log.trace("Slot processing list value: %s", listvalue)
+                        if isinstance(listvalue, dict):
+                            # Search dict values in list for __slot__:
+                            for key, value in listvalue.items():
+                                try:
+                                    if value.startswith(SLOT_TEXT):
+                                        log.trace("Slot processsing nested dict value %s", value)
+                                        cdata[atype][ind][idx][key] = self.__eval_slot(value)
+                                except AttributeError:
+                                    # Not a string/slot
+                                    continue
+                        if isinstance(listvalue, six.text_type):
+                            # Search strings in a list for __slot__:
+                            if listvalue.startswith(SLOT_TEXT):
+                                log.trace("Slot processsing nested string %s", listvalue)
+                                cdata[atype][ind][idx] = self.__eval_slot(listvalue)
+                elif isinstance(arg, six.text_type) \
+                        and arg.startswith(SLOT_TEXT):
+                    # Search strings for __slot__:
+                    log.trace("Slot processsing %s", arg)
+                    cdata[atype][ind] = self.__eval_slot(arg)
+                else:
                     # Not a slot, skip it
                     continue
-                cdata[atype][ind] = self.__eval_slot(arg)
 
     def verify_retry_data(self, retry_data):
         '''
@@ -2301,6 +2430,8 @@ class State(object):
             present = True
         if 'onfail_any' in low:
             present = True
+        if 'onfail_all' in low:
+            present = True
         if 'onchanges' in low:
             present = True
         if 'onchanges_any' in low:
@@ -2316,6 +2447,7 @@ class State(object):
                 'prereq': [],
                 'onfail': [],
                 'onfail_any': [],
+                'onfail_all': [],
                 'onchanges': [],
                 'onchanges_any': []}
         if pre:
@@ -2407,7 +2539,7 @@ class State(object):
                 else:
                     if run_dict[tag].get('__state_ran__', True):
                         req_stats.add('met')
-            if r_state.endswith('_any'):
+            if r_state.endswith('_any') or r_state == 'onfail':
                 if 'met' in req_stats or 'change' in req_stats:
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
@@ -2417,8 +2549,14 @@ class State(object):
                     if 'fail' in req_stats:
                         req_stats.remove('fail')
                 if 'onfail' in req_stats:
-                    if 'fail' in req_stats:
+                    # a met requisite in this case implies a success
+                    if 'met' in req_stats:
                         req_stats.remove('onfail')
+            if r_state.endswith('_all'):
+                if 'onfail' in req_stats:
+                    # a met requisite in this case implies a failure
+                    if 'met' in req_stats:
+                        req_stats.remove('met')
             fun_stats.update(req_stats)
 
         if 'unmet' in fun_stats:
@@ -2430,8 +2568,8 @@ class State(object):
                 status = 'met'
             else:
                 status = 'pre'
-        elif 'onfail' in fun_stats and 'met' not in fun_stats:
-            status = 'onfail'  # all onfail states are OK
+        elif 'onfail' in fun_stats and 'onchangesmet' not in fun_stats:
+            status = 'onfail'
         elif 'onchanges' in fun_stats and 'onchangesmet' not in fun_stats:
             status = 'onchanges'
         elif 'change' in fun_stats:
@@ -2783,10 +2921,33 @@ class State(object):
         running.update(errors)
         return running
 
+    def inject_default_call(self, high):
+        '''
+        Sets .call function to a state, if not there.
+
+        :param high:
+        :return:
+        '''
+        for chunk in high:
+            state = high[chunk]
+            if not isinstance(state, collections.Mapping):
+                continue
+            for state_ref in state:
+                needs_default = True
+                if not isinstance(state[state_ref], list):
+                    continue
+                for argset in state[state_ref]:
+                    if isinstance(argset, six.string_types):
+                        needs_default = False
+                        break
+                if needs_default:
+                    state[state_ref].insert(-1, '__call__')
+
     def call_high(self, high, orchestration_jid=None):
         '''
         Process a high data call and ensure the defined states.
         '''
+        self.inject_default_call(high)
         errors = []
         # If there is extension data reconcile it
         high, ext_errors = self.reconcile_extend(high)
@@ -3677,7 +3838,7 @@ class BaseHighState(object):
 
                     for arg in state[name][s_dec]:
                         if isinstance(arg, dict):
-                            if len(arg) > 0:
+                            if arg:
                                 if next(six.iterkeys(arg)) == 'order':
                                     found = True
                     if not found:
@@ -3803,12 +3964,14 @@ class BaseHighState(object):
         statefiles = []
         for saltenv, states in six.iteritems(matches):
             for sls_match in states:
-                try:
+                if saltenv in self.avail:
                     statefiles = fnmatch.filter(self.avail[saltenv], sls_match)
-                except KeyError:
-                    all_errors.extend(
-                        ['No matching salt environment for environment '
-                         '\'{0}\' found'.format(saltenv)]
+                elif '__env__' in self.avail:
+                    statefiles = fnmatch.filter(self.avail['__env__'], sls_match)
+                else:
+                    all_errors.append(
+                        'No matching salt environment for environment '
+                        '\'{0}\' found'.format(saltenv)
                     )
                 # if we did not found any sls in the fileserver listing, this
                 # may be because the sls was generated or added later, we can
@@ -4157,7 +4320,7 @@ class MasterState(State):
         self.utils = salt.loader.utils(self.opts)
         self.serializers = salt.loader.serializers(self.opts)
         self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
-        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
+        self.rend = salt.loader.render(self.opts, self.functions, states=self.states, context=self.state_con)
 
 
 class MasterHighState(HighState):
@@ -4181,12 +4344,14 @@ class RemoteHighState(object):
     '''
     Manage gathering the data from the master
     '''
+    # XXX: This class doesn't seem to be used anywhere
     def __init__(self, opts, grains):
         self.opts = opts
         self.grains = grains
         self.serial = salt.payload.Serial(self.opts)
         # self.auth = salt.crypt.SAuth(opts)
-        self.channel = salt.transport.Channel.factory(self.opts['master_uri'])
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts['master_uri'])
+        self._closing = False
 
     def compile_master(self):
         '''
@@ -4199,3 +4364,13 @@ class RemoteHighState(object):
             return self.channel.send(load, tries=3, timeout=72000)
         except SaltReqTimeoutError:
             return {}
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        self.channel.close()
+
+    def __del__(self):
+        self.destroy()

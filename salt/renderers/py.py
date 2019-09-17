@@ -47,8 +47,8 @@ execution functions, grains, pillar, etc. They are:
   ``/srv/salt/foo/bar/baz.sls``, then ``__sls__`` in that file will be
   ``foo.bar.baz``.
 
-The global context ``data`` (same as context ``{{ data }}`` for states written
-with Jinja + YAML). The following YAML + Jinja state declaration:
+When writing a reactor SLS file the global context ``data`` (same as context ``{{ data }}``
+for states written with Jinja + YAML) is available. The following YAML + Jinja state declaration:
 
 .. code-block:: jinja
 

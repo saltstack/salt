@@ -6,7 +6,7 @@ import os
 import time
 
 # Import Salt Testing libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
@@ -25,7 +25,7 @@ class NetapiClientTest(TestCase):
         '''
         Set up a NetapiClient instance
         '''
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
+        opts = salt.config.client_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):
@@ -36,6 +36,11 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
+        # If --proxy is set, it will cause an extra minion_id to be in the
+        # response. Since there's not a great way to know if the test
+        # runner's proxy minion is running, and we're not testing proxy
+        # minions here anyway, just remove it from the response.
+        ret.pop('proxytest', None)
         self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
     def test_local_batch(self):
@@ -59,6 +64,14 @@ class NetapiClientTest(TestCase):
         self.assertIn('jid', ret)
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
+        try:
+            # If --proxy is set, it will cause an extra minion_id to be in the
+            # response. Since there's not a great way to know if the test
+            # runner's proxy minion is running, and we're not testing proxy
+            # minions here anyway, just remove it from the response.
+            ret['minions'].remove('proxytest')
+        except ValueError:
+            pass
         self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
 
     def test_wheel(self):

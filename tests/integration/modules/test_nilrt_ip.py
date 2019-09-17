@@ -33,9 +33,6 @@ except ImportError:
     CaseInsensitiveDict = None
 
 
-INTERFACE_FOR_TEST = 'eth1'
-
-
 # pylint: disable=too-many-ancestors
 @skip_if_not_root
 @skipIf(not pyiface, 'The python pyiface package is not installed')
@@ -64,8 +61,7 @@ class NilrtIpModuleTest(ModuleCase):
         if self.os_grain['lsb_distrib_id'] == 'nilrt':
             self.run_function('file.copy', ['/etc/natinst/share/ni-rt.ini', '/tmp/ni-rt.ini', 'remove_existing=True'])
         else:
-            self.run_function('file.copy', ['/var/lib/connman', '/tmp/connman', 'recurse=True',
-                                            'remove_existing=False'])
+            self.run_function('file.copy', ['/var/lib/connman', '/tmp/connman', 'recurse=True', 'remove_existing=True'])
 
     def tearDown(self):
         '''
@@ -129,8 +125,7 @@ class NilrtIpModuleTest(ModuleCase):
             self.assertTrue(result)
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
-            if self.os_grain['lsb_distrib_id'] == 'nilrt':
-                self.assertEqual(interface['adapter_mode'], 'disabled')
+            self.assertEqual(interface['adapter_mode'], 'disabled')
             self.assertFalse(self.__connected(pyiface.Interface(name=interface['connectionid'])))
 
     @destructiveTest
@@ -147,10 +142,9 @@ class NilrtIpModuleTest(ModuleCase):
         for interface in interfaces:
             result = self.run_function('ip.up', [interface.name])
             self.assertTrue(result)
-        if self.os_grain['lsb_distrib_id'] == 'nilrt':
-            info = self.run_function('ip.get_interfaces_details', timeout=300)
-            for interface in info['interfaces']:
-                self.assertEqual(interface['adapter_mode'], 'tcpip')
+        info = self.run_function('ip.get_interfaces_details', timeout=300)
+        for interface in info['interfaces']:
+            self.assertEqual(interface['adapter_mode'], 'tcpip')
 
     @destructiveTest
     def test_set_dhcp_linklocal_all(self):
@@ -164,8 +158,7 @@ class NilrtIpModuleTest(ModuleCase):
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
             self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
-            if self.os_grain['lsb_distrib_id'] == 'nilrt':
-                self.assertEqual(interface['adapter_mode'], 'tcpip')
+            self.assertEqual(interface['adapter_mode'], 'tcpip')
 
     @destructiveTest
     def test_set_dhcp_only_all(self):
@@ -211,12 +204,12 @@ class NilrtIpModuleTest(ModuleCase):
             self.assertTrue(result)
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
+            self.assertEqual(interface['adapter_mode'], 'tcpip')
             if self.os_grain['lsb_distrib_id'] != 'nilrt':
                 self.assertIn('8.8.4.4', interface['ipv4']['dns'])
                 self.assertIn('8.8.8.8', interface['ipv4']['dns'])
             else:
                 self.assertEqual(interface['ipv4']['dns'], ['8.8.4.4'])
-                self.assertEqual(interface['adapter_mode'], 'tcpip')
             self.assertEqual(interface['ipv4']['requestmode'], 'static')
             self.assertEqual(interface['ipv4']['address'], '192.168.10.4')
             self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
@@ -226,8 +219,6 @@ class NilrtIpModuleTest(ModuleCase):
         '''
         Test supported adapter modes for each interface
         '''
-        if self.os_grain['lsb_distrib_id'] != 'nilrt':
-            self.skipTest('Test is just for older nilrt distros')
         interface_pattern = re.compile('^eth[0-9]+$')
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
@@ -247,123 +238,17 @@ class NilrtIpModuleTest(ModuleCase):
         '''
         if not self.__check_ethercat():
             self.skipTest('Test is just for systems with Ethercat')
-        self.assertTrue(self.run_function('ip.set_ethercat', [INTERFACE_FOR_TEST, 19]))
+        self.assertTrue(self.run_function('ip.set_ethercat', ['eth1', 19]))
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
+            if interface['connectionid'] == 'eth1':
                 self.assertEqual(interface['adapter_mode'], 'ethercat')
                 self.assertEqual(int(interface['ethercat']['masterid']), 19)
                 break
-        self.assertTrue(self.run_function('ip.set_dhcp_linklocal_all', [INTERFACE_FOR_TEST]))
+        self.assertTrue(self.run_function('ip.set_dhcp_linklocal_all', ['eth1']))
         info = self.run_function('ip.get_interfaces_details', timeout=300)
         for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
+            if interface['connectionid'] == 'eth1':
                 self.assertEqual(interface['adapter_mode'], 'tcpip')
                 self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
-                break
-
-    @destructiveTest
-    def test_dhcp_disable(self):
-        '''
-        Test cases:
-            - dhcp -> disable
-            - disable -> dhcp
-        '''
-        if self.os_grain['lsb_distrib_id'] == 'nilrt':
-            self.skipTest('Test is just for newer nilrt distros')
-
-        self.assertTrue(self.run_function('ip.set_dhcp_linklocal_all', [INTERFACE_FOR_TEST]))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
-                break
-
-        self.assertTrue(self.run_function('ip.disable', [INTERFACE_FOR_TEST]))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'disabled')
-                break
-
-        self.assertTrue(self.run_function('ip.set_dhcp_linklocal_all', [INTERFACE_FOR_TEST]))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
-                break
-
-    @destructiveTest
-    def test_dhcp_static(self):
-        '''
-        Test cases:
-            - dhcp -> static
-            - static -> dhcp
-        '''
-        if self.os_grain['lsb_distrib_id'] == 'nilrt':
-            self.skipTest('Test is just for newer nilrt distros')
-
-        self.assertTrue(self.run_function('ip.set_dhcp_linklocal_all', [INTERFACE_FOR_TEST]))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
-                break
-
-        self.assertTrue(self.run_function('ip.set_static_all', [INTERFACE_FOR_TEST, '192.168.1.125', '255.255.255.0',
-                                                                '192.168.1.1', '8.8.8.8 8.8.8.4']))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'static')
-                self.assertEqual(interface['ipv4']['address'], '192.168.1.125')
-                self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
-                self.assertIn('8.8.8.4', interface['ipv4']['dns'])
-                self.assertIn('8.8.8.8', interface['ipv4']['dns'])
-                break
-
-        self.assertTrue(self.run_function('ip.set_dhcp_linklocal_all', [INTERFACE_FOR_TEST]))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'dhcp_linklocal')
-                break
-
-    @destructiveTest
-    def test_static_disable(self):
-        '''
-        Test cases:
-            - static -> disable
-            - disable -> static
-        '''
-        if self.os_grain['lsb_distrib_id'] == 'nilrt':
-            self.skipTest('Test is just for newer nilrt distros')
-
-        self.assertTrue(self.run_function('ip.set_static_all', [INTERFACE_FOR_TEST, '192.168.1.125', '255.255.255.0',
-                                                                '192.168.1.1', '8.8.8.8']))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'static')
-                self.assertEqual(interface['ipv4']['address'], '192.168.1.125')
-                self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
-                self.assertEqual(interface['ipv4']['dns'], ['8.8.8.8'])
-                break
-
-        self.assertTrue(self.run_function('ip.disable', [INTERFACE_FOR_TEST]))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'disabled')
-                break
-
-        self.assertTrue(self.run_function('ip.set_static_all', [INTERFACE_FOR_TEST, '192.168.1.125', '255.255.255.0',
-                                                                '192.168.1.1']))
-        info = self.run_function('ip.get_interfaces_details', timeout=300)
-        for interface in info['interfaces']:
-            if interface['connectionid'] == INTERFACE_FOR_TEST:
-                self.assertEqual(interface['ipv4']['requestmode'], 'static')
-                self.assertEqual(interface['ipv4']['address'], '192.168.1.125')
-                self.assertEqual(interface['ipv4']['netmask'], '255.255.255.0')
-                self.assertEqual(interface['ipv4']['dns'], [])
                 break

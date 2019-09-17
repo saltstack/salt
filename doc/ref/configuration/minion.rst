@@ -213,18 +213,18 @@ minion event bus. The value is expressed in bytes.
 ``enable_legacy_startup_events``
 --------------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``True``
 
 When a minion starts up it sends a notification on the event bus with a tag
-that looks like this: `salt/minion/<minion_id>/start`. For historical reasons
+that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
-`minion_start`. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set `enable_legacy_startup_events: False` in the
-minion config to ensure only the `salt/minion/<minion_id>/start` events are
-sent. Beginning with the `Neon` Salt release this option will default to
-`False`
+``minion_start``. This duplication can cause a lot of clutter on the event bus
+when there are many minions. Set ``enable_legacy_startup_events: False`` in the
+minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
+sent. Beginning with the ``Sodium`` Salt release this option will default to
+``False``.
 
 .. code-block:: yaml
 
@@ -286,13 +286,13 @@ to the next master in the list if it finds the existing one is dead.
 ------------------
 
 .. versionadded:: 2014.7.0
-.. deprecated:: Fluorine
+.. deprecated:: 2019.2.0
 
 Default: ``False``
 
 .. warning::
 
-    This option has been deprecated in Salt ``Fluorine``. Please use
+    This option has been deprecated in Salt ``2019.2.0``. Please use
     :conf_minion:`random_master` instead.
 
 .. code-block:: yaml
@@ -305,7 +305,7 @@ Default: ``False``
 -----------------
 
 .. versionadded:: 2014.7.0
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
     The :conf_minion:`master_failback` option can be used in conjunction with
     ``random_master`` to force the minion to fail back to the first master in the
     list if the first master is back online. Note that :conf_minion:`master_type`
@@ -900,6 +900,23 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: metadata_server_grains
+
+``metadata_server_grains``
+--------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``False``
+
+Set this option to enable gathering of cloud metadata from
+``http://169.254.169.254/latest`` for use in grains (see :py:mod:`here
+<salt.grains.metadata>` for more information).
+
+.. code-block:: yaml
+
+    metadata_server_grains: True
+
 .. conf_minion:: fibre_channel_grains
 
 ``fibre_channel_grains``
@@ -928,6 +945,20 @@ minion. Since this grain is expensive, it is disabled by default.
 .. code-block:: yaml
 
     iscsi_grains: True
+
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
 
 .. conf_minion:: mine_enabled
 
@@ -1429,7 +1460,7 @@ talking to the intended master.
 ``http_connect_timeout``
 ------------------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``20``
 
@@ -1515,7 +1546,7 @@ The password used for HTTP proxy access.
 ``no_proxy``
 ------------
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Default: ``[]``
 
@@ -1538,7 +1569,7 @@ Docker Configuration
 ----------------------
 
 .. versionadded:: 2017.7.8,2018.3.3
-.. versionchanged:: Fluorine
+.. versionchanged:: 2019.2.0
     The default value is now ``False``
 
 Default: ``True``
@@ -3072,6 +3103,34 @@ Default: ``{}``
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
 
+
+.. conf_minion:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_minion:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_minion:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
+
 .. conf_minion:: zmq_monitor
 
 ``zmq_monitor``
@@ -3292,7 +3351,7 @@ have other services that need to go with it.
 
 .. versionadded:: 2016.11.0
 
-Default: ``0``
+Default: ``1800``
 
 If set to a nonzero integer, then passing ``refresh=True`` to functions in the
 :mod:`windows pkg module <salt.modules.win_pkg>` will not refresh the windows

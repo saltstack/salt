@@ -53,7 +53,7 @@ def __virtual__():
     '''
     Only work on Solaris based systems
     '''
-    if 'Solaris' in __grains__['os_family']:
+    if 'Solaris' in __grains__.get('os_family'):
         return True
     return (False, 'The logadm execution module cannot be loaded: only available on Solaris.')
 
@@ -64,7 +64,7 @@ def _arg2opt(arg):
     '''
     res = [o for o, a in option_toggles.items() if a == arg]
     res += [o for o, a in option_flags.items() if a == arg]
-    return res[0] if len(res) else None
+    return res[0] if res else None
 
 
 def _parse_conf(conf_file=default_conf):
@@ -90,7 +90,7 @@ def _parse_options(entry, options, include_unset=True):
     '''
     log_cfg = {}
     options = shlex.split(options)
-    if len(options) == 0:
+    if not options:
         return None
 
     ## identifier is entry or log?

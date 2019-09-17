@@ -129,6 +129,20 @@ def sync_engines(name, **kwargs):
     return _sync_single(name, "engines", **kwargs)
 
 
+def sync_executors(name, **kwargs):
+    '''
+    Performs the same task as saltutil.sync_executors module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_executors:
+            - refresh: True
+    '''
+    return _sync_single(name, "executors", **kwargs)
+
+
 def sync_grains(name, **kwargs):
     '''
     Performs the same task as saltutil.sync_grains module
@@ -227,6 +241,20 @@ def sync_proxymodules(name, **kwargs):
     return _sync_single(name, "proxymodules", **kwargs)
 
 
+def sync_matchers(name, **kwargs):
+    '''
+    Performs the same task as saltutil.sync_matchers module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_matchers:
+            - refresh: True
+    '''
+    return _sync_single(name, "matchers", **kwargs)
+
+
 def sync_renderers(name, **kwargs):
     '''
     Performs the same task as saltutil.sync_renderers module
@@ -309,3 +337,17 @@ def sync_utils(name, **kwargs):
             - refresh: True
     '''
     return _sync_single(name, "utils", **kwargs)
+
+
+def sync_serializers(name, **kwargs):
+    '''
+    Performs the same task as saltutil.sync_serializers module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_serializers:
+            - refresh: True
+    '''
+    return _sync_single(name, "serializers", **kwargs)

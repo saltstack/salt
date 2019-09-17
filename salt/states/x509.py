@@ -6,7 +6,7 @@ Manage X509 Certificates
 
 :depends: M2Crypto
 
-This module can enable managing a complete PKI infrastructure including creating private keys, CA's,
+This module can enable managing a complete PKI infrastructure including creating private keys, CAs,
 certificates and CRLs. It includes the ability to generate a private key on a server, and have the
 corresponding public key sent to a remote CA to create a CA signed certificate. This can be done in
 a secure manner, where private keys are always generated locally and never moved across the network.
@@ -117,7 +117,7 @@ can define a restricted list of minons which are allowed to remotely invoke this
 
 
 This state will instruct all minions to trust certificates signed by our new CA.
-Using jinja to strip newlines from the text avoids dealing with newlines in the rendered yaml,
+Using Jinja to strip newlines from the text avoids dealing with newlines in the rendered YAML,
 and the  :mod:`sign_remote_certificate <salt.states.x509.sign_remote_certificate>` state will
 handle properly formatting the text before writing the output.
 
@@ -267,7 +267,7 @@ def private_key_managed(name,
         Cipher for encrypting the private key.
 
     new:
-        Always create a new key. Defaults to False.
+        Always create a new key. Defaults to ``False``.
         Combining new with :mod:`prereq <salt.states.requsities.preqreq>`, or when used as part of a
         `managed_private_key` can allow key rotation whenever a new certificiate is generated.
 
@@ -285,7 +285,7 @@ def private_key_managed(name,
 
     Example:
 
-    The jinja templating in this example ensures a private key is generated if the file doesn't exist
+    The Jinja templating in this example ensures a private key is generated if the file doesn't exist
     and that a new private key is generated whenever the certificate that uses it is to be renewed.
 
     .. code-block:: jinja
@@ -294,7 +294,7 @@ def private_key_managed(name,
           x509.private_key_managed:
             - bits: 4096
             - new: True
-            {% if salt['file.file_exists']('/etc/pki/ca.key') -%}
+            {% if salt['file.file_exists']('/etc/pki/www.key') -%}
             - prereq:
               - x509: /etc/pki/www.crt
             {%- endif %}
@@ -404,7 +404,7 @@ def certificate_managed(name,
         Manages the private key corresponding to the certificate. All of the
         arguments supported by :py:func:`x509.private_key_managed
         <salt.states.x509.private_key_managed>` are supported. If `name` is not
-        speicified or is the same as the name of the certificate, the private
+        specified or is the same as the name of the certificate, the private
         key and certificate will be written together in the same file.
 
     append_certs:
@@ -530,11 +530,12 @@ def certificate_managed(name,
         raise salt.exceptions.SaltInvocationError(
             'signing_policy must be specified if ca_server is.')
 
-    new = __salt__['x509.create_certificate'](testrun=True, **kwargs)
+    new = __salt__['x509.create_certificate'](testrun=False, text=True, **kwargs)
+    new = __salt__['x509.read_certificate'](certificate=new)
+    newcert = __salt__['x509.create_certificate'](testrun=True, **kwargs)
 
     if isinstance(new, dict):
         new_comp = copy.deepcopy(new)
-        new.pop('Issuer Public Key')
         if 'serial_number' not in kwargs:
             new_comp.pop('Serial Number')
             if 'signing_cert' not in kwargs:
@@ -549,7 +550,7 @@ def certificate_managed(name,
         new_comp.pop('MD5 Finger Print')
         new_comp.pop('SHA1 Finger Print')
         new_comp.pop('SHA-256 Finger Print')
-        new_issuer_public_key = new_comp.pop('Issuer Public Key')
+        new_issuer_public_key = new_issuer_public_key = newcert.pop('Issuer Public Key')
     else:
         new_comp = new
 
@@ -626,14 +627,14 @@ def crl_managed(name,
         Path to the certificate
 
     signing_private_key
-        The private key that will be used to sign this crl. This is
+        The private key that will be used to sign the CRL. This is
         usually your CA's private key.
 
     signing_private_key_passphrase
         Passphrase to decrypt the private key.
 
     signing_cert
-        The certificate of the authority that will be used to sign this crl.
+        The certificate of the authority that will be used to sign the CRL.
         This is usually your CA's certificate.
 
     revoked
@@ -649,8 +650,8 @@ def crl_managed(name,
         of pyOpenSSL less than 0.14.
 
     days_remaining : 30
-        The crl should be automatically recreated if there are less than
-        ``days_remaining`` days until the crl expires. Set to 0 to disable
+        The CRL should be automatically recreated if there are less than
+        ``days_remaining`` days until the CRL expires. Set to 0 to disable
         automatic renewal.
 
     include_expired : False

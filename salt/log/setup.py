@@ -166,6 +166,7 @@ def is_mp_logging_configured():
 def is_extended_logging_configured():
     return __EXTERNAL_LOGGERS_CONFIGURED
 
+
 # Store a reference to the temporary queue logging handler
 LOGGING_NULL_HANDLER = __NullLoggingHandler(logging.WARNING)
 
@@ -177,7 +178,9 @@ LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 
 
 class SaltLogQueueHandler(QueueHandler):
-    pass
+    '''
+    Subclassed just to differentiate when debugging
+    '''
 
 
 class SaltLogRecord(logging.LogRecord):
@@ -238,7 +241,7 @@ setLogRecordFactory(SaltLogRecord)
 
 
 class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
-    def __new__(cls, *args):  # pylint: disable=W0613, E1002
+    def __new__(cls, *args):  # pylint: disable=W0613,E0012
         '''
         We override `__new__` in our logging logger class in order to provide
         some additional features like expand the module name padding if length
@@ -427,7 +430,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
     logging.addLevelName(TRACE, 'TRACE')
     logging.addLevelName(GARBAGE, 'GARBAGE')
 
-    if len(logging.root.handlers) == 0:
+    if not logging.root.handlers:
         # No configuration to the logging system has been done so far.
         # Set the root logger at the lowest level possible
         logging.root.setLevel(GARBAGE)
@@ -825,13 +828,17 @@ def setup_extended_logging(opts):
 
 def get_multiprocessing_logging_queue():
     global __MP_LOGGING_QUEUE
+    from salt.utils.platform import is_darwin
 
     if __MP_IN_MAINPROCESS is False:
         # We're not in the MainProcess, return! No Queue shall be instantiated
         return __MP_LOGGING_QUEUE
 
     if __MP_LOGGING_QUEUE is None:
-        __MP_LOGGING_QUEUE = multiprocessing.Queue()
+        if is_darwin():
+            __MP_LOGGING_QUEUE = multiprocessing.Queue(32767)
+        else:
+            __MP_LOGGING_QUEUE = multiprocessing.Queue(100000)
     return __MP_LOGGING_QUEUE
 
 

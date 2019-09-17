@@ -301,7 +301,7 @@ reports of confusion among community members, since the targeting method is
 published to minions as ``tgt_type``, and appears as ``tgt_type`` in the job
 cache as well.
 
-While ``expr_form`` will continue to be supported until the **Fluorine**
+While ``expr_form`` will continue to be supported until the **2019.2.0**
 release cycle (two major releases after this one), those who are using the
 :ref:`LocalClient <local-client>` (either directly, or implictly via a
 :ref:`netapi module <all-netapi-modules>`) are encouraged to update their code
@@ -566,7 +566,7 @@ of objects (users, databases, roles, etc.).
 .. _`Moby announcement`: https://blog.docker.com/2017/04/introducing-the-moby-project/
 .. _DockerCon: http://2017.dockercon.com/
 
-The old syntax will continue to work until the **Fluorine** release of Salt.
+The old syntax will continue to work until the **2019.2.0** release of Salt.
 The old ``dockerng`` naming will also continue to work until that release, so
 no immediate changes need to be made to your SLS files (unless you were still
 using the old docker states that have been moved to salt-contrib_).
@@ -683,7 +683,7 @@ New Modules
 Beacons
 -------
 
-- :mod:`salt.beacons.log <salt.beacons.log>`
+- :mod:`salt.beacons.logs <salt.beacons.logs>`
 
 Cache
 -----
@@ -710,7 +710,7 @@ Execution modules
 - :mod:`salt.modules.grafana4 <salt.modules.grafana4>`
 - :mod:`salt.modules.heat <salt.modules.heat>`
 - :mod:`salt.modules.icinga2 <salt.modules.icinga2>`
-- :mod:`salt.modules.kubernetes <salt.modules.kubernetes>`
+- :mod:`salt.modules.kubernetesmod <salt.modules.kubernetesmod>`
 - :mod:`salt.modules.logmod <salt.modules.logmod>`
 - :mod:`salt.modules.mattermost <salt.modules.mattermost>`
 - :mod:`salt.modules.namecheap_dns <salt.modules.namecheap_dns>`

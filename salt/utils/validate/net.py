@@ -81,6 +81,14 @@ def ipv6_addr(addr):
     return __ip_addr(addr, socket.AF_INET6)
 
 
+def ip_addr(addr):
+    '''
+    Returns True if the IPv4 or IPv6 address (and optional subnet) are valid,
+    otherwise returns False.
+    '''
+    return ipv4_addr(addr) or ipv6_addr(addr)
+
+
 def netmask(mask):
     '''
     Returns True if the value passed is a valid netmask, otherwise return False

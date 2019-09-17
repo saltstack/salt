@@ -10,12 +10,14 @@ import time
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.unit import skipIf
 
 # Import Salt Libs
 from salt.config import cloud_providers_config
 from salt.ext import six
+
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
@@ -23,6 +25,7 @@ PROVIDER_NAME = 'vultr'
 TIMEOUT = 500
 
 
+@expensiveTest
 class VultrTest(ShellCase):
     '''
     Integration tests for the Vultr cloud provider in Salt-Cloud
@@ -48,7 +51,7 @@ class VultrTest(ShellCase):
         # check if api_key, ssh_key_file, and ssh_key_names are present
         config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
@@ -94,7 +97,7 @@ class VultrTest(ShellCase):
         '''
         size_list = self.run_cloud('--list-sizes {0}'.format(PROVIDER_NAME))
         self.assertIn(
-            '32768 MB RAM,110 GB SSD,40.00 TB BW',
+            '32768 MB RAM,4x110 GB SSD,40.00 TB BW',
             [i.strip() for i in size_list]
         )
 
@@ -138,6 +141,7 @@ class VultrTest(ShellCase):
 #        # Delete public key
 #        self.assertTrue(self.run_cloud('-f remove_key {0} id={1}'.format(PROVIDER_NAME, finger_print)))
 
+    @skipIf(True, 'Skipped temporarily')
     def test_instance(self):
         '''
         Test creating an instance on Vultr

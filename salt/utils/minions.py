@@ -149,7 +149,7 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
             # No compound operators found in nodegroup definition. Check for
             # group type specifiers
             group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?''}])']
+            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
             if not [x for x in ret if '*' in x or group_type_re.match(x)]:
                 # No group type specifiers and no wildcards.
                 # Treat this as an expression.
@@ -245,8 +245,12 @@ class CkMinions(object):
         try:
             if self.opts['key_cache'] and os.path.exists(pki_cache_fn):
                 log.debug('Returning cached minion list')
-                with salt.utils.files.fopen(pki_cache_fn) as fn_:
-                    return self.serial.load(fn_)
+                if six.PY2:
+                    with salt.utils.files.fopen(pki_cache_fn) as fn_:
+                        return self.serial.load(fn_)
+                else:
+                    with salt.utils.files.fopen(pki_cache_fn, mode='rb') as fn_:
+                        return self.serial.load(fn_)
             else:
                 for fn_ in salt.utils.data.sorted_ignorecase(os.listdir(os.path.join(self.opts['pki_dir'], self.acc))):
                     if not fn_.startswith('.') and os.path.isfile(os.path.join(self.opts['pki_dir'], self.acc, fn_)):
@@ -267,9 +271,10 @@ class CkMinions(object):
                              regex_match=False,
                              exact_match=False):
         '''
-        Helper function to search for minions in master caches
-        If 'greedy' return accepted minions that matched by the condition or absend in the cache.
-        If not 'greedy' return the only minions have cache data and matched by the condition.
+        Helper function to search for minions in master caches If 'greedy',
+        then return accepted minions matched by the condition or those absent
+        from the cache.  If not 'greedy' return the only minions have cache
+        data and matched by the condition.
         '''
         cache_enabled = self.opts.get('minion_data_cache', False)
 
@@ -725,34 +730,13 @@ class CkMinions(object):
             _res = {'minions': [], 'missing': []}
         return _res
 
-    def _expand_matching(self, auth_entry):
-        ref = {'G': 'grain',
-               'P': 'grain_pcre',
-               'I': 'pillar',
-               'J': 'pillar_pcre',
-               'L': 'list',
-               'S': 'ipcidr',
-               'E': 'pcre',
-               'N': 'node',
-               None: 'compound'}
-
-        target_info = parse_target(auth_entry)
-        if not target_info:
-            log.error('Failed to parse valid target "%s"', auth_entry)
-
-        v_matcher = ref.get(target_info['engine'])
-        v_expr = target_info['pattern']
-
-        _res = self.check_minions(v_expr, v_matcher)
-        return set(_res['minions'])
-
-    def validate_tgt(self, valid, expr, tgt_type, minions=None):
+    def validate_tgt(self, valid, expr, tgt_type, minions=None, expr_form=None):
         '''
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
 
-        v_minions = self._expand_matching(valid)
+        v_minions = set(self.check_minions(valid, 'compound').get('minions', []))
         if minions is None:
             _res = self.check_minions(expr, tgt_type)
             minions = set(_res['minions'])
@@ -892,7 +876,7 @@ class CkMinions(object):
                     continue
             allowed_minions.update(set(auth_list_entry.keys()))
             for key in auth_list_entry:
-                for match in self._expand_matching(key):
+                for match in set(self.check_minions(key, 'compound')):
                     if match in auth_dictionary:
                         auth_dictionary[match].extend(auth_list_entry[key])
                     else:
@@ -900,12 +884,12 @@ class CkMinions(object):
 
         allowed_minions_from_auth_list = set()
         for next_entry in allowed_minions:
-            allowed_minions_from_auth_list.update(self._expand_matching(next_entry))
+            allowed_minions_from_auth_list.update(set(self.check_minions(next_entry, 'compound')))
         # 'minions' here are all the names of minions matched by the target
         # if we take out all the allowed minions, and there are any left, then
         # the target includes minions that are not allowed by eauth
         # so we can give up here.
-        if len(minions - allowed_minions_from_auth_list) > 0:
+        if minions - allowed_minions_from_auth_list:
             return False
 
         try:

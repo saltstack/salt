@@ -58,7 +58,7 @@ def to_bytes(s, encoding=None, errors='strict'):
             # raised, otherwise we would have already returned (or raised some
             # other exception).
             raise exc  # pylint: disable=raising-bad-type
-        raise TypeError('expected bytes, bytearray, or str')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         return to_str(s, encoding, errors)
 
@@ -115,7 +115,7 @@ def to_str(s, encoding=None, errors='strict', normalize=False):
             # raised, otherwise we would have already returned (or raised some
             # other exception).
             raise exc  # pylint: disable=raising-bad-type
-        raise TypeError('expected str, bytearray, or unicode')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
 def to_unicode(s, encoding=None, errors='strict', normalize=False):
@@ -140,12 +140,12 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
             return _normalize(s)
         elif isinstance(s, (bytes, bytearray)):
             return _normalize(to_str(s, encoding, errors))
-        raise TypeError('expected str, bytes, or bytearray')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
     else:
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             for enc in encoding:
@@ -158,7 +158,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
             # raised, otherwise we would have already returned (or raised some
             # other exception).
             raise exc  # pylint: disable=raising-bad-type
-        raise TypeError('expected str or bytearray')
+        raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
 @jinja_filter('str_to_num')  # Remove this for Neon
@@ -177,6 +177,19 @@ def to_num(text):
             return float(text)
         except ValueError:
             return text
+
+
+def to_bool(text):
+    '''
+    Convert the string name of a boolean to that boolean value.
+    '''
+    downcased_text = six.text_type(text).strip().lower()
+
+    if downcased_text == 'false':
+        return False
+    elif downcased_text == 'true':
+        return True
+    return text
 
 
 def to_none(text):
@@ -333,7 +346,9 @@ def build_whitespace_split_regex(text):
         lexer = shlex.shlex(text)
         lexer.whitespace_split = True
         lexer.commenters = ''
-        if '\'' in text:
+        if r"'\"" in text:
+            lexer.quotes = ''
+        elif '\'' in text:
             lexer.quotes = '"'
         elif '"' in text:
             lexer.quotes = '\''
@@ -573,3 +588,39 @@ def get_diff(a, b, *args, **kwargs):
             *args, **kwargs
         )
     )
+
+
+@jinja_filter('to_snake_case')
+def camel_to_snake_case(camel_input):
+    '''
+    Converts camelCase (or CamelCase) to snake_case.
+    From https://codereview.stackexchange.com/questions/185966/functions-to-convert-camelcase-strings-to-snake-case
+
+    :param str camel_input: The camelcase or CamelCase string to convert to snake_case
+
+    :return str
+    '''
+    res = camel_input[0].lower()
+    for i, letter in enumerate(camel_input[1:], 1):
+        if letter.isupper():
+            if camel_input[i-1].islower() or (i != len(camel_input)-1 and camel_input[i+1].islower()):
+                res += '_'
+        res += letter.lower()
+    return res
+
+
+@jinja_filter('to_camelcase')
+def snake_to_camel_case(snake_input, uppercamel=False):
+    '''
+    Converts snake_case to camelCase (or CamelCase if uppercamel is ``True``).
+    Inspired by https://codereview.stackexchange.com/questions/85311/transform-snake-case-to-camelcase
+
+    :param str snake_input: The input snake_case string to convert to camelCase
+    :param bool uppercamel: Whether or not to convert to CamelCase instead
+
+    :return str
+    '''
+    words = snake_input.split('_')
+    if uppercamel:
+        words[0] = words[0].capitalize()
+    return words[0] + ''.join(word.capitalize() for word in words[1:])

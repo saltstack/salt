@@ -7,13 +7,17 @@ import time
 
 # Import Salt libs
 import salt.utils.decorators
-from tests.support.paths import BASE_FILES
+from tests.support.runtests import RUNTIME_VARS
 
-EXIT_CODE_SH = os.path.join(BASE_FILES, 'exit_code.sh')
+EXIT_CODE_SH = os.path.join(RUNTIME_VARS.BASE_FILES, 'exit_code.sh')
+EXIT_CODE_CMD = os.path.join(RUNTIME_VARS.BASE_FILES, 'exit_code.cmd')
 
 
 def _exit_code(code):
-    return '/usr/bin/env sh {0} {1}'.format(EXIT_CODE_SH, code)
+    if os.name == 'nt':
+        return 'cmd /c {0} {1}'.format(EXIT_CODE_CMD, code)
+    else:
+        return '/usr/bin/env sh {0} {1}'.format(EXIT_CODE_SH, code)
 
 
 def _fallbackfunc():

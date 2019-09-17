@@ -55,12 +55,13 @@ from salt.modules.file import (check_hash,  # pylint: disable=W0611
         _splitlines_preserving_trailing_newline, restore_backup,
         access, copy, readdir, read, rmdir, truncate, replace, delete_backup,
         search, _get_flags, extract_hash, _error, _sed_esc, _psed,
-        RE_FLAG_TABLE, blockreplace, prepend, seek_read, seek_write, rename,
+        RE_FLAG_TABLE, blockreplace, prepend, tail, seek_read, seek_write, rename,
         lstat, path_exists_glob, write, pardir, join, HASHES, HASHES_REVMAP,
         comment, uncomment, _add_flags, comment_line, _regex_to_static,
         _set_line_indent, apply_template_on_contents, dirname, basename,
-        list_backups_dir, _assert_occurrence, _starts_till, _set_line_eol, _get_eol,
-        _insert_line_after, _insert_line_before)
+        list_backups_dir, _assert_occurrence, _set_line_eol, _get_eol,
+        _set_line,
+        )
 from salt.modules.file import normpath as normpath_
 
 from salt.utils.functools import namespaced_function as _namespaced_function
@@ -69,9 +70,10 @@ HAS_WINDOWS_MODULES = False
 try:
     if salt.utils.platform.is_windows():
         import win32api
-        import win32file
         import win32con
-        from pywintypes import error as pywinerror
+        import win32file
+        import win32security
+        import salt.platform.win
         HAS_WINDOWS_MODULES = True
 except ImportError:
     HAS_WINDOWS_MODULES = False
@@ -114,12 +116,13 @@ def __virtual__():
             global access, copy, readdir, read, rmdir, truncate, replace, search
             global _binary_replace, _get_bkroot, list_backups, restore_backup
             global _splitlines_preserving_trailing_newline
-            global blockreplace, prepend, seek_read, seek_write, rename, lstat
+            global blockreplace, prepend, tail, seek_read, seek_write, rename, lstat
             global write, pardir, join, _add_flags, apply_template_on_contents
             global path_exists_glob, comment, uncomment, _mkstemp_copy
             global _regex_to_static, _set_line_indent, dirname, basename
-            global list_backups_dir, normpath_, _assert_occurrence, _starts_till
-            global _insert_line_before, _insert_line_after, _set_line_eol, _get_eol
+            global list_backups_dir, normpath_, _assert_occurrence
+            global _set_line_eol, _get_eol
+            global _set_line
 
             replace = _namespaced_function(replace, globals())
             search = _namespaced_function(search, globals())
@@ -163,6 +166,7 @@ def __virtual__():
             truncate = _namespaced_function(truncate, globals())
             blockreplace = _namespaced_function(blockreplace, globals())
             prepend = _namespaced_function(prepend, globals())
+            tail = _namespaced_function(tail, globals())
             seek_read = _namespaced_function(seek_read, globals())
             seek_write = _namespaced_function(seek_write, globals())
             rename = _namespaced_function(rename, globals())
@@ -175,11 +179,10 @@ def __virtual__():
             uncomment = _namespaced_function(uncomment, globals())
             comment_line = _namespaced_function(comment_line, globals())
             _regex_to_static = _namespaced_function(_regex_to_static, globals())
+            _set_line = _namespaced_function(_set_line, globals())
             _set_line_indent = _namespaced_function(_set_line_indent, globals())
             _set_line_eol = _namespaced_function(_set_line_eol, globals())
             _get_eol = _namespaced_function(_get_eol, globals())
-            _insert_line_after = _namespaced_function(_insert_line_after, globals())
-            _insert_line_before = _namespaced_function(_insert_line_before, globals())
             _mkstemp_copy = _namespaced_function(_mkstemp_copy, globals())
             _add_flags = _namespaced_function(_add_flags, globals())
             apply_template_on_contents = _namespaced_function(apply_template_on_contents, globals())
@@ -188,7 +191,6 @@ def __virtual__():
             list_backups_dir = _namespaced_function(list_backups_dir, globals())
             normpath_ = _namespaced_function(normpath_, globals())
             _assert_occurrence = _namespaced_function(_assert_occurrence, globals())
-            _starts_till = _namespaced_function(_starts_till, globals())
 
         else:
             return False, 'Module win_file: Missing Win32 modules'
@@ -197,6 +199,7 @@ def __virtual__():
         return False, 'Module win_file: Unable to load salt.utils.win_dacl'
 
     return __virtualname__
+
 
 __outputter__ = {
     'touch': 'txt',
@@ -852,7 +855,7 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_sum(path, hash_type)
     ret['type'] = 'file'
@@ -1070,7 +1073,7 @@ def remove(path, force=False):
         raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
     # Does the file/folder exists
-    if not os.path.exists(path):
+    if not os.path.exists(path) and not is_link(path):
         raise CommandExecutionError('Path not found: {0}'.format(path))
 
     # Remove ReadOnly Attribute
@@ -1146,10 +1149,19 @@ def symlink(src, link):
 
     is_dir = os.path.isdir(src)
 
+    # Elevate the token from the current process
+    desired_access = (
+        win32security.TOKEN_QUERY |
+        win32security.TOKEN_ADJUST_PRIVILEGES
+    )
+    th = win32security.OpenProcessToken(win32api.GetCurrentProcess(),
+                                        desired_access)
+    salt.platform.win.elevate_token(th)
+
     try:
         win32file.CreateSymbolicLink(link, src, int(is_dir))
         return True
-    except pywinerror as exc:
+    except win32file.error as exc:
         raise CommandExecutionError(
             'Could not create \'{0}\' - [{1}] {2}'.format(
                 link,

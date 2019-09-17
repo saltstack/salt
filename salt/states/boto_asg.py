@@ -716,7 +716,7 @@ def _determine_termination_policies(termination_policies, termination_policies_f
     pillar_termination_policies = copy.deepcopy(
         __salt__['config.option'](termination_policies_from_pillar, [])
     )
-    if not termination_policies and len(pillar_termination_policies) > 0:
+    if not termination_policies and pillar_termination_policies:
         termination_policies = pillar_termination_policies
     return termination_policies
 
@@ -728,7 +728,7 @@ def _determine_scaling_policies(scaling_policies, scaling_policies_from_pillar):
     pillar_scaling_policies = copy.deepcopy(
         __salt__['config.option'](scaling_policies_from_pillar, {})
     )
-    if not scaling_policies and len(pillar_scaling_policies) > 0:
+    if not scaling_policies and pillar_scaling_policies:
         scaling_policies = pillar_scaling_policies
     return scaling_policies
 
@@ -757,7 +757,7 @@ def _determine_notification_info(notification_arn,
         __salt__['config.option'](notification_arn_from_pillar, {})
     )
     pillar_arn = None
-    if len(pillar_arn_list) > 0:
+    if pillar_arn_list:
         pillar_arn = pillar_arn_list[0]
     pillar_notification_types = copy.deepcopy(
         __salt__['config.option'](notification_types_from_pillar, {})

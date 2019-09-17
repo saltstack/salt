@@ -88,7 +88,8 @@ class NetapiClient(object):
         :return: job ID
         '''
         local = salt.client.get_local_client(mopts=self.opts)
-        return local.run_job(*args, **kwargs)
+        ret = local.run_job(*args, **kwargs)
+        return ret
 
     def local(self, *args, **kwargs):
         '''
@@ -203,6 +204,7 @@ class NetapiClient(object):
         kwargs['fun'] = fun
         wheel = salt.wheel.WheelClient(self.opts)
         return wheel.cmd_async(kwargs)
+
 
 CLIENTS = [
     name for name, _

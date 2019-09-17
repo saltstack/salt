@@ -275,7 +275,7 @@ def get_tops(extra_mods='', so_mods=''):
             try:
                 locals()[mod] = __import__(mod)
                 moddir, modname = os.path.split(locals()[mod].__file__)
-                base, ext = os.path.splitext(modname)
+                base, _ = os.path.splitext(modname)
                 if base == '__init__':
                     tops.append(moddir)
                 else:
@@ -318,6 +318,22 @@ def _get_supported_py_config(tops, extended_cfg):
     pymap.append('')
 
     return salt.utils.stringutils.to_bytes(os.linesep.join(pymap))
+
+
+def _get_thintar_prefix(tarname):
+    '''
+    Make sure thintar temporary name is concurrent and secure.
+
+    :param tarname: name of the chosen tarball
+    :return: prefixed tarname
+    '''
+    tfd, tmp_tarname = tempfile.mkstemp(
+        dir=os.path.dirname(tarname),
+        prefix=".thin-",
+        suffix=os.path.splitext(tarname)[1])
+    os.close(tfd)
+
+    return tmp_tarname
 
 
 def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
@@ -375,26 +391,32 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             except OSError as exc:
                 log.error('Error while removing %s file: %s', thintar, exc)
                 if os.path.exists(thintar):
-                    raise salt.exceptions.SaltSystemExit('Unable to remove %s file. See logs for details.', thintar)
+                    raise salt.exceptions.SaltSystemExit(
+                        'Unable to remove {0}. See logs for details.'.format(thintar)
+                    )
         else:
             return thintar
     if _six.PY3:
         # Let's check for the minimum python 2 version requirement, 2.6
-        py_shell_cmd = "{} -c 'import sys;sys.stdout.write(\"%s.%s\\n\" % sys.version_info[:2]);'".format(python2_bin)
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
-        stdout, _ = cmd.communicate()
-        if cmd.returncode == 0:
-            py2_version = tuple(int(n) for n in stdout.decode('utf-8').strip().split('.'))
-            if py2_version < (2, 6):
-                raise salt.exceptions.SaltSystemExit(
-                    'The minimum required python version to run salt-ssh is "2.6".'
-                    'The version reported by "{0}" is "{1}". Please try "salt-ssh '
-                    '--python2-bin=<path-to-python-2.6-binary-or-higher>".'.format(python2_bin, stdout.strip()))
+        if not salt.utils.path.which(python2_bin):
+            log.debug('%s binary does not exist. Will not detect Python 2 version', python2_bin)
         else:
-            log.error('Unable to detect Python-2 version')
-            log.debug(stdout)
+            py_shell_cmd = "{} -c 'import sys;sys.stdout.write(\"%s.%s\\n\" % sys.version_info[:2]);'".format(python2_bin)
+            cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, shell=True)
+            stdout, _ = cmd.communicate()
+            if cmd.returncode == 0:
+                py2_version = tuple(int(n) for n in stdout.decode('utf-8').strip().split('.'))
+                if py2_version < (2, 6):
+                    raise salt.exceptions.SaltSystemExit(
+                        'The minimum required python version to run salt-ssh is "2.6".'
+                        'The version reported by "{0}" is "{1}". Please try "salt-ssh '
+                        '--python2-bin=<path-to-python-2.6-binary-or-higher>".'.format(python2_bin, stdout.strip()))
+            else:
+                log.debug('Unable to detect %s version', python2_bin)
+                log.debug(stdout)
 
     tops_failure_msg = 'Failed %s tops for Python binary %s.'
+    python_check_msg = '%s binary does not exist. Will not attempt to generate tops for Python %s'
     tops_py_version_mapping = {}
     tops = get_tops(extra_mods=extra_mods, so_mods=so_mods)
     tops_py_version_mapping[sys.version_info.major] = tops
@@ -402,48 +424,54 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     # Collect tops, alternative to 2.x version
     if _six.PY2 and sys.version_info.major == 2:
         # Get python 3 tops
-        py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
-            python3_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        stdout, stderr = cmd.communicate()
-        if cmd.returncode == 0:
-            try:
-                tops = salt.utils.json.loads(stdout)
-                tops_py_version_mapping['3'] = tops
-            except ValueError as err:
-                log.error(tops_failure_msg, 'parsing', python3_bin)
-                log.exception(err)
+        if not salt.utils.path.which(python3_bin):
+            log.debug(python_check_msg, python3_bin, '3')
         else:
-            log.error(tops_failure_msg, 'collecting', python3_bin)
-            log.debug(stderr)
+            py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
+                python3_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
+            cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = cmd.communicate()
+            if cmd.returncode == 0:
+                try:
+                    tops = salt.utils.json.loads(stdout)
+                    tops_py_version_mapping['3'] = tops
+                except ValueError as err:
+                    log.error(tops_failure_msg, 'parsing', python3_bin)
+                    log.exception(err)
+            else:
+                log.debug(tops_failure_msg, 'collecting', python3_bin)
+                log.debug(stderr)
 
     # Collect tops, alternative to 3.x version
     if _six.PY3 and sys.version_info.major == 3:
         # Get python 2 tops
-        py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
-            python2_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
-        cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        stdout, stderr = cmd.communicate()
-        if cmd.returncode == 0:
-            try:
-                tops = salt.utils.json.loads(stdout.decode('utf-8'))
-                tops_py_version_mapping['2'] = tops
-            except ValueError as err:
-                log.error(tops_failure_msg, 'parsing', python2_bin)
-                log.exception(err)
+        if not salt.utils.path.which(python2_bin):
+            log.debug(python_check_msg, python2_bin, '2')
         else:
-            log.error(tops_failure_msg, 'collecting', python2_bin)
-            log.debug(stderr)
+            py_shell_cmd = "{0} -c 'import salt.utils.thin as t;print(t.gte())' '{1}'".format(
+                python2_bin, salt.utils.json.dumps({'extra_mods': extra_mods, 'so_mods': so_mods}))
+            cmd = subprocess.Popen(py_shell_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            stdout, stderr = cmd.communicate()
+            if cmd.returncode == 0:
+                try:
+                    tops = salt.utils.json.loads(stdout.decode('utf-8'))
+                    tops_py_version_mapping['2'] = tops
+                except ValueError as err:
+                    log.error(tops_failure_msg, 'parsing', python2_bin)
+                    log.exception(err)
+            else:
+                log.debug(tops_failure_msg, 'collecting', python2_bin)
+                log.debug(stderr)
 
     with salt.utils.files.fopen(pymap_cfg, 'wb') as fp_:
         fp_.write(_get_supported_py_config(tops=tops_py_version_mapping, extended_cfg=extended_cfg))
 
+    tmp_thintar = _get_thintar_prefix(thintar)
     if compress == 'gzip':
-        tfp = tarfile.open(thintar, 'w:gz', dereference=True)
+        tfp = tarfile.open(tmp_thintar, 'w:gz', dereference=True)
     elif compress == 'zip':
-        tfp = zipfile.ZipFile(thintar, 'w', compression=zlib and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED)
+        tfp = zipfile.ZipFile(tmp_thintar, 'w', compression=zlib and zipfile.ZIP_DEFLATED or zipfile.ZIP_STORED)
         tfp.add = tfp.write
-
     try:  # cwd may not exist if it was removed but salt was run from it
         start_dir = os.getcwd()
     except OSError:
@@ -540,6 +568,8 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
     if start_dir:
         os.chdir(start_dir)
     tfp.close()
+
+    shutil.move(tmp_thintar, thintar)
 
     return thintar
 

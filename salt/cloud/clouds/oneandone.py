@@ -99,6 +99,7 @@ Create a firewall policy
 
     sudo salt-cloud -f create_firewall_policy oneandone name='1salttest'
     description='salt_test_desc' rules='[{"protocol":"TCP", "port":"80", "description":"salt_fw_rule_desc"}]'
+
 List baremetal models
 
 .. code-block:: bash
@@ -517,11 +518,11 @@ def list_nodes(conn=None, call=None):
 
         size = node.get('hardware').get('fixed_instance_size_id', 'Custom size')
 
-        if node.get('private_networks') and len(node['private_networks']) > 0:
+        if node.get('private_networks'):
             for private_ip in node['private_networks']:
                 private_ips.append(private_ip)
 
-        if node.get('ips') and len(node['ips']) > 0:
+        if node.get('ips'):
             for public_ip in node['ips']:
                 public_ips.append(public_ip['ip'])
 

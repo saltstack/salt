@@ -56,7 +56,7 @@ def _parse_image_meta(image=None, detail=False):
 
     if image and 'Error' in image:
         ret = image
-    elif image:
+    elif image and 'manifest' in image:
         name = image['manifest']['name']
         version = image['manifest']['version']
         os = image['manifest']['os']
@@ -110,8 +110,7 @@ def _split_docker_uuid(uuid):
         if len(uuid) == 2:
             tag = uuid[1]
             repo = uuid[0]
-            if len(repo.split('/')) == 2:
-                return repo, tag
+            return repo, tag
     return None, None
 
 
@@ -157,13 +156,15 @@ def docker_to_uuid(uuid):
     '''
     Get the image uuid from an imported docker image
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
     '''
     if _is_uuid(uuid):
         return uuid
     if _is_docker_uuid(uuid):
         images = list_installed(verbose=True)
         for image_uuid in images:
+            if 'name' not in images[image_uuid]:
+                continue
             if images[image_uuid]['name'] == uuid:
                 return image_uuid
     return None
@@ -232,7 +233,7 @@ def list_installed(verbose=False):
     verbose : boolean (False)
         toggle verbose output
 
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
 
         Docker images are now also listed
 
@@ -422,7 +423,7 @@ def sources(verbose=False):
     verbose : boolean (False)
         toggle verbose output
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -455,7 +456,7 @@ def source_delete(source):
     source : string
         source url to delete
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -483,7 +484,7 @@ def source_add(source, source_type='imgapi'):
     source_trype : string (imgapi)
         source type, either imgapi or docker
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 

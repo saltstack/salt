@@ -163,15 +163,17 @@ def _render_template(config_file):
     return template.render(__grains__)
 
 
-def _config(name, conf):
+def _config(name, conf, default=None):
     '''
-    Return a value for 'name' from  the config file options.
+    Return a value for 'name' from the config file options. If the 'name' is
+    not in the config, the 'default' value is returned. This method converts
+    unicode values to str type under python 2.
     '''
     try:
-        value = salt.utils.data.decode(conf[name], to_str=True)
+        value = conf[name]
     except KeyError:
-        value = None
-    return value
+        value = default
+    return salt.utils.data.decode(value, to_str=True)
 
 
 def _result_to_dict(data, result, conf, source):
@@ -285,7 +287,7 @@ def _do_search(conf):
     scope = _config('scope', conf)
     _lists = _config('lists', conf) or []
     _attrs = _config('attrs', conf) or []
-    _dict_key_attr = _config('dict_key_attr', conf) or 'dn'
+    _dict_key_attr = _config('dict_key_attr', conf, 'dn')
     attrs = _lists + _attrs + [_dict_key_attr]
     if not attrs:
         attrs = None
@@ -329,11 +331,13 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         opts['conf_file'] = config_file
     except Exception as err:
         import salt.log
-        msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'
+        msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'.format(
+            config_file, err
+        )
         if salt.log.is_console_configured():
-            log.warning(msg.format(config_file, err))
+            log.warning(msg)
         else:
-            print(msg.format(config_file, err))
+            print(msg)
         return {}
     else:
         if not isinstance(opts, dict):

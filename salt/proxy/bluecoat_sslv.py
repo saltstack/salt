@@ -2,17 +2,18 @@
 '''
 Proxy Minion interface module for managing Blue Coat SSL Decryption devices
 
-:codeauthor: ``Spencer Ervin <spencer_ervin@hotmail.com>``
+:codeauthor: Spencer Ervin <spencer_ervin@hotmail.com>
 :maturity:   new
 :depends:    none
 :platform:   unix
-This proxy minion enables Blue Coat SSL Visibility devices (hereafter referred to
-as simply 'bluecoat_sslv') to be treated individually like a Salt Minion.
-The bluecoat_sslv proxy leverages the JSON API functionality on the Blue Coat SSL
-Visibility devices. The Salt proxy must have access to the Blue Coat device on
-HTTPS (tcp/443).
-More in-depth conceptual reading on Proxy Minions can be found in the
-:ref:`Proxy Minion <proxy-minion>` section of Salt's documentation.
+
+This proxy minion enables Blue Coat SSL Visibility devices (hereafter referred
+to as simply 'bluecoat_sslv') to be treated individually like a Salt Minion.
+The bluecoat_sslv proxy leverages the JSON API functionality on the Blue Coat
+SSL Visibility devices. The Salt proxy must have access to the Blue Coat device
+on HTTPS (tcp/443). More in-depth conceptual reading on Proxy Minions can be
+found in the :ref:`Proxy Minion <proxy-minion>` section of Salt's
+documentation.
 
 Configuration
 =============
@@ -101,7 +102,7 @@ def __virtual__():
 def _validate_response_code(response_code_to_check):
     formatted_response_code = response_code_to_check
     if formatted_response_code not in [200, 201, 202, 204]:
-        log.error("Received error HTTP status code: {0}" .format(formatted_response_code))
+        log.error("Received error HTTP status code: %s", formatted_response_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 
@@ -180,8 +181,8 @@ def logon():
     logon_response = session.post(DETAILS['url'], data=json.dumps(payload), verify=False)
 
     if logon_response.status_code != 200:
-        log.error("Error logging into proxy. HTTP Error code: {0}" .format(
-            logon_response.status_code))
+        log.error("Error logging into proxy. HTTP Error code: %s",
+                  logon_response.status_code)
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 

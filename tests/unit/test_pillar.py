@@ -8,21 +8,25 @@
 '''
 
 # Import python libs
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
+import os
 import shutil
 import tempfile
+import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.paths import TMP
 
 # Import salt libs
+import salt.exceptions
 import salt.fileclient
 import salt.pillar
 import salt.utils.stringutils
-import salt.exceptions
+
+from salt.utils.files import fopen
 
 
 class MockFileclient(object):
@@ -326,6 +330,51 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
 
+    def test_ext_pillar_first(self):
+        '''
+        test when using ext_pillar and ext_pillar_first
+        '''
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+            'ext_pillar_first': True,
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        try:
+            sls_files = self._setup_test_topfile_sls_pillar_match(
+                tempdir,)
+            fc_mock = MockFileclient(
+                cache_file=sls_files['top']['dest'],
+                list_states=['top', 'ssh', 'ssh.minion',
+                             'generic', 'generic.minion'],
+                get_state=sls_files)
+            with patch.object(salt.fileclient, 'get_file_client',
+                              MagicMock(return_value=fc_mock)), \
+                    patch('salt.pillar.Pillar.ext_pillar',
+                          MagicMock(return_value=({'id': 'minion',
+                                                  'phase': 'alpha', 'role':
+                                                  'database'}, []))):
+                pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+                self.assertEqual(pillar.compile_pillar()['generic']['key1'], 'value1')
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
     def test_dynamic_pillarenv(self):
         opts = {
             'optimization_order': [0, 1, 2],
@@ -554,7 +603,7 @@ class PillarTestCase(TestCase):
         }
 
         def _run_test(nodegroup_order, glob_order, expected):
-            tempdir = tempfile.mkdtemp(dir=TMP)
+            tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
             try:
                 sls_files = self._setup_test_topfile_sls(
                     tempdir,
@@ -580,6 +629,28 @@ class PillarTestCase(TestCase):
         # test case where nodegroup match happens second and therefore takes
         # precedence over glob match.
         _run_test(nodegroup_order=2, glob_order=1, expected='foo')
+
+    def _setup_test_topfile_sls_pillar_match(self, tempdir):
+        # Write a simple topfile and two pillar state files
+        top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        s = '''
+base:
+  'phase:alpha':
+    - match: pillar
+    - generic
+'''
+        top_file.write(salt.utils.stringutils.to_bytes(s))
+        top_file.flush()
+        generic_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        generic_file.write(b'''
+generic:
+    key1: value1
+''')
+        generic_file.flush()
+        return {
+            'top': {'path': '', 'dest': top_file.name},
+            'generic': {'path': '', 'dest': generic_file.name},
+        }
 
     def _setup_test_topfile_sls(self, tempdir, nodegroup_order, glob_order):
         # Write a simple topfile and two pillar state files
@@ -659,14 +730,21 @@ generic:
             'oscodename': 'raring',
             'osfullname': 'Ubuntu',
             'osrelease': '13.04',
-            'kernel': 'Linux'
+            'kernel': 'Linux',
         }
         sls_files = self._setup_test_include_sls(tempdir)
         fc_mock = MockFileclient(
             cache_file=sls_files['top']['dest'],
             get_state=sls_files,
-            list_states=['top', 'test.init', 'test.sub1',
-                         'test.sub2', 'test.sub_wildcard_1'],
+            list_states=[
+                'top',
+                'test.init',
+                'test.sub1',
+                'test.sub2',
+                'test.sub_wildcard_1',
+                'test.sub_with_init_dot',
+                'test.sub.with.slashes',
+            ],
         )
         with patch.object(salt.fileclient, 'get_file_client',
                           MagicMock(return_value=fc_mock)):
@@ -677,6 +755,8 @@ generic:
             self.assertEqual(compiled_pillar['foo_wildcard'], 'bar_wildcard')
             self.assertEqual(compiled_pillar['foo1'], 'bar1')
             self.assertEqual(compiled_pillar['foo2'], 'bar2')
+            self.assertEqual(compiled_pillar['sub_with_slashes'], 'sub_slashes_worked')
+            self.assertEqual(compiled_pillar['sub_init_dot'], 'sub_with_init_dot_worked')
 
     def _setup_test_include_sls(self, tempdir):
         top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
@@ -695,6 +775,8 @@ base:
 include:
    - test.sub1
    - test.sub_wildcard*
+   - .test.sub_with_init_dot
+   - test/sub/with/slashes
 ''')
         init_sls.flush()
         sub1_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
@@ -717,17 +799,170 @@ foo_wildcard:
 ''')
         sub_wildcard_1_sls.flush()
 
+        sub_with_init_dot_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_with_init_dot_sls.write(b'''
+sub_init_dot:
+  sub_with_init_dot_worked
+''')
+        sub_with_init_dot_sls.flush()
+
+        sub_with_slashes_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_with_slashes_sls.write(b'''
+sub_with_slashes:
+  sub_slashes_worked
+''')
+        sub_with_slashes_sls.flush()
+
         return {
             'top': {'path': '', 'dest': top_file.name},
             'test': {'path': '', 'dest': init_sls.name},
             'test.sub1': {'path': '', 'dest': sub1_sls.name},
             'test.sub2': {'path': '', 'dest': sub2_sls.name},
             'test.sub_wildcard_1': {'path': '', 'dest': sub_wildcard_1_sls.name},
+            'test.sub_with_init_dot': {'path': '', 'dest': sub_with_init_dot_sls.name},
+            'test.sub.with.slashes': {'path': '', 'dest': sub_with_slashes_sls.name},
         }
+
+    @with_tempdir()
+    def test_relative_include(self, tempdir):
+        join = os.path.join
+        with fopen(join(tempdir, 'top.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    base:
+                      '*':
+                        - includer
+                        - simple_includer
+                        - includes.with.more.depth
+                '''),
+                file=f,
+            )
+        includer_dir = join(tempdir, 'includer')
+        os.makedirs(includer_dir)
+        with fopen(join(includer_dir, 'init.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    include:
+                      - .this
+                      - includer.that
+                '''),
+                file=f,
+            )
+        with fopen(join(includer_dir, 'this.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    this:
+                        is all good
+                '''),
+                file=f,
+            )
+        with fopen(join(includer_dir, 'that.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    that:
+                        is also all good
+                '''),
+                file=f,
+            )
+
+        with fopen(join(tempdir, 'simple_includer.sls'), 'w') as simpleincluder:
+            print(
+                textwrap.dedent('''
+                    include:
+                      - .simple
+                      - super_simple
+                '''),
+                file=simpleincluder,
+            )
+        with fopen(join(tempdir, 'simple.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    simple:
+                      simon
+                '''),
+                file=f,
+            )
+        with fopen(join(tempdir, 'super_simple.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    super simple:
+                      a caveman
+                '''),
+                file=f,
+            )
+
+        depth_dir = join(tempdir, 'includes', 'with', 'more')
+        os.makedirs(depth_dir)
+        with fopen(join(depth_dir, 'depth.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    include:
+                      - .ramble
+                      - includes.with.more.doors
+
+                    mordor:
+                        has dark depths
+                '''),
+                file=f,
+            )
+
+        with fopen(join(depth_dir, 'ramble.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    found:
+                        my precious
+                '''),
+                file=f,
+            )
+
+        with fopen(join(depth_dir, 'doors.sls'), 'w') as f:
+            print(
+                textwrap.dedent('''
+                    mojo:
+                        bad risin'
+                '''),
+                file=f,
+            )
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': 'top.sls',
+            'pillar_roots': {'base': [tempdir]},
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+            'file_ignore_regex': None,
+            'file_ignore_glob': None,
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux',
+        }
+        pillar = salt.pillar.Pillar(opts, grains, 'minion', 'base')
+        # Make sure that confirm_top.confirm_top returns True
+        pillar.matchers['confirm_top.confirm_top'] = lambda *x, **y: True
+
+        # Act
+        compiled_pillar = pillar.compile_pillar()
+
+        # Assert
+        self.assertEqual(compiled_pillar['this'], 'is all good')
+        self.assertEqual(compiled_pillar['that'], 'is also all good')
+        self.assertEqual(compiled_pillar['simple'], 'simon')
+        self.assertEqual(compiled_pillar['super simple'], 'a caveman')
+        self.assertEqual(compiled_pillar['mordor'], 'has dark depths')
+        self.assertEqual(compiled_pillar['found'], 'my precious')
+        self.assertEqual(compiled_pillar['mojo'], "bad risin'")
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.transport.Channel.factory', MagicMock())
+@patch('salt.transport.client.ReqChannel.factory', MagicMock())
 class RemotePillarTestCase(TestCase):
     '''
     Tests for instantiating a RemotePillar in salt.pillar
@@ -826,7 +1061,7 @@ class RemotePillarTestCase(TestCase):
             'pass_to_ext_pillars': ['path_to_add']}
         mock_channel = MagicMock(
             crypted_transfer_decode_dictentry=MagicMock(return_value={}))
-        with patch('salt.transport.Channel.factory',
+        with patch('salt.transport.client.ReqChannel.factory',
                    MagicMock(return_value=mock_channel)):
             pillar = salt.pillar.RemotePillar(opts, self.grains,
                                               'mocked_minion', 'fake_env')

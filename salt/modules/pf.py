@@ -4,7 +4,7 @@ Control the OpenBSD packet filter (PF).
 
 :codeauthor: Jasper Lievisse Adriaanse <j@jasper.la>
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
@@ -26,11 +26,11 @@ def __virtual__():
     FreeBSD, etc) need to be tested before enabling them.
     '''
     tested_oses = ['FreeBSD', 'OpenBSD']
-    if __grains__['os'] in tested_oses and salt.utils.path.which('pfctl'):
+    if __grains__.get('os') in tested_oses and salt.utils.path.which('pfctl'):
         return True
 
     return (False, 'The pf execution module cannot be loaded: either the '
-            'OS (' + __grains__['os'] + ') is not tested or the pfctl binary '
+            'OS (' + __grains__.get('os', 'None') + ') is not tested or the pfctl binary '
             'was not found')
 
 

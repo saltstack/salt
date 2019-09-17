@@ -18,6 +18,7 @@ except ImportError:
 import yaml  # pylint: disable=blacklisted-import
 import collections
 import salt.utils.context
+import salt.utils.thread_local_proxy
 from salt.utils.odict import OrderedDict
 
 __all__ = ['OrderedDumper', 'SafeOrderedDumper', 'IndentedSafeOrderedDumper',
@@ -87,6 +88,23 @@ SafeOrderedDumper.add_representer(
     SafeOrderedDumper.represent_scalar)
 
 
+# DO NOT MOVE THIS FUNCTION! It must be defined after the representers above
+# have been added, so that it has access to the manually-added representers
+# above when it looks for a representer for the proxy object's __class__.
+def represent_thread_local_proxy(dumper, data):
+    if data.__class__ in dumper.yaml_representers:
+        return dumper.yaml_representers[data.__class__](dumper, data)
+    return dumper.represent_undefined(data)
+
+
+OrderedDumper.add_representer(
+    salt.utils.thread_local_proxy.ThreadLocalProxy,
+    represent_thread_local_proxy)
+SafeOrderedDumper.add_representer(
+    salt.utils.thread_local_proxy.ThreadLocalProxy,
+    represent_thread_local_proxy)
+
+
 def get_dumper(dumper_name):
     return {
         'OrderedDumper': OrderedDumper,
@@ -104,6 +122,7 @@ def dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
+    kwargs.setdefault('default_flow_style', None)
     return yaml.dump(data, stream, **kwargs)
 
 
@@ -115,4 +134,5 @@ def safe_dump(data, stream=None, **kwargs):
     '''
     if 'allow_unicode' not in kwargs:
         kwargs['allow_unicode'] = True
+    kwargs.setdefault('default_flow_style', None)
     return yaml.dump(data, stream, Dumper=SafeOrderedDumper, **kwargs)

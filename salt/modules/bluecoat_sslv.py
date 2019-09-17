@@ -2,7 +2,7 @@
 '''
 Module to provide Blue Coat SSL Visibility compatibility to Salt.
 
-:codeauthor: :email:`Spencer Ervin <spencer_ervin@hotmail.com>`
+:codeauthor: Spencer Ervin <spencer_ervin@hotmail.com>
 :maturity:   new
 :depends:    none
 :platform:   unix
@@ -16,7 +16,7 @@ parameters, or as configuration settings in pillar as a Salt proxy.
 Options passed into opts will be ignored if options are passed into pillar.
 
 .. seealso::
-    :prox:`Blue Coat SSL Visibility Proxy Module <salt.proxy.bluecoat_sslv>`
+    :py:mod:`Blue Coat SSL Visibility Proxy Module <salt.proxy.bluecoat_sslv>`
 
 About
 =====

@@ -122,7 +122,8 @@ def cert(name,
          http_01_port=None,
          http_01_address=None,
          dns_plugin=None,
-         dns_plugin_credentials=None):
+         dns_plugin_credentials=None,
+         dns_plugin_propagate_seconds=10):
     '''
     Obtain/renew a certificate from an ACME CA, probably Let's Encrypt.
 
@@ -150,8 +151,10 @@ def cert(name,
                          the port Certbot listens on. A conforming ACME server
                          will still attempt to connect on port 80.
     :param https_01_address: The address the server listens to during http-01 challenge.
-    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare')
+    :param dns_plugin: Name of a DNS plugin to use (currently only 'cloudflare' or 'digitalocean')
     :param dns_plugin_credentials: Path to the credentials file if required by the specified DNS plugin
+    :param dns_plugin_propagate_seconds: Number of seconds to wait for DNS propogations before
+                                asking ACME servers to verify the DNS record. (default 10)
     :return: dict with 'result' True/False/None, 'comment' and certificate's expiry date ('not_after')
 
     CLI example:
@@ -163,7 +166,7 @@ def cert(name,
 
     cmd = [LEA, 'certonly', '--non-interactive', '--agree-tos']
 
-    supported_dns_plugins = ['cloudflare']
+    supported_dns_plugins = ['cloudflare', 'digitalocean']
 
     cert_file = _cert_file(name, 'cert')
     if not __salt__['file.file_exists'](cert_file):
@@ -192,6 +195,11 @@ def cert(name,
         if dns_plugin == 'cloudflare':
             cmd.append('--dns-cloudflare')
             cmd.append('--dns-cloudflare-credentials {0}'.format(dns_plugin_credentials))
+            cmd.append('--dns-cloudflare-propagation-seconds {0}'.format(dns_plugin_propagate_seconds))
+        elif dns_plugin == 'digitalocean':
+            cmd.append('--dns-digitalocean')
+            cmd.append('--dns-digitalocean-credentials {0}'.format(dns_plugin_credentials))
+            cmd.append('--dns-digitalocean-propagation-seconds {0}'.format(dns_plugin_propagate_seconds))
         else:
             return {'result': False, 'comment': 'DNS plugin \'{0}\' is not supported'.format(dns_plugin)}
     else:
@@ -223,18 +231,25 @@ def cert(name,
     res = __salt__['cmd.run_all'](' '.join(cmd))
 
     if res['retcode'] != 0:
-        return {'result': False,
-                'comment': 'Certificate {0} renewal failed with:\n{1}{2}'
-                           ''.format(name, res['stdout'], res['stderr'])}
+        if 'expand' in res['stderr']:
+            cmd.append('--expand')
+            res = __salt__['cmd.run_all'](' '.join(cmd))
+            if res['retcode'] != 0:
+                return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
+        else:
+            return {'result': False, 'comment': 'Certificate {0} renewal failed with:\n{1}'.format(name, res['stderr'])}
 
     if 'no action taken' in res['stdout']:
         comment = 'Certificate {0} unchanged'.format(cert_file)
+        result = None
     elif renew:
         comment = 'Certificate {0} renewed'.format(name)
+        result = True
     else:
         comment = 'Certificate {0} obtained'.format(name)
+        result = True
 
-    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': True}
+    ret = {'comment': comment, 'not_after': expires(name), 'changes': {}, 'result': result}
     ret, _ = __salt__['file.check_perms'](_cert_file(name, 'privkey'),
                                           ret,
                                           owner, group, mode,

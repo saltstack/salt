@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import fnmatch
 import inspect
+import logging
 import re
 import shlex
 
@@ -19,6 +20,9 @@ import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
 import salt.utils.yaml
+from salt.utils.odict import OrderedDict
+
+log = logging.getLogger(__name__)
 
 
 if six.PY3:
@@ -76,7 +80,7 @@ def condition_input(args, kwargs):
     ret = []
     for arg in args:
         if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
-        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code,undefined-variable
             ret.append(six.text_type(arg))
         else:
             ret.append(arg)
@@ -88,7 +92,7 @@ def condition_input(args, kwargs):
     return ret
 
 
-def parse_input(args, condition=True, no_parse=None):
+def parse_input(args, kwargs=None, condition=True, no_parse=None):
     '''
     Parse out the args and kwargs from a list of input values. Optionally,
     return the args and kwargs without passing them to condition_input().
@@ -97,6 +101,8 @@ def parse_input(args, condition=True, no_parse=None):
     '''
     if no_parse is None:
         no_parse = ()
+    if kwargs is None:
+        kwargs = {}
     _args = []
     _kwargs = {}
     for arg in args:
@@ -118,6 +124,7 @@ def parse_input(args, condition=True, no_parse=None):
                 _args.append(arg)
         else:
             _args.append(arg)
+    _kwargs.update(kwargs)
     if condition:
         return condition_input(_args, _kwargs)
     return _args, _kwargs
@@ -417,7 +424,7 @@ def format_call(fun,
     ret = initial_ret is not None and initial_ret or {}
 
     ret['args'] = []
-    ret['kwargs'] = {}
+    ret['kwargs'] = OrderedDict()
 
     aspec = get_function_argspec(fun, is_class_method=is_class_method)
 

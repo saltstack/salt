@@ -36,7 +36,6 @@ integration.modules.test_localemod
 integration.modules.test_lxc
 integration.modules.test_mine
 integration.modules.test_mysql
-integration.modules.test_nacl
 integration.modules.test_network
 integration.modules.test_nilrt_ip
 integration.modules.test_pillar
@@ -73,6 +72,7 @@ integration.runners.test_salt
 integration.scheduler.test_eval
 integration.scheduler.test_postpone
 integration.scheduler.test_skip
+integration.scheduler.test_helpers
 integration.sdb.test_env
 integration.shell.test_arguments
 integration.shell.test_auth

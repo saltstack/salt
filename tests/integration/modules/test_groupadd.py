@@ -119,13 +119,7 @@ class GroupModuleTest(ModuleCase):
         self.assertEqual(group_info['gid'], self._gid)
         self.assertEqual(group_info['name'], self._group)
         # try adding the group again
-        if self.os_grain['kernel'] == 'Windows':
-            add_group = self.run_function('group.add', [self._group], gid=self._gid)
-            self.assertEqual(add_group['result'], None)
-            self.assertEqual(add_group['comment'], 'The group {0} already exists.'.format(self._group))
-            self.assertEqual(add_group['changes'], [])
-        else:
-            self.assertFalse(self.run_function('group.add', [self._group], gid=self._gid))
+        self.assertFalse(self.run_function('group.add', [self._group], gid=self._gid))
 
     @destructiveTest
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
@@ -176,12 +170,7 @@ class GroupModuleTest(ModuleCase):
         self.assertTrue(self.run_function('group.delete', [self._group]))
 
         # group does not exist
-        if self.os_grain['kernel'] == 'Windows':
-            del_group = self.run_function('group.delete', [self._no_group])
-            self.assertEqual(del_group['changes'], [])
-            self.assertEqual(del_group['comment'], 'The group {0} does not exists.'.format(self._no_group))
-        else:
-            self.assertFalse(self.run_function('group.delete', [self._no_group]))
+        self.assertFalse(self.run_function('group.delete', [self._no_group]))
 
     def test_info(self):
         '''
@@ -215,20 +204,12 @@ class GroupModuleTest(ModuleCase):
         self.assertTrue(self.run_function('group.adduser', [self._group, self._user]))
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, str(group_info['members']))
-        if self.os_grain['kernel'] == 'Windows':
-            no_group = self.run_function('group.adduser', [self._no_group, self._no_user])
-            no_user = self.run_function('group.adduser', [self._group, self._no_user])
-            funcs = [no_group, no_user]
-            for func in funcs:
-                self.assertIn('Fail', func['comment'])
-                self.assertFalse(func['result'])
-        else:
-            # try add a non existing user
-            self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
-            # try add a user to non existing group
-            self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
-            # try add a non existing user to a non existing group
-            self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
+        # try add a non existing user
+        self.assertFalse(self.run_function('group.adduser', [self._group, self._no_user]))
+        # try add a user to non existing group
+        self.assertFalse(self.run_function('group.adduser', [self._no_group, self._user]))
+        # try add a non existing user to a non existing group
+        self.assertFalse(self.run_function('group.adduser', [self._no_group, self._no_user]))
 
     def test_deluser(self):
         '''
@@ -250,10 +231,7 @@ class GroupModuleTest(ModuleCase):
         self.run_function('user.add', [self._user1])
         m = '{0},{1}'.format(self._user, self._user1)
         ret = self.run_function('group.members', [self._group, m])
-        if salt.utils.platform.is_windows():
-            self.assertTrue(ret['result'])
-        else:
-            self.assertTrue(ret)
+        self.assertTrue(ret)
         group_info = self.run_function('group.info', [self._group])
         self.assertIn(self._user, str(group_info['members']))
         self.assertIn(self._user1, str(group_info['members']))

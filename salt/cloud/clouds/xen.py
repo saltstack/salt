@@ -238,7 +238,7 @@ def get_vm_ip(name=None, session=None, call=None):
     vifs = session.xenapi.VM.get_VIFs(vm)
     if vifs is not None:
         for vif in vifs:
-            if len(session.xenapi.VIF.get_ipv4_addresses(vif)) != 0:
+            if session.xenapi.VIF.get_ipv4_addresses(vif):
                 cidr = session.xenapi.VIF.get_ipv4_addresses(vif).pop()
                 ret, subnet = cidr.split('/')
                 log.debug(
@@ -520,7 +520,7 @@ def _determine_resource_pool(session, vm_):
         resource_pool = _get_pool(vm_['resource_pool'], session)
     else:
         pool = session.xenapi.pool.get_all()
-        if len(pool) <= 0:
+        if not pool:
             resource_pool = None
         else:
             first_pool = session.xenapi.pool.get_all()[0]
@@ -669,6 +669,7 @@ def _deploy_salt_minion(name, session, vm_):
     vm_['ssh_host'] = get_vm_ip(name, session)
     vm_['user'] = vm_.get('user', 'root')
     vm_['password'] = vm_.get('password', 'p@ssw0rd!')
+    vm_['provider'] = vm_.get('provider', 'xen')
     log.debug('%s has IP of %s', name, vm_['ssh_host'])
     # Bootstrap Salt minion!
     if vm_['ssh_host'] is not None:
@@ -1022,7 +1023,7 @@ def destroy(name=None, call=None):
     if vm:
         # get vm
         record = session.xenapi.VM.get_record(vm)
-        log.debug('power_state: ' + record['power_state'])
+        log.debug('power_state: %s', record['power_state'])
         # shut down
         if record['power_state'] != 'Halted':
             task = session.xenapi.Async.VM.hard_shutdown(vm)
@@ -1306,7 +1307,7 @@ def get_pv_args(name, session=None, call=None):
         session = _get_session()
     vm = _get_vm(name, session=session)
     pv_args = session.xenapi.VM.get_PV_args(vm)
-    if len(pv_args) > 0:
+    if pv_args:
         return pv_args
     return None
 

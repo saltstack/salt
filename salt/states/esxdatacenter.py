@@ -2,7 +2,7 @@
 '''
 Salt states to create and manage VMware vSphere datacenters (datacenters).
 
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+:codeauthor: `Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
 
 Dependencies
 ============
@@ -32,6 +32,7 @@ Example:
 Proxy minion configuration (connects passthrough to the vCenter):
 
 .. code-block:: yaml
+
     proxy:
       proxytype: esxdatacenter
       datacenter: target_dc
@@ -87,8 +88,7 @@ def datacenter_configured(name):
         dc_name = __salt__['esxdatacenter.get_details']()['datacenter']
     else:
         dc_name = name
-    log.info('Running datacenter_configured for datacenter \'{0}\''
-             ''.format(dc_name))
+    log.info('Running datacenter_configured for datacenter \'%s\'', dc_name)
     ret = {'name': name,
            'changes': {},
            'result': None,
@@ -104,7 +104,7 @@ def datacenter_configured(name):
                 comments.append('State will create '
                                 'datacenter \'{0}\'.'.format(dc_name))
             else:
-                log.debug('Creating datacenter \'{0}\'. '.format(dc_name))
+                log.debug('Creating datacenter \'%s\'', dc_name)
                 __salt__['vsphere.create_datacenter'](dc_name, si)
                 comments.append('Created datacenter \'{0}\'.'.format(dc_name))
             log.info(comments[-1])
@@ -118,7 +118,7 @@ def datacenter_configured(name):
         ret['result'] = None if __opts__['test'] and ret['changes'] else True
         return ret
     except salt.exceptions.CommandExecutionError as exc:
-        log.error('Error: {}'.format(exc))
+        log.error('Error: %s', exc)
         if si:
             __salt__['vsphere.disconnect'](si)
         ret.update({

@@ -10,13 +10,12 @@
 # Import python libs
 from __future__ import absolute_import
 import os
-import signal
 import shutil
 import logging
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
 from tests.integration.utils import testprogram
@@ -26,9 +25,15 @@ import salt.utils.files
 import salt.utils.yaml
 import salt.utils.platform
 
+# Import 3rd-party libs
+import pytest
+
 log = logging.getLogger(__name__)
 
+SIGKILL = 9
 
+
+@pytest.mark.usefixtures('session_salt_syndic')
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command
@@ -38,7 +43,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
     def test_issue_7754(self):
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'issue-7754')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'issue-7754')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -57,7 +62,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                 with salt.utils.files.fopen(os.path.join(config_dir, fname), 'w') as fhw:
                     salt.utils.yaml.safe_dump(config, fhw, default_flow_style=False)
 
-        ret = self.run_script(
+        self.run_script(
             self._call_binary_,
             '--config-dir={0} --pid-file={1} -l debug'.format(
                 config_dir,
@@ -72,7 +77,7 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         if os.path.exists(pid_path):
             with salt.utils.files.fopen(pid_path) as fhr:
                 try:
-                    os.kill(int(fhr.read()), signal.SIGKILL)
+                    os.kill(int(fhr.read()), SIGKILL)
                 except OSError:
                     pass
         try:

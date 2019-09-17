@@ -57,7 +57,10 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                 'name': 'salt', 'result': True},
                {'changes': 'saltstack',
                 'comment': 'Service salt failed to start', 'name': 'salt',
-                'result': False}]
+                'result': False},
+               {'changes': 'saltstack',
+                'comment': 'Started Service salt\nService masking not available on this minion',
+                'name': 'salt', 'result': True, 'warnings': ["The 'unmask' argument is not supported by this platform/action"]}]
 
         tmock = MagicMock(return_value=True)
         fmock = MagicMock(return_value=False)
@@ -90,6 +93,13 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                                                    'service.start': MagicMock(return_value="stack")}):
                     with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
                         self.assertDictEqual(service.running("salt", True), ret[4])
+
+                with patch.dict(service.__salt__, {'service.status': MagicMock(side_effect=[False, True]),
+                                                   'service.enabled': MagicMock(side_effect=[False, True]),
+                                                   'service.unmask': MagicMock(side_effect=[False, True]),
+                                                   'service.start': MagicMock(return_value="stack")}):
+                    with patch.object(service, '_enable', MagicMock(return_value={'changes': 'saltstack'})):
+                        self.assertDictEqual(service.running("salt", True, unmask=True), ret[7])
 
             with patch.dict(service.__opts__, {'test': True}):
                 with patch.dict(service.__salt__, {'service.status': tmock}):

@@ -27,10 +27,11 @@ from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import (
     get_unused_localhost_port,
     requires_system_grains,
+    patched_environ
 )
 from tests.support.mock import patch
 
@@ -70,7 +71,6 @@ _OPTS = {
     'git_pillar_includes': True,
 }
 PROC_TIMEOUT = 10
-NOTSET = object()
 
 
 class ProcessManager(object):
@@ -86,11 +86,16 @@ class ProcessManager(object):
             raise ValueError('one of name or search is required')
         for proc in psutil.process_iter():
             if name is not None:
-                if search is None:
-                    if name in proc.name():
+                try:
+                    if search is None:
+                        if name in proc.name():
+                            return proc
+                    elif name in proc.name() and _search(proc):
                         return proc
-                elif name in proc.name() and _search(proc):
-                    return proc
+                except psutil.NoSuchProcess:
+                    # Whichever process we are interrogating is no longer alive.
+                    # Skip it and keep searching.
+                    continue
             else:
                 if _search(proc):
                     return proc
@@ -127,15 +132,19 @@ class SSHDMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
 
     @classmethod
     def prep_server(cls):
-        cls.sshd_config_dir = tempfile.mkdtemp(dir=TMP)
+        cls.sshd_config_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.sshd_config = os.path.join(cls.sshd_config_dir, 'sshd_config')
         cls.sshd_port = get_unused_localhost_port()
         cls.url = 'ssh://{username}@127.0.0.1:{port}/~/repo.git'.format(
             username=cls.username,
             port=cls.sshd_port)
+        cls.url_extra_repo = 'ssh://{username}@127.0.0.1:{port}/~/extra_repo.git'.format(
+            username=cls.username,
+            port=cls.sshd_port)
         home = '/root/.ssh'
         cls.ext_opts = {
             'url': cls.url,
+            'url_extra_repo': cls.url_extra_repo,
             'privkey_nopass': os.path.join(home, cls.id_rsa_nopass),
             'pubkey_nopass': os.path.join(home, cls.id_rsa_nopass + '.pub'),
             'privkey_withpass': os.path.join(home, cls.id_rsa_withpass),
@@ -179,7 +188,7 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
         Set up all the webserver paths. Designed to be run once in a
         setUpClass function.
         '''
-        cls.root_dir = tempfile.mkdtemp(dir=TMP)
+        cls.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         cls.config_dir = os.path.join(cls.root_dir, 'config')
         cls.nginx_conf = os.path.join(cls.config_dir, 'nginx.conf')
         cls.uwsgi_conf = os.path.join(cls.config_dir, 'uwsgi.yml')
@@ -193,7 +202,8 @@ class WebserverMixin(ModuleCase, ProcessManager, SaltReturnAssertsMixin):
             # get_unused_localhost_port() return identical port numbers.
             cls.uwsgi_port = get_unused_localhost_port()
         cls.url = 'http://127.0.0.1:{port}/repo.git'.format(port=cls.nginx_port)
-        cls.ext_opts = {'url': cls.url}
+        cls.url_extra_repo = 'http://127.0.0.1:{port}/extra_repo.git'.format(port=cls.nginx_port)
+        cls.ext_opts = {'url': cls.url, 'url_extra_repo': cls.url_extra_repo}
         # Add auth params if present (if so this will trigger the spawned
         # server to turn on HTTP basic auth).
         for credential_param in ('user', 'password'):
@@ -250,7 +260,7 @@ class GitTestBase(ModuleCase):
     Base class for all gitfs/git_pillar tests. Must be subclassed and paired
     with either SSHDMixin or WebserverMixin to provide the server.
     '''
-    case = port = bare_repo = admin_repo = None
+    case = port = bare_repo = base_extra_repo = admin_repo = admin_extra_repo = None
     maxDiff = None
     git_opts = '-c user.name="Foo Bar" -c user.email=foo@bar.com'
     ext_opts = {}
@@ -329,7 +339,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         '''
         Run git_pillar with the specified configuration
         '''
-        cachedir = tempfile.mkdtemp(dir=TMP)
+        cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, cachedir, ignore_errors=True)
         ext_pillar_opts = {'optimization_order': [0, 1, 2]}
         ext_pillar_opts.update(
@@ -412,6 +422,11 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'bar.sls'), 'w') as fp_:
             fp_.write('included_pillar: True\n')
+        # Add another file in subdir
+        os.mkdir(os.path.join(self.admin_repo, 'subdir'))
+        with salt.utils.files.fopen(
+                os.path.join(self.admin_repo, 'subdir', 'bar.sls'), 'w') as fp_:
+            fp_.write('from_subdir: True\n')
         _push('master', 'initial commit')
 
         # Do the same with different values for "dev" branch
@@ -457,7 +472,7 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
         # The top.sls should be the only file in this branch
         self.run_function(
             'git.rm',
-            [self.admin_repo, 'foo.sls'],
+            [self.admin_repo, 'foo.sls', os.path.join('subdir', 'bar.sls')],
             user=user)
         with salt.utils.files.fopen(
                 os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
@@ -467,6 +482,78 @@ class GitPillarTestBase(GitTestBase, LoaderModuleMockMixin):
                 - bar
             '''))
         _push('top_only', 'add top_only branch')
+
+        # Create just another top file in a separate repo, to be mapped to the base
+        # env and including mounted.bar
+        self.run_function(
+            'git.checkout',
+            [self.admin_repo],
+            user=user,
+            opts='-b top_mounted')
+        # The top.sls should be the only file in this branch
+        with salt.utils.files.fopen(
+                os.path.join(self.admin_repo, 'top.sls'), 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            base:
+              '*':
+                - mounted.bar
+            '''))
+        _push('top_mounted', 'add top_mounted branch')
+
+    def make_extra_repo(self, root_dir, user='root'):
+        self.bare_extra_repo = os.path.join(root_dir, 'extra_repo.git')
+        self.admin_extra_repo = os.path.join(root_dir, 'admin_extra')
+
+        for dirname in (self.bare_extra_repo, self.admin_extra_repo):
+            shutil.rmtree(dirname, ignore_errors=True)
+
+        # Create bare extra repo
+        self.run_function(
+            'git.init',
+            [self.bare_extra_repo],
+            user=user,
+            bare=True)
+
+        # Clone bare repo
+        self.run_function(
+            'git.clone',
+            [self.admin_extra_repo],
+            url=self.bare_extra_repo,
+            user=user)
+
+        def _push(branch, message):
+            self.run_function(
+                'git.add',
+                [self.admin_extra_repo, '.'],
+                user=user)
+            self.run_function(
+                'git.commit',
+                [self.admin_extra_repo, message],
+                user=user,
+                git_opts=self.git_opts,
+            )
+            self.run_function(
+                'git.push',
+                [self.admin_extra_repo],
+                remote='origin',
+                ref=branch,
+                user=user,
+            )
+
+        with salt.utils.files.fopen(
+                os.path.join(self.admin_extra_repo, 'top.sls'), 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            "{{saltenv}}":
+              '*':
+                - motd
+                - nowhere.foo
+            '''))
+        with salt.utils.files.fopen(
+                os.path.join(self.admin_extra_repo, 'motd.sls'), 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+            motd: The force will be with you. Always.
+            '''))
+        _push('master', 'initial commit')
 
 
 class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
@@ -538,6 +625,7 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
                 )
             )
         self.make_repo(root_dir, user=self.username)
+        self.make_extra_repo(root_dir, user=self.username)
 
     def get_pillar(self, ext_pillar_conf):
         '''
@@ -546,14 +634,8 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
         '''
-        orig_git_ssh = os.environ.pop('GIT_SSH', NOTSET)
-        os.environ['GIT_SSH'] = self.git_ssh
-        try:
+        with patched_environ(GIT_SSH=self.git_ssh):
             return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
-        finally:
-            os.environ.pop('GIT_SSH', None)
-            if orig_git_ssh is not NOTSET:
-                os.environ['GIT_SSH'] = orig_git_ssh
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
@@ -584,3 +666,4 @@ class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):
             self.spawn_server()  # pylint: disable=E1120
 
         self.make_repo(self.repo_dir)
+        self.make_extra_repo(self.repo_dir)

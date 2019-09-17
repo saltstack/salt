@@ -58,6 +58,7 @@ def _has_required_boto():
     else:
         return True
 
+
 if _has_required_boto():
     region = 'us-east-1'
     access_key = 'GKTADJGHEIQSXMKKRBJ08H'
@@ -158,7 +159,7 @@ class BotoIoTStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 r'''
-Renderer that will decrypt ciphers encrypted using `AWS KMS Envelope Encryption`_.
-
 .. _`AWS KMS Envelope Encryption`: https://docs.aws.amazon.com/kms/latest/developerguide/workflow.html
+
+Renderer that will decrypt ciphers encrypted using `AWS KMS Envelope Encryption`_.
 
 Any key in the data to be rendered can be a urlsafe_b64encoded string, and this renderer will attempt
 to decrypt it before passing it off to Salt. This allows you to safely store secrets in
@@ -94,6 +94,7 @@ def __virtual__():
     a given version.
     '''
     return HAS_FERNET and salt.utils.versions.check_boto_reqs()
+
 
 log = logging.getLogger(__name__)
 

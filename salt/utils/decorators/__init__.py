@@ -23,6 +23,10 @@ from salt.log import LOG_LEVELS
 # Import 3rd-party libs
 from salt.ext import six
 
+IS_WINDOWS = False
+if getattr(sys, 'getwindowsversion', False):
+    IS_WINDOWS = True
+
 log = logging.getLogger(__name__)
 
 
@@ -88,11 +92,11 @@ class Depends(object):
         '''
         The decorator is "__call__"d with the function, we take that function
         and determine which module and function name it is to store in the
-        class wide depandancy_dict
+        class wide dependency_dict
         '''
         try:
-            # This inspect call may fail under certain conditions in the loader. Possibly related to
-            # a Python bug here:
+            # This inspect call may fail under certain conditions in the loader.
+            # Possibly related to a Python bug here:
             # http://bugs.python.org/issue17735
             frame = inspect.stack()[1][0]
             # due to missing *.py files under esky we cannot use inspect.getmodule
@@ -112,8 +116,11 @@ class Depends(object):
     def run_command(dependency, mod_name, func_name):
         full_name = '{0}.{1}'.format(mod_name, func_name)
         log.trace('Running \'%s\' for \'%s\'', dependency, full_name)
-        import salt.utils.args
-        args = salt.utils.args.shlex_split(dependency)
+        if IS_WINDOWS:
+            args = salt.utils.args.shlex_split(dependency, posix=False)
+        else:
+            args = salt.utils.args.shlex_split(dependency)
+        log.trace('Command after shlex_split: %s', args)
         proc = subprocess.Popen(args,
                                 shell=False,
                                 stdout=subprocess.PIPE,
@@ -322,7 +329,7 @@ class _DeprecationDecorator(object):
                     'Unhandled exception occurred in function "%s: %s',
                     self._function.__name__, error
                 )
-                raise error
+                six.reraise(*sys.exc_info())
         else:
             raise CommandExecutionError("Function is deprecated, but the successor function was not found.")
 
@@ -406,6 +413,7 @@ class _IsDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -580,6 +588,7 @@ class _WithDeprecated(_DeprecationDecorator):
         '''
         _DeprecationDecorator.__call__(self, function)
 
+        @wraps(function)
         def _decorate(*args, **kwargs):
             '''
             Decorator function.
@@ -620,6 +629,7 @@ class _WithDeprecated(_DeprecationDecorator):
             return self._call_function(kwargs)
 
         _decorate.__doc__ = self._function.__doc__
+        _decorate.__wrapped__ = self._function
         return _decorate
 
 
@@ -634,6 +644,7 @@ def ignores_kwargs(*kwarg_names):
         List of argument names to ignore
     '''
     def _ignores_kwargs(fn):
+        @wraps(fn)
         def __ignores_kwargs(*args, **kwargs):
             kwargs_filtered = kwargs.copy()
             for name in kwarg_names:
@@ -658,3 +669,27 @@ def ensure_unicode_args(function):
         else:
             return function(*args, **kwargs)
     return wrapped
+
+
+def external(func):
+    '''
+    Mark function as external.
+
+    :param func:
+    :return:
+    '''
+
+    def f(*args, **kwargs):
+        '''
+        Stub.
+
+        :param args:
+        :param kwargs:
+        :return:
+        '''
+        return func(*args, **kwargs)
+
+    f.external = True
+    f.__doc__ = func.__doc__
+
+    return f

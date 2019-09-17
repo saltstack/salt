@@ -199,7 +199,7 @@ def present(name,
                 Owner is set for the key that contains the value/data pair. You
                 cannot set ownership on value/data pairs themselves.
 
-            .. versionadded:: Fluorine
+            .. versionadded:: 2019.2.0
 
         win_perms (dict):
             A dictionary containing permissions to grant and their propagation.
@@ -244,7 +244,7 @@ def present(name,
                     - this_key_subkeys
                     - subkeys_only
 
-            .. versionadded:: Fluorine
+            .. versionadded:: 2019.2.0
 
         win_deny_perms (dict):
             A dictionary containing permissions to deny and their propagation.
@@ -260,7 +260,7 @@ def present(name,
                 'Deny' permissions always take precedence over 'grant'
                  permissions.
 
-            .. versionadded:: Fluorine
+            .. versionadded:: 2019.2.0
 
         win_inheritance (bool):
             ``True`` to inherit permissions from the parent key. ``False`` to
@@ -270,7 +270,7 @@ def present(name,
                 Inheritance is set for the key that contains the value/data
                 pair. You cannot set inheritance on value/data pairs themselves.
 
-            .. versionadded:: Fluorine
+            .. versionadded:: 2019.2.0
 
         win_perms_reset (bool):
             If ``True`` the existing DACL will be cleared and replaced with the
@@ -281,7 +281,7 @@ def present(name,
                 Perms are reset for the key that contains the value/data pair.
                 You cannot set permissions on value/data pairs themselves.
 
-            .. versionadded:: Fluorine
+            .. versionadded:: 2019.2.0
 
     Returns:
         dict: A dictionary showing the results of the registry operation.

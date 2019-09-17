@@ -20,7 +20,7 @@ import tests.integration as integration
 # Import Salt libs
 import salt.utils.schedule
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -49,6 +49,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
+        self.schedule.opts['run_schedule_jobs_in_background'] = False
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
 
@@ -103,7 +104,7 @@ class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
         self.assertEqual(ret['_error'],
-                         'Invalid date string. Ignoring job job1.')
+                         'Invalid date string 13/29/2017 1:00pm. Ignoring job job1.')
 
     def test_eval_whens_grain_not_dict(self):
         '''

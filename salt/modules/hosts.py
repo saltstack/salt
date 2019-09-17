@@ -5,6 +5,7 @@ Manage the information in the hosts file
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import errno
 import os
 
 # Import salt libs
@@ -22,7 +23,12 @@ def __get_hosts_filename():
     '''
     Return the path to the appropriate hosts file
     '''
-    return __salt__['config.option']('hosts.file')
+    try:
+        return __context__['hosts.__get_hosts_filename']
+    except KeyError:
+        __context__['hosts.__get_hosts_filename'] = \
+            __salt__['config.option']('hosts.file')
+        return __context__['hosts.__get_hosts_filename']
 
 
 def _get_or_create_hostfile():
@@ -43,26 +49,35 @@ def _list_hosts():
     '''
     Return the hosts found in the hosts file in as an OrderedDict
     '''
-    count = 0
-    hfn = __get_hosts_filename()
-    ret = odict.OrderedDict()
-    if not os.path.isfile(hfn):
+    try:
+        return __context__['hosts._list_hosts']
+    except KeyError:
+        count = 0
+        hfn = __get_hosts_filename()
+        ret = odict.OrderedDict()
+        try:
+            with salt.utils.files.fopen(hfn) as ifile:
+                for line in ifile:
+                    line = salt.utils.stringutils.to_unicode(line).strip()
+                    if not line:
+                        continue
+                    if line.startswith('#'):
+                        ret.setdefault('comment-{0}'.format(count), []).append(line)
+                        count += 1
+                        continue
+                    if '#' in line:
+                        line = line[:line.index('#')].strip()
+                    comps = line.split()
+                    ip = comps.pop(0)
+                    ret.setdefault(ip, []).extend(comps)
+        except (IOError, OSError) as exc:
+            salt.utils.files.process_read_exception(exc, hfn, ignore=errno.ENOENT)
+            # Don't set __context__ since we weren't able to read from the
+            # hosts file.
+            return ret
+
+        __context__['hosts._list_hosts'] = ret
         return ret
-    with salt.utils.files.fopen(hfn) as ifile:
-        for line in ifile:
-            line = salt.utils.stringutils.to_unicode(line).strip()
-            if not line:
-                continue
-            if line.startswith('#'):
-                ret.setdefault('comment-{0}'.format(count), []).append(line)
-                count += 1
-                continue
-            if '#' in line:
-                line = line[:line.index('#')].strip()
-            comps = line.split()
-            ip = comps.pop(0)
-            ret.setdefault(ip, []).extend(comps)
-    return ret
 
 
 def list_hosts():
@@ -133,7 +148,10 @@ def has_pair(ip, alias):
         salt '*' hosts.has_pair <ip> <alias>
     '''
     hosts = _list_hosts()
-    return ip in hosts and alias in hosts[ip]
+    try:
+        return alias in hosts[ip]
+    except KeyError:
+        return False
 
 
 def set_host(ip, alias):
@@ -156,6 +174,9 @@ def set_host(ip, alias):
     ovr = False
     if not os.path.isfile(hfn):
         return False
+
+    # Make sure future calls to _list_hosts() will re-read the file
+    __context__.pop('hosts._list_hosts', None)
 
     line_to_add = salt.utils.stringutils.to_bytes(
         ip + '\t\t' + alias + os.linesep
@@ -203,6 +224,8 @@ def rm_host(ip, alias):
     '''
     if not has_pair(ip, alias):
         return True
+    # Make sure future calls to _list_hosts() will re-read the file
+    __context__.pop('hosts._list_hosts', None)
     hfn = _get_or_create_hostfile()
     with salt.utils.files.fopen(hfn, 'rb') as fp_:
         lines = fp_.readlines()
@@ -251,6 +274,10 @@ def add_host(ip, alias):
         return True
 
     hosts = _list_hosts()
+
+    # Make sure future calls to _list_hosts() will re-read the file
+    __context__.pop('hosts._list_hosts', None)
+
     inserted = False
     for i, h in six.iteritems(hosts):
         for j in range(len(h)):

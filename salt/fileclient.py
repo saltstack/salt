@@ -20,10 +20,9 @@ from salt.exceptions import (
     CommandExecutionError, MinionError
 )
 import salt.client
-import salt.crypt
 import salt.loader
 import salt.payload
-import salt.transport
+import salt.transport.client
 import salt.fileserver
 import salt.utils.data
 import salt.utils.files
@@ -340,6 +339,29 @@ class Client(object):
             return extrndest
 
         return ''
+
+    def cache_dest(self, url, saltenv='base', cachedir=None):
+        '''
+        Return the expected cache location for the specified URL and
+        environment.
+        '''
+        proto = urlparse(url).scheme
+
+        if proto == '':
+            # Local file path
+            return url
+
+        if proto == 'salt':
+            url, senv = salt.utils.url.parse(url)
+            if senv:
+                saltenv = senv
+            return salt.utils.path.join(
+                self.opts['cachedir'],
+                'files',
+                saltenv,
+                url.lstrip('|/'))
+
+        return self._extrn_path(url, saltenv, cachedir=cachedir)
 
     def list_states(self, saltenv):
         '''
@@ -735,7 +757,7 @@ class Client(object):
         kwargs['saltenv'] = saltenv
         url_data = urlparse(url)
         sfn = self.cache_file(url, saltenv, cachedir=cachedir)
-        if not os.path.exists(sfn):
+        if not sfn or not os.path.exists(sfn):
             return ''
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -875,7 +897,7 @@ class PillarClient(Client):
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
-                if len(dirs) == 0 and len(files) == 0:
+                if not dirs and not files:
                     ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
@@ -1008,7 +1030,8 @@ class RemoteClient(Client):
     '''
     def __init__(self, opts):
         Client.__init__(self, opts)
-        self.channel = salt.transport.Channel.factory(self.opts)
+        self._closing = False
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         if hasattr(self.channel, 'auth'):
             self.auth = self.channel.auth
         else:
@@ -1018,8 +1041,24 @@ class RemoteClient(Client):
         '''
         Reset the channel, in the event of an interruption
         '''
-        self.channel = salt.transport.Channel.factory(self.opts)
+        self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
+
+    def __del__(self):
+        self.destroy()
+
+    def destroy(self):
+        if self._closing:
+            return
+
+        self._closing = True
+        channel = None
+        try:
+            channel = self.channel
+        except AttributeError:
+            pass
+        if channel is not None:
+            channel.close()
 
     def get_file(self,
                  path,
@@ -1372,6 +1411,7 @@ class FSClient(RemoteClient):
     '''
     def __init__(self, opts):  # pylint: disable=W0231
         Client.__init__(self, opts)  # pylint: disable=W0233
+        self._closing = False
         self.channel = salt.fileserver.FSChan(opts)
         self.auth = DumbAuth()
 

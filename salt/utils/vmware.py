@@ -946,7 +946,7 @@ def get_mors_with_properties(service_instance, object_type, property_list=None,
         content = get_content(*content_args, **content_kwargs)
     except IOError as exc:
         if exc.errno != errno.EPIPE:
-            raise exc
+            six.reraise(*sys.exc_info())
         content = get_content(*content_args, **content_kwargs)
 
     object_list = []
@@ -1936,6 +1936,102 @@ def list_datastores(service_instance):
         The Service Instance Object from which to obtain datastores.
     '''
     return list_objects(service_instance, vim.Datastore)
+
+
+def list_datastores_full(service_instance):
+    '''
+    Returns a list of datastores associated with a given service instance.
+    The list contains basic information about the datastore:
+        name, type, url, capacity, free, used, usage, hosts
+
+    service_instance
+        The Service Instance Object from which to obtain datastores.
+    '''
+    datastores_list = list_objects(service_instance, vim.Datastore)
+
+    datastores = {}
+    for datastore in datastores_list:
+        datastores[datastore] = list_datastore_full(service_instance, datastore)
+
+    return datastores
+
+
+def list_datastore_full(service_instance, datastore):
+    '''
+    Returns a dictionary with the basic information for the given datastore:
+        name, type, url, capacity, free, used, usage, hosts
+
+    service_instance
+        The Service Instance Object from which to obtain datastores.
+
+    datastore
+        Name of the datastore.
+    '''
+    datastore_object = get_mor_by_name(service_instance, vim.Datastore, datastore)
+
+    if not datastore_object:
+        raise salt.exceptions.VMwareObjectRetrievalError(
+            'Datastore \'{0}\' does not exist.'.format(datastore)
+        )
+
+    items = {}
+    items['name'] = str(datastore_object.summary.name).replace("'", "")
+    items['type'] = str(datastore_object.summary.type).replace("'", "")
+    items['url'] = str(datastore_object.summary.url).replace("'", "")
+    items['capacity'] = datastore_object.summary.capacity / 1024 / 1024
+    items['free'] = datastore_object.summary.freeSpace / 1024 / 1024
+    items['used'] = items['capacity'] - items['free']
+    items['usage'] = (float(items['used']) / float(items['capacity'])) * 100
+    items['hosts'] = []
+
+    for host in datastore_object.host:
+        host_key = str(host.key).replace("'", "").split(":", 1)[1]
+        host_object = get_mor_by_moid(service_instance, vim.HostSystem, host_key)
+        items['hosts'].append(host_object.name)
+
+    return items
+
+
+def get_mor_by_name(si, obj_type, obj_name):
+    '''
+    Get reference to an object of specified object type and name
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    obj_type
+        Type of the object (vim.StoragePod, vim.Datastore, etc)
+
+    obj_name
+        Name of the object
+    '''
+    inventory = get_inventory(si)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [obj_type], True)
+    for item in container.view:
+        if item.name == obj_name:
+            return item
+    return None
+
+
+def get_mor_by_moid(si, obj_type, obj_moid):
+    '''
+    Get reference to an object of specified object type and id
+
+    si
+        ServiceInstance for the vSphere or ESXi server (see get_service_instance)
+
+    obj_type
+        Type of the object (vim.StoragePod, vim.Datastore, etc)
+
+    obj_moid
+        ID of the object
+    '''
+    inventory = get_inventory(si)
+    container = inventory.viewManager.CreateContainerView(inventory.rootFolder, [obj_type], True)
+    for item in container.view:
+        if item._moId == obj_moid:
+            return item
+    return None
 
 
 def get_datastore_files(service_instance, directory, datastores, container_object, browser_spec):

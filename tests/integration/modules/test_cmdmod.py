@@ -3,9 +3,9 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import random
 import sys
 import tempfile
-import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -15,7 +15,7 @@ from tests.support.helpers import (
     skip_if_not_root,
     this_user,
 )
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 # Import salt libs
@@ -152,6 +152,28 @@ class CMDModuleTest(ModuleCase):
 
         self.assertEqual(ret, 0)
 
+    def test_run_all_with_success_stderr(self):
+        '''
+        cmd.run with success_retcodes
+        '''
+        random_file = "{0}{1}{2}".format(RUNTIME_VARS.TMP_ROOT_DIR,
+                                         os.path.sep,
+                                         random.random())
+
+        if salt.utils.platform.is_windows():
+            func = 'type'
+            expected_stderr = 'The system cannot find the file specified.'
+        else:
+            func = 'cat'
+            expected_stderr = 'cat: {0}: No such file or directory'.format(random_file)
+        ret = self.run_function('cmd.run_all',
+                                ['{0} {1}'.format(func, random_file)],
+                                success_stderr=[expected_stderr],
+                                python_shell=True)
+
+        self.assertTrue('retcode' in ret)
+        self.assertEqual(ret.get('retcode'), 0)
+
     def test_blacklist_glob(self):
         '''
         cmd_blacklist_glob
@@ -181,7 +203,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = tempfile.mkdtemp(dir=TMP)
+        tmp_cwd = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         args = 'saltines crackers biscuits=yes'
         script = 'salt://script.py'
         ret = self.run_function('cmd.script', [script, args], cwd=tmp_cwd)
@@ -191,7 +213,7 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.script with cwd
         '''
-        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=TMP), os.path.sep)
+        tmp_cwd = "{0}{1}test 2".format(tempfile.mkdtemp(dir=RUNTIME_VARS.TMP), os.path.sep)
         os.mkdir(tmp_cwd)
 
         args = 'saltines crackers biscuits=yes'
@@ -239,9 +261,11 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys
-               sys.stdout.write('cheese')''')
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = '''|
+                   import sys
+                   sys.stdout.write('cheese')
+               '''
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
                                             code]).rstrip(),
@@ -251,9 +275,11 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys
-               sys.stdout.write(sys.argv[1])''')
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = '''|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               '''
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -265,9 +291,11 @@ class CMDModuleTest(ModuleCase):
         '''
         cmd.exec_code
         '''
-        code = textwrap.dedent('''\
-               import sys
-               sys.stdout.write(sys.argv[1])''')
+        # `code` is a multiline YAML text. Formatting it as a YAML block scalar.
+        code = '''|
+                   import sys
+                   sys.stdout.write(sys.argv[1])
+               '''
         arg = 'cheese'
         self.assertEqual(self.run_function('cmd.exec_code',
                                            [AVAILABLE_PYTHON_EXECUTABLE,
@@ -403,3 +431,12 @@ class CMDModuleTest(ModuleCase):
             self.assertIn('administrator', cmd)
         else:
             self.assertEqual('root', cmd)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'minion is not windows')
+    def test_windows_env_handling(self):
+        '''
+        Ensure that nt.environ is used properly with cmd.run*
+        '''
+        out = self.run_function('cmd.run', ['set'], env={"abc": "123", "ABC": "456"}).splitlines()
+        self.assertIn('abc=123', out)
+        self.assertIn('ABC=456', out)

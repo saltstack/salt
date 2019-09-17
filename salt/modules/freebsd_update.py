@@ -23,7 +23,8 @@ from salt.exceptions import CommandNotFoundError
 log = logging.getLogger(__name__)
 
 # Define the module's virtual name
-__virtualname__ = 'freebsd-update'
+__virtualname__ = 'freebsd_update'
+__virtual_aliases__ = ('freebsd-update',)
 
 
 def __virtual__():
@@ -32,7 +33,7 @@ def __virtual__():
 
     Only work on FreeBSD RELEASEs >= 6.2, where freebsd-update was introduced.
     '''
-    if __grains__['os'] != 'FreeBSD':
+    if __grains__.get('os') != 'FreeBSD':
         return (False, 'The freebsd_update execution module cannot be loaded: only available on FreeBSD systems.')
     if float(__grains__['osrelease']) < 6.2:
         return (False, 'freebsd_update is only available on FreeBSD versions >= 6.2-RELESE')

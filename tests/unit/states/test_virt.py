@@ -8,8 +8,8 @@ import tempfile
 import shutil
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -23,6 +23,10 @@ from salt.ext import six
 from salt.exceptions import CommandExecutionError
 import salt.states.virt as virt
 import salt.utils.files
+from salt.exceptions import CommandExecutionError
+
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
@@ -55,7 +59,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.pki_dir = tempfile.mkdtemp(dir=TMP)
+        cls.pki_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     @classmethod
     def tearDownClass(cls):
@@ -654,7 +658,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                source_name=None,
                                                source_format=None,
                                                transient=True,
-                                               start=True,
+                                               start=False,
                                                connection='myconnection',
                                                username='user',
                                                password='secret')
@@ -667,6 +671,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               connection='myconnection',
                                               username='user',
                                               password='secret')
+            mocks['start'].assert_not_called()
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.pool_info': MagicMock(return_value={'state': 'running'}),

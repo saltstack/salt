@@ -33,7 +33,7 @@
 # and a warning will be logged.
 #random_master: False
 
-# NOTE: Deprecated in Salt Fluorine. Use 'random_master' instead.
+# NOTE: Deprecated in Salt 2019.2.0. Use 'random_master' instead.
 #master_shuffle: False
 
 # Minions can connect to multiple masters simultaneously (all masters
@@ -409,7 +409,7 @@
 # `minion_start`. This duplication can cause a lot of clutter on the event bus
 # when there are many minions. Set `enable_legacy_startup_events: False` in the
 # minion config to ensure only the `salt/minion/<minion_id>/start` events are
-# sent. Beginning with the `Neon` Salt release this option will default to
+# sent. Beginning with the `Sodium` Salt release this option will default to
 # `False`
 #enable_legacy_startup_events: True
 
@@ -736,6 +736,9 @@
 # processes or threads. -1 is the default and disables the limit.
 #process_count_max: -1
 
+# If the process_count_max limit is reached, wait for this long in a coroutine before
+# attempting to launch the process for the next publication.
+#process_count_max_sleep_secs: 10
 
 #####         Logging settings       #####
 ##########################################

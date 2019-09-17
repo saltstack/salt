@@ -43,7 +43,7 @@ class SaltException(Exception):
         import salt.utils.stringutils
         if not isinstance(message, six.string_types):
             message = six.text_type(message)
-        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code
+        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             super(SaltException, self).__init__(
                 salt.utils.stringutils.to_str(message)
             )
@@ -57,7 +57,7 @@ class SaltException(Exception):
             # a str version, and convert the passed value to unicode for the
             # message/strerror attributes.
             super(SaltException, self).__init__(str(message))  # future lint: blacklisted-function
-            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code
+            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code,undefined-variable
 
     def __unicode__(self):
         return self.strerror
@@ -565,4 +565,28 @@ class VMwareVmCreationError(VMwareSaltError):
 class MissingSmb(SaltException):
     '''
     Raised when no smb library is found.
+    '''
+
+
+class NxosError(SaltException):
+    '''
+    NX-OS Base Exception class
+    '''
+
+
+class NxosCliError(NxosError):
+    '''
+    NX-OS Cli Error raised when Cli command rejected by the NX-OS device
+    '''
+
+
+class NxosClientError(NxosError):
+    '''
+    NX-OS Client Error raised for problems connecting to the NX-OS device
+    '''
+
+
+class NxosRequestNotSupported(NxosError):
+    '''
+    Raised for unsupported client requests
     '''

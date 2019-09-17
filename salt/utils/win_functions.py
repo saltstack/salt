@@ -10,6 +10,7 @@ import ctypes
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
+from salt.ext.six.moves import range
 
 # Import 3rd Party Libs
 try:
@@ -79,18 +80,27 @@ def get_user_groups(name, sid=False):
     Returns:
         list: A list of group names or sids
     '''
-    if name == 'SYSTEM':
+    groups = []
+    if name.upper() == 'SYSTEM':
         # 'win32net.NetUserGetLocalGroups' will fail if you pass in 'SYSTEM'.
-        groups = [name]
+        groups = ['SYSTEM']
     else:
-        groups = win32net.NetUserGetLocalGroups(None, name)
+        try:
+            groups = win32net.NetUserGetLocalGroups(None, name)
+        except win32net.error as exc:
+            if exc.winerror == 5:
+                # Try without LG_INCLUDE_INDIRECT flag, because the user might
+                # not have permissions for it
+                groups = win32net.NetUserGetLocalGroups(None, name, 0)
+            else:
+                raise
 
     if not sid:
         return groups
 
-    ret_groups = set()
+    ret_groups = []
     for group in groups:
-        ret_groups.add(get_sid_from_name(group))
+        ret_groups.append(get_sid_from_name(group))
 
     return ret_groups
 
@@ -305,3 +315,60 @@ def broadcast_setting_change(message='Environment'):
                                         broadcast_message, SMTO_ABORTIFHUNG,
                                         5000, 0)
     return result == 1
+
+
+def guid_to_squid(guid):
+    '''
+    Converts a GUID   to a compressed guid (SQUID)
+
+    Each Guid has 5 parts separated by '-'. For the first three each one will be
+    totally reversed, and for the remaining two each one will be reversed by
+    every other character. Then the final compressed Guid will be constructed by
+    concatenating all the reversed parts without '-'.
+
+    .. Example::
+
+        Input:                  2BE0FA87-5B36-43CF-95C8-C68D6673FB94
+        Reversed:               78AF0EB2-63B5-FC34-598C-6CD86637BF49
+        Final Compressed Guid:  78AF0EB263B5FC34598C6CD86637BF49
+
+    Args:
+
+        guid (str): A valid GUID
+
+    Returns:
+        str: A valid compressed GUID (SQUID)
+    '''
+    guid_pattern = re.compile(r'^\{(\w{8})-(\w{4})-(\w{4})-(\w\w)(\w\w)-(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)\}$')
+    guid_match = guid_pattern.match(guid)
+    squid = ''
+    if guid_match is not None:
+        for index in range(1, 12):
+            squid += guid_match.group(index)[::-1]
+    return squid
+
+
+def squid_to_guid(squid):
+    '''
+    Converts a compressed GUID (SQUID) back into a GUID
+
+    Args:
+
+        squid (str): A valid compressed GUID
+
+    Returns:
+        str: A valid GUID
+    '''
+    squid_pattern = re.compile(r'^(\w{8})(\w{4})(\w{4})(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)(\w\w)$')
+    squid_match = squid_pattern.match(squid)
+    guid = ''
+    if squid_match is not None:
+        guid = '{' + \
+               squid_match.group(1)[::-1]+'-' + \
+               squid_match.group(2)[::-1]+'-' + \
+               squid_match.group(3)[::-1]+'-' + \
+               squid_match.group(4)[::-1]+squid_match.group(5)[::-1] + '-'
+        for index in range(6, 12):
+            guid += squid_match.group(index)[::-1]
+        guid += '}'
+    return guid

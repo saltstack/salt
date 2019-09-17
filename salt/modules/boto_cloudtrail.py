@@ -211,7 +211,7 @@ def describe(Name,
     try:
         conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
         trails = conn.describe_trails(trailNameList=[Name])
-        if trails and len(trails.get('trailList', [])) > 0:
+        if trails and trails.get('trailList'):
             keys = ('Name', 'S3BucketName', 'S3KeyPrefix',
                     'SnsTopicName', 'IncludeGlobalServiceEvents',
                     'IsMultiRegionTrail',

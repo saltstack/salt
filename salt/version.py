@@ -8,10 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import sys
 import platform
+import warnings
 
 # linux_distribution deprecated in py3.7
 try:
-    from platform import linux_distribution
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
 except ImportError:
     from distro import linux_distribution
 
@@ -98,7 +104,7 @@ class SaltStackVersion(object):
         'Carbon'        : (2016, 11),
         'Nitrogen'      : (2017, 7),
         'Oxygen'        : (2018, 3),
-        'Fluorine'      : (MAX_SIZE - 100, 0),
+        'Fluorine'      : (2019, 2),
         'Neon'          : (MAX_SIZE - 99, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
@@ -642,26 +648,47 @@ def system_information():
         else:
             return ''
 
-    version = system_version()
-    release = platform.release()
     if platform.win32_ver()[0]:
+        # Get the version and release info based on the Windows Operating
+        # System Product Name. As long as Microsoft maintains a similar format
+        # this should be future proof
         import win32api  # pylint: disable=3rd-party-module-not-gated
-        server = {'Vista': '2008Server',
-                  '7': '2008ServerR2',
-                  '8': '2012Server',
-                  '8.1': '2012ServerR2',
-                  '10': '2016Server'}
-        # Starting with Python 2.7.12 and 3.5.2 the `platform.uname()` function
-        # started reporting the Desktop version instead of the Server version on
-        # Server versions of Windows, so we need to look those up
-        # So, if you find a Server Platform that's a key in the server
-        # dictionary, then lookup the actual Server Release.
-        # If this is a Server Platform then `GetVersionEx` will return a number
-        # greater than 1.
-        if win32api.GetVersionEx(1)[8] > 1 and release in server:
-            release = server[release]
+        import win32con  # pylint: disable=3rd-party-module-not-gated
+
+        # Get the product name from the registry
+        hkey = win32con.HKEY_LOCAL_MACHINE
+        key = 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+        value_name = 'ProductName'
+        reg_handle = win32api.RegOpenKey(hkey, key)
+
+        # Returns a tuple of (product_name, value_type)
+        product_name, _ = win32api.RegQueryValueEx(reg_handle, value_name)
+
+        version = 'Unknown'
+        release = ''
+        if 'Server' in product_name:
+            for item in product_name.split(' '):
+                # If it's all digits, then it's version
+                if re.match(r'\d+', item):
+                    version = item
+                # If it starts with R and then numbers, it's the release
+                # ie: R2
+                if re.match(r'^R\d+$', item):
+                    release = item
+            release = '{0}Server{1}'.format(version, release)
+        else:
+            for item in product_name.split(' '):
+                # If it's a number, decimal number, Thin or Vista, then it's the
+                # version
+                if re.match(r'^(\d+(\.\d+)?)|Thin|Vista$', item):
+                    version = item
+            release = version
+
         _, ver, sp, extra = platform.win32_ver()
         version = ' '.join([release, ver, sp, extra])
+    else:
+        version = system_version()
+        release = platform.release()
 
     system = [
         ('system', platform.system()),
@@ -695,10 +722,11 @@ def versions_report(include_salt_cloud=False):
     Yield each version properly formatted for console output.
     '''
     ver_info = versions_information(include_salt_cloud)
-
+    not_installed = 'Not Installed'
+    ns_pad = len(not_installed)
     lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
     sys_pad = max(len(name) for name in ver_info['System Versions'])
-    padding = max(lib_pad, sys_pad) + 1
+    padding = max(lib_pad, sys_pad, ns_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
     info = []
@@ -707,7 +735,7 @@ def versions_report(include_salt_cloud=False):
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
-                             ver_info[ver_type][name] or 'Not Installed',
+                             ver_info[ver_type][name] or not_installed,
                              pad=padding)
             info.append(ver)
         info.append(' ')
@@ -750,6 +778,7 @@ def msi_conformant_version():
     if noc == 0:
         noc = 65535
     return '{}.{}.{}'.format(short_year, 20*(month-1)+bugfix, noc)
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 2 and sys.argv[1] == 'msi':

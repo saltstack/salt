@@ -2,7 +2,7 @@
 '''
 Docker executor module
 
-.. versionadded: Fluorine
+.. versionadded: 2019.2.0
 
 Used with the docker proxy minion.
 '''

@@ -45,7 +45,7 @@ from salt.ext import six
 def __virtual__():
     IMPORT_ERR = None
     try:
-        from pyghmi.ipmi import command
+        from pyghmi.ipmi import command  # pylint: disable=unused-import
     except Exception as exc:
         IMPORT_ERR = six.text_type(exc)
     return (IMPORT_ERR is None, IMPORT_ERR)
@@ -278,7 +278,7 @@ def user_absent(name, channel=14, **kwargs):
     ret = {'name': name, 'result': False, 'comment': '', 'changes': {}}
     user_id_list = __salt__['ipmi.get_name_uids'](name, channel, **kwargs)
 
-    if len(user_id_list) == 0:
+    if not user_id_list:
         ret['result'] = True
         ret['comment'] = 'user already absent'
         return ret

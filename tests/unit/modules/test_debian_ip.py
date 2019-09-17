@@ -7,6 +7,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 from collections import OrderedDict as odict
 import tempfile
+import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -20,7 +21,8 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.debian_ip as debian_ip
-import salt.utils
+import salt.utils.files
+import salt.utils.platform
 
 # Import third party libs
 import jinja2.exceptions
@@ -782,10 +784,42 @@ test_interfaces = [
                 '    address 2001:db8:dead:c0::3/64\n',
                 '    gateway 2001:db8:dead:c0::1\n',
                 '\n']},
+
+        # IPv6-only; static with autoconf and accept_ra forced
+        {'iface_name': 'eth20', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3/64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv6': True,
+                'autoconf': 1,
+                'accept_ra': 2,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth20', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('autoconf', 1),
+                    ('address', '2001:db8:dead:beef::3/64'),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ('accept_ra', 2),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth20\n',
+                'iface eth20 inet6 static\n',
+                '    autoconf 1\n',
+                '    address 2001:db8:dead:beef::3/64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '    accept_ra 2\n',
+                '\n']},
         ]
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(salt.utils.platform.is_windows(), 'Do not run these tests on Windows')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.debian_ip
@@ -810,6 +844,18 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(debian_ip.__salt__, {'kmod.load': mock,
                                                      'pkg.install': mock}):
                     self.assertEqual(debian_ip.build_bond('bond0'), '')
+
+    def test_error_message_iface_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
+        msg = debian_ip._error_msg_iface(iface, option, values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+
+    def test_error_message_network_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        msg = debian_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond_exception(self):
         '''
@@ -939,7 +985,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertTrue(debian_ip.build_interface('eth0', 'eth', 'enabled', test='True'))
 
-        with tempfile.NamedTemporaryFile(mode='r', delete=True) as tfile:
+        with tempfile.NamedTemporaryFile(mode='r', delete=False) as tfile:
             with patch('salt.modules.debian_ip._DEB_NETWORK_FILE', str(tfile.name)):
                 for iface in test_interfaces:
                     if iface.get('skip_test', False):
@@ -955,6 +1001,7 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                                     interface_file=tfile.name,
                                     **iface['build_interface']),
                             iface['return'])
+        os.remove(tfile.name)
 
     # 'up' function tests: 1
 
@@ -979,14 +1026,17 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.debian_ip._parse_hostname',
                       MagicMock(return_value='SaltStack')), \
                         patch('salt.modules.debian_ip._parse_domainname',
-                              MagicMock(return_value='saltstack.com')):
+                              MagicMock(return_value='saltstack.com')), \
+                                      patch('salt.modules.debian_ip._parse_searchdomain',
+                                              MagicMock(return_value='test.saltstack.com')):
             mock_avai = MagicMock(return_value=True)
             with patch.dict(debian_ip.__salt__, {'service.available': mock_avai,
                                                  'service.status': mock_avai}):
                 self.assertEqual(debian_ip.get_network_settings(),
-                                 ['NETWORKING=yes\n',
-                                  'HOSTNAME=SaltStack\n',
-                                  'DOMAIN=saltstack.com\n'])
+                                 [u'NETWORKING=yes\n',
+                                  u'HOSTNAME=SaltStack\n',
+                                  u'DOMAIN=saltstack.com\n',
+                                  u'SEARCH=test.saltstack.com\n'])
 
                 mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                  ('error'))

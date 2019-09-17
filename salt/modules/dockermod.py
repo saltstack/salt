@@ -858,12 +858,22 @@ def _get_create_kwargs(skip_translate=None,
     Take input kwargs and return a kwargs dict to pass to docker-py's
     create_container() function.
     '''
+
+    networks = kwargs.pop('networks', {})
+    if kwargs.get('network_mode', '') in networks:
+        networks = {kwargs['network_mode']: networks[kwargs['network_mode']]}
+    else:
+        networks = {}
+
     kwargs = __utils__['docker.translate_input'](
         salt.utils.docker.translate.container,
         skip_translate=skip_translate,
         ignore_collisions=ignore_collisions,
         validate_ip_addrs=validate_ip_addrs,
         **__utils__['args.clean_kwargs'](**kwargs))
+
+    if networks:
+        kwargs['networking_config'] = _create_networking_config(networks)
 
     if client_args is None:
         try:
@@ -953,6 +963,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Ulimits':
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                if item == 'Env':
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {
                         'old': val1, 'new': val2}
@@ -982,6 +995,9 @@ def compare_containers(first, second, ignore=None):
                 if item == 'Ulimits':
                     val1 = _ulimit_sort(val1)
                     val2 = _ulimit_sort(val2)
+                if item == 'Env':
+                    val1 = sorted(val1)
+                    val2 = sorted(val2)
                 if val1 != val2:
                     ret.setdefault(conf_dict, {})[item] = {
                         'old': val1, 'new': val2}
@@ -1210,10 +1226,18 @@ def compare_container_networks(first, second):
                         old_val.remove(result1['Config']['Hostname'])
                     except (AttributeError, ValueError):
                         pass
+                    try:
+                        old_val.remove(result1['Id'][:12])
+                    except (AttributeError, ValueError):
+                        pass
                     if not old_val:
                         old_val = None
                     try:
                         new_val.remove(result2['Config']['Hostname'])
+                    except (AttributeError, ValueError):
+                        pass
+                    try:
+                        new_val.remove(result2['Id'][:12])
                     except (AttributeError, ValueError):
                         pass
                     if not new_val:
@@ -2105,7 +2129,7 @@ def port(name, private_port=None):
     name
         Container name or ID
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             This value can now be a pattern expression (using the
             pattern-matching characters defined in fnmatch_). If a pattern
             expression is used, this function will return a dictionary mapping
@@ -2413,6 +2437,11 @@ def version():
             )
     return ret
 
+
+def _create_networking_config(networks):
+    log.debug("creating networking config from {}".format(networks))
+    return _client_wrapper('create_networking_config',
+        {k: _client_wrapper('create_endpoint_config', **v) for k, v in networks.items()})
 
 # Functions to manage containers
 @_refresh_mine_cache
@@ -5901,7 +5930,7 @@ def wait(name, ignore_already_stopped=False, fail_on_exit_status=False):
 def prune(containers=False, networks=False, images=False,
           build=False, volumes=False, system=None, **filters):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Prune Docker's various subsystems
 
@@ -6701,7 +6730,7 @@ def call(name, function, *args, **kwargs):
 
 def apply_(name, mods=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Apply states! This function will call highstate or state.sls based on the
     arguments passed in, ``apply`` is intended to be the main gateway for
@@ -6841,7 +6870,7 @@ def highstate(name, saltenv='base', **kwargs):
     '''
     Apply a highstate to the running container
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     The container does not need to have Salt installed, but Python is required.
 

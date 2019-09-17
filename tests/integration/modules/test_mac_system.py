@@ -34,7 +34,7 @@ SET_SUBNET_NAME = __random_string()
 
 
 @skip_if_not_root
-@flaky
+@flaky(attempts=8)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacSystemModuleTest(ModuleCase):

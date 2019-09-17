@@ -229,7 +229,7 @@ deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                        description=('{\n'
                                     '    "api_name": "unit test api",\n'
                                     '    "swagger_file": "temp-swagger-sample.yaml",\n'
-                                    '    "swagger_file_md5sum": "693c57997a12a2446bb5c08c793d943c",\n'
+                                    '    "swagger_file_md5sum": "55a948ff90ad80ff747ec91657c7a299",\n'
                                     '    "swagger_info_object": {\n'
                                     '        "description": "salt boto apigateway unit test service",\n'
                                     '        "title": "salt boto apigateway unit test service",\n'
@@ -371,7 +371,7 @@ class TempSwaggerFile(object):
     def __enter__(self):
         self.swaggerfile = 'temp-swagger-sample.yaml'
         with salt.utils.files.fopen(self.swaggerfile, 'w') as fp_:
-            salt.utils.yaml.safe_dump(self.swaggerdict, fp_)
+            salt.utils.yaml.safe_dump(self.swaggerdict, fp_, default_flow_style=False)
         return self.swaggerfile
 
     def __exit__(self, objtype, value, traceback):
@@ -397,7 +397,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod

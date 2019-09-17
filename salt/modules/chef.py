@@ -215,6 +215,6 @@ def _exec_cmd(*args, **kwargs):
          for k, v in six.iteritems(kwargs) if not k.startswith('__')
     ])
     cmd_exec = '{0}{1}'.format(cmd_args, cmd_kwargs)
-    log.debug('Chef command: {0}'.format(cmd_exec))
+    log.debug('Chef command: %s', cmd_exec)
 
     return __salt__['cmd.run_all'](cmd_exec, python_shell=False)

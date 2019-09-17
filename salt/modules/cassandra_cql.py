@@ -882,6 +882,60 @@ def create_user(username, password, superuser=False, contact_points=None, port=N
     return True
 
 
+def create_role(username, password, superuser=False, login=False, contact_points=None, port=None, cql_user=None, cql_pass=None):
+    '''
+    Create a new cassandra role with credentials and superuser status.
+
+    :param username:       The name of the new user.
+    :type  username:       str
+    :param password:       The password of the new user.
+    :type  password:       str
+    :param superuser:      Is the new role going to be a superuser? default: False
+    :type  superuser:      bool
+    :param login:          Is the new role going to be allowed to log in? default: False
+    :type  superuser:      bool
+    :param contact_points: The Cassandra cluster addresses, can either be a string or a list of IPs.
+    :type  contact_points: str | list[str]
+    :param cql_user:       The Cassandra user if authentication is turned on.
+    :type  cql_user:       str
+    :param cql_pass:       The Cassandra user password if authentication is turned on.
+    :type  cql_pass:       str
+    :param port:           The Cassandra cluster port, defaults to None.
+    :type  port:           int
+    :return:
+    :rtype:
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt 'minion1' cassandra_cql.create_role username=joe password=secret
+
+        salt 'minion1' cassandra_cql.create_role username=joe password=secret superuser=True
+
+        salt 'minion1' cassandra_cql.create_role username=joe password=secret superuser=True login=True
+
+        salt 'minion1' cassandra_cql.create_role username=joe password=secret superuser=True login=True contact_points=minion1
+    '''
+    superuser_cql = 'superuser = true' if superuser else 'superuser = false'
+    login_cql = 'login = true' if login else 'login = false'
+    query = '''create role if not exists {0} with password '{1}' and {2} and {3} ;'''.format(username, password, superuser_cql, login_cql)
+    log.debug("Attempting to create a new role with username=%s superuser=%s login=%s", username, superuser, login)
+
+    # The create role query doesn't actually return anything if the query succeeds.
+    # If the query fails, catch the exception, log a messange and raise it again.
+    try:
+        cql_query(query, contact_points, port, cql_user, cql_pass)
+    except CommandExecutionError:
+        log.critical('Could not create role.')
+        raise
+    except BaseException as e:
+        log.critical('Unexpected error while creating role: %s', e)
+        raise
+
+    return True
+
+
 def list_permissions(username=None, resource=None, resource_type='keyspace', permission=None, contact_points=None,
                      port=None, cql_user=None, cql_pass=None):
     '''

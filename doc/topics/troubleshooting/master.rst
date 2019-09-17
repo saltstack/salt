@@ -178,6 +178,7 @@ Results can then be analyzed with `kcachegrind`_ or similar tool.
 
 .. _`kcachegrind`: http://kcachegrind.sourceforge.net/html/Home.html
 
+Make sure you have yappi installed.
 
 Commands Time Out or Do Not Return Output
 =========================================
@@ -218,6 +219,10 @@ commands (by default it is 5 seconds) or by modifying the master
 configuration file: ``/etc/salt/master`` and setting the ``timeout`` value to
 change the default timeout for all commands, and then restarting the
 salt-master service.
+
+If a ``state.apply`` run takes too long, you can find a bottleneck by adding the
+:py:mod:`--out=profile <salt.output.profile>` option.
+
 
 Salt Master Auth Flooding
 =========================

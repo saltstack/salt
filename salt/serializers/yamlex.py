@@ -113,6 +113,7 @@ import logging
 from salt.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 import yaml
@@ -128,9 +129,18 @@ log = logging.getLogger(__name__)
 available = True
 
 # prefer C bindings over python when available
-# CSafeDumper causes test failures under python3
 BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+if six.PY3:
+    # CSafeDumper causes repr errors in python3, so use the pure Python one
+    try:
+        # Depending on how PyYAML was built, yaml.SafeDumper may actually be
+        # yaml.cyaml.CSafeDumper (i.e. the C dumper instead of pure Python).
+        BaseDumper = yaml.dumper.SafeDumper
+    except AttributeError:
+        # Here just in case, but yaml.dumper.SafeDumper should always exist
+        BaseDumper = yaml.SafeDumper
+else:
+    BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -173,6 +183,7 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    options.setdefault('default_flow_style', None)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -389,11 +400,12 @@ class Dumper(BaseDumper):  # pylint: disable=W0232
     def represent_odict(self, data):
         return self.represent_mapping('tag:yaml.org,2002:map', list(data.items()))
 
+
 Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code,undefined-variable
 else:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_binary)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_str)
@@ -407,6 +419,10 @@ Dumper.add_multi_representer(set, Dumper.represent_set)
 Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
+Dumper.add_representer(
+    ThreadLocalProxy,
+    lambda dumper, proxy:
+        dumper.represent_data(ThreadLocalProxy.unproxy(proxy)))
 
 
 def merge_recursive(obj_a, obj_b, level=False):

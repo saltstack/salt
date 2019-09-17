@@ -62,7 +62,7 @@ A polkit rule like the following one will allow `salt` user to connect to libvir
 
 :depends: libvirt 1.0.0+ python binding
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 '''
 
 from __future__ import absolute_import, unicode_literals, print_function
@@ -165,7 +165,7 @@ def _get_libvirt_enum_string(prefix, value):
     # Filter out the values starting with a common base as they match another enum
     prefixes = [_compute_subprefix(p) for p in attributes]
     counts = {p: prefixes.count(p) for p in prefixes}
-    sub_prefixes = [p for p, count in counts.items() if count > 1]
+    sub_prefixes = [p for p, count in counts.items() if count > 1 or (p.endswith('_') and p[:-1] in prefixes)]
     filtered = [attr for attr in attributes if _compute_subprefix(attr) not in sub_prefixes]
 
     for candidate in filtered:
@@ -313,10 +313,9 @@ def _domain_event_graphics_cb(conn, domain, phase, local, remote, auth, subject,
         '''
         transform address structure into event data piece
         '''
-        data = {'family': _get_libvirt_enum_string('{0}_ADDRESS_'.format(prefix), addr['family']),
+        return {'family': _get_libvirt_enum_string('{0}_ADDRESS_'.format(prefix), addr['family']),
                 'node': addr['node'],
                 'service': addr['service']}
-        return addr
 
     _salt_send_domain_event(opaque, conn, domain, opaque['event'], {
         'phase': _get_libvirt_enum_string(prefix, phase),

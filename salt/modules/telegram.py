@@ -121,9 +121,7 @@ def _post_message(message, chat_id, token):
         )
         result = response.json()
 
-        log.debug(
-            'Raw response of the telegram request is {0}'.format(response)
-        )
+        log.debug('Raw response of the telegram request is %s', response)
 
     except Exception:
         log.exception(
@@ -134,9 +132,8 @@ def _post_message(message, chat_id, token):
     # Check if the Telegram Bot API returned successfully.
     if not result.get('ok', False):
         log.debug(
-            'Sending telegram api request failed due to error {0} ({1})'.format(
-                result.get('error_code'), result.get('description')
-            )
+            'Sending telegram api request failed due to error %s (%s)',
+            result.get('error_code'), result.get('description')
         )
         return False
 
