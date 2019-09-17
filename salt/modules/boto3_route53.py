@@ -1302,7 +1302,7 @@ def create_health_check(Name, CallerReference=None, IPAddress=None,
                 profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
     '''
     if not Name:
-        raise SaltInvocationError('Name of healthcheck to update missing.')
+        raise SaltInvocationError('Name of healthcheck to create missing.')
 
     keys = [
         'IPAddress', 'Port', 'Type', 'ResourcePath', 'FullyQualifiedDomainName', 'SearchString',
