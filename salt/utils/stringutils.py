@@ -452,31 +452,37 @@ def check_include_exclude(path_str, include_pat=None, exclude_pat=None):
       - If both include_pat and exclude_pat are supplied: return 'True' if
         include_pat matches AND exclude_pat does not match
     '''
+    def _pat_check(path_str, check_pat):
+        if re.match('E@', check_pat):
+            return True if re.search(
+                check_pat[2:],
+                path_str
+            ) else False
+        else:
+            return True if fnmatch.fnmatch(
+                path_str,
+                check_pat
+            ) else False
+
     ret = True  # -- default true
     # Before pattern match, check if it is regexp (E@'') or glob(default)
     if include_pat:
-        if re.match('E@', include_pat):
-            retchk_include = True if re.search(
-                include_pat[2:],
-                path_str
-            ) else False
+        if isinstance(include_pat, list):
+            for include_line in include_pat:
+                retchk_include = _pat_check(path_str, include_line)
+                if retchk_include:
+                    break
         else:
-            retchk_include = True if fnmatch.fnmatch(
-                path_str,
-                include_pat
-            ) else False
+            retchk_include = _pat_check(path_str, include_pat)
 
     if exclude_pat:
-        if re.match('E@', exclude_pat):
-            retchk_exclude = False if re.search(
-                exclude_pat[2:],
-                path_str
-            ) else True
+        if isinstance(exclude_pat, list):
+            for exclude_line in exclude_pat:
+                retchk_exclude = not _pat_check(path_str, exclude_line)
+                if not retchk_exclude:
+                    break
         else:
-            retchk_exclude = False if fnmatch.fnmatch(
-                path_str,
-                exclude_pat
-            ) else True
+            retchk_exclude = not _pat_check(path_str, exclude_pat)
 
     # Now apply include/exclude conditions
     if include_pat and not exclude_pat:
