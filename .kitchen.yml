@@ -4,6 +4,7 @@
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
+<% golden_images_branch = ENV['GOLDEN_IMAGES_CI_BRANCH'] || 'master' %>
 
 <% if File.exists?(driverfile) %>
 <%= ERB.new(File.read(driverfile)).result %>
@@ -20,7 +21,11 @@ driver:
     - sys_admin
   disable_upstart: false
   provision_command:
+    - systemctl enable sshd
     - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  driver_config:
+    run_command: /usr/lib/systemd/systemd
+    run_options: --entrypoint=/usr/lib/systemd/systemd
 transport:
   name: rsync
 <% end %>
@@ -59,68 +64,70 @@ provisioner:
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
 platforms:
-  - name: fedora
+  - name: arch
     driver_config:
-      image: fedora:latest
+      image: saltstack/ci-arch:<%= golden_images_branch %>
       run_command: /usr/lib/systemd/systemd
-    provisioner:
-      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
-  - name: centos-7
+  - name: amazon-1
     driver_config:
+      image: saltstack/ci-amazon-1:<%= golden_images_branch %>
+      run_command: /usr/lib/systemd/systemd
+  - name: amazon-2
+    driver_config:
+      image: saltstack/ci-amazon-2:<%= golden_images_branch %>
       run_command: /usr/lib/systemd/systemd
   - name: centos-6
     driver_config:
+      image: saltstack/ci-centos-6:<%= golden_images_branch %>
       run_command: /sbin/init
       provision_command:
-        - yum install -y upstart
-    provisioner:
-      salt_bootstrap_options: -P -p rsync -y -x python2.7 -X git v<%= version %> >/dev/null
-  - name: ubuntu-18.04
+  - name: centos-7
     driver_config:
-      run_command: /lib/systemd/systemd
-  - name: ubuntu-16.04
-    driver_config:
-      run_command: /lib/systemd/systemd
-  - name: ubuntu-14.04
-    driver_config:
-      run_command: /sbin/init
-      provision_command:
-        - rm -f /sbin/initctl
-        - dpkg-divert --local --rename --remove /sbin/initctl
-  - name: debian-8
-    driver_config:
-      run_command: /lib/systemd/systemd
-      provision_command:
-        - apt-get install -y dbus
-        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+      image: saltstack/ci-centos-7:<%= golden_images_branch %>
+      run_command: /usr/lib/systemd/systemd
   - name: debian-9
     driver_config:
+      image: saltstack/ci-debian-9:<%= golden_images_branch %>
       run_command: /lib/systemd/systemd
-  - name: arch
-    driver_config:
-      image: saltstack/ci-arch:2019.2
+      run_options: --entrypoint=/lib/systemd/systemd
       provision_command:
-        - systemctl enable sshd
+        - systemctl enable ssh
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
-    provisioner:
-      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
+  - name: debian-10
+    driver_config:
+      image: saltstack/ci-debian-10:<%= golden_images_branch %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
+      provision_command:
+        - systemctl enable ssh
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  - name: fedora-29
+    driver_config:
+      image: saltstack/ci-fedora-29:<%= golden_images_branch %>
+      run_command: /usr/lib/systemd/systemd
+  - name: fedora-30
+    driver_config:
+      image: saltstack/ci-fedora-30:<%= golden_images_branch %>
+      run_command: /usr/lib/systemd/systemd
   - name: opensuse-15
     driver_config:
-      image: opensuse/leap:15.0
+      image: saltstack/ci-opensuse-15:<%= golden_images_branch %>
       run_command: /usr/lib/systemd/systemd
-      provision_command:
-        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
-        - systemctl enable sshd.service
-        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
-    provisioner:
-      salt_bootstrap_options: -qXU -x python2 git v<%= @version %>
-  - name: opensuse-42.3
+  - name: ubuntu-16.04
     driver_config:
-      image: opensuse/leap:42.3
-      run_command: /usr/lib/systemd/systemd
+      image: saltstack/ci-ubuntu-1604:<%= golden_images_branch %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
       provision_command:
-        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
-        - systemctl enable sshd.service
+        - systemctl enable ssh
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
+  - name: ubuntu-18.04
+    driver_config:
+      image: saltstack/ci-ubuntu-1804:<%= golden_images_branch %>
+      run_command: /lib/systemd/systemd
+      run_options: --entrypoint=/lib/systemd/systemd
+      provision_command:
+        - systemctl enable ssh
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
 <% if vagrant != false %>
   - name: windows-2012r2
@@ -177,12 +184,12 @@ suites:
   - name: py3
     excludes:
       - centos-6
-      - ubuntu-14.04
 <% if File.exists?(verifierfile) %>
 <%= ERB.new(File.read(verifierfile)).result %>
 <% else %>
 verifier:
   name: nox
+  pytest: true
   run_destructive: true
   coverage: true
   junitxml: true
