@@ -893,6 +893,20 @@ minion. Since this grain is expensive, it is disabled by default.
 
     iscsi_grains: True
 
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
+
 .. conf_minion:: mine_enabled
 
 ``mine_enabled``
