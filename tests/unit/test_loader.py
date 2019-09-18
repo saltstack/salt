@@ -283,6 +283,31 @@ class LazyLoaderWhitelistTest(TestCase):
         self.assertNotIn('grains.get', self.loader)
 
 
+class LazyLoaderGrainsBlacklistTest(TestCase):
+    '''
+    Test the loader of grains with a blacklist
+    '''
+    def setUp(self):
+        self.opts = salt.config.minion_config(None)
+
+    def tearDown(self):
+        del self.opts
+
+    def test_whitelist(self):
+        opts = copy.deepcopy(self.opts)
+        opts['grains_blacklist'] = [
+            'master',
+            'os*',
+            'ipv[46]'
+        ]
+
+        grains = salt.loader.grains(opts)
+        self.assertNotIn('master', grains)
+        self.assertNotIn('os', set([g[:2] for g in list(grains)]))
+        self.assertNotIn('ipv4', grains)
+        self.assertNotIn('ipv6', grains)
+
+
 class LazyLoaderSingleItem(TestCase):
     '''
     Test loading a single item via the _load() function
