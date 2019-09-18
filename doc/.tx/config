@@ -3092,6 +3092,12 @@ source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.softlayer.pot
 source_lang = en
 source_name = ref/clouds/all/salt.cloud.clouds.softlayer.rst
 
+[salt.ref--clouds--all--salt_cloud_clouds_tencentcloud]
+file_filter = locale/<lang>/LC_MESSAGES/ref/clouds/all/salt.cloud.clouds.tencentcloud.po
+source_file = _build/locale/ref/clouds/all/salt.cloud.clouds.tencentcloud.pot
+source_lang = en
+source_name = ref/clouds/all/salt.cloud.clouds.tencentcloud.rst
+
 [salt.topics--cloud--action]
 file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/action.po
 source_file = _build/locale/topics/cloud/action.pot
@@ -3487,6 +3493,12 @@ file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/salt.po
 source_file = _build/locale/topics/cloud/salt.pot
 source_lang = en
 source_name = topics/cloud/salt.rst
+
+[salt.topics--cloud--tencentcloud]
+file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/tencentcloud.po
+source_file = _build/locale/topics/cloud/tencentcloud.pot
+source_lang = en
+source_name = topics/cloud/tencentcloud.rst
 
 [salt.topics--cloud--troubleshooting]
 file_filter = locale/<lang>/LC_MESSAGES/topics/cloud/troubleshooting.po

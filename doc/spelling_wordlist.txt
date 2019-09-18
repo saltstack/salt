@@ -815,6 +815,8 @@ tarball
 tbz
 tcp
 templating
+tencent
+tencentcloud
 testrb
 tgt
 tgz
