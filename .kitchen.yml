@@ -27,21 +27,16 @@ transport:
 
 provisioner:
   name: salt_solo
-  salt_install: bootstrap
   salt_version: latest
-  salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X -p rsync git v<%= version %>
+  salt_install: bootstrap
+  run_salt_call: false
+  install_after_init_environment: true
   log_level: info
   sudo: true
   require_chef: false
   retry_on_exit_code:
     - 139
   max_retries: 2
-  remote_states:
-    name: git://github.com/saltstack/salt-jenkins.git
-    branch: master
-    repo: git
-    testingdir: /testing
   salt_copy_filter:
     - __pycache__
     - '*.pyc'
@@ -51,27 +46,15 @@ provisioner:
     - .kitchen
     - artifacts
     - Gemfile.lock
-  state_top:
-    base:
-      "os:Windows":
-        - match: grain
-        - windows
-      "*":
-        - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
+  # Remote states needs to be defined and under it testingdir or else
+  # the local directory isn't copied over to the VM's/Containers that
+  # get spun up.
+  remote_states:
+    testingdir: /testing
   pillars:
-    top.sls:
-      base:
-        "*":
-          - jenkins
-        "os:Windows":
-          - match: grain
-          - windows
     jenkins.sls:
       testing_dir: "{{salt.config.get('root_dir')|replace('\\', '\\\\')}}/testing"
-      clone_repo: false
-      salttesting_namespec: salttesting==2017.6.1
-    windows.sls:
-      virtualenv_path: 'c:\Python27\Scripts\pip.exe'
+  state_top: {}
 <% if File.exists?(platformsfile) %>
 <%= ERB.new(File.read(platformsfile)).result %>
 <% else %>
@@ -115,10 +98,8 @@ platforms:
       run_command: /lib/systemd/systemd
   - name: arch
     driver_config:
-      image: archlinux/base
-      run_command: /usr/lib/systemd/systemd
+      image: saltstack/ci-arch:2019.2
       provision_command:
-        - pacman -Syu --noconfirm systemd
         - systemctl enable sshd
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
@@ -163,14 +144,6 @@ platforms:
         winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
-    verifier:
-      windows: true
-      types:
-        - unit
-      coverage_xml: false
-      save:
-        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
-        /salt/var/log/salt/minion: artifacts/logs/minion
   - name: windows-2016
     driver:
       box: mwrock/Windows2016
@@ -197,51 +170,24 @@ platforms:
         winrm set winrm/config/winrs '@{MaxMemoryPerShellMB="5000"}'
       salt_bootstrap_url: https://raw.githubusercontent.com/saltstack/salt-bootstrap/develop/bootstrap-salt.ps1
       salt_bootstrap_options: ''
-    verifier:
-      windows: true
-      types:
-        - unit
-      coverage_xml: false
-      xml: /tmp/xml-unittests-output/
-      save:
-        /tmp/xml-unittests-output/: artifacts/
-        $env:TEMP/salt-runtests.log: artifacts/logs/salt-runtests.log
-        /salt/var/log/salt/minion: artifacts/logs/minion
 <% end %>
 <% end %>
 suites:
   - name: py2
-    verifier:
-      python_bin: python2.7
   - name: py3
     excludes:
       - centos-6
       - ubuntu-14.04
-    verifier:
-      python_bin: python3
-    provisioner:
-      pillars:
-        jenkins.sls:
-          py3: true
-        windows.sls:
-          virtualenv_path: 'c:\Python35\Scripts\pip.exe'
-
 <% if File.exists?(verifierfile) %>
 <%= ERB.new(File.read(verifierfile)).result %>
 <% else %>
 verifier:
-  name: runtests
-  sudo: true
+  name: nox
   run_destructive: true
+  coverage: true
+  junitxml: true
+  sudo: true
   transport: zeromq
-  enable_filenames: true
-  types:
-    - ssh
-  xml: /tmp/xml-unittests-output/
-  coverage_xml: /tmp/coverage.xml
-  save:
-    /tmp/xml-unittests-output: artifacts/
-    /tmp/coverage.xml: artifacts/coverage/coverage.xml
-    /tmp/kitchen/var/log/salt/minion: artifacts/logs/minion
-    /tmp/salt-runtests.log: artifacts/logs/salt-runtests.log
+  sysinfo: true
+  sys_stats: true
 <% end %>
