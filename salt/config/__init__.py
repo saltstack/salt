@@ -925,6 +925,9 @@ VALID_OPTS = {
     # Set a hard limit for the amount of memory modules can consume on a minion.
     'modules_max_memory': int,
 
+    # Blacklist specific core grains to be filtered
+    'grains_blacklist': list,
+
     # The number of minutes between the minion refreshing its cache of grains
     'grains_refresh_every': int,
 
@@ -1248,6 +1251,7 @@ DEFAULT_MINION_OPTS = {
     'cachedir': os.path.join(salt.syspaths.CACHE_DIR, 'minion'),
     'append_minionid_config_dirs': [],
     'cache_jobs': False,
+    'grains_blacklist': [],
     'grains_cache': False,
     'grains_cache_expiration': 300,
     'grains_deep_merge': False,
