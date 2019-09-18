@@ -1141,6 +1141,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
                            'driver': 'linode'
+                          },
+                          {'id': 'a-tencentcloud-id',
+                           'key': 'a-tencentcloud-key',
+                           'location': 'ap-guangzhou',
+                           'driver': 'tencentcloud'
                           }],
                      'conf_file': PATH}
         ret = {'my-production-envs':
@@ -1157,6 +1162,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                          'password': 'supersecret',
                          'profiles': {},
                          'driver': 'linode'},
+                    'tencentcloud':
+                        {'id': 'a-tencentcloud-id',
+                         'key': 'a-tencentcloud-key',
+                         'location': 'ap-guangzhou',
+                         'profiles': {},
+                         'driver': 'tencentcloud'},
                     'ec2':
                         {'profiles': {},
                          'location': 'ap-southeast-1',
@@ -1180,7 +1191,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                           {'password': 'new-password',
                            'extends': 'my-dev-envs:linode',
                            'location': 'Salt Lake City'
-                          }],
+                          },
+                          {'extends': 'my-dev-envs:tencentcloud',
+                           'id': 'new-id',
+                           'key': 'new-key',
+                           'location': 'ap-beijing'}],
                      'my-dev-envs':
                          [{'id': 'ABCDEFGHIJKLMNOP',
                            'user': 'user@mycorp.com',
@@ -1189,7 +1204,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                            'driver': 'ec2'},
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
-                           'driver': 'linode'}],
+                           'driver': 'linode'},
+                          {'id': 'the-tencentcloud-id',
+                           'location': 'ap-beijing',
+                           'key': 'the-tencentcloud-key',
+                           'driver': 'tencentcloud'}],
                      'conf_file': PATH}
         ret = {'my-production-envs':
                    {'linode':
@@ -1204,7 +1223,13 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                          'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
                          'profiles': {},
-                         'location': 'us-east-1'}},
+                         'location': 'us-east-1'},
+                    'tencentcloud':
+                        {'id': 'new-id',
+                         'key': 'new-key',
+                         'location': 'ap-beijing',
+                         'profiles': {},
+                         'driver': 'tencentcloud'}},
                'my-dev-envs':
                    {'linode':
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
@@ -1217,8 +1242,19 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                          'key': 'supersecretkeysupersecretkey',
                          'driver': 'ec2',
                          'id': 'ABCDEFGHIJKLMNOP',
+<<<<<<< HEAD
                          'location': 'ap-southeast-1'}}}
+        self.assertEqual(ret, sconfig.apply_cloud_providers_config(
+=======
+                         'location': 'ap-southeast-1'},
+                    'tencentcloud':
+                        {'id': 'the-tencentcloud-id',
+                         'key': 'the-tencentcloud-key',
+                         'location': 'ap-beijing',
+                         'profiles': {},
+                         'driver': 'tencentcloud'}}}
         self.assertEqual(ret, salt.config.apply_cloud_providers_config(
+>>>>>>> de3fd871dc... add tencentcloud testing
             overrides,
             defaults=DEFAULT))
 
@@ -1249,7 +1285,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         overrides = {'my-production-envs':
                          [{'extends': 'my-dev-envs:linode',
                            'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'}],
+                           'user': 'ec2-user@mycorp.com'},
+                          {'extends': 'my-dev-envs:tencentcloud',
+                           'location': 'ap-shanghai',
+                           'id': 'the-tencentcloud-id'}],
                      'my-dev-envs':
                          [{'id': 'ABCDEFGHIJKLMNOP',
                            'user': 'user@mycorp.com',
@@ -1269,7 +1308,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         overrides = {'my-production-envs':
                          [{'extends': 'my-dev-envs',
                            'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'}],
+                           'user': 'ec2-user@mycorp.com'},
+                          {'extends': 'my-dev-envs:tencentcloud',
+                           'location': 'ap-shanghai',
+                           'id': 'the-tencentcloud-id'}],
                      'my-dev-envs':
                          [{'id': 'ABCDEFGHIJKLMNOP',
                            'user': 'user@mycorp.com',
@@ -1295,7 +1337,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
-                           'driver': 'linode'}],
+                           'driver': 'linode'},
+                          {'id': 'a-tencentcloud-id',
+                           'key': 'a-tencentcloud-key',
+                           'location': 'ap-guangzhou',
+                           'driver': 'tencentcloud'
+                          }],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
