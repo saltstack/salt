@@ -221,6 +221,15 @@ def state(name,
 
         .. versionadded:: 2017.7.0
 
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        NOTE: This flag conflicts with subset and batch flags and cannot be
+        used at the same time.
+
+        .. versionadded:: neon
+
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -273,6 +282,7 @@ def state(name,
     if 'roster' in kwargs:
         cmd_kw['roster'] = kwargs['roster']
     cmd_kw['expect_minions'] = expect_minions
+    cmd_kw['asynchronous'] = kwargs.pop('asynchronous', False)
     if highstate:
         fun = 'state.highstate'
     elif top:
@@ -331,6 +341,17 @@ def state(name,
             'out': tmp_ret.get('out', 'highstate') if
                 isinstance(tmp_ret, dict) else 'highstate'
         }}
+
+    if cmd_kw['asynchronous']:
+        state_ret['__jid__'] = cmd_ret.get('jid')
+        state_ret['changes'] = cmd_ret
+        if int(cmd_ret.get('jid', 0)) > 0:
+            state_ret['result'] = True
+            state_ret['comment'] = 'State submitted successfully.'
+        else:
+            state_ret['result'] = False
+            state_ret['comment'] = 'State failed to run.'
+        return state_ret
 
     try:
         state_ret['__jid__'] = cmd_ret[next(iter(cmd_ret))]['jid']
@@ -477,6 +498,11 @@ def function(
 
         .. versionadded:: 2017.7.0
 
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
+
     '''
     func_ret = {'name': name,
                 'changes': {},
@@ -501,6 +527,7 @@ def function(
     cmd_kw['ssh'] = ssh
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
+    cmd_kw['asynchronous'] = kwargs.pop('asynchronous', False)
 
     if ret_config:
         cmd_kw['ret_config'] = ret_config
@@ -520,6 +547,17 @@ def function(
     except Exception as exc:
         func_ret['result'] = False
         func_ret['comment'] = six.text_type(exc)
+        return func_ret
+
+    if cmd_kw['asynchronous']:
+        func_ret['__jid__'] = cmd_ret.get('jid')
+        func_ret['changes'] = cmd_ret
+        if int(cmd_ret.get('jid', 0)) > 0:
+            func_ret['result'] = True
+            func_ret['comment'] = 'Function submitted successfully.'
+        else:
+            func_ret['result'] = False
+            func_ret['comment'] = 'Function failed to run.'
         return func_ret
 
     try:
@@ -699,8 +737,15 @@ def runner(name, **kwargs):
 
     name
         The name of the function to run
+
     kwargs
         Any keyword arguments to pass to the runner function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
+
 
     .. code-block:: yaml
 
@@ -730,6 +775,10 @@ def runner(name, **kwargs):
                                       __env__=__env__,
                                       full_return=True,
                                       **kwargs)
+
+    if kwargs.get('asynchronous'):
+        out['return'] = out.copy()
+        out['success'] = 'jid' in out and 'tag' in out
 
     runner_return = out.get('return')
     if isinstance(runner_return, dict) and 'Error' in runner_return:
@@ -943,8 +992,15 @@ def wheel(name, **kwargs):
 
     name
         The name of the function to run
+
     kwargs
         Any keyword arguments to pass to the wheel function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
+
 
     .. code-block:: yaml
 
@@ -972,6 +1028,17 @@ def wheel(name, **kwargs):
                                      __orchestration_jid__=jid,
                                      __env__=__env__,
                                      **kwargs)
+
+    if kwargs.get('asynchronous'):
+        ret['__jid__'] = ret.get('jid')
+        ret['changes'] = out
+        if int(out.get('jid', 0)) > 0:
+            ret['result'] = True
+            ret['comment'] = 'wheel submitted successfully.'
+        else:
+            ret['result'] = False
+            ret['comment'] = 'wheel failed to run.'
+        return ret
 
     wheel_return = out.get('return')
     if isinstance(wheel_return, dict) and 'Error' in wheel_return:

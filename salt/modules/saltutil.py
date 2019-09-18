@@ -50,6 +50,7 @@ import salt.utils.event
 import salt.utils.extmods
 import salt.utils.files
 import salt.utils.functools
+import salt.utils.master
 import salt.utils.minion
 import salt.utils.path
 import salt.utils.process
@@ -1444,6 +1445,14 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             'ret': ret, 'cli': True, 'kwarg': kwarg, 'sub': kwargs['subset'],
         }
         del kwargs['subset']
+    elif kwargs.get('asynchronous'):
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
+            'ret': ret, 'kwarg': kwarg
+        }
+        del kwargs['asynchronous']
+        # run_job doesnt need processing like the others
+        return client.run_job(**cmd_kwargs)
     else:
         _cmd = client.cmd_iter
         cmd_kwargs = {
@@ -1550,7 +1559,7 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=None, **kwargs):
+def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=None, asynchronous=False, **kwargs):
     '''
     Execute a runner function. This function must be run on the master,
     either by targeting a minion running on a master or by using
@@ -1563,6 +1572,11 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
 
     kwargs
         Any keyword arguments to pass to the runner function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
 
     CLI Example:
 
@@ -1608,11 +1622,16 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
             prefix='run'
         )
 
-    return rclient.cmd(name,
-                       arg=arg,
-                       kwarg=kwarg,
-                       print_event=False,
-                       full_return=full_return)
+    if asynchronous:
+        master_key = salt.utils.master.get_master_key('root', __opts__)
+        low = {'arg': arg, 'kwarg': kwarg, 'fun': name, 'key': master_key}
+        return rclient.cmd_async(low)
+    else:
+        return rclient.cmd(name,
+                           arg=arg,
+                           kwarg=kwarg,
+                           print_event=False,
+                           full_return=full_return)
 
 
 def wheel(name, *args, **kwargs):
@@ -1633,6 +1652,11 @@ def wheel(name, *args, **kwargs):
 
     kwargs
         Any keyword arguments to pass to the wheel function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
 
     CLI Example:
 
@@ -1687,13 +1711,18 @@ def wheel(name, *args, **kwargs):
                 prefix='run'
             )
 
-        ret = wheel_client.cmd(name,
-                               arg=args,
-                               pub_data=pub_data,
-                               kwarg=valid_kwargs,
-                               print_event=False,
-                               full_return=True)
-    except SaltInvocationError:
+        if kwargs.pop('asynchronous', False):
+            master_key = salt.utils.master.get_master_key('root', __opts__)
+            low = {'arg': args, 'kwarg': kwargs, 'fun': name, 'key': master_key}
+            ret = wheel_client.cmd_async(low)
+        else:
+            ret = wheel_client.cmd(name,
+                                   arg=args,
+                                   pub_data=pub_data,
+                                   kwarg=valid_kwargs,
+                                   print_event=False,
+                                   full_return=True)
+    except SaltInvocationError as e:
         raise CommandExecutionError(
             'This command can only be executed on a minion that is located on '
             'the master.'
