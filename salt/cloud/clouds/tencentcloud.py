@@ -26,7 +26,7 @@ To use this module, set up the cloud configuration at
 :depends: tencentcloud-sdk-python
 '''
 
-# pylint: disable=invalid-name,function-redefined,undefined-variable,broad-except,too-many-locals,too-many-branches
+# pylint: disable=invalid-name,redefined-builtin,function-redefined,undefined-variable,broad-except,too-many-locals,too-many-branches
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -48,9 +48,10 @@ from salt.exceptions import (
 
 # Import 3rd-party libs
 from salt.ext import six
+from salt.ext.six.moves import range
 
-# Try import tencentcloud sdk
 try:
+    # Try import tencentcloud sdk
     from tencentcloud.common import credential
     from tencentcloud.common.profile.client_profile import ClientProfile
     from tencentcloud.cvm.v20170312 import cvm_client
@@ -71,10 +72,9 @@ DEFAULT_REGION = 'ap-guangzhou'
 __virtualname__ = 'tencentcloud'
 
 
-# Only load in this module if the TencentCloud configurations are in place
 def __virtual__():
     '''
-    Check for TencentCloud configurations
+    Only load in this module if the TencentCloud configurations are in place
     '''
     if get_configured_provider() is False:
         return False
@@ -409,59 +409,8 @@ def create(vm_):
     '''
     Create a single TencentCloud instance from a data dict.
 
-    Configuration parameters:
-
-    - provider: (Required) Name of entry in ``salt/cloud.providers.d/???`` file.
-    - availability_zone: (Required) The available zone that the instance locates at.
-    - image: (Required) The image id to use for the instance.
-    - size: (Required) Instance type for instance can be found using the --list-sizes option.
-    - securitygroups: (Optional) A list of security group ids to associate with.
-    - hostname: (Optional) The hostname of instance.
-    - instance_charge_type: (Optional)
-        The charge type of instance.
-        Valid values are PREPAID, POSTPAID_BY_HOUR and SPOTPAID,
-        The default is POSTPAID_BY_HOUR.
-    - instance_charge_type_prepaid_renew_flag: (Optional)
-        When enabled, the instance will be renew automatically
-        when it reach the end of the prepaid tenancy.
-        Valid values are NOTIFY_AND_AUTO_RENEW, NOTIFY_AND_MANUAL_RENEW and
-        DISABLE_NOTIFY_AND_MANUAL_RENEW.
-        NOTE: it only works when instance_charge_type is set to PREPAID.
-    - instance_charge_type_prepaid_period: (Optional)
-        The tenancy (time unit is month) of the prepaid instance,
-        Valid values are 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36.
-        NOTE: it only works when instance_charge_type is set to PREPAID.
-    - allocate_public_ip: (Optional)
-        Associate a public ip address with an instance in a VPC or Classic.
-        Boolean value, Default is false.
-    - internet_charge_type: (Optional)
-        Internet charge type of the instance, Valid values are BANDWIDTH_PREPAID,
-        TRAFFIC_POSTPAID_BY_HOUR, BANDWIDTH_POSTPAID_BY_HOUR and BANDWIDTH_PACKAGE.
-        The default is TRAFFIC_POSTPAID_BY_HOUR.
-    - internet_max_bandwidth_out: (Optional)
-        Maximum outgoing bandwidth to the public network, measured in Mbps (Mega bit per second).
-        Value range: [0, 100], If this value is not specified, then automatically sets it to 0 Mbps.
-    - key_name: (Optional) The key pair to use for the instance, it looks like skey-16jig7tx.
-    - password: (Optional) Password to an instance.
-    - private_ip: (Optional)
-        The private ip to be assigned to this instance,
-        must be in the provided subnet and available.
-    - project_id: (Optional) The project belongs to, default to 0.
-    - vpc_id: (Optional)
-        The id of a VPC network.
-        If you want to create instances in VPC network, this parameter must be set.
-    - subnet_id: (Optional)
-        The id of a VPC subnetwork.
-        If you want to create instances in VPC network, this parameter must be set.
-    - system_disk_size: (Optional)
-        Size of the system disk.
-        Value range: [50, 1000], and unit is GB. Default is 50GB.
-    - system_disk_type: (Optional)
-        Type of the system disk.
-        Valid values are CLOUD_BASIC, CLOUD_SSD and CLOUD_PREMIUM, default value is CLOUD_BASIC.
-
-    TencentCloud profiles require a provider, availability_zone, image and size.
-    Set up an initial profile at /etc/salt/cloud.profiles or /etc/salt/cloud.profiles.d/*.conf:
+    TencentCloud profiles require a ``provider``, ``availability_zone``, ``image`` and ``size``.
+    Set up profile at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
     .. code-block:: yaml
 
@@ -482,8 +431,8 @@ def create(vm_):
 
         salt-cloud -p tencentcloud-guangzhou-s1 myinstance
     '''
-    # Check for required profile parameters before sending any API calls.
     try:
+        # Check for required profile parameters before sending any API calls.
         if vm_['profile'] and \
             config.is_profile_configured(__opts__,
                                          __active_provider_name__ or 'tencentcloud',
@@ -602,7 +551,6 @@ def create(vm_):
 
     time.sleep(5)
 
-    # pylint: disable=inconsistent-return-statements
     def __query_node_data(vm_name):
         data = show_instance(vm_name, call='action')
         if not data:
@@ -663,6 +611,7 @@ def create(vm_):
 def start(name, call=None):
     '''
     Start a TencentCloud instance
+    Notice: the instance state must be stopped
 
     CLI Examples:
 
@@ -687,7 +636,8 @@ def start(name, call=None):
 
 def stop(name, force=False, call=None):
     '''
-    Stop a TencentCloud instance
+    Stop a TencentCloud running instance
+    Note: use `force=True` to make force stop
 
     CLI Examples:
 
@@ -816,8 +766,8 @@ def show_image(kwargs, call=None):
 
     if 'image' not in kwargs:
         raise SaltCloudSystemExit('No image specified.')
-    else:
-        image = kwargs['image']
+
+    image = kwargs['image']
 
     client = get_provider_client("cvm_client")
     req = cvm_models.DescribeImagesRequest()
@@ -982,9 +932,6 @@ def _get_images(image_type):
 
 
 def __get_image(vm_):
-    '''
-    Return the TencentCloud image id to use
-    '''
     vm_image = six.text_type(config.get_cloud_config_value(
         'image', vm_, __opts__, search_global=False
     ))
@@ -1002,9 +949,6 @@ def __get_image(vm_):
 
 
 def __get_size(vm_):
-    '''
-    Return the TencentCloud instance type to use
-    '''
     vm_size = six.text_type(config.get_cloud_config_value(
         'size', vm_, __opts__, search_global=False
     ))
@@ -1022,9 +966,6 @@ def __get_size(vm_):
 
 
 def __get_securitygroups(vm_):
-    '''
-    Return the TencentCloud securitygroups id to use
-    '''
     vm_securitygroups = config.get_cloud_config_value(
         'securitygroups', vm_, __opts__, search_global=False
     )
@@ -1033,7 +974,7 @@ def __get_securitygroups(vm_):
         return []
 
     securitygroups = list_securitygroups()
-    for i in xrange(len(vm_securitygroups)):
+    for i in range(len(vm_securitygroups)):
         vm_securitygroups[i] = six.text_type(vm_securitygroups[i])
         if vm_securitygroups[i] not in securitygroups:
             raise SaltCloudNotFound(
@@ -1046,9 +987,6 @@ def __get_securitygroups(vm_):
 
 
 def __get_availability_zone(vm_):
-    '''
-    Return the TencentCloud availability zone to use
-    '''
     vm_availability_zone = six.text_type(config.get_cloud_config_value(
         'availability_zone', vm_, __opts__, search_global=False
     ))

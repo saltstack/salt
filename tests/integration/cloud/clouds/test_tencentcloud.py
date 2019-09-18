@@ -81,14 +81,11 @@ class TencentCloudTest(ShellCase):
             raise
 
         # delete the instance
-        try:
-            self.assertIn(
-                INSTANCE_NAME + ':',
-                [i.strip() for i in self.run_cloud(
-                    '-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
-            )
-        except AssertionError:
-            raise
+        self.assertIn(
+            INSTANCE_NAME + ':',
+            [i.strip() for i in self.run_cloud(
+                '-d {0} --assume-yes'.format(INSTANCE_NAME), timeout=500)]
+        )
 
     def tearDown(self):
         '''
