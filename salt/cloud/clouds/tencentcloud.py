@@ -919,7 +919,7 @@ def _get_node(name):
             req.Filters = [{"Name": "instance-name", "Values": [name]}]
             resp = client.DescribeInstances(req)
             return resp.InstanceSet[0]
-        except Exception, ex:
+        except Exception as ex:
             attempts -= 1
             log.debug(
                 'Failed to get data for node \'%s\': %s. Remaining attempts: %d', name, ex, attempts
