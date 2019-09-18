@@ -752,7 +752,7 @@ def update_ca_bundle(
         source=None,
         opts=None,
         merge_files=None,
-    ):
+        ):
     '''
     Attempt to update the CA bundle file from a URL
 
