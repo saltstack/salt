@@ -113,6 +113,7 @@ import logging
 from salt.serializers import DeserializationError, SerializationError
 from salt.utils.aggregation import aggregate, Map, Sequence
 from salt.utils.odict import OrderedDict
+from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 import yaml
@@ -418,6 +419,10 @@ Dumper.add_multi_representer(set, Dumper.represent_set)
 Dumper.add_multi_representer(datetime.date, Dumper.represent_date)
 Dumper.add_multi_representer(datetime.datetime, Dumper.represent_datetime)
 Dumper.add_multi_representer(None, Dumper.represent_undefined)
+Dumper.add_representer(
+    ThreadLocalProxy,
+    lambda dumper, proxy:
+        dumper.represent_data(ThreadLocalProxy.unproxy(proxy)))
 
 
 def merge_recursive(obj_a, obj_b, level=False):
