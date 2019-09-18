@@ -94,9 +94,6 @@ Request a new certificate. Analogous to:
 
 :param str key_password=None: Optional. Password for the private key.
 
-:param str company_id=None: Optional, but may be configured in ``master`` file
-    instead.
-
 :param str csr_path=None: Optional, sign certificate request
 
 Example for CSR signing:
