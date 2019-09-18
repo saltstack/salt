@@ -59,14 +59,22 @@ def _handle_signals(client, signum, sigframe):
         exit_msg = '\nExiting gracefully on Ctrl-c'
         try:
             jid = client.local_client.pub_data['jid']
+            target = client.local_client.target_data
             exit_msg += (
                 '\n'
                 'This job\'s jid is: {0}\n'
                 'The minions may not have all finished running and any remaining '
-                'minions will return upon completion. To look up the return data '
-                'for this job later, run the following command:\n\n'
+                'minions will return upon completion.\n\n'
+                'To look up the return data for this job later, run the '
+                'following command:\n'
                 'salt-run jobs.lookup_jid {0}'.format(jid)
             )
+            if target:
+                exit_msg += (
+                    '\n\n'
+                    'To set up the state run to safely exit, run the following command:\n'
+                    'salt {0} state.soft_kill {1}'.format(target, jid)
+                )
         except (AttributeError, KeyError):
             pass
     else:

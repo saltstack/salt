@@ -751,6 +751,28 @@ class LocalClient(object):
         arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
+        if fun.startswith('state.'):
+            ref = {'compound': '-C',
+                    'glob': '',
+                    'grain': '-G',
+                    'grain_pcre': '-P',
+                    'ipcidr': '-S',
+                    'list': '-L',
+                    'nodegroup': '-N',
+                    'pcre': '-E',
+                    'pillar': '-I',
+                    'pillar_pcre': '-J'}
+            if HAS_RANGE:
+                ref['range'] = '-R'
+            if ref[tgt_type].startswith('-'):
+                self.target_data = "{0} '{1}'".format(
+                    ref[tgt_type],
+                    ','.join(tgt) if isinstance(tgt, list) else tgt)
+            else:
+                self.target_data = ','.join(tgt) if isinstance(tgt, list) else tgt
+        else:
+            self.target_data = ''
+
         try:
             self.pub_data = self.run_job(
                 tgt,
@@ -781,16 +803,21 @@ class LocalClient(object):
 
                         yield fn_ret
                 except KeyboardInterrupt:
-                    raise SystemExit(
+                    exit_msg = (
+                        '\nExiting gracefully on Ctrl-c'
                         '\n'
                         'This job\'s jid is: {0}\n'
-                        'Exiting gracefully on Ctrl-c\n'
                         'The minions may not have all finished running and any '
-                        'remaining minions will return upon completion. To look '
-                        'up the return data for this job later, run the following '
-                        'command:\n\n'
-                        'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid'])
-                    )
+                        'remaining minions will return upon completion.\n\n'
+                        'To look up the return data for this job later, run the '
+                        'following command:\n'
+                        'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid']))
+                    if self.target_data:
+                        exit_msg += (
+                            '\n\n'
+                            'To set up the state run to safely exit, run the following command:\n'
+                            'salt {0} state.soft_kill {1}'.format(self.target_data, self.pub_data['jid']))
+                    raise SystemExit(exit_msg)
         finally:
             if not was_listening:
                 self.event.close_pub()
