@@ -541,7 +541,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
     profile
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
-    Name = Name if Name else name
+    Name = Name or name
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating"
@@ -559,6 +559,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
         ret['comment'] = 'Route 53 {} hosted zone {} not found'.format('private' if PrivateZone
                 else 'public', DomainName)
         log.info(ret['comment'])
+        ret['result'] = False
         return ret
     zone = zone[0]
     HostedZoneId = zone['HostedZone']['Id']
@@ -626,7 +627,7 @@ def rr_present(name, HostedZoneId=None, DomainName=None, PrivateZone=False, Name
             cleanid = HostedZoneId[12:] if HostedZoneId.startswith('/hostedzone/') else HostedZoneId
             AliasTarget.update({'HostedZoneId': cleanid})
 
-    if HealthCheckName is not None:
+    if HealthCheckName:
         HealthCheckId = __salt__['boto3_route53.get_health_check_id_by_name'](HealthCheckName, region, key, keyid, profile)
 
     recordsets = __salt__['boto3_route53.get_resource_records'](HostedZoneId=HostedZoneId,
@@ -855,7 +856,7 @@ def health_check_present(name, Name=None, CallerReference=None, IPAddress=None,
         Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     '''
 
-    Name = Name if Name else name
+    Name = Name or name
 
     if Type is None:
         raise SaltInvocationError("'Type' is a required parameter when adding or updating resource records.")
@@ -949,7 +950,7 @@ def health_check_present(name, Name=None, CallerReference=None, IPAddress=None,
         args = {'region': region, 'key': key, 'keyid': keyid, 'profile': profile}
         changes = {key: params.get(key) for key in keys if params.get(key) is not None}
 
-        if reset_elements):
+        if reset_elements:
             changes.update({'ResetElements': reset_elements})
 
         if __opts__['test']:

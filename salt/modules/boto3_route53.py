@@ -88,7 +88,7 @@ def __init__(opts):
         __utils__['boto3.assign_funcs'](__name__, 'route53')
 
 def _has_name_tag(tags, name):
-    return any(item.get('Value', None) == name for item in tags if item.get('Key', None) == 'Name')
+    return any(item.get('Value') == name for item in tags if item.get('Key') == 'Name')
 
 def _collect_results(func, item, args, marker='Marker', nextmarker='NextMarker'):
     ret = []
@@ -1051,13 +1051,13 @@ def get_health_check_id_by_name(name, region=None, key=None, keyid=None, profile
     '''
     ids = get_health_check_ids_by_name(name, region=region, key=key, keyid=keyid, profile=profile)
 
-    if len(ids) > 1:
+    if ids:
         log.error(
             'Request matched more than one HealthCheck (%s). Refine your '
-            'criteria and try again.', [z['Id'] for z in ret]
+            'criteria and try again.', ids
         )
 
-    return ids[0] if len(ids) > 0 else None
+    return ids[0] if ids else None
 
 def list_tags_for_resource(Type, Id, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1129,7 +1129,7 @@ def get_health_check(Id, region=None, key=None, keyid=None, profile=None):
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     args = {'HealthCheckId': Id}
     ret = _collect_results(conn.get_health_check, None, args)
-    return ret[0]['HealthCheck'] if len(ret) > 0 else None
+    return ret[0]['HealthCheck'] if ret else None
 
 def get_health_check_by_name(name, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1151,7 +1151,7 @@ def get_health_check_by_name(name, region=None, key=None, keyid=None, profile=No
                 profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
     '''
     id = get_health_check_id_by_name(name, region, key, keyid, profile)
-    return get_health_check(id, region, key, keyid, profile) if id != None else None
+    return None if id is None else get_health_check(id, region, key, keyid, profile)
 
 def get_health_checks_by_name(name, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1173,7 +1173,7 @@ def get_health_checks_by_name(name, region=None, key=None, keyid=None, profile=N
                 profile='{"region": "us-east-1", "keyid": "A12345678AB", "key": "xblahblahblah"}'
     '''
     ids = get_health_check_ids_by_name(name, region, key, keyid, profile) or []
-    return [get_health_check(x, region, key, keyid, profile) for x in ids]
+    return [get_health_check(id, region, key, keyid, profile) for id in ids]
 
 def find_health_checks(Id=None, Name=None, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1225,14 +1225,14 @@ def find_health_check(Id=None, Name=None, region=None, key=None, keyid=None, pro
     '''
     ret = find_health_checks(Id=Id, Name=Name, region=region, key=key, keyid=keyid, profile=profile)
 
-    if len(ret) > 1:
+    if ret:
         ids = [z['Id'] for z in ret]
         raise SaltInvocationError(
             'Request matched more than one HealthCheck (%s). Refine your '
             'criteria and try again.'.format(ids)
         )
 
-    return ret[0] if len(ret) > 0 else None
+    return ret[0] if ret else None
 
 def get_health_check_version(Id, region=None, key=None, keyid=None, profile=None):
     '''
@@ -1345,8 +1345,8 @@ def update_health_check(Id, changes, region=None, key=None, keyid=None, profile=
     '''
     Updates a health check with with passed changes request.
 
-    Name
-        The name to assign to newly created health check.
+    Id
+        Id of the health check to update.
     region
         Region to connect to.
     key
@@ -1416,29 +1416,49 @@ def delete_health_check(Id, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a Route53 health check.
 
+    Id
+        Id of the health check to update.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     CLI Example::
 
-        salt myminion boto3_route53.health_check 2405309f-2aa1-4add-9e8c-c47546a199d7
+        salt myminion boto3_route53.delete_health_check 2405309f-2aa1-4add-9e8c-c47546a199d7
     '''
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
     try:
         r = conn.delete_health_check(HealthCheckId=Id)
         return {'result': True}
     except ClientError as e:
-        log.error('Failed to delete health check %s: %s', Id, e)
-    return False
+        log.error('Failed to delete health check %s: %r', Id, e)
+    return {'result': False}
 
 def delete_health_check_by_name(Name, region=None, key=None, keyid=None, profile=None):
     '''
     Delete a Route53 health check (by name).
 
+    Name
+        Nameof health check to delete.
+    region
+        Region to connect to.
+    key
+        Secret key to be used.
+    keyid
+        Access key to be used.
+    profile
+        Dict, or pillar key pointing to a dict, containing AWS region/key/keyid.
     CLI Example::
 
-        salt myminion boto3_route53.health_check_by_name A-HEALTH-CHECK
+        salt myminion boto3_route53.delete_health_check_by_name A-HEALTH-CHECK
     '''
     ids = get_health_check_ids_by_name(Name, region=region, key=key, keyid=keyid, profile=profile) or []
 
-    if len(ids) == 0:
+    if not ids:
         raise SaltInvocationError('HealthCheck with name {0} not found.'.format(Name))
     elif len(ids) > 1:
         raise SaltInvocationError(

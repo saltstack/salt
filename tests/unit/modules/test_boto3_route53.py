@@ -207,3 +207,19 @@ class Boto3Route53TestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res[0]['Id'], res0['result']['Id'])
         self.assertEqual(res[1]['Id'], res1['result']['Id'])
 
+    @mock_route53_deprecated
+    @skipIf(True, 'TODO: moto does not yet implement list_tags_for_resources.')
+    def test_get_health_check_id_by_name(self):
+        '''
+        test getting a health check by name.
+        '''
+        hc = boto3_route53.create_health_check(
+            'HC1',
+            Type='HTTP',
+            Port=443,
+            RequestInterval=30,
+            FailureThreshold=3
+        )
+        res = boto3_route53.get_health_check_id_by_name('HC1')
+        self.assertEqual(res, {})
+
