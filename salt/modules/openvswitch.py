@@ -184,7 +184,7 @@ def bridge_delete(br, if_exists=True):
     return _retcode_to_bool(retcode)
 
 
-def port_add(br, port, may_exist=False):
+def port_add(br, port, may_exist=False, internal=False):
     '''
     Creates on bridge a new port named port.
 
@@ -195,6 +195,7 @@ def port_add(br, port, may_exist=False):
         br: A string - bridge name
         port: A string - port name
         may_exist: Bool, if False - attempting to create a port that exists returns False.
+        internal: A boolean to create an internal interface if one does not exist.
 
     .. versionadded:: 2016.3.0
 
@@ -205,6 +206,8 @@ def port_add(br, port, may_exist=False):
     '''
     param_may_exist = _param_may_exist(may_exist)
     cmd = 'ovs-vsctl {2}add-port {0} {1}'.format(br, port, param_may_exist)
+    if internal:
+        cmd += ' -- set interface {0} type=internal'.format(port)
     result = __salt__['cmd.run_all'](cmd)
     retcode = result['retcode']
     return _retcode_to_bool(retcode)
