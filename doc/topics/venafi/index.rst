@@ -66,13 +66,13 @@ Request a new certificate. Analogous to:
 
 .. code-block:: bash
 
-    salt-run venafi.request minion.example.com minion.example.com country=US \
+    salt-run venafi.request minion.example.com dns_name=minion.example.com country=US \
     state=California loc=Sacramento org=CompanyName org_unit=DevOps \
-    zone=Internet password=SecretSauce
+    zone=Internet key_password=SecretSauce
 
 :param str minion_id: Required.
 
-:param str dns_name: Required.
+:param str dns_name: Required only if csr_path not set
 
 :param str zone="Default": Optional. The zone in Venafi Cloud
     or a policy folder in Venafi Trust Platform.
@@ -92,11 +92,17 @@ Request a new certificate. Analogous to:
 :param str org_unit=None: Optional. Section of the organisation, can be left
     empty if this does not apply to your case.
 
-:param str password=None: Optional. Password for the private key.
+:param str key_password=None: Optional. Password for the private key.
 
 :param str company_id=None: Optional, but may be configured in ``master`` file
     instead.
 
+:param str csr_path=None: Optional, sign certificate request
+
+Example for CSR signing:
+
+.. code-block:: bash
+    salt-run venafi.request minion.example.com csr_path=/tmp/minion.example.com.csr
 
 show_cert
 -----------------
