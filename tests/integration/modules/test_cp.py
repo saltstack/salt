@@ -505,7 +505,7 @@ class CPModuleTest(ModuleCase):
         file_contents = 'Hello world!'
 
         for dirname in (nginx_root_dir, nginx_conf_dir):
-            os.mkdir(dirname)
+            os.makedirs(dirname)
 
         # Write the temp file
         with salt.utils.files.fopen(os.path.join(nginx_root_dir, 'actual_file'), 'w') as fp_:
