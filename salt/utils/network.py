@@ -1895,8 +1895,16 @@ def refresh_dns():
         pass
 
 
+@jinja_filter('connection_check')
+def connection_check(addr, port=80, safe=False, ipv6=None):
+    '''
+    Provides a convenient alias for the dns_check filter.
+    '''
+    return dns_check(addr, port, safe, ipv6)
+
+
 @jinja_filter('dns_check')
-def dns_check(addr, port, safe=False, ipv6=None):
+def dns_check(addr, port=80, safe=False, ipv6=None):
     '''
     Return an ip address resolved by dns in a format usable in URLs (ipv6 in brackets).
     Obeys system preference for IPv4/6 address resolution - this can be overridden by

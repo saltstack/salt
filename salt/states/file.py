@@ -8095,14 +8095,15 @@ def not_cached(name, saltenv='base'):
     '''
     .. versionadded:: 2017.7.3
 
-    Ensures that a file is saved to the minion's cache. This state is primarily
-    invoked by other states to ensure that we do not re-download a source file
-    if we do not need to.
+    Ensures that a file is not present in the minion's cache, deleting it
+    if found. This state is primarily invoked by other states to ensure
+    that a fresh copy is fetched.
 
     name
-        The URL of the file to be cached. To cache a file from an environment
-        other than ``base``, either use the ``saltenv`` argument or include the
-        saltenv in the URL (e.g. ``salt://path/to/file.conf?saltenv=dev``).
+        The URL of the file to be removed from cache. To remove a file from
+        cache in an environment other than ``base``, either use the ``saltenv``
+        argument or include the saltenv in the URL (e.g.
+        ``salt://path/to/file.conf?saltenv=dev``).
 
         .. note::
             A list of URLs is not supported, this must be a single URL. If a
