@@ -87,3 +87,12 @@
 
 #my-scaleway-config:
 #  driver: scaleway
+
+#my-tencentcloud-config:
+    # driver: tencentcloud
+    # TencentCloud Secret Id
+    # id: AKIDA64pOio9BMemkApzevX0HS169S4b750A
+    # TencentCloud Secret Key
+    # key: 8r2xmPn0C5FDvRAlmcJimiTZKVRsk260
+    # TencentCloud Region
+    # location: ap-guangzhou
