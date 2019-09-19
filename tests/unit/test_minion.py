@@ -314,6 +314,69 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    def test_minion_manage_schedule(self):
+        '''
+        Tests that the manage_schedule will call the add function, adding
+        schedule data into opts.
+        '''
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+            mock_opts = self.get_config('minion', from_scratch=True)
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+
+            with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
+                mock_functions = {'test.ping': None}
+
+                minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+                minion.schedule = salt.utils.schedule.Schedule(mock_opts,
+                                                               mock_functions,
+                                                               returners={})
+
+                schedule_data = {'test_job': {'function': 'test.ping',
+                                              'return_job': False,
+                                              'jid_include': True,
+                                              'maxrunning': 2,
+                                              'seconds': 10}}
+
+                data = {'name': 'test-item',
+                        'schedule': schedule_data,
+                        'func': 'add'}
+                tag = 'manage_schedule'
+
+                minion.manage_schedule(tag, data)
+                self.assertIn('test_job', minion.opts['schedule'])
+
+    def test_minion_manage_beacons(self):
+        '''
+        Tests that the manage_beacons will call the add function, adding
+        beacon data into opts.
+        '''
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+            mock_opts = self.get_config('minion', from_scratch=True)
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+
+            mock_functions = {'test.ping': None}
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+            minion.beacons = salt.beacons.Beacon(mock_opts, mock_functions)
+
+            bdata = [{'salt-master': 'stopped'}, {'apache2': 'stopped'}]
+            data = {'name': 'ps',
+                    'beacon_data': bdata,
+                    'func': 'add'}
+
+            tag = 'manage_beacons'
+
+            minion.manage_beacons(tag, data)
+            self.assertIn('ps', minion.opts['beacons'])
+            self.assertEqual(minion.opts['beacons']['ps'], bdata)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
