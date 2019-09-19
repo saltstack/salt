@@ -288,10 +288,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     def test_proper_path_joining(self, fpath):
-        temp_config = 'root_dir: /\n'\
+        temp_config = 'root_dir: /\n' \
                       'key_logfile: key\n'
         if salt.utils.platform.is_windows():
-            temp_config = 'root_dir: c:\\\n'\
+            temp_config = 'root_dir: c:\\\n' \
                           'key_logfile: key\n'
         with salt.utils.files.fopen(fpath, 'w') as fp_:
             fp_.write(temp_config)
@@ -681,9 +681,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 minion_id_caching: False
                 minion_id_lowercase: True
             '''))
-        config = salt.config.minion_config(minion_config)               # Load the configuration
-        self.assertEqual(config['minion_id_caching'], False)        # Check the configuration
-        self.assertEqual(config['minion_id_lowercase'], True)       # Check the configuration
+        config = sconfig.minion_config(minion_config)  # Load the configuration
+        self.assertEqual(config['minion_id_caching'], False)  # Check the configuration
+        self.assertEqual(config['minion_id_lowercase'], True)  # Check the configuration
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()
@@ -886,7 +886,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(len(non_unicode), 0, non_unicode)
         self.assertTrue(tally['unicode'] > 0)
 
-# <---- Salt Cloud Configuration Tests ---------------------------------------------
+    # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
     # cloud_config tests
 
@@ -1130,23 +1130,23 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                          [{'extends': 'my-dev-envs:ec2',
                            'location': 'us-east-1',
                            'user': 'ec2-user@mycorp.com'
-                          }],
+                           }],
                      'my-dev-envs':
                          [{'id': 'ABCDEFGHIJKLMNOP',
                            'user': 'user@mycorp.com',
                            'location': 'ap-southeast-1',
                            'key': 'supersecretkeysupersecretkey',
                            'driver': 'ec2'
-                          },
+                           },
                           {'apikey': 'abcdefghijklmnopqrstuvwxyz',
                            'password': 'supersecret',
                            'driver': 'linode'
-                          },
+                           },
                           {'id': 'a-tencentcloud-id',
                            'key': 'a-tencentcloud-key',
                            'location': 'ap-guangzhou',
                            'driver': 'tencentcloud'
-                          }],
+                           }],
                      'conf_file': PATH}
         ret = {'my-production-envs':
                    {'ec2':
@@ -1184,32 +1184,35 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests the successful extension of two cloud providers
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'my-dev-envs:ec2',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'},
-                          {'password': 'new-password',
-                           'extends': 'my-dev-envs:linode',
-                           'location': 'Salt Lake City'
-                          },
-                          {'extends': 'my-dev-envs:tencentcloud',
-                           'id': 'new-id',
-                           'key': 'new-key',
-                           'location': 'ap-beijing'}],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'ec2'},
-                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                           'password': 'supersecret',
-                           'driver': 'linode'},
-                          {'id': 'the-tencentcloud-id',
-                           'location': 'ap-beijing',
-                           'key': 'the-tencentcloud-key',
-                           'driver': 'tencentcloud'}],
-                     'conf_file': PATH}
+        overrides = {
+            'my-production-envs': [
+                {'extends': 'my-dev-envs:ec2',
+                 'location': 'us-east-1',
+                 'user': 'ec2-user@mycorp.com'},
+                {'password': 'new-password',
+                 'extends': 'my-dev-envs:linode',
+                 'location': 'Salt Lake City'
+                 },
+                {'extends': 'my-dev-envs:tencentcloud',
+                 'id': 'new-id',
+                 'key': 'new-key',
+                 'location': 'ap-beijing'}
+            ],
+            'my-dev-envs':
+                [{'id': 'ABCDEFGHIJKLMNOP',
+                  'user': 'user@mycorp.com',
+                  'location': 'ap-southeast-1',
+                  'key': 'supersecretkeysupersecretkey',
+                  'driver': 'ec2'},
+                 {'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                  'password': 'supersecret',
+                  'driver': 'linode'},
+                 {'id': 'the-tencentcloud-id',
+                  'location': 'ap-beijing',
+                  'key': 'the-tencentcloud-key',
+                  'driver': 'tencentcloud'}
+                 ],
+            'conf_file': PATH}
         ret = {'my-production-envs':
                    {'linode':
                         {'apikey': 'abcdefghijklmnopqrstuvwxyz',
@@ -1342,7 +1345,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                            'key': 'a-tencentcloud-key',
                            'location': 'ap-guangzhou',
                            'driver': 'tencentcloud'
-                          }],
+                           }],
                      'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
@@ -1499,7 +1502,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertIn('ec2-config', config['providers'])
         self.assertIn('ec2-test', config['profiles'])
 
-# <---- Salt Cloud Configuration Tests ---------------------------------------------
+    # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_without_errors(self):
@@ -1574,10 +1577,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Ensure that the environment and saltenv options work properly
         '''
-        with patch.object(salt.config, '_adjust_log_file_override', Mock()), \
-                patch.object(salt.config, '_update_ssl_config', Mock()), \
-                patch.object(salt.config, '_update_discovery_config', Mock()):
-
+        with patch.object(sconfig, '_adjust_log_file_override', Mock()), \
+             patch.object(sconfig, '_update_ssl_config', Mock()), \
+             patch.object(sconfig, '_update_discovery_config', Mock()):
             # MASTER CONFIG
 
             # Ensure that environment overrides saltenv when saltenv not
@@ -1642,6 +1644,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
     '''
     TestCase for the api_config function in salt.config.__init__.py
     '''
+
     def setUp(self):
         # Copy DEFAULT_API_OPTS to restore after the test
         self.default_api_opts = salt.config.DEFAULT_API_OPTS.copy()
@@ -1656,10 +1659,9 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         various default dict updates. 'log_file' should be updated to match
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
-
-            expected = '{}/var/log/salt/api'.format(
-                RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
+        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+            expected = '{0}/var/log/salt/api'.format(
+                salt.syspaths.ROOT_DIR if salt.syspaths.ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
                 expected = '{}\\var\\log\\salt\\api'.format(
                     RUNTIME_VARS.TMP_ROOT_DIR)
@@ -1673,10 +1675,9 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         various default dict updates. 'pidfile' should be updated to match
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
-
-            expected = '{}/var/run/salt-api.pid'.format(
-                RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
+        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+            expected = '{0}/var/run/salt-api.pid'.format(
+                salt.syspaths.ROOT_DIR if salt.syspaths.ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
                 expected = '{}\\var\\run\\salt-api.pid'.format(
                     RUNTIME_VARS.TMP_ROOT_DIR)
