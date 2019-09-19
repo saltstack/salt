@@ -1168,7 +1168,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
+                                {'file.search': MagicMock(side_effect=[False, True, False, False])}):
                     comt = ('Pattern already commented')
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1178,7 +1178,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                                {'file.search': MagicMock(side_effect=[True, True, True]),
                                  'file.comment': mock_t,
                                  'file.comment_line': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
@@ -1216,7 +1216,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
-            mock = MagicMock(side_effect=[True, False, False, False, True, False,
+            mock = MagicMock(side_effect=[False, True,
+                                          False, False,
+                                          True,
                                           True, True])
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'.format(name))

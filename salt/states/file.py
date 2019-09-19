@@ -4904,15 +4904,9 @@ def comment(name, regex, char='#', backup='.bak'):
 
     comment_regex = char + unanchor_regex
 
-    # Check if the line is already commented
-    if __salt__['file.search'](name, comment_regex, multiline=True):
-        commented = True
-    else:
-        commented = False
-
     # Make sure the pattern appears in the file before continuing
-    if commented or not __salt__['file.search'](name, regex, multiline=True):
-        if __salt__['file.search'](name, unanchor_regex, multiline=True):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, comment_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -5011,17 +5005,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Make sure the pattern appears in the file
     if __salt__['file.search'](
             name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
+        # Line exists and is commented
+        pass
+    elif __salt__['file.search'](
+            name,
             '^[ \t]*{0}'.format(regex.lstrip('^')),
             multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.search'](
-            name,
-            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
-            multiline=True):
-        # Line exists and is commented
-        pass
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
