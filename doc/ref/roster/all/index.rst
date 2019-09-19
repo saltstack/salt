@@ -19,3 +19,4 @@ roster modules
     scan
     sshconfig
     terraform
+    sshknownhosts
