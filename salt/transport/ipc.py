@@ -430,16 +430,13 @@ class IPCMessageServer(IPCServer):
 
         # Import Salt libs
         import salt.transport.ipc
-        import salt.config
-
-        opts = salt.config.master_opts()
 
         io_loop = tornado.ioloop.IOLoop.current()
         ipc_server_socket_path = '/var/run/ipc_server.ipc'
-        ipc_server = salt.transport.ipc.IPCMessageServer(opts, io_loop=io_loop
-                                                         stream_handler=print_to_console)
+        ipc_server = salt.transport.ipc.IPCMessageServer(ipc_server_socket_path, io_loop=io_loop,
+                                                         payload_handler=print_to_console)
         # Bind to the socket and prepare to run
-        ipc_server.start(ipc_server_socket_path)
+        ipc_server.start()
 
         # Start the server
         io_loop.start()
