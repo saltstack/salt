@@ -333,6 +333,13 @@ def csr_managed(name,
     kwargs:
         Any arguments supported by :py:func:`file.managed <salt.states.file.managed>` are supported.
 
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
+
     Example:
 
     .. code-block:: yaml
@@ -345,6 +352,19 @@ def csr_managed(name,
              - ST: Utah
              - L: Salt Lake City
              - keyUsage: 'critical dataEncipherment'
+
+        /etc/pki/mycert.csr:
+          x509.csr_managed:
+             - private_key: /etc/pki/mycert.key
+             - CN: www.example.com
+             - C: US
+             - ST: Utah
+             - L: Salt Lake City
+             - keyUsage: 'critical dataEncipherment'
+             - DomainController: 'ASN1:UTF8String:SomeOneSomeWhere'
+             - ext_mapping:
+                 '1.3.6.1.4.1.311.20.2': 'DomainController'
+
     '''
     try:
         old = __salt__['x509.read_csr'](name)
@@ -392,6 +412,13 @@ def certificate_managed(name,
         Any arguments supported by :py:func:`x509.create_certificate
         <salt.modules.x509.create_certificate>` or :py:func:`file.managed
         <salt.states.file.managed>` are supported.
+
+    ext_mapping:
+        Provide additional X509v3 extension mappings.  This argument should be
+        in the form of a dictionary and should include both the OID and the
+        friendly name for the extension.
+
+        .. versionadded:: Neon
 
     Examples:
 
