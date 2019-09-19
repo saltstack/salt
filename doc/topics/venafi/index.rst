@@ -5,14 +5,17 @@ Venafi Tools for Salt
 Introduction
 ~~~~~~~~~~~~
 
-Before using these modules you need to register an account with Venafi, and
-configure it in your ``master`` configuration file.
+Before using these modules you need to create an account with Venafi Cloud or obtain credentials from your Venafi Platform administrator.  Then configure your Salt Master by adding the following to the ``/etc/salt/master`` file:
 
-First, you need to configure the ``master`` file. This is because
-all module functions require either a configured ``api_key`` (for Cloud) or
-``a ttp_user`` with a ``tpp_password`` and a ``base_url`` (for Trust Platform).
+For Venafi Cloud:
 
-Open up ``/etc/salt/master`` and add:
+.. code-block:: yaml
+
+    venafi:
+      api_key: abcdef01-2345-6789-abcd-ef0123456789
+      base_url: "https://cloud.venafi.example.com/"    (optional)
+
+For Venafi Platform:
 
 .. code-block:: yaml
 
@@ -20,40 +23,16 @@ Open up ``/etc/salt/master`` and add:
       base_url: "https://tpp.example.com/"
       tpp_user: admin
       tpp_password: "Str0ngPa$$w0rd"
+      trust_bundle: "/opt/venafi/bundle.pem"
 
-or
+*It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA, therefore establishing trust for that server certificate is a critical part of your configuration. Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to your Salt Master (e.g. /opt/venafi/bundle.pem). You then reference that file using the 'trust_bundle' parameter as shown above.*
 
-.. code-block:: yaml
-
-    venafi:
-      api_key: abcdef01-2345-6789-abcd-ef0123456789
-      base_url: "https://cloud.venafi.example.com/" (optional)
-
-To enable the ability for creating keys and certificates it is necessary to enable the
-external pillars.  Open the ``/etc/salt/master`` file and add:
+For the Venafi module to create keys and certificates it is necessary to enable external pillars. This is done by adding the following to the ``/etc/salt/master`` file:
 
 .. code-block:: yaml
 
     ext_pillar:
       - venafi: True
-
-To modify the URL being used for the Venafi Certificate issuance modify the file
-in ``/etc/salt/master`` and add the base_url information following under the
-``venafi`` tag:
-
-.. code-block:: yaml
-
-    venafi:
-      base_url: http://newurl.venafi.com
-
-
-Example Usage
-~~~~~~~~~~~~~
-Request a certificate from Venafi Cloud or Trust Platform, using the ``Internet``
-zone for minion ``minion.example.com``:
-
-.. code-block:: bash
-    salt-run venafi.request minion.example.com www.example.com zone=Internet
 
 
 Runner Functions
@@ -61,62 +40,68 @@ Runner Functions
 
 request
 -------
+This command is used to enroll a certificate from Venafi Cloud or Venafi Platform.
 
-Request a new certificate. Analogous to:
+``minion_id``
+    ID of the minion for which the certificate is being issued. Required.
+
+``dns_name``
+    DNS subject name for the certificate. Required if ``csr_path`` is not specified.
+
+``csr_path``
+    Full path name of certificate signing request file to enroll. Required if ``dns_name`` is not specified.
+    
+``zone``
+    Venafi Cloud zone or Venafi Platform folder that specify key and certificate policy. Defaults to "Default".
+    
+``org_unit``
+    Business Unit, Department, etc. Do not specify if it does not apply.
+    
+``org``
+    Exact legal name of your organization. Do not abbreviate.
+    
+``loc``
+    City/locality where your organization is legally located.
+    
+``state``
+    State or province where your organization is legally located. Must not be abbreviated.
+    
+``country``
+    Country where your organization is legally located; two-letter ISO code.
+
+``key_password``
+    Password for encrypting the private key.
+
+The syntax for requesting a new certificate with private key generation looks like this:
 
 .. code-block:: bash
 
-    salt-run venafi.request minion.example.com dns_name=minion.example.com country=US \
-    state=California loc=Sacramento org=CompanyName org_unit=DevOps \
+    salt-run venafi.request minion.example.com dns_name=www.example.com \
+    country=US state=California loc=Sacramento org="Company Name" org_unit=DevOps \
     zone=Internet key_password=SecretSauce
 
-:param str minion_id: Required.
-
-:param str dns_name: Required only if csr_path not set
-
-:param str zone="Default": Optional. The zone in Venafi Cloud
-    or a policy folder in Venafi Trust Platform.
-
-:param str country=None: Optional. The two-letter ISO abbreviation for your
-    country.
-
-:param str state=None: Optional. The state/county/region where your
-    organisation is legally located. Must not be abbreviated.
-
-:param str loc=None: Optional. The city where your organisation is legally
-    located.
-
-:param str org=None: Optional. The exact legal name of your organisation. Do
-    not abbreviate your organisation name.
-
-:param str org_unit=None: Optional. Section of the organisation, can be left
-    empty if this does not apply to your case.
-
-:param str key_password=None: Optional. Password for the private key.
-
-:param str csr_path=None: Optional, sign certificate request
-
-Example for CSR signing:
+And the syntax for requesting a new certificate using a previously generated CSR looks like this:
 
 .. code-block:: bash
-    salt-run venafi.request minion.example.com csr_path=/tmp/minion.example.com.csr
+
+    salt-run venafi.request minion.example.com csr_path=/tmp/minion.req zone=Internet
+
 
 show_cert
------------------
+---------
+This command is used to show last issued certificate for domain.
 
-Show last issued certificate for domain ``test.example.com``
+``dns_name``
+    DNS subject name of the certificate to look up.
 
 .. code-block:: bash
 
-  salt-run venafi.show_cert test.example.com
-
-:param str dns_name: Required. The id of the certificate to look up.
+  salt-run venafi.show_cert www.example.com
 
 
 list_domain_cache
 -----------------
-
-List domains that have been cached on this master.
+This command lists domains that have been cached on this Salt Master.
 
 .. code-block:: bash
 
@@ -125,30 +110,36 @@ List domains that have been cached on this master.
 
 del_cached_domain
 -----------------
+This command deletes a domain from the Salt Master's cache.
 
-Delete a domain from this master's cache.
+``domains``
+    A domain name, or a comma-separated list of domain names, to delete from this master's cache.
 
 .. code-block:: bash
 
-  salt-run venafi.del_cached_domain example.com
+  salt-run venafi.del_cached_domain www.example.com
 
-:param str domains: A domain name, or a comma-separated list of domain names,
-    to delete from this master's cache.
 
-Transfer certificate to pillar
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Transfer certificate to a minion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 To transfer a cached certificate to a minion, you can use Venafi pillar.
 
-Example state file:
+Example state (SLS) file:
 
 .. code-block:: yml
 
-    /etc/ssl/cert/minion.example.com.pem:
+    /etc/ssl/cert/www.example.com.crt:
       file.managed:
           - contents_pillar: venafi:minion.example.com:cert
           - replace: True
 
-    /etc/ssl/cert/minion.example.com.key.pem:
+    /etc/ssl/cert/www.example.com.key:
       file.managed:
           - contents_pillar: venafi:minion.example.com:pkey
+          - replace: True
+          
+    /etc/ssl/cert/www.example.com-chain.pem:
+      file.managed:
+          - contents_pillar: venafi:minion.example.com:chain
           - replace: True
