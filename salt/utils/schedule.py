@@ -213,7 +213,8 @@ class Schedule(object):
         # NOTE--jid_include defaults to True, thus if it is missing from the data
         # dict we treat it like it was there and is True
 
-        # Check if we're able to run
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
         if not data['run']:
             return data
         if 'jid_include' not in data or data['jid_include']:
@@ -463,18 +464,22 @@ class Schedule(object):
 
         if 'name' not in data:
             data['name'] = name
+        if 'run' not in data:
+            data['run'] = True
         log.info('Running Job: %s', name)
 
+        now = datetime.datetime.now()
         if not self.standalone:
             data = self._check_max_running(func,
                                            data,
                                            self.opts,
-                                           datetime.datetime.now())
+                                           now)
 
         # Grab run, assume True
         run = data.get('run', True)
         if run:
             self._run_job(func, data)
+            data['_last_run'] = now
 
     def enable_schedule(self):
         '''
@@ -614,6 +619,34 @@ class Schedule(object):
 
         schedule = self._get_schedule()
         return schedule.get(name, {})
+
+    def job_running(self, data):
+        '''
+        Return the schedule data structure
+        '''
+        # Check to see if there are other jobs with this
+        # signature running.  If there are more than maxrunning
+        # jobs present then don't start another.
+        # If jid_include is False for this job we can ignore all this
+        # NOTE--jid_include defaults to True, thus if it is missing from the data
+        # dict we treat it like it was there and is True
+
+        # Check if we're able to run, default to False
+        # in case the `run` value is not present.
+        running = False
+        if 'jid_include' not in data or data['jid_include']:
+            if self.opts['__role'] == 'master':
+                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+            else:
+                current_jobs = salt.utils.minion.running(self.opts)
+            for job in current_jobs:
+                if 'schedule' in job:
+                    log.info('=== data %s ===', data)
+                    log.info('=== job %s ===', job)
+                    if data['name'] in job['schedule'] \
+                            and salt.utils.process.os_is_running(job['pid']):
+                        running = True
+        return running
 
     def handle_func(self, multiprocessing_enabled, func, data):
         '''
