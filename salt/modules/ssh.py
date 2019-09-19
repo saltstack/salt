@@ -16,7 +16,9 @@ import hashlib
 import logging
 import os
 import re
+import shutil
 import subprocess
+import tempfile
 
 # Import salt libs
 import salt.utils.decorators.path
@@ -1017,15 +1019,35 @@ def recv_known_host_entries(hostname,
         cmd.extend(['-t', enc])
     if not enc and __grains__.get('osfinger') in need_dash_t:
         cmd.extend(['-t', 'rsa'])
-    if hash_known_hosts:
-        cmd.append('-H')
     cmd.extend(['-T', six.text_type(timeout)])
     cmd.append(hostname)
     lines = None
     attempts = 5
     while not lines and attempts > 0:
         attempts = attempts - 1
-        lines = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
+        output = __salt__['cmd.run'](cmd, python_shell=False)
+
+    # This is a workaround because ssh-keyscan hashing is broken for
+    # non-standard SSH ports on basically every platform. See
+    # https://github.com/saltstack/salt/issues/40152 for more info.
+    if hash_known_hosts:
+        # Use a tempdir, because ssh-keygen creates a backup .old file
+        # and we want to get rid of that. We won't need our temp keys
+        # file, either.
+        tempdir = tempfile.mkdtemp()
+        try:
+            filename = os.path.join(tempdir, 'keys')
+            with salt.utils.files.fopen(filename, mode='w') as f:
+                f.write(output)
+            cmd = ['ssh-keygen', '-H', '-f', filename]
+            __salt__['cmd.run'](cmd, python_shell=False)
+            # ssh-keygen moves the old file, so we have to re-open to
+            # read the hashed entries
+            with salt.utils.files.fopen(filename, mode='r') as f:
+                output = f.read()
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+    lines = output.splitlines()
     known_host_entries = list(_parse_openssh_output(lines,
                                              fingerprint_hash_type=fingerprint_hash_type))
     return known_host_entries if known_host_entries else None
@@ -1185,11 +1207,6 @@ def set_known_host(user=None,
     if not hostname:
         return {'status': 'error',
                 'error': 'hostname argument required'}
-
-    if port is not None and port != DEFAULT_SSH_PORT and hash_known_hosts:
-        return {'status': 'error',
-                'error': 'argument port can not be used in '
-                'conjunction with argument hash_known_hosts'}
 
     update_required = False
     check_required = False
