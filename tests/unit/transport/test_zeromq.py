@@ -646,6 +646,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             executor.submit(self._send_small, opts, 3)
             executor.submit(self._send_large, opts, 4)
         expect = ['{}-{}'.format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
+        time.sleep(0.1)
         server_channel.publish({'tgt_type': 'glob', 'tgt': '*', 'stop': True})
         gather.join()
         server_channel.pub_close()
