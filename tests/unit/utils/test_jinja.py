@@ -981,6 +981,26 @@ class TestCustomExtensions(TestCase):
                       .render(data={'foo': 'bar'})
         self.assertEqual(rendered, '1')
 
+    def test_camel_to_snake_case(self):
+        '''
+        Test the `to_snake_case` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl('{{ \'abcdEfghhIjkLmnoP\' | to_snake_case }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'abcd_efghh_ijk_lmno_p')
+
+    def test_snake_to_camel_case(self):
+        '''
+        Test the `to_camelcase` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'theFoxJumpedOverTheLazyDog')
+
+        rendered = render_jinja_tmpl('{{ \'the_fox_jumped_over_the_lazy_dog\' | to_camelcase(uppercamel=True) }}',
+                                     dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
+        self.assertEqual(rendered, 'TheFoxJumpedOverTheLazyDog')
+
     def test_is_ip(self):
         '''
         Test the `is_ip` Jinja filter.
