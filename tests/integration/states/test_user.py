@@ -269,3 +269,39 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(
             self.run_state('user.absent', name=self.user_name)
         )
+
+
+@destructiveTest
+@skip_if_not_root
+@skipIf(not salt.utils.platform.is_windows(), 'Windows only tests')
+class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
+    '''
+    test for user absent
+    '''
+    def tearDown(self):
+        self.assertSaltTrueReturn(
+            self.run_state('user.absent', name=USER)
+        )
+
+    def test_user_present_existing(self):
+        ret = self.run_state('user.present',
+                             name=USER,
+                             win_homedrive='U:',
+                             win_profile='C:\\User\\{0}'.format(USER),
+                             win_logonscript='C:\\logon.vbs',
+                             win_description='Test User Account')
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state('user.present',
+                             name=USER,
+                             win_homedrive='R:',
+                             win_profile='C:\\Users\\{0}'.format(USER),
+                             win_logonscript='C:\\Windows\\logon.vbs',
+                             win_description='Temporary Account')
+        self.assertSaltTrueReturn(ret)
+        self.assertSaltStateChangesEqual(ret, 'R:', keys=['homedrive'])
+        self.assertSaltStateChangesEqual(
+            ret, 'C:\\Users\\{0}'.format(USER), keys=['profile'])
+        self.assertSaltStateChangesEqual(
+            ret, 'C:\\Windows\\logon.vbs', keys=['logonscript'])
+        self.assertSaltStateChangesEqual(
+            ret, 'Temporary Account', keys=['description'])
