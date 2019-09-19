@@ -6,7 +6,10 @@ lack of support for reading NTFS links.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import collections
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 import errno
 import logging
 import os
@@ -262,7 +265,7 @@ def which_bin(exes):
     '''
     Scan over some possible executables and return the first one that is found
     '''
-    if not isinstance(exes, collections.Iterable):
+    if not isinstance(exes, Iterable):
         return None
     for exe in exes:
         path = which(exe)
