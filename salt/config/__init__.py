@@ -459,6 +459,9 @@ VALID_OPTS = {
     # Tell the client to display the jid when a job is published
     'show_jid': bool,
 
+    # Generate jids based on UTC time instead of local time
+    'utc_jid': bool,
+
     # Ensure that a generated jid is always unique. If this is set, the jid
     # format is different due to an underscore and process id being appended
     # to the jid. WARNING: A change to the jid format may break external
