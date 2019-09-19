@@ -1883,20 +1883,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # with the new name
                     log.trace('Loaded %s as virtual %s', module_name, virtual)
 
-                    if not hasattr(mod, '__virtualname__'):
-                        salt.utils.versions.warn_until(
-                            'Hydrogen',
-                            'The \'{0}\' module is renaming itself in its '
-                            '__virtual__() function ({1} => {2}). Please '
-                            'set it\'s virtual name as the '
-                            '\'__virtualname__\' module attribute. '
-                            'Example: "__virtualname__ = \'{2}\'"'.format(
-                                mod.__name__,
-                                module_name,
-                                virtual
-                            )
-                        )
-
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's
                         # being returned by the __virtual__() function. This
