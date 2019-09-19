@@ -1954,7 +1954,9 @@ def managed(name,
         (use ~ in YAML), the file will be created as an empty file and
         the content will not be managed. This is also the case when a file
         already exists and the source is undefined; the contents of the file
-        will not be changed or managed.
+        will not be changed or managed. If source is left blank or None, please
+        also set replaced to False to make your intention explicit.
+
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required.
