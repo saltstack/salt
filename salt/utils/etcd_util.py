@@ -267,12 +267,16 @@ class EtcdClient(object):
         return self.write(key, value, ttl=ttl, directory=directory)
 
     def write(self, key, value, ttl=None, directory=False):
-        # directories can't have values, but have to have it passed
         if directory:
-            value = None
+            return self.write_directory(key, value, ttl)
+        return self.write_file(key, value, ttl)
+
+    def write_file(self, key, value, ttl=None):
         try:
-            result = self.client.write(key, value, ttl=ttl, dir=directory)
-        except (etcd.EtcdNotFile, etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
+            result = self.client.write(key, value, ttl=ttl, dir=False)
+        except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, ValueError) as err:
+            # If EtcdNotFile is raised, then this key is a directory and
+            # really this is a name collision.
             log.error('etcd: %s', err)
             return None
         except MaxRetryError as err:
@@ -282,10 +286,32 @@ class EtcdClient(object):
             log.error('etcd: uncaught exception %s', err)
             raise
 
-        if directory:
-            return getattr(result, 'dir')
-        else:
-            return getattr(result, 'value')
+        return getattr(result, 'value')
+
+    def write_directory(self, key, value, ttl=None):
+        if value is not None:
+            log.info('etcd: non-empty value passed for directory: %s', value)
+        try:
+            # directories can't have values, but have to have it passed
+            result = self.client.write(key, None, ttl=ttl, dir=True)
+        except etcd.EtcdNotFile:
+            # When a directory already exists, python-etcd raises an EtcdNotFile
+            # exception. In this case, we just catch and return True for success.
+            log.info('etcd: directory already exists: %s', key)
+            return True
+        except (etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
+            # If EtcdNotDir is raised, then the specified path is a file and
+            # thus this is an error.
+            log.error('etcd: %s', err)
+            return None
+        except MaxRetryError as err:
+            log.error("etcd: Could not connect to etcd server: %s", err)
+            return None
+        except Exception as err:
+            log.error('etcd: uncaught exception %s', err)
+            raise
+
+        return getattr(result, 'dir')
 
     def ls(self, path):
         ret = {}
