@@ -613,7 +613,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
