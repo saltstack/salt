@@ -1371,7 +1371,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 self.clients.discard(client)
                 break
             except Exception as e:
-                log.error('Exception parsing response', exc_info=True)
+                log.error('Exception parsing response from %s', client.address, exc_info=True)
                 continue
 
     def handle_stream(self, stream, address):
