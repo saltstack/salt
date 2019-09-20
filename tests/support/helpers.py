@@ -1553,8 +1553,18 @@ class MirrorPostHandler(tornado.web.RequestHandler):
     Mirror a POST body back to the client
     '''
     def post(self, *args):
+        '''
+        Handle the post
+        '''
         body = self.request.body
+        log.debug('Incoming body: %s  Incoming args: %s', body, args)
         self.write(body)
+
+    def data_received(self):
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
 
 
 def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
