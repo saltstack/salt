@@ -129,6 +129,7 @@ def state(name,
         queue=False,
         subset=None,
         orchestration_jid=None,
+        failhard=None,
         **kwargs):
     '''
     Invoke a state run on a given target
@@ -233,6 +234,10 @@ def state(name,
 
         .. versionadded:: neon
 
+    failhard
+        pass failhard down to the executing state
+
+        .. versionadded:: develop
 
     Examples:
 
@@ -472,6 +477,7 @@ def function(
         timeout=None,
         batch=None,
         subset=None,
+        failhard=None,
         **kwargs):  # pylint: disable=unused-argument
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
@@ -525,6 +531,11 @@ def function(
         Run the salt command but don't wait for a reply.
 
         .. versionadded:: neon
+
+    failhard
+        pass failhard down to the executing state
+
+        .. versionadded:: develop
 
     '''
     func_ret = {'name': name,
