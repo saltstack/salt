@@ -1552,7 +1552,7 @@ class MirrorPostHandler(tornado.web.RequestHandler):
     '''
     Mirror a POST body back to the client
     '''
-    def post(self, *args):
+    def post(self, *args):  # pylint: disable=arguments-differ
         '''
         Handle the post
         '''
@@ -1560,7 +1560,7 @@ class MirrorPostHandler(tornado.web.RequestHandler):
         log.debug('Incoming body: %s  Incoming args: %s', body, args)
         self.write(body)
 
-    def data_received(self):
+    def data_received(self):  # pylint: disable=arguments-differ
         '''
         Streaming not used for testing
         '''
