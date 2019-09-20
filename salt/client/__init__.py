@@ -547,7 +547,7 @@ class LocalClient(object):
                 'tgt_type': tgt_type,
                 'ret': ret,
                 'batch': batch,
-                'failhard': kwargs.get('failhard', False),
+                'failhard': kwargs.get('failhard', self.opts.get('failhard', False)),
                 'raw': kwargs.get('raw', False)}
 
         if 'timeout' in kwargs:
