@@ -2822,7 +2822,33 @@ def create(vm_):
                                 datastore
                             )
             if not datastore_ref:
-                raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
+                # check if it is a datastore cluster instead
+
+                 datastore_cluster_ref = salt.utils.vmware.get_mor_using_container_view(_get_si(), vim.StoragePod, datastore)
+
+                 if not datastore_cluster_ref:
+                         raise SaltCloudSystemExit("Specified datastore: '{0}' does not exist".format(datastore))
+
+                 # datastore cluster has been specified
+                 # find datastore with most free space available
+                 #
+                 # TODO: Get DRS Recommendations instead of finding datastore with most free space
+                 datastore_list = salt.utils.vmware.get_datastores(_get_si(), datastore_cluster_ref, get_all_datastores=True)
+                 datastore_free_space = 0
+                 for ds_ref in datastore_list:
+                     log.trace(
+                         'Found datastore (%s) with free space (%s) in datastore '
+                         'cluster (%s)', ds_ref.name, ds_ref.summary.freeSpace, datastore
+                     )
+                     if ds_ref.summary.accessible and ds_ref.summary.freeSpace > datastore_free_space:
+                         datastore_free_space = ds_ref.summary.freeSpace
+                         datastore_ref = ds_ref
+                         # Override datastore name for vmPathName
+                         datastore = ds_ref.name
+
+                 if not datastore_ref:
+                     # datastore cluster specified does not have any accessible datastores
+                     raise SaltCloudSystemExit("Specified datastore cluster ({0}) for disk ({1}) does not have any accessible datastores available".format(datastore, disk_label))
 
         if host:
             host_ref = salt.utils.vmware.get_mor_by_property(
