@@ -24,7 +24,7 @@ PROVIDER_NAME = 'tencentcloud'
 @expensiveTest
 class TencentCloudTest(ShellCase):
     '''
-    Integration tests for the TencentCloud cloud provider in Salt-Cloud
+    Integration tests for the Tencent Cloud cloud provider in Salt-Cloud
     '''
 
     def setUp(self):
@@ -66,7 +66,7 @@ class TencentCloudTest(ShellCase):
 
     def test_instance(self):
         '''
-        Test creating an instance on TencentCloud
+        Test creating an instance on Tencent Cloud
         '''
         # check if instance with salt installed returned
         try:

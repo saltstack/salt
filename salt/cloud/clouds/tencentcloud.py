@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 '''
-TencentCloud Cloud Module
+Tencent Cloud Cloud Module
 =============================
 
 .. versionadded:: 2019.09.01
 
-The TencentCloud Cloud Module is used to control access to the TencentCloud instance.
+The Tencent Cloud Cloud Module is used to control access to the Tencent Cloud instance.
 https://intl.cloud.tencent.com/
 
 To use this module, set up the cloud configuration at
@@ -16,11 +16,11 @@ To use this module, set up the cloud configuration at
 
     my-tencentcloud-config:
       driver: tencentcloud
-      # TencentCloud Secret Id
+      # Tencent Cloud Secret Id
       id: AKIDA64pOio9BMemkApzevX0HS169S4b750A
-      # TencentCloud Secret Key
+      # Tencent Cloud Secret Key
       key: 8r2xmPn0C5FDvRAlmcJimiTZKVRsk260
-      # TencentCloud Region
+      # Tencent Cloud Region
       location: ap-guangzhou
 
 :depends: tencentcloud-sdk-python
@@ -68,13 +68,13 @@ log = logging.getLogger(__name__)
 # The default region
 DEFAULT_REGION = 'ap-guangzhou'
 
-# The TencentCloud
+# The Tencent Cloud
 __virtualname__ = 'tencentcloud'
 
 
 def __virtual__():
     '''
-    Only load in this module if the TencentCloud configurations are in place
+    Only load in this module if the Tencent Cloud configurations are in place
     '''
     if get_configured_provider() is False:
         return False
@@ -134,7 +134,7 @@ def get_provider_client(name=None):
 
 def avail_locations(call=None):
     '''
-    Return TencentCloud available region
+    Return Tencent Cloud available region
 
     CLI Example:
 
@@ -164,7 +164,7 @@ def avail_locations(call=None):
 
 def avail_images(call=None):
     '''
-    Return TencentCloud available image
+    Return Tencent Cloud available image
 
     CLI Example:
 
@@ -184,7 +184,7 @@ def avail_images(call=None):
 
 def avail_sizes(call=None):
     '''
-    Return TencentCloud available instance type
+    Return Tencent Cloud available instance type
 
     CLI Example:
 
@@ -220,7 +220,7 @@ def avail_sizes(call=None):
 
 def list_securitygroups(call=None):
     '''
-    Return all TencentCloud security groups in current region
+    Return all Tencent Cloud security groups in current region
 
     CLI Example:
 
@@ -254,7 +254,7 @@ def list_securitygroups(call=None):
 
 def list_custom_images(call=None):
     '''
-    Return all TencentCloud images in current region
+    Return all Tencent Cloud images in current region
 
     CLI Example:
 
@@ -272,7 +272,7 @@ def list_custom_images(call=None):
 
 def list_availability_zones(call=None):
     '''
-    Return all TencentCloud availability zones in current region
+    Return all Tencent Cloud availability zones in current region
 
     CLI Example:
 
@@ -407,9 +407,9 @@ def list_nodes_min(call=None):
 
 def create(vm_):
     '''
-    Create a single TencentCloud instance from a data dict.
+    Create a single Tencent Cloud instance from a data dict.
 
-    TencentCloud profiles require a ``provider``, ``availability_zone``, ``image`` and ``size``.
+    Tencent Cloud profiles require a ``provider``, ``availability_zone``, ``image`` and ``size``.
     Set up profile at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
     .. code-block:: yaml
@@ -610,7 +610,7 @@ def create(vm_):
 
 def start(name, call=None):
     '''
-    Start a TencentCloud instance
+    Start a Tencent Cloud instance
     Notice: the instance state must be stopped
 
     CLI Examples:
@@ -636,7 +636,7 @@ def start(name, call=None):
 
 def stop(name, force=False, call=None):
     '''
-    Stop a TencentCloud running instance
+    Stop a Tencent Cloud running instance
     Note: use `force=True` to make force stop
 
     CLI Examples:
@@ -665,7 +665,7 @@ def stop(name, force=False, call=None):
 
 def reboot(name, call=None):
     '''
-    Reboot a TencentCloud instance
+    Reboot a Tencent Cloud instance
 
     CLI Examples:
 
@@ -690,7 +690,7 @@ def reboot(name, call=None):
 
 def destroy(name, call=None):
     '''
-    Destroy a TencentCloud instance
+    Destroy a Tencent Cloud instance
 
     CLI Example:
 
@@ -748,7 +748,7 @@ def script(vm_):
 
 def show_image(kwargs, call=None):
     '''
-    Show the details of TencentCloud image
+    Show the details of Tencent Cloud image
 
     CLI Examples:
 
@@ -796,7 +796,7 @@ def show_image(kwargs, call=None):
 
 def show_instance(name, call=None):
     '''
-    Show the details of TencentCloud instance
+    Show the details of Tencent Cloud instance
 
     CLI Examples:
 
@@ -820,7 +820,7 @@ def show_instance(name, call=None):
 
 def show_disk(name, call=None):
     '''
-    Show the disk details of TencentCloud instance
+    Show the disk details of Tencent Cloud instance
 
     CLI Examples:
 
@@ -859,7 +859,7 @@ def show_disk(name, call=None):
 
 def _get_node(name):
     '''
-    Return TencentCloud instance detail by name
+    Return Tencent Cloud instance detail by name
     '''
     attempts = 5
     while attempts >= 0:
@@ -883,7 +883,7 @@ def _get_node(name):
 
 def _get_nodes():
     '''
-    Return all list of TencentCloud instances
+    Return all list of Tencent Cloud instances
     '''
     ret = []
     offset = 0
@@ -906,7 +906,7 @@ def _get_nodes():
 
 def _get_images(image_type):
     '''
-    Return all list of TencentCloud images
+    Return all list of Tencent Cloud images
     '''
     client = get_provider_client("cvm_client")
     req = cvm_models.DescribeImagesRequest()
@@ -1007,7 +1007,7 @@ def __get_availability_zone(vm_):
 
 def __get_location(vm_):
     '''
-    Return the TencentCloud region to use, in this order:
+    Return the Tencent Cloud region to use, in this order:
         - CLI parameter
         - VM parameter
         - Cloud profile setting
