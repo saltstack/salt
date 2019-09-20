@@ -87,72 +87,71 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
             }
         }
 
-        sshagent(credentials: ['jenkins-testing-ssh-key']) {
-            sh 'ssh-add ~/.ssh/kitchen.pem'
-            try {
-                timeout(time: testrun_timeout, unit: 'HOURS') {
-                    stage('Converge VM') {
-                        sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
-                        sh """
-                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-converge.log"
-                        fi
-                        if [ -s ".kitchen/logs/kitchen.log" ]; then
-                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-converge.log"
-                        fi
-                        """
-                    }
-                    stage('Run Tests') {
-                        withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
-                            sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
-                        }
-                    }
-                }
-            } finally {
-                try {
+        try {
+            timeout(time: testrun_timeout, unit: 'HOURS') {
+                stage('Converge VM') {
+                    sh '''
+                    ssh-agent /bin/bash -c 'ssh-add ~/.ssh/kitchen.pem; bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?"'
+                    '''
                     sh """
                     if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-verify.log"
+                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-converge.log"
                     fi
                     if [ -s ".kitchen/logs/kitchen.log" ]; then
-                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-verify.log"
+                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-converge.log"
                     fi
                     """
-                    stage('Download Artefacts') {
-                        withEnv(["ONLY_DOWNLOAD_ARTEFACTS=1"]){
-                            sh '''
-                            bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM || exit 0
-                            '''
-                        }
-                        sh """
-                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-download.log"
-                        fi
-                        if [ -s ".kitchen/logs/kitchen.log" ]; then
-                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-download.log"
-                        fi
-                        """
+                }
+                stage('Run Tests') {
+                    withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
+                        sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
                     }
-                    archiveArtifacts(
-                        artifacts: "artifacts/*,artifacts/**/*,.kitchen/logs/*-create.log,.kitchen/logs/*-converge.log,.kitchen/logs/*-verify.log,.kitchen/logs/*-download.log,artifacts/xml-unittests-output/*.xml",
-                        allowEmptyArchive: true
-                    )
-                    junit 'artifacts/xml-unittests-output/*.xml'
-                } finally {
-                    stage('Cleanup') {
+                }
+            }
+        } finally {
+            try {
+                sh """
+                if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                    mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-verify.log"
+                fi
+                if [ -s ".kitchen/logs/kitchen.log" ]; then
+                    mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-verify.log"
+                fi
+                """
+                stage('Download Artefacts') {
+                    withEnv(["ONLY_DOWNLOAD_ARTEFACTS=1"]){
                         sh '''
-                        bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                        bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM || exit 0
                         '''
                     }
-                    stage('Upload Coverage') {
-                        script {
-                            withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
-                              sh '''
-                              if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
-                                  (curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}") || true
-                              fi
-                              '''
-                            }
+                    sh """
+                    if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-download.log"
+                    fi
+                    if [ -s ".kitchen/logs/kitchen.log" ]; then
+                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-download.log"
+                    fi
+                    """
+                }
+                archiveArtifacts(
+                    artifacts: "artifacts/*,artifacts/**/*,.kitchen/logs/*-create.log,.kitchen/logs/*-converge.log,.kitchen/logs/*-verify.log,.kitchen/logs/*-download.log,artifacts/xml-unittests-output/*.xml",
+                    allowEmptyArchive: true
+                )
+                junit 'artifacts/xml-unittests-output/*.xml'
+            } finally {
+                stage('Cleanup') {
+                    sh '''
+                    bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                    '''
+                }
+                stage('Upload Coverage') {
+                    script {
+                        withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
+                          sh '''
+                          if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
+                              (curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}") || true
+                          fi
+                          '''
                         }
                     }
                 }
