@@ -69,14 +69,14 @@ class BuildoutTestCase(Base):
                                  onlyif=RUNTIME_VARS.SHELL_FALSE_PATH)
         self.assertEqual(ret['comment'], '\nonlyif condition is false')
         self.assertEqual(ret['result'], True)
-        self.assertTrue('/b' in ret['name'])
+        self.assertTrue(os.sep + 'b' in ret['name'])
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  unless=RUNTIME_VARS.SHELL_TRUE_PATH)
         self.assertEqual(ret['comment'], '\nunless condition is true')
         self.assertEqual(ret['result'], True)
-        self.assertTrue('/b' in ret['name'])
+        self.assertTrue(os.sep + 'b' in ret['name'])
         ret = buildout.installed(b_dir, python=self.py_st)
         self.assertEqual(ret['result'], True)
         self.assertTrue('OUTPUT:' in ret['comment'])
