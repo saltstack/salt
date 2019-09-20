@@ -343,7 +343,7 @@ def _refresh_buckets_cache_file(creds, cache_file, multiple_env, environment, pr
 
     log.debug('Writing S3 buckets pillar cache file')
 
-    with salt.utils.files.fopen(cache_file, 'w') as fp_:
+    with salt.utils.files.fopen(cache_file, 'wb') as fp_:
         pickle.dump(metadata, fp_)
 
     return metadata
