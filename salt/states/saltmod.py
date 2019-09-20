@@ -340,8 +340,12 @@ def state(name,
 
     if batch is not None:
         cmd_kw['batch'] = six.text_type(batch)
+
     if subset is not None:
         cmd_kw['subset'] = subset
+
+    if failhard is True or __opts__.get('failhard'):
+        cmd_kw['failhard'] = True
 
     masterless = __opts__['__role'] == 'minion' and \
                  __opts__['file_client'] == 'local'
@@ -547,6 +551,9 @@ def function(
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
     cmd_kw['asynchronous'] = kwargs.pop('asynchronous', False)
+
+    if failhard is True or __opts__.get('failhard'):
+        cmd_kw['failhard'] = True
 
     if ret_config:
         cmd_kw['ret_config'] = ret_config

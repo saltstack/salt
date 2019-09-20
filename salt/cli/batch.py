@@ -309,8 +309,8 @@ class Batch(object):
                 failhard = False
                 if 'retcode' in data and isinstance(data['ret'], dict) and 'retcode' not in data['ret']:
                     data['ret']['retcode'] = data['retcode']
-                    if self.opts.get('failhard') and data['ret']['retcode'] > 0:
-                        failhard = True
+                if self.opts.get('failhard') and data['ret']['retcode'] > 0:
+                    failhard = True
 
                 if self.opts.get('raw'):
                     ret[minion] = data
