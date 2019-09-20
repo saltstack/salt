@@ -118,10 +118,11 @@ def merge(dest, src, merge_lists=False, in_place=True):
         If True, it will merge into dest dict,
         if not it will make a new copy from that dict and return it.
 
-        CLI Example:
-        .. code-block:: bash
+    CLI Example:
 
-        salt '*' default.merge a=b d=e
+    .. code-block:: bash
+
+        salt '*' defaults.merge '{a: b}' '{d: e}'
 
     It is more typical to use this in a templating language in formulas,
     instead of directly on the command-line.
