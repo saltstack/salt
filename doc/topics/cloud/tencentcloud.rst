@@ -1,6 +1,6 @@
-=================================
-Getting Started With TencentCloud
-=================================
+==================================
+Getting Started With Tencent Cloud
+==================================
 
 Tencent Cloud is a secure, reliable and high-performance cloud compute service
 provided by Tencent. It is the 2nd largest Cloud Provider in China.
@@ -8,7 +8,7 @@ provided by Tencent. It is the 2nd largest Cloud Provider in China.
 
 Dependencies
 ============
-The TencentCloud driver for Salt Cloud requires the tencentcloud-sdk-python package,
+The Tencent Cloud driver for Salt Cloud requires the ``tencentcloud-sdk-python`` package,
 which is available at PyPI:
 
 https://pypi.org/project/tencentcloud-sdk-python/
@@ -30,11 +30,11 @@ To use this module, set up the cloud configuration at
 
     my-tencentcloud-config:
       driver: tencentcloud
-      # TencentCloud Secret Id
+      # Tencent Cloud Secret Id
       id: AKIDA64pOio9BMemkApzevX0HS169S4b750A
-      # TencentCloud Secret Key
+      # Tencent Cloud Secret Key
       key: 8r2xmPn0C5FDvRAlmcJimiTZKVRsk260
-      # TencentCloud Region
+      # Tencent Cloud Region
       location: ap-guangzhou
 
 Configuration Parameters
@@ -42,20 +42,20 @@ Configuration Parameters
 
 driver
 ------
-Required, Please use ``tencentcloud`` always with this module.
+**Required**. ``tencentcloud`` to use this module.
 
 id
 --
-Required, The TencentCloud secret id.
+**Required**. Your Tencent Cloud secret id.
 
 key
 ---
-Required, The TencentCloud secret key.
+**Required**. Your Tencent Cloud secret key.
 
 location
 --------
-Optional, If this value is not specified, the default is ``ap-guangzhou``.
-Location to be configured can be found using the ``--list-locations`` option:
+**Optional**. If this value is not specified, the default is ``ap-guangzhou``.
+Available locations can be found using the ``--list-locations`` option:
 
 .. code-block:: bash
 
@@ -65,7 +65,7 @@ Location to be configured can be found using the ``--list-locations`` option:
 Profile Configuration
 =====================
 
-TencentCloud profiles require a ``provider``, ``availability_zone``, ``image`` and ``size``.
+Tencent Cloud profiles require a ``provider``, ``availability_zone``, ``image`` and ``size``.
 Set up an initial profile at ``/etc/salt/cloud.profiles`` or ``/etc/salt/cloud.profiles.d/*.conf``:
 
 .. code-block:: yaml
@@ -86,12 +86,12 @@ Configuration Parameters
 
 provider
 --------
-Required, Name of entry in ``salt/cloud.providers.d/???`` file.
+**Required**. Name of entry in ``salt/cloud.providers.d/???`` file.
 
 availability_zone
 -----------------
-Required, The available zone that the instance locates at.
-Available zones to build an instance can be found using the ``list_availability_zones`` function:
+**Required**. The availability zone that the instance is located in.
+Available zones can be found using the ``list_availability_zones`` function:
 
 .. code-block:: bash
 
@@ -99,8 +99,8 @@ Available zones to build an instance can be found using the ``list_availability_
 
 image
 -----
-Required, The image id to use for the instance.
-Images to build an instance can be found using the ``--list-images`` option:
+**Required**. The image id to use for the instance.
+Available images can be found using the ``--list-images`` option:
 
 .. code-block:: bash
 
@@ -108,7 +108,7 @@ Images to build an instance can be found using the ``--list-images`` option:
 
 size
 ----
-Required, Instance type for instance can be found using the ``--list-sizes`` option.
+**Required**. Instance type for instance can be found using the ``--list-sizes`` option.
 
 .. code-block:: bash
 
@@ -116,14 +116,14 @@ Required, Instance type for instance can be found using the ``--list-sizes`` opt
 
 securitygroups
 --------------
-Optional, A list of security group ids to associate with.
-Security group ids to build an instance can be found using the ``list_securitygroups`` function:
+**Optional**. A list of security group ids to associate with.
+Available security group ids can be found using the ``list_securitygroups`` function:
 
 .. code-block:: bash
 
     # salt-cloud -f list_securitygroups my-tencentcloud-config
 
-Multiple security group is supported.
+Multiple security groups are supported:
 
 .. code-block:: yaml
 
@@ -134,87 +134,93 @@ Multiple security group is supported.
 
 hostname
 --------
-Optional, The hostname of instance.
+**Optional**. The hostname of the instance.
 
 instance_charge_type
 --------------------
-Optional, The charge type of instance. Valid values are ``PREPAID``,
-``POSTPAID_BY_HOUR`` and ``SPOTPAID``, The default is ``POSTPAID_BY_HOUR``.
+**Optional**. The charge type of the instance. Valid values are ``PREPAID``,
+``POSTPAID_BY_HOUR`` and ``SPOTPAID``. The default is ``POSTPAID_BY_HOUR``.
 
 instance_charge_type_prepaid_renew_flag
 ---------------------------------------
-Optional, When enabled, the instance will be renew automatically
-when it reach the end of the prepaid tenancy.
+**Optional**. When enabled, the instance will be renew automatically
+when it reaches the end of the prepaid tenancy.
 Valid values are ``NOTIFY_AND_AUTO_RENEW``, ``NOTIFY_AND_MANUAL_RENEW`` and ``DISABLE_NOTIFY_AND_MANUAL_RENEW``.
-NOTE: it only works when ``instance_charge_type`` is set to ``PREPAID``.
+
+.. note::
+
+    This value is only used when ``instance_charge_type`` is set to ``PREPAID``.
 
 instance_charge_type_prepaid_period
 -----------------------------------
-Optional, The tenancy (time unit is month) of the prepaid instance,
+**Optional**. The tenancy time in months of the prepaid instance,
 Valid values are ``1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36``.
-NOTE: it only works when ``instance_charge_type`` is set to ``PREPAID``.
+
+.. note::
+
+    This value is only used when ``instance_charge_type`` is set to ``PREPAID``.
 
 allocate_public_ip
 ------------------
-Optional, Associate a public ip address with an instance
-in a VPC or Classic. Boolean value, Default is ``false``.
+**Optional**. Associate a public ip address with an instance
+in a VPC or Classic. Boolean value, default is ``false``.
 
 internet_max_bandwidth_out
 --------------------------
-Optional, Maximum outgoing bandwidth to the public network, measured in Mbps (Mega bit per second).
-Value range: ``[0, 100]``, If this value is not specified, then automatically sets it to ``0 Mbps``.
+**Optional**. Maximum outgoing bandwidth to the public network, measured in Mbps (Mega bits per second).
+Value range: ``[0, 100]``. If this value is not specified, the default is ``0`` Mbps.
 
 internet_charge_type
 --------------------
-Optional, Internet charge type of the instance, Valid values are ``BANDWIDTH_PREPAID``,
+**Optional**. Internet charge type of the instance. Valid values are ``BANDWIDTH_PREPAID``,
 ``TRAFFIC_POSTPAID_BY_HOUR``, ``BANDWIDTH_POSTPAID_BY_HOUR`` and ``BANDWIDTH_PACKAGE``.
 The default is ``TRAFFIC_POSTPAID_BY_HOUR``.
 
 key_name
 --------
-Optional, The key pair to use for the instance, it looks like ``skey-16jig7tx``.
+**Optional**. The key pair to use for the instance, for example ``skey-16jig7tx``.
 
 password
 --------
-Optional, Password to an instance.
+**Optional**. Login password for the instance.
 
 private_ip
 ----------
-Optional, The private ip to be assigned to this instance,
+**Optional**. The private ip to be assigned to this instance,
 must be in the provided subnet and available.
 
 project_id
 ----------
-Optional, The project instance belongs to, default to ``0``.
+**Optional**. The project this instance belongs to, defaults to ``0``.
 
 vpc_id
 ------
-Optional, The id of a VPC network.
-If you want to create instances in VPC network, this parameter must be set.
+**Optional**. The id of a VPC network.
+If you want to create instances in a VPC network, this parameter must be set.
 
 subnet_id
 ---------
-Optional, The id of a VPC subnetwork.
+**Optional**. The id of a VPC subnet.
 If you want to create instances in VPC network, this parameter must be set.
 
 system_disk_size
 ----------------
-Optional, Size of the system disk.
-Value range: ``[50, 1000]``, and unit is ``GB``. Default is ``50 GB``.
+**Optional**. Size of the system disk.
+Value range: ``[50, 1000]``, and unit is ``GB``. Default is ``50`` GB.
 
 system_disk_type
 ----------------
-Optional, Type of the system disk.
+**Optional**. Type of the system disk.
 Valid values are ``CLOUD_BASIC``, ``CLOUD_SSD`` and ``CLOUD_PREMIUM``, default value is ``CLOUD_BASIC``.
 
 
 Actions
 =======
-The following actions are currently supported by the TencentCloud Salt Cloud driver.
+The following actions are supported by the Tencent Cloud Salt Cloud driver.
 
 show_instance
 ~~~~~~~~~~~~~
-This action is a thin wrapper around `--full-query`, which displays details on a
+This action is a thin wrapper around ``--full-query``, which displays details on a
 single instance only. In an environment with several machines, this will save a
 user from having to sort through all instance data, just to examine a single
 instance.
@@ -225,7 +231,7 @@ instance.
 
 show_disk
 ~~~~~~~~~
-Return details about a specific instance.
+Return disk details about a specific instance.
 
 .. code-block:: bash
 
@@ -233,7 +239,7 @@ Return details about a specific instance.
 
 destroy
 ~~~~~~~
-Destroy a TencentCloud instance.
+Destroy a Tencent Cloud instance.
 
 .. code-block:: bash
 
@@ -241,7 +247,7 @@ Destroy a TencentCloud instance.
 
 start
 ~~~~~
-Start a TencentCloud instance.
+Start a Tencent Cloud instance.
 
 .. code-block:: bash
 
@@ -249,7 +255,7 @@ Start a TencentCloud instance.
 
 stop
 ~~~~
-Stop a TencentCloud instance.
+Stop a Tencent Cloud instance.
 
 .. code-block:: bash
 
@@ -257,7 +263,7 @@ Stop a TencentCloud instance.
 
 reboot
 ~~~~~~
-Reboot a TencentCloud instance.
+Reboot a Tencent Cloud instance.
 
 .. code-block:: bash
 
@@ -266,11 +272,11 @@ Reboot a TencentCloud instance.
 
 Functions
 =========
-The following functions are currently supported by the TencentCloud Salt Cloud driver.
+The following functions are currently supported by the Tencent Cloud Salt Cloud driver.
 
 list_securitygroups
 ~~~~~~~~~~~~~~~~~~~
-This function return all TencentCloud security groups in current region.
+Lists all Tencent Cloud security groups in current region.
 
 .. code-block:: bash
 
@@ -278,7 +284,7 @@ This function return all TencentCloud security groups in current region.
 
 list_availability_zones
 ~~~~~~~~~~~~~~~~~~~~~~~
-This function return all TencentCloud availability zones in current region.
+Lists all Tencent Cloud availability zones in current region.
 
 .. code-block:: bash
 
@@ -286,7 +292,7 @@ This function return all TencentCloud availability zones in current region.
 
 list_custom_images
 ~~~~~~~~~~~~~~~~~~
-This function lists any custom images associated with the account, that can
+Lists any custom images associated with the account. These images can
 be used to create a new instance.
 
 .. code-block:: bash
@@ -295,8 +301,8 @@ be used to create a new instance.
 
 show_image
 ~~~~~~~~~~
-Return details about a specific image, that can
-be used to create a new instance.
+Return details about a specific image. This image can be used
+to create a new instance.
 
 .. code-block:: bash
 

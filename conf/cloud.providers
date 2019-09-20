@@ -90,9 +90,9 @@
 
 #my-tencentcloud-config:
     # driver: tencentcloud
-    # TencentCloud Secret Id
+    # Tencent Cloud Secret Id
     # id: AKIDA64pOio9BMemkApzevX0HS169S4b750A
-    # TencentCloud Secret Key
+    # Tencent Cloud Secret Key
     # key: 8r2xmPn0C5FDvRAlmcJimiTZKVRsk260
-    # TencentCloud Region
+    # Tencent Cloud Region
     # location: ap-guangzhou

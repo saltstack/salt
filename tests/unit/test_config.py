@@ -1209,8 +1209,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'id': 'a-tencentcloud-id',
                 'key': 'a-tencentcloud-key',
                 'location': 'ap-guangzhou',
-                'driver': 'tencentcloud'
-            }],
+                'driver': 'tencentcloud',
+            },
+            ],
             'conf_file': PATH
         }
         ret = {
@@ -1236,7 +1237,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'key': 'a-tencentcloud-key',
                     'location': 'ap-guangzhou',
                     'profiles': {},
-                    'driver': 'tencentcloud'
+                    'driver': 'tencentcloud',
                 },
                 'ec2': {
                     'profiles': {},
@@ -1244,9 +1245,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'key': 'supersecretkeysupersecretkey',
                     'driver': 'ec2',
                     'id': 'ABCDEFGHIJKLMNOP',
-                    'user': 'user@mycorp.com'
-                }
-            }
+                    'user': 'user@mycorp.com',
+                },
+            },
         }
         self.assertEqual(ret,
                          salt.config.apply_cloud_providers_config(
@@ -1270,8 +1271,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'extends': 'my-dev-envs:tencentcloud',
                     'id': 'new-id',
                     'key': 'new-key',
-                    'location': 'ap-beijing'
-                }],
+                    'location': 'ap-beijing',
+                },
+            ],
             'my-dev-envs': [{
                     'id': 'ABCDEFGHIJKLMNOP',
                     'user': 'user@mycorp.com',
@@ -1286,8 +1288,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'id': 'the-tencentcloud-id',
                     'location': 'ap-beijing',
                     'key': 'the-tencentcloud-key',
-                    'driver': 'tencentcloud'
-                }],
+                    'driver': 'tencentcloud',
+                },
+            ],
             'conf_file': PATH}
         ret = {
             'my-production-envs': {
@@ -1311,8 +1314,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'key': 'new-key',
                     'location': 'ap-beijing',
                     'profiles': {},
-                    'driver': 'tencentcloud'
-                }
+                    'driver': 'tencentcloud',
+                },
             },
             'my-dev-envs': {
                 'linode': {
@@ -1334,9 +1337,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'key': 'the-tencentcloud-key',
                     'location': 'ap-beijing',
                     'profiles': {},
-                    'driver': 'tencentcloud'
-                }
-            }
+                    'driver': 'tencentcloud',
+                },
+            },
         }
         self.assertEqual(ret, salt.config.apply_cloud_providers_config(
 >>>>>>> de3fd871dc... add tencentcloud testing
@@ -1378,8 +1381,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 }, {
                     'extends': 'my-dev-envs:tencentcloud',
                     'location': 'ap-shanghai',
-                    'id': 'the-tencentcloud-id'
-                }],
+                    'id': 'the-tencentcloud-id',
+                },
+            ],
             'my-dev-envs': [{
                     'id': 'ABCDEFGHIJKLMNOP',
                     'user': 'user@mycorp.com',
@@ -1405,8 +1409,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 }, {
                     'extends': 'my-dev-envs:tencentcloud',
                     'location': 'ap-shanghai',
-                    'id': 'the-tencentcloud-id'
-                }],
+                    'id': 'the-tencentcloud-id',
+                },
+            ],
             'my-dev-envs': [{
                     'id': 'ABCDEFGHIJKLMNOP',
                     'user': 'user@mycorp.com',
@@ -1440,8 +1445,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'id': 'a-tencentcloud-id',
                     'key': 'a-tencentcloud-key',
                     'location': 'ap-guangzhou',
-                    'driver': 'tencentcloud'
-                }],
+                    'driver': 'tencentcloud',
+                },
+            ],
             'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
