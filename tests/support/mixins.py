@@ -14,6 +14,7 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
+import copy
 import time
 import types
 import atexit
@@ -709,18 +710,17 @@ class SaltReturnAssertsMixin(object):
             self.assertNotEqual(saltret, comparison)
 
 
-def _fetch_events(q):
+def _fetch_events(q, opts):
     '''
     Collect events and store them
     '''
     def _clean_queue():
-        print('Cleaning queue!')
+        log.info('Cleaning queue!')
         while not q.empty():
             queue_item = q.get()
             queue_item.task_done()
 
     atexit.register(_clean_queue)
-    opts = RUNTIME_VARS.RUNTIME_CONFIGS['minion']
     event = salt.utils.event.get_event('minion', sock_dir=opts['sock_dir'], opts=opts)
 
     # Wait for event bus to be connected
@@ -747,10 +747,11 @@ class SaltMinionEventAssertsMixin(object):
 
     @classmethod
     def setUpClass(cls):
+        opts = copy.deepcopy(RUNTIME_VARS.RUNTIME_CONFIGS['minion'])
         cls.q = multiprocessing.Queue()
         cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
             target=_fetch_events,
-            args=(cls.q,),
+            args=(cls.q, opts),
             name='Process-{}-Queue'.format(cls.__name__)
         )
         cls.fetch_proc.start()
