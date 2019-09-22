@@ -1268,3 +1268,42 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot delete snapshot {0} from repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
+
+def flush_synced(hosts=None, profile=None, **kwargs):
+    '''
+    .. versionadded:: Sodium
+
+    Perform a normal flush, then add a generated unique marker (sync_id) to all shards.
+    http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-synced-flush.html
+
+    index
+        (Optional, string) A comma-separated list of index names; use _all or empty string for all indices. Defaults to '_all'.
+
+    ignore_unavailable
+        (Optional, boolean) If true, missing or closed indices are not included in the response. Defaults to false.
+
+    allow_no_indices
+        (Optional, boolean) If true, the request does not return an error if a wildcard expression or _all value retrieves only missing or closed indices.
+        This parameter also applies to index aliases that point to a missing or closed index.
+
+    expand_wildcards
+        (Optional, string) Controls what kind of indices that wildcard expressions can expand to.
+        Valid values are:
+          all - Expand to open and closed indices.
+          open - Expand only to open indices.
+          closed - Expand only to closed indices.
+          none - Wildcard expressions are not accepted.
+
+    The defaults settings for the above parameters depend on the API being used.
+
+    CLI example::
+
+        salt myminion elasticsearch.flush_synced index='index1,index2' ignore_unavailable=True allow_no_indices=True expand_wildcards='all'
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.indices.flush_synced(kwargs)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot flush synced, server returned code {} with message {}".format(e.status_code, e.error))
+

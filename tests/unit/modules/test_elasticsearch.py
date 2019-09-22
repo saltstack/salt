@@ -2339,3 +2339,37 @@ class ElasticsearchTestCase(TestCase):
         '''
 
         self.assertRaises(SaltInvocationError, elasticsearch.cluster_put_settings)
+
+    # flush_synced tests below.
+    # We're assuming that _get_instance is properly tested
+    # These tests are very simple in nature, mostly checking default arguments.
+    def test_flush_synced_succeess(self):
+        '''
+        Test if flush_synced succeeds
+        '''
+
+        expected_return = {'_shards': {'failed': 0, 'successful': 0, 'total': 0}}
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.flush_synced = MagicMock(return_value=expected_return)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            output = elasticsearch.flush_synced(index='_all', ignore_unavailable=True, allow_no_indices=True, expand_wildcards='all')
+            fake_es.indices.flush_synced.assert_called_with({'index': '_all', 'ignore_unavailable': True, 'allow_no_indices': True, 'expand_wildcards': 'all'})
+            assert output == expected_return
+
+    def test_flush_synced_failure(self):
+        '''
+        Test if flush_synced fails with CommandExecutionError
+        '''
+
+        fake_es = MagicMock()
+        fake_es.indices = MagicMock()
+        fake_es.indices.flush_synced = MagicMock()
+        fake_es.indices.flush_synced.side_effect = TransportError("custom error", 123)
+        fake_instance = MagicMock(return_value=fake_es)
+
+        with patch.object(elasticsearch, '_get_instance', fake_instance):
+            self.assertRaises(CommandExecutionError, elasticsearch.flush_synced)
+
