@@ -32,7 +32,7 @@ def get_bnum(opts, minions, quiet):
     '''
     partition = lambda x: float(x) / 100.0 * len(minions)
     try:
-        if '%' in opts['batch']:
+        if isinstance(opts['batch'], basestring) and '%' in opts['batch']:
             res = partition(float(opts['batch'].strip('%')))
             if res < 1:
                 return int(math.ceil(res))
