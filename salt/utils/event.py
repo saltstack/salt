@@ -1168,12 +1168,9 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         Return an EventReturn instance
         '''
-        if sys.platform.startswith('win'):
-            # This is required for Windows.  On Linux, when a process is
-            # forked, the module namespace is copied and the current process
-            # gets all of sys.modules from where the fork happens.  This is not
-            # the case for Windows.
-            import salt.minion
+        # This is required because the process is forked and the module no
+        # longer exists in the global namespace.
+        import salt.minion
 
         super(EventReturn, self).__init__(**kwargs)
 
