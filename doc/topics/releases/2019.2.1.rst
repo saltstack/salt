@@ -4,6 +4,14 @@ Salt 2019.2.1 Release Notes
 
 Version 2019.2.1 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 
+Known Issues
+============
+
+This release has a known issue in the master daemon when the ``event_return``
+option is set in the master's config.  If you are using the ``event_return``
+config option it is recommended that you skip this release, 2019.2.2 will
+address this issue.
+
 Change to YAML Renderer
 =======================
 
