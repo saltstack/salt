@@ -59,7 +59,6 @@ import fnmatch
 import hashlib
 import logging
 import datetime
-import sys
 
 try:
     from collections.abc import MutableMapping
