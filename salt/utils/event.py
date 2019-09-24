@@ -1162,22 +1162,19 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
-    def __new__(cls, *args, **kwargs):
-        if sys.platform.startswith('win'):
-            # This is required for Windows.  On Linux, when a process is
-            # forked, the module namespace is copied and the current process
-            # gets all of sys.modules from where the fork happens.  This is not
-            # the case for Windows.
-            import salt.minion
-        instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
-        return instance
-
     def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
+        if sys.platform.startswith('win'):
+            # This is required for Windows.  On Linux, when a process is
+            # forked, the module namespace is copied and the current process
+            # gets all of sys.modules from where the fork happens.  This is not
+            # the case for Windows.
+            import salt.minion
+
         super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
