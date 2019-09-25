@@ -83,7 +83,7 @@ class WinLgpoTest(ModuleCase):
         if expected_value_type:
             self.assertEqual(
                 val["vtype"],
-                expected_value_data,
+                expected_value_type,
                 "The registry value type {0} does not match the expected type {1} for policy {2}".format(
                     val["vtype"], expected_value_type, policy_name
                 ),
