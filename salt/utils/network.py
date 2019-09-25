@@ -1328,17 +1328,18 @@ def active_tcp():
     '''
     ret = {}
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
-        if os.path.isfile(statf):
-            with salt.utils.files.fopen(statf, 'rb') as fp_:
-                for line in fp_:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if line.strip().startswith('sl'):
-                        continue
-                    iret = _parse_tcp_line(line)
-                    slot = next(iter(iret))
-                    if iret[slot]['state'] == 1:  # 1 is ESTABLISHED
-                        del iret[slot]['state']
-                        ret[len(ret)] = iret[slot]
+        if not os.path.isfile(statf):
+            continue
+        with salt.utils.files.fopen(statf, 'rb') as fp_:
+            for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
+                if line.strip().startswith('sl'):
+                    continue
+                iret = _parse_tcp_line(line)
+                slot = next(iter(iret))
+                if iret[slot]['state'] == 1:  # 1 is ESTABLISHED
+                    del iret[slot]['state']
+                    ret[len(ret)] = iret[slot]
     return ret
 
 
@@ -1371,17 +1372,18 @@ def _remotes_on(port, which_end):
     ret = set()
     proc_available = False
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
-        if os.path.isfile(statf):
-            proc_available = True
-            with salt.utils.files.fopen(statf, 'r') as fp_:
-                for line in fp_:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if line.strip().startswith('sl'):
-                        continue
-                    iret = _parse_tcp_line(line)
-                    slot = next(iter(iret))
-                    if iret[slot][which_end] == port and iret[slot]['state'] == 1:  # 1 is ESTABLISHED
-                        ret.add(iret[slot]['remote_addr'])
+        if not os.path.isfile(statf):
+            continue
+        proc_available = True
+        with salt.utils.files.fopen(statf, 'r') as fp_:
+            for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
+                if line.strip().startswith('sl'):
+                    continue
+                iret = _parse_tcp_line(line)
+                slot = next(iter(iret))
+                if iret[slot][which_end] == port and iret[slot]['state'] == 1:  # 1 is ESTABLISHED
+                    ret.add(iret[slot]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
         if salt.utils.platform.is_sunos():
