@@ -34,6 +34,8 @@ class WinLgpoTest(ModuleCase):
         registry_value_path,
         registry_value_vname,
         expected_value_data,
+        expected_value_type=None,
+        expect_value_exists=True,
     ):
         """
         Takes a registry based policy name and config and validates that the
@@ -51,26 +53,39 @@ class WinLgpoTest(ModuleCase):
             the registry value name
         expected_value_data
             the expected data that the value will contain
+        expected_value_type
+            the registry value type (i.e. REG_SZ, REG_DWORD, etc)
+        expect_value_exists
+            define if it expected for a registry value to exist
+            some policies when set to 'Not Defined' delete the registry value
         """
         ret = self.run_function(
             "lgpo.set_computer_policy", (policy_name, policy_config)
         )
         self.assertTrue(ret)
         val = reg.read_value(
-            hive=registry_value_hive,
-            key=registry_value_path,
-            vname=registry_value_vname,
+            registry_value_hive, registry_value_path, registry_value_vname
         )
-        self.assertTrue(
-            val["success"],
-            msg="Failed to obtain the registry data for policy {0}".format(policy_name),
+        if expect_value_exists:
+            self.assertTrue(
+                val["success"],
+                msg="Failed to obtain the registry data for policy {0}".format(
+                    policy_name
+                ),
+            )
+        self.assertEqual(
+            val["vdata"],
+            expected_value_data,
+            "The registry value data {0} does not match the expected value {1} for policy {2}".format(
+                val["vdata"], expected_value_data, policy_name
+            ),
         )
-        if val["success"]:
+        if expected_value_type:
             self.assertEqual(
-                val["vdata"],
+                val["vtype"],
                 expected_value_data,
-                "The registry value data {0} does not match the expected value {1} for policy {2}".format(
-                    val["vdata"], expected_value_data, policy_name
+                "The registry value type {0} does not match the expected type {1} for policy {2}".format(
+                    val["vtype"], expected_value_type, policy_name
                 ),
             )
 
@@ -932,6 +947,40 @@ class WinLgpoTest(ModuleCase):
                         },
                     }
                     self.assertDictEqual(result[name]["changes"], expected)
+
+    @destructiveTest
+    def test_set_computer_policy_ScRemoveOption(self):
+        """
+        Tests changing ScRemoveOption policy
+        """
+        self._testRegistryPolicy(
+            "ScRemoveOption",
+            "No Action",
+            "HKEY_LOCAL_MACHINE",
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            "ScRemoveOption",
+            "0",
+            "REG_SZ",
+        )
+        self._testRegistryPolicy(
+            "Interactive logon: Smart card removal behavior",
+            "Lock Workstation",
+            "HKEY_LOCAL_MACHINE",
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            "ScRemoveOption",
+            "1",
+            "REG_SZ",
+        )
+        self._testRegistryPolicy(
+            "Interactive logon: Smart card removal behavior",
+            "Not Defined",
+            "HKEY_LOCAL_MACHINE",
+            "Software\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+            "ScRemoveOption",
+            None,
+            None,
+            False,
+        )
 
     def tearDown(self):
         """
