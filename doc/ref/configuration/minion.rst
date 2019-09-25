@@ -1393,7 +1393,7 @@ creates a new connection for every return to the master.
 Default: ``ipc``
 
 Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
-process communications. Set ipc_mode to ``tcp`` on such systems.
+process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 
 .. code-block:: yaml
 
