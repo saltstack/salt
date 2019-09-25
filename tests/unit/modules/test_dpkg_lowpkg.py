@@ -107,36 +107,40 @@ class DpkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the bin_pkg_info function
         '''
-        cache_mock = MagicMock(return_value='/path/to/some/package.deb')
-        with patch.dict(dpkg.__salt__, {'cp.cache_file': cache_mock}):
-            dpkg_info_mock = MagicMock(return_value={'retcode': 0,
-                                                     'stderr': '',
-                                                     'stdout': (' new Debian package, version 2.0\n'
-                                                                ' size 123456 bytes: control archive: 4029  bytes.\n'
-                                                                ' Package          : package_name\n'
-                                                                ' Version          : 1.0\n'
-                                                                ' Section          : section_name\n'
-                                                                ' Priority         : priority\n'
-                                                                ' Architecture     : all\n'
-                                                                ' Description      : some package\n')})
-            with patch.dict(dpkg.__salt__, {'cmd.run_all': dpkg_info_mock})
-                self.assertEqual(dpkg.bin_pkg_info('package.deb')['name'], 'package_name')
+        file_proto_mock = MagicMock(return_value=True)
+        with patch.dict(dpkg.__salt__, {'config.valid_fileproto': file_proto_mock}):
+            cache_mock = MagicMock(return_value='/path/to/some/package.deb')
+            with patch.dict(dpkg.__salt__, {'cp.cache_file': cache_mock}):
+                dpkg_info_mock = MagicMock(return_value={'retcode': 0,
+                                                         'stderr': '',
+                                                         'stdout': (' new Debian package, version 2.0\n'
+                                                                    ' size 123456 bytes: control archive: 4029  bytes.\n'
+                                                                    ' Package          : package_name\n'
+                                                                    ' Version          : 1.0\n'
+                                                                    ' Section          : section_name\n'
+                                                                    ' Priority         : priority\n'
+                                                                    ' Architecture     : all\n'
+                                                                    ' Description      : some package\n')})
+                with patch.dict(dpkg.__salt__, {'cmd.run_all': dpkg_info_mock}):
+                    self.assertEqual(dpkg.bin_pkg_info('package.deb')['name'], 'package_name')
 
     def test_bin_pkg_info_no_spaces(self):
         '''
         Test the bin_pkg_info function
         '''
-        cache_mock = MagicMock(return_value='/path/to/some/package.deb')
-        with patch.dict(dpkg.__salt__, {'cp.cache_file': cache_mock}):
-            dpkg_info_mock = MagicMock(return_value={'retcode': 0,
-                                                     'stderr': '',
-                                                     'stdout': (' new Debian package, version 2.0\n'
-                                                                ' size 123456 bytes: control archive: 4029  bytes.\n'
-                                                                ' Package: package_name\n'
-                                                                ' Version: 1.0\n'
-                                                                ' Section: section_name\n'
-                                                                ' Priority: priority\n'
-                                                                ' Architecture: all\n'
-                                                                ' Description: some package\n')})
-            with patch.dict(dpkg.__salt__, {'cmd.run_all': dpkg_info_mock})
-                self.assertEqual(dpkg.bin_pkg_info('package.deb')['name'], 'package_name')
+        file_proto_mock = MagicMock(return_value=True)
+        with patch.dict(dpkg.__salt__, {'config.valid_fileproto': file_proto_mock}):
+            cache_mock = MagicMock(return_value='/path/to/some/package.deb')
+            with patch.dict(dpkg.__salt__, {'cp.cache_file': cache_mock}):
+                dpkg_info_mock = MagicMock(return_value={'retcode': 0,
+                                                         'stderr': '',
+                                                         'stdout': (' new Debian package, version 2.0\n'
+                                                                    ' size 123456 bytes: control archive: 4029  bytes.\n'
+                                                                    ' Package: package_name\n'
+                                                                    ' Version: 1.0\n'
+                                                                    ' Section: section_name\n'
+                                                                    ' Priority: priority\n'
+                                                                    ' Architecture: all\n'
+                                                                    ' Description: some package\n')})
+                with patch.dict(dpkg.__salt__, {'cmd.run_all': dpkg_info_mock}):
+                    self.assertEqual(dpkg.bin_pkg_info('package.deb')['name'], 'package_name')
