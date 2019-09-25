@@ -32,5 +32,5 @@ def targets(tgt, tgt_type='glob', **kwargs):
                            **kwargs)
     conditioned_raw = {}
     for minion in raw:
-        conditioned_raw[six.text_type(minion)] = salt.config.apply_sdb(raw[minion])
+        conditioned_raw[six.text_type(minion)] = salt.config.apply_sdb(__opts__, raw[minion])
     return __utils__['roster_matcher.targets'](conditioned_raw, tgt, tgt_type, 'ipv4')
