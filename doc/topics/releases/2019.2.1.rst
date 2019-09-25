@@ -10,7 +10,7 @@ Known Issues
 This release has a known issue in the master daemon when the ``event_return``
 option is set in the master's config.  If you are using the ``event_return``
 config option it is recommended that you skip this release, 2019.2.2 will
-address this issue.
+address this issue. This only affects PY3 versions of Salt.
 
 Change to YAML Renderer
 =======================
@@ -6865,5 +6865,4 @@ Changelog for v2019.2.0..v2019.2.1
 .. _`whytewolf`: https://github.com/whytewolf
 .. _`wyardley`: https://github.com/wyardley
 .. _`xuhcc`: https://github.com/xuhcc
-.. _`zyguy`: https://github.com/zyguy
-:wq
+.. _`zyguy`: https://github.com/zyguy
