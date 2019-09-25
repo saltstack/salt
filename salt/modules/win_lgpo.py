@@ -355,10 +355,10 @@ class _policy_info(object):
             None: "Not Configured",
         }
         self.sc_removal_lookup = {
-            0: "No Action",
-            1: "Lock Workstation",
-            2: "Force Logoff",
-            3: "Disconnect if a Remote Desktop Services session",
+            "0": "No Action",
+            "1": "Lock Workstation",
+            "2": "Force Logoff",
+            "3": "Disconnect if a Remote Desktop Services session",
             None: "Not Defined",
             "(value not set)": "Not Defined",
         }
