@@ -46,8 +46,8 @@ log = logging.getLogger(__name__)
 try:
     import ctypes
     import ctypes.util
-    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
-    res_init = libc.__res_init
+    LIBC = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
+    RES_INIT = LIBC.__res_init
 except (ImportError, OSError, AttributeError, TypeError):
     pass
 
@@ -252,29 +252,29 @@ def is_reachable_host(entity_name):
     return ret
 
 
-def is_ip(ip):
+def is_ip(ip_addr):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
     '''
-    return is_ipv4(ip) or is_ipv6(ip)
+    return is_ipv4(ip_addr) or is_ipv6(ip_addr)
 
 
-def is_ipv4(ip):
+def is_ipv4(ip_addr):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address
     '''
     try:
-        return ipaddress.ip_address(ip).version == 4
+        return ipaddress.ip_address(ip_addr).version == 4
     except ValueError:
         return False
 
 
-def is_ipv6(ip):
+def is_ipv6(ip_addr):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address
     '''
     try:
-        return ipaddress.ip_address(ip).version == 6
+        return ipaddress.ip_address(ip_addr).version == 6
     except ValueError:
         return False
 
@@ -307,11 +307,11 @@ def is_ipv6_subnet(cidr):
 
 
 @jinja_filter('is_ip')
-def is_ip_filter(ip, options=None):
+def is_ip_filter(ip_addr, options=None):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
     '''
-    return is_ipv4_filter(ip, options=options) or is_ipv6_filter(ip, options=options)
+    return is_ipv4_filter(ip_addr, options=options) or is_ipv6_filter(ip_addr, options=options)
 
 
 def _ip_options_global(ip_obj, version):
@@ -384,7 +384,7 @@ def _ip_options(ip_obj, version, options=None):
     return six.text_type(ip_obj)
 
 
-def _is_ipv(ip, version, options=None):
+def _is_ipv(ip_addr, version, options=None):
 
     if not version:
         version = 4
@@ -393,11 +393,11 @@ def _is_ipv(ip, version, options=None):
         return None
 
     try:
-        ip_obj = ipaddress.ip_address(ip)
+        ip_obj = ipaddress.ip_address(ip_addr)
     except ValueError:
         # maybe it is an IP network
         try:
-            ip_obj = ipaddress.ip_interface(ip)
+            ip_obj = ipaddress.ip_interface(ip_addr)
         except ValueError:
             # nope, still not :(
             return None
@@ -410,7 +410,7 @@ def _is_ipv(ip, version, options=None):
 
 
 @jinja_filter('is_ipv4')
-def is_ipv4_filter(ip, options=None):
+def is_ipv4_filter(ip_addr, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address.
 
@@ -423,12 +423,12 @@ def is_ipv4_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    _is_ipv4 = _is_ipv(ip, 4, options=options)
+    _is_ipv4 = _is_ipv(ip_addr, 4, options=options)
     return isinstance(_is_ipv4, six.string_types)
 
 
 @jinja_filter('is_ipv6')
-def is_ipv6_filter(ip, options=None):
+def is_ipv6_filter(ip_addr, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address.
 
@@ -441,7 +441,7 @@ def is_ipv6_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    _is_ipv6 = _is_ipv(ip, 6, options=options)
+    _is_ipv6 = _is_ipv(ip_addr, 6, options=options)
     return isinstance(_is_ipv6, six.string_types)
 
 
@@ -572,11 +572,11 @@ def network_size(value, options=None, version=None):
     ]
 
 
-def natural_ipv4_netmask(ip, fmt='prefixlen'):
+def natural_ipv4_netmask(ip_addr, fmt='prefixlen'):
     '''
     Returns the "natural" mask of an IPv4 address
     '''
-    bits = _ipv4_to_bits(ip)
+    bits = _ipv4_to_bits(ip_addr)
 
     if bits.startswith('11'):
         mask = '24'
@@ -591,14 +591,14 @@ def natural_ipv4_netmask(ip, fmt='prefixlen'):
         return '/' + mask
 
 
-def rpad_ipv4_network(ip):
+def rpad_ipv4_network(ip_addr):
     '''
     Returns an IP network address padded with zeros.
 
     Ex: '192.168.3' -> '192.168.3.0'
         '10.209' -> '10.209.0.0'
     '''
-    return '.'.join(itertools.islice(itertools.chain(ip.split('.'), '0000'), 0,
+    return '.'.join(itertools.islice(itertools.chain(ip_addr.split('.'), '0000'), 0,
                                      4))
 
 
@@ -962,6 +962,7 @@ def _interfaces_ipconfig(out):
     '''
     ifaces = dict()
     iface = None
+    addr = None
     adapter_iface_regex = re.compile(r'adapter (\S.+):$')
 
     for line in out.splitlines():
@@ -1267,16 +1268,16 @@ def hex2ip(hex_ip, invert=False):
     returned. If 'invert=True' assume that ip from /proc/net/<proto>
     '''
     if len(hex_ip) == 32:  # ipv6
-        ip = []
+        ip_addr = []
         for i in range(0, 32, 8):
             ip_part = hex_ip[i:i + 8]
             ip_part = [ip_part[x:x + 2] for x in range(0, 8, 2)]
             if invert:
-                ip.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
+                ip_addr.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
             else:
-                ip.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
+                ip_addr.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
         try:
-            address = ipaddress.IPv6Address(":".join(ip))
+            address = ipaddress.IPv6Address(":".join(ip_addr))
             if address.ipv4_mapped:
                 return str(address.ipv4_mapped)
             else:
@@ -1334,10 +1335,10 @@ def active_tcp():
                     if line.strip().startswith('sl'):
                         continue
                     iret = _parse_tcp_line(line)
-                    sl = next(iter(iret))
-                    if iret[sl]['state'] == 1:  # 1 is ESTABLISHED
-                        del iret[sl]['state']
-                        ret[len(ret)] = iret[sl]
+                    slot = next(iter(iret))
+                    if iret[slot]['state'] == 1:  # 1 is ESTABLISHED
+                        del iret[slot]['state']
+                        ret[len(ret)] = iret[slot]
     return ret
 
 
@@ -1378,9 +1379,9 @@ def _remotes_on(port, which_end):
                     if line.strip().startswith('sl'):
                         continue
                     iret = _parse_tcp_line(line)
-                    sl = next(iter(iret))
-                    if iret[sl][which_end] == port and iret[sl]['state'] == 1:  # 1 is ESTABLISHED
-                        ret.add(iret[sl]['remote_addr'])
+                    slot = next(iter(iret))
+                    if iret[slot][which_end] == port and iret[slot]['state'] == 1:  # 1 is ESTABLISHED
+                        ret.add(iret[slot]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
         if salt.utils.platform.is_sunos():
@@ -1407,15 +1408,15 @@ def _parse_tcp_line(line):
     '''
     ret = {}
     comps = line.strip().split()
-    sl = comps[0].rstrip(':')
-    ret[sl] = {}
+    slot = comps[0].rstrip(':')
+    ret[slot] = {}
     l_addr, l_port = comps[1].split(':')
     r_addr, r_port = comps[2].split(':')
-    ret[sl]['local_addr'] = hex2ip(l_addr, True)
-    ret[sl]['local_port'] = int(l_port, 16)
-    ret[sl]['remote_addr'] = hex2ip(r_addr, True)
-    ret[sl]['remote_port'] = int(r_port, 16)
-    ret[sl]['state'] = int(comps[3], 16)
+    ret[slot]['local_addr'] = hex2ip(l_addr, True)
+    ret[slot]['local_port'] = int(l_port, 16)
+    ret[slot]['remote_addr'] = hex2ip(r_addr, True)
+    ret[slot]['remote_port'] = int(r_port, 16)
+    ret[slot]['state'] = int(comps[3], 16)
     return ret
 
 
@@ -1850,9 +1851,9 @@ def refresh_dns():
     issue #21397: force glibc to re-read resolv.conf
     '''
     try:
-        res_init()
+        RES_INIT()
     except NameError:
-        # Exception raised loading the library, thus res_init is not defined
+        # Exception raised loading the library, thus RES_INIT is not defined
         pass
 
 
@@ -1909,13 +1910,13 @@ def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
         else:
             resolved = False
             candidates = []
-            for h in hostnames:
+            for host in hostnames:
                 # Input is IP address, passed through unchanged, just return it
-                if h[4][0] == addr:
+                if host[4][0] == addr:
                     resolved = salt.utils.zeromq.ip_bracket(addr)
                     break
 
-                candidate_addr = salt.utils.zeromq.ip_bracket(h[4][0])
+                candidate_addr = salt.utils.zeromq.ip_bracket(host[4][0])
 
                 # sometimes /etc/hosts contains ::1 localhost
                 if not ipv6 and candidate_addr == '[::1]':
@@ -1925,10 +1926,10 @@ def dns_check(addr, port=80, safe=False, ipv6=None, attempt_connect=True):
 
                 if attempt_connect:
                     try:
-                        s = socket.socket(h[0], socket.SOCK_STREAM)
-                        s.settimeout(2)
-                        s.connect((candidate_addr.strip('[]'), h[4][1]))
-                        s.close()
+                        _socket = socket.socket(host[0], socket.SOCK_STREAM)
+                        _socket.settimeout(2)
+                        _socket.connect((candidate_addr.strip('[]'), host[4][1]))
+                        _socket.close()
 
                         resolved = candidate_addr
                         break
