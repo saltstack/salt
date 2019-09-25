@@ -1557,6 +1557,7 @@ def mod_data(fsclient):
     '''
     # TODO, change out for a fileserver backend
     sync_refs = [
+            'executors',
             'modules',
             'states',
             'grains',
