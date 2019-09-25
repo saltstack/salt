@@ -65,7 +65,7 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
             retry(3) {
                 sh '''
                 t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
-                echo -e "driver:\n  spot_price: on-demand\n  block_duration_minutes: 360\n  instance_type:\n  - m5.large\n  - c5.xlarge\n  - m4.large\n  - c4.xlarge" > .kitchen.local.yml
+                cp -f ~/workspace/spot.yml .kitchen.local.yml
                 bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM || (rm .kitchen.local.yml; bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM); echo "ExitCode: $?";
                 '''
                 sh """
