@@ -64,6 +64,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             lt = ['2.3.0-1', '2.3.1-15.1']
             eq = ['2.3.1-15.1', '2.3.1-15.1']
             gt = ['2.3.2-15.1', '2.3.1-15.1']
+        else:
+            self.skipTest('pkg.version_cmp test has not been configured for \'{}\''.format(grains['os_family']))
 
         self.assertEqual(self.run_function(func, lt), -1)
         self.assertEqual(self.run_function(func, eq), 0)
@@ -100,10 +102,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             elif grains['os_family'] == 'RedHat':
                 repo = 'saltstack'
-                name = 'SaltStack repo for RHEL/CentOS {0}'.format(grains['os_major_release'])
-                baseurl = 'http://repo.saltstack.com/yum/redhat/{0}/x86_64/latest/'.format(grains['os_major_release'])
+                name = 'SaltStack repo for RHEL/CentOS {0}'.format(grains['osmajorrelease'])
+                baseurl = 'http://repo.saltstack.com/yum/redhat/{0}/x86_64/latest/'.format(grains['osmajorrelease'])
                 gpgkey = 'https://repo.saltstack.com/yum/rhel{0}/SALTSTACK-GPG-KEY.pub'.format(
-                    grains['os_major_release'])
+                    grains['osmajorrelease'])
                 gpgcheck = 1
                 enabled = 1
                 ret = self.run_function(
