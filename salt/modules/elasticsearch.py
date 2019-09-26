@@ -1269,6 +1269,7 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot delete snapshot {0} from repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
 
+
 def flush_synced(hosts=None, profile=None, **kwargs):
     '''
     .. versionadded:: Sodium
@@ -1306,4 +1307,3 @@ def flush_synced(hosts=None, profile=None, **kwargs):
         return es.indices.flush_synced(kwargs)
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot flush synced, server returned code {} with message {}".format(e.status_code, e.error))
-
