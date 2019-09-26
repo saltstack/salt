@@ -2372,4 +2372,3 @@ class ElasticsearchTestCase(TestCase):
 
         with patch.object(elasticsearch, '_get_instance', fake_instance):
             self.assertRaises(CommandExecutionError, elasticsearch.flush_synced)
-
