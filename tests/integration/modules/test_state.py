@@ -15,7 +15,7 @@ import time
 from tests.support.case import ModuleCase
 from tests.support.helpers import with_tempdir, flaky
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -117,6 +117,21 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         states = self.run_function('state.show_states', sorted=False)
         self.assertTrue(isinstance(states, list))
         self.assertTrue(isinstance(states[0], six.string_types))
+
+    def test_show_states_missing_sls(self):
+        '''
+        Test state.show_states with a sls file
+        defined in a top file is missing
+        '''
+        with salt.utils.files.fopen(os.path.join(TMP_STATE_TREE, 'top.sls'), 'w') as top_file:
+            top_file.write(textwrap.dedent('''\
+                                           base:
+                                             '*':
+                                               - doesnotexist
+                                           '''))
+        states = self.run_function('state.show_states')
+        assert isinstance(states, list)
+        assert states == ["No matching sls found for 'doesnotexist' in env 'base'"]
 
     def test_catch_recurse(self):
         '''
