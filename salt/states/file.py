@@ -21,7 +21,6 @@ the jinja templating system would look like this:
         - user: root
         - group: root
         - mode: 644
-        - attrs: ai
         - template: jinja
         - defaults:
             custom_var: "default value"
