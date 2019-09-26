@@ -280,8 +280,8 @@ def get_dependencies():
         log.warning(HAS_SHADE[1])
         return False
     deps = {
-        'shade': shade[0],
-        'os_client_config': shade[0],
+        'shade': HAS_SHADE[0],
+        'os_client_config': HAS_SHADE[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
