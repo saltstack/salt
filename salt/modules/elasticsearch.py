@@ -1289,11 +1289,13 @@ def flush_synced(hosts=None, profile=None, **kwargs):
 
     expand_wildcards
         (Optional, string) Controls what kind of indices that wildcard expressions can expand to.
-        Valid values are:
-          all - Expand to open and closed indices.
-          open - Expand only to open indices.
-          closed - Expand only to closed indices.
-          none - Wildcard expressions are not accepted.
+
+        Valid values are::
+
+            all - Expand to open and closed indices.
+            open - Expand only to open indices.
+            closed - Expand only to closed indices.
+            none - Wildcard expressions are not accepted.
 
     The defaults settings for the above parameters depend on the API being used.
 
