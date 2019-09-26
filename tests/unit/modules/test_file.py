@@ -1768,7 +1768,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                         filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
             self.assertIn(
                 'Found more than one line between boundaries "before" and "after"',
-                six.text_type(exc_info))
+                six.text_type(exc_info.value))
 
     @with_tempfile()
     def test_line_delete(self, name):
