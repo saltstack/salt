@@ -27,19 +27,18 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):
         cls.ctx = {}
+        cls.pkg = 'htop'
+        if salt.utils.platform.is_windows():
+            cls.pkg = 'putty'
+        elif salt.utils.platform.is_darwin():
+            os_release = cls.run_function('grains.get', ['osrelease'])
+            if int(os_release.split('.')[1]) >= 13:
+                cls.pkg = 'wget'
 
     def setUp(self):
         if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
-
-        self.pkg = 'htop'
-        if salt.utils.platform.is_windows():
-            self.pkg = 'putty'
-        elif salt.utils.platform.is_darwin():
-            os_release = self.run_function('grains.get', ['osrelease'])
-            if int(os_release.split('.')[1]) >= 13:
-                self.pkg = 'wget'
 
     @requires_salt_modules('pkg.list_pkgs')
     def test_list(self):
