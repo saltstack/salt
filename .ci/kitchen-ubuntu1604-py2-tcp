@@ -42,7 +42,7 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
         "SALT_TARGET_BRANCH=${salt_target_branch}",
         "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
         "CODECOV_FLAGS=${distro_name}${distro_version},${python_version},${test_transport.toLowerCase()}",
-        'PATH=~/.rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin',
+        'PATH=~/.rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin',
         'RBENV_VERSION=2.6.3',
         "TEST_SUITE=${python_version}",
         "TEST_PLATFORM=${distro_name}-${distro_version}",
