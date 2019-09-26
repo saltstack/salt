@@ -260,10 +260,14 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    provider = config.is_provider_configured(
         __opts__, __active_provider_name__ or __virtualname__,
-        ('auth', 'region_name'), log_message=False,
-    ) or config.is_provider_configured(
+        ('auth', 'region_name')
+    )
+    if provider:
+        return provider
+
+    return config.is_provider_configured(
         __opts__, __active_provider_name__ or __virtualname__,
         ('cloud', 'region_name')
     )
