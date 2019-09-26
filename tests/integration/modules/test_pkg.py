@@ -87,9 +87,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
                 ret = self.run_function('pkg.get_repo', [repo])
 
-                self.asserIsInstance(ret, dict,
-                                     'The \'pkg.get_repo\' command did not return the excepted dictionary. Output:\n{}'.format(
-                                         ret))
+                self.assertIsInstance(ret, dict,
+                                      'The \'pkg.get_repo\' command did not return the excepted dictionary. '
+                                      'Output:\n{}'.format(ret))
 
                 self.assertEqual(
                     ret['uri'],
@@ -102,7 +102,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 repo = 'saltstack'
                 name = 'SaltStack repo for RHEL/CentOS {0}'.format(grains['os_major_release'])
                 baseurl = 'http://repo.saltstack.com/yum/redhat/{0}/x86_64/latest/'.format(grains['os_major_release'])
-                gpgkey = 'https://repo.saltstack.com/yum/rhel{0}/SALTSTACK-GPG-KEY.pub'.format(grains['os_major_release'])
+                gpgkey = 'https://repo.saltstack.com/yum/rhel{0}/SALTSTACK-GPG-KEY.pub'.format(
+                    grains['os_major_release'])
                 gpgcheck = 1
                 enabled = 1
                 ret = self.run_function(
