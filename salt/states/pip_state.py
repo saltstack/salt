@@ -85,7 +85,7 @@ def _from_line(*args, **kwargs):
     import pip
     if salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
-                                   ver2='10.0'):
+                                   ver2='18.1'):
         import pip._internal.req.constructors  # pylint: disable=E0611,E0401
         return pip._internal.req.constructors.install_req_from_line(*args, **kwargs)
     elif salt.utils.versions.compare(ver1=pip.__version__,
