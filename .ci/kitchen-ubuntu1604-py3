@@ -78,7 +78,8 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
                 """
             }
             sh '''
-            bundle exec kitchen diagnose $TEST_SUITE-$TEST_PLATFORM | grep 'instance_type: \\|image_id: '
+            bundle exec kitchen diagnose $TEST_SUITE-$TEST_PLATFORM | grep 'image_id:'
+            bundle exec kitchen diagnose $TEST_SUITE-$TEST_PLATFORM | grep 'instance_type:' -A5
             '''
         }
 
