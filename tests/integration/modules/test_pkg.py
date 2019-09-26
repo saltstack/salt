@@ -59,13 +59,14 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             lt = ['0.2.4-0ubuntu1', '0.2.4.1-0ubuntu1']
             eq = ['0.2.4-0ubuntu1', '0.2.4-0ubuntu1']
             gt = ['0.2.4.1-0ubuntu1', '0.2.4-0ubuntu1']
-
         elif grains['os_family'] == 'Suse':
             lt = ['2.3.0-1', '2.3.1-15.1']
             eq = ['2.3.1-15.1', '2.3.1-15.1']
             gt = ['2.3.2-15.1', '2.3.1-15.1']
         else:
-            self.skipTest('pkg.version_cmp test has not been configured for \'{}\''.format(grains['os_family']))
+            lt = ['2.3.0', '2.3.1']
+            eq = ['2.3.1', '2.3.1']
+            gt = ['2.3.2', '2.3.1']
 
         self.assertEqual(self.run_function(func, lt), -1)
         self.assertEqual(self.run_function(func, eq), 0)
