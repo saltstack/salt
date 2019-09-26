@@ -293,6 +293,27 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltMasterUnresolvableError,
                               salt.minion.resolve_dns, __opts__)
 
+    def test_gen_modules_executors(self):
+        '''
+        Ensure gen_modules is called with the correct arguments #54429
+        '''
+        mock_opts = self.get_config('minion', from_scratch=True)
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+
+        class MockPillarCompiler(object):
+            def compile_pillar(self):
+                return {}
+
+        try:
+            with patch('salt.pillar.get_pillar', return_value=MockPillarCompiler()):
+                with patch('salt.loader.executors') as execmock:
+                    minion.gen_modules()
+            assert execmock.called_with(minion.opts, minion.functions)
+        finally:
+            minion.destroy()
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
