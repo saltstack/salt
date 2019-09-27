@@ -1,7 +1,7 @@
 @Library('salt@1.1') _
 
 // Define the maximum time, in hours, that a test run should run for
-def testrun_timeout = 5
+def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
 // hour to allow for artifacts to be downloaded, if possible.
 def global_timeout = testrun_timeout + 1;
