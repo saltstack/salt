@@ -180,7 +180,7 @@ def options_absent(name, sections=None, separator='='):
                 return ret
             except AttributeError:
                 cur_section = section
-            if isinstance(sections[section], (dict, OrderedDict)):
+            if isinstance(sections[section], list):
                 for key in sections[section]:
                     cur_value = cur_section.get(key)
                     if not cur_value:
@@ -213,7 +213,7 @@ def options_absent(name, sections=None, separator='='):
             if section not in ret['changes']:
                 ret['changes'].update({section: {}})
             ret['changes'][section].update({key: current_value})
-            if not isinstance(sections[section], (dict, OrderedDict)):
+            if not isinstance(sections[section], list):
                 ret['changes'].update({section: current_value})
                 # break
             ret['comment'] = 'Changes take effect'
