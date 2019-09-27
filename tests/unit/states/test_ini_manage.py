@@ -94,6 +94,19 @@ class IniManageTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('No anomaly detected')
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(ini_manage.options_absent(name), ret)
+        original = {'Tables': {'key1': '1',
+                               'key2': '2',
+                               'key3': '3',
+                               'key4': '4'}}
+        sections = {'Tables': ['key2',
+                               'key3']}
+        changes = {'Tables': {'key2': '2',
+                              'key3': '3'}}
+        with patch.dict(ini_manage.__salt__, {'ini.remove_option': MagicMock(side_effect=['2', '3'])}):
+            with patch.dict(ini_manage.__opts__, {'test': False}):
+                comt = ('Changes take effect')
+                ret.update({'comment': comt, 'result': True, 'changes': changes})
+                self.assertDictEqual(ini_manage.options_absent(name, sections), ret)
 
     # 'sections_present' function tests: 1
 
