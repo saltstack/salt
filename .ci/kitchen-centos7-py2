@@ -84,7 +84,7 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
         }
 
         try {
-            timeout(time: testrun_timeout, unit: 'HOURS') {
+            timeout(time: testrun_timeout * 60 - 15, unit: 'MINUTES') {
                 stage('Converge VM') {
                     sh '''
                     ssh-agent /bin/bash -c 'ssh-add ~/.ssh/kitchen.pem; bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?"'
