@@ -2080,25 +2080,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
     def tearDown(self):
-        nonbase_file = os.path.join(TMP, 'nonbase_env')
-        if os.path.isfile(nonbase_file):
-            os.remove(nonbase_file)
+        rm_files = [os.path.join(TMP, 'nonbase_env'),
+                    os.path.join(TMP, 'testfile'),
+                    os.path.join(TMP, 'test.txt'),
+                    os.path.join(TMP_STATE_TREE, 'top.sls')]
+
+        for file_ in rm_files:
+            if os.path.isfile(file_):
+                os.remove(file_)
 
         # remove old pillar data
         for filename in os.listdir(TMP_PILLAR_TREE):
             os.remove(os.path.join(TMP_PILLAR_TREE, filename))
         self.run_function('saltutil.refresh_pillar')
         self.run_function('test.sleep', [5])
-
-        # remove testfile added in core.sls state file
-        state_file = os.path.join(TMP, 'testfile')
-        if os.path.isfile(state_file):
-            os.remove(state_file)
-
-        # remove testfile added in issue-30161.sls state file
-        state_file = os.path.join(TMP, 'test.txt')
-        if os.path.isfile(state_file):
-            os.remove(state_file)
 
     def test_state_sls_integer_name(self):
         '''
