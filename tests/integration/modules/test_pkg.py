@@ -321,7 +321,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
-    @requires_salt_modules('pkg.remove', 'pkg.list_available', 'pkg.latest_version')
+    @requires_salt_modules('pkg.remove', 'pkg.latest_version')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):
         '''
@@ -331,11 +331,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         remove = False
         if salt.utils.platform.is_windows():
             cmd_info = self.run_function('pkg.version', [self.pkg])
-            remove = False if cmd_info == '' else True
+            remove = cmd_info != ''
         else:
             cmd_info = self.run_function('pkg.info_installed', [self.pkg])
-            if cmd_info != 'ERROR: package {0} is not installed'.format(self.pkg):
-                remove = True
+            remove = cmd_info != 'ERROR: package {0} is not installed'.format(self.pkg)
 
         # remove package if its installed
         if remove:
