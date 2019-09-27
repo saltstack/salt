@@ -604,14 +604,19 @@ def dead(name,
     if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
         stop_kwargs.update({'timeout': kwargs.get('timeout')})
 
-    func_ret = __salt__['service.stop'](name, **stop_kwargs)
-    if not func_ret:
+    try:
+        func_ret = __salt__['service.stop'](name, **stop_kwargs)
+        if not func_ret:
+            ret['result'] = False
+            ret['comment'] = 'Service {0} failed to die'.format(name)
+            if enable is True:
+                ret.update(_enable(name, True, result=False, **kwargs))
+            elif enable is False:
+                ret.update(_disable(name, True, result=False, **kwargs))
+            return ret
+    except CommandExecutionError as exc:
         ret['result'] = False
-        ret['comment'] = 'Service {0} failed to die'.format(name)
-        if enable is True:
-            ret.update(_enable(name, True, result=False, **kwargs))
-        elif enable is False:
-            ret.update(_disable(name, True, result=False, **kwargs))
+        ret['comment'] = exc.strerror
         return ret
 
     if init_delay:
