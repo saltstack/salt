@@ -768,6 +768,12 @@ class TestDaemon(object):
         }
         master_opts['ext_pillar'].append({'file_tree': file_tree})
 
+        # Config settings to test `event_return`
+        if 'returner_dirs' not in master_opts:
+            master_opts['returner_dirs'] = []
+        master_opts['returner_dirs'].append(os.path.join(RUNTIME_VARS.FILES, 'returners'))
+        master_opts['event_return'] = 'runtests_noop'
+
         # Under windows we can't seem to properly create a virtualenv off of another
         # virtualenv, we can on linux but we will still point to the virtualenv binary
         # outside the virtualenv running the test suite, if that's the case.
