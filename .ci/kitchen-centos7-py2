@@ -66,7 +66,7 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
                 sh '''
                 t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
                 cp -f ~/workspace/spot.yml .kitchen.local.yml
-                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM || (rm .kitchen.local.yml; bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM); echo "ExitCode: $?";
+                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM || (bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; rm .kitchen.local.yml; bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM); echo "ExitCode: $?";
                 '''
                 sh """
                 if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
