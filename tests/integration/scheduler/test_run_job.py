@@ -3,14 +3,8 @@
 # Import Python libs
 from __future__ import absolute_import
 import copy
-import datetime
 import logging
 import os
-import random
-import time
-
-import dateutil.parser as dateutil_parser
-import datetime
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -18,7 +12,6 @@ from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-from tests.support.unit import skipIf
 import tests.integration as integration
 
 # Import Salt libs
