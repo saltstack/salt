@@ -475,8 +475,7 @@ class Schedule(object):
                                            datetime.datetime.now())
 
         # Grab run, assume True
-        run = data.get('run', True)
-        if run:
+        if data.get('run'):
             log.info('Running Job: %s', name)
             self._run_job(func, data)
 
