@@ -249,11 +249,16 @@ class StateRunnerTest(ShellCase):
         ret = self.run_run('state.orchestrate orch.batch --out=json -l critical')
         ret_json = salt.utils.json.loads('\n'.join(ret))
         retcode = ret_json['retcode']
-        changed = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['changes']
+        changes = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['changes']
         result = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['result']
 
+        # Debug
+        print('Retcode: {}'.format(retcode))
+        print('Changes: {}'.format(changes))
+        print('Result: {}'.format(result))
+
         assert retcode == 1
-        assert changed == {}
+        assert changes == {}
         assert result is False
 
     def test_state_event(self):
