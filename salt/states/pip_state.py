@@ -60,14 +60,35 @@ except ImportError:
     if sys_modules_pip is not None:
         del sys_modules_pip
 
+
+def pip_has_internal_exceptions_mod(ver):
+    '''
+    True when the pip version has the `pip._internal.exceptions` module
+    '''
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper='>=',
+        ver2='10.0',
+    )
+
+
+def pip_has_exceptions_mod(ver):
+    '''
+    True when the pip version has the `pip.exceptions` module
+    '''
+    if pip_has_internal_exceptions_mod(ver):
+        return False
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper='>=',
+        ver2='1.0'
+    )
+
+
 if HAS_PIP is True:
-    if salt.utils.versions.compare(ver1=pip.__version__,
-                                   oper='>=',
-                                   ver2='10.0'):
+    if pip_has_internal_exceptions_mod(pip.__version__):
         from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
-    elif salt.utils.versions.compare(ver1=pip.__version__,
-                                     oper='>=',
-                                     ver2='1.0'):
+    elif pip_has_exceptions_mod(pip.__version__):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
         InstallationError = ValueError

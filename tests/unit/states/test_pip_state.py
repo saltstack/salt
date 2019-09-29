@@ -282,3 +282,13 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                 'successfully installed',
                 {'test': ret}
             )
+
+    def test_has_internal_exceptions_mod_function(self):
+        assert pip_state.pip_has_internal_exceptions_mod('10.0')
+        assert pip_state.pip_has_internal_exceptions_mod('18.1')
+        assert not pip_state.pip_has_internal_exceptions_mod('9.99')
+
+    def test_has_exceptions_mod_function(self):
+        assert pip_state.pip_has_exceptions_mod('1.0')
+        assert not pip_state.pip_has_exceptions_mod('0.1')
+        assert not pip_state.pip_has_exceptions_mod('10.0')
