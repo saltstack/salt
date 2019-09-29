@@ -242,6 +242,20 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
+    def test_orchestrate_batch_with_failhard_error(self):
+        '''
+        test orchestration properly stops with failhard and batch.
+        '''
+        ret = self.run_run('state.orchestrate orch.batch --out=json -l critical')
+        ret_json = salt.utils.json.loads('\n'.join(ret))
+        retcode = ret_json['retcode']
+        changed = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['changes']
+        result = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['result']
+
+        assert retcode == 1
+        assert changed == {}
+        assert result is False
+
     def test_state_event(self):
         '''
         test to ensure state.event
