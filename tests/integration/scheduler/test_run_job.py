@@ -69,5 +69,5 @@ class SchedulerRunJobTest(ModuleCase, SaltReturnAssertsMixin):
         # Run job
         self.schedule.run_job(job_name)
         ret = self.schedule.job_status(job_name)
-        expected = {'function': 'test.ping', u'name': 'test_run_job'}
+        expected = {'function': 'test.ping', 'run': True, 'name': 'test_run_job'}
         self.assertEqual(ret, expected)
