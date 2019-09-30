@@ -21,6 +21,7 @@ The data structure needs to be:
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import sys
 import time
 import random
 import logging
@@ -338,9 +339,9 @@ class LocalClient(object):
                 'The salt master could not be contacted. Is master running?'
             )
         except AuthenticationError as err:
-            raise AuthenticationError(err)
+            six.reraise(*sys.exc_info())
         except AuthorizationError as err:
-            raise AuthorizationError(err)
+            six.reraise(*sys.exc_info())
         except Exception as general_exception:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
