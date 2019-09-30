@@ -10,7 +10,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
-from mock import Mock
 from salt.cloud.clouds import openstack
 
 # Import Salt Testing Libs
@@ -19,12 +18,12 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
 
 
-class MockImage:
+class MockImage(object):
     name = 'image name'
     id = 'image id'
 
 
-class MockNode:
+class MockNode(object):
     name = 'node name'
     id = 'node id'
     flavor = MockImage()
@@ -37,7 +36,7 @@ class MockNode:
         return iter(())
 
 
-class MockConn:
+class MockConn(object):
     def __init__(self, image):
         self.node = MockNode(image)
 
