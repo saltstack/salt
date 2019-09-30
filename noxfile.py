@@ -197,6 +197,7 @@ def _install_requirements(session, transport, *extra_requirements):
         _install_system_packages(session)
         distro = _get_distro_info(session)
         distro_keys = [
+            'linux',
             '{id}'.format(**distro),
             '{id}-{version}'.format(**distro),
             '{id}-{version_parts[major]}'.format(**distro)

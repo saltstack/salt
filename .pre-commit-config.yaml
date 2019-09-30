@@ -6,7 +6,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-linux-py2.7-zmq-requirements
         name: Linux Py2.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
         exclude: ^requirements/static/(lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
@@ -67,7 +67,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-linux-py3.4-zmq-requirements
         name: Linux Py3.4 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
@@ -89,7 +89,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
@@ -149,7 +149,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
@@ -209,7 +209,7 @@ repos:
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
         name: Linux Py3.7 ZeroMQ Requirements
-        files: ^requirements/((base|zeromq|pytest)\.txt|static/(.*)\.in)$
+        files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
         exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
         args:
           - -v
