@@ -25,6 +25,7 @@ URIs with IPv6 addresses are broken, preventing master-minion communication in I
 
 * `#54763`_
 .. _`#54763`: https://github.com/saltstack/salt/issues/54763
+
 * `#54762`_
 .. _`#54762`: https://github.com/saltstack/salt/issues/54762
 
