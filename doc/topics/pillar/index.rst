@@ -312,6 +312,10 @@ Since both pillar SLS files contained a ``bind`` key which contained a nested
 dictionary, the pillar dictionary's ``bind`` key contains the combined contents
 of both SLS files' ``bind`` keys.
 
+.. note::
+    When both pillar files include the same key, and the values are not
+    dictionaries, the behavior of the merging in non-deterministic.
+
 .. _pillar-include:
 
 Including Other Pillars
