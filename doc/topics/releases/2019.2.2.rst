@@ -34,7 +34,7 @@ URIs with IPv6 addresses are broken, preventing master-minion communication in I
 
 Minion fails to start when it contains below values in minion configuration file. Fix planned in 2019.2.2 release.
 
-.. code-block:: bash
+.. code-block:: yaml
     auth_tries: 2
     master_tries: -1
     auth_safemode: false
