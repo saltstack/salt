@@ -916,7 +916,7 @@ def push_dir(path, glob=None, upload_path=None):
         for root, _, files in salt.utils.path.os_walk(path):
             filelist += [os.path.join(root, tmpfile) for tmpfile in files]
         if glob is not None:
-            filelist = [fi for fi in filelist if fnmatch.fnmatch(os.path.basename(fi), glob)]
+            filelist = [fi for fi in filelist if fnmatch.fnmatch(fi, glob)]
         if not filelist:
             return False
         for tmpfile in filelist:
