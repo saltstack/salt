@@ -75,4 +75,3 @@ class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.cloud.clouds.openstack.HAS_SHADE', HAS_SHADE):
             result = openstack.get_dependencies()
             self.assertEqual(result, False)
-
