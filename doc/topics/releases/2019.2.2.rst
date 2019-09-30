@@ -16,12 +16,10 @@ https://github.com/saltstack/salt/issues/54763
 https://github.com/saltstack/salt/issues/54762
 
 Minion fails to start when it contains below values in minion configuration file.Fix planned in 2019.2.2 release.
-cat > /etc/salt/minion.d/test.conf << EOF
 auth_tries: 2
 master_tries: -1
 auth_safemode: false
 ping_interval: 5
-EOF
 https://github.com/saltstack/salt/issues/54776
 
 Returners (except for default salt master returner) not loading properly in Py3. Fix planned in 2019.2.2 release.
