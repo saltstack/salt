@@ -214,7 +214,7 @@ class Schedule(object):
         # dict we treat it like it was there and is True
 
         # Check if we're able to run
-        if not data['run']:
+        if 'run' not in data or not data['run']:
             return data
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
@@ -463,7 +463,10 @@ class Schedule(object):
 
         if 'name' not in data:
             data['name'] = name
-        log.info('Running Job: %s', name)
+
+        # Assume run should be True until we check max_running
+        if 'run' not in data:
+            data['run'] = True
 
         if not self.standalone:
             data = self._check_max_running(func,
@@ -472,8 +475,8 @@ class Schedule(object):
                                            datetime.datetime.now())
 
         # Grab run, assume True
-        run = data.get('run', True)
-        if run:
+        if data.get('run'):
+            log.info('Running Job: %s', name)
             self._run_job(func, data)
 
     def enable_schedule(self):
