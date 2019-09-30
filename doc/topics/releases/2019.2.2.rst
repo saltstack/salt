@@ -4,3 +4,37 @@ In Progress: Salt 2019.2.2 Release Notes
 
 Version 2019.2.2 is an **unreleased** bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 This release is still in progress and has not been released yet.
+
+Known Issues
+============
+
+Proxy minion fails to start. Fix planned in 2019.2.2 release.
+https://github.com/saltstack/salt/issues/54751
+
+URIs with IPv6 addresses are broken, preventing master-minion communication in IPv6-only environments. Fix planned in 2019.2.2 release.
+https://github.com/saltstack/salt/issues/54763
+https://github.com/saltstack/salt/issues/54762
+
+Minion fails to start when it contains below values in minion configuration file.Fix planned in 2019.2.2 release.
+cat > /etc/salt/minion.d/test.conf << EOF
+auth_tries: 2
+master_tries: -1
+auth_safemode: false
+ping_interval: 5
+EOF
+https://github.com/saltstack/salt/issues/54776
+
+Returners (except for default salt master returner) not loading properly in Py3. Fix planned in 2019.2.2 release.
+https://github.com/saltstack/salt/pull/54731
+
+salt-call state.show_states gives  "Passed invalid arguments" error when a sls defined in top.sls file is missing. Fix planned in 2019.2.2 release.
+https://github.com/saltstack/salt/issues/54758
+
+Jinja from import is broken. Fix planned in 2019.2.2 release.
+https://github.com/saltstack/salt/issues/54765
+
+Affects only Debian 10. pkgrepo.managed does not work if used with proxy (configured at salt-minion). No fix date available yet.
+https://github.com/saltstack/salt/issues/54771
+
+Deprecation warnings for pyzmq. No fix date available yet.
+https://github.com/saltstack/salt/issues/54759
