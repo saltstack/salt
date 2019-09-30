@@ -5,6 +5,14 @@ In Progress: Salt 2019.2.2 Release Notes
 Version 2019.2.2 is an **unreleased** bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 This release is still in progress and has not been released yet.
 
+Python 2.7 Deprecation
+======================
+
+In light of Python 2.7 reaching its End of Life (EOL) on Jan 1st 2020,
+Python 2 will be deprecated from SaltStack no earlier than the Sodium
+release, that is either the Sodium release or a later release.
+This decision is pending further community discussion.
+
 Known Issues
 ============
 
@@ -15,11 +23,12 @@ URIs with IPv6 addresses are broken, preventing master-minion communication in I
 https://github.com/saltstack/salt/issues/54763
 https://github.com/saltstack/salt/issues/54762
 
-Minion fails to start when it contains below values in minion configuration file.Fix planned in 2019.2.2 release.
-auth_tries: 2
-master_tries: -1
-auth_safemode: false
-ping_interval: 5
+Minion fails to start when it contains below values in minion configuration file. Fix planned in 2019.2.2 release.
+.. code-block:: jinja
+  auth_tries: 2
+  master_tries: -1
+  auth_safemode: false
+  ping_interval: 5
 https://github.com/saltstack/salt/issues/54776
 
 Returners (except for default salt master returner) not loading properly in Py3. Fix planned in 2019.2.2 release.
