@@ -890,10 +890,10 @@ class TestDaemon(object):
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
-                os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                RUNTIME_VARS.TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(FILES, 'file', 'base'),
             ],
             # Alternate root to test __env__ choices
             'prod': [
@@ -903,10 +903,10 @@ class TestDaemon(object):
         }
         minion_opts['file_roots'] = {
             'base': [
-                os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                RUNTIME_VARS.TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(FILES, 'file', 'base'),
             ],
             # Alternate root to test __env__ choices
             'prod': [
