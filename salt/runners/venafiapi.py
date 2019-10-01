@@ -56,8 +56,12 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
-import vcert
-from vcert.common import CertificateRequest
+try:
+    import vcert
+    from vcert.common import CertificateRequest
+    HAS_VCERT = True
+except ImportError:
+    HAS_VCERT = False
 
 CACHE_BANK_NAME = 'venafi/domains'
 __virtualname__ = 'venafi'
@@ -85,6 +89,8 @@ def __virtual__():
     '''
     Only load the module if venafi is installed
     '''
+    if not HAS_VCERT:
+        return False
     return __virtualname__
 
 
