@@ -89,7 +89,6 @@ def pip_has_exceptions_mod(ver):
     )
 
 
-purge_pip()
 try:
     import pip
     HAS_PIP = True
@@ -98,6 +97,12 @@ except ImportError:
 
 
 if HAS_PIP is True:
+    if not hasattr(purge_pip, '__pip_ver__'):
+        purge_pip.__pip_ver__ = pip.__version__
+    elif purge_pip.__pip_ver__ != pip.__version__:
+        purge_pip()
+        import pip
+        purge_pip.__pip_ver__ = pip.__version__
     if pip_has_internal_exceptions_mod(pip.__version__):
         from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
     elif pip_has_exceptions_mod(pip.__version__):
