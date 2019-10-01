@@ -24,6 +24,7 @@ import tempfile
 import functools
 import subprocess
 import multiprocessing
+from collections import OrderedDict
 
 # Import Salt Testing Libs
 from tests.support.mock import patch
@@ -323,9 +324,15 @@ class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
         # Late import
         import salt.client
         if 'runtime_clients' not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            mopts = self.get_config(self._salt_client_config_file_name_, from_scratch=True)
-            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = salt.client.get_local_client(mopts=mopts)
-        return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = OrderedDict()
+
+        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+        for master_id in ('mm-master', 'mm-sub-master'):
+            if master_id in runtime_clients:
+                continue
+            mopts = self.get_config(master_id.replace('-', '_'), from_scratch=True)
+            runtime_clients[master_id] = salt.client.get_local_client(mopts=mopts)
+        return runtime_clients
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
