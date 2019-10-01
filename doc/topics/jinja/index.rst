@@ -1415,7 +1415,7 @@ Examples:
   {"machines": [
     {"name": "a", "state": "running"},
     {"name": "b", "state": "stopped"},
-    {"name": "b", "state": "running"}
+    {"name": "c", "state": "running"}
   ]} | json_query("machines[?state=='running'].name") }}
 
   Example 3: {{
@@ -1431,7 +1431,7 @@ Returns:
 
   Example 1: [1, 2, 3, 4, 5, 6]
 
-  Example 2: ['a', 'b']
+  Example 2: ['a', 'c']
 
   Example 3: [80, 25, 22]
 

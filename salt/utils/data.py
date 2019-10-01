@@ -988,6 +988,26 @@ def stringify(data):
 def json_query(data, expr):
     '''
     Query data using JMESPath language (http://jmespath.org).
+
+    Requires the https://github.com/jmespath/jmespath.py library.
+
+    :param data: A complex data structure to query
+    :param expr: A JMESPath expression (query)
+    :returns: The query result
+
+    .. code-block:: jinja
+
+        {"services": [
+            {"name": "http", "host": "1.2.3.4", "port": 80},
+            {"name": "smtp", "host": "1.2.3.5", "port": 25},
+            {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+        ]} | json_query("services[].port") }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [80, 25, 22]
     '''
     if jmespath is None:
         err = 'json_query requires jmespath module installed'
