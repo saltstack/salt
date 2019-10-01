@@ -2,32 +2,27 @@
 '''
 Support for Venafi
 
-Before using this module you need to register an account with Venafi, and
-configure it in your ``master`` configuration file.
+:depends: - vcert Python module
 
-First, you need to add a placeholder to the ``master`` file. This is because
-the module will not load unless it finds an ``api_key`` setting, valid or not.
-Open up ``/etc/salt/master`` and add:
+:configuration: In order to connect to Venafi services you need to specify it in
+    Salt master configuration.
+    Example for Venafi Cloud (using env variables):
 
-.. code-block:: yaml
-
-    venafi:
-      api_key: None
-
-Then register your email address with Venafi using the following command:
-
-.. code-block:: bash
-
-    salt-run venafi.register <youremail@yourdomain.com>
-
-This command will not return an ``api_key`` to you; that will be sent to you
-via email from Venafi. Once you have received that key, open up your ``master``
-file and set the ``api_key`` to it:
-
-.. code-block:: yaml
+    .. code-block:: yaml
 
     venafi:
-      api_key: abcdef01-2345-6789-abcd-ef0123456789
+        api_key: "sdb://osenv/CLOUDAPIKEY"
+
+    Example for Venafi Platform (using env variables):
+
+    .. code-block:: yaml
+
+    venafi:
+      base_url: "https://tpp.example.com/"
+      tpp_user: admin
+      tpp_password: "sdb://osenv/TPP_PASSWORD"
+      trust_bundle: "/opt/venafi/bundle.pem"
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
