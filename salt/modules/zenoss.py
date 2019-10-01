@@ -5,7 +5,7 @@ Module for working with the Zenoss API
 
 :configuration: This module requires a 'zenoss' entry in the master/minion config.
 
-    For example:
+    Example for authenticating with a user:
 
     .. code-block:: yaml
 
@@ -15,6 +15,17 @@ Module for working with the Zenoss API
           password: admin123
           verify_ssl: True
           ca_bundle: /etc/ssl/certs/ca-certificates.crt
+
+    Example for Zenoss Cloud:
+
+    .. code-block:: yaml
+
+         zenoss:
+          hostname: https://company.zenoss.io/ab1
+          api_key: FFFFFFFFFFFFFFFFFFFFFFFFFF
+          verify_ssl: True
+          ca_bundle: /etc/ssl/certs/ca-certificates.crt
+
 """
 
 import logging
@@ -56,14 +67,24 @@ def _session():
     """
 
     config = __salt__["config.option"]("zenoss")
-    return salt.utils.http.session(
-        user=config.get("username"),
-        password=config.get("password"),
-        verify_ssl=config.get("verify_ssl", True),
-        ca_bundle=config.get("ca_bundle"),
-        headers={"Content-type": "application/json; charset=utf-8"},
-    )
 
+    if config.get('api_key'):
+        return salt.utils.http.session(
+            verify_ssl=config.get("verify_ssl", True),
+            ca_bundle=config.get("ca_bundle"),
+            headers={
+                "Content-type": "application/json; charset=utf-8",
+                "z-api-key": config.get("api_key"),
+            },
+        )
+    else:
+        return salt.utils.http.session(
+            user=config.get("username"),
+            password=config.get("password"),
+            verify_ssl=config.get("verify_ssl", True),
+            ca_bundle=config.get("ca_bundle"),
+            headers={"Content-type": "application/json; charset=utf-8"},
+        )
 
 def _router_request(router, method, data=None):
     """
