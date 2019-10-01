@@ -47,7 +47,7 @@ _VERSION_SPEC_SUPPORTED = True
 if salt.utils.platform.is_windows():
     _PKG_TARGETS = ['7zip', 'putty']
 if pre_grains:
-    if 'arch' in pre_grains.like():
+    if any(arch in pre_grains.like() for arch in ('arch', 'archlinux')):
         _WILDCARDS_SUPPORTED = True
     elif 'debian' in pre_grains.like():
         _WILDCARDS_SUPPORTED = True
@@ -68,7 +68,7 @@ if pre_grains:
         elif pre_grains.major_version() == 7:
             _PKG_DOT_TARGETS.append('tomcat-el-2.2-api')
             _PKG_EPOCH_TARGETS.append('comps-extras')
-    elif 'sles' in pre_grains.like():
+    elif any(suse in pre_grains.like() for suse in ('sles', 'opensuse')):
         _PKG_TARGETS = ['figlet', 'htop']
         _PKG_CAP_TARGETS.append(('perl(ZNC)', 'znc-perl'))
 
