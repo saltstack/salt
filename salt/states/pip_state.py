@@ -58,8 +58,10 @@ def purge_pip():
         sys.modules.pop(name)
         del entry
 
-    if 'pip' in globals() or 'pip' in locals():
-        del pip
+    if 'pip' in globals():
+        del globals()['pip']
+    if 'pip' in locals():
+        del locals()['pip']
     sys_modules_pip = sys.modules.pop('pip', None)
     if sys_modules_pip is not None:
         del sys_modules_pip
