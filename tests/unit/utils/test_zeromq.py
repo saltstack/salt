@@ -21,6 +21,7 @@ import salt.utils.zeromq
 from salt.exceptions import SaltSystemExit
 
 
+
 class UtilsTestCase(TestCase):
     def test_ip_bracket(self):
         test_ipv4 = '127.0.0.1'
