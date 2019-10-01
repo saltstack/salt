@@ -69,6 +69,7 @@ if pre_grains:
             _PKG_DOT_TARGETS.append('tomcat-el-2.2-api')
             _PKG_EPOCH_TARGETS.append('comps-extras')
     elif 'sles' in pre_grains.like():
+        _PKG_TARGETS = ['figlet', 'htop']
         _PKG_CAP_TARGETS.append(('perl(ZNC)', 'znc-perl'))
 
 
