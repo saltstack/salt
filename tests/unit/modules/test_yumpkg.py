@@ -239,6 +239,49 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_attr])
 
+    def test_latest_version(self):
+        # Test four possible latest_version conditions:
+        #  1) package is installed and is latest.
+        #  2) package is installed but is not the latest.
+        #  3) package is not installed.
+        #  4) package is not available.
+        def _add_data(data, key, value):
+            data.setdefault(key, []).append(value)
+        rpm_out = [
+            'testpkg1|-(none)_|-1.0.0_|-1.el7_|-noarch_|-(none)_|-1487838471',
+            'testpkg2|-(none)_|-1.0.0_|-1.el7_|-noarch_|-(none)_|-1487838471',
+        ]
+        yum_out = [
+            'testpkg1.x86_64   1.0.0   repo1',
+            'testpkg2.x86_64   1.0.1   repo1',
+            'testpkg3.x86_64   1.0.0   repo1',
+        ]
+        cmd = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run': MagicMock(return_value=os.linesep.join(rpm_out))}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run_all': MagicMock(return_value=os.linesep.join(yum_out))}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.add_pkg': _add_data}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.format_pkg_list': pkg_resource.format_pkg_list}), \
+             patch.dict(yumpkg.__salt__, {'pkg_resource.stringify': MagicMock()}), \
+             patch.dict(yumpkg.__opts__, {'cachedir': 'tmp'}), \
+             patch.dict(yumpkg.__salt__, {'cmd.run_all': cmd, 'config.get': MagicMock(return_value=False)}):
+
+            versions = yumpkg.latest_version('testpkg1', 'testpkg2', 'testpkg3', 'testpkg4')
+            self.assertEqual(versions, {
+                'testpkg1': '1.0.0-1.el7',
+                'testpkg2': '1.0.1-1.el7',
+                'testpkg3': '1.0.0-1.el7',
+                'testpkg4': '',
+                })
+            for pkg_name, pkg_version in {
+                'testpkg1': '1.0.0-1.el7',
+                'testpkg2': '1.0.1-1.el7',
+                'testpkg3': '1.0.0-1.el7',
+                'testpkg4': '',
+                }.items():
+                self.assertTrue(versions.get(pkg_name, False))
+                self.assertEqual(versions[pkg_name], pkg_version)
+
     def test_latest_version_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})):
 

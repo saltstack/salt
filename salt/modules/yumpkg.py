@@ -555,7 +555,7 @@ def latest_version(*names, **kwargs):
                     # no need to check another match, if there was one
                     break
         else:
-            ret[name] = ''
+            ret[name] = cur_pkgs.get(name, '')
 
     # Return a string if only one package name passed
     if len(names) == 1:
