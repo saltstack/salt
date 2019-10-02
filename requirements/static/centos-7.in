@@ -43,3 +43,5 @@ timelib
 tornado<5.0
 virtualenv
 yamlordereddictloader
+#VCert module for Venafi runner
+vcert>=0.6.5
