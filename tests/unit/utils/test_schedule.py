@@ -214,9 +214,12 @@ class ScheduleTestCase(TestCase):
         '''
         Tests enabling the scheduler
         '''
-        self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
-        Schedule.enable_schedule(self.schedule)
-        self.assertTrue(self.schedule.opts['schedule']['enabled'])
+        with patch('salt.utils.schedule.Schedule.persist', MagicMock(return_value=None)) as persist_mock:
+            self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
+            Schedule.enable_schedule(self.schedule)
+            self.assertTrue(self.schedule.opts['schedule']['enabled'])
+
+        persist_mock.assert_called()
 
     # disable_schedule tests
 
@@ -224,9 +227,12 @@ class ScheduleTestCase(TestCase):
         '''
         Tests disabling the scheduler
         '''
-        self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
-        Schedule.disable_schedule(self.schedule)
-        self.assertFalse(self.schedule.opts['schedule']['enabled'])
+        with patch('salt.utils.schedule.Schedule.persist', MagicMock(return_value=None)) as persist_mock:
+            self.schedule.opts.update({'schedule': {'enabled': 'foo'}, 'pillar': {}})
+            Schedule.disable_schedule(self.schedule)
+            self.assertFalse(self.schedule.opts['schedule']['enabled'])
+
+        persist_mock.assert_called()
 
     # reload tests
 

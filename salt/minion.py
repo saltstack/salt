@@ -2223,9 +2223,9 @@ class Minion(MinionBase):
         elif func == 'modify':
             self.schedule.modify_job(name, schedule, persist)
         elif func == 'enable':
-            self.schedule.enable_schedule()
+            self.schedule.enable_schedule(persist)
         elif func == 'disable':
-            self.schedule.disable_schedule()
+            self.schedule.disable_schedule(persist)
         elif func == 'enable_job':
             self.schedule.enable_job(name, persist)
         elif func == 'run_job':

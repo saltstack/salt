@@ -476,7 +476,7 @@ class Schedule(object):
         if run:
             self._run_job(func, data)
 
-    def enable_schedule(self):
+    def enable_schedule(self, persist=True):
         '''
         Enable the scheduler.
         '''
@@ -487,7 +487,10 @@ class Schedule(object):
         evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_enabled_complete')
 
-    def disable_schedule(self):
+        if persist:
+            self.persist()
+
+    def disable_schedule(self, persist=True):
         '''
         Disable the scheduler.
         '''
@@ -497,6 +500,9 @@ class Schedule(object):
         evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
         evt.fire_event({'complete': True, 'schedule': self._get_schedule()},
                        tag='/salt/minion/minion_schedule_disabled_complete')
+
+        if persist:
+            self.persist()
 
     def reload(self, schedule):
         '''
