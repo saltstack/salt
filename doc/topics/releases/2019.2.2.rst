@@ -14,12 +14,8 @@ Statistics
 
 - Contributors: **12** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_)
 
-
-INSERT RELEASE NOTES BODY HERE
-
-
-Changelog for v2019.2.1..10d433f8853aee5ec5678c4e779aaa56265dd40a
-=================================================================
+Changelog for v2019.2.1..v2019.2.2
+==================================
 
 *Generated at: 2019-10-02 18:33:46 UTC*
 
