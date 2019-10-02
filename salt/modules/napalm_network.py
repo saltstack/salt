@@ -2098,7 +2098,6 @@ def commit(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-argu
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'commit_config',
-        **{}
     )
 
 
@@ -2118,7 +2117,6 @@ def discard_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'discard_config',
-        **{}
     )
 
 
@@ -2138,7 +2136,6 @@ def compare_config(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'compare_config',
-        **{}
     )
 
 
@@ -2158,7 +2155,6 @@ def rollback(inherit_napalm_device=None, **kwargs):  # pylint: disable=unused-ar
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'rollback',
-        **{}
     )
 
 

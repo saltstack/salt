@@ -187,7 +187,6 @@ def alive(**kwargs):  # pylint: disable=unused-argument
     return salt.utils.napalm.call(
         napalm_device,  # pylint: disable=undefined-variable
         'is_alive',
-        **{}
     )
 
 
@@ -232,14 +231,12 @@ def reconnect(force=False, **kwargs):  # pylint: disable=unused-argument
         salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'close',
-            **{}
         )
         # and re-open
         log.info('Re-opening the NAPALM proxy connection with %s', proxyid)
         salt.utils.napalm.call(
             napalm_device,  # pylint: disable=undefined-variable
             'open',
-            **{}
         )
         default_ret.update({
             'comment': 'Connection restarted!'

@@ -74,7 +74,6 @@ def _retrieve_grains_cache(proxy=None):
             GRAINS_CACHE = salt.utils.napalm.call(
                 DEVICE_CACHE,
                 'get_facts',
-                **{}
             )
     return GRAINS_CACHE
 

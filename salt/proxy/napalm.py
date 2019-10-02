@@ -217,7 +217,7 @@ def alive(opts):
     if salt.utils.napalm.not_always_alive(opts):
         return True  # don't force reconnection for not-always alive proxies
         # or regular minion
-    is_alive_ret = call('is_alive', **{})
+    is_alive_ret = call('is_alive')
     if not is_alive_ret.get('result', False):
         log.debug(
             '[%s] Unable to execute `is_alive`: %s',
@@ -259,7 +259,7 @@ def get_grains():
     '''
     Retrieve facts from the network device.
     '''
-    return call('get_facts', **{})
+    return call('get_facts')
 
 
 def grains_refresh():
