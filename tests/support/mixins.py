@@ -95,8 +95,8 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_temp_config(config_for, **config_overrides):
-        rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        conf_dir = os.path.join(rootdir, 'conf')
+        rootdir = config_overrides.get('root_dir', tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+        conf_dir = config_overrides.pop('conf_dir', os.path.join(rootdir, 'conf'))
         for key in ('cachedir', 'pki_dir', 'sock_dir'):
             if key not in config_overrides:
                 config_overrides[key] = key
