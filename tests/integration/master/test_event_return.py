@@ -84,8 +84,6 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
                 if _err:
                     err += _err
 
-                print(1, repr(out))
-
                 if six.b('DeprecationWarning: object() takes no parameters') in out:
                     self.fail('\'DeprecationWarning: object() takes no parameters\' was seen in output')
 
