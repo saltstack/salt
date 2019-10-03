@@ -1,0 +1,2 @@
+#VCert module for Venafi runner
+vcert>=0.6.5

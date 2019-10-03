@@ -82,7 +82,7 @@ def _init_connection():
 
 def __virtual__():
     '''
-    Only load the module if venafi is installed
+    Only load the module if vcert module is installed
     '''
     if not HAS_VCERT:
         return False

@@ -5,7 +5,9 @@ Venafi Tools for Salt
 Introduction
 ~~~~~~~~~~~~
 
-Before using these modules you need to create an account with Venafi Cloud or obtain credentials from your Venafi Platform administrator.  Then configure your Salt Master by adding the following to the ``/etc/salt/master`` file:
+First, you need to configure the ``master`` file. This is because
+all module functions require either a configured ``api_key`` (for Cloud) or
+``a ttp_user`` with a ``tpp_password`` and a ``base_url`` (for Trust Platform).
 
 For Venafi Cloud:
 
