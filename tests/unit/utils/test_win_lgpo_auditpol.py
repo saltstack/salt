@@ -10,6 +10,7 @@ from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
+import salt.exceptions
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
@@ -28,11 +29,35 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
                     'cmd.run_all': salt.modules.cmdmod.run_all
                 }}}
 
+    def test__auditpol_cmd(self):
+        mock_set = MagicMock(return_value={'retcode': 0, 'stdout': 'test 123\nret data'})
+        command = '/get /category:"System"'
+        with patch.object(salt.modules.cmdmod, 'run_all', mock_set) as run_all:
+            ret = win_lgpo_auditpol._auditpol_cmd(command)
+            run_all.assert_called_once_with(cmd='auditpol {0}'.format(command), python_shell=True)
+            self.assertEqual(tuple(ret), ('test 123', 'ret data'))
+
+    def test__auditpol_cmd_error(self):
+        mock_set = MagicMock(return_value={'retcode': 666, 'stdout': 'test 123\nret data'})
+        command = '/get /category:"System"'
+        with patch.object(salt.modules.cmdmod, 'run_all', mock_set) as run_all:
+            self.assertRaises(salt.exceptions.CommandExecutionError, win_lgpo_auditpol._auditpol_cmd, command)
+            run_all.assert_called_once_with(cmd='auditpol {0}'.format(command), python_shell=True)
+
     def test_get_settings(self):
         names = win_lgpo_auditpol._get_valid_names()
         ret = win_lgpo_auditpol.get_settings(category='All')
         for name in names:
             self.assertIn(name, [k.lower() for k in ret])
+
+    def test_get_settings_2(self):
+        ret = win_lgpo_auditpol.get_settings(category='DS Access')
+        for name in ('Directory Service Replication',
+                     'Directory Service Access',
+                     'Detailed Directory Service Replication',
+                     'Directory Service Changes'):
+            self.assertIn(name, ret)
+        self.assertEqual(len(ret), 4)
 
     def test_get_settings_invalid_category(self):
         self.assertRaises(
@@ -51,6 +76,12 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
             KeyError,
             win_lgpo_auditpol.get_setting,
             name='Fake Name')
+
+    def test__get_valid_names(self):
+        ret = win_lgpo_auditpol._get_valid_names()
+        for name in ret:
+            self.assertIsInstance(name, str)
+            self.assertEqual(name, name.lower())
 
     def test_set_setting(self):
         names = ['Credential Validation', 'IPsec Driver', 'File System', 'SAM']
