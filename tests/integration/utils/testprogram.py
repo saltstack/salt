@@ -33,7 +33,7 @@ from tests.support.unit import TestCase
 from tests.support.helpers import win32_kill_process_tree
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.processes import terminate_process, terminate_process_list
-
+from tests.support.cli_scripts import ScriptPathMixin
 log = logging.getLogger(__name__)
 
 
@@ -592,7 +592,7 @@ class TestSaltProgramMeta(TestProgramMeta):
         return super(TestSaltProgramMeta, mcs).__new__(mcs, name, bases, attrs)
 
 
-class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
+class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram, ScriptPathMixin)):
     '''
     This is like TestProgram but with some functions to run a salt-specific
     auxiliary program.
@@ -643,9 +643,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
             # This is effectively a place-holder - it gets set correctly after super()
             kwargs['program'] = self.script
         super(TestSaltProgram, self).__init__(*args, **kwargs)
-        self.program = self.abs_path(os.path.join(self.script_dir, self.script))
-        path = self.env.get('PATH', os.getenv('PATH'))
-        self.env['PATH'] = ':'.join([self.abs_path(self.script_dir), path])
+        self.program = self.get_script_path(self.script)
 
     def config_merge(self, base, overrides):
         _base = self.config_cast(copy.deepcopy(base))
@@ -686,28 +684,6 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
             else:
                 cfg[key] = val
         return salt.utils.yaml.safe_dump(cfg, default_flow_style=False)
-
-    def setup(self, *args, **kwargs):
-        super(TestSaltProgram, self).setup(*args, **kwargs)
-        self.install_script()
-
-    def install_script(self):
-        '''Generate the script file that calls python objects and libraries.'''
-        lines = []
-        script_source = os.path.join(RUNTIME_VARS.CODE_DIR, 'scripts', self.script)
-        with salt.utils.files.fopen(script_source, 'r') as sso:
-            lines.extend(sso.readlines())
-        if lines[0].startswith('#!'):
-            lines.pop(0)
-        lines.insert(0, '#!{0}\n'.format(sys.executable))
-
-        script_path = self.abs_path(os.path.join(self.script_dir, self.script))
-        log.debug('Installing "{0}" to "{1}"'.format(script_source, script_path))
-        with salt.utils.files.fopen(script_path, 'w') as sdo:
-            sdo.write(''.join(lines))
-            sdo.flush()
-
-        os.chmod(script_path, 0o755)
 
     def run(self, **kwargs):
         if not kwargs.get('verbatim_args'):
