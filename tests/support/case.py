@@ -898,7 +898,13 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
         '''
         ret = []
         for master_id in self.clients:
-            ret.append(self.run_function(function, arg, minion_tgt, timeout, master_tgt=master_id, **kwargs))
+            ret.append(
+                self.run_function(function,
+                                  arg=arg,
+                                  minion_tgt=minion_tgt,
+                                  timeout=timeout,
+                                  master_tgt=master_id,
+                                  **kwargs))
         return ret
 
 
