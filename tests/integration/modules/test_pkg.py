@@ -25,14 +25,14 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
 
     @classmethod
-    def setUpClass(cls):
+    @requires_system_grains
+    def setUpClass(cls, grains):
         cls.ctx = {}
         cls.pkg = 'htop'
         if salt.utils.platform.is_windows():
             cls.pkg = 'putty'
         elif salt.utils.platform.is_darwin():
-            os_release = cls.run_function('grains.get', ['osrelease'])
-            if int(os_release.split('.')[1]) >= 13:
+            if int(grains['osmajorrelease']) >= 13:
                 cls.pkg = 'wget'
 
     def setUp(self):
@@ -174,27 +174,34 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
-        version_lock = None
-        lock_pkg = 'yum-plugin-versionlock'
+        def hold_package():
+            hold_ret = self.run_function('pkg.hold', [self.pkg])
+            self.assertIn(self.pkg, hold_ret)
+            self.assertTrue(hold_ret[self.pkg]['result'])
 
-        self.run_function('pkg.install', [self.pkg])
-        if grains['os_family'] == 'RedHat':
-            version_lock = self.run_function('pkg.version', [lock_pkg])
-            if not version_lock:
-                self.run_function('pkg.install', [lock_pkg])
-
-        hold_ret = self.run_function('pkg.hold', [self.pkg])
-        self.assertIn(self.pkg, hold_ret)
-        self.assertTrue(hold_ret[self.pkg]['result'])
-
-        unhold_ret = self.run_function('pkg.unhold', [self.pkg])
-        self.assertIn(self.pkg, unhold_ret)
-        self.assertTrue(unhold_ret[self.pkg]['result'])
+            unhold_ret = self.run_function('pkg.unhold', [self.pkg])
+            self.assertIn(self.pkg, unhold_ret)
+            self.assertTrue(unhold_ret[self.pkg]['result'])
+            self.run_function('pkg.remove', [self.pkg])
 
         if grains['os_family'] == 'RedHat':
-            if not version_lock:
-                self.run_function('pkg.remove', [lock_pkg])
-        self.run_function('pkg.remove', [self.pkg])
+            lock_pkgs = ('yum-plugin-versionlock', 'dnf-plugin-versionlock')
+            version_lock = {}
+            try:
+                self.run_function('pkg.install', [self.pkg])
+                for lock_pkg in lock_pkgs:
+                    version_lock[lock_pkg] = self.run_function('pkg.version', [lock_pkg])
+                    if not version_lock[lock_pkg]:
+                        self.run_function('pkg.install', [lock_pkg])
+                if not any(version_lock.values()):
+                    self.skipTest('versionlock is not installed: {}'.format(version_lock))
+                hold_package()
+            finally:
+                for lock_pkg in lock_pkgs:
+                    if not version_lock[lock_pkg]:
+                        self.run_function('pkg.remove', [lock_pkg])
+        else:
+            hold_package()
 
     @destructiveTest
     @requires_salt_modules('pkg.refresh_db')
