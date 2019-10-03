@@ -15,6 +15,8 @@ from tests.support.helpers import (
     requires_system_grains)
 
 # Import Salt libs
+from salt.ext import six
+from salt.modules.yumpkg import _yum
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -187,20 +189,20 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.remove', [self.pkg])
 
         if grains['os_family'] == 'RedHat':
-            lock_pkgs = ('yum-plugin-versionlock', 'dnf-plugin-versionlock')
-            version_lock = {}
+            lock_pkg = 'yum-plugin-versionlock' if _yum() == 'yum' else \
+                       'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
+
+            version_lock = None
             try:
-                for lock_pkg in lock_pkgs:
-                    version_lock[lock_pkg] = self.run_function('pkg.version', [lock_pkg])
-                    if not version_lock[lock_pkg]:
-                        self.run_function('pkg.install', [lock_pkg])
-                if not any(version_lock.values()):
+                version_lock = self.run_function('pkg.version', [lock_pkg])
+                if not version_lock:
+                    self.run_function('pkg.install', [lock_pkg])
+                if not version_lock:
                     self.skipTest('versionlock is not installed: {}'.format(version_lock))
                 hold_package()
             finally:
-                for lock_pkg in lock_pkgs:
-                    if not version_lock[lock_pkg]:
-                        self.run_function('pkg.remove', [lock_pkg])
+                if not version_lock:
+                    self.run_function('pkg.remove', [lock_pkg])
         else:
             hold_package()
 
