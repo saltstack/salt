@@ -28,12 +28,13 @@ import salt.utils.platform
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+
 try:
     from distro import LinuxDistribution
+
     pre_grains = LinuxDistribution()
 except ImportError:
     pre_grains = None
-
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ elif pre_grains:
             _PKG_DOT_TARGETS = ['tomcat6-el-2.1-api']
         elif pre_grains.major_version() == 7:
             _PKG_DOT_TARGETS = ['tomcat-el-2.2-api']
-            _PKG_EPOCH_TARGETS = [ 'comps-extras']
+            _PKG_EPOCH_TARGETS = ['comps-extras']
     elif pre_grains.id() in ('sles', 'opensuse'):
         _PKG_TARGETS = ['figlet', 'htop']
         _PKG_CAP_TARGETS = [('perl(ZNC)', 'znc-perl')]
@@ -85,7 +86,9 @@ def runs_on(platforms=None, os_like=None, reason=''):
                 if not any(x in pre_grains.like() for x in os_like):
                     cls.skipTest(reason if reason else 'OS not similar to [{}]'.format(', '.join(os_like)))
             return caller(cls)
+
         return wrapper
+
     return decorator
 
 
