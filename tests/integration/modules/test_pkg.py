@@ -175,6 +175,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test holding and unholding a package
         '''
         def hold_package():
+            self.run_function('pkg.install', [self.pkg])
+
             hold_ret = self.run_function('pkg.hold', [self.pkg])
             self.assertIn(self.pkg, hold_ret)
             self.assertTrue(hold_ret[self.pkg]['result'])
@@ -188,7 +190,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             lock_pkgs = ('yum-plugin-versionlock', 'dnf-plugin-versionlock')
             version_lock = {}
             try:
-                self.run_function('pkg.install', [self.pkg])
                 for lock_pkg in lock_pkgs:
                     version_lock[lock_pkg] = self.run_function('pkg.version', [lock_pkg])
                     if not version_lock[lock_pkg]:
