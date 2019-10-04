@@ -16,7 +16,6 @@ from tests.support.helpers import (
 
 # Import Salt libs
 from salt.ext import six
-from salt.modules.yumpkg import _yum
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -176,6 +175,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
+
         def hold_package():
             self.run_function('pkg.install', [self.pkg])
 
@@ -189,8 +189,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.remove', [self.pkg])
 
         if grains['os_family'] == 'RedHat':
-            lock_pkg = 'yum-plugin-versionlock' if _yum() == 'yum' else \
-                       'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
+            lock_pkg = 'yum-plugin-versionlock'
+            # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
+            if 'fedora' in grains['os'].lower() and int(grains['osrelease']) >= 22:
+                'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
 
             version_lock = None
             try:
