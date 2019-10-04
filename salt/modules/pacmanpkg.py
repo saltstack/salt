@@ -718,7 +718,7 @@ def _uninstall(action='remove', name=None, pkgs=None, **kwargs):
     if not targets:
         return {}
 
-    remove_arg = '-Rs' if action == 'purge' else '-R'
+    remove_arg = '-Rn' if action == 'purge' else '-R'
 
     cmd = []
     if salt.utils.systemd.has_scope(__context__) \
@@ -814,8 +814,7 @@ def purge(name=None, pkgs=None, **kwargs):
     .. _`systemd-run(1)`: https://www.freedesktop.org/software/systemd/man/systemd-run.html
     .. _`systemd.kill(5)`: https://www.freedesktop.org/software/systemd/man/systemd.kill.html
 
-    Recursively remove a package and all dependencies which were installed
-    with it, this will call a ``pacman -Rs``
+    Remove packages via ``pacman -Rn`` along with all configuration files.
 
     name
         The name of the package to be deleted.
