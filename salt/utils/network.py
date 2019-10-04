@@ -1899,61 +1899,25 @@ def refresh_dns():
 @jinja_filter('dns_check')
 def dns_check(addr, port, safe=False, ipv6=None):
     '''
-    Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception. Obeys system preference for IPv4/6 address resolution - this
-    can be overridden by the ipv6 flag.
-    Tries to connect to the address before considering it useful. If no address
-    can be reached, the first one resolved is used as a fallback.
+    Return an ip address resolved by dns in a format usable in URLs (ipv6 in brackets).
+    Obeys system preference for IPv4/6 address resolution - this can be overridden by
+    the ipv6 flag. Tries to connect to the address before considering it useful. If no
+    address can be reached, the first one resolved is used as a fallback.
+    Does not exit on failure, raises an exception.
     '''
-    error = False
-    lookup = addr
-    seen_ipv6 = False
+    ip_addrs = []
     family = socket.AF_INET6 if ipv6 else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
     try:
         refresh_dns()
-        hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
-        if not hostnames:
-            error = True
-        else:
-            resolved = False
-            candidates = []
-            for h in hostnames:
-                # Input is IP address, passed through unchanged, just return it
-                if h[4][0] == addr:
-                    resolved = salt.utils.zeromq.ip_bracket(addr)
-                    break
-
-                if h[0] == socket.AF_INET and ipv6 is True:
-                    continue
-                if h[0] == socket.AF_INET6 and ipv6 is False:
-                    continue
-
-                candidate_addr = h[4][0]
-
-                if h[0] != socket.AF_INET6 or ipv6 is not None:
-                    candidates.append(candidate_addr)
-
-                try:
-                    s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr, port))
-                    s.close()
-
-                    resolved = candidate_addr
-                    break
-                except socket.error:
-                    pass
-            if not resolved:
-                if len(candidates) > 0:
-                    resolved = candidates[0]
-                else:
-                    error = True
+        addrinfo = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
+        ip_addrs = _test_addrs(addrinfo, port)
     except TypeError:
-        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
-        error = True
+        pass
 
-    if error:
+    if not ip_addrs:
         err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
@@ -1963,7 +1927,34 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return resolved
+
+    return salt.utils.zeromq.ip_bracket(ip_addrs[0])
+
+
+def _test_addrs(addrinfo, port):
+    '''
+    Attempt to connect to all addresses, return one if it succeeds.
+    Otherwise, return all addrs.
+    '''
+    ip_addrs = []
+    # test for connectivity, short circuit on success
+    for a in addrinfo:
+        ip_family = a[0]
+        ip_addr = a[4][0]
+        if ip_addr in ip_addrs:
+            continue
+        ip_addrs.append(ip_addr)
+
+        try:
+            s = socket.socket(ip_family, socket.SOCK_STREAM)
+            s.connect((ip_addr, port))
+            s.close()
+
+            ip_addrs = [ip_addr]
+            break
+        except socket.error:
+            pass
+    return ip_addrs
 
 
 def parse_host_port(host_port):
