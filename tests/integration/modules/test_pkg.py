@@ -192,7 +192,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             lock_pkg = 'yum-plugin-versionlock'
             # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
             if 'fedora' in grains['os'].lower() and int(grains['osrelease']) >= 22:
-                'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
+                lock_pkg = 'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
 
             version_lock = None
             try:
