@@ -1513,7 +1513,8 @@ def install(name=None,
                 else:
                     if archpart in salt.utils.pkg.rpm.ARCHES:
                         arch = '.' + archpart
-                        pkgname = namepart
+                        if normalize:
+                            pkgname = namepart
 
                 if '*' in version_num:
                     # Resolve wildcard matches
@@ -2006,7 +2007,8 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
             else:
                 if archpart in salt.utils.pkg.rpm.ARCHES:
                     arch = '.' + archpart
-                    pkgname = namepart
+                    if normalize:
+                        pkgname = namepart
             targets.append('{0}-{1}{2}'.format(pkgname, pkg_params[target], arch))
     if not targets:
         return {}
