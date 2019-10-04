@@ -92,8 +92,10 @@ def __virtual__():
 
     return __virtualname__
 
+
 def init_kwargs(kwargs):
     return {}
+
 
 def _init_client():
     """Setup client and init datastore.

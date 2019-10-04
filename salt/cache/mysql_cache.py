@@ -91,8 +91,10 @@ def __virtual__():
     """
     return bool(MySQLdb), "No python mysql client installed." if MySQLdb is None else ""
 
+
 def init_kwargs(kwargs):
     return {}
+
 
 def run_query(conn, query, retries=3):
     """
