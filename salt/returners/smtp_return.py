@@ -216,11 +216,14 @@ def returner(ret):
                                    whitelist,
                                    input_data=template,
                                    **ret)
+    
+    if isinstance(content, six.moves.StringIO):
+        content = content.read()
 
     if gpgowner:
         if HAS_GNUPG:
             gpg = gnupg.GPG(gnupghome=os.path.expanduser('~{0}/.gnupg'.format(gpgowner)),
-                            options=['--trust-model always'])
+                            options=['--trust-model=always'])
             encrypted_data = gpg.encrypt(content, to_addrs)
             if encrypted_data.ok:
                 log.debug('smtp_return: Encryption successful')
