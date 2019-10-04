@@ -14,7 +14,6 @@ import threading
 import traceback
 import time
 
-import yaml
 from tests.support.case import ModuleCase
 from tests.support.mock import Mock
 from tests.support.paths import CODE_DIR
@@ -26,6 +25,7 @@ from tests.support.helpers import (
 import salt.utils.files
 import salt.utils.win_runas
 import salt.ext.six
+from salt.utils import yaml
 
 try:
     import win32service
