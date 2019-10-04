@@ -29,12 +29,14 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_system_grains
     def setUpClass(cls, grains):
         cls.ctx = {}
-        cls.pkg = 'htop'
+        cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():
             cls.pkg = 'putty'
         elif salt.utils.platform.is_darwin():
             if int(grains['osmajorrelease']) >= 13:
                 cls.pkg = 'wget'
+        elif grains['os_family'] == 'RedHat':
+            cls.pkg = 'units'
 
     def setUp(self):
         if 'refresh' not in self.ctx:
@@ -340,17 +342,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         Check that pkg.latest_version returns the latest version of the uninstalled package.
         The package is not installed. Only the package version is checked.
         '''
-        remove = False
-        if salt.utils.platform.is_windows():
-            cmd_info = self.run_function('pkg.version', [self.pkg])
-            remove = cmd_info != ''
-        else:
-            cmd_info = self.run_function('pkg.info_installed', [self.pkg])
-            remove = cmd_info != 'ERROR: package {0} is not installed'.format(self.pkg)
-
-        # remove package if it's installed
-        if remove:
-            self.run_function('pkg.remove', [self.pkg])
+        self.run_state('pkg.removed', name=self.pkg)
 
         cmd_pkg = []
         if grains['os_family'] == 'RedHat':
@@ -363,7 +355,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
+        elif grains['os_family'] == 'MacOS':
+            cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)])
         else:
-            self.skipTest('test not configured for {}'.format(grains['os_family']))
+            self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
         self.assertIn(pkg_latest, cmd_pkg)
