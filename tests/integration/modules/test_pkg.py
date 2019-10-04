@@ -15,7 +15,7 @@ from tests.support.helpers import (
     requires_system_grains)
 
 # Import Salt libs
-from salt.ext import six
+from salt.exceptions import CommandExecutionError
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -33,8 +33,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if salt.utils.platform.is_windows():
             cls.pkg = 'putty'
         elif salt.utils.platform.is_darwin():
-            if int(grains['osmajorrelease']) >= 13:
-                cls.pkg = 'wget'
+            cls.pkg = 'wget' if int(grains['osmajorrelease']) >= 13 else 'htop'
         elif grains['os_family'] == 'RedHat':
             cls.pkg = 'units'
 
@@ -194,16 +193,16 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             lock_pkg = 'yum-plugin-versionlock'
             # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
             if 'fedora' in grains['os'].lower() and int(grains['osrelease']) >= 22:
-                lock_pkg = 'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
+                lock_pkg = 'python3-dnf-plugin-versionlock'
 
             version_lock = None
             try:
                 version_lock = self.run_function('pkg.version', [lock_pkg])
                 if not version_lock:
                     self.run_function('pkg.install', [lock_pkg])
-                if not version_lock:
-                    self.skipTest('versionlock is not installed: {}'.format(version_lock))
                 hold_package()
+            except CommandExecutionError as e:
+                self.skipTest('versionlock plugin "{}" could not be installed: {}'.format(lock_pkg, e))
             finally:
                 if not version_lock:
                     self.run_function('pkg.remove', [lock_pkg])
