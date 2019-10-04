@@ -101,6 +101,8 @@ def __virtual__():
 
     return __virtualname__
 
+def init_kwargs(kwargs):
+    return {}
 
 def store(bank, key, data):
     """
