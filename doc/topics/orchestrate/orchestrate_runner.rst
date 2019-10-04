@@ -140,7 +140,7 @@ can specify the "name" argument to avoid conflicting IDs:
 State
 ^^^^^
 
-To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`.
+To execute a state on a Salt Minion, use :mod:`salt.state <salt.states.saltmod.state>`.
 
 .. code-block:: yaml
 
@@ -154,6 +154,20 @@ To execute a state, use :mod:`salt.state <salt.states.saltmod.state>`.
 .. code-block:: bash
 
     salt-run state.orchestrate orch.webserver
+    
+To execute a state on the Salt Master running your orchestration simply write your state as you normally would.  This is great for running scripts or sending API requests that you want your Salt Master to do directly.
+
+.. code-block:: yaml
+
+    # /srv/salt/orch/report/init.sls
+    run_report_script:
+      cmd.script:
+        - name: salt://orch/report/files/report.sh
+        - args: "'-a April' '-b June'"
+
+.. code-block:: bash
+
+    salt-run state.orchestrate orch.report
 
 Highstate
 ^^^^^^^^^
