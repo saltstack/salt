@@ -18,9 +18,10 @@ def confirm_top(match, data, nodegroups=None):
     Takes the data passed to a top file environment and determines if the
     data matches this minion
     """
-    matcher = "compound"
-    if not data:
-        log.error("Received bad data when setting the match from the top " "file")
+    matcher = 'compound'
+    if not isinstance(data, list):
+        log.error('Received bad data when setting the match from the top '
+                  'file')
         return False
     for item in data:
         if isinstance(item, dict):
