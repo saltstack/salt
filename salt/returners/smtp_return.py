@@ -216,7 +216,7 @@ def returner(ret):
                                    whitelist,
                                    input_data=template,
                                    **ret)
-    
+
     if isinstance(content, six.moves.StringIO):
         content = content.read()
 
