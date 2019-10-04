@@ -378,8 +378,15 @@ def pytest_runtest_setup(item):
 
     skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None or _has_unittest_attr(item, '__skip_if_not_root__'):
-        if os.getuid() != 0:
-            pytest.skip('You must be logged in as root to run this test')
+        if not sys.platform.startswith('win'):
+            if os.getuid() != 0:
+                pytest.skip('You must be logged in as root to run this test')
+        else:
+            import salt.utils.win_functions
+            current_user = salt.utils.win_functions.get_current_user()
+            if current_user != 'SYSTEM':
+                if not salt.utils.win_functions.is_admin(current_user):
+                    pytest.skip('You must be logged in as an Administrator to run this test')
 
     skip_if_binaries_missing_marker = item.get_closest_marker('skip_if_binaries_missing')
     if skip_if_binaries_missing_marker is not None:
