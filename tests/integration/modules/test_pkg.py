@@ -16,7 +16,6 @@ from tests.support.helpers import (
 
 # Import Salt libs
 from salt.utils import six
-from salt.exceptions import CommandExecutionError
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -177,6 +176,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
+        ret = None
         if grains['os_family'] == 'RedHat':
             # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
             lock_pkg = 'yum-versionlock' if grains['osmajorrelease'] == '5' else 'yum-plugin-versionlock'
@@ -185,11 +185,14 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     lock_pkg = 'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
                 else:
                     lock_pkg = 'python{py}-dnf-plugins-extras-versionlock'.format(py=3 if six.PY3 else '')
-            self.run_state('pkg.installed', name=lock_pkg)
+            ret = self.run_state('pkg.installed', name=lock_pkg)
 
         self.run_function('pkg.install', [self.pkg])
 
         hold_ret = self.run_function('pkg.hold', [self.pkg])
+        if 'versionlock is not installed' in 'hold_ret':
+            self.run_function('pkg.remove', [self.pkg])
+            self.skipTest('Versionlock could not be installed on this system: {}'.format(ret))
         self.assertIn(self.pkg, hold_ret)
         self.assertTrue(hold_ret[self.pkg]['result'])
 
