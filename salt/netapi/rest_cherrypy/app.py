@@ -636,6 +636,15 @@ except ImportError:
 
     HAS_WEBSOCKETS = False
 
+# Python version-specific imports
+try:
+    if six.PY2:
+        from urlparse import parse_qsl
+    if six.PY3:
+        from urllib.parse import parse_qsl
+except ImportError as exc:
+    logger.warn('Import failed: %s', exc)
+
 
 def html_override_tool():
     '''
@@ -937,8 +946,8 @@ def process_request_body(fn):
 
 def urlencoded_processor(entity):
     '''
-    Accept x-www-form-urlencoded data (run through CherryPy's formatter)
-    and reformat it into a Low State data structure.
+    Accept x-www-form-urlencoded data and reformat it into a Low State
+    data structure.
 
     Since we can't easily represent complicated data structures with
     key-value pairs, any more complicated requirements (e.g. compound
@@ -953,11 +962,11 @@ def urlencoded_processor(entity):
 
     :param entity: raw POST data
     '''
-    # First call out to CherryPy's default processor
-    cherrypy._cpreqbody.process_urlencoded(entity)
-    cherrypy._cpreqbody.process_urlencoded(entity)
-    cherrypy.serving.request.unserialized_data = entity.params
-    cherrypy.serving.request.raw_body = ''
+    # cherrypy._cpreqbody.process_urlencoded doesn't preserve the raw
+    # "body", so we have to handle parsing the tokens using parse_qsl
+    urlencoded = str(entity.read())
+    cherrypy.serving.request.raw_body = urlencoded
+    cherrypy.serving.request.unserialized_data = dict(parse_qsl(urlencoded))
 
 
 @process_request_body
