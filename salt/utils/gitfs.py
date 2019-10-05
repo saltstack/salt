@@ -1307,10 +1307,10 @@ class GitPython(GitProvider):
             file_path = add_mountpoint(relpath(file_blob.path))
             files.add(file_path)
             if stat.S_ISLNK(file_blob.mode):
-                stream = six.StringIO()
+                stream = six.BytesIO()
                 file_blob.stream_data(stream)
                 stream.seek(0)
-                link_tgt = stream.read()
+                link_tgt = salt.utils.stringutils.to_str(stream.read())
                 stream.close()
                 symlinks[file_path] = link_tgt
         return files, symlinks
@@ -1337,10 +1337,10 @@ class GitPython(GitProvider):
                     # this path's object ID will be the target of the
                     # symlink. Follow the symlink and set path to the
                     # location indicated in the blob data.
-                    stream = six.StringIO()
+                    stream = six.BytesIO()
                     file_blob.stream_data(stream)
                     stream.seek(0)
-                    link_tgt = stream.read()
+                    link_tgt = salt.utils.stringutils.to_str(stream.read())
                     stream.close()
                     path = salt.utils.path.join(
                         os.path.dirname(path), link_tgt, use_posixpath=True)
