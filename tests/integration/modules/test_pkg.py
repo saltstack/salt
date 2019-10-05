@@ -15,6 +15,7 @@ from tests.support.helpers import (
     requires_system_grains)
 
 # Import Salt libs
+from salt.utils import six
 from salt.exceptions import CommandExecutionError
 import salt.utils.pkg
 import salt.utils.platform
@@ -176,38 +177,26 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
-
-        def hold_package():
-            self.run_function('pkg.install', [self.pkg])
-
-            hold_ret = self.run_function('pkg.hold', [self.pkg])
-            self.assertIn(self.pkg, hold_ret)
-            self.assertTrue(hold_ret[self.pkg]['result'])
-
-            unhold_ret = self.run_function('pkg.unhold', [self.pkg])
-            self.assertIn(self.pkg, unhold_ret)
-            self.assertTrue(unhold_ret[self.pkg]['result'])
-            self.run_function('pkg.remove', [self.pkg])
-
         if grains['os_family'] == 'RedHat':
-            lock_pkg = 'yum-plugin-versionlock'
             # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
+            lock_pkg = 'yum-versionlock' if grains['osmajorrelease'] == '5' else 'yum-plugin-versionlock'
             if 'fedora' in grains['os'].lower() and int(grains['osrelease']) >= 22:
-                lock_pkg = 'python3-dnf-plugin-versionlock'
+                if int(grains['osmajorrelease']) >= 26:
+                    lock_pkg = 'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
+                else:
+                    lock_pkg = 'python{py}-dnf-plugins-extras-versionlock'.format(py=3 if six.PY3 else '')
+            self.run_state('pkg.installed', name=lock_pkg)
 
-            version_lock = None
-            try:
-                version_lock = self.run_function('pkg.version', [lock_pkg])
-                if not version_lock:
-                    self.run_function('pkg.install', [lock_pkg])
-                hold_package()
-            except CommandExecutionError as e:
-                self.skipTest('versionlock plugin "{}" could not be installed: {}'.format(lock_pkg, e))
-            finally:
-                if not version_lock:
-                    self.run_function('pkg.remove', [lock_pkg])
-        else:
-            hold_package()
+        self.run_function('pkg.install', [self.pkg])
+
+        hold_ret = self.run_function('pkg.hold', [self.pkg])
+        self.assertIn(self.pkg, hold_ret)
+        self.assertTrue(hold_ret[self.pkg]['result'])
+
+        unhold_ret = self.run_function('pkg.unhold', [self.pkg])
+        self.assertIn(self.pkg, unhold_ret)
+        self.assertTrue(unhold_ret[self.pkg]['result'])
+        self.run_function('pkg.remove', [self.pkg])
 
     @destructiveTest
     @requires_salt_modules('pkg.refresh_db')
@@ -355,7 +344,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':
-            cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)])
+            self.skipTest('TODO the following command needs to be run as a non-root user')
+            #cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)])
         else:
             self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
