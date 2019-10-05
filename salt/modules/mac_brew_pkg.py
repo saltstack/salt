@@ -14,6 +14,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import copy
 import functools
 import logging
+import re
 
 # Import salt libs
 import salt.utils.data
@@ -149,7 +150,19 @@ def list_pkgs(versions_as_list=False, **kwargs):
         for line in out.splitlines():
             try:
                 name_and_versions = line.split(' ')
-                name = '/'.join(('caskroom/cask', name_and_versions[0]))
+                pkg_name = name_and_versions[0]
+
+                # Get cask namespace
+                info_cmd = 'cask info {}'.format(pkg_name)
+                match = re.search(r'^From: .*/(.+?)/homebrew-(.+?)/.*$',
+                                  _call_brew(info_cmd)['stdout'], re.MULTILINE)
+                if match:
+                    namespace = '/'.join((match.group(1).lower(),
+                                          match.group(2).lower()))
+                else:
+                    namespace = 'homebrew/cask'
+
+                name = '/'.join((namespace, pkg_name))
                 installed_versions = name_and_versions[1:]
                 key_func = functools.cmp_to_key(salt.utils.versions.version_cmp)
                 newest_version = sorted(installed_versions, key=key_func).pop()
@@ -245,6 +258,7 @@ def remove(name=None, pkgs=None, **kwargs):
         salt '*' pkg.remove pkgs='["foo", "bar"]'
     '''
     try:
+        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params = __salt__['pkg_resource.parse_targets'](
             name, pkgs, **kwargs
         )[0]
@@ -384,6 +398,7 @@ def install(name=None, pkgs=None, taps=None, options=None, **kwargs):
         salt '*' pkg.install 'package package package'
     '''
     try:
+        name, pkgs = _fix_cask_namespace(name, pkgs)
         pkg_params, pkg_type = __salt__['pkg_resource.parse_targets'](
             name, pkgs, kwargs.get('sources', {})
         )
@@ -534,3 +549,42 @@ def info_installed(*names):
         salt '*' pkg.info_installed <package1> <package2> <package3> ...
     '''
     return _info(*names)
+
+
+def _fix_cask_namespace(name=None, pkgs=None):
+    """
+    Check if provided packages contains the old version of brew-cask namespace
+    and replace it by the new one.
+
+    This function also warns about the correct namespace for this packages
+    and it will stop working with the release of Sodium.
+
+    :param name: The name of the package to check
+    :param pkgs: A list of packages to check
+
+    :return: name and pkgs with the mocked namespace
+    """
+
+    show_warning = False
+
+    if name and name.startswith('caskroom/cask/'):
+        show_warning = True
+        name = name.replace("caskroom/cask/", "homebrew/cask/")
+
+    if pkgs:
+        pkgs_ = []
+        for pkg in pkgs:
+            if pkg.startswith('caskroom/cask/'):
+                show_warning = True
+                pkg = pkg.replace("caskroom/cask/", "homebrew/cask/")
+            pkgs_.append(pkg)
+        pkgs = pkgs_
+
+    if show_warning:
+        salt.utils.versions.warn_until(
+            'Sodium',
+            'The \'caskroom/cask/\' namespace for brew-cask packages '
+            'is deprecated. Use \'homebrew/cask/\' instead.'
+        )
+
+    return name, pkgs
