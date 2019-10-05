@@ -70,6 +70,11 @@ import tornado.httputil
 import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
 
+if six.PY2:
+    from StringIO import StringIO
+elif six.PY3:
+    from io import StringIO
+
 try:
     import tornado.curl_httpclient
     HAS_CURL_HTTPCLIENT = True
@@ -175,6 +180,9 @@ def query(url,
           agent=USERAGENT,
           hide_fields=None,
           raise_error=True,
+          formdata=False,
+          formdata_fieldname=None,
+          formdata_filename=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -345,9 +353,22 @@ def query(url,
                 log.error('The client-side certificate path that'
                           ' was passed is not valid: %s', cert)
 
-        result = sess.request(
-            method, url, params=params, data=data, **req_kwargs
-        )
+        if formdata:
+            if not formdata_fieldname:
+                ret['error'] = ('formdata_fieldname is required when formdata=True')
+                log.error(ret['error'])
+                return ret
+            result = sess.request(
+                method,
+                url,
+                params=params,
+                files={formdata_fieldname: (formdata_filename, StringIO(data))},
+                **req_kwargs
+            )
+        else:
+            result = sess.request(
+                method, url, params=params, data=data, **req_kwargs
+            )
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
