@@ -1547,8 +1547,12 @@ class Webserver(object):
         '''
         self.ioloop = tornado.ioloop.IOLoop()
         self.ioloop.make_current()
-        self.application = tornado.web.Application(
-            [(r'/(.*)', self.handler, {'path': self.root})])
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
+                [(r'/(.*)', self.handler, {'path': self.root})])
+        else:
+            self.application = tornado.web.Application(
+                [(r'/(.*)', self.handler)])
         self.application.listen(self.port)
         self.ioloop.start()
 
@@ -1609,6 +1613,25 @@ class Webserver(object):
         '''
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+
+
+class MirrorPostHandler(tornado.web.RequestHandler):
+    '''
+    Mirror a POST body back to the client
+    '''
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        body = self.request.body
+        log.debug('Incoming body: %s  Incoming args: %s', body, args)
+        self.write(body)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
 
 
 def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
