@@ -386,7 +386,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                                     runas='foobar',
                                     use_vt=False)
 
-                        self.assertNotRegex(cmd_handler.get(), "{} -l -c".format(user_default_shell),
+                        self.assertNotRegex(cmd_handler.get(), "bash -l -c",
                                             "cmd does not invoke user shell on macOS")
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
