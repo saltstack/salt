@@ -26,6 +26,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_brew module
     '''
+
     def setup_loader_modules(self):
         return {mac_brew: {'__opts__': {'user': MagicMock(return_value='bar')}}}
 
@@ -63,8 +64,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_user = MagicMock(return_value='foo')
         mock_cmd = MagicMock(return_value='')
         with patch.dict(mac_brew.__salt__, {'cmd.run_all': mock_failure,
-                                        'file.get_user': mock_user,
-                                        'cmd.run': mock_cmd}), \
+                                            'file.get_user': mock_user,
+                                            'cmd.run': mock_cmd}), \
                 patch('salt.modules.mac_brew_pkg._list_taps', MagicMock(return_value={})):
             self.assertFalse(mac_brew._tap('homebrew/test'))
 
@@ -109,6 +110,63 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_brew.__context__, {'pkg.list_pkgs': mock_context}):
             self.assertEqual(mac_brew.list_pkgs(versions_as_list=True),
                              mock_context)
+
+    def test_list_pkgs_homebrew_cask_pakages(self):
+        '''
+        Tests if pkg.list_pkgs list properly homebrew cask packages
+        '''
+
+        def custom_call_brew(cmd, failhard=True):
+            result = dict()
+            if cmd == 'info --json=v1 --installed':
+                result = {'stdout': '[{"name":"zsh","full_name":"zsh","oldname":null,'
+                          '"aliases":[],"homepage":"https://www.zsh.org/",'
+                          '"versions":{"stable":"5.7.1","devel":null,"head":"HEAD","bottle":true},'
+                          '"installed":[{"version":"5.7.1","used_options":[],'
+                          '"built_as_bottle":true,"poured_from_bottle":true,'
+                          '"runtime_dependencies":[{"full_name":"ncurses","version":"6.1"},'
+                          '{"full_name":"pcre","version":"8.42"}],'
+                          '"installed_as_dependency":false,"installed_on_request":true}]}]',
+                          'stderr': '',
+                          'retcode': 0}
+            elif cmd == 'cask list --versions':
+                result = {'stdout': 'macvim 8.1.151\nfont-firacode-nerd-font 2.0.0',
+                          'stderr': '',
+                          'retcode': 0}
+            elif cmd == 'cask info macvim':
+                result = {'stdout': 'macvim: 8.1.1517,156 (auto_updates)\n'
+                          'https://github.com/macvim-dev/macvim\n'
+                          '/usr/local/Caskroom/macvim/8.1.151 (64B)\n'
+                          'From: https://github.com/Homebrew/homebrew-cask/blob/master/Casks/macvim.rb\n'
+                          '==> Name\n'
+                          'MacVim',
+                          'stderr': '',
+                          'retcode': 0}
+            elif cmd == 'cask info font-firacode-nerd-font':
+                result = {'stdout': 'font-firacode-nerd-font: 2.0.0\n'
+                          'https://github.com/ryanoasis/nerd-fonts\n'
+                          '/usr/local/Caskroom/font-firacode-nerd-font/2.0.0 (35 files, 64.8MB)\n'
+                          'From: https://github.com/Homebrew/homebrew-cask-fonts/blob/master/Casks/font-firacode-nerd-font.rb\n'
+                          '==> Name\n'
+                          'FuraCode Nerd Font (FiraCode)',
+                          'stderr': '',
+                          'retcode': ''}
+
+            return result
+
+        def custom_add_pkg(ret, name, newest_version):
+            ret[name] = newest_version
+            return ret
+
+        expected_pkgs = {'zsh': '5.7.1',
+                         'homebrew/cask/macvim': '8.1.151',
+                         'homebrew/cask-fonts/font-firacode-nerd-font': '2.0.0'}
+
+        with patch('salt.modules.mac_brew_pkg._call_brew', custom_call_brew),\
+            patch.dict(mac_brew.__salt__, {'pkg_resource.add_pkg': custom_add_pkg,
+                                           'pkg_resource.sort_pkglist': MagicMock()}):
+            self.assertEqual(mac_brew.list_pkgs(versions_as_list=True),
+                             expected_pkgs)
 
     # 'version' function tests: 1
 
@@ -160,7 +218,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_user = MagicMock(return_value='foo')
         mock_success = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
-                                        'cmd.run_all': mock_success}), \
+                                            'cmd.run_all': mock_success}), \
                 patch('salt.modules.mac_brew_pkg._homebrew_bin',
                       MagicMock(return_value=HOMEBREW_BIN)):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
