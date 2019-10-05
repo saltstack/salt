@@ -6,8 +6,8 @@ def testrun_timeout = 6
 // hour to allow for artifacts to be downloaded, if possible.
 def global_timeout = testrun_timeout + 1;
 
-def distro_name = 'fedora'
-def distro_version = '29'
+def distro_name = 'amazon'
+def distro_version = '2'
 def python_version = 'py2'
 def test_transport = 'ZeroMQ'
 def salt_target_branch = '2018.3'

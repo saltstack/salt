@@ -1,123 +1,148 @@
+@Library('salt@1.1') _
+
 // Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
 // hour to allow for artifacts to be downloaded, if possible.
 def global_timeout = testrun_timeout + 1;
 
+def distro_name = 'debian'
+def distro_version = '8'
+def python_version = 'py3'
+def test_transport = 'ZeroMQ'
+def salt_target_branch = '2018.3'
+def golden_images_branch = '2018.3'
+def nox_passthrough_opts = '--ssh-tests'
+
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-    [
-        $class: 'ScannerJobProperty', doNotScan: false
-    ],
-    [
-        $class: 'RebuildSettings', autoRebuild: false, rebuildDisabled: false
-    ],
     parameters([
         booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
 ])
-timeout(time: global_timeout, unit: 'HOURS') {
-    node('kitchen-slave') {
-        timestamps {
-            ansiColor('xterm') {
-                withEnv([
-                    'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
-                    'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
-                    'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
-                    'NOX_ENV_NAME=runtests-zeromq',
-                    'NOX_PASSTHROUGH_OPTS=--ssh-tests',
-                    'NOX_ENABLE_FROM_FILENAMES=true',
-                    'GOLDEN_IMAGES_CI_BRANCH=2018.3',
-                    'CODECOV_FLAGS=debian8,py3',
-                    'PATH=/usr/local/rbenv/shims/:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin:/root/bin',
-                    'RBENV_VERSION=2.4.2',
-                    'TEST_SUITE=py3',
-                    'TEST_PLATFORM=debian-8',
-                    'PY_COLORS=1',
-                    "FORCE_FULL=${params.runFull}",
-                ]) {
-                    // Set the GH status even before cloning the repo
-                    stage('github-pending') {
-                        githubNotify credentialsId: 'test-jenkins-credentials',
-                            description: "running ${TEST_SUITE}-${TEST_PLATFORM}...",
-                            status: 'PENDING',
-                            context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
+
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > 1) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - 1)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
+
+
+wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
+    withEnv([
+        'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
+        'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
+        'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
+        "NOX_ENV_NAME=runtests-${test_transport.toLowerCase()}",
+        'NOX_ENABLE_FROM_FILENAMES=true',
+        "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts}",
+        "SALT_TARGET_BRANCH=${salt_target_branch}",
+        "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
+        "CODECOV_FLAGS=${distro_name}${distro_version},${python_version},${test_transport.toLowerCase()}",
+        'PATH=~/.rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin',
+        'RBENV_VERSION=2.6.3',
+        "TEST_SUITE=${python_version}",
+        "TEST_PLATFORM=${distro_name}-${distro_version}",
+        "TEST_TRANSPORT=${test_transport}",
+        "FORCE_FULL=${params.runFull}",
+    ]) {
+        // Checkout the repo
+        stage('Clone') {
+            cleanWs notFailBuild: true
+            checkout scm
+            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
+        }
+
+        // Setup the kitchen required bundle
+        stage('Setup') {
+            sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
+        }
+
+        stage('Create VM') {
+            retry(3) {
+                sh '''
+                t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
+                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                '''
+                sh """
+                if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                    mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-create.log"
+                fi
+                if [ -s ".kitchen/logs/kitchen.log" ]; then
+                    mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-create.log"
+                fi
+                """
+            }
+        }
+
+        sshagent(credentials: ['jenkins-testing-ssh-key']) {
+            sh 'ssh-add ~/.ssh/kitchen.pem'
+            try {
+                timeout(time: testrun_timeout, unit: 'HOURS') {
+                    stage('Converge VM') {
+                        sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                        sh """
+                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-converge.log"
+                        fi
+                        if [ -s ".kitchen/logs/kitchen.log" ]; then
+                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-converge.log"
+                        fi
+                        """
                     }
-                    // Checkout the repo
-                    stage('checkout-scm') {
-                        cleanWs notFailBuild: true
-                        checkout scm
+                    stage('Run Tests') {
+                        withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
+                            sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                        }
                     }
-                    try {
-                        // Setup the kitchen required bundle
-                        stage('setup-bundle') {
-                            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}'
-                            sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
+                }
+            } finally {
+                try {
+                    sh """
+                    if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-verify.log"
+                    fi
+                    if [ -s ".kitchen/logs/kitchen.log" ]; then
+                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-verify.log"
+                    fi
+                    """
+                    stage('Download Artefacts') {
+                        withEnv(["ONLY_DOWNLOAD_ARTEFACTS=1"]){
+                            sh '''
+                            bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM || exit 0
+                            '''
                         }
-                        try {
-                            stage('run kitchen') {
-                                timeout(time: testrun_timeout, unit: 'HOURS') {
-                                    withCredentials([
-                                        [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
-                                    ]) {
-                                        sshagent(credentials: ['jenkins-testing-ssh-key']) {
-                                            sh 'ssh-add ~/.ssh/jenkins-testing.pem'
-                                            sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM || bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM'
-                                            sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM'
-                                        }
-                                    }
-                                }
-                            }
-                        } finally {
-                            stage('cleanup kitchen') {
-                                script {
-                                    withCredentials([
-                                        [$class: 'AmazonWebServicesCredentialsBinding', accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
-                                    ]) {
-                                        sshagent(credentials: ['jenkins-testing-ssh-key']) {
-                                            sh 'ssh-add ~/.ssh/jenkins-testing.pem'
-                                            sh 'bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM'
-                                        }
-                                    }
-                                }
-                                archiveArtifacts artifacts: 'artifacts/*,artifacts/**/*'
-                            }
-                            stage('report code coverage') {
-                                script {
-                                    withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
-                                      sh '''
-                                      if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
-                                          curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}"
-                                      fi
-                                      '''
-                                    }
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        currentBuild.result = 'FAILURE'
-                    } finally {
-                        try {
-                            junit 'artifacts/xml-unittests-output/*.xml'
-                        } finally {
-                            cleanWs notFailBuild: true
-                            if (currentBuild.resultIsBetterOrEqualTo('SUCCESS')) {
-                                githubNotify credentialsId: 'test-jenkins-credentials',
-                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has passed",
-                                    status: 'SUCCESS',
-                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
-                            } else {
-                                githubNotify credentialsId: 'test-jenkins-credentials',
-                                    description: "The ${TEST_SUITE}-${TEST_PLATFORM} job has failed",
-                                    status: 'FAILURE',
-                                    context: "jenkins/pr/${TEST_SUITE}-${TEST_PLATFORM}"
-                                try {
-                                  slackSend channel: "#jenkins-prod-pr",
-                                      color: '#FF0000',
-                                      message: "FAILED: PR-Job: '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL})"
-                                } catch (Exception e) {
-                                  sh 'echo Failed to send the Slack notification'
-                                }
+                        sh """
+                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-download.log"
+                        fi
+                        if [ -s ".kitchen/logs/kitchen.log" ]; then
+                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-download.log"
+                        fi
+                        """
+                    }
+                    archiveArtifacts(
+                        artifacts: "artifacts/*,artifacts/**/*,.kitchen/logs/*-create.log,.kitchen/logs/*-converge.log,.kitchen/logs/*-verify.log,.kitchen/logs/*-download.log,artifacts/xml-unittests-output/*.xml",
+                        allowEmptyArchive: true
+                    )
+                    junit 'artifacts/xml-unittests-output/*.xml'
+                } finally {
+                    stage('Cleanup') {
+                        sh '''
+                        bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                        '''
+                    }
+                    stage('Upload Coverage') {
+                        script {
+                            withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
+                              sh '''
+                              if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
+                                  (curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}") || true
+                              fi
+                              '''
                             }
                         }
                     }
@@ -127,4 +152,4 @@ timeout(time: global_timeout, unit: 'HOURS') {
     }
 }
 
-// vi: ft=groovy
+// vim: ft=groovy
