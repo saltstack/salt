@@ -401,7 +401,7 @@ class GitFSTestBase(object):
                 log.error("Access error removeing file %s", TMP_REPO_DIR)
             elif exc.errno != errno.ENOENT:
                 raise
-        shutil.copytree(INTEGRATION_BASE_FILES, TMP_REPO_DIR + '/')
+        shutil.copytree(INTEGRATION_BASE_FILES, TMP_REPO_DIR + '/', symlinks=True)
 
         repo = git.Repo.init(TMP_REPO_DIR)
 
