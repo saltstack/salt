@@ -41,3 +41,4 @@ pylxd>=2.2.5; sys.platform != 'win32' and sys.platform != 'darwin'
 jmespath
 yamlordereddictloader
 python-dateutil
+vcert>=0.6.5
