@@ -51,6 +51,13 @@ that startup script in a profile like so:
       size: 13
       startup_script_id: 493234
 
+Similarly you can also specify a fiewall group ID using the option firewall_group_id. You can list
+firewall groups with
+
+.. code-block:: bash
+
+    salt-cloud -f list_firewall_groups <name of vultr provider>
+
 '''
 
 # Import python libs
@@ -135,6 +142,12 @@ def avail_scripts(conn=None):
     '''
     return _query('startupscript/list')
 
+def avail_firewall_groups(conn=None):
+    '''
+    return available firewall groups
+    '''
+    return _query('firewall/group_list')
+
 def avail_keys(conn=None):
     '''
     return available SSH keys
@@ -146,6 +159,12 @@ def list_scripts(conn=None, call=None):
     return list of Startup Scripts
     '''
     return avail_scripts()
+
+def list_firewall_groups(conn=None, call=None):
+    '''
+    return list of firewall groups
+    '''
+    return avail_firewall_groups()
 
 
 def avail_sizes(conn=None):
@@ -290,6 +309,14 @@ def create(vm_):
         log.error('Your Vultr account does not have a startup script with ID %s', str(startup_script))
         return False
     
+    firewall_group_id = config.get_cloud_config_value(
+        'firewall_group_id', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if firewall_group_id and str(firewall_group_id) not in avail_firewall_groups():
+        log.error('Your Vultr account does not have a firewall group with ID %s', str(firewall_group_id))
+        return False
+
     key_list = ssh_key_ids.split(',')
     available_keys = avail_keys()
     for key in key_list:
@@ -340,9 +367,12 @@ def create(vm_):
     if startup_script:
         kwargs['SCRIPTID'] = startup_script
 
+    if firewall_group_id:
+        kwargs['FIREWALLGROUPID'] = firewall_group_id
+
     if ssh_key_ids:
         kwargs['SSHKEYID'] = ssh_key_ids
-        
+
     log.info('Creating Cloud VM %s', vm_['name'])
 
     __utils__['cloud.fire_event'](
