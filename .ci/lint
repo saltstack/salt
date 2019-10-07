@@ -2,7 +2,7 @@
 
 // Define the maximum time, in hours, that a test run should run for
 def global_timeout = 3
-def salt_target_branch = '2019.2.1'
+def salt_target_branch = 'master'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
