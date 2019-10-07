@@ -309,6 +309,7 @@ state modules
     win_system
     win_update
     win_wua
+    win_wusa
     winrepo
     x509
     xmpp
