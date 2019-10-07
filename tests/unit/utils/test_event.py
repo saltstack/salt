@@ -12,6 +12,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import os
 import hashlib
 import time
+import warnings
 from tornado.testing import AsyncTestCase
 import zmq
 import zmq.eventloop.ioloop
@@ -25,6 +26,7 @@ from multiprocessing import Process
 from tests.support.unit import expectedFailure, skipIf, TestCase
 
 # Import salt libs
+import salt.config
 import salt.utils.event
 import salt.utils.stringutils
 import tests.integration as integration
@@ -32,6 +34,7 @@ from salt.utils.process import clean_proc
 
 # Import 3rd-+arty libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from tests.support.processes import terminate_process
 
 SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
 
@@ -366,3 +369,27 @@ class TestAsyncEventPublisher(AsyncTestCase):
         self.assertEqual(self.tag, 'evt1')
         self.data.pop('_stamp')  # drop the stamp
         self.assertEqual(self.data, {'data': 'foo1'})
+
+
+class TestEventReturn(TestCase):
+
+    def test_event_return(self):
+        # Once salt is py3 only, the warnings part of this test no longer applies
+        evt = None
+        try:
+            with warnings.catch_warnings(record=True) as w:
+                # Cause all warnings to always be triggered.
+                warnings.simplefilter("always")
+                evt = None
+                try:
+                    evt = salt.utils.event.EventReturn(salt.config.DEFAULT_MASTER_OPTS.copy())
+                    evt.start()
+                except TypeError as exc:
+                    if 'object' in str(exc):
+                        self.fail('\'{}\' TypeError should have not been raised'.format(exc))
+                for warning in w:
+                    if warning.category is DeprecationWarning:
+                        assert 'object() takes no parameters' not in warning.message
+        finally:
+            if evt is not None:
+                terminate_process(evt.pid, kill_children=True)

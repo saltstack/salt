@@ -260,10 +260,14 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    provider = config.is_provider_configured(
         __opts__, __active_provider_name__ or __virtualname__,
-        ('auth', 'region_name'), log_message=False,
-    ) or config.is_provider_configured(
+        ('auth', 'region_name')
+    )
+    if provider:
+        return provider
+
+    return config.is_provider_configured(
         __opts__, __active_provider_name__ or __virtualname__,
         ('cloud', 'region_name')
     )
@@ -280,8 +284,8 @@ def get_dependencies():
         log.warning(HAS_SHADE[1])
         return False
     deps = {
-        'shade': shade[0],
-        'os_client_config': shade[0],
+        'shade': HAS_SHADE[0],
+        'os_client_config': HAS_SHADE[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -420,7 +424,10 @@ def list_nodes_full(conn=None, call=None):
         ret[node.name]['public_ips'] = _get_ips(node, 'public')
         ret[node.name]['floating_ips'] = _get_ips(node, 'floating')
         ret[node.name]['fixed_ips'] = _get_ips(node, 'fixed')
-        ret[node.name]['image'] = node.image.name
+        if isinstance(node.image, six.string_types):
+            ret[node.name]['image'] = node.image
+        else:
+            ret[node.name]['image'] = getattr(conn.get_image(node.image.id), 'name', node.image.id)
     return ret
 
 
@@ -479,7 +486,7 @@ def show_instance(name, conn=None, call=None):
     if isinstance(node.image, six.string_types):
         ret['image'] = node.image
     else:
-        ret['image'] = conn.get_image(node.image.id).name
+        ret['image'] = getattr(conn.get_image(node.image.id), 'name', node.image.id)
     return ret
 
 

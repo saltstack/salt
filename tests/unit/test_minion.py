@@ -282,6 +282,29 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(self):
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+            mock_opts = self.get_config('minion', from_scratch=True)
+            mock_opts['ping_interval'] = 10
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+            try:
+                try:
+                    minion.connected = MagicMock(side_effect=(False, True))
+                    minion._fire_master_minion_start = MagicMock()
+                    minion.tune_in(start=False)
+                except RuntimeError:
+                    pass
+
+                # Make sure the scheduler is initialized but the beacons are not
+                self.assertTrue('ping' in minion.periodic_callbacks)
+            finally:
+                minion.destroy()
+
     def test_minion_retry_dns_count(self):
         '''
         Tests that the resolve_dns will retry dns look ups for a maximum of
