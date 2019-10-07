@@ -58,6 +58,23 @@ firewall groups with
 
     salt-cloud -f list_firewall_groups <name of vultr provider>
 
+To specify SSH keys to be preinstalled on the server, use the ssh_key_names setting
+
+.. code-block:: yaml
+
+    nyc-2gb-1cpu-ubuntu-17-04:
+      location: 1
+      provider: my-vultr-config
+      image: 223
+      size: 13
+      ssh_key_names: dev1,dev2,salt-master
+
+You can list SSH keys available on your account using
+
+.. code-block:: bash
+
+    salt-cloud -f list_keypairs <name of vultr provider>
+
 '''
 
 # Import python libs
@@ -142,11 +159,13 @@ def avail_scripts(conn=None):
     '''
     return _query('startupscript/list')
 
+
 def avail_firewall_groups(conn=None):
     '''
     return available firewall groups
     '''
     return _query('firewall/group_list')
+
 
 def avail_keys(conn=None):
     '''
@@ -154,17 +173,44 @@ def avail_keys(conn=None):
     '''
     return _query('sshkey/list')
 
+
 def list_scripts(conn=None, call=None):
     '''
     return list of Startup Scripts
     '''
     return avail_scripts()
 
+
 def list_firewall_groups(conn=None, call=None):
     '''
     return list of firewall groups
     '''
     return avail_firewall_groups()
+
+
+def list_keypairs(conn=None, call=None):
+    '''
+    return list of SSH keys
+    '''
+    return avail_keys()
+
+
+def show_keypair(kwargs=None, call=None):
+    '''
+    return list of SSH keys
+    '''
+    if not kwargs:
+        kwargs = {}
+
+    if 'keyname' not in kwargs:
+        log.error('A keyname is required.')
+        return False
+
+    keys = list_keypairs(call='function')
+    keyid = keys[kwargs['keyname']]['SSHKEYID']
+    log.debug('Key ID is %s', keyid)
+
+    return keys[kwargs['keyname']]
 
 
 def avail_sizes(conn=None):
@@ -308,7 +354,7 @@ def create(vm_):
     if startup_script and str(startup_script) not in avail_scripts():
         log.error('Your Vultr account does not have a startup script with ID %s', str(startup_script))
         return False
-    
+
     firewall_group_id = config.get_cloud_config_value(
         'firewall_group_id', vm_, __opts__, search_global=False, default=None,
     )
@@ -320,9 +366,9 @@ def create(vm_):
     key_list = ssh_key_ids.split(',')
     available_keys = avail_keys()
     for key in key_list:
-      if key and str(key) not in available_keys:
-        log.error('Your Vultr account does not have a key with ID %s', str(key))
-        return False
+        if key and str(key) not in available_keys:
+            log.error('Your Vultr account does not have a key with ID %s', str(key))
+            return False
 
     if private_networking is not None:
         if not isinstance(private_networking, bool):
