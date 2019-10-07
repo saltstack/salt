@@ -935,7 +935,7 @@ class Client(object):
 def run_winexe_command(cmd, args, host, username, password, port=445):
     '''
     Run a command remotly via the winexe executable
-    '''
+    '''    
     creds = "-U '{0}%{1}' //{2}".format(
         username,
         password,
@@ -945,9 +945,9 @@ def run_winexe_command(cmd, args, host, username, password, port=445):
         username,
         host
     )
-    cmd = 'winexe {0} {1} {2}'.format(creds, cmd, args)
-    logging_cmd = 'winexe {0} {1} {2}'.format(logging_creds, cmd, args)
-    return win_cmd(cmd, logging_command=logging_cmd)
+    command = 'winexe {0} "{1} {2}"'.format(creds, cmd, args)
+    logging_cmd = 'winexe {0} "{1} {2}"'.format(logging_creds, cmd, args)
+    return win_cmd(command, logging_command=logging_cmd)
 
 
 def run_psexec_command(cmd, args, host, username, password, port=445):
@@ -1356,18 +1356,28 @@ def deploy_windows(host,
                 salt.utils.smb.delete_directory('salttemp', 'C$', conn=smb_conn)
         # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
+            
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
-            time.sleep(5)
+            time.sleep(10)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
+            
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc stop salt-minion', host, username, password
             )
             if ret_code != 0:
                 return False
 
-            time.sleep(5)
-
+            stdout, stderr, ret_code = run_psexec_command(
+                'cmd.exe', '/c sc query salt-minion', host, username, password
+            )
+            log.info('%s',stdout) 
+            
+            while "STOP_PENDING" in stdout:
+                stdout, stderr, ret_code = run_psexec_command(
+                    'cmd.exe', '/c sc query salt-minion', host, username, password
+                )
+            
             log.debug('Run psexec: sc start salt-minion')
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc start salt-minion', host, username, password
