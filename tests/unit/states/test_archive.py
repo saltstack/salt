@@ -41,7 +41,7 @@ def _isfile_side_effect(path):
         '/tmp/test_extracted_tar': False,
         'c:\\tmp\\test_extracted_tar': False,
         '/private/tmp/test_extracted_tar': False,
-    }[path]
+    }[path.lower() if salt.utils.platform.is_windows() else path]
 
 
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
