@@ -131,6 +131,11 @@ def avail_scripts(conn=None):
     """
     return _query("startupscript/list")
 
+def avail_keys(conn=None):
+    '''
+    return available SSH keys
+    '''
+    return _query('sshkey/list')
 
 def list_scripts(conn=None, call=None):
     """
@@ -271,6 +276,10 @@ def create(vm_):
         "enable_private_network", vm_, __opts__, search_global=False, default=False,
     )
 
+    ssh_key_ids = config.get_cloud_config_value(
+        'ssh_key_names', vm_, __opts__, search_global=False, default=None
+    )
+
     startup_script = config.get_cloud_config_value(
         "startup_script_id", vm_, __opts__, search_global=False, default=None,
     )
@@ -280,6 +289,13 @@ def create(vm_):
             "Your Vultr account does not have a startup script with ID %s",
             str(startup_script),
         )
+        return False
+    
+    key_list = ssh_key_ids.split(',')
+    available_keys = avail_keys()
+    for key in key_list:
+      if key and str(key) not in available_keys:
+        log.error('Your Vultr account does not have a key with ID %s', str(key))
         return False
 
     if private_networking is not None:
@@ -329,6 +345,9 @@ def create(vm_):
     if startup_script:
         kwargs["SCRIPTID"] = startup_script
 
+    if ssh_key_ids:
+        kwargs['SSHKEYID'] = ssh_key_ids
+        
     log.info("Creating Cloud VM %s", vm_["name"])
 
     __utils__["cloud.fire_event"](
