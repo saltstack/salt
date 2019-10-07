@@ -35,6 +35,7 @@ PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or o
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
+IS_DARWIN = sys.platform.lower().startswith('darwin')
 IS_WINDOWS = sys.platform.lower().startswith('win')
 
 # Python versions to run against
@@ -181,9 +182,9 @@ def _install_system_packages(session):
                         shutil.copyfile(src, dst)
 
 
-def _install_requirements(session, transport, *extra_requirements):
+def _get_distro_pip_constraints(session, transport):
     # Install requirements
-    distro_requirements = None
+    distro_constraints = []
 
     if transport == 'tcp':
         # The TCP requirements are the exact same requirements as the ZeroMQ ones
@@ -191,57 +192,106 @@ def _install_requirements(session, transport, *extra_requirements):
 
     pydir = _get_pydir(session)
 
+    if transport == 'raet':
+        # Because we still install ioflo, which requires setuptools-git, which fails with a
+        # weird SSL certificate issue(weird because the requirements file requirements install
+        # fine), let's previously have setuptools-git installed
+        session.install('--progress-bar=off', 'setuptools-git', silent=PIP_INSTALL_SILENT)
+
     if IS_WINDOWS:
-        _distro_requirements = os.path.join(REPO_ROOT,
-                                            'requirements',
-                                            'static',
-                                            pydir,
-                                            '{}-windows.txt'.format(transport))
-        if os.path.exists(_distro_requirements):
-            if transport == 'raet':
-                # Because we still install ioflo, which requires setuptools-git, which fails with a
-                # weird SSL certificate issue(weird because the requirements file requirements install
-                # fine), let's previously have setuptools-git installed
-                session.install('--progress-bar=off', 'setuptools-git', silent=PIP_INSTALL_SILENT)
-            distro_requirements = _distro_requirements
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           '{}-windows.txt'.format(transport))
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'windows.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+    elif IS_DARWIN:
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           '{}-darwin.txt'.format(transport))
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
     else:
         _install_system_packages(session)
         distro = _get_distro_info(session)
         distro_keys = [
+            'linux',
             '{id}'.format(**distro),
             '{id}-{version}'.format(**distro),
             '{id}-{version_parts[major]}'.format(**distro)
         ]
         for distro_key in distro_keys:
-            _distro_requirements = os.path.join(REPO_ROOT,
-                                                'requirements',
-                                                'static',
-                                                pydir,
-                                                '{}-{}.txt'.format(transport, distro_key))
-            if os.path.exists(_distro_requirements):
-                distro_requirements = _distro_requirements
-                break
+            _distro_constraints = os.path.join('requirements',
+                                               'static',
+                                               pydir,
+                                               '{}.txt'.format(distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join('requirements',
+                                               'static',
+                                               pydir,
+                                               '{}-{}.txt'.format(transport, distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+    return distro_constraints
 
-    if distro_requirements is not None:
-        _requirements_files = [distro_requirements]
-        requirements_files = []
+
+def _install_requirements(session, transport, *extra_requirements):
+    # Install requirements
+    distro_constraints = _get_distro_pip_constraints(session, transport)
+
+    _requirements_files = [
+        os.path.join(REPO_ROOT, 'requirements', 'base.txt'),
+        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+    ]
+
+    if transport == 'raet':
+        _requirements_files.append(
+            os.path.join(REPO_ROOT, 'requirements', 'raet.txt'),
+        )
     else:
-        _requirements_files = [
-            os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+        _requirements_files.append(
+            os.path.join(REPO_ROOT, 'requirements', 'zeromq.txt'),
+        )
+
+    if sys.platform.startswith('linux'):
+        requirements_files = [
+            os.path.join(REPO_ROOT, 'requirements', 'static', 'linux.in')
         ]
-        if sys.platform.startswith('linux'):
-            requirements_files = [
-                os.path.join(REPO_ROOT, 'requirements', 'tests.txt')
-            ]
-        elif sys.platform.startswith('win'):
-            requirements_files = [
-                os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-            ]
-        elif sys.platform.startswith('darwin'):
-            requirements_files = [
-                os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
-                os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
-            ]
+    elif sys.platform.startswith('win'):
+        requirements_files = [
+            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
+            os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.in')
+        ]
+    elif sys.platform.startswith('darwin'):
+        requirements_files = [
+            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
+            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
+            os.path.join(REPO_ROOT, 'requirements', 'static', 'osx.in')
+        ]
 
     while True:
         if not requirements_files:
@@ -265,10 +315,25 @@ def _install_requirements(session, transport, *extra_requirements):
                     continue
 
     for requirements_file in _requirements_files:
-        session.install('--progress-bar=off', '-r', requirements_file, silent=PIP_INSTALL_SILENT)
+        install_command = [
+            '--progress-bar=off', '-r', requirements_file
+        ]
+        for distro_constraint in distro_constraints:
+            install_command.extend([
+                '--constraint', distro_constraint
+            ])
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     if extra_requirements:
-        session.install('--progress-bar=off', *extra_requirements, silent=PIP_INSTALL_SILENT)
+        install_command = [
+            '--progress-bar=off',
+        ]
+        for distro_constraint in distro_constraints:
+            install_command.extend([
+                '--constraint', distro_constraint
+            ])
+        install_command += list(extra_requirements)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
 
 def _run_with_coverage(session, *test_cmd):
@@ -395,7 +460,16 @@ def runtests_parametrized(session, coverage, transport, crypto):
             session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
         else:
             session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-        session.install('--progress-bar=off', crypto, silent=PIP_INSTALL_SILENT)
+        distro_constraints = _get_distro_pip_constraints(session, transport)
+        install_command = [
+            '--progress-bar=off',
+        ]
+        for distro_constraint in distro_constraints:
+            install_command.extend([
+                '--constraint', distro_constraint
+            ])
+        install_command.append(crypto)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--tests-logfile={}'.format(RUNTESTS_LOGFILE),
@@ -617,7 +691,16 @@ def pytest_parametrized(session, coverage, transport, crypto):
             session.run('pip', 'uninstall', '-y', 'pycrypto', 'pycryptodome', 'pycryptodomex', silent=True)
         else:
             session.run('pip', 'uninstall', '-y', 'm2crypto', silent=True)
-        session.install('--progress-bar=off', crypto, silent=PIP_INSTALL_SILENT)
+        distro_constraints = _get_distro_pip_constraints(session, transport)
+        install_command = [
+            '--progress-bar=off',
+        ]
+        for distro_constraint in distro_constraints:
+            install_command.extend([
+                '--constraint', distro_constraint
+            ])
+        install_command.append(crypto)
+        session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
