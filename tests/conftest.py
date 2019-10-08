@@ -506,9 +506,9 @@ def pytest_runtest_setup(item):
             search_name = required_module_name
             if '.' not in search_name:
                 search_name += '.*'
-                if not fnmatch.filter(available_modules, search_name):
-                    not_available_modules.add(required_module_name)
-                    cached_not_available_modules.add(required_module_name)
+            if not fnmatch.filter(available_modules, search_name):
+                not_available_modules.add(required_module_name)
+                cached_not_available_modules.add(required_module_name)
 
         if not_available_modules:
             if len(not_available_modules) == 1:
