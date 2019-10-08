@@ -7,7 +7,7 @@ def testrun_timeout = 6
 def global_timeout = testrun_timeout + 1;
 
 def distro_name = 'debian'
-def distro_version = '9'
+def distro_version = '10'
 def python_version = 'py3'
 def test_transport = 'ZeroMQ'
 def salt_target_branch = 'master'
