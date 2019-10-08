@@ -619,6 +619,7 @@ import salt.utils.versions
 import salt.utils.yaml
 from salt.ext import six
 from salt.ext.six import BytesIO
+from salt.ext.six.moves.urllib.parse import parse_qsl
 
 # Import salt-api libs
 import salt.netapi
@@ -635,15 +636,6 @@ except ImportError:
     })
 
     HAS_WEBSOCKETS = False
-
-# Python version-specific imports
-try:
-    if six.PY2:
-        from urlparse import parse_qsl
-    if six.PY3:
-        from urllib.parse import parse_qsl
-except ImportError as exc:
-    logger.warn('Import failed: %s', exc)
 
 
 def html_override_tool():
