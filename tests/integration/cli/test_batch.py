@@ -75,3 +75,15 @@ class BatchTest(ShellCase):
             timeout=self.run_timeout,
         )
         self.assertEqual(cmd[-1], 2)
+
+    def test_batch_no_response(self):
+        '''
+        Tests executing a simple batch command using a number division instead of
+        a percentage with full batch CLI call.
+        '''
+        ret = 'Minion did not return. [Failed]'
+        cmd = self.run_salt(
+            '"badminion" test.ping --batch-size 2',
+            timeout=self.run_timeout,
+        )
+        self.assertIn(ret, cmd)
