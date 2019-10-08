@@ -19,7 +19,6 @@ import re
 import sys
 import time
 import errno
-import signal
 import textwrap
 import logging
 import tempfile
@@ -28,9 +27,8 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import (
-    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
-)
+from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import (AdaptedConfigurationTestCaseMixin,
                                   SaltClientTestCaseMixin,
@@ -317,33 +315,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                     if process.returncode is not None:
                         break
                 else:
-                    # We've reached the timeout
-                    if term_sent is False:
-                        # Kill the process group since sending the term signal
-                        # would only terminate the shell, not the command
-                        # executed in the shell
-                        if salt.utils.platform.is_windows():
-                            _, alive = win32_kill_process_tree(process.pid)
-                            if alive:
-                                log.error("Child processes still alive: %s", alive)
-                        else:
-                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                        term_sent = True
-                        continue
-
-                    try:
-                        # As a last resort, kill the process group
-                        if salt.utils.platform.is_windows():
-                            _, alive = win32_kill_process_tree(process.pid)
-                            if alive:
-                                log.error("Child processes still alive: %s", alive)
-                        else:
-                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                    except OSError as exc:
-                        if exc.errno != errno.ESRCH:
-                            # If errno is not "no such process", raise
-                            raise
-
+                    terminate_process(process.pid, kill_children=True)
                     return format_return(
                         process.returncode,
                         *process.communicate(),
