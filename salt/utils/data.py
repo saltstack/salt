@@ -153,6 +153,45 @@ def compare_lists(old=None, new=None):
     return ret
 
 
+def _remove_circular_refs(ob, _seen=None):
+    '''
+    Generic method to remove circular references from objects.
+    This has been taken from author Martijn Pieters
+    https://stackoverflow.com/questions/44777369/
+    remove-circular-references-in-dicts-lists-tuples/44777477#44777477
+    :param ob: dict, list, typle, set, and frozenset
+        Standard python object
+    :param object _seen:
+        Object that has circular reference
+    :returns:
+        Cleaned Python object
+    :rtype:
+        type(ob)
+    '''
+    if _seen is None:
+        _seen = set()
+    if id(ob) in _seen:
+        # Here we caught a circular reference.
+        # Alert user and cleanup to continue.
+        log.exception(
+            'Caught a circular reference in data structure below.'
+            'Cleaning and continuing execution.\n%r\n',
+            ob,
+        )
+        return None
+    _seen.add(id(ob))
+    res = ob
+    if isinstance(ob, dict):
+        res = {
+            _remove_circular_refs(k, _seen): _remove_circular_refs(v, _seen)
+            for k, v in ob.items()}
+    elif isinstance(ob, (list, tuple, set, frozenset)):
+        res = type(ob)(_remove_circular_refs(v, _seen) for v in ob)
+    # remove id again; only *nested* references count
+    _seen.remove(id(ob))
+    return res
+
+
 def decode(data, encoding=None, errors='strict', keep=False,
            normalize=False, preserve_dict_class=False, preserve_tuples=False,
            to_str=False):
@@ -183,6 +222,9 @@ def decode(data, encoding=None, errors='strict', keep=False,
     for the base character, and one for the breve mark). Normalizing allows for
     a more reliable test case.
     '''
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
         else salt.utils.stringutils.to_str
@@ -219,6 +261,9 @@ def decode_dict(data, encoding=None, errors='strict', keep=False,
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
     '''
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
         else salt.utils.stringutils.to_str
@@ -278,6 +323,9 @@ def decode_list(data, encoding=None, errors='strict', keep=False,
     Decode all string values to Unicode. Optionally use to_str=True to ensure
     strings are str types and not unicode on Python 2.
     '''
+    # Clean data object before decoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     _decode_func = salt.utils.stringutils.to_unicode \
         if not to_str \
         else salt.utils.stringutils.to_str
@@ -334,6 +382,9 @@ def encode(data, encoding=None, errors='strict', keep=False,
     can be useful for cases where the data passed to this function is likely to
     contain binary blobs.
     '''
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     if isinstance(data, Mapping):
         return encode_dict(data, encoding, errors, keep,
                            preserve_dict_class, preserve_tuples)
@@ -366,6 +417,9 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
     '''
     Encode all string values to bytes
     '''
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     rv = data.__class__() if preserve_dict_class else {}
     for key, value in six.iteritems(data):
         if isinstance(key, tuple):
@@ -419,6 +473,9 @@ def encode_list(data, encoding=None, errors='strict', keep=False,
     '''
     Encode all string values to bytes
     '''
+    # Clean data object before encoding to avoid circular references
+    data = _remove_circular_refs(data)
+
     rv = []
     for item in data:
         if isinstance(item, list):
