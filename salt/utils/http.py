@@ -60,6 +60,7 @@ from salt.ext import six
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
+from salt.ext.six.moves import StringIO
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
@@ -69,11 +70,6 @@ from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 import tornado.httputil
 import tornado.simple_httpclient
 from tornado.httpclient import HTTPClient
-
-if six.PY2:
-    from StringIO import StringIO
-elif six.PY3:
-    from io import StringIO
 
 try:
     import tornado.curl_httpclient
