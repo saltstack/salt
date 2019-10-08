@@ -30,7 +30,6 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
-from tests.support.helpers import win32_kill_process_tree
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.processes import terminate_process, terminate_process_list
 from tests.support.cli_scripts import ScriptPathMixin
@@ -440,27 +439,8 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                 process.poll()
 
                 if datetime.now() > stop_at:
-                    if term_sent is False:
-                        if salt.utils.platform.is_windows():
-                            _, alive = win32_kill_process_tree(process.pid)
-                            if alive:
-                                log.error("Child processes still alive: %s", alive)
-                        else:
-                            # Kill the process group since sending the term signal
-                            # would only terminate the shell, not the command
-                            # executed in the shell
-                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                            term_sent = True
-                            continue
-
                     try:
-                        if salt.utils.platform.is_windows():
-                            _, alive = win32_kill_process_tree(process.pid)
-                            if alive:
-                                log.error("Child processes still alive: %s", alive)
-                        else:
-                            # As a last resort, kill the process group
-                            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+                        terminate_process(pid=process.pid, kill_children=True)
                         process.wait()
                     except OSError as exc:
                         if exc.errno != errno.ESRCH:
