@@ -2311,8 +2311,10 @@ def managed(name,
 
         If ``True``, files managed using ``contents``, ``contents_pillar``, or
         ``contents_grains`` will have a newline added to the end of the file if
-        one is not present. Setting this option to ``False`` will omit this
-        final newline.
+        one is not present. Setting this option to ``False`` will ensure the
+        final line, or entry, does not contain a new line. If the last line, or
+        entry in the file does contain a new line already, this option will not
+        remove it.
 
     contents_delimiter
         .. versionadded:: 2015.8.4
@@ -2634,9 +2636,17 @@ def managed(name,
             contents = ''
             for part in validated_contents:
                 for line in part.splitlines():
-                    contents += line.rstrip('\n').rstrip('\r') + os.linesep
-            if contents_newline and not contents.endswith(os.linesep):
-                contents += os.linesep
+                    if not line == validated_contents[-1]:
+                        # So long as we haven't reached the end, strip out the
+                        # newline and carriage return and add a platform
+                        # specific line ending with os.linesep
+                        contents += line.rstrip('\n').rstrip('\r') + os.linesep
+                    else:
+                        # Were at the last line, decide if a newline needs to
+                        # go in or not
+                        contents += line.rstrip('\n').rstrip('\r')
+                        if contents_newline:
+                            contents += os.linesep
         except UnicodeDecodeError:
             # Either something terrible happened, or we have binary data.
             if template:
