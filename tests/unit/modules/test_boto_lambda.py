@@ -8,12 +8,6 @@ import logging
 import os
 from tempfile import NamedTemporaryFile
 
-# linux_distribution deprecated in py3.7
-try:
-    from platform import linux_distribution
-except ImportError:
-    from distro import linux_distribution
-
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
@@ -41,10 +35,6 @@ try:
     HAS_BOTO = True
 except ImportError:
     HAS_BOTO = False
-
-ON_SUSE = False
-if 'SuSE' in linux_distribution(full_distribution_name=False):
-    ON_SUSE = True
 
 # pylint: enable=import-error,no-name-in-module
 
