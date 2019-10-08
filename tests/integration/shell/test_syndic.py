@@ -25,12 +25,12 @@ import salt.utils.platform
 
 # Import 3rd-party libs
 import psutil
-import pytest
+#import pytest
 
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope='module', autouse=True)
+#@pytest.fixture(scope='module', autouse=True)
 def session_salt_syndic(request, session_salt_master_of_masters, session_salt_syndic):
     request.session.stats_processes.update(OrderedDict((
         ('Salt Syndic Master', psutil.Process(session_salt_master_of_masters.pid)),
