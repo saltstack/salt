@@ -75,3 +75,15 @@ class BatchTest(ShellCase):
             timeout=self.run_timeout,
         )
         self.assertEqual(cmd[-1], 2)
+
+    def test_batch_no_response(self):
+        '''
+        Tests executing a simple batch command on a non-existent device
+        returns the correct response.
+        '''
+        ret = 'Minion did not return. [Failed]'
+        cmd = self.run_salt(
+            ' L "server1.domain.com" test.ping --batch-size 2',
+            timeout=self.run_timeout,
+        )
+        self.assertIn(ret, cmd)
