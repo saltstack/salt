@@ -43,7 +43,7 @@ The 5.5.0.2014.1.1 is a known stable version that this original vSphere Executio
 Module was developed against.
 
 vSphere Automation SDK
--------
+----------------------
 
 vSphere Automation SDK can be installed via pip:
 
@@ -9490,7 +9490,7 @@ def create_tag(name, description, category_id,
         str
     :raise: AlreadyExists
         if the name provided in the create_spec is the name of an already
-         existing tag in the input category.
+        existing tag in the input category.
     :raise: InvalidArgument
         if any of the input information in the create_spec is invalid.
     :raise: NotFound
