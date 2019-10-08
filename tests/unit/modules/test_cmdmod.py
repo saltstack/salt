@@ -329,7 +329,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                     if not salt.utils.platform.is_darwin():
                         getpwnam_mock.assert_called_with('foobar')
 
-    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    @skipIf(not salt.utils.platform.is_darwin(), 'applicable to macOS only')
     def test_shell_properly_handled_on_macOS(self):
         '''
         cmd.run should invoke a new bash login only
@@ -359,35 +359,34 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('pwd.getpwnam') as getpwnam_mock:
             with patch('salt.utils.timed_subprocess.TimedProc', mock_proc):
-                with patch('salt.utils.platform.is_darwin', MagicMock(return_value=True)):
 
-                    # User default shell is '/usr/local/bin/bash'
-                    user_default_shell = '/usr/local/bin/bash'
-                    with patch.dict(cmdmod.__salt__,
-                                    {'user.info': MagicMock(return_value={'shell': user_default_shell})}):
+                # User default shell is '/usr/local/bin/bash'
+                user_default_shell = '/usr/local/bin/bash'
+                with patch.dict(cmdmod.__salt__,
+                                {'user.info': MagicMock(return_value={'shell': user_default_shell})}):
 
-                        cmd_handler.clear()
-                        cmdmod._run('ls',
-                                    cwd=tempfile.gettempdir(),
-                                    runas='foobar',
-                                    use_vt=False)
+                    cmd_handler.clear()
+                    cmdmod._run('ls',
+                                cwd=tempfile.gettempdir(),
+                                runas='foobar',
+                                use_vt=False)
 
-                        self.assertRegex(cmd_handler.get(), "{} -l -c".format(user_default_shell),
-                                         "cmd invokes right bash session on macOS")
+                    self.assertRegex(cmd_handler.get(), "{} -l -c".format(user_default_shell),
+                                        "cmd invokes right bash session on macOS")
 
-                    # User default shell is '/bin/zsh'
-                    user_default_shell = '/bin/zsh'
-                    with patch.dict(cmdmod.__salt__,
-                                    {'user.info': MagicMock(return_value={'shell': user_default_shell})}):
+                # User default shell is '/bin/zsh'
+                user_default_shell = '/bin/zsh'
+                with patch.dict(cmdmod.__salt__,
+                                {'user.info': MagicMock(return_value={'shell': user_default_shell})}):
 
-                        cmd_handler.clear()
-                        cmdmod._run('ls',
-                                    cwd=tempfile.gettempdir(),
-                                    runas='foobar',
-                                    use_vt=False)
+                    cmd_handler.clear()
+                    cmdmod._run('ls',
+                                cwd=tempfile.gettempdir(),
+                                runas='foobar',
+                                use_vt=False)
 
-                        self.assertNotRegex(cmd_handler.get(), "bash -l -c",
-                                            "cmd does not invoke user shell on macOS")
+                    self.assertNotRegex(cmd_handler.get(), "bash -l -c",
+                                        "cmd does not invoke user shell on macOS")
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
         '''
