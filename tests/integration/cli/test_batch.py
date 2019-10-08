@@ -83,7 +83,7 @@ class BatchTest(ShellCase):
         '''
         ret = 'Minion did not return. [Failed]'
         cmd = self.run_salt(
-            ' L "server1.domain.com" test.ping --batch-size 2',
+            ' -L "server1.domain.com" test.ping --batch-size 2',
             timeout=self.run_timeout,
         )
         self.assertIn(ret, cmd)
