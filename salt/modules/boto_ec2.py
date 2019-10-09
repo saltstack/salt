@@ -709,7 +709,7 @@ def terminate(instance_id=None, name=None, region=None,
                                region=region, key=key, keyid=keyid,
                                profile=profile, return_objs=True,
                                filters=filters)
-    if instances in (False, None, []):
+    if instances in {False, None, []}:
         return instances
 
     if len(instances) == 1:

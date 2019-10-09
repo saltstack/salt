@@ -161,7 +161,7 @@ def _get_comparison_spec(pkgver):
     comparison, and "==" will be the operator returned.
     '''
     oper, verstr = salt.utils.pkg.split_comparison(pkgver.strip())
-    if oper in ('=', ''):
+    if oper in {'=', ''}:
         oper = '=='
     return oper, verstr
 
@@ -2609,7 +2609,7 @@ def _uninstall(
     '''
     Common function for package removal
     '''
-    if action not in ('remove', 'purge'):
+    if action not in {'remove', 'purge'}:
         return {'name': name,
                 'changes': {},
                 'result': False,

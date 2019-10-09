@@ -323,7 +323,7 @@ def _run(name,
                 and state(name) != 'stopped':
             stop(name)
 
-    if output in (None, 'all'):
+    if output in {None, 'all'}:
         return ret
     else:
         return ret[output]
@@ -1330,7 +1330,7 @@ def _pull_image(pull_type, image, name, **kwargs):
         raise SaltInvocationError(
             'Container \'{0}\' already exists'.format(name)
         )
-    if pull_type in ('raw', 'tar'):
+    if pull_type in {'raw', 'tar'}:
         valid_kwargs = ('verify',)
     elif pull_type == 'dkr':
         valid_kwargs = ('index',)
@@ -1350,7 +1350,7 @@ def _pull_image(pull_type, image, name, **kwargs):
 
     pull_opts = []
 
-    if pull_type in ('raw', 'tar'):
+    if pull_type in {'raw', 'tar'}:
         verify = kwargs.get('verify', False)
         if not verify:
             pull_opts.append('--verify=no')
@@ -1365,7 +1365,7 @@ def _pull_image(pull_type, image, name, **kwargs):
             except AttributeError:
                 _bad_verify()
             else:
-                if verify not in ('signature', 'checksum'):
+                if verify not in {'signature', 'checksum'}:
                     _bad_verify()
                 pull_opts.append('--verify={0}'.format(verify))
 

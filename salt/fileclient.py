@@ -458,7 +458,7 @@ class Client(object):
             url_path = ':'.join((url_scheme, url_path))
             url_scheme = 'file'
 
-        if url_scheme in ('file', ''):
+        if url_scheme in {'file', ''}:
             # Local filesystem
             if not os.path.isabs(url_path):
                 raise CommandExecutionError(
@@ -573,7 +573,7 @@ class Client(object):
 
         get_kwargs = {}
         if url_data.username is not None \
-                and url_data.scheme in ('http', 'https'):
+                and url_data.scheme in {'http', 'https'}:
             netloc = url_data.netloc
             at_sign_pos = netloc.rfind('@')
             if at_sign_pos != -1:

@@ -283,14 +283,14 @@ def describe(Bucket,
             try:
                 data = query(Bucket=Bucket)
             except ClientError as e:
-                if e.response.get('Error', {}).get('Code') in (
+                if e.response.get('Error', {}).get('Code') in {
                             'NoSuchLifecycleConfiguration',
                             'NoSuchCORSConfiguration',
                             'NoSuchBucketPolicy',
                             'NoSuchWebsiteConfiguration',
                             'ReplicationConfigurationNotFoundError',
                             'NoSuchTagSet',
-                            ):
+                            }:
                     continue
                 raise
             if 'ResponseMetadata' in data:
@@ -400,7 +400,7 @@ def list_object_versions(Bucket, Delimiter=None, EncodingType=None, Prefix=None,
         while IsTruncated:
             ret = conn.list_object_versions(**args)
             IsTruncated = ret.get('IsTruncated', False)
-            if IsTruncated in ('True', 'true', True):
+            if IsTruncated in {'True', 'true', True}:
                 args['KeyMarker'] = ret['NextKeyMarker']
                 args['VersionIdMarker'] = ret['NextVersionIdMarker']
             Versions += ret.get('Versions', [])
@@ -438,7 +438,7 @@ def list_objects(Bucket, Delimiter=None, EncodingType=None, Prefix=None,
         while IsTruncated:
             ret = conn.list_objects_v2(**args)
             IsTruncated = ret.get('IsTruncated', False)
-            if IsTruncated in ('True', 'true', True):
+            if IsTruncated in {'True', 'true', True}:
                 args['ContinuationToken'] = ret['NextContinuationToken']
             Contents += ret.get('Contents', [])
         return {'Contents': Contents}

@@ -893,9 +893,9 @@ class WinSoftware(object):
             # winerror.ERROR_INVALID_DOMAINNAME The format of the specified domain name is
             # invalid. e.g. S-1-5-19 which is a local account
             # winerror.ERROR_NONE_MAPPED No mapping between account names and security IDs was done.
-            if exc.winerror in (winerror.ERROR_NO_SUCH_DOMAIN,
+            if exc.winerror in {winerror.ERROR_NO_SUCH_DOMAIN,
                                 winerror.ERROR_INVALID_DOMAINNAME,
-                                winerror.ERROR_NONE_MAPPED):
+                                winerror.ERROR_NONE_MAPPED}:
                 return '{0}@{1}'.format(name.lower(), domain.lower())
             else:
                 raise
@@ -1012,7 +1012,7 @@ class WinSoftware(object):
 
         if (re.match(r'^{.*\}\.KB\d{6,}$', key_software, flags=re.IGNORECASE + re.UNICODE) is not None or
                 (default_value and default_value.startswith(('KB', 'kb', 'Kb'))) or
-                (release_type and release_type in ('Hotfix', 'Update Rollup', 'Security Update', 'ServicePack'))):
+                (release_type and release_type in {'Hotfix', 'Update Rollup', 'Security Update', 'ServicePack'})):
             log.debug('skipping hotfix/update/service pack %s', key_software)
             return
 

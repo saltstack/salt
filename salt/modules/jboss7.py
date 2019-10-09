@@ -190,7 +190,7 @@ def __get_single_assignment_string(key, val, ds_attributes):
 def __format_value(key, value, ds_attributes):
     type_ = ds_attributes[key]['type']
     if type_ == 'BOOLEAN':
-        if value in ('true', 'false'):
+        if value in {'true', 'false'}:
             return value
         elif isinstance(value, bool):
             if value:

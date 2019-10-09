@@ -279,9 +279,9 @@ def connect(connect_spec=None):
             tls = {}
         vars = {}
         for k, v in six.iteritems(tls):
-            if k in ('starttls', 'newctx'):
+            if k in {'starttls', 'newctx'}:
                 vars[k] = True
-            elif k in ('crlcheck', 'require_cert'):
+            elif k in {'crlcheck', 'require_cert'}:
                 l.set_option(getattr(ldap, 'OPT_X_TLS_' + k.upper()),
                              getattr(ldap, 'OPT_X_TLS_' + v.upper()))
             else:

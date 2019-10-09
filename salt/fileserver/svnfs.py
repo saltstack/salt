@@ -270,7 +270,7 @@ def _clear_old_remotes():
             pass
     to_remove = []
     for item in cachedir_ls:
-        if item in ('hash', 'refs'):
+        if item in {'hash', 'refs'}:
             continue
         path = os.path.join(bp_, item)
         if os.path.isdir(path):

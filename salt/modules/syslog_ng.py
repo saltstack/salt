@@ -419,7 +419,7 @@ def _is_statement_unnamed(statement):
     junction.
 
     '''
-    return statement in ('log', 'channel', 'junction', 'options')
+    return statement in {'log', 'channel', 'junction', 'options'}
 
 
 def _is_simple_type(value):

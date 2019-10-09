@@ -369,12 +369,12 @@ def status(name):
     for node in _iter(root, 'node'):
         peerid = node.find('peerid').text
         hostname = node.find('hostname').text
-        if hostname not in ('NFS Server', 'Self-heal Daemon'):
+        if hostname not in {'NFS Server', 'Self-heal Daemon'}:
             hostref[peerid] = hostname
 
     for node in _iter(root, 'node'):
         hostname = node.find('hostname').text
-        if hostname not in ('NFS Server', 'Self-heal Daemon'):
+        if hostname not in {'NFS Server', 'Self-heal Daemon'}:
             path = node.find('path').text
             ret['bricks'][
                 '{0}:{1}'.format(hostname, path)] = etree_legacy_wrap(node)

@@ -81,7 +81,7 @@ class SaltCP(object):
                 # Path does not exist
                 sys.stderr.write('{0} does not exist\n'.format(path))
                 sys.exit(42)
-            elif exc.errno in (errno.EINVAL, errno.ENOTDIR):
+            elif exc.errno in {errno.EINVAL, errno.ENOTDIR}:
                 # Path is a file (EINVAL on Windows, ENOTDIR otherwise)
                 files[path] = self._mode(path)
         else:

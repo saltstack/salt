@@ -291,7 +291,7 @@ class Minion(salt.utils.parsers.MinionOptionParser, DaemonsMixin):  # pylint: di
         transport = self.config.get('transport').lower()
 
         # TODO: AIO core is separate from transport
-        if transport in ('zeromq', 'tcp', 'detect'):
+        if transport in {'zeromq', 'tcp', 'detect'}:
             # Late import so logging works correctly
             import salt.minion
             # If the minion key has not been accepted, then Salt enters a loop
@@ -470,6 +470,7 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
             self.shutdown(1)
 
         # TODO: AIO core is separate from transport
+<<<<<<< HEAD
         # Late import so logging works correctly
         import salt.minion
         # If the minion key has not been accepted, then Salt enters a loop
@@ -481,6 +482,26 @@ class ProxyMinion(salt.utils.parsers.ProxyMinionOptionParser, DaemonsMixin):  # 
         if self.config.get('master_type') == 'func':
             salt.minion.eval_master_func(self.config)
         self.minion = salt.minion.ProxyMinionManager(self.config)
+=======
+        if self.config['transport'].lower() in {'zeromq', 'tcp', 'detect'}:
+            # Late import so logging works correctly
+            import salt.minion
+            # If the minion key has not been accepted, then Salt enters a loop
+            # waiting for it, if we daemonize later then the minion could halt
+            # the boot process waiting for a key to be accepted on the master.
+            # This is the latest safe place to daemonize
+            self.daemonize_if_required()
+            self.set_pidfile()
+            if self.config.get('master_type') == 'func':
+                salt.minion.eval_master_func(self.config)
+            self.minion = salt.minion.ProxyMinionManager(self.config)
+        else:
+            # For proxy minions, this doesn't work yet.
+            import salt.daemons.flo
+            self.daemonize_if_required()
+            self.set_pidfile()
+            self.minion = salt.daemons.flo.IofloMinion(self.config)
+>>>>>>> 4a643acf2f... Replaced all O(n) comparisons that match /in tuple/ with /in set/ which compares in O(1).
 
     def start(self):
         '''

@@ -387,7 +387,7 @@ def _get_ips(node, addr_type='public'):
     ret = []
     for _, interface in node.addresses.items():
         for addr in interface:
-            if addr_type in ('floating', 'fixed') and addr_type == addr.get('OS-EXT-IPS:type'):
+            if addr_type in {'floating', 'fixed'} and addr_type == addr.get('OS-EXT-IPS:type'):
                 ret.append(addr['addr'])
             elif addr_type == 'public' and __utils__['cloud.is_public_ip'](addr['addr']):
                 ret.append(addr['addr'])

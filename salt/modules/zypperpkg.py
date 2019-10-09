@@ -1591,7 +1591,7 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__['osarch'], 'noarch') \
+    if arch in {__grains__['osarch'], 'noarch'} \
             or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
         return name[:-(len(arch) + 1)]
     return name

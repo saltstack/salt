@@ -491,7 +491,7 @@ def reloaded(name, jboss_config, timeout=60, interval=5):
            'comment': ''}
 
     status = __salt__['jboss7.status'](jboss_config)
-    if not status['success'] or status['result'] not in ('running', 'reload-required'):
+    if not status['success'] or status['result'] not in {'running', 'reload-required'}:
         ret['result'] = False
         ret['comment'] = "Cannot reload server configuration, it should be up and in 'running' or 'reload-required' state."
         return ret

@@ -1620,7 +1620,7 @@ def get_repo(repo, **kwargs):
     ppa_auth = kwargs.get('ppa_auth', None)
     # we have to be clever about this since the repo definition formats
     # are a bit more "loose" than in some other distributions
-    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
+    if repo.startswith('ppa:') and __grains__['os'] in {'Ubuntu', 'Mint', 'neon'}:
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         dist = __grains__['lsb_distrib_codename']
@@ -1698,7 +1698,7 @@ def del_repo(repo, **kwargs):
     '''
     _check_apt()
     is_ppa = False
-    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
+    if repo.startswith('ppa:') and __grains__['os'] in {'Ubuntu', 'Mint', 'neon'}:
         # This is a PPA definition meaning special handling is needed
         # to derive the name.
         is_ppa = True
@@ -1851,7 +1851,7 @@ def get_repo_keys():
             log.debug('Skipping line: %s', line)
             continue
 
-        if items[0] in ('pub', 'sub'):
+        if items[0] in {'pub', 'sub'}:
             key_props.update({
                 'algorithm': items[3],
                 'bits': items[2],
@@ -2080,7 +2080,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     # to ensure no one sets some key values that _shouldn't_ be changed on the
     # object itself, this is just a white-list of "ok" to set properties
     if repo.startswith('ppa:'):
-        if __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
+        if __grains__['os'] in {'Ubuntu', 'Mint', 'neon'}:
             # secure PPAs cannot be supported as of the time of this code
             # implementation via apt-add-repository.  The code path for
             # secure PPAs should be the same as urllib method
@@ -2390,7 +2390,7 @@ def expand_repo_def(**kwargs):
 
     sanitized = {}
     repo = salt.utils.pkg.deb.strip_uri(kwargs['repo'])
-    if repo.startswith('ppa:') and __grains__['os'] in ('Ubuntu', 'Mint', 'neon'):
+    if repo.startswith('ppa:') and __grains__['os'] in {'Ubuntu', 'Mint', 'neon'}:
         dist = __grains__['lsb_distrib_codename']
         owner_name, ppa_name = repo[4:].split('/', 1)
         if 'ppa_auth' in kwargs:
@@ -2731,7 +2731,7 @@ def show(*names, **kwargs):
 
     def _check_filter(key):
         key = key.lower()
-        return True if key in ('package', 'version') or not filter_ \
+        return True if key in {'package', 'version'} or not filter_ \
             else key in filter_
 
     ret = {}

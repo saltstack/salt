@@ -160,7 +160,7 @@ def present(name,
         # is the case, then bail out early.
         c_profile = __salt__['lxc.get_container_profile'](profile)
         if not any(x for x in c_profile
-                   if x in ('template', 'image', 'clone_from')):
+                   if x in {'template', 'image', 'clone_from'}):
             ret['result'] = False
             ret['comment'] = ('No template, image, or clone_from parameter '
                               'was found in either the state\'s arguments or '
@@ -200,7 +200,7 @@ def present(name,
                 # running. Set the result back to True and return
                 return ret
             elif running:
-                if state['old'] in ('frozen', 'stopped'):
+                if state['old'] in {'frozen', 'stopped'}:
                     ret['comment'] = (
                         'Container \'{0}\' would be {1}'.format(
                             name,
@@ -214,7 +214,7 @@ def present(name,
                     ret['comment'] += ' and is running'
                     return ret
             else:
-                if state['old'] in ('frozen', 'running'):
+                if state['old'] in {'frozen', 'running'}:
                     ret['comment'] = (
                         'Container \'{0}\' would be stopped'.format(name)
                     )

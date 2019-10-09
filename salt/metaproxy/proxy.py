@@ -762,7 +762,7 @@ def target_load(self, load):
         match_func = self.matchers.get('{0}_match.match'.format(load['tgt_type']), None)
         if match_func is None:
             return False
-        if load['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
+        if load['tgt_type'] in {'grain', 'grain_pcre', 'pillar'}:
             delimiter = load.get('delimiter', DEFAULT_TARGET_DELIM)
             if not match_func(load['tgt'], delimiter=delimiter):
                 return False

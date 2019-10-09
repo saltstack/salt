@@ -106,7 +106,7 @@ def describe_topic(name, region=None, key=None, keyid=None, profile=None):
     topics = list_topics(region=region, key=key, keyid=keyid, profile=profile)
     ret = {}
     for topic, arn in topics.items():
-        if name in (topic, arn):
+        if name in {topic, arn}:
             ret = {'TopicArn': arn}
             ret['Subscriptions'] = list_subscriptions_by_topic(arn, region=region, key=key,
                                                                keyid=keyid, profile=profile)

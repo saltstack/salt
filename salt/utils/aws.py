@@ -258,7 +258,7 @@ def sig4(method, endpoint, params, prov_dict,
         location = DEFAULT_LOCATION
 
     params_with_headers = params.copy()
-    if product not in ('s3', 'ssm'):
+    if product not in {'s3', 'ssm'}:
         params_with_headers['Version'] = aws_api_version
     keys = sorted(params_with_headers.keys())
     values = list(map(params_with_headers.get, keys))

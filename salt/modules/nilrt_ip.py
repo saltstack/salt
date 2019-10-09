@@ -200,7 +200,7 @@ def _get_service_info(service):
                 info = 'requestmode'
                 if value == 'dhcp':
                     value = 'dhcp_linklocal'
-                elif value in ('manual', 'fixed'):
+                elif value in {'manual', 'fixed'}:
                     value = 'static'
             data['ipv4'][info.lower()] = six.text_type(value)
 

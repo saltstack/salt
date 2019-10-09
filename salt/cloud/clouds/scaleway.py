@@ -161,7 +161,7 @@ def get_image(server_):
         'image', server_, __opts__, search_global=False
     ))
     for image in images:
-        if server_image in (images[image]['name'], images[image]['id']):
+        if server_image in {images[image]['name'], images[image]['id']}:
             return images[image]['id']
     raise SaltCloudNotFound(
         'The specified image, \'{0}\', could not be found.'.format(server_image)

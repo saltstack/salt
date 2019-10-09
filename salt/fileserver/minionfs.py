@@ -366,7 +366,7 @@ def dir_list(load):
             relpath = os.path.relpath(root, minion_files_dir)
             # Ensure that the current directory and directories outside of
             # the minion dir do not end up in return list
-            if relpath in ('.', '..') or relpath.startswith('../'):
+            if relpath in {'.', '..'} or relpath.startswith('../'):
                 continue
             ret.append(os.path.join(mountpoint, minion, relpath))
     return ret

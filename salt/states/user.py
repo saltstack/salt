@@ -106,7 +106,7 @@ def _changes(name,
     wanted_groups = sorted(set((groups or []) + (optional_groups or [])))
     if uid and lusr['uid'] != uid:
         change['uid'] = uid
-    if gid is not None and lusr['gid'] not in (gid, __salt__['file.group_to_gid'](gid)):
+    if gid is not None and lusr['gid'] not in {gid, __salt__['file.group_to_gid'](gid)}:
         change['gid'] = gid
     default_grp = __salt__['file.gid_to_group'](
         gid if gid is not None else lusr['gid']
@@ -195,7 +195,7 @@ def _changes(name,
         if lusr['other'] != other:
             change['other'] = other
     # OpenBSD/FreeBSD login class
-    if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
+    if __grains__['kernel'] in {'OpenBSD', 'FreeBSD'}:
         if loginclass:
             if __salt__['user.get_loginclass'](name) != loginclass:
                 change['loginclass'] = loginclass
@@ -481,7 +481,7 @@ def present(name,
         other = salt.utils.data.decode(other)
 
     # createhome not supported on Windows or Mac
-    if __grains__['kernel'] in ('Darwin', 'Windows'):
+    if __grains__['kernel'] in {'Darwin', 'Windows'}:
         createhome = False
 
     ret = {'name': name,
@@ -584,7 +584,7 @@ def present(name,
         # The user is present
         if 'shadow.info' in __salt__:
             lshad = __salt__['shadow.info'](name)
-        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
+        if __grains__['kernel'] in {'OpenBSD', 'FreeBSD'}:
             lcpre = __salt__['user.get_loginclass'](name)
         pre = __salt__['user.info'](name)
         for key, val in iteritems(changes):
@@ -602,13 +602,13 @@ def present(name,
                 continue
             # run chhome once to avoid any possible bad side-effect
             if key == 'home' and 'homeDoesNotExist' not in changes:
-                if __grains__['kernel'] in ('Darwin', 'Windows'):
+                if __grains__['kernel'] in {'Darwin', 'Windows'}:
                     __salt__['user.chhome'](name, val)
                 else:
                     __salt__['user.chhome'](name, val, persist=False)
                 continue
             if key == 'homeDoesNotExist':
-                if __grains__['kernel'] in ('Darwin', 'Windows'):
+                if __grains__['kernel'] in {'Darwin', 'Windows'}:
                     __salt__['user.chhome'](name, val)
                 else:
                     __salt__['user.chhome'](name, val, persist=True)
@@ -653,7 +653,7 @@ def present(name,
         spost = {}
         if 'shadow.info' in __salt__ and lshad['passwd'] != password:
             spost = __salt__['shadow.info'](name)
-        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD'):
+        if __grains__['kernel'] in {'OpenBSD', 'FreeBSD'}:
             lcpost = __salt__['user.get_loginclass'](name)
         # See if anything changed
         for key in post:
@@ -666,7 +666,7 @@ def present(name,
                         ret['changes'][key] = 'XXX-REDACTED-XXX'
                     else:
                         ret['changes'][key] = spost[key]
-        if __grains__['kernel'] in ('OpenBSD', 'FreeBSD') and lcpost != lcpre:
+        if __grains__['kernel'] in {'OpenBSD', 'FreeBSD'} and lcpost != lcpre:
             ret['changes']['loginclass'] = lcpost
         if ret['changes']:
             ret['comment'] = 'Updated user {0}'.format(name)

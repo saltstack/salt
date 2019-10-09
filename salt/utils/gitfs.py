@@ -503,7 +503,7 @@ class GitProvider(object):
         '''
         def _getconf(self, tgt_env='base'):
             strip_sep = lambda x: x.rstrip(os.sep) \
-                if name in ('root', 'mountpoint') \
+                if name in {'root', 'mountpoint'} \
                 else x
             if self.role != 'gitfs':
                 return strip_sep(getattr(self, '_' + name))
@@ -1039,7 +1039,7 @@ class GitProvider(object):
         '''
         Examine self.id and assign self.url (and self.branch, for git_pillar)
         '''
-        if self.role in ('git_pillar', 'winrepo'):
+        if self.role in {'git_pillar', 'winrepo'}:
             # With winrepo and git_pillar, the remote is specified in the
             # format '<branch> <url>', so that we can get a unique identifier
             # to hash for each remote.
@@ -1267,8 +1267,8 @@ class GitPython(GitProvider):
                     fetchinfo.commit.hexsha[:7]
                 )
                 new_objs = True
-            elif fetchinfo.flags in (fetchinfo.NEW_TAG,
-                                     fetchinfo.NEW_HEAD):
+            elif fetchinfo.flags in {fetchinfo.NEW_TAG,
+                                     fetchinfo.NEW_HEAD}:
                 log.debug(
                     '%s has fetched new %s \'%s\' for remote \'%s\'',
                     self.role,
@@ -1984,7 +1984,7 @@ class Pygit2(GitProvider):
 
         transport = transport.lower()
 
-        if transport in ('git', 'file'):
+        if transport in {'git', 'file'}:
             # These transports do not use auth
             return True
 
@@ -2278,7 +2278,7 @@ class GitBase(object):
                 pass
         to_remove = []
         for item in cachedir_ls:
-            if item in ('hash', 'refs'):
+            if item in {'hash', 'refs'}:
                 continue
             path = salt.utils.path.join(self.cache_root, item)
             if os.path.isdir(path):

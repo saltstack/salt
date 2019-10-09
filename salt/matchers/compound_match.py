@@ -60,11 +60,11 @@ def match(tgt, opts=None):
         # Easy check first
         if word in opers:
             if results:
-                if results[-1] == '(' and word in ('and', 'or'):
+                if results[-1] == '(' and word in {'and', 'or'}:
                     log.error('Invalid beginning operator after "(": %s', word)
                     return False
                 if word == 'not':
-                    if not results[-1] in ('and', 'or', '('):
+                    if not results[-1] in {'and', 'or', '('}:
                         results.append('and')
                 results.append(word)
             else:

@@ -2502,7 +2502,7 @@ def request_instance(vm_):
             'ex_preemptible': config.get_cloud_config_value(
                 'preemptible', vm_, __opts__, default=False)
         })
-        if kwargs.get('ex_disk_type') not in ('pd-standard', 'pd-ssd'):
+        if kwargs.get('ex_disk_type') not in {'pd-standard', 'pd-ssd'}:
             raise SaltCloudSystemExit(
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''

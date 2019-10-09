@@ -528,7 +528,7 @@ class MinionBase(object):
                 eval_master_func(opts)
 
             # if failover or distributed is set, master has to be of type list
-            elif opts['master_type'] in ('failover', 'distributed'):
+            elif opts['master_type'] in {'failover', 'distributed'}:
                 if isinstance(opts['master'], list):
                     log.info(
                         'Got list of available master addresses: %s',
@@ -990,7 +990,7 @@ class MinionManager(MinionBase):
         Spawn all the coroutines which will sign in to masters
         '''
         masters = self.opts['master']
-        if (self.opts['master_type'] in ('failover', 'distributed')) or not isinstance(self.opts['master'], list):
+        if (self.opts['master_type'] in {'failover', 'distributed'}) or not isinstance(self.opts['master'], list):
             masters = [masters]
 
         beacons_leader = True
@@ -2781,7 +2781,7 @@ class Minion(MinionBase):
             match_func = self.matchers.get('{0}_match.match'.format(load['tgt_type']), None)
             if match_func is None:
                 return False
-            if load['tgt_type'] in ('grain', 'grain_pcre', 'pillar'):
+            if load['tgt_type'] in {'grain', 'grain_pcre', 'pillar'}:
                 delimiter = load.get('delimiter', DEFAULT_TARGET_DELIM)
                 if not match_func(load['tgt'], delimiter=delimiter):
                     return False

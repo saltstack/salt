@@ -726,7 +726,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
 
             cmp_result = cmp_func((ver1_e, ver1_v, ver1_r),
                                   (ver2_e, ver2_v, ver2_r))
-            if cmp_result not in (-1, 0, 1):
+            if cmp_result not in {-1, 0, 1}:
                 raise CommandExecutionError(
                     'Comparison result \'{0}\' is invalid'.format(cmp_result)
                 )

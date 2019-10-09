@@ -121,7 +121,7 @@ def query(key, value=None, service=None, profile=None):  # pylint: disable=W0613
 
     extras = {}
     for item in profile[key]:
-        if item not in ('backend', 'url'):
+        if item not in {'backend', 'url'}:
             extras[item] = profile[key][item]
 
     result = http.query(

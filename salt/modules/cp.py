@@ -490,7 +490,7 @@ def cache_file(path, saltenv='base', source_hash=None):
 
     contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
+    path_is_remote = _urlparse(path).scheme in {'http', 'https', 'ftp'}
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs

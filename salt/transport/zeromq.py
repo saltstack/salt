@@ -158,7 +158,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo))  # pylint: disable=too-many-function-args
         memo[id(self)] = result
         for key in self.__dict__:
-            if key in ('_io_loop', '_refcount', '_refcount_lock'):
+            if key in {'_io_loop', '_refcount', '_refcount_lock'}:
                 continue
                 # The _io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
@@ -533,8 +533,8 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         # 2 includes a header which says who should do it
         elif messages_len == 2:
             message_target = salt.utils.stringutils.to_str(messages[0])
-            if (self.opts.get('__role') != 'syndic' and message_target not in ('broadcast', self.hexid)) or \
-                (self.opts.get('__role') == 'syndic' and message_target not in ('broadcast', 'syndic')):
+            if (self.opts.get('__role') != 'syndic' and message_target not in {'broadcast', self.hexid}) or \
+                (self.opts.get('__role') == 'syndic' and message_target not in {'broadcast', 'syndic'}):
                 log.debug('Publish received for not this minion: %s', message_target)
                 raise tornado.gen.Return(None)
             payload = self.serial.loads(messages[1])

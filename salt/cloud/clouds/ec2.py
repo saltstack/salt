@@ -1037,7 +1037,7 @@ def ssh_interface(vm_):
         'ssh_interface', vm_, __opts__, default='public_ips',
         search_global=False
     )
-    if ret not in ('public_ips', 'private_ips'):
+    if ret not in {'public_ips', 'private_ips'}:
         log.warning(
             'Invalid ssh_interface: %s. '
             'Allowed options are ("public_ips", "private_ips"). '
@@ -2527,7 +2527,7 @@ def _validate_key_path_and_mode(key_filename):
         )
 
     key_mode = stat.S_IMODE(os.stat(key_filename).st_mode)
-    if key_mode not in (0o400, 0o600):
+    if key_mode not in {0o400, 0o600}:
         raise SaltCloudSystemExit(
             'The EC2 key file \'{0}\' needs to be set to mode 0400 or 0600.\n'.format(
                 key_filename

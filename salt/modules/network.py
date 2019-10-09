@@ -333,7 +333,7 @@ def _netstat_bsd():
     ppid = _ppid()
     if __grains__['kernel'] == 'OpenBSD':
         netinfo = _netinfo_openbsd()
-    elif __grains__['kernel'] in ('FreeBSD', 'NetBSD'):
+    elif __grains__['kernel'] in {'FreeBSD', 'NetBSD'}:
         netinfo = _netinfo_freebsd_netbsd()
     for idx in range(len(ret)):
         local = ret[idx]['local-address']
@@ -764,7 +764,7 @@ def netstat():
             return _ss_linux()
         else:
             return _netstat_linux()
-    elif __grains__['kernel'] in ('OpenBSD', 'FreeBSD', 'NetBSD'):
+    elif __grains__['kernel'] in {'OpenBSD', 'FreeBSD', 'NetBSD'}:
         return _netstat_bsd()
     elif __grains__['kernel'] == 'SunOS':
         return _netstat_sunos()
@@ -894,7 +894,7 @@ def traceroute(host):
         # Parse output from unix variants
         if 'Darwin' in six.text_type(traceroute_version[1]) or \
                 'FreeBSD' in six.text_type(traceroute_version[1]) or \
-                __grains__['kernel'] in ('SunOS', 'AIX'):
+                __grains__['kernel'] in {'SunOS', 'AIX'}:
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
             except IndexError:
@@ -1006,7 +1006,7 @@ def arp():
                 continue
             ret[comps[1]] = comps[0]
         elif __grains__['kernel'] == 'AIX':
-            if comps[0] in ('bucket', 'There'):
+            if comps[0] in {'bucket', 'There'}:
                 continue
             ret[comps[3]] = comps[1].strip('(').strip(')')
         else:
@@ -1355,7 +1355,7 @@ def mod_hostname(hostname):
                             quote_type)))
                 else:
                     fh_.write(salt.utils.stringutils.to_str(net))
-    elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
+    elif __grains__['os_family'] in {'Debian', 'NILinuxRT'}:
         with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
         if __grains__['lsb_distrib_id'] == 'nilrt':
@@ -1689,7 +1689,7 @@ def default_route(family=None):
         default_route['inet'] = ['0.0.0.0', 'default']
         default_route['inet6'] = ['::/0', 'default']
     elif __grains__['os'] in {'FreeBSD', 'NetBSD', 'OpenBSD', 'MacOS', 'Darwin'} or \
-        __grains__['kernel'] in ('SunOS', 'AIX'):
+        __grains__['kernel'] in {'SunOS', 'AIX'}:
         default_route['inet'] = ['default']
         default_route['inet6'] = ['default']
     else:

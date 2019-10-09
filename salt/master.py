@@ -249,7 +249,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         if self.opts['key_cache'] == 'sched':
             keys = []
             #TODO DRY from CKMinions
-            if self.opts['transport'] in ('zeromq', 'tcp'):
+            if self.opts['transport'] in {'zeromq', 'tcp'}:
                 acc = 'minions'
             else:
                 acc = 'accepted'

@@ -1255,7 +1255,7 @@ def show(name):
             for item in value.split(' ; '):
                 comps = item.split('=')
                 ret[name][comps[0].strip()] = comps[1].strip()
-        elif name in ('Before', 'After', 'Wants'):
+        elif name in {'Before', 'After', 'Wants'}:
             ret[name] = value.split()
         else:
             ret[name] = value

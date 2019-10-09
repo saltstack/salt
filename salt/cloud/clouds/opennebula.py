@@ -649,7 +649,7 @@ def get_image(vm_):
         'image', vm_, __opts__, search_global=False
     ))
     for image in images:
-        if vm_image in (images[image]['name'], images[image]['id']):
+        if vm_image in {images[image]['name'], images[image]['id']}:
             return images[image]['id']
     raise SaltCloudNotFound(
         'The specified image, \'{0}\', could not be found.'.format(vm_image)
@@ -708,8 +708,8 @@ def get_location(vm_):
         return None
 
     for location in locations:
-        if vm_location in (locations[location]['name'],
-                           locations[location]['id']):
+        if vm_location in {locations[location]['name'],
+                           locations[location]['id']}:
             return locations[location]['id']
     raise SaltCloudNotFound(
         'The specified location, \'{0}\', could not be found.'.format(

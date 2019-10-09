@@ -5281,7 +5281,7 @@ def _findOptionValueNetSH(profile, option):
 
 
 def _setOptionValueNetSH(profile, section, option, value):
-    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+    if section not in {'firewallpolicy', 'settings', 'logging', 'state'}:
         raise ValueError('LGPO: Invalid section: {0}'.format(section))
     log.debug('LGPO: Setting the following\n'
               'Profile: {0}\n'
@@ -5301,7 +5301,7 @@ def _setOptionValueNetSH(profile, section, option, value):
         salt.utils.win_lgpo_netsh.set_state(
             profile=profile, state=value, store='lgpo')
     if section == 'logging':
-        if option in ('FileName', 'MaxFileSize'):
+        if option in {'FileName', 'MaxFileSize'}:
             if value == 'Not configured':
                 value = 'notconfigured'
         # Trim log for the two logging options

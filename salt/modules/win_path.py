@@ -114,7 +114,7 @@ def exists(path):
     path = _normalize_dir(path)
     sysPath = get_path()
 
-    return path.lower() in (x.lower() for x in sysPath)
+    return path.lower() in {x.lower() for x in sysPath}
 
 
 def _update_local_path(local_path):

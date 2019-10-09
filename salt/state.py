@@ -306,10 +306,10 @@ def format_log(ret):
                         msg = 'Made the following changes:\n'
                         for pkg in chg:
                             old = chg[pkg]['old']
-                            if not old and old not in (False, None):
+                            if not old and old not in {False, None}:
                                 old = 'absent'
                             new = chg[pkg]['new']
-                            if not new and new not in (False, None):
+                            if not new and new not in {False, None}:
                                 new = 'absent'
                             # This must be able to handle unicode as some package names contain
                             # non-ascii characters like "Français" or "Español". See Issue #33605.
@@ -492,7 +492,7 @@ class Compiler(object):
                             # Add the requires to the reqs dict and check them
                             # all for recursive requisites.
                             argfirst = next(iter(arg))
-                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
+                            if argfirst in {'require', 'watch', 'prereq', 'onchanges'}:
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(('The {0}'
                                     ' statement in state \'{1}\' in SLS \'{2}\' '
@@ -1051,7 +1051,7 @@ class State(object):
             elif data['fun'] == 'symlink':
                 if 'bin' in data['name']:
                     self.module_refresh()
-        elif data['state'] in ('pkg', 'ports'):
+        elif data['state'] in {'pkg', 'ports'}:
             self.module_refresh()
 
     def verify_data(self, data):
@@ -1216,7 +1216,7 @@ class State(object):
                                         'formed as a list'
                                         .format(name, body['__sls__'])
                                     )
-                            if argfirst in ('require', 'watch', 'prereq', 'onchanges'):
+                            if argfirst in {'require', 'watch', 'prereq', 'onchanges'}:
                                 if not isinstance(arg[argfirst], list):
                                     errors.append(
                                         'The {0} statement in state \'{1}\' in '

@@ -59,7 +59,7 @@ def execute(opts, data, func, args, kwargs):
            '-c', opts.get('config_dir'),
            '--',
            data.get('fun')]
-    if data['fun'] in ('state.sls', 'state.highstate', 'state.apply'):
+    if data['fun'] in {'state.sls', 'state.highstate', 'state.apply'}:
         kwargs['concurrent'] = True
     for arg in args:
         cmd.append(_cmd_quote(six.text_type(arg)))

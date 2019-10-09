@@ -123,7 +123,7 @@ def send_msg(recipient,
         log.debug("Exception: %s", _error)
         return False
 
-    if use_ssl not in ('True', 'true'):
+    if use_ssl not in {'True', 'true'}:
         smtpconn.ehlo()
         if smtpconn.has_extn('STARTTLS'):
             try:

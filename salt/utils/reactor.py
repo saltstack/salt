@@ -304,7 +304,7 @@ class ReactWrap(object):
         reaction_type = low['state']
         if reaction_type not in self.client_cache:
             log.debug('Reactor is populating %s client cache', reaction_type)
-            if reaction_type in ('runner', 'wheel'):
+            if reaction_type in {'runner', 'wheel'}:
                 # Reaction types that run locally on the master want the full
                 # opts passed.
                 self.client_cache[reaction_type] = \
@@ -340,7 +340,7 @@ class ReactWrap(object):
             args = wrap_call.get('args', ())
             kwargs = wrap_call.get('kwargs', {})
             # TODO: Setting user doesn't seem to work for actual remote pubs
-            if low['state'] in ('runner', 'wheel'):
+            if low['state'] in {'runner', 'wheel'}:
                 # Update called function's low data with event user to
                 # segregate events fired by reactor and avoid reaction loops
                 kwargs['__user__'] = self.event_user
@@ -388,7 +388,7 @@ class ReactWrap(object):
             else:
                 # Legacy configuration
                 react_call = {}
-                if low['state'] in ('runner', 'wheel'):
+                if low['state'] in {'runner', 'wheel'}:
                     if 'arg' not in kwargs or 'kwarg' not in kwargs:
                         # Runner/wheel execute on the master, so we can use
                         # format_call to get the functions args/kwargs

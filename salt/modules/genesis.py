@@ -147,7 +147,7 @@ def bootstrap(
             flavor=wheezy static_qemu=/usr/bin/qemu-x86_64-static
 
     '''
-    if img_format not in ('dir', 'sparse'):
+    if img_format not in {'dir', 'sparse'}:
         raise SaltInvocationError('The img_format must be "sparse" or "dir"')
 
     if img_format == 'dir':
@@ -186,7 +186,7 @@ def bootstrap(
     if exclude_pkgs is None:
         exclude_pkgs = []
 
-    if platform in ('rpm', 'yum'):
+    if platform in {'rpm', 'yum'}:
         _bootstrap_yum(
             root,
             pkgs=pkgs,
@@ -270,11 +270,11 @@ def _mkfs(root, fs_format, fs_opts=None):
     if fs_opts is None:
         fs_opts = {}
 
-    if fs_format in ('ext2', 'ext3', 'ext4'):
+    if fs_format in {'ext2', 'ext3', 'ext4'}:
         __salt__['extfs.mkfs'](root, fs_format, **fs_opts)
-    elif fs_format in ('btrfs',):
+    elif fs_format in {'btrfs',}:
         __salt__['btrfs.mkfs'](root, **fs_opts)
-    elif fs_format in ('xfs',):
+    elif fs_format in {'xfs',}:
         __salt__['xfs.mkfs'](root, **fs_opts)
 
 
@@ -667,13 +667,13 @@ def _compress(compress):
     '''
     Resolve compression flags
     '''
-    if compress in ('bz2', 'bzip2', 'j'):
+    if compress in {'bz2', 'bzip2', 'j'}:
         compression = 'j'
         ext = 'bz2'
-    elif compress in ('gz', 'gzip', 'z'):
+    elif compress in {'gz', 'gzip', 'z'}:
         compression = 'z'
         ext = 'gz'
-    elif compress in ('xz', 'a', 'J'):
+    elif compress in {'xz', 'a', 'J'}:
         compression = 'J'
         ext = 'xz'
 

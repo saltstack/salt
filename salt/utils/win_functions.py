@@ -62,7 +62,7 @@ def is_admin(name):
     groups = get_user_groups(name, True)
 
     for group in groups:
-        if group in ('S-1-5-32-544', 'S-1-5-18'):
+        if group in {'S-1-5-32-544', 'S-1-5-18'}:
             return True
 
     return False

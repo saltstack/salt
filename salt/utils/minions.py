@@ -204,7 +204,7 @@ class CkMinions(object):
         self.serial = salt.payload.Serial(opts)
         self.cache = salt.cache.factory(opts)
         # TODO: this is actually an *auth* check
-        if self.opts.get('transport', 'zeromq') in ('zeromq', 'tcp'):
+        if self.opts.get('transport', 'zeromq') in {'zeromq', 'tcp'}:
             self.acc = 'minions'
         else:
             self.acc = 'accepted'
@@ -522,11 +522,11 @@ class CkMinions(object):
                 # Easy check first
                 if word in opers:
                     if results:
-                        if results[-1] == '(' and word in ('and', 'or'):
+                        if results[-1] == '(' and word in {'and', 'or'}:
                             log.error('Invalid beginning operator after "(": %s', word)
                             return {'minions': [], 'missing': []}
                         if word == 'not':
-                            if not results[-1] in ('&', '|', '('):
+                            if not results[-1] in {'&', '|', '('}:
                                 results.append('&')
                             results.append('(')
                             results.append(six.text_type(set(minions)))
@@ -591,7 +591,7 @@ class CkMinions(object):
                         return {'minions': [], 'missing': []}
 
                     engine_args = [target_info['pattern']]
-                    if target_info['engine'] in ('G', 'P', 'I', 'J'):
+                    if target_info['engine'] in {'G', 'P', 'I', 'J'}:
                         engine_args.append(target_info['delimiter'] or ':')
                     engine_args.append(greedy)
 
@@ -717,13 +717,13 @@ class CkMinions(object):
             if expr is None:
                 expr = ''
             check_func = getattr(self, '_check_{0}_minions'.format(tgt_type), None)
-            if tgt_type in ('grain',
+            if tgt_type in {'grain',
                              'grain_pcre',
                              'pillar',
                              'pillar_pcre',
                              'pillar_exact',
                              'compound',
-                             'compound_pillar_exact'):
+                             'compound_pillar_exact'}:
                 _res = check_func(expr, delimiter, greedy)
             else:
                 _res = check_func(expr, greedy)
@@ -843,7 +843,7 @@ class CkMinions(object):
         # auth.enable_expanded_auth_matching
         # and default to False
         v_tgt_type = tgt_type
-        if tgt_type.lower() in ('pillar', 'pillar_pcre'):
+        if tgt_type.lower() in {'pillar', 'pillar_pcre'}:
             v_tgt_type = 'pillar_exact'
         elif tgt_type.lower() == 'compound':
             v_tgt_type = 'compound_pillar_exact'
@@ -935,7 +935,7 @@ class CkMinions(object):
             return self.auth_check_expanded(auth_list, funs, args, tgt, tgt_type, groups, publish_validate)
         if publish_validate:
             v_tgt_type = tgt_type
-            if tgt_type.lower() in ('pillar', 'pillar_pcre'):
+            if tgt_type.lower() in {'pillar', 'pillar_pcre'}:
                 v_tgt_type = 'pillar_exact'
             elif tgt_type.lower() == 'compound':
                 v_tgt_type = 'compound_pillar_exact'

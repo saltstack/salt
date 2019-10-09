@@ -513,7 +513,7 @@ def get_image(vm_):
 
     images = avail_images()
     for key in six.iterkeys(images):
-        if vm_image and vm_image in (images[key]['id'], images[key]['name']):
+        if vm_image and vm_image in {images[key]['id'], images[key]['name']}:
             return images[key]
 
     raise SaltCloudNotFound(

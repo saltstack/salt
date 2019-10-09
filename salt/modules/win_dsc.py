@@ -714,8 +714,8 @@ def set_lcm_config(config_mode=None,
     cmd += '    Node localhost {'
     cmd += '        LocalConfigurationManager {'
     if config_mode:
-        if config_mode not in ('ApplyOnly', 'ApplyAndMonitor',
-                               'ApplyAndAutoCorrect'):
+        if config_mode not in {'ApplyOnly', 'ApplyAndMonitor',
+                               'ApplyAndAutoCorrect'}:
             error = 'config_mode must be one of ApplyOnly, ApplyAndMonitor, ' \
                     'or ApplyAndAutoCorrect. Passed {0}'.format(config_mode)
             raise SaltInvocationError(error)
@@ -728,7 +728,7 @@ def set_lcm_config(config_mode=None,
             raise SaltInvocationError(error)
         cmd += '            ConfigurationModeFrequencyMins = {0};'.format(config_mode_freq)
     if refresh_mode:
-        if refresh_mode not in ('Disabled', 'Push', 'Pull'):
+        if refresh_mode not in {'Disabled', 'Push', 'Pull'}:
             raise SaltInvocationError(
                 'refresh_mode must be one of Disabled, Push, or Pull'
             )
@@ -746,8 +746,8 @@ def set_lcm_config(config_mode=None,
             reboot_if_needed = '$false'
         cmd += '            RebootNodeIfNeeded = {0};'.format(reboot_if_needed)
     if action_after_reboot:
-        if action_after_reboot not in ('ContinueConfiguration',
-                                       'StopConfiguration'):
+        if action_after_reboot not in {'ContinueConfiguration',
+                                       'StopConfiguration'}:
             raise SaltInvocationError(
                 'action_after_reboot must be one of '
                 'ContinueConfiguration or StopConfiguration'
@@ -772,7 +772,7 @@ def set_lcm_config(config_mode=None,
     if debug_mode is not False:
         if debug_mode is None:
             debug_mode = 'None'
-        if debug_mode not in ('None', 'ForceModuleImport', 'All'):
+        if debug_mode not in {'None', 'ForceModuleImport', 'All'}:
             raise SaltInvocationError(
                 'debug_mode must be one of None, ForceModuleImport, '
                 'ResourceScriptBreakAll, or All'

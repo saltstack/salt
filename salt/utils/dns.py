@@ -576,7 +576,7 @@ def lookup(
 
     # pylint: disable=bad-whitespace,multiple-spaces-before-keyword
     query_methods = (
-        ('gai',       _lookup_gai,       not any((rdtype not in ('A', 'AAAA'), servers, secure))),
+        ('gai',       _lookup_gai,       not any((rdtype not in {'A', 'AAAA'}, servers, secure))),
         ('dnspython', _lookup_dnspython, HAS_DNSPYTHON),
         ('dig',       _lookup_dig,       HAS_DIG),
         ('drill',     _lookup_drill,     HAS_DRILL),
@@ -606,7 +606,7 @@ def lookup(
     if servers:
         if not isinstance(servers, (list, tuple)):
             servers = [servers]
-        if method in ('dnspython', 'dig', 'drill'):
+        if method in {'dnspython', 'dig', 'drill'}:
             res_kwargs['servers'] = servers
         else:
             if timeout:
@@ -627,7 +627,7 @@ def lookup(
         name = [name]
     else:
         idx = 0
-        if rdtype in ('SRV', 'TLSA'):  # The only RRs I know that have 2 name components
+        if rdtype in {'SRV', 'TLSA'}:  # The only RRs I know that have 2 name components
             idx = name.find('.') + 1
         idx = name.find('.', idx) + 1
         domain = name[idx:]
@@ -712,9 +712,9 @@ def query(
 
     if not qres or rdtype not in rec_map:
         return qres
-    elif rdtype in ('A', 'AAAA', 'SSHFP', 'TLSA'):
+    elif rdtype in {'A', 'AAAA', 'SSHFP', 'TLSA'}:
         res = [rec_map[rdtype](res) for res in qres]
-    elif rdtype in ('SOA', 'SPF'):
+    elif rdtype in {'SOA', 'SPF'}:
         res = rec_map[rdtype](qres[0])
     else:
         res = rec_map[rdtype](qres)
@@ -885,7 +885,7 @@ def spf_rec(rdata):
             #     return query(val, 'SPF', **qargs)
 
         mech = {}
-        if mech_spec[0] in ('+', '-', '~', '?'):
+        if mech_spec[0] in {'+', '-', '~', '?'}:
             mech['qualifier'] = mech_spec[0]
             mech_spec = mech_spec[1:]
 
@@ -901,7 +901,7 @@ def spf_rec(rdata):
         res[mech_spec] = mech
         if not val:
             continue
-        elif mech_spec in ('ip4', 'ip6'):
+        elif mech_spec in {'ip4', 'ip6'}:
             val = ipaddress.ip_interface(val)
             assert val.version == int(mech_spec[-1])
 
@@ -1146,7 +1146,7 @@ def parse_resolv(src='/etc/resolv.conf'):
                 try:
                     (directive, arg) = (line[0].lower(), line[1:])
                     # Drop everything after # or ; (comments)
-                    arg = list(itertools.takewhile(lambda x: x[0] not in ('#', ';'), arg))
+                    arg = list(itertools.takewhile(lambda x: x[0] not in {'#', ';'}, arg))
                     if directive == 'nameserver':
                         addr = arg[0]
                         try:

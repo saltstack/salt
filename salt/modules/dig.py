@@ -224,7 +224,7 @@ def SPF(domain, record='SPF', nameserver=None):
             continue
         if mechanism == 'include':
             ret.extend(SPF(address, 'SPF', nameserver))
-        elif mechanism in ('ip4', 'ip6') and check_ip(address):
+        elif mechanism in {'ip4', 'ip6'} and check_ip(address):
             ret.append(address)
     return ret
 

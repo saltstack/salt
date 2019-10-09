@@ -485,7 +485,7 @@ class ProcessManager(object):
 
     def send_signal_to_processes(self, signal_):
         if (salt.utils.platform.is_windows() and
-                signal_ in (signal.SIGTERM, signal.SIGINT)):
+                signal_ in {signal.SIGTERM, signal.SIGINT}):
             # On Windows, the subprocesses automatically have their signal
             # handlers invoked. If you send one of these signals while the
             # signal handler is running, it will kill the process where it
@@ -502,7 +502,7 @@ class ProcessManager(object):
             try:
                 os.kill(pid, signal_)
             except OSError as exc:
-                if exc.errno not in (errno.ESRCH, errno.EACCES):
+                if exc.errno not in {errno.ESRCH, errno.EACCES}:
                     # If it's not a "No such process" error, raise it
                     raise
                 # Otherwise, it's a dead process, remove it from the process map
@@ -604,7 +604,7 @@ class ProcessManager(object):
                 try:
                     p_map['Process'].terminate()
                 except OSError as exc:
-                    if exc.errno not in (errno.ESRCH, errno.EACCES):
+                    if exc.errno not in {errno.ESRCH, errno.EACCES}:
                         raise
                 if not p_map['Process'].is_alive():
                     try:

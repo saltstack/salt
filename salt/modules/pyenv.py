@@ -69,7 +69,7 @@ def _pyenv_bin(runas=None):
 
 def _pyenv_path(runas=None):
     path = None
-    if runas in (None, 'root'):
+    if runas in {None, 'root'}:
         path = __salt__['config.option']('pyenv.root') or '/usr/local/pyenv'
     else:
         path = __salt__['config.option']('pyenv.root') or '~{0}/.pyenv'.format(runas)
@@ -165,7 +165,7 @@ def install_python(python, runas=None):
     env = None
     env_list = []
 
-    if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
+    if __grains__['os'] in {'FreeBSD', 'NetBSD', 'OpenBSD'}:
         env_list.append('MAKE=gmake')
 
     if __salt__['config.option']('pyenv.build_env'):

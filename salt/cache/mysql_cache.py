@@ -190,7 +190,7 @@ def store(bank, key, data):
 
     cur, cnt = run_query(client, query)
     cur.close()
-    if cnt not in (1, 2):
+    if cnt not in {1, 2}:
         raise SaltCacheError(
             'Error storing {0} {1} returned {2}'.format(bank, key, cnt)
         )

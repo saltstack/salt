@@ -161,7 +161,7 @@ def _generate_minion_id():
                     line = salt.utils.stringutils.to_unicode(line)
                     hst = line.strip().split('#')[0].strip().split()
                     if hst:
-                        if hst[0][:4] in ('127.', '::1') or len(hst) == 1:
+                        if hst[0][:4] in {'127.', '::1'} or len(hst) == 1:
                             hosts.extend(hst)
         except IOError:
             pass
@@ -386,7 +386,7 @@ def _is_ipv(ip, version, options=None):
     if not version:
         version = 4
 
-    if version not in (4, 6):
+    if version not in {4, 6}:
         return None
 
     try:
@@ -444,7 +444,7 @@ def is_ipv6_filter(ip, options=None):
 
 def _ipv_filter(value, version, options=None):
 
-    if version not in (4, 6):
+    if version not in {4, 6}:
         return
 
     if isinstance(value, (six.string_types, six.text_type, six.binary_type)):
@@ -701,7 +701,7 @@ def _interfaces_ip(out):
             if len(cols) >= 2:
                 type_, value = tuple(cols[0:2])
                 iflabel = cols[-1:][0]
-                if type_ in ('inet', 'inet6'):
+                if type_ in {'inet', 'inet6'}:
                     if 'secondary' not in cols:
                         ipaddr, netmask, broadcast, scope = parse_network(value, cols)
                         if type_ == 'inet':
@@ -976,7 +976,7 @@ def _interfaces_ipconfig(out):
             val = val.strip()
             if addr and key == 'Subnet Mask':
                 addr['netmask'] = val
-            elif key in ('IP Address', 'IPv4 Address'):
+            elif key in {'IP Address', 'IPv4 Address'}:
                 if 'inet' not in iface:
                     iface['inet'] = list()
                 addr = {'address': val.rstrip('(Preferred)'),

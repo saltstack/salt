@@ -359,7 +359,7 @@ def managed(name, ppa=None, **kwargs):
         enabled = True
 
     repo = name
-    if __grains__['os'] in ('Ubuntu', 'Mint'):
+    if __grains__['os'] in {'Ubuntu', 'Mint'}:
         if ppa is not None:
             # overload the name/repo value for PPAs cleanly
             # this allows us to have one code-path for PPAs
@@ -372,7 +372,7 @@ def managed(name, ppa=None, **kwargs):
             if enabled is not None \
             else salt.utils.data.is_true(disabled)
 
-    elif __grains__['os_family'] in ('RedHat', 'Suse'):
+    elif __grains__['os_family'] in {'RedHat', 'Suse'}:
         if 'humanname' in kwargs:
             kwargs['name'] = kwargs.pop('humanname')
         if 'name' not in kwargs:
@@ -383,7 +383,7 @@ def managed(name, ppa=None, **kwargs):
             if disabled is not None \
             else salt.utils.data.is_true(enabled)
 
-    elif __grains__['os_family'] in ('NILinuxRT', 'Poky'):
+    elif __grains__['os_family'] in {'NILinuxRT', 'Poky'}:
         # opkg is the pkg virtual
         kwargs['enabled'] = not salt.utils.data.is_true(disabled) \
             if disabled is not None \
@@ -461,7 +461,7 @@ def managed(name, ppa=None, **kwargs):
                 if set(sanitizedkwargs[kwarg]) != set(pre[kwarg]):
                     break
             else:
-                if __grains__['os_family'] in ('RedHat', 'Suse') \
+                if __grains__['os_family'] in {'RedHat', 'Suse'} \
                         and any(isinstance(x, bool) for x in
                                 (sanitizedkwargs[kwarg], pre[kwarg])):
                     # This check disambiguates 1/0 from True/False
@@ -594,7 +594,7 @@ def absent(name, **kwargs):
            'result': None,
            'comment': ''}
 
-    if 'ppa' in kwargs and __grains__['os'] in ('Ubuntu', 'Mint'):
+    if 'ppa' in kwargs and __grains__['os'] in {'Ubuntu', 'Mint'}:
         name = kwargs.pop('ppa')
         if not name.startswith('ppa:'):
             name = 'ppa:' + name

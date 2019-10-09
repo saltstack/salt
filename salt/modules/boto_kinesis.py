@@ -469,7 +469,7 @@ def list_streams(region=None, key=None, keyid=None, profile=None):
             return ret
         ret = ret['result'] if ret and ret.get('result') else {}
         streams += ret.get('StreamNames', [])
-        exclusive_start_stream_name = streams[-1] if ret.get('HasMoreStreams', False) in (True, 'true') else None
+        exclusive_start_stream_name = streams[-1] if ret.get('HasMoreStreams', False) in {True, 'true'} else None
     return {'result': streams}
 
 

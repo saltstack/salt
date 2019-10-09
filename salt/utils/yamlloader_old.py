@@ -150,7 +150,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                     # Might be a unicode literal string, check for 2nd char and
                     # call the appropriate fetch func if it's a quote
                     quote_char = self.peek(1)
-                    if quote_char in ("'", '"'):
+                    if quote_char in {"'", '"'}:
                         # Skip the "u" prefix by advancing the column and
                         # pointer by 1
                         self.column += 1

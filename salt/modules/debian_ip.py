@@ -1868,7 +1868,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought up.
-    if iface_type not in ('slave', 'source'):
+    if iface_type not in {'slave', 'source'}:
         return __salt__['cmd.run'](['ifup', iface])
     return None
 

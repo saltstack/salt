@@ -59,7 +59,7 @@ def __virtual__():
             break
 
     if HAS_LIBS and not missing_util:
-        if __grains__.get('os_family', False) in ('RedHat', 'Suse'):
+        if __grains__.get('os_family', False) in {'RedHat', 'Suse'}:
             return __virtualname__
         else:
             # The module will be exposed as `rpmbuild` on non-RPM based systems

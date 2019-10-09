@@ -363,7 +363,7 @@ def _get_yum_config():
 
         if cp.has_section('main'):
             for opt in cp.options('main'):
-                if opt in ('reposdir', 'commands', 'excludes'):
+                if opt in {'reposdir', 'commands', 'excludes'}:
                     # these options are expected to be lists
                     conf[opt] = [x.strip()
                                  for x in cp.get('main', opt).split(',')]
@@ -434,7 +434,7 @@ def normalize_name(name):
             return name
     except ValueError:
         return name
-    if arch in (__grains__['osarch'], 'noarch') \
+    if arch in {__grains__['osarch'], 'noarch'} \
             or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
         return name[:-(len(arch) + 1)]
     return name
@@ -2771,7 +2771,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = dict(
         (x, kwargs[x]) for x in kwargs
-        if not x.startswith('__') and x not in ('saltenv',)
+        if not x.startswith('__') and x not in {'saltenv',}
     )
 
     if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):

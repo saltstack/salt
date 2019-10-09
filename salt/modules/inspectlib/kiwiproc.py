@@ -85,7 +85,7 @@ class KiwiExporter(object):
         :return:
         '''
         ret = None
-        if self.__grains__.get('os_family') in ('Kali', 'Debian'):
+        if self.__grains__.get('os_family') in {'Kali', 'Debian'}:
             ret = 'apt-get'
         elif self.__grains__.get('os_family', '') == 'Suse':
             ret = 'zypper'
@@ -193,7 +193,7 @@ class KiwiExporter(object):
                 if not uri:
                     continue
                 repo = etree.SubElement(node, 'repository')
-                if self.__grains__.get('os_family') in ('Kali', 'Debian'):
+                if self.__grains__.get('os_family') in {'Kali', 'Debian'}:
                     repo.set('alias', repo_id)
                     repo.set('distribution', repo_data['dist'])
                 else:

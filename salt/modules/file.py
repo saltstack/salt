@@ -665,7 +665,7 @@ def chattr(*files, **kwargs):
     flags = kwargs.pop('flags', None)
     version = kwargs.pop('version', None)
 
-    if (operator is None) or (operator not in ('add', 'remove')):
+    if (operator is None) or (operator not in {'add', 'remove'}):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
@@ -1989,7 +1989,7 @@ def line(path, content=None, match=None, mode=None, location=None,
     before = _regex_to_static(body, before)
     match = _regex_to_static(body, match)
 
-    if os.stat(path).st_size == 0 and mode in ('delete', 'replace'):
+    if os.stat(path).st_size == 0 and mode in {'delete', 'replace'}:
         log.warning('Cannot find text to {0}. File \'{1}\' is empty.'.format(mode, path))
         body = []
     elif mode == 'delete' and match:
@@ -2889,7 +2889,7 @@ def patch(originalfile, patchfile, options='', dry_run=False):
     cmd = [patchpath]
     cmd.extend(salt.utils.args.shlex_split(options))
     if dry_run:
-        if __grains__['kernel'] in ('FreeBSD', 'OpenBSD'):
+        if __grains__['kernel'] in {'FreeBSD', 'OpenBSD'}:
             cmd.append('-C')
         else:
             cmd.append('--dry-run')
@@ -3072,7 +3072,7 @@ def append(path, *args, **kwargs):
         try:
             ofile.seek(-len(linesep), os.SEEK_END)
         except IOError as exc:
-            if exc.errno in (errno.EINVAL, errno.ESPIPE):
+            if exc.errno in {errno.EINVAL, errno.ESPIPE}:
                 # Empty file, simply append lines at the beginning of the file
                 pass
             else:
@@ -4157,7 +4157,7 @@ def get_managed(
             parsed_scheme = ''
         parsed_path = os.path.join(
                 urlparsed_source.netloc, urlparsed_source.path).rstrip(os.sep)
-        unix_local_source = parsed_scheme in ('file', '')
+        unix_local_source = parsed_scheme in {'file', ''}
 
         if parsed_scheme == '':
             parsed_path = sfn = source
@@ -4831,7 +4831,7 @@ def check_managed_changes(
             __clean_tmp(sfn)
             return False, comments
         if sfn and source and keep_mode:
-            if _urlparse(source).scheme in ('salt', 'file') \
+            if _urlparse(source).scheme in {'salt', 'file'} \
                     or source.startswith('/'):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
@@ -5261,7 +5261,7 @@ def manage_file(name,
             }
 
         if keep_mode:
-            if _urlparse(source).scheme in ('salt', 'file', ''):
+            if _urlparse(source).scheme in {'salt', 'file', ''}:
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
                 except Exception as exc:

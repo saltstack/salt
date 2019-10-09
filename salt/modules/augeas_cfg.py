@@ -221,7 +221,7 @@ def execute(context=None, lens=None, commands=(), load_path=None):
                 args = {'src': path, 'dst': dst}
             elif method == 'insert':
                 label, where, path = parts
-                if where not in ('before', 'after'):
+                if where not in {'before', 'after'}:
                     raise ValueError(
                         'Expected "before" or "after", not {0}'.format(where))
                 path = make_path(path)

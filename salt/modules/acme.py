@@ -346,7 +346,7 @@ def needs_renewal(name, window=None):
         else:
             log.info('Your certificate is still good')
     '''
-    if window is not None and window in ('force', 'Force', True):
+    if window is not None and window in {'force', 'Force', True}:
         return True
 
     return _renew_by(name, window) <= datetime.datetime.today()

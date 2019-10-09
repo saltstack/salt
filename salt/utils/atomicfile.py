@@ -156,7 +156,7 @@ def atomic_open(filename, mode='w'):
     file instead of the given file and moves it over when the file is
     closed.  The file returned behaves as if it was a regular Python
     '''
-    if mode in ('r', 'rb', 'r+', 'rb+', 'a', 'ab'):
+    if mode in {'r', 'rb', 'r+', 'rb+', 'a', 'ab'}:
         raise TypeError('Read or append modes don\'t work with atomic_open')
     kwargs = {
         'prefix': '.___atomic_write',

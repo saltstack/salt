@@ -371,7 +371,7 @@ def config(name, reset=False, **kwargs):
 
     bad_vals = [
         '{0}={1}'.format(x, y) for x, y in six.iteritems(opts)
-        if y not in ('on', 'off')
+        if y not in {'on', 'off'}
     ]
     if bad_vals:
         raise SaltInvocationError(

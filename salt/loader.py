@@ -1216,7 +1216,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Allow for "direct" attribute access-- this allows jinja templates to
         access things like `salt.test.ping()`
         '''
-        if mod_name in ('__getstate__', '__setstate__'):
+        if mod_name in {'__getstate__', '__setstate__'}:
             return object.__getattribute__(self, mod_name)
 
         # if we have an attribute named that, lets return it.
@@ -1379,7 +1379,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     except KeyError:
                         pass
                     else:
-                        if '' in (curr_ext, ext) and curr_ext != ext:
+                        if '' in {curr_ext, ext} and curr_ext != ext:
                             log.error(
                                 'Module/package collision: \'%s\' and \'%s\'',
                                 fpath,

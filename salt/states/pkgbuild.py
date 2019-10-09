@@ -198,7 +198,7 @@ def built(name,
         return ret
 
     func = 'pkgbuild.build'
-    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+    if __grains__.get('os_family', False) not in {'RedHat', 'Suse'}:
         for res in results:
             if res.endswith('.rpm'):
                 func = 'rpmbuild.build'
@@ -363,7 +363,7 @@ def repo(name,
         return ret
 
     func = 'pkgbuild.make_repo'
-    if __grains__.get('os_family', False) not in ('RedHat', 'Suse'):
+    if __grains__.get('os_family', False) not in {'RedHat', 'Suse'}:
         for file in os.listdir(name):
             if file.endswith('.rpm'):
                 func = 'rpmbuild.make_repo'

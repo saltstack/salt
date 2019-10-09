@@ -39,7 +39,7 @@ def __virtual__():
     if __grains__.get('os_family', '') == 'RedHat':
         return __virtualname__
     elif __grains__.get('os', '').lower() \
-            in ('amazon', 'xcp', 'xenserver', 'virtuozzolinux'):
+            in {'amazon', 'xcp', 'xenserver', 'virtuozzolinux'}:
         return __virtualname__
 
     return (False, "Module kernelpkg_linux_yum: no YUM based system detected")

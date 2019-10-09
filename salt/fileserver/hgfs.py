@@ -359,7 +359,7 @@ def _clear_old_remotes():
             pass
     to_remove = []
     for item in cachedir_ls:
-        if item in ('hash', 'refs'):
+        if item in {'hash', 'refs'}:
             continue
         path = os.path.join(bp_, item)
         if os.path.isdir(path):
@@ -619,13 +619,13 @@ def envs(ignore_cache=False):
     ret = set()
     for repo in init():
         repo['repo'].open()
-        if repo['branch_method'] in ('branches', 'mixed'):
+        if repo['branch_method'] in {'branches', 'mixed'}:
             for branch in _all_branches(repo['repo']):
                 branch_name = branch[0]
                 if branch_name == repo['base']:
                     branch_name = 'base'
                 ret.add(branch_name)
-        if repo['branch_method'] in ('bookmarks', 'mixed'):
+        if repo['branch_method'] in {'bookmarks', 'mixed'}:
             for bookmark in _all_bookmarks(repo['repo']):
                 bookmark_name = bookmark[0]
                 if bookmark_name == repo['base']:

@@ -127,7 +127,7 @@ def _netsh_file(content):
 
 
 def _netsh_command(command, store):
-    if store.lower() not in ('local', 'lgpo'):
+    if store.lower() not in {'local', 'lgpo'}:
         raise ValueError('Incorrect store: {0}'.format(store))
     # set the store for local or lgpo
     if store.lower() == 'local':
@@ -185,11 +185,11 @@ def get_settings(profile, section, store='local'):
         ValueError: If the parameters are incorrect
     '''
     # validate input
-    if profile.lower() not in ('domain', 'public', 'private'):
+    if profile.lower() not in {'domain', 'public', 'private'}:
         raise ValueError('Incorrect profile: {0}'.format(profile))
-    if section.lower() not in ('state', 'firewallpolicy', 'settings', 'logging'):
+    if section.lower() not in {'state', 'firewallpolicy', 'settings', 'logging'}:
         raise ValueError('Incorrect section: {0}'.format(section))
-    if store.lower() not in ('local', 'lgpo'):
+    if store.lower() not in {'local', 'lgpo'}:
         raise ValueError('Incorrect store: {0}'.format(store))
     command = 'show {0}profile {1}'.format(profile, section)
     # run it
@@ -337,16 +337,16 @@ def set_firewall_settings(profile,
         ValueError: If the parameters are incorrect
     '''
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
+    if profile.lower() not in {'domain', 'public', 'private'}:
         raise ValueError('Incorrect profile: {0}'.format(profile))
-    if inbound and inbound.lower() not in ('blockinbound',
+    if inbound and inbound.lower() not in {'blockinbound',
                                            'blockinboundalways',
                                            'allowinbound',
-                                           'notconfigured'):
+                                           'notconfigured'}:
         raise ValueError('Incorrect inbound value: {0}'.format(inbound))
-    if outbound and outbound.lower() not in ('allowoutbound',
+    if outbound and outbound.lower() not in {'allowoutbound',
                                              'blockoutbound',
-                                             'notconfigured'):
+                                             'notconfigured'}:
         raise ValueError('Incorrect outbound value: {0}'.format(outbound))
     if not inbound and not outbound:
         raise ValueError('Must set inbound or outbound')
@@ -438,15 +438,15 @@ def set_logging_settings(profile, setting, value, store='local'):
         ValueError: If the parameters are incorrect
     '''
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
+    if profile.lower() not in {'domain', 'public', 'private'}:
         raise ValueError('Incorrect profile: {0}'.format(profile))
-    if setting.lower() not in ('allowedconnections',
+    if setting.lower() not in {'allowedconnections',
                                'droppedconnections',
                                'filename',
-                               'maxfilesize'):
+                               'maxfilesize'}:
         raise ValueError('Incorrect setting: {0}'.format(setting))
-    if setting.lower() in ('allowedconnections', 'droppedconnections'):
-        if value.lower() not in ('enable', 'disable', 'notconfigured'):
+    if setting.lower() in {'allowedconnections', 'droppedconnections'}:
+        if value.lower() not in {'enable', 'disable', 'notconfigured'}:
             raise ValueError('Incorrect value: {0}'.format(value))
     # TODO: Consider adding something like the following to validate filename
     # https://stackoverflow.com/questions/9532499/check-whether-a-path-is-valid-in-python-without-creating-a-file-at-the-paths-ta
@@ -516,15 +516,15 @@ def set_settings(profile, setting, value, store='local'):
         ValueError: If the parameters are incorrect
     '''
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
+    if profile.lower() not in {'domain', 'public', 'private'}:
         raise ValueError('Incorrect profile: {0}'.format(profile))
-    if setting.lower() not in ('localfirewallrules',
+    if setting.lower() not in {'localfirewallrules',
                                'localconsecrules',
                                'inboundusernotification',
                                'remotemanagement',
-                               'unicastresponsetomulticast'):
+                               'unicastresponsetomulticast'}:
         raise ValueError('Incorrect setting: {0}'.format(setting))
-    if value.lower() not in ('enable', 'disable', 'notconfigured'):
+    if value.lower() not in {'enable', 'disable', 'notconfigured'}:
         raise ValueError('Incorrect value: {0}'.format(value))
 
     # Run the command
@@ -575,9 +575,9 @@ def set_state(profile, state, store='local'):
         ValueError: If the parameters are incorrect
     '''
     # Input validation
-    if profile.lower() not in ('domain', 'public', 'private'):
+    if profile.lower() not in {'domain', 'public', 'private'}:
         raise ValueError('Incorrect profile: {0}'.format(profile))
-    if state.lower() not in ('on', 'off', 'notconfigured'):
+    if state.lower() not in {'on', 'off', 'notconfigured'}:
         raise ValueError('Incorrect state: {0}'.format(state))
 
     # Run the command

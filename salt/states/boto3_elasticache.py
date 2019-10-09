@@ -558,8 +558,8 @@ def _diff_replication_group(current, desired):
     much, much easier to code :)
     '''
     if current.get('AutomaticFailover') is not None:
-        current['AutomaticFailoverEnabled'] = True if current['AutomaticFailover'] in ('enabled',
-                'enabling') else False
+        current['AutomaticFailoverEnabled'] = True if current['AutomaticFailover'] in {'enabled',
+                'enabling'} else False
 
     modifiable = {
         # Amazingly, the AWS API provides NO WAY to query the current state of most repl group

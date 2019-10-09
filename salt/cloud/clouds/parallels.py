@@ -176,7 +176,7 @@ def get_image(vm_):
         'image', vm_, __opts__, search_global=False
     )
     for image in images:
-        if six.text_type(vm_image) in (images[image]['name'], images[image]['id']):
+        if six.text_type(vm_image) in {images[image]['name'], images[image]['id']}:
             return images[image]['id']
     raise SaltCloudNotFound('The specified image could not be found.')
 

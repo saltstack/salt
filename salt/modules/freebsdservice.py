@@ -327,7 +327,7 @@ def enabled(name, **kwargs):
         if '_enable="' not in line:
             continue
         _, state, _ = line.split('"', 2)
-        return state.lower() in ('yes', 'true', 'on', '1')
+        return state.lower() in {'yes', 'true', 'on', '1'}
 
     # probably will never reached
     return False

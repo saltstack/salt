@@ -308,11 +308,11 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
 
         # Add any extra attributes to the message field
         for key, value in six.iteritems(record.__dict__):
-            if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
+            if key in {'args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
                        'name', 'pathname', 'process', 'processName',
-                       'relativeCreated', 'thread', 'threadName'):
+                       'relativeCreated', 'thread', 'threadName'}:
                 # These are already handled above or not handled at all
                 continue
 
@@ -352,11 +352,11 @@ class LogstashFormatter(logging.Formatter, NewStyleClassMixIn):
 
         # Add any extra attributes to the message field
         for key, value in six.iteritems(record.__dict__):
-            if key in ('args', 'asctime', 'created', 'exc_info', 'exc_text',
+            if key in {'args', 'asctime', 'created', 'exc_info', 'exc_text',
                        'filename', 'funcName', 'id', 'levelname', 'levelno',
                        'lineno', 'module', 'msecs', 'msecs', 'message', 'msg',
                        'name', 'pathname', 'process', 'processName',
-                       'relativeCreated', 'thread', 'threadName'):
+                       'relativeCreated', 'thread', 'threadName'}:
                 # These are already handled above or not handled at all
                 continue
 

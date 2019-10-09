@@ -629,7 +629,7 @@ def _client_wrapper(attr, *args, **kwargs):
     func = getattr(__context__['docker.client'], attr, None)
     if func is None or not hasattr(func, '__call__'):
         raise SaltInvocationError('Invalid client action \'{0}\''.format(attr))
-    if attr in ('push', 'pull'):
+    if attr in {'push', 'pull'}:
         try:
             # Refresh auth config from config.json
             __context__['docker.client'].reload_config()
@@ -943,7 +943,7 @@ def compare_containers(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict][item]
             val2 = result2[conf_dict].get(item)
-            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+            if item in {'OomKillDisable',} or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
             elif item == 'Image':
@@ -972,7 +972,7 @@ def compare_containers(first, second, ignore=None):
                 continue
             val1 = result1[conf_dict].get(item)
             val2 = result2[conf_dict][item]
-            if item in ('OomKillDisable',) or (val1 is None or val2 is None):
+            if item in {'OomKillDisable',} or (val1 is None or val2 is None):
                 if bool(val1) != bool(val2):
                     ret.setdefault(conf_dict, {})[item] = {'old': val1, 'new': val2}
             elif item == 'Image':
@@ -1694,10 +1694,10 @@ def images(verbose=False, **kwargs):
                 continue
             for item in img:
                 img_state = ('untagged' if
-                             img['RepoTags'] in (
+                             img['RepoTags'] in {
                                ['<none>:<none>'],  # docker API <1.24
                                None,  # docker API >=1.24
-                             ) else 'tagged')
+                             } else 'tagged')
                 bucket = __context__.setdefault('docker.images', {})
                 bucket = bucket.setdefault(img_state, {})
                 img_key = key_map.get(item, item)
@@ -2168,7 +2168,7 @@ def port(name, private_port=None):
             try:
                 port_num, _, protocol = private_port.partition('/')
                 protocol = protocol.lower()
-                if not port_num.isdigit() or protocol not in ('tcp', 'udp'):
+                if not port_num.isdigit() or protocol not in {'tcp', 'udp'}:
                     raise SaltInvocationError(err)
                 pattern = port_num + '/' + protocol
             except AttributeError:
@@ -3717,7 +3717,7 @@ def export(name,
     elif compression == 'lzma':
         compression = 'xz'
 
-    if compression and compression not in ('gzip', 'bzip2', 'xz'):
+    if compression and compression not in {'gzip', 'bzip2', 'xz'}:
         raise SaltInvocationError(
             'Invalid compression type \'{0}\''.format(compression)
         )
@@ -3762,13 +3762,13 @@ def export(name,
         while buf != '':
             buf = response.read(4096)
             if buf:
-                if compression in ('bzip2', 'xz'):
+                if compression in {'bzip2', 'xz'}:
                     data = compressor.compress(buf)
                     if data:
                         out.write(data)
                 else:
                     out.write(buf)
-        if compression in ('bzip2', 'xz'):
+        if compression in {'bzip2', 'xz'}:
             # Flush any remaining data out of the compressor
             data = compressor.flush()
             if data:
@@ -4880,7 +4880,7 @@ def save(name,
     elif compression == 'lzma':
         compression = 'xz'
 
-    if compression and compression not in ('gzip', 'bzip2', 'xz'):
+    if compression and compression not in {'gzip', 'bzip2', 'xz'}:
         raise SaltInvocationError(
             'Invalid compression type \'{0}\''.format(compression)
         )
@@ -4934,13 +4934,13 @@ def save(name,
                 while buf != '':
                     buf = uncompressed.read(4096)
                     if buf:
-                        if compression in ('bzip2', 'xz'):
+                        if compression in {'bzip2', 'xz'}:
                             data = compressor.compress(buf)
                             if data:
                                 out.write(data)
                         else:
                             out.write(buf)
-                if compression in ('bzip2', 'xz'):
+                if compression in {'bzip2', 'xz'}:
                     # Flush any remaining data out of the compressor
                     data = compressor.flush()
                     if data:
@@ -6070,7 +6070,7 @@ def _run(name,
         use_vt=use_vt,
         keep_env=keep_env)
 
-    if output in (None, 'all'):
+    if output in {None, 'all'}:
         return ret
     else:
         return ret[output]

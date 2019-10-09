@@ -303,7 +303,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
             match_value = match_value.split(',')
         for match in match_value:
             rule.append('-m {0}'.format(match))
-            if 'name_' in kwargs and match.strip() in ('pknock', 'quota2', 'recent'):
+            if 'name_' in kwargs and match.strip() in {'pknock', 'quota2', 'recent'}:
                 rule.append('--name {0}'.format(kwargs['name_']))
                 del kwargs['name_']
         if 'proto' in kwargs and kwargs.get('match') == 'policy':
@@ -505,7 +505,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
     for after_jump_argument in after_jump_arguments:
         if after_jump_argument in kwargs:
             value = kwargs[after_jump_argument]
-            if value in (None, ''):  # options without arguments
+            if value in {None, ''}:  # options without arguments
                 after_jump.append('--{0}'.format(after_jump_argument))
             elif any(ws_char in str(value) for ws_char in string.whitespace):
                 after_jump.append('--{0} "{1}"'.format(after_jump_argument, value))
@@ -519,7 +519,7 @@ def build_rule(table='filter', chain=None, command=None, position='', full=None,
         # the value in the kwargs, thus we need to fetch it after that has run
         value = kwargs[key]
         flag = '-' if len(key) == 1 else '--'
-        value = '' if value in (None, '') else ' {0}'.format(value)
+        value = '' if value in {None, ''} else ' {0}'.format(value)
         rule.append('{0}{1}{2}{3}'.format(negation, flag, key, value))
 
     rule += after_jump

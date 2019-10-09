@@ -81,7 +81,7 @@ def resolve_name(name, arch, osarch=None):
     if osarch is None:
         osarch = get_osarch()
 
-    if not check_32(arch, osarch) and arch not in (osarch, 'noarch'):
+    if not check_32(arch, osarch) and arch not in {osarch, 'noarch'}:
         name += '.{0}'.format(arch)
     return name
 
@@ -101,10 +101,10 @@ def parse_pkginfo(line, osarch=None):
     name = resolve_name(name, arch, osarch)
     if release:
         version += '-{0}'.format(release)
-    if epoch not in ('(none)', '0'):
+    if epoch not in {'(none)', '0'}:
         version = ':'.join((epoch, version))
 
-    if install_time not in ('(none)', '0'):
+    if install_time not in {'(none)', '0'}:
         install_date = datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
         install_date_time_t = int(install_time)
     else:

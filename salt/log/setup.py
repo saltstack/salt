@@ -127,7 +127,7 @@ def setup_temp_logger(log_level='error'):
 
     handler = None
     for handler in logging.root.handlers:
-        if handler in (LOGGING_NULL_HANDLER, LOGGING_STORE_HANDLER):
+        if handler in {LOGGING_NULL_HANDLER, LOGGING_STORE_HANDLER}:
             continue
 
         if not hasattr(handler, 'stream'):
@@ -265,7 +265,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
 
     root_logger = logging.getLogger()
 
-    if parsed_log_path.scheme in ('tcp', 'udp', 'file'):
+    if parsed_log_path.scheme in {'tcp', 'udp', 'file'}:
         syslog_opts = {
             'facility': SysLogHandler.LOG_USER,
             'socktype': socket.SOCK_DGRAM
@@ -320,7 +320,7 @@ def setup_logfile_logger(log_path, log_level='error', log_format=None,
                 )
             syslog_opts['socktype'] = socket.SOCK_STREAM
 
-        if parsed_log_path.scheme in ('tcp', 'udp'):
+        if parsed_log_path.scheme in {'tcp', 'udp'}:
             syslog_opts['address'] = (
                 parsed_log_path.hostname,
                 parsed_log_path.port or logging.handlers.SYSLOG_UDP_PORT

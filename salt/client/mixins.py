@@ -530,7 +530,7 @@ class AsyncClientMixin(object):
             return
 
         # some suffixes we don't want to print
-        if suffix in ('new',):
+        if suffix in {'new',}:
             return
 
         try:

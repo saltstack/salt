@@ -210,7 +210,7 @@ def get_image(vm_):
 
     images = avail_images()
     for key, value in six.iteritems(images):
-        if vm_image and vm_image in (images[key]['id'], images[key]['name']):
+        if vm_image and vm_image in {images[key]['id'], images[key]['name']}:
             return images[key]
 
     raise SaltCloudNotFound(
@@ -930,10 +930,10 @@ def _wait_for_completion(conn, wait_timeout, server_id):
             return
         elif server_state == 'failed':
             raise Exception('Server creation failed for {0}'.format(server_id))
-        elif server_state in ('active',
+        elif server_state in {'active',
                               'enabled',
                               'deploying',
-                              'configuring'):
+                              'configuring'}:
             continue
         else:
             raise Exception(

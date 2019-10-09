@@ -719,7 +719,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
             # Remove it from config so it inherits from log_file
             self.config.pop(self._logfile_config_setting_name_)
 
-        if self.config['verify_env'] and self.config['log_level'] not in ('quiet', ):
+        if self.config['verify_env'] and self.config['log_level'] not in {'quiet', }:
             # Verify the logfile if it was explicitly set but do not try to
             # verify the default
             if logfile is not None:
@@ -3252,7 +3252,7 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         # spm needs arguments
         if len(self.args) <= 1:
-            if not self.args or self.args[0] not in ('update_repo',):
+            if not self.args or self.args[0] not in {'update_repo',}:
                 self.print_help()
                 self.error('Insufficient arguments')
 

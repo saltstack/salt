@@ -399,7 +399,7 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
         if ret != '_|-':
             return sdb.sdb_get(ret, __opts__)
     else:
-        if merge not in ('recurse', 'overwrite'):
+        if merge not in {'recurse', 'overwrite'}:
             log.warning('Unsupported merge strategy \'{0}\'. Falling back '
                         'to \'recurse\'.'.format(merge))
             merge = 'recurse'

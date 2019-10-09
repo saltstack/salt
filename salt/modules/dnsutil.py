@@ -187,7 +187,7 @@ def parse_zone(zonefile=None, zone=None):
             if 'MX' not in zonedict:
                 zonedict.setdefault('MX', []).append({'priority': comps[3],
                                                       'host': comps[4]})
-        elif comps[3] in ('A', 'AAAA'):
+        elif comps[3] in {'A', 'AAAA'}:
             zonedict.setdefault(comps[3], {})[comps[0]] = {
                 'TARGET': comps[4],
                 'TTL': comps[1],

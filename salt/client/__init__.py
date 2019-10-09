@@ -1470,7 +1470,7 @@ class LocalClient(object):
             if int(time.time()) > timeout_at:
                 if verbose or show_timeout:
                     if self.opts.get('minion_data_cache', False) \
-                            or tgt_type in ('glob', 'pcre', 'list'):
+                            or tgt_type in {'glob', 'pcre', 'list'}:
                         if len(found) < len(minions):
                             fail = sorted(list(minions.difference(found)))
                             for minion in fail:

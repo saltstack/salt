@@ -27,7 +27,7 @@ def __virtual__():
     '''
     Set the vbox_guest module if the OS Linux
     '''
-    if __grains__.get('kernel', '') not in ('Linux', ):
+    if __grains__.get('kernel', '') not in {'Linux', }:
         return (False, 'The vbox_guest execution module failed to load: only available on Linux systems.')
     return __virtualname__
 
@@ -132,7 +132,7 @@ def _additions_install_linux(mount_point, **kwargs):
         log.warning("%s is not fully supported yet.", guest_os)
     installer_path = _additions_install_program_path(mount_point)
     installer_ret = __salt__['cmd.run_all'](installer_path)
-    if installer_ret['retcode'] in (0, 1):
+    if installer_ret['retcode'] in {0, 1}:
         if reboot:
             __salt__['system.reboot']()
         elif restart_x11:
@@ -144,7 +144,7 @@ def _additions_install_linux(mount_point, **kwargs):
             #     __salt__['service.start'](service)
             pass
         return additions_version()
-    elif installer_ret['retcode'] in (127, '127'):
+    elif installer_ret['retcode'] in {127, '127'}:
         return ("'{0}' not found on CD. Make sure that VirtualBox Guest "
                 "Additions CD is attached to the CD IDE Controller.".format(
                     os.path.basename(installer_path)))
@@ -193,7 +193,7 @@ def _additions_dir():
 
 def _additions_remove_linux_run(cmd):
     uninstaller_ret = __salt__['cmd.run_all'](cmd)
-    return uninstaller_ret['retcode'] in (0, )
+    return uninstaller_ret['retcode'] in {0, }
 
 
 def _additions_remove_linux(**kwargs):

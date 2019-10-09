@@ -215,9 +215,9 @@ def get_image(vm_):
         vm_image = six.text_type(vm_image)
 
     for image in images:
-        if vm_image in (images[image]['name'],
+        if vm_image in {images[image]['name'],
                         images[image]['slug'],
-                        images[image]['id']):
+                        images[image]['id']}:
             if images[image]['slug'] is not None:
                 return images[image]['slug']
             return int(images[image]['id'])
@@ -252,8 +252,8 @@ def get_location(vm_):
     ))
 
     for location in locations:
-        if vm_location in (locations[location]['name'],
-                           locations[location]['slug']):
+        if vm_location in {locations[location]['name'],
+                           locations[location]['slug']}:
             return locations[location]['slug']
     raise SaltCloudNotFound(
         'The specified location, \'{0}\', could not be found.'.format(

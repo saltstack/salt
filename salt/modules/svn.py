@@ -117,7 +117,7 @@ def info(cwd,
         opts += salt.utils.args.shlex_split(targets)
     infos = _run_svn('info', cwd, user, username, password, opts)
 
-    if fmt in ('str', 'xml'):
+    if fmt in {'str', 'xml'}:
         return infos
 
     info_list = []

@@ -81,7 +81,7 @@ def __virtual__():
 
         osrelease_major = __grains__.get('osrelease_info', [0])[0]
 
-        if __grains__['os'] in ('XenServer', 'XCP-ng'):
+        if __grains__['os'] in {'XenServer', 'XCP-ng'}:
             if osrelease_major >= 7:
                 return (
                     False,
@@ -97,7 +97,7 @@ def __virtual__():
                     'Fedora >= 15 uses systemd, will not load rh_service.py '
                     'as virtual \'service\''
                 )
-        if __grains__['os'] in ('RedHat', 'CentOS', 'ScientificLinux', 'OEL', 'CloudLinux'):
+        if __grains__['os'] in {'RedHat', 'CentOS', 'ScientificLinux', 'OEL', 'CloudLinux'}:
             if osrelease_major >= 7:
                 return (
                     False,

@@ -21,7 +21,7 @@ __virtualname__ = 'publish'
 
 
 def __virtual__():
-    return __virtualname__ if __opts__.get('transport', '') in ('zeromq', 'tcp') else False
+    return __virtualname__ if __opts__.get('transport', '') in {'zeromq', 'tcp'} else False
 
 
 def _parse_args(arg):

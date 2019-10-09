@@ -355,7 +355,7 @@ def fopen(*args, **kwargs):
             # Don't permit stdin/stdout/stderr to be opened. The boolean False
             # and True are treated by Python 3's open() as file descriptors 0
             # and 1, respectively.
-            if args[0] in (0, 1, 2):
+            if args[0] in {0, 1, 2}:
                 raise TypeError(
                     '{0} is not a permitted file descriptor'.format(args[0])
                 )

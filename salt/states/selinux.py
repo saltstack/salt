@@ -61,9 +61,9 @@ def _refine_value(value):
     Return a yes/no value, or None if the input is invalid
     '''
     value = six.text_type(value).lower()
-    if value in ('1', 'on', 'yes', 'true'):
+    if value in {'1', 'on', 'yes', 'true'}:
         return 'on'
-    if value in ('0', 'off', 'no', 'false'):
+    if value in {'0', 'off', 'no', 'false'}:
         return 'off'
     return None
 
@@ -74,9 +74,9 @@ def _refine_module_state(module_state):
     .. versionadded:: 2016.3.0
     '''
     module_state = six.text_type(module_state).lower()
-    if module_state in ('1', 'on', 'yes', 'true', 'enabled'):
+    if module_state in {'1', 'on', 'yes', 'true', 'enabled'}:
         return 'enabled'
-    if module_state in ('0', 'off', 'no', 'false', 'disabled'):
+    if module_state in {'0', 'off', 'no', 'false', 'disabled'}:
         return 'disabled'
     return 'unknown'
 

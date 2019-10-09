@@ -1307,7 +1307,7 @@ def regenerate_storage_keys(kwargs=None, conn=None, call=None):
     if 'name' not in kwargs:
         raise SaltCloudSystemExit('A name must be specified as "name"')
 
-    if 'key_type' not in kwargs or kwargs['key_type'] not in ('primary', 'secondary'):
+    if 'key_type' not in kwargs or kwargs['key_type'] not in {'primary', 'secondary'}:
         raise SaltCloudSystemExit('A key_type must be specified ("primary" or "secondary")')
 
     try:

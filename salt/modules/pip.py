@@ -783,7 +783,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         cmd.append('--ignore-installed')
 
     if exists_action:
-        if exists_action.lower() not in ('s', 'i', 'w', 'b'):
+        if exists_action.lower() not in {'s', 'i', 'w', 'b'}:
             raise CommandExecutionError(
                 'The exists_action pip option only supports the values '
                 's, i, w, and b. \'{0}\' is not valid.'.format(exists_action)

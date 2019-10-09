@@ -723,7 +723,7 @@ class SchemaItem(six.with_metaclass(BaseSchemaItemMeta, object)):
         method because it will just duplicate the executions. This class'es
         metaclass will take care of that.
         '''
-        if self.required not in (True, False):
+        if self.required not in {True, False}:
             raise RuntimeError(
                 '\'required\' can only be True/False'
             )

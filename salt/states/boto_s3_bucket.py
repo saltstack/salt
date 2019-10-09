@@ -203,7 +203,7 @@ def _acl_to_grant(ACL, owner_canonical_id):
     if 'ACL' in ACL:
         # This is syntactic sugar; expand it out
         acl = ACL['ACL']
-        if acl in ('public-read', 'public-read-write'):
+        if acl in {'public-read', 'public-read-write'}:
             ret['Grants'].append({
                 'Grantee': {
                     'Type': 'Group',

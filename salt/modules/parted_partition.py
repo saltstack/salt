@@ -154,7 +154,7 @@ def list_(device, unit=None):
     ret = {'info': {}, 'partitions': {}}
     mode = 'info'
     for line in out:
-        if line in ('BYT;', 'CHS;', 'CYL;'):
+        if line in {'BYT;', 'CHS;', 'CYL;'}:
             continue
         cols = line.rstrip(';').split(':')
         if mode == 'info':

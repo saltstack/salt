@@ -68,7 +68,7 @@ def check_existing(package, pkg_files, formula_def, conn=None):
             continue
 
         if member.name.startswith('{0}/_'.format(package)):
-            if node_type in ('master', 'minion'):
+            if node_type in {'master', 'minion'}:
                 # Module files are distributed via extmods directory
                 out_file = os.path.join(
                     salt.syspaths.CACHE_DIR,
@@ -128,13 +128,13 @@ def install_file(package, formula_tar, member, formula_def, conn=None):
                 tag = line.split('|', 1)[0]
                 line = line.split('|', 1)[1]
         if tag and new_name == line:
-            if tag in ('c', 'd', 'g', 'l', 'r'):
+            if tag in {'c', 'd', 'g', 'l', 'r'}:
                 out_path = __opts__['spm_share_dir']
-            elif tag in ('s', 'm'):
+            elif tag in {'s', 'm'}:
                 pass
 
     if member.name.startswith('{0}/_'.format(package)):
-        if node_type in ('master', 'minion'):
+        if node_type in {'master', 'minion'}:
             # Module files are distributed via extmods directory
             member.name = new_name.name.replace('{0}/_'.format(package), '')
             out_path = os.path.join(

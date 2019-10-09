@@ -859,7 +859,7 @@ def list_policies(vhost="/", runas=None):
     for line in _output_lines_to_list(output):
         parts = line.split('\t')
 
-        if len(parts) not in (5, 6):
+        if len(parts) not in {5, 6}:
             continue
 
         vhost, name = parts[0], parts[1]

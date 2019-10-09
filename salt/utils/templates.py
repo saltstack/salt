@@ -203,9 +203,9 @@ def _get_jinja_error_slug(tb_data):
     try:
         return [
             x
-            for x in tb_data if x[2] in ('top-level template code',
+            for x in tb_data if x[2] in {'top-level template code',
                                          'template',
-                                         '<module>')
+                                         '<module>'}
         ][-1]
     except IndexError:
         pass

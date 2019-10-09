@@ -132,7 +132,7 @@ class SaltCacheLoader(BaseLoader):
         '''
         # FIXME: somewhere do seprataor replacement: '\\' => '/'
         _template = template
-        if template.split('/', 1)[0] in ('..', '.'):
+        if template.split('/', 1)[0] in {'..', '.'}:
             is_relative = True
         else:
             is_relative = False
@@ -326,7 +326,7 @@ def to_bool(val):
     if isinstance(val, bool):
         return val
     if isinstance(val, (six.text_type, six.string_types)):
-        return val.lower() in ('yes', '1', 'true')
+        return val.lower() in {'yes', '1', 'true'}
     if isinstance(val, six.integer_types):
         return val > 0
     if not isinstance(val, collections.Hashable):

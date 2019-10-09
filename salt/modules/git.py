@@ -532,7 +532,7 @@ def add(cwd,
     command = ['git'] + _format_git_opts(git_opts)
     command.extend(['add', '--verbose'])
     command.extend(
-        [x for x in _format_opts(opts) if x not in ('-v', '--verbose')]
+        [x for x in _format_opts(opts) if x not in {'-v', '--verbose'}]
     )
     command.extend(['--', filename])
     return _git_run(command,
@@ -2143,7 +2143,7 @@ def fetch(cwd,
     if force:
         command.append('--force')
     command.extend(
-        [x for x in _format_opts(opts) if x not in ('-f', '--force')]
+        [x for x in _format_opts(opts) if x not in {'-f', '--force'}]
     )
     if remote:
         command.append(remote)
@@ -3729,7 +3729,7 @@ def rebase(cwd,
     '''
     cwd = _expand_path(cwd, user)
     opts = _format_opts(opts)
-    if any(x for x in opts if x in ('-i', '--interactive')):
+    if any(x for x in opts if x in {'-i', '--interactive'}):
         raise SaltInvocationError('Interactive rebases are not supported')
     command = ['git'] + _format_git_opts(git_opts)
     command.append('rebase')
@@ -4177,7 +4177,7 @@ def remotes(cwd,
             continue
         # Remove parenthesis
         action = action.lstrip('(').rstrip(')').lower()
-        if action not in ('fetch', 'push'):
+        if action not in {'fetch', 'push'}:
             log.warning(
                 'Unknown action \'%s\' for remote \'%s\' in git checkout '
                 'located in %s', action, remote, cwd
@@ -5048,7 +5048,7 @@ def tag(cwd,
     # Don't add options for annotated tags, since we'll automatically add them
     # if a message was passed. This keeps us from blocking on input, as passing
     # these options without a separate message option would launch an editor.
-    formatted_opts = [x for x in _format_opts(opts) if x not in ('-a', '--annotate')]
+    formatted_opts = [x for x in _format_opts(opts) if x not in {'-a', '--annotate'}]
     # Make sure that the message was not passed in the opts
     if any(x == '-m' or '--message' in x for x in formatted_opts):
         raise SaltInvocationError(

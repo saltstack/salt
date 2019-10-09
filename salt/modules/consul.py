@@ -1231,7 +1231,7 @@ def session_create(consul_url=None, token=None, **kwargs):
         data['Touch'] = kwargs['touch']
 
     if 'behavior' in kwargs:
-        if not kwargs['behavior'] in ('delete', 'release'):
+        if not kwargs['behavior'] in {'delete', 'release'}:
             ret['message'] = ('Behavior must be ',
                               'either delete or release.')
             ret['res'] = False
@@ -1531,7 +1531,7 @@ def catalog_register(consul_url=None, token=None, **kwargs):
         data['Check']['Name'] = kwargs['check']
 
         if 'check_status' in kwargs:
-            if kwargs['check_status'] not in ('unknown', 'passing', 'warning', 'critical'):
+            if kwargs['check_status'] not in {'unknown', 'passing', 'warning', 'critical'}:
                 ret['message'] = 'Check status must be unknown, passing, warning, or critical.'
                 ret['res'] = False
                 return ret
@@ -1987,7 +1987,7 @@ def health_state(consul_url=None, token=None, state=None, **kwargs):
     if 'dc' in kwargs:
         query_params['dc'] = kwargs['dc']
 
-    if state not in ('any', 'unknown', 'passing', 'warning', 'critical'):
+    if state not in {'any', 'unknown', 'passing', 'warning', 'critical'}:
         ret['message'] = 'State must be any, unknown, passing, warning, or critical.'
         ret['res'] = False
         return ret

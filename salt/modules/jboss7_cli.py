@@ -352,7 +352,7 @@ def __get_long(token):
 
 
 def __is_datatype(token):
-    return token in ("INT", "BOOLEAN", "STRING", "OBJECT", "LONG")
+    return token in {"INT", "BOOLEAN", "STRING", "OBJECT", "LONG"}
 
 
 def __get_datatype(token):

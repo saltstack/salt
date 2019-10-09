@@ -599,7 +599,7 @@ def show_pricing(kwargs=None, call=None):
     ret['per_hour'] = 0
     conn = get_conn(service='SoftLayer_Product_Item_Price')
     for item in profile:
-        if item in ('profile', 'provider', 'location'):
+        if item in {'profile', 'provider', 'location'}:
             continue
         price = conn.getObject(id=profile[item])
         raw[item] = price

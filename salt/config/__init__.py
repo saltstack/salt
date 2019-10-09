@@ -2090,7 +2090,7 @@ def _validate_ssh_minion_opts(opts):
     for opt_name in list(ssh_minion_opts):
         if re.match('^[a-z0-9]+fs_', opt_name, flags=re.IGNORECASE) \
                 or ('pillar' in opt_name and not 'ssh_merge_pillar' == opt_name) \
-                or opt_name in ('fileserver_backend',):
+                or opt_name in {'fileserver_backend',}:
             log.warning(
                 '\'%s\' is not a valid ssh_minion_opts parameter, ignoring',
                 opt_name
@@ -2915,7 +2915,7 @@ def apply_vm_profiles_config(providers, overrides, defaults=None):
     vms = {}
 
     for key, val in six.iteritems(config):
-        if key in ('conf_file', 'include', 'default_include', 'user'):
+        if key in {'conf_file', 'include', 'default_include', 'user'}:
             continue
         if not isinstance(val, dict):
             raise salt.exceptions.SaltCloudConfigError(
@@ -3074,7 +3074,7 @@ def apply_cloud_providers_config(overrides, defaults=None):
     providers = {}
     ext_count = 0
     for key, val in six.iteritems(config):
-        if key in ('conf_file', 'include', 'default_include', 'user'):
+        if key in {'conf_file', 'include', 'default_include', 'user'}:
             continue
 
         if not isinstance(val, (list, tuple)):
@@ -3632,7 +3632,7 @@ def _update_ssl_config(opts):
     '''
     Resolves string names to integer constant in ssl configuration.
     '''
-    if opts['ssl'] in (None, False):
+    if opts['ssl'] in {None, False}:
         opts['ssl'] = None
         return
     if opts['ssl'] is True:
@@ -3707,7 +3707,7 @@ def apply_minion_config(overrides=None,
             opts['saltenv'] = opts['environment']
 
     for idx, val in enumerate(opts['fileserver_backend']):
-        if val in ('git', 'hg', 'svn', 'minion'):
+        if val in {'git', 'hg', 'svn', 'minion'}:
             new_val = val + 'fs'
             log.debug(
                 'Changed %s to %s in minion opts\' fileserver_backend list',
@@ -3734,7 +3734,7 @@ def apply_minion_config(overrides=None,
         opts['id'] = _append_domain(opts)
 
     for directory in opts.get('append_minionid_config_dirs', []):
-        if directory in ('pki_dir', 'cachedir', 'extension_modules'):
+        if directory in {'pki_dir', 'cachedir', 'extension_modules'}:
             newdirectory = os.path.join(opts[directory], opts['id'])
             opts[directory] = newdirectory
         elif directory == 'default_include' and directory in opts:
@@ -3811,7 +3811,7 @@ def _update_discovery_config(opts):
     :param opts:
     :return:
     '''
-    if opts.get('discovery') not in (None, False):
+    if opts.get('discovery') not in {None, False}:
         if opts['discovery'] is True:
             opts['discovery'] = {}
         discovery_config = {'attempts': 3, 'pause': 5, 'port': 4520, 'match': 'any', 'mapping': {}}
@@ -3912,7 +3912,7 @@ def apply_master_config(overrides=None, defaults=None):
         opts['rest_cherrypy'] = salt.utils.data.encode(opts['rest_cherrypy'])
 
     for idx, val in enumerate(opts['fileserver_backend']):
-        if val in ('git', 'hg', 'svn', 'minion'):
+        if val in {'git', 'hg', 'svn', 'minion'}:
             new_val = val + 'fs'
             log.debug(
                 'Changed %s to %s in master opts\' fileserver_backend list',

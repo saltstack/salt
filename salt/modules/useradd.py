@@ -40,7 +40,7 @@ def __virtual__():
     Set the user module if the kernel is Linux, OpenBSD, NetBSD or AIX
     '''
 
-    if HAS_PWD and __grains__['kernel'] in ('Linux', 'OpenBSD', 'NetBSD', 'AIX'):
+    if HAS_PWD and __grains__['kernel'] in {'Linux', 'OpenBSD', 'NetBSD', 'AIX'}:
         return __virtualname__
     return (False, 'useradd execution module not loaded: either pwd python library not available or system not one of Linux, OpenBSD, NetBSD or AIX')
 
@@ -143,9 +143,9 @@ def add(name,
     cmd = ['useradd']
     if shell:
         cmd.extend(['-s', shell])
-    if uid not in (None, ''):
+    if uid not in {None, ''}:
         cmd.extend(['-u', uid])
-    if gid not in (None, ''):
+    if gid not in {None, ''}:
         cmd.extend(['-g', gid])
     elif groups is not None and name in groups:
         defs_file = '/etc/login.defs'
@@ -278,7 +278,7 @@ def delete(name, remove=False, force=False, root=None):
         # There's a known bug in Debian based distributions, at least, that
         # makes the command exit with 12, see:
         #  https://bugs.launchpad.net/ubuntu/+source/shadow/+bug/1023509
-        if __grains__['os_family'] not in ('Debian',):
+        if __grains__['os_family'] not in {'Debian',}:
             return False
 
         if 'var/mail' in ret['stderr'] or 'var/spool/mail' in ret['stderr']:

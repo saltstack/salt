@@ -110,7 +110,7 @@ def query(key, keyid, method='GET', params=None, headers=None,
     if not keyid:
         keyid = salt.utils.aws.IROLE_CODE
 
-    if kms_keyid is not None and method in ('PUT', 'POST'):
+    if kms_keyid is not None and method in {'PUT', 'POST'}:
         headers['x-amz-server-side-encryption'] = 'aws:kms'
         headers['x-amz-server-side-encryption-aws-kms-key-id'] = kms_keyid
 

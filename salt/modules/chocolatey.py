@@ -42,7 +42,7 @@ def __virtual__():
         return (False, 'Cannot load module chocolatey: Chocolatey requires '
                        'Windows')
 
-    if __grains__['osrelease'] in ('XP', '2003Server'):
+    if __grains__['osrelease'] in {'XP', '2003Server'}:
         return (False, 'Cannot load module chocolatey: Chocolatey requires '
                        'Windows Vista or later')
 

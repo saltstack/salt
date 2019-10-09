@@ -164,7 +164,7 @@ def get_location(conn, vm_):
     # Default to Dallas if not otherwise set
     loc = config.get_cloud_config_value('location', vm_, __opts__, default=2)
     for location in locations:
-        if six.text_type(loc) in (six.text_type(location.id), six.text_type(location.name)):
+        if six.text_type(loc) in {six.text_type(location.id), six.text_type(location.name)}:
             return location
 
 
@@ -256,7 +256,7 @@ def get_project(conn, vm_):
         return False
 
     for project in projects:
-        if six.text_type(projid) in (six.text_type(project.id), six.text_type(project.name)):
+        if six.text_type(projid) in {six.text_type(project.id), six.text_type(project.name)}:
             return project
 
     log.warning("Couldn't find project %s in projects", projid)

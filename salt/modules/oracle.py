@@ -78,8 +78,8 @@ def _unicode_output(cursor, name, default_type, size, precision, scale):
 
     http://www.oracle.com/technetwork/articles/dsl/tuininga-cx-oracle-084866.html
     '''
-    if default_type in (cx_Oracle.STRING, cx_Oracle.LONG_STRING,
-                        cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB):
+    if default_type in {cx_Oracle.STRING, cx_Oracle.LONG_STRING,
+                        cx_Oracle.FIXED_CHAR, cx_Oracle.CLOB}:
         return cursor.var(six.text_type, size, cursor.arraysize)
 
 

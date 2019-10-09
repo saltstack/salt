@@ -582,7 +582,7 @@ def _memdata(osdata):
     grains = {'mem_total': 0}
     if osdata['kernel'] == 'Linux':
         grains.update(_linux_memdata())
-    elif osdata['kernel'] in ('FreeBSD', 'OpenBSD', 'NetBSD'):
+    elif osdata['kernel'] in {'FreeBSD', 'OpenBSD', 'NetBSD'}:
         grains.update(_bsd_memdata(osdata))
     elif osdata['kernel'] == 'Darwin':
         grains.update(_osx_memdata())
@@ -775,7 +775,7 @@ def _virtual(osdata):
             # Break out of the loop so the next log message is not issued
             break
         elif command == 'systemd-detect-virt':
-            if output in ('qemu', 'kvm', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'):
+            if output in {'qemu', 'kvm', 'oracle', 'xen', 'bochs', 'chroot', 'uml', 'systemd-nspawn'}:
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
@@ -795,7 +795,7 @@ def _virtual(osdata):
                 output = output.splitlines()[-1]
             except IndexError:
                 pass
-            if output in ('kvm', 'qemu', 'uml', 'xen', 'lxc'):
+            if output in {'kvm', 'qemu', 'uml', 'xen', 'lxc'}:
                 grains['virtual'] = output
                 break
             elif 'vmware' in output:
@@ -1898,8 +1898,8 @@ def os_data():
                                 key, val = line.rstrip('\n').split('=')
                             except ValueError:
                                 continue
-                            if key in ('majorversion', 'minorversion',
-                                       'buildnumber'):
+                            if key in {'majorversion', 'minorversion',
+                                       'buildnumber'}:
                                 synoinfo[key] = val.strip('"')
                         if len(synoinfo) != 3:
                             log.warning(
@@ -2046,7 +2046,7 @@ def os_data():
             # derive osrelease from kernelversion prior to that
             grains['osrelease'] = grains['kernelrelease'].split('-')[0]
         grains.update(_bsd_cpudata(grains))
-    if grains['kernel'] in ('OpenBSD', 'NetBSD'):
+    if grains['kernel'] in {'OpenBSD', 'NetBSD'}:
         grains.update(_bsd_cpudata(grains))
         grains['osrelease'] = grains['kernelrelease'].split('-')[0]
         if grains['kernel'] == 'NetBSD':
@@ -2067,7 +2067,7 @@ def os_data():
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
     elif grains.get('os_family') in {'RedHat', 'Suse'}:
         osarch = salt.utils.pkg.rpm.get_osarch()
-    elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
+    elif grains.get('os_family') in {'NILinuxRT', 'Poky'}:
         archinfo = {}
         for line in __salt__['cmd.run']('opkg print-architecture').splitlines():
             if line.startswith('arch'):
@@ -2105,10 +2105,10 @@ def os_data():
                 'The osmajorrelease grain will not be set.',
                 grains['osrelease_info']
             )
-        os_name = grains['os' if grains.get('os') in (
-            'Debian', 'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian') else 'osfullname']
+        os_name = grains['os' if grains.get('os') in {
+            'Debian', 'FreeBSD', 'OpenBSD', 'NetBSD', 'Mac', 'Raspbian'} else 'osfullname']
         grains['osfinger'] = '{0}-{1}'.format(
-            os_name, grains['osrelease'] if os_name in ('Ubuntu',) else grains['osrelease_info'][0])
+            os_name, grains['osrelease'] if os_name in {'Ubuntu',} else grains['osrelease_info'][0])
 
     return grains
 

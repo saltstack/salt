@@ -286,7 +286,7 @@ def get_all_security_groups(groupnames=None, group_ids=None, filters=None,
                 v = getattr(g, a, None)
                 if a == 'region':
                     v = v.name
-                elif a in ('rules', 'rules_egress'):
+                elif a in {'rules', 'rules_egress'}:
                     v = _parse_rules(g, v)
                 elif a == 'instances':
                     v = [i.id for i in v()]

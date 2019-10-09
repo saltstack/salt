@@ -359,7 +359,7 @@ def get_image(conn, vm_):
     image_list = conn.image_list()
 
     for img in image_list:
-        if vm_image in (image_list[img]['id'], img):
+        if vm_image in {image_list[img]['id'], img}:
             return image_list[img]['id']
 
     try:
@@ -410,7 +410,7 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and six.text_type(vm_size) in (six.text_type(sizes[size]['id']), six.text_type(size)):
+        if vm_size and six.text_type(vm_size) in {six.text_type(sizes[size]['id']), six.text_type(size)}:
             return sizes[size]['id']
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)

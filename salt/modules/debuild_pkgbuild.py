@@ -54,7 +54,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian-based system, and has required utilities
     '''
-    if __grains__.get('os_family', False) in ('Kali', 'Debian'):
+    if __grains__.get('os_family', False) in {'Kali', 'Debian'}:
         missing_util = False
         utils_reqd = ['gpg', 'debuild', 'pbuilder', 'reprepro']
         for named_util in utils_reqd:

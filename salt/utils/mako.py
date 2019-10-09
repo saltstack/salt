@@ -68,7 +68,7 @@ if HAS_MAKO:
 
         def adjust_uri(self, uri, filename):
             scheme = urlparse(uri).scheme
-            if scheme in ('salt', 'file'):
+            if scheme in {'salt', 'file'}:
                 return uri
             elif scheme:
                 raise ValueError(

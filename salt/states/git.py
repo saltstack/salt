@@ -649,7 +649,7 @@ def latest(name,
             '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
         )
 
-    if force_reset not in (True, False, 'remote-changes'):
+    if force_reset not in {True, False, 'remote-changes'}:
         return _fail(
             ret,
             '\'force_reset\' must be one of True, False, or \'remote-changes\''
@@ -865,7 +865,7 @@ def latest(name,
             )
             remote_loc = None
 
-    if depth is not None and remote_rev_type not in ('branch', 'tag'):
+    if depth is not None and remote_rev_type not in {'branch', 'tag'}:
         return _fail(
             ret,
             'When \'depth\' is used, \'rev\' must be set to the name of a '

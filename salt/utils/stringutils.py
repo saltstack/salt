@@ -507,7 +507,7 @@ def print_cli(msg, retries=10, step=0.01):
             if exc.errno != errno.EPIPE:
                 if (
                     ("temporarily unavailable" in err or
-                     exc.errno in (errno.EAGAIN,)) and
+                     exc.errno in {errno.EAGAIN,}) and
                     retries
                 ):
                     time.sleep(step)

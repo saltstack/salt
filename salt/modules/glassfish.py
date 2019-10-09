@@ -312,11 +312,11 @@ def create_connector_c_pool(name, server=None, **kwargs):
     data.update(kwargs)
 
     # Check TransactionSupport against acceptable values
-    if data['transactionSupport'] and data['transactionSupport'] not in (
+    if data['transactionSupport'] and data['transactionSupport'] not in {
                'XATransaction',
                'LocalTransaction',
                'NoTransaction'
-       ):
+       }:
         raise CommandExecutionError('Invalid transaction support')
 
     return _create_element(name, 'resources/connector-connection-pool', data, server)
@@ -326,11 +326,11 @@ def update_connector_c_pool(name, server=None, **kwargs):
     '''
     Update a connection pool
     '''
-    if 'transactionSupport' in kwargs and kwargs['transactionSupport'] not in (
+    if 'transactionSupport' in kwargs and kwargs['transactionSupport'] not in {
                'XATransaction',
                'LocalTransaction',
                'NoTransaction'
-       ):
+       }:
         raise CommandExecutionError('Invalid transaction support')
     return _update_element(name, 'resources/connector-connection-pool', kwargs, server)
 
@@ -540,38 +540,38 @@ def create_jdbc_connection_pool(name, server=None, **kwargs):
     data.update(kwargs)
 
     # Check resType against acceptable values
-    if data['resType'] not in (
+    if data['resType'] not in {
             'javax.sql.DataSource',
             'javax.sql.XADataSource',
             'javax.sql.ConnectionPoolDataSource',
             'java.sql.Driver'
-       ):
+       }:
         raise CommandExecutionError('Invalid resource type')
 
     # Check connectionValidationMethod against acceptable velues
-    if data['connectionValidationMethod'] not in (
+    if data['connectionValidationMethod'] not in {
             'auto-commit',
             'meta-data',
             'table',
             'custom-validation'
-       ):
+       }:
         raise CommandExecutionError('Invalid connection validation method')
 
     if data['transactionIsolationLevel'] \
-       and data['transactionIsolationLevel'] not in (
+       and data['transactionIsolationLevel'] not in {
                'read-uncommitted',
                'read-committed',
                'repeatable-read',
                'serializable'
-       ):
+       }:
         raise CommandExecutionError('Invalid transaction isolation level')
 
     if not data['datasourceClassname'] \
-       and data['resType'] in (
+       and data['resType'] in {
                'javax.sql.DataSource',
                'javax.sql.ConnectionPoolDataSource',
                'javax.sql.XADataSource'
-       ):
+       }:
         raise CommandExecutionError('No datasource class name while using datasource resType')
     if not data['driverClassname'] and data['resType'] == 'java.sql.Driver':
         raise CommandExecutionError('No driver class nime while using driver resType')

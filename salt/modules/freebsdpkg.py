@@ -499,7 +499,7 @@ def _rehash():
     command is created during the current session.
     '''
     shell = __salt__['environ.get']('SHELL')
-    if shell.split('/')[-1] in ('csh', 'tcsh'):
+    if shell.split('/')[-1] in {'csh', 'tcsh'}:
         __salt__['cmd.shell']('rehash', output_loglevel='trace')
 
 

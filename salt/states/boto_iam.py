@@ -1300,7 +1300,7 @@ def account_policy(name=None, allow_users_to_change_password=None,
         ret['result'] = False
         return ret
     for key, value in config.items():
-        if key in ('region', 'key', 'keyid', 'profile', 'name'):
+        if key in {'region', 'key', 'keyid', 'profile', 'name'}:
             continue
         if value is not None and six.text_type(info[key]) != six.text_type(value).lower():
             ret['comment'] = ' '.join([ret['comment'], 'Policy value {0} has been set to {1}.'.format(value, info[key])])
@@ -1585,7 +1585,7 @@ def policy_absent(name,
                                     keyid=keyid, profile=profile)
     if versions:
         for version in versions:
-            if version.get('is_default_version', False) in ('true', True):
+            if version.get('is_default_version', False) in {'true', True}:
                 continue
             r = __salt__['boto_iam.delete_policy_version'](name,
                                     version_id=version.get('version_id'),

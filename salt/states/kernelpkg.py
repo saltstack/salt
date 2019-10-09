@@ -205,7 +205,7 @@ def mod_watch(name, sfun, **kwargs):
     '''
     Execute a kernelpkg state based on a watch or listen call
     '''
-    if sfun in ('latest_active', 'latest_wait'):
+    if sfun in {'latest_active', 'latest_wait'}:
         return latest_active(name, **kwargs)
     else:
         return {'name': name, 'changes': {},

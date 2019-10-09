@@ -283,7 +283,7 @@ def _make_it_list(dict_, field_name, value):
         return prev_value
     elif isinstance(value, (tuple, list)):
         # other type of iterables
-        if field_name in ('source_port', 'destination_port'):
+        if field_name in {'source_port', 'destination_port'}:
             # port fields are more special
             # they can either be a list of integers, either a list of tuples
             # list of integers = a list of ports
@@ -314,7 +314,7 @@ def _make_it_list(dict_, field_name, value):
                 )
             return list(set(prev_value + translated_portval))
         return list(set(prev_value + list(value)))
-    if field_name in ('source_port', 'destination_port'):
+    if field_name in {'source_port', 'destination_port'}:
         if not isinstance(value, int):
             value = _translate_port(value)
         return list(set(prev_value + [(value, value)]))  # a list of tuples

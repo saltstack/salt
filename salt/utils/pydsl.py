@@ -422,7 +422,7 @@ class StateFunction(object):
         if args:
             first = args[0]
             if self.mod._name == 'cmd' and \
-                    self.name in ('call', 'wait_call') and callable(first):
+                    self.name in {'call', 'wait_call'} and callable(first):
 
                 args[0] = first.__name__
                 kws = dict(func=first, args=args[1:], kws=kws)

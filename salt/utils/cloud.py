@@ -2933,7 +2933,7 @@ def update_bootstrap(config, url=None):
             # directory
             continue
 
-        if entry in (deploy_d_from_conf_file, deploy_d_from_syspaths):
+        if entry in {deploy_d_from_conf_file, deploy_d_from_syspaths}:
             # Allow parent directories to be made
             deploy_scripts_search_paths.append((entry, True))
         else:
@@ -3322,7 +3322,7 @@ def check_key_path_and_mode(provider, key_path):
         return False
 
     key_mode = stat.S_IMODE(os.stat(key_path).st_mode)
-    if key_mode not in (0o400, 0o600):
+    if key_mode not in {0o400, 0o600}:
         log.error(
             'The key file \'%s\' used in the \'%s\' provider configuration '
             'needs to be set to mode 0400 or 0600.\n', key_path, provider

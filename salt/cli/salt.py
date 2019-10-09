@@ -40,7 +40,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         import salt.client
         self.parse_args()
 
-        if self.config['log_level'] not in ('quiet', ):
+        if self.config['log_level'] not in {'quiet', }:
             # Setup file logging!
             self.setup_logfile_logger()
             verify_log(self.config)

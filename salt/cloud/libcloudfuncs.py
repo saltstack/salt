@@ -187,7 +187,7 @@ def avail_images(conn=None, call=None):
 
         ret[img_name] = {}
         for attr in dir(img):
-            if attr.startswith('_') or attr in ('driver', 'get_uuid'):
+            if attr.startswith('_') or attr in {'driver', 'get_uuid'}:
                 continue
             attr_value = getattr(img, attr)
             if isinstance(attr_value, six.string_types) and not six.PY3:
@@ -222,7 +222,7 @@ def avail_sizes(conn=None, call=None):
 
         ret[size_name] = {}
         for attr in dir(size):
-            if attr.startswith('_') or attr in ('driver', 'get_uuid'):
+            if attr.startswith('_') or attr in {'driver', 'get_uuid'}:
                 continue
 
             try:
@@ -260,7 +260,7 @@ def get_location(conn, vm_):
         else:
             img_name = str(img.name)  # future lint: disable=blacklisted-function
 
-        if vm_location and vm_location in (img_id, img_name):
+        if vm_location and vm_location in {img_id, img_name}:
             return img
 
     raise SaltCloudNotFound(
@@ -291,7 +291,7 @@ def get_image(conn, vm_):
         else:
             img_name = str(img.name)  # future lint: disable=blacklisted-function
 
-        if vm_image and vm_image in (img_id, img_name):
+        if vm_image and vm_image in {img_id, img_name}:
             return img
 
     raise SaltCloudNotFound(
@@ -309,7 +309,7 @@ def get_size(conn, vm_):
         return sizes[0]
 
     for size in sizes:
-        if vm_size and str(vm_size) in (str(size.id), str(size.name)):  # pylint: disable=blacklisted-function
+        if vm_size and str(vm_size) in {str(size.id), str(size.name)}:  # pylint: disable=blacklisted-function
             return size
     raise SaltCloudNotFound(
         'The specified size, \'{0}\', could not be found.'.format(vm_size)

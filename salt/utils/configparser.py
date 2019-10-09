@@ -115,7 +115,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                     if optval is None:
                         optval = ''
                     if optval:
-                        if vi in ('=', ':') and ';' in optval:
+                        if vi in {'=', ':'} and ';' in optval:
                             # ';' is a comment delimiter only if it follows
                             # a spacing character
                             pos = optval.find(';')
@@ -123,7 +123,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
                                 optval = optval[:pos]
                         optval = optval.strip()
                         # Empty strings should be considered as blank strings
-                        if optval in ('""', "''"):
+                        if optval in {'""', "''"}:
                             optval = ''
                     self._add_option(cursect, optname, optval)
                 else:

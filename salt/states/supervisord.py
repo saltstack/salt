@@ -42,9 +42,9 @@ def _check_error(result, success_message):
 
 
 def _is_stopped_state(state):
-    if state in ('STOPPED', 'STOPPING', 'EXITED', 'FATAL', 'BACKOFF'):
+    if state in {'STOPPED', 'STOPPING', 'EXITED', 'FATAL', 'BACKOFF'}:
         return True
-    if state in ('STARTING', 'RUNNING'):
+    if state in {'STARTING', 'RUNNING'}:
         return False
     return False
 

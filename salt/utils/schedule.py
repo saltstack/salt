@@ -802,7 +802,7 @@ class Schedule(object):
         finally:
             # Only attempt to return data to the master if the scheduled job is running
             # on a master itself or a minion.
-            if '__role' in self.opts and self.opts['__role'] in ('master', 'minion'):
+            if '__role' in self.opts and self.opts['__role'] in {'master', 'minion'}:
                 # The 'return_job' option is enabled by default even if not set
                 if 'return_job' in data and not data['return_job']:
                     pass

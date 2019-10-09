@@ -986,7 +986,7 @@ def diskusage(*args):
                     ifile = salt.utils.stringutils.to_unicode(fp_.read()).splitlines()
             except OSError:
                 return {}
-        elif __grains__['kernel'] in ('FreeBSD', 'SunOS'):
+        elif __grains__['kernel'] in {'FreeBSD', 'SunOS'}:
             ifile = __salt__['cmd.run']('mount -p').splitlines()
         else:
             raise CommandExecutionError('status.diskusage not yet supported on this platform')

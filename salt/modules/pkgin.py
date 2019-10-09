@@ -186,14 +186,14 @@ def latest_version(*names, **kwargs):
                 return pkglist
             p = line.split(';' if _supports_parsing() else None)
 
-            if p and p[0] in ('=:', '<:', '>:', ''):
+            if p and p[0] in {'=:', '<:', '>:', ''}:
                 # These are explanation comments
                 continue
             elif p:
                 s = _splitpkg(p[0])
                 if s:
                     if not s[0] in pkglist:
-                        if len(p) > 1 and p[1] in ('<', '', '='):
+                        if len(p) > 1 and p[1] in {'<', '', '='}:
                             pkglist[s[0]] = s[1]
                         else:
                             pkglist[s[0]] = ''
@@ -633,7 +633,7 @@ def _rehash():
     session.
     '''
     shell = __salt__['environ.get']('SHELL')
-    if shell.split('/')[-1] in ('csh', 'tcsh'):
+    if shell.split('/')[-1] in {'csh', 'tcsh'}:
         __salt__['cmd.run']('rehash', output_loglevel='trace')
 
 

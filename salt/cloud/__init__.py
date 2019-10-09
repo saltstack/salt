@@ -566,7 +566,7 @@ class Cloud(object):
         providers = set()
         for alias, drivers in six.iteritems(self.opts['providers']):
             for driver in drivers:
-                if lookup in (alias, driver):
+                if lookup in {alias, driver}:
                     providers.add((alias, driver))
 
         if not providers:
@@ -1252,8 +1252,8 @@ class Cloud(object):
             ):
                 output = self.clouds[func](vm_)
             if output is not False and 'sync_after_install' in self.opts:
-                if self.opts['sync_after_install'] not in (
-                        'all', 'modules', 'states', 'grains'):
+                if self.opts['sync_after_install'] not in {
+                        'all', 'modules', 'states', 'grains'}:
                     log.error('Bad option for sync_after_install')
                     return output
 
@@ -2189,7 +2189,7 @@ class Map(Cloud):
         local_master = master_name is None
 
         for name, profile in create_list:
-            if name in (master_name, master_minion_name):
+            if name in {master_name, master_minion_name}:
                 # Already deployed, it's the master's minion
                 continue
 

@@ -316,9 +316,9 @@ def _failout(state, msg):
 
 
 def _is_true(val):
-    if val and six.text_type(val).lower() in ('true', 'yes', '1'):
+    if val and six.text_type(val).lower() in {'true', 'yes', '1'}:
         return True
-    elif six.text_type(val).lower() in ('false', 'no', '0'):
+    elif six.text_type(val).lower() in {'false', 'no', '0'}:
         return False
     raise ValueError('Failed parsing boolean value: {0}'.format(val))
 
@@ -1311,7 +1311,7 @@ def mod_watch(name, **kwargs):
 
         Parameters for this function should be set by the state being triggered.
     '''
-    if kwargs['sfun'] in ('wait', 'run', 'watch'):
+    if kwargs['sfun'] in {'wait', 'run', 'watch'}:
         if kwargs.get('stateful'):
             kwargs.pop('stateful')
             return _reinterpreted_state(run(name, **kwargs))

@@ -78,7 +78,7 @@ class Listener(object):
             ret.update(dict(list(zip(
                 ('master', 'old_host', 'old_port', 'new_host', 'new_port'), item['data'].split(' ')
             ))))
-        elif item['channel'] in ('+odown', '-odown'):
+        elif item['channel'] in {'+odown', '-odown'}:
             ret.update(dict(list(zip(
                 ('master', 'host', 'port'), item['data'].split(' ')[1:]
             ))))

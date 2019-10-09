@@ -1918,11 +1918,11 @@ def create(name,
     fstype = select('fstype')
     size = select('size', '1G')
     zfsroot = select('zfsroot')
-    if backing in ('dir', 'overlayfs', 'btrfs', 'zfs'):
+    if backing in {'dir', 'overlayfs', 'btrfs', 'zfs'}:
         fstype = None
         size = None
     # some backends won't support some parameters
-    if backing in ('aufs', 'dir', 'overlayfs', 'btrfs'):
+    if backing in {'aufs', 'dir', 'overlayfs', 'btrfs'}:
         lvname = vgname = thinpool = None
 
     if image:
@@ -1944,17 +1944,17 @@ def create(name,
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
-        if backing in ('zfs',):
+        if backing in {'zfs',}:
             if zfsroot:
                 cmd += ' --zfsroot {0}'.format(zfsroot)
-        if backing in ('lvm',):
+        if backing in {'lvm',}:
             if lvname:
                 cmd += ' --lvname {0}'.format(lvname)
             if vgname:
                 cmd += ' --vgname {0}'.format(vgname)
             if thinpool:
                 cmd += ' --thinpool {0}'.format(thinpool)
-        if backing not in ('dir', 'overlayfs'):
+        if backing not in {'dir', 'overlayfs'}:
             if fstype:
                 cmd += ' --fstype {0}'.format(fstype)
             if size:
@@ -2066,7 +2066,7 @@ def clone(name,
 
     backing = select('backing')
     snapshot = select('snapshot')
-    if backing in ('dir',):
+    if backing in {'dir',}:
         snapshot = False
     if not snapshot:
         snapshot = ''
@@ -2074,7 +2074,7 @@ def clone(name,
         snapshot = '-s'
 
     size = select('size', '1G')
-    if backing in ('dir', 'overlayfs', 'btrfs'):
+    if backing in {'dir', 'overlayfs', 'btrfs'}:
         size = None
     # LXC commands and options changed in 2.0 - CF issue #34086 for details
     if _LooseVersion(version()) >= _LooseVersion('2.0'):
@@ -2092,7 +2092,7 @@ def clone(name,
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
-        if backing not in ('dir', 'overlayfs'):
+        if backing not in {'dir', 'overlayfs'}:
             if size:
                 cmd += ' -L {0}'.format(size)
     ret = __salt__['cmd.run_all'](cmd, python_shell=False)
@@ -2205,7 +2205,7 @@ def list_(extra=False, limit=None, path=None):
         c_state = None
         for line in c_info.splitlines():
             stat = line.split(':')
-            if stat[0] in ('State', 'state'):
+            if stat[0] in {'State', 'state'}:
                 c_state = stat[1].strip()
                 break
 
@@ -3219,7 +3219,7 @@ def running_systemd(name, cache=True, path=None):
             if result['stderr']:
                 error += ': {0}'.format(result['stderr'])
         # only cache result if we got a known exit code
-        if result['retcode'] in (0, 2):
+        if result['retcode'] in {0, 2}:
             __context__[k] = ret = not result['retcode']
     return ret
 
@@ -3272,7 +3272,7 @@ def test_sd_started_state(name, path=None):
 
     '''
     qstate = systemd_running_state(name, path=path)
-    if qstate in ('initializing', 'starting'):
+    if qstate in {'initializing', 'starting'}:
         return False
     elif qstate == '':
         return None
@@ -3685,7 +3685,7 @@ def _run(name,
             elif orig_state == 'frozen' and new_state != 'frozen':
                 freeze(name, start=True, path=path)
 
-    if output in (None, 'all'):
+    if output in {None, 'all'}:
         return ret
     else:
         return ret[output]
