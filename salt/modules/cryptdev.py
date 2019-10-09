@@ -303,7 +303,7 @@ def set_crypttab(
         lines.append(six.text_type(entry))
         ret = 'new'
 
-    if ret != 'present':  # ret in ['new', 'change']:
+    if ret != 'present':  # ret in {'new', 'change'}:
         if not test:
             try:
                 with salt.utils.files.fopen(config, 'w+') as ofile:

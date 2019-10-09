@@ -788,7 +788,7 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
         if returntype is None:
             salt.utils.namecheap.log.error('returntype must be specified when returncertificate is set to True')
             raise Exception('returntype must be specified when returncertificate is set to True')
-        if returntype not in ["Individual", "PKCS7"]:
+        if returntype not in {"Individual", "PKCS7"}:
             salt.utils.namecheap.log.error('returntype must be specified as Individual or PKCS7, not ' + returntype)
             raise Exception('returntype must be specified as Individual or PKCS7, not ' + returntype)
         opts['returntype'] = returntype

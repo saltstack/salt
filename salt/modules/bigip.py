@@ -1899,7 +1899,7 @@ def create_monitor(hostname, username, password, monitor_type, name, **kwargs):
     #this logic relies that the end user knows which options are meant for which monitor types
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'type']:
+            if key not in {'hostname', 'username', 'password', 'type'}:
                 key = key.replace('_', '-')
                 payload[key] = value
 
@@ -1949,7 +1949,7 @@ def modify_monitor(hostname, username, password, monitor_type, name, **kwargs):
     #this logic relies that the end user knows which options are meant for which monitor types
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'type', 'name']:
+            if key not in {'hostname', 'username', 'password', 'type', 'name'}:
                 key = key.replace('_', '-')
                 payload[key] = value
 
@@ -2099,7 +2099,7 @@ def create_profile(hostname, username, password, profile_type, name, **kwargs):
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'profile_type']:
+            if key not in {'hostname', 'username', 'password', 'profile_type'}:
                 key = key.replace('_', '-')
 
                 try:
@@ -2187,7 +2187,7 @@ def modify_profile(hostname, username, password, profile_type, name, **kwargs):
     #this logic relies that the end user knows which options are meant for which profile types
     for key, value in six.iteritems(kwargs):
         if not key.startswith('__'):
-            if key not in ['hostname', 'username', 'password', 'profile_type']:
+            if key not in {'hostname', 'username', 'password', 'profile_type'}:
                 key = key.replace('_', '-')
 
                 try:

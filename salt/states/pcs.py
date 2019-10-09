@@ -287,7 +287,7 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
     # constraints, properties, resource defaults or resource op defaults
     # do not support specifying an id on 'show' command
     item_id_show = item_id
-    if item in ['constraint'] or '=' in item_id:
+    if item in {'constraint'} or '=' in item_id:
         item_id_show = None
 
     is_existing = __salt__['pcs.item_show'](item=item,
@@ -303,15 +303,15 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
     # key,value pairs (item_id contains =) - match key and value
     if item_id_value is not None:
         for line in is_existing['stdout'].splitlines():
-            if len(line.split(':')) in [2]:
+            if len(line.split(':')) in {2}:
                 key = line.split(':')[0].strip()
                 value = line.split(':')[1].strip()
-                if item_id_key in [key]:
-                    if item_id_value in [value]:
+                if item_id_key in {key}:
+                    if item_id_value in {value}:
                         item_create_required = False
 
     # constraints match on '(id:<id>)'
-    elif item in ['constraint']:
+    elif item in {'constraint'}:
         for line in is_existing['stdout'].splitlines():
             if '(id:{0})'.format(item_id) in line:
                 item_create_required = False
@@ -319,7 +319,7 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
     # item_id was provided,
     # return code 0 indicates, that resource already exists
     else:
-        if is_existing['retcode'] in [0]:
+        if is_existing['retcode'] in {0}:
             item_create_required = False
 
     if not item_create_required:
@@ -345,7 +345,7 @@ def _item_present(name, item, item_id, item_type, show='show', create='create', 
 
     log.trace('Output of pcs.item_create: %s', item_create)
 
-    if item_create['retcode'] in [0]:
+    if item_create['retcode'] in {0}:
         ret['comment'] += 'Created {0} {1} ({2})\n'.format(item, item_id, item_type)
         ret['changes'].update({item_id: {'old': '', 'new': six.text_type(item_id)}})
     else:
@@ -481,11 +481,11 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     log.trace('Output of pcs.config_show: %s', config_show)
 
     for line in config_show['stdout'].splitlines():
-        if len(line.split(':')) in [2]:
+        if len(line.split(':')) in {2}:
             key = line.split(':')[0].strip()
             value = line.split(':')[1].strip()
-            if key in ['Cluster Name']:
-                if value in [pcsclustername]:
+            if key in {'Cluster Name'}:
+                if value in {pcsclustername}:
                     ret['comment'] += 'Cluster {0} is already set up\n'.format(pcsclustername)
                 else:
                     setup_required = True
@@ -509,7 +509,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     for line in setup['stdout'].splitlines():
         log.trace('line: %s', line)
         log.trace('line.split(:).len: %s', len(line.split(':')))
-        if len(line.split(':')) in [2]:
+        if len(line.split(':')) in {2}:
             node = line.split(':')[0].strip()
             setup_state = line.split(':')[1].strip()
             if node in nodes:
@@ -518,7 +518,7 @@ def cluster_setup(name, nodes, pcsclustername='pcscluster', extra_args=None):
     log.trace('setup_dict: %s', setup_dict)
 
     for node in nodes:
-        if node in setup_dict and setup_dict[node] in ['Succeeded', 'Success']:
+        if node in setup_dict and setup_dict[node] in {'Succeeded', 'Success'}:
             ret['comment'] += 'Set up {0}\n'.format(node)
             ret['changes'].update({node: {'old': '', 'new': 'Setup'}})
         else:
@@ -568,10 +568,10 @@ def cluster_node_present(name, node, extra_args=None):
     log.trace('Output of pcs status nodes corosync: %s', is_member)
 
     for line in is_member['stdout'].splitlines():
-        if len(line.split(':')) in [2]:
+        if len(line.split(':')) in {2}:
             key = line.split(':')[0].strip()
             value = line.split(':')[1].strip()
-            if key in ['Offline', 'Online']:
+            if key in {'Offline', 'Online'}:
                 if len(value.split()) > 0:
                     if node in value.split():
                         node_add_required = False
@@ -597,7 +597,7 @@ def cluster_node_present(name, node, extra_args=None):
     for line in node_add['stdout'].splitlines():
         log.trace('line: %s', line)
         log.trace('line.split(:).len: %s', len(line.split(':')))
-        if len(line.split(':')) in [2]:
+        if len(line.split(':')) in {2}:
             current_node = line.split(':')[0].strip()
             current_node_add_state = line.split(':')[1].strip()
             if current_node in current_nodes + [node]:
@@ -606,7 +606,7 @@ def cluster_node_present(name, node, extra_args=None):
 
     for current_node in current_nodes:
         if current_node in node_add_dict:
-            if node_add_dict[current_node] not in ['Corosync updated']:
+            if node_add_dict[current_node] not in {'Corosync updated'}:
                 ret['result'] = False
                 ret['comment'] += 'Failed to update corosync.conf on node {0}\n'.format(current_node)
                 ret['comment'] += '{0}: node_add_dict: {1}\n'.format(current_node, node_add_dict[current_node])
@@ -614,7 +614,7 @@ def cluster_node_present(name, node, extra_args=None):
             ret['result'] = False
             ret['comment'] += 'Failed to update corosync.conf on node {0}\n'.format(current_node)
 
-    if node in node_add_dict and node_add_dict[node] in ['Succeeded', 'Success']:
+    if node in node_add_dict and node_add_dict[node] in {'Succeeded', 'Success'}:
         ret['comment'] += 'Added node {0}\n'.format(node)
         ret['changes'].update({node: {'old': '', 'new': 'Added'}})
     else:
@@ -680,7 +680,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
     cib_create = __salt__['pcs.cib_create'](cibfile=cibfile_tmp, scope=scope, extra_args=extra_args)
     log.trace('Output of pcs.cib_create: %s', cib_create)
 
-    if cib_create['retcode'] not in [0] or not os.path.exists(cibfile_tmp):
+    if cib_create['retcode'] not in {0} or not os.path.exists(cibfile_tmp):
         ret['result'] = False
         ret['comment'] += 'Failed to get live CIB\n'
         return ret
@@ -690,7 +690,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
 
     cib_hash_cur = _file_read(path=cibfile_cksum)
 
-    if cib_hash_cur not in [cib_hash_live]:
+    if cib_hash_cur not in {cib_hash_live}:
         cib_cksum_required = True
 
     log.trace('cib_hash_cur: %s', cib_hash_cur)
@@ -733,7 +733,7 @@ def cib_present(name, cibname, scope=None, extra_args=None):
     if cib_cksum_required:
         _file_write(cibfile_cksum, cib_hash_live)
 
-        if _file_read(cibfile_cksum) in [cib_hash_live]:
+        if _file_read(cibfile_cksum) in {cib_hash_live}:
             ret['comment'] += 'Created/updated checksum {0} of CIB {1}\n'.format(cib_hash_live, cibname)
             ret['changes'].update({'cibcksum': cib_hash_live})
         else:
@@ -791,7 +791,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     cib_hash_cibfile = '{0}:{1}'.format(cib_hash_form, __salt__['file.get_hash'](path=cibfile, form=cib_hash_form))
     log.trace('cib_hash_cibfile: %s', cib_hash_cibfile)
 
-    if _file_read(cibfile_cksum) not in [cib_hash_cibfile]:
+    if _file_read(cibfile_cksum) not in {cib_hash_cibfile}:
         cib_push_required = True
 
     if not cib_push_required:
@@ -806,7 +806,7 @@ def cib_pushed(name, cibname, scope=None, extra_args=None):
     cib_push = __salt__['pcs.cib_push'](cibfile=cibfile, scope=scope, extra_args=extra_args)
     log.trace('Output of pcs.cib_push: %s', cib_push)
 
-    if cib_push['retcode'] in [0]:
+    if cib_push['retcode'] in {0}:
         ret['comment'] += 'Pushed CIB {0}\n'.format(cibname)
         ret['changes'].update({'cibfile_pushed': cibfile})
     else:

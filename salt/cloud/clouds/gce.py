@@ -535,7 +535,7 @@ def _parse_allow(allow):
     protocols = allow.split(',')
     for p in protocols:
         pairs = p.split(':')
-        if pairs[0].lower() not in ['tcp', 'udp', 'icmp']:
+        if pairs[0].lower() not in {'tcp', 'udp', 'icmp'}:
             raise SaltCloudSystemExit(
                 'Unsupported protocol {0}. Must be tcp, udp, or icmp.'.format(
                     pairs[0]
@@ -2079,12 +2079,12 @@ def attach_disk(name=None, kwargs=None, call=None):
     mode = kwargs.get('mode', 'READ_WRITE').upper()
     boot = kwargs.get('boot', False)
     auto_delete = kwargs.get('auto_delete', False)
-    if boot and boot.lower() in ['true', 'yes', 'enabled']:
+    if boot and boot.lower() in {'true', 'yes', 'enabled'}:
         boot = True
     else:
         boot = False
 
-    if mode not in ['READ_WRITE', 'READ_ONLY']:
+    if mode not in {'READ_WRITE', 'READ_ONLY'}:
         log.error(
             'Mode must be either READ_ONLY or (default) READ_WRITE.'
         )

@@ -479,7 +479,7 @@ def _get_process_owner(process):
     if not error_code and all((user, domain)):
         owner['user'] = salt.utils.stringutils.to_unicode(user)
         owner['user_domain'] = salt.utils.stringutils.to_unicode(domain)
-    elif process.ProcessId in [0, 4] and error_code == 2:
+    elif process.ProcessId in {0, 4} and error_code == 2:
         # Access Denied for System Idle Process and System
         owner['user'] = 'SYSTEM'
         owner['user_domain'] = 'NT AUTHORITY'

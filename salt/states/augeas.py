@@ -78,7 +78,7 @@ def _check_filepath(changes):
                 raise ValueError(error)
             method = METHOD_MAP[cmd]
             parts = salt.utils.args.shlex_split(arg)
-            if method in ['set', 'setm', 'move', 'remove']:
+            if method in {'set', 'setm', 'move', 'remove'}:
                 filename_ = parts[0]
             else:
                 _, _, filename_ = parts

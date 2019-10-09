@@ -51,7 +51,7 @@ def _clean_vdev_config(config):
     '''
     cln_config = OrderedDict()
     for label, sub_config in config.items():
-        if label not in ['state', 'read', 'write', 'cksum']:
+        if label not in {'state', 'read', 'write', 'cksum'}:
             sub_config = _clean_vdev_config(sub_config)
 
             if sub_config and isinstance(cln_config, list):
@@ -189,7 +189,7 @@ def status(zpool=None):
             #       we grab all the none whitespace values
             if not header:
                 header = line.strip().lower()
-                header = [x for x in header.split(' ') if x not in ['']]
+                header = [x for x in header.split(' ') if x not in {''}]
                 continue
 
             # NOTE: data is indented by 1 tab, then multiples of 2 spaces
@@ -202,7 +202,7 @@ def status(zpool=None):
             # NOTE: transform data into dict
             stat_data = OrderedDict(list(zip(
                 header,
-                [x for x in line.strip().split(' ') if x not in ['']],
+                [x for x in line.strip().split(' ') if x not in {''}],
             )))
 
             # NOTE: decode the zfs values properly
@@ -303,7 +303,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
     for line in res['stdout'].splitlines():
         # NOTE: skip header
         if line.strip() == '' or \
-           line.strip().split()[-1] in ['write', 'bandwidth']:
+           line.strip().split()[-1] in {'write', 'bandwidth'}:
             continue
 
         # NOTE: reset pool on line separator
@@ -315,7 +315,7 @@ def iostat(zpool=None, sample_time=5, parsable=True):
         # NOTE: transform data into dict
         io_data = OrderedDict(list(zip(
             header,
-            [x for x in line.strip().split(' ') if x not in ['']],
+            [x for x in line.strip().split(' ') if x not in {''}],
         )))
 
         # NOTE: normalize values
@@ -499,7 +499,7 @@ def get(zpool, prop=None, show_source=False, parsable=True):
         # NOTE: transform data into dict
         prop_data = OrderedDict(list(zip(
             value_properties,
-            [x for x in line.strip().split('\t') if x not in ['']],
+            [x for x in line.strip().split('\t') if x not in {''}],
         )))
 
         # NOTE: older zfs does not have -o, fall back to manually stipping the name field
@@ -1287,7 +1287,7 @@ def import_(zpool=None, new_name=None, **kwargs):
         opts['-d'] = kwargs.get('dir').split(',')
     if kwargs.get('recovery', False) and __utils__['zfs.has_feature_flags']():
         recovery = kwargs.get('recovery')
-        if recovery in [True, 'test']:
+        if recovery in {True, 'test'}:
             flags.append('-F')
         if recovery == 'test':
             flags.append('-n')

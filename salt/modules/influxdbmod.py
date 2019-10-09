@@ -105,7 +105,7 @@ def db_exists(name, **client_args):
 
         salt '*' influxdb.db_exists <name>
     '''
-    if name in [db['name'] for db in list_dbs(**client_args)]:
+    if name in {db['name'] for db in list_dbs(**client_args)}:
         return True
 
     return False

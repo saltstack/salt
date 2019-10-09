@@ -629,7 +629,7 @@ def set_boot_arch(arch='default'):
 
         salt '*' system.set_boot_arch i386
     '''
-    if arch not in ['i386', 'x86_64', 'default']:
+    if arch not in {'i386', 'x86_64', 'default'}:
         msg = 'Invalid value passed for arch.\n' \
               'Must be i386, x86_64, or default.\n' \
               'Passed: {0}'.format(arch)

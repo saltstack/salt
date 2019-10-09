@@ -112,7 +112,7 @@ def profile_get(user, default_hidden=True):
             attrs = {}
             for attr in profile[4].strip().split(';'):
                 attr_key, attr_val = attr.strip().split('=')
-                if attr_key in ['auths', 'profiles', 'roles']:
+                if attr_key in {'auths', 'profiles', 'roles'}:
                     attrs[attr_key] = attr_val.strip().split(',')
                 else:
                     attrs[attr_key] = attr_val
@@ -264,7 +264,7 @@ def role_list():
             attrs = {}
             for attr in role[4].split(';'):
                 attr_key, attr_val = attr.split('=')
-                if attr_key in ['auths', 'profiles', 'roles']:
+                if attr_key in {'auths', 'profiles', 'roles'}:
                     attrs[attr_key] = attr_val.split(',')
                 else:
                     attrs[attr_key] = attr_val
@@ -311,7 +311,7 @@ def role_get(user):
             attrs = {}
             for attr in role[4].strip().split(';'):
                 attr_key, attr_val = attr.strip().split('=')
-                if attr_key in ['auths', 'profiles', 'roles']:
+                if attr_key in {'auths', 'profiles', 'roles'}:
                     attrs[attr_key] = attr_val.strip().split(',')
                 else:
                     attrs[attr_key] = attr_val
@@ -496,7 +496,7 @@ def auth_get(user, computed=True):
             attrs = {}
             for attr in auth[4].strip().split(';'):
                 attr_key, attr_val = attr.strip().split('=')
-                if attr_key in ['auths', 'profiles', 'roles']:
+                if attr_key in {'auths', 'profiles', 'roles'}:
                     attrs[attr_key] = attr_val.strip().split(',')
                 else:
                     attrs[attr_key] = attr_val

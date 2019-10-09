@@ -56,7 +56,7 @@ def validate(config):
                            ' for load beacon.')
         else:
 
-            if not any(j in ['1m', '5m', '15m'] for j
+            if not any(j in {'1m', '5m', '15m'} for j
                        in _config.get('averages', {})):
                 return False, ('Averages configuration for load beacon '
                                'must contain 1m, 5m or 15m items.')

@@ -626,7 +626,7 @@ def request_instance(vm_=None, call=None):
         group_list = []
 
         for vmg in vm_groups:
-            if vmg in [name for name, details in six.iteritems(avail_groups)]:
+            if vmg in {name for name, details in six.iteritems(avail_groups)}:
                 group_list.append(vmg)
             else:
                 raise SaltCloudNotFound(

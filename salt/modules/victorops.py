@@ -166,7 +166,7 @@ def create_event(message_type=None, routing_key='everybody', **kwargs):
     if not message_type:
         raise SaltInvocationError('Required argument "message_type" is missing.')
 
-    if message_type.upper() not in ['INFO', 'WARNING', 'ACKNOWLEDGEMENT', 'CRITICAL', 'RECOVERY']:
+    if message_type.upper() not in {'INFO', 'WARNING', 'ACKNOWLEDGEMENT', 'CRITICAL', 'RECOVERY'}:
         raise SaltInvocationError('"message_type" must be INFO, WARNING, ACKNOWLEDGEMENT, CRITICAL, or RECOVERY.')
 
     data['message_type'] = message_type

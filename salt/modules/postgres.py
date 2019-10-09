@@ -1014,7 +1014,7 @@ def _role_cmd_args(name,
                    valid_until=None,
                    db_role=None):
     if inherit is None:
-        if typ_ in ['user', 'group']:
+        if typ_ in {'user', 'group'}:
             inherit = True
     if login is None:
         if typ_ == 'user':
@@ -1466,10 +1466,10 @@ def is_available_extension(name,
                                 maintenance_db=maintenance_db,
                                 password=password,
                                 runas=runas)
-    if name.lower() in [
+    if name.lower() in {
         a.lower()
         for a in exts
-    ]:
+    }:
         return True
     return False
 
@@ -2933,7 +2933,7 @@ def privileges_grant(name,
 
     _grants = ','.join(_privs)
 
-    if object_type in ['table', 'sequence']:
+    if object_type in {'table', 'sequence'}:
         on_part = '{0}."{1}"'.format(prepend, object_name)
     elif object_type == 'function':
         on_part = '{0}'.format(object_name)
@@ -3063,7 +3063,7 @@ def privileges_revoke(name,
 
     _grants = ','.join(_privs)
 
-    if object_type in ['table', 'sequence']:
+    if object_type in {'table', 'sequence'}:
         on_part = '{0}.{1}'.format(prepend, object_name)
     else:
         on_part = object_name

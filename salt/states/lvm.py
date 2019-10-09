@@ -135,7 +135,7 @@ def vg_present(name, devices=None, **kwargs):
                     ret['comment'] = '{0}\n{1}'.format(
                         ret['comment'],
                         '{0} is part of Volume Group'.format(device))
-                elif pvs[realdev]['Volume Group Name'] in ['', '#orphans_lvm2']:
+                elif pvs[realdev]['Volume Group Name'] in {'', '#orphans_lvm2'}:
                     __salt__['lvm.vgextend'](name, device)
                     pvs = __salt__['lvm.pvdisplay'](realdev, real=True)
                     if pvs[realdev]['Volume Group Name'] == name:

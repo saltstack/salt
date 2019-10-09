@@ -303,7 +303,7 @@ def list_(narrow=None,
     # This may start to effect other functions in the future as Chocolatey
     # moves more functions to this new paradigm
     # https://github.com/chocolatey/choco/issues/1758
-    if result['retcode'] not in [0, 2]:
+    if result['retcode'] not in {0, 2}:
         err = 'Running chocolatey failed: {0}'.format(result['stdout'])
         raise CommandExecutionError(err)
 
@@ -490,7 +490,7 @@ def install(name,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1641, 3010]:
+    if result['retcode'] not in {0, 1641, 3010}:
         err = 'Running chocolatey failed: {0}'.format(result['stdout'])
         raise CommandExecutionError(err)
 
@@ -740,7 +740,7 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     cmd.extend(_yes())
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1605, 1614, 1641]:
+    if result['retcode'] not in {0, 1605, 1614, 1641}:
         err = 'Running chocolatey failed: {0}'.format(result['stdout'])
         raise CommandExecutionError(err)
 
@@ -833,7 +833,7 @@ def upgrade(name,
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1641, 3010]:
+    if result['retcode'] not in {0, 1641, 3010}:
         err = 'Running chocolatey failed: {0}'.format(result['stdout'])
         raise CommandExecutionError(err)
 
@@ -879,7 +879,7 @@ def update(name, source=None, pre_versions=False):
 
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
-    if result['retcode'] not in [0, 1641, 3010]:
+    if result['retcode'] not in {0, 1641, 3010}:
         err = 'Running chocolatey failed: {0}'.format(result['stdout'])
         raise CommandExecutionError(err)
 

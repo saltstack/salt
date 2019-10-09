@@ -832,8 +832,8 @@ def make_repo(repodir,
                     number_retries = timeout / interval
                     times_looped = 0
                     error_msg = 'Failed to debsign file {0}'.format(abs_file)
-                    if ((__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18)
-                         or (__grains__['os'] in ['Debian'] and __grains__['osmajorrelease'] <= 8)):
+                    if ((__grains__['os'] in {'Ubuntu'} and __grains__['osmajorrelease'] < 18)
+                         or (__grains__['os'] in {'Debian'} and __grains__['osmajorrelease'] <= 8)):
                         cmd = 'debsign --re-sign -k {0} {1}'.format(keyid, abs_file)
                         try:
                             proc = salt.utils.vt.Terminal(
@@ -885,8 +885,8 @@ def make_repo(repodir,
                 cmd = 'reprepro --ignore=wrongdistribution --component=main -Vb . includedsc {0} {1}'.format(
                         codename,
                         abs_file)
-                if ((__grains__['os'] in ['Ubuntu'] and __grains__['osmajorrelease'] < 18)
-                    or (__grains__['os'] in ['Debian'] and __grains__['osmajorrelease'] <= 8)):
+                if ((__grains__['os'] in {'Ubuntu'} and __grains__['osmajorrelease'] < 18)
+                    or (__grains__['os'] in {'Debian'} and __grains__['osmajorrelease'] <= 8)):
                     try:
                         proc = salt.utils.vt.Terminal(
                                 cmd,

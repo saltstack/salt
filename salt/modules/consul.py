@@ -726,7 +726,7 @@ def agent_check_register(consul_url=None, token=None, **kwargs):
     else:
         raise SaltInvocationError('Required argument "name" is missing.')
 
-    if True not in [True for item in ('script', 'http', 'ttl') if item in kwargs]:
+    if True not in {True for item in ('script', 'http', 'ttl') if item in kwargs}:
         ret['message'] = 'Required parameter "script" or "http" is missing.'
         ret['res'] = False
         return ret

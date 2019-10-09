@@ -68,7 +68,7 @@ def _refine_enc(enc):
     elif enc in ecdsa:
         # ecdsa defaults to ecdsa-sha2-nistp256
         # otherwise enc string is actual encoding string
-        if enc in ['e', 'ecdsa']:
+        if enc in {'e', 'ecdsa'}:
             return 'ecdsa-sha2-nistp256'
         return enc
     elif enc in ed25519:
@@ -1281,7 +1281,7 @@ def set_known_host(user=None,
 
     lines = []
     for entry in remote_host_entries:
-        if hash_known_hosts or port in [DEFAULT_SSH_PORT, None] or ':' in entry['hostname']:
+        if hash_known_hosts or port in {DEFAULT_SSH_PORT, None} or ':' in entry['hostname']:
             line = '{hostname} {enc} {key}\n'.format(**entry)
         else:
             entry['port'] = port

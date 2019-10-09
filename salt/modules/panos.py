@@ -1988,10 +1988,10 @@ def set_ntp_authentication(target=None,
     '''
     ret = {}
 
-    if target not in ['primary', 'secondary', 'both']:
+    if target not in {'primary', 'secondary', 'both'}:
         raise salt.exceptions.CommandExecutionError("Target option must be primary, secondary, or both.")
 
-    if authentication_type not in ['symmetric', 'autokey', 'none']:
+    if authentication_type not in {'symmetric', 'autokey', 'none'}:
         raise salt.exceptions.CommandExecutionError("Type option must be symmetric, autokey, or both.")
 
     if authentication_type == "symmetric" and not authentication_key:
@@ -2001,7 +2001,7 @@ def set_ntp_authentication(target=None,
     if authentication_type == "symmetric" and not key_id:
         raise salt.exceptions.CommandExecutionError("When using symmetric authentication, key_id must be provided.")
 
-    if authentication_type == "symmetric" and algorithm not in ['md5', 'sha1']:
+    if authentication_type == "symmetric" and algorithm not in {'md5', 'sha1'}:
         raise salt.exceptions.CommandExecutionError("When using symmetric authentication, algorithm must be md5 or "
                                                     "sha1.")
 

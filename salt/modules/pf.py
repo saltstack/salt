@@ -263,7 +263,7 @@ def table(command, table, **kwargs):
 
     cmd = ['pfctl', '-t', table, '-T', command]
 
-    if command in ['add', 'delete', 'replace', 'test']:
+    if command in {'add', 'delete', 'replace', 'test'}:
         cmd += kwargs.get('addresses', [])
     elif command == 'expire':
         number = kwargs.get('number', None)

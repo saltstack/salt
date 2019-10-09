@@ -1011,7 +1011,7 @@ def absent(name, uninstall=False):
             ret['comment'] = 'Zone {0} was removed.'.format(name)
         else:
             ret['result'] = True
-            if uninstall and zones[name]['state'] in ['running', 'installed']:
+            if uninstall and zones[name]['state'] in {'running', 'installed'}:
                 res_halt = __salt__['zoneadm.halt'](name)
                 res_uninstall = __salt__['zoneadm.uninstall'](name)
                 ret['result'] = res_uninstall['status']

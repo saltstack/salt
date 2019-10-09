@@ -115,7 +115,7 @@ def atq(tag=None):
         if not tag:
             jobs.append({'job': job, 'date': specs[0], 'time': specs[1],
                 'queue': specs[2], 'user': specs[3], 'tag': job_tag})
-        elif tag and tag in [job_tag, job]:
+        elif tag and tag in {job_tag, job}:
             jobs.append({'job': job, 'date': specs[0], 'time': specs[1],
                 'queue': specs[2], 'user': specs[3], 'tag': job_tag})
 

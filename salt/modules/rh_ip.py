@@ -224,42 +224,42 @@ def _parse_settings_bond(opts, iface):
         'xmit_hash_policy': 'layer2',
     }
 
-    if opts['mode'] in ['balance-rr', '0']:
+    if opts['mode'] in {'balance-rr', '0'}:
         log.info(
             'Device: %s Bonding Mode: load balancing (round-robin)',
             iface
         )
         return _parse_settings_bond_0(opts, iface, bond_def)
-    elif opts['mode'] in ['active-backup', '1']:
+    elif opts['mode'] in {'active-backup', '1'}:
         log.info(
             'Device: %s Bonding Mode: fault-tolerance (active-backup)',
             iface
         )
         return _parse_settings_bond_1(opts, iface, bond_def)
-    elif opts['mode'] in ['balance-xor', '2']:
+    elif opts['mode'] in {'balance-xor', '2'}:
         log.info(
             'Device: %s Bonding Mode: load balancing (xor)',
             iface
         )
         return _parse_settings_bond_2(opts, iface, bond_def)
-    elif opts['mode'] in ['broadcast', '3']:
+    elif opts['mode'] in {'broadcast', '3'}:
         log.info(
             'Device: %s Bonding Mode: fault-tolerance (broadcast)',
             iface
         )
         return _parse_settings_bond_3(opts, iface, bond_def)
-    elif opts['mode'] in ['802.3ad', '4']:
+    elif opts['mode'] in {'802.3ad', '4'}:
         log.info(
             'Device: %s Bonding Mode: IEEE 802.3ad Dynamic link '
             'aggregation', iface
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
-    elif opts['mode'] in ['balance-tlb', '5']:
+    elif opts['mode'] in {'balance-tlb', '5'}:
         log.info(
             'Device: %s Bonding Mode: transmit load balancing', iface
         )
         return _parse_settings_bond_5(opts, iface, bond_def)
-    elif opts['mode'] in ['balance-alb', '6']:
+    elif opts['mode'] in {'balance-alb', '6'}:
         log.info(
             'Device: %s Bonding Mode: adaptive load balancing', iface
         )
@@ -619,7 +619,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         except ValueError:
             _raise_error_iface(iface, 'mtu', ['integer'])
 
-    if iface_type not in ['bridge']:
+    if iface_type not in {'bridge'}:
         ethtool = _parse_ethtool_opts(opts, iface)
         if ethtool:
             result['ethtool'] = ethtool
@@ -640,7 +640,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
             for opt in vlan:
                 result[opt] = opts[opt]
 
-    if iface_type not in ['bond', 'vlan', 'bridge', 'ipip']:
+    if iface_type not in {'bond', 'vlan', 'bridge', 'ipip'}:
         auto_addr = False
         if 'addr' in opts:
             if salt.utils.validate.net.mac(opts['addr']):
@@ -897,7 +897,7 @@ def _parse_network_settings(opts, current):
             _raise_error_network('nozeroconf', valid)
 
     for opt in opts:
-        if opt not in ['networking', 'hostname', 'nozeroconf']:
+        if opt not in {'networking', 'hostname', 'nozeroconf'}:
             result[opt] = '{1}{0}{1}'.format(
                 salt.utils.stringutils.dequote(opts[opt]), quote_type)
     return result
@@ -1061,7 +1061,7 @@ def build_interface(iface, iface_type, enabled, **settings):
     if iface_type == 'bridge':
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib', 'alias']:
+    if iface_type in {'eth', 'bond', 'bridge', 'slave', 'vlan', 'ipip', 'ib', 'alias'}:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
         try:
             template = JINJA.get_template('rh{0}_eth.jinja'.format(rh_major))
@@ -1151,7 +1151,7 @@ def down(iface, iface_type):
         salt '*' ip.down eth0
     '''
     # Slave devices are controlled by the master.
-    if iface_type not in ['slave']:
+    if iface_type not in {'slave'}:
         return __salt__['cmd.run']('ifdown {0}'.format(iface))
     return None
 
@@ -1195,7 +1195,7 @@ def up(iface, iface_type):  # pylint: disable=C0103
         salt '*' ip.up eth0
     '''
     # Slave devices are controlled by the master.
-    if iface_type not in ['slave']:
+    if iface_type not in {'slave'}:
         return __salt__['cmd.run']('ifup {0}'.format(iface))
     return None
 

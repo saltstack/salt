@@ -52,7 +52,7 @@ def installed(name,
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    if cyg_arch not in ['x86', 'x86_64']:
+    if cyg_arch not in {'x86', 'x86_64'}:
         ret['result'] = False
         ret['comment'] = 'The \'cyg_arch\' argument must\
  be one of \'x86\' or \'x86_64\''
@@ -118,7 +118,7 @@ def removed(name, cyg_arch='x86_64', mirrors=None):
     '''
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
-    if cyg_arch not in ['x86', 'x86_64']:
+    if cyg_arch not in {'x86', 'x86_64'}:
         ret['result'] = False
         ret['comment'] = 'The \'cyg_arch\' argument must\
  be one of \'x86\' or \'x86_64\''
@@ -176,7 +176,7 @@ def updated(name=None, cyg_arch='x86_64', mirrors=None):
     '''
     ret = {'name': 'cyg.updated', 'result': None, 'comment': '', 'changes': {}}
 
-    if cyg_arch not in ['x86', 'x86_64']:
+    if cyg_arch not in {'x86', 'x86_64'}:
         ret['result'] = False
         ret['comment'] = 'The \'cyg_arch\' argument must\
  be one of \'x86\' or \'x86_64\''

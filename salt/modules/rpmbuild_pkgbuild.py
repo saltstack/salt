@@ -140,7 +140,7 @@ def _get_distset(tgt):
     tgtattrs = tgt.split('-')
     if tgtattrs[0] == 'amzn':
         distset = '--define "dist .{0}1"'.format(tgtattrs[0])
-    elif tgtattrs[1] in ['6', '7']:
+    elif tgtattrs[1] in {'6', '7'}:
         distset = '--define "dist .el{0}"'.format(tgtattrs[1])
     else:
         distset = ''

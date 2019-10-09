@@ -226,13 +226,13 @@ def validate_enabled(enabled):
     :rtype: str
     '''
     if isinstance(enabled, six.string_types):
-        if enabled.lower() not in ['on', 'off', 'yes', 'no']:
+        if enabled.lower() not in {'on', 'off', 'yes', 'no'}:
             msg = '\nMac Power: Invalid String Value for Enabled.\n' \
                   'String values must be \'on\' or \'off\'/\'yes\' or \'no\'.\n' \
                   'Passed: {0}'.format(enabled)
             raise SaltInvocationError(msg)
 
-        return 'on' if enabled.lower() in ['on', 'yes'] else 'off'
+        return 'on' if enabled.lower() in {'on', 'yes'} else 'off'
 
     return 'on' if bool(enabled) else 'off'
 

@@ -1387,7 +1387,7 @@ def service_exists(name, servicename=None, vsys=1, protocol=None, port=None, des
         service = {}
 
     # Verify the arguments
-    if not protocol and protocol not in ['tcp', 'udp']:
+    if not protocol and protocol not in {'tcp', 'udp'}:
         ret.update({'comment': "The protocol must be provided and must be tcp or udp."})
         return ret
     if not port:

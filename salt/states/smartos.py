@@ -633,7 +633,7 @@ def image_vacuum(name):
         if state['state'] != __virtualname__:
             continue
         # skip if not image_present
-        if state['fun'] not in ['image_present']:
+        if state['fun'] not in {'image_present'}:
             continue
         # keep images installed via image_present
         if 'name' in state:

@@ -83,13 +83,13 @@ def _property_detect_type(name, values):
         value_type = 'bool'
     elif values.startswith('yes | no'):
         value_type = 'bool_alt'
-    elif values in ['<size>', '<size> | none']:
+    elif values in {'<size>', '<size> | none'}:
         value_type = 'size'
-    elif values in ['<count>', '<count> | none', '<guid>']:
+    elif values in {'<count>', '<count> | none', '<guid>'}:
         value_type = 'numeric'
-    elif name in ['sharenfs', 'sharesmb', 'canmount']:
+    elif name in {'sharenfs', 'sharesmb', 'canmount'}:
         value_type = 'bool'
-    elif name in ['version', 'copies']:
+    elif name in {'version', 'copies'}:
         value_type = 'numeric'
     return value_type
 
@@ -134,7 +134,7 @@ def _property_parse_cmd(cmd, alias=None):
             prop_hdr = prop_data
             continue
         # NOTE: skip lines after data
-        elif not prop_hdr or prop_data[1] not in ['no', 'yes']:
+        elif not prop_hdr or prop_data[1] not in {'no', 'yes'}:
             continue
 
         # NOTE: create property dict
@@ -155,7 +155,7 @@ def _auto(direction, name, value, source='auto', convert_to_human=True):
     Internal magic for from_auto and to_auto
     '''
     # NOTE: check direction
-    if direction not in ['to', 'from']:
+    if direction not in {'to', 'from'}:
         return value
 
     # NOTE: collect property data
@@ -431,9 +431,9 @@ def from_bool(value):
     '''
     Convert zfs bool to python bool
     '''
-    if value in ['on', 'yes']:
+    if value in {'on', 'yes'}:
         value = True
-    elif value in ['off', 'no']:
+    elif value in {'off', 'no'}:
         value = False
     elif value == 'none':
         value = None

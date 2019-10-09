@@ -293,14 +293,14 @@ def copy_to(name,
 
     def run_all(*args, **akwargs):
         akwargs = copy.deepcopy(akwargs)
-        if container_type in ['lxc'] and 'path' not in akwargs:
+        if container_type in {'lxc'} and 'path' not in akwargs:
             akwargs['path'] = path
         return __salt__['{0}.run_all'.format(container_type)](
             *args, **akwargs)
 
     state_kwargs = {}
     cmd_kwargs = {'ignore_retcode': True}
-    if container_type in ['lxc']:
+    if container_type in {'lxc'}:
         cmd_kwargs['path'] = path
         state_kwargs['path'] = path
 

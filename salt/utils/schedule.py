@@ -1460,7 +1460,7 @@ class Schedule(object):
                 _handle_run_explicit(data, loop_interval)
                 run = data['run']
 
-            if True in [True for item in time_elements if item in data]:
+            if any(item in data for item in time_elements):
                 _handle_time_elements(data)
             elif 'once' in data:
                 _handle_once(data, loop_interval)

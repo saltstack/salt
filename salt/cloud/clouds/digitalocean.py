@@ -341,7 +341,7 @@ def create(vm_):
         'ssh_interface', vm_, __opts__, search_global=False, default='public'
     )
 
-    if ssh_interface in ['private', 'public']:
+    if ssh_interface in {'private', 'public'}:
         log.info("ssh_interface: Setting interface for ssh to %s", ssh_interface)
         kwargs['ssh_interface'] = ssh_interface
     else:

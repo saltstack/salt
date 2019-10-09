@@ -123,9 +123,9 @@ def validate(config):
                     return False, ('Configuration for inotify beacon must '
                                    'be a list of dictionaries.')
                 else:
-                    if not any(j in ['mask',
+                    if not any(j in {'mask',
                                      'recurse',
-                                     'auto_add'] for j in _config['files'][path]):
+                                     'auto_add'} for j in _config['files'][path]):
                         return False, ('Configuration for inotify beacon must '
                                        'contain mask, recurse or auto_add items.')
 

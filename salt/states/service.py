@@ -258,7 +258,7 @@ def _disable(name, started, result=True, **kwargs):
     if salt.utils.platform.is_windows():
         # service.disabled in Windows returns True for services that are set to
         # Manual start, so we need to check specifically for Disabled
-        before_toggle_disable_status = __salt__['service.info'](name)['StartType'] in ['Disabled']
+        before_toggle_disable_status = __salt__['service.info'](name)['StartType'] in {'Disabled'}
     else:
         before_toggle_disable_status = __salt__['service.disabled'](name)
     if before_toggle_disable_status:
@@ -575,7 +575,7 @@ def dead(name,
         if salt.utils.platform.is_windows():
             # service.enabled in Windows returns True for services that are set
             # to Auto start, but services set to Manual can also be disabled
-            before_toggle_enable_status = __salt__['service.info'](name)['StartType'] in ['Auto', 'Manual']
+            before_toggle_enable_status = __salt__['service.info'](name)['StartType'] in {'Auto', 'Manual'}
         else:
             before_toggle_enable_status = __salt__['service.enabled'](name)
     else:

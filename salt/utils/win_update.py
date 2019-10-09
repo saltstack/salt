@@ -533,12 +533,12 @@ class WindowsUpdateAgent(object):
                     continue
 
                 # Search by KB
-                if find in ['KB' + item for item in update.KBArticleIDs]:
+                if find in {'KB' + item for item in update.KBArticleIDs}:
                     found.Add(update)
                     continue
 
                 # Search by KB without the KB in front
-                if find in [item for item in update.KBArticleIDs]:
+                if find in {item for item in update.KBArticleIDs}:
                     found.Add(update)
                     continue
 
@@ -646,7 +646,7 @@ class WindowsUpdateAgent(object):
         ret['Message'] = result_code[result.ResultCode]
 
         # Was the download successful?
-        if result.ResultCode in [2, 3]:
+        if result.ResultCode in {2, 3}:
             log.debug('Downloaded Successfully')
             ret['Success'] = True
         else:
@@ -752,7 +752,7 @@ class WindowsUpdateAgent(object):
         log.debug(result_code[result.ResultCode])
         ret['Message'] = result_code[result.ResultCode]
 
-        if result.ResultCode in [2, 3]:
+        if result.ResultCode in {2, 3}:
             ret['Success'] = True
             ret['NeedsReboot'] = result.RebootRequired
             log.debug('NeedsReboot: %s', result.RebootRequired)
@@ -946,7 +946,7 @@ class WindowsUpdateAgent(object):
         log.debug(result_code[result.ResultCode])
         ret['Message'] = result_code[result.ResultCode]
 
-        if result.ResultCode in [2, 3]:
+        if result.ResultCode in {2, 3}:
             ret['Success'] = True
             ret['NeedsReboot'] = result.RebootRequired
             log.debug('NeedsReboot: %s', result.RebootRequired)

@@ -157,7 +157,7 @@ def _get_pool_results(*args, **kwargs):
     direction = sort != 'up'
 
     tgt_type = kwargs.pop('tgt_type', 'compound')
-    if tgt_type not in ['compound', 'pcre']:
+    if tgt_type not in {'compound', 'pcre'}:
         tgt_type = 'compound'
 
     kwargs_passthru = dict((k, kwargs[k]) for k in six.iterkeys(kwargs) if not k.startswith('_'))

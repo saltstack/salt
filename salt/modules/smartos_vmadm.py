@@ -182,7 +182,7 @@ def start(vm, options=None, key='uuid'):
         salt '*' vmadm.start vm=nina.example.org key=hostname
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -222,7 +222,7 @@ def stop(vm, force=False, key='uuid'):
         salt '*' vmadm.stop vm=nina.example.org key=hostname
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -262,7 +262,7 @@ def reboot(vm, force=False, key='uuid'):
         salt '*' vmadm.reboot vm=nina.example.org key=hostname
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -401,10 +401,10 @@ def sysrq(vm, action='nmi', key='uuid'):
         salt '*' vmadm.sysrq nacl nmi key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
-    if action not in ['nmi', 'screenshot']:
+    if action not in {'nmi', 'screenshot'}:
         ret['Error'] = 'Action must be either nmi or screenshot'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -440,7 +440,7 @@ def delete(vm, key='uuid'):
         salt '*' vmadm.delete nacl key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -473,7 +473,7 @@ def get(vm, key='uuid'):
         salt '*' vmadm.get nacl key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -510,10 +510,10 @@ def info(vm, info_type='all', key='uuid'):
         salt '*' vmadm.info nacl vnc key=alias
     '''
     ret = {}
-    if info_type not in ['all', 'block', 'blockstats', 'chardev', 'cpus', 'kvm', 'pci', 'spice', 'version', 'vnc']:
+    if info_type not in {'all', 'block', 'blockstats', 'chardev', 'cpus', 'kvm', 'pci', 'spice', 'version', 'vnc'}:
         ret['Error'] = 'Requested info_type is not available'
         return ret
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -554,7 +554,7 @@ def create_snapshot(vm, name, key='uuid'):
         salt '*' vmadm.create_snapshot nacl baseline key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -564,10 +564,10 @@ def create_snapshot(vm, name, key='uuid'):
     if 'datasets' in vmobj:
         ret['Error'] = 'VM cannot have datasets'
         return ret
-    if vmobj['brand'] in ['kvm']:
+    if vmobj['brand'] in {'kvm'}:
         ret['Error'] = 'VM must be of type OS'
         return ret
-    if vmobj['zone_state'] not in ['running']:  # work around a vmadm bug
+    if vmobj['zone_state'] not in {'running'}:  # work around a vmadm bug
         ret['Error'] = 'VM must be running to take a snapshot'
         return ret
     # vmadm create-snapshot <uuid> <snapname>
@@ -605,7 +605,7 @@ def delete_snapshot(vm, name, key='uuid'):
         salt '*' vmadm.delete_snapshot nacl baseline key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -615,7 +615,7 @@ def delete_snapshot(vm, name, key='uuid'):
     if 'datasets' in vmobj:
         ret['Error'] = 'VM cannot have datasets'
         return ret
-    if vmobj['brand'] in ['kvm']:
+    if vmobj['brand'] in {'kvm'}:
         ret['Error'] = 'VM must be of type OS'
         return ret
     # vmadm delete-snapshot <uuid> <snapname>
@@ -653,7 +653,7 @@ def rollback_snapshot(vm, name, key='uuid'):
         salt '*' vmadm.rollback_snapshot nacl baseline key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -663,7 +663,7 @@ def rollback_snapshot(vm, name, key='uuid'):
     if 'datasets' in vmobj:
         ret['Error'] = 'VM cannot have datasets'
         return ret
-    if vmobj['brand'] in ['kvm']:
+    if vmobj['brand'] in {'kvm'}:
         ret['Error'] = 'VM must be of type OS'
         return ret
     # vmadm rollback-snapshot <uuid> <snapname>
@@ -698,7 +698,7 @@ def reprovision(vm, image, key='uuid'):
         salt '*' vmadm.reprovision nacl c02a2044-c1bd-11e4-bd8c-dfc1db8b0182 key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     vm = lookup('{0}={1}'.format(key, vm), one=True)
@@ -777,7 +777,7 @@ def update(vm, from_file=None, key='uuid', **kwargs):
     for k, v in six.iteritems(kwargs):
         vmcfg[k] = v
 
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     uuid = lookup('{0}={1}'.format(key, vm), one=True)
@@ -809,7 +809,7 @@ def send(vm, target, key='uuid'):
         salt '*' vmadm.send vm=nacl target=/opt/backups key=alias
     '''
     ret = {}
-    if key not in ['uuid', 'alias', 'hostname']:
+    if key not in {'uuid', 'alias', 'hostname'}:
         ret['Error'] = 'Key must be either uuid, alias or hostname'
         return ret
     if not os.path.isdir(target):

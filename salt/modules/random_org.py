@@ -251,7 +251,7 @@ def generateIntegers(api_key=None,
 
     if 'base' in kwargs:
         base = kwargs['base']
-        if base not in [2, 8, 10, 16]:
+        if base not in {2, 8, 10, 16}:
             ret['res'] = False
             ret['message'] = 'Base must be either 2, 8, 10 or 16.'
             return ret
@@ -715,7 +715,7 @@ def generateBlobs(api_key=None,
 
     if 'format' in kwargs:
         _format = kwargs['format']
-        if _format not in ['base64', 'hex']:
+        if _format not in {'base64', 'hex'}:
             ret['res'] = False
             ret['message'] = 'Format must be either base64 or hex.'
             return ret

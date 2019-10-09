@@ -4700,7 +4700,7 @@ class _policy_info(object):
         if 'lookup' in kwargs:
             for k, v in six.iteritems(kwargs['lookup']):
                 if value_lookup:
-                    if six.text_type(v).lower() in [z.lower() for z in item]:
+                    if six.text_type(v).lower() in {z.lower() for z in item}:
                         ret_val = ret_val + k
                 else:
                     do_test = True
@@ -7184,10 +7184,10 @@ def _getScriptSettingsFromIniFile(policy_info):
             except Exception as error:
                 log.exception('An error occurred attempting to deserialize data for %s', policy_info['Policy'])
                 raise CommandExecutionError(error)
-            if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
+            if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in {z.lower() for z in _existingData.keys()}:
                 if 'SettingName' in policy_info['ScriptIni']:
                     log.debug('Need to look for %s', policy_info['ScriptIni']['SettingName'])
-                    if policy_info['ScriptIni']['SettingName'].lower() in [z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()]:
+                    if policy_info['ScriptIni']['SettingName'].lower() in {z.lower() for z in _existingData[policy_info['ScriptIni']['Section']].keys()}:
                         return _existingData[policy_info['ScriptIni']['Section']][policy_info['ScriptIni']['SettingName'].lower()]
                     else:
                         return None
@@ -7691,7 +7691,7 @@ def get(policy_class=None, return_full_policy_names=True,
 
     if policy_class is None or policy_class.lower() == 'both':
         policy_class = _policydata.policies.keys()
-    elif policy_class.lower() not in [z.lower() for z in _policydata.policies.keys()]:
+    elif policy_class.lower() not in {z.lower() for z in _policydata.policies.keys()}:
         msg = 'The policy_class {0} is not an available policy class, please ' \
               'use one of the following: {1}, Both'
         raise SaltInvocationError(

@@ -367,7 +367,7 @@ def call(payload=None):
     if not r:
         raise salt.exceptions.CommandExecutionError("Did not receive a valid response from host.")
 
-    if six.text_type(r['status']) not in ['200', '201', '204']:
+    if six.text_type(r['status']) not in {'200', '201', '204'}:
         if six.text_type(r['status']) == '400':
             raise salt.exceptions.CommandExecutionError(
                 "The server cannot process the request due to a client error.")

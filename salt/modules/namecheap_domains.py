@@ -333,7 +333,7 @@ def get_list(list_type=None,
     opts = salt.utils.namecheap.get_opts('namecheap.domains.getList')
 
     if list_type is not None:
-        if list_type not in ['ALL', 'EXPIRING', 'EXPIRED']:
+        if list_type not in {'ALL', 'EXPIRING', 'EXPIRED'}:
             salt.utils.namecheap.log.error('Invalid option for list_type')
             raise Exception('Invalid option for list_type')
         opts['ListType'] = list_type
@@ -354,7 +354,7 @@ def get_list(list_type=None,
         opts['PageSize'] = page_size
 
     if sort_by is not None:
-        if sort_by not in ['NAME', 'NAME_DESC', 'EXPIREDATE', 'EXPIREDATE_DESC', 'CREATEDATE', 'CREATEDATE_DESC']:
+        if sort_by not in {'NAME', 'NAME_DESC', 'EXPIREDATE', 'EXPIREDATE_DESC', 'CREATEDATE', 'CREATEDATE_DESC'}:
             salt.utils.namecheap.log.error('Invalid option for sort_by')
             raise Exception('Invalid option for sort_by')
         opts['SortBy'] = sort_by

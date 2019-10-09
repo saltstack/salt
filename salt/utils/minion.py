@@ -101,7 +101,7 @@ def _read_proc_file(path, opts):
             return None
         if data.get('jid') == current_thread:
             return None
-        if not data.get('jid') in [x.name for x in threading.enumerate()]:
+        if not data.get('jid') in {x.name for x in threading.enumerate()}:
             try:
                 os.remove(path)
             except IOError:

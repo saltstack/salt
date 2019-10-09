@@ -42,7 +42,7 @@ def _validate_sleep(minutes):
     '''
     # Must be a value between 1 and 180 or Never/Off
     if isinstance(minutes, six.string_types):
-        if minutes.lower() in ['never', 'off']:
+        if minutes.lower() in {'never', 'off'}:
             return 'Never'
         else:
             msg = 'Invalid String Value for Minutes.\n' \

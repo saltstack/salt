@@ -189,7 +189,7 @@ def get_enabled():
     raw_services = _get_services()
     services = set()
     for service in raw_services:
-        if info(service['ServiceName'])['StartType'] in ['Auto']:
+        if info(service['ServiceName'])['StartType'] in {'Auto'}:
             services.add(service['ServiceName'])
 
     return sorted(services)
@@ -212,7 +212,7 @@ def get_disabled():
     raw_services = _get_services()
     services = set()
     for service in raw_services:
-        if info(service['ServiceName'])['StartType'] in ['Manual', 'Disabled']:
+        if info(service['ServiceName'])['StartType'] in {'Manual', 'Disabled'}:
             services.add(service['ServiceName'])
 
     return sorted(services)
@@ -644,7 +644,7 @@ def status(name, *args, **kwargs):
     else:
         services = [name]
     for service in services:
-        results[service] = info(service)['Status'] in ['Running', 'Stop Pending']
+        results[service] = info(service)['Status'] in {'Running', 'Stop Pending'}
     if contains_globbing:
         return results
     return results[name]
@@ -860,7 +860,7 @@ def modify(name,
 
     if account_name is not None:
         changes['ServiceAccount'] = account_name
-    if account_name in ['LocalSystem', 'LocalService', 'NetworkService']:
+    if account_name in {'LocalSystem', 'LocalService', 'NetworkService'}:
         account_password = ''
 
     if account_password is not None:
@@ -1159,9 +1159,9 @@ def create(name,
             raise CommandExecutionError(
                 'Invalid Parameter: start_delayed requires start_type "auto"')
 
-    if account_name in ['LocalSystem', '.\\LocalSystem',
+    if account_name in {'LocalSystem', '.\\LocalSystem',
                         'LocalService', '.\\LocalService',
-                        'NetworkService', '.\\NetworkService']:
+                        'NetworkService', '.\\NetworkService'}:
         account_password = ''
 
     # Connect to Service Control Manager

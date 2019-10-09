@@ -347,14 +347,14 @@ def mod_watch(name, **kwargs):
     '''
 
     # Watch to set etcd key
-    if kwargs.get('sfun') in ['wait_set_key', 'wait_set']:
+    if kwargs.get('sfun') in {'wait_set_key', 'wait_set'}:
         return set_(
             name,
             kwargs.get('value'),
             kwargs.get('profile'))
 
     # Watch to rm etcd key
-    if kwargs.get('sfun') in ['wait_rm_key', 'wait_rm']:
+    if kwargs.get('sfun') in {'wait_rm_key', 'wait_rm'}:
         return rm(
             name,
             kwargs.get('profile'))

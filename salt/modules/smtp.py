@@ -114,7 +114,7 @@ def send_msg(recipient,
     recipients = [r.strip() for r in recipient.split(',')]
 
     try:
-        if use_ssl in ['True', 'true']:
+        if use_ssl in {'True', 'true'}:
             smtpconn = smtplib.SMTP_SSL(server)
         else:
             smtpconn = smtplib.SMTP(server)

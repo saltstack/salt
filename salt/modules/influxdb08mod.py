@@ -119,7 +119,7 @@ def db_exists(name, user=None, password=None, host=None, port=None):
     dbs = db_list(user, password, host, port)
     if not isinstance(dbs, list):
         return False
-    return name in [db['name'] for db in dbs]
+    return name in {db['name'] for db in dbs}
 
 
 def db_create(name, user=None, password=None, host=None, port=None):

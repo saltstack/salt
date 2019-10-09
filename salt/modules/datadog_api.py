@@ -226,7 +226,7 @@ def post_event(api_key=None,
         raise SaltInvocationError('title must be specified')
     if text is None:
         raise SaltInvocationError('text must be specified')
-    if alert_type not in [None, 'error', 'warning', 'info', 'success']:
+    if alert_type not in {None, 'error', 'warning', 'info', 'success'}:
         # Datadog only supports these alert types but the API doesn't return an
         # error for an incorrect alert_type, so we can do it here for now.
         # https://github.com/DataDog/datadogpy/issues/215

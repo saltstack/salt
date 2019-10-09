@@ -482,12 +482,12 @@ def _run(cmd,
                 else:
                     env_cmd.extend(['-i', '--'])
                 env_cmd.extend([sys.executable])
-            elif __grains__['os'] in ['FreeBSD']:
+            elif __grains__['os'] in {'FreeBSD'}:
                 env_cmd = ('su', '-', runas, '-c',
                            "{0} -c {1}".format(shell, sys.executable))
-            elif __grains__['os_family'] in ['Solaris']:
+            elif __grains__['os_family'] in {'Solaris'}:
                 env_cmd = ('su', '-', runas, '-c', sys.executable)
-            elif __grains__['os_family'] in ['AIX']:
+            elif __grains__['os_family'] in {'AIX'}:
                 env_cmd = ('su', '-', runas, '-c', sys.executable)
             else:
                 env_cmd = ('su', '-s', shell, '-', runas, '-c', sys.executable)

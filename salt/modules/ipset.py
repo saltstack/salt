@@ -605,7 +605,7 @@ def _parse_member(settype, member, strict=False):
         subtype = subtypes[i]
         part = parts[i]
 
-        if subtype in ['ip', 'net']:
+        if subtype in {'ip', 'net'}:
             try:
                 if '/' in part:
                     part = ipaddress.ip_network(part, strict=strict)

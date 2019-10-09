@@ -85,7 +85,7 @@ def get_modules():
         return None
 
     for module in module_list:
-        if module not in ['help', 'usage', 'version']:
+        if module not in {'help', 'usage', 'version'}:
             modules.append(module)
     return modules
 

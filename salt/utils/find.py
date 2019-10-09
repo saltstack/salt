@@ -471,7 +471,7 @@ class PrintOption(Option):
         self.fmt = []
         for arg in value.replace(',', ' ').split():
             self.fmt.append(arg)
-            if arg not in ['name', 'path']:
+            if arg not in {'name', 'path'}:
                 self.need_stat = True
         if len(self.fmt) == 0:
             self.fmt.append('path')

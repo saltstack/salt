@@ -230,7 +230,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
 
     ret['rule'] = rule
 
-    if full in ['True', 'true']:
+    if full in {'True', 'true'}:
 
         if not table:
             ret['comment'] = 'Table needs to be specified'
@@ -244,7 +244,7 @@ def build_rule(table=None, chain=None, command=None, position='', full=None, fam
             ret['comment'] = 'Command needs to be specified'
             return ret
 
-        if command in ['Insert', 'insert', 'INSERT']:
+        if command in {'Insert', 'insert', 'INSERT'}:
             if position:
                 ret['rule'] = '{0} insert rule {1} {2} {3} ' \
                               'position {4} {5}'.format(_nftables_cmd(),

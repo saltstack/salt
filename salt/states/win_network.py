@@ -105,7 +105,7 @@ def _validate(dns_proto, dns_servers, ip_proto, ip_addrs, gateway):
                 'set to \'static\''
             )
     else:
-        if str(dns_servers).lower() in ['none', '[]']:
+        if str(dns_servers).lower() in {'none', '[]'}:
             pass
         elif not isinstance(dns_servers, list):
             errors.append(

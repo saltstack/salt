@@ -173,9 +173,9 @@ def get_settings(category='All'):
         salt.utils.win_lgpo_auditpol.get_settings(category="Account Logon")
     '''
     # Parameter validation
-    if category.lower() in ['all', '*']:
+    if category.lower() in {'all', '*'}:
         category = '*'
-    elif category.lower() not in [x.lower() for x in categories]:
+    elif category.lower() not in {x.lower() for x in categories}:
         raise KeyError('Invalid category: "{0}"'.format(category))
 
     cmd = '/get /category:"{0}"'.format(category)

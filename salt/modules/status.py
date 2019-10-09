@@ -649,7 +649,7 @@ def cpuinfo():
         '''
         bsd_cmd = 'sysctl hw.model hw.ncpu'
         ret = {}
-        if __grains__['kernel'].lower() in ['netbsd', 'openbsd']:
+        if __grains__['kernel'].lower() in {'netbsd', 'openbsd'}:
             sep = '='
         else:
             sep = ':'
@@ -1342,14 +1342,14 @@ def netdev():
             for i in range(len(netstat_ipv4[0])-1):
                 if netstat_ipv4[0][i] == 'Name':
                     continue
-                if netstat_ipv4[0][i] in ['Address', 'Net/Dest']:
+                if netstat_ipv4[0][i] in {'Address', 'Net/Dest'}:
                     ret[dev]['IPv4 {field}'.format(field=netstat_ipv4[0][i])] = netstat_ipv4[1][i]
                 else:
                     ret[dev][netstat_ipv4[0][i]] = _number(netstat_ipv4[1][i])
             for i in range(len(netstat_ipv6[0])-1):
                 if netstat_ipv6[0][i] == 'Name':
                     continue
-                if netstat_ipv6[0][i] in ['Address', 'Net/Dest']:
+                if netstat_ipv6[0][i] in {'Address', 'Net/Dest'}:
                     ret[dev]['IPv6 {field}'.format(field=netstat_ipv6[0][i])] = netstat_ipv6[1][i]
                 else:
                     ret[dev][netstat_ipv6[0][i]] = _number(netstat_ipv6[1][i])

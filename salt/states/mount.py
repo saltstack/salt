@@ -218,11 +218,11 @@ def mounted(name,
         device_name_regex = []
 
     # Defaults is not a valid option on Mac OS
-    if __grains__['os'] in ['MacOS', 'Darwin'] and opts == 'defaults':
+    if __grains__['os'] in {'MacOS', 'Darwin'} and opts == 'defaults':
         opts = 'noowners'
 
     # Defaults is not a valid option on AIX
-    if __grains__['os'] in ['AIX']:
+    if __grains__['os'] in {'AIX'}:
         if opts == 'defaults':
             opts = ''
 
@@ -402,7 +402,7 @@ def mounted(name,
                         converted_size = _size_convert(size_match)
                         opt = "size={0}k".format(converted_size)
                     # make cifs option user synonym for option username which is reported by /proc/mounts
-                    if fstype in ['cifs'] and opt.split('=')[0] == 'user':
+                    if fstype in {'cifs'} and opt.split('=')[0] == 'user':
                         opt = "username={0}".format(opt.split('=')[1])
 
                     if opt.split('=')[0] in mount_ignore_fs_keys.get(fstype, []):
@@ -443,7 +443,7 @@ def mounted(name,
                         else:
                             # Some file systems require umounting and mounting if options change
                             # add others to list that require similiar functionality
-                            if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
+                            if fstype in {'nfs', 'cvfs'} or fstype.startswith('fuse'):
                                 ret['changes']['umount'] = "Forced unmount and mount because " \
                                                             + "options ({0}) changed".format(opt)
                                 unmount_result = __salt__['mount.umount'](real_name)
@@ -482,7 +482,7 @@ def mounted(name,
                         else:
                             # Some file systems require umounting and mounting if options change
                             # add others to list that require similiar functionality
-                            if fstype in ['nfs', 'cvfs'] or fstype.startswith('fuse'):
+                            if fstype in {'nfs', 'cvfs'} or fstype.startswith('fuse'):
                                 ret['changes']['umount'] = "Forced unmount and mount because " \
                                                             + "options ({0}) changed".format(opt)
                                 unmount_result = __salt__['mount.umount'](real_name)
@@ -593,7 +593,7 @@ def mounted(name,
     if persist:
         if '/etc/fstab' == config:
             # Override default for Mac OS
-            if __grains__['os'] in ['MacOS', 'Darwin']:
+            if __grains__['os'] in {'MacOS', 'Darwin'}:
                 config = "/etc/auto_salt"
 
             # Override default for AIX
@@ -601,14 +601,14 @@ def mounted(name,
                 config = "/etc/filesystems"
 
         if __opts__['test']:
-            if __grains__['os'] in ['MacOS', 'Darwin']:
+            if __grains__['os'] in {'MacOS', 'Darwin'}:
                 out = __salt__['mount.set_automaster'](name,
                                                        device,
                                                        fstype,
                                                        opts,
                                                        config,
                                                        test=True)
-            elif __grains__['os'] in ['AIX']:
+            elif __grains__['os'] in {'AIX'}:
                 out = __salt__['mount.set_filesystems'](name,
                                                   device,
                                                   fstype,
@@ -659,13 +659,13 @@ def mounted(name,
                 return ret
 
         else:
-            if __grains__['os'] in ['MacOS', 'Darwin']:
+            if __grains__['os'] in {'MacOS', 'Darwin'}:
                 out = __salt__['mount.set_automaster'](name,
                                                        device,
                                                        fstype,
                                                        opts,
                                                        config)
-            elif __grains__['os'] in ['AIX']:
+            elif __grains__['os'] in {'AIX'}:
                 out = __salt__['mount.set_filesystems'](name,
                                                   device,
                                                   fstype,
@@ -764,7 +764,7 @@ def swap(name, persist=True, config='/etc/fstab'):
         else:
             fstab_data = __salt__['mount.fstab'](config)
         if __opts__['test']:
-            if name not in fstab_data and name not in [fstab_data[item]['device'] for item in fstab_data]:
+            if name not in fstab_data and name not in {fstab_data[item]['device'] for item in fstab_data}:
                 ret['result'] = None
                 if name in on_:
                     ret['comment'] = ('Swap {0} is set to be added to the '
@@ -886,7 +886,7 @@ def unmounted(name,
     if persist:
         device_key_name = 'device'
         # Override default for Mac OS
-        if __grains__['os'] in ['MacOS', 'Darwin'] and config == '/etc/fstab':
+        if __grains__['os'] in {'MacOS', 'Darwin'} and config == '/etc/fstab':
             config = "/etc/auto_salt"
             fstab_data = __salt__['mount.automaster'](config)
         elif 'AIX' in __grains__['os']:
@@ -911,7 +911,7 @@ def unmounted(name,
                                   'persistent').format(name, config)
                 return ret
             else:
-                if __grains__['os'] in ['MacOS', 'Darwin']:
+                if __grains__['os'] in {'MacOS', 'Darwin'}:
                     out = __salt__['mount.rm_automaster'](name, device, config)
                 elif 'AIX' in __grains__['os']:
                     out = __salt__['mount.rm_filesystems'](name, device, config)

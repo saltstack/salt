@@ -1814,7 +1814,7 @@ def _set_line_indent(src, line, indent):
 
     idt = []
     for c in src:
-        if c not in ['\t', ' ']:
+        if c not in {'\t', ' '}:
             break
         idt.append(c)
 
@@ -1960,7 +1960,7 @@ def line(path, content=None, match=None, mode=None, location=None,
         return False  # No changes had happened
 
     mode = mode and mode.lower() or mode
-    if mode not in ['insert', 'ensure', 'delete', 'replace']:
+    if mode not in {'insert', 'ensure', 'delete', 'replace'}:
         if mode is None:
             raise CommandExecutionError('Mode was not defined. How to process the file?')
         else:

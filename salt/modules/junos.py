@@ -209,7 +209,7 @@ def rpc(cmd=None, dest=None, **kwargs):
     else:
         op.update(kwargs)
 
-    if cmd in ['get-config', 'get_config']:
+    if cmd in {'get-config', 'get_config'}:
         filter_reply = None
         if 'filter' in op:
             filter_reply = etree.XML(op['filter'])

@@ -162,7 +162,7 @@ def run(*args, **kwargs):
         # based on puppet documentation action must come first. making the same
         # assertion. need to ensure the list of supported cmds here matches
         # those defined in _Puppet.arguments()
-        if args[arg] in ['agent', 'apply']:
+        if args[arg] in {'agent', 'apply'}:
             puppet.subcmd = args[arg]
         else:
             buildargs += (args[arg],)

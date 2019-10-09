@@ -443,7 +443,7 @@ def mount(name=None, **kwargs):
         flags.append('-O')
     if kwargs.get('options', False):
         opts['-o'] = kwargs.get('options')
-    if name in [None, '-a']:
+    if name in {None, '-a'}:
         # NOTE: the new way to mount all filesystems is to have name
         #       set to ```None```. We still accept the old '-a' until
         #       Sodium. After Sodium we can update the if statement
@@ -505,7 +505,7 @@ def unmount(name, **kwargs):
     # NOTE: set extra config from kwargs
     if kwargs.get('force', False):
         flags.append('-f')
-    if name in [None, '-a']:
+    if name in {None, '-a'}:
         # NOTE: still accept '-a' as name for backwards compatibility
         #       until Salt Sodium this should just simplify
         #       this to just set '-a' if name is not set.

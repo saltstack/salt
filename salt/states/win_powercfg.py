@@ -93,7 +93,7 @@ def set_timeout(name, value, power='ac', scheme=None):
 
     # Validate name values
     name = name.lower()
-    if name not in ['monitor', 'disk', 'standby', 'hibernate']:
+    if name not in {'monitor', 'disk', 'standby', 'hibernate'}:
         ret['result'] = False
         ret['comment'] = '"{0}" is not a valid setting'.format(name)
         log.debug(ret['comment'])
@@ -101,7 +101,7 @@ def set_timeout(name, value, power='ac', scheme=None):
 
     # Validate power values
     power = power.lower()
-    if power not in ['ac', 'dc']:
+    if power not in {'ac', 'dc'}:
         ret['result'] = False
         ret['comment'] = '"{0}" is not a power type'.format(power)
         log.debug(ret['comment'])

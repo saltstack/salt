@@ -221,7 +221,7 @@ def ext_pillar(minion_id,
     # Find a active instance, i.e. ignore terminated and stopped instances
     active_inst = []
     for inst in range(0, len(instance_data)):
-        if instance_data[inst].state not in ['terminated', 'stopped']:
+        if instance_data[inst].state not in {'terminated', 'stopped'}:
             active_inst.append(inst)
 
     valid_inst = len(active_inst)

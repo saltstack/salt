@@ -85,7 +85,7 @@ def capability_installed(name,
     status = __salt__['dism.add_capability'](
         name, source, limit_access, image, restart)
 
-    if status['retcode'] not in [0, 1641, 3010]:
+    if status['retcode'] not in {0, 1641, 3010}:
         ret['comment'] = 'Failed to install {0}: {1}'\
             .format(name, status['stdout'])
         ret['result'] = False
@@ -141,7 +141,7 @@ def capability_removed(name, image=None, restart=False):
     # Remove the capability
     status = __salt__['dism.remove_capability'](name, image, restart)
 
-    if status['retcode'] not in [0, 1641, 3010]:
+    if status['retcode'] not in {0, 1641, 3010}:
         ret['comment'] = 'Failed to remove {0}: {1}' \
             .format(name, status['stdout'])
         ret['result'] = False
@@ -212,7 +212,7 @@ def feature_installed(name,
     status = __salt__['dism.add_feature'](
         name, package, source, limit_access, enable_parent, image, restart)
 
-    if status['retcode'] not in [0, 1641, 3010]:
+    if status['retcode'] not in {0, 1641, 3010}:
         ret['comment'] = 'Failed to install {0}: {1}' \
             .format(name, status['stdout'])
         ret['result'] = False
@@ -272,7 +272,7 @@ def feature_removed(name, remove_payload=False, image=None, restart=False):
     status = __salt__['dism.remove_feature'](
         name, remove_payload, image, restart)
 
-    if status['retcode'] not in [0, 1641, 3010]:
+    if status['retcode'] not in {0, 1641, 3010}:
         ret['comment'] = 'Failed to remove {0}: {1}' \
             .format(name, status['stdout'])
         ret['result'] = False
@@ -349,7 +349,7 @@ def package_installed(name,
     status = __salt__['dism.add_package'](
         name, ignore_check, prevent_pending, image, restart)
 
-    if status['retcode'] not in [0, 1641, 3010]:
+    if status['retcode'] not in {0, 1641, 3010}:
         ret['comment'] = 'Failed to install {0}: {1}' \
             .format(name, status['stdout'])
         ret['result'] = False
@@ -427,7 +427,7 @@ def package_removed(name, image=None, restart=False):
     # Remove the package
     status = __salt__['dism.remove_package'](name, image, restart)
 
-    if status['retcode'] not in [0, 1641, 3010]:
+    if status['retcode'] not in {0, 1641, 3010}:
         ret['comment'] = 'Failed to remove {0}: {1}' \
             .format(name, status['stdout'])
         ret['result'] = False

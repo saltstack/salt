@@ -69,7 +69,7 @@ def match(tgt, opts=None):
                 results.append(word)
             else:
                 # seq start with binary oper, fail
-                if word not in ['(', 'not']:
+                if word not in {'(', 'not'}:
                     log.error('Invalid beginning operator: %s', word)
                     return False
                 results.append(word)

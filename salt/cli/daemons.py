@@ -68,7 +68,7 @@ class DaemonsMixin(object):  # pylint: disable=no-init
 
         :return:
         '''
-        if self.config['hash_type'].lower() in ['md5', 'sha1']:
+        if self.config['hash_type'].lower() in {'md5', 'sha1'}:
             log.warning(
                 'IMPORTANT: Do not use %s hashing algorithm! Please set '
                 '"hash_type" to sha256 in Salt %s config!',

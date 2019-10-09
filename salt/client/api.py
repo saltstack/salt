@@ -124,7 +124,7 @@ class APIClient(object):
 
         # check for wheel or runner prefix to fun name to use wheel or runner client
         funparts = cmd.get('fun', '').split('.')
-        if len(funparts) > 2 and funparts[0] in ['wheel', 'runner']:  # master
+        if len(funparts) > 2 and funparts[0] in {'wheel', 'runner'}:  # master
             client = funparts[0]
             cmd['fun'] = '.'.join(funparts[1:])  # strip prefix
 
@@ -206,7 +206,7 @@ class APIClient(object):
         Adds client per the command.
         '''
         cmd['client'] = 'minion'
-        if len(cmd['module'].split('.')) > 2 and cmd['module'].split('.')[0] in ['runner', 'wheel']:
+        if len(cmd['module'].split('.')) > 2 and cmd['module'].split('.')[0] in {'runner', 'wheel'}:
             cmd['client'] = 'master'
         return self._signature(cmd)
 

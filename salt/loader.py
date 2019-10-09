@@ -1663,7 +1663,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         #
         # Render modules and state modules are OK though
         if 'proxy' in self.opts:
-            if self.tag in ['grains', 'proxy']:
+            if self.tag in {'grains', 'proxy'}:
                 if not hasattr(mod, '__proxyenabled__') or \
                         (self.opts['proxy']['proxytype'] not in mod.__proxyenabled__ and
                             '*' not in mod.__proxyenabled__):

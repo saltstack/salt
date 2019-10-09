@@ -350,7 +350,7 @@ def _edit_existing_network_adapter(network_adapter,
     adapter_type.strip().lower()
     switch_type.strip().lower()
 
-    if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
+    if adapter_type in {"vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"}:
         edited_network_adapter = salt.utils.vmware.get_network_adapter_type(adapter_type)
         if isinstance(network_adapter, type(edited_network_adapter)):
             edited_network_adapter = network_adapter
@@ -430,7 +430,7 @@ def _add_new_network_adapter_helper(network_adapter_label,
     switch_type.strip().lower()
     network_spec = vim.vm.device.VirtualDeviceSpec()
 
-    if adapter_type in ["vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"]:
+    if adapter_type in {"vmxnet", "vmxnet2", "vmxnet3", "e1000", "e1000e"}:
         network_spec.device = salt.utils.vmware.get_network_adapter_type(adapter_type)
     else:
         # If type not specified or does not match, create adapter of type vmxnet3
@@ -631,7 +631,7 @@ def _add_new_cd_or_dvd_drive_helper(drive_label,
     drive_spec.device = vim.vm.device.VirtualCdrom()
     drive_spec.device.deviceInfo = vim.Description()
 
-    if device_type in ['datastore_iso_file', 'client_device']:
+    if device_type in {'datastore_iso_file', 'client_device'}:
         drive_spec.device = _set_cd_or_dvd_backing_type(drive_spec.device, device_type, mode, iso_path)
     else:
         # If device_type not specified or does not match, create drive of Client type with Passthough mode
@@ -767,11 +767,11 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
 
                         if 'mode' in devices['disk'][device.deviceInfo.label]:
                             if devices['disk'][device.deviceInfo.label]['mode'] \
-                                in [
+                                in {
                                     'independent_persistent',
                                     'independent_nonpersistent',
                                     'dependent',
-                            ]:
+                            }:
                                 mode = devices['disk'][device.deviceInfo.label]['mode']
                                 disk_spec = _get_mode_spec(device, mode, disk_spec)
                             else:
@@ -807,7 +807,7 @@ def _manage_devices(devices, vm=None, container_ref=None, new_vm_name=None):
                         # Modify the existing SCSI controller
                         scsi_controller_properties = devices['scsi'][device.deviceInfo.label]
                         bus_sharing = scsi_controller_properties['bus_sharing'].strip().lower() if 'bus_sharing' in scsi_controller_properties else None
-                        if bus_sharing and bus_sharing in ['virtual', 'physical', 'no']:
+                        if bus_sharing and bus_sharing in {'virtual', 'physical', 'no'}:
                             bus_sharing = '{0}Sharing'.format(bus_sharing)
                             if bus_sharing != device.sharedBus:
                                 # Only edit the SCSI controller if bus_sharing is different
@@ -1171,7 +1171,7 @@ def _format_instance_info_select(vm, selection):
         if 'networks' in selection:
             vm_select_info['networks'] = network_full_info
 
-    if any(x in ['devices', 'mac_address', 'mac_addresses']
+    if any(x in {'devices', 'mac_address', 'mac_addresses'}
            for x in selection):
         device_full_info = {}
         device_mac_addresses = []
@@ -1409,7 +1409,7 @@ def _upg_tools_helper(vm, reboot=False):
         status = 'VM must be powered on to upgrade tools'
 
     # Exit if VMware tools is either not running or not installed
-    elif vm.guest.toolsStatus in ["toolsNotRunning", "toolsNotInstalled"]:
+    elif vm.guest.toolsStatus in {"toolsNotRunning", "toolsNotInstalled"}:
         status = 'VMware tools is either not running or not installed'
 
     # If vmware tools is out of date, check major OS family
@@ -1420,7 +1420,7 @@ def _upg_tools_helper(vm, reboot=False):
             if vm.guest.guestFamily == "windowsGuest" and not reboot:
                 log.info('Reboot suppressed on %s', vm.name)
                 task = vm.UpgradeTools('/S /v"/qn REBOOT=R"')
-            elif vm.guest.guestFamily in ["linuxGuest", "windowsGuest"]:
+            elif vm.guest.guestFamily in {"linuxGuest", "windowsGuest"}:
                 task = vm.UpgradeTools()
             else:
                 return 'Only Linux and Windows guests are currently supported'
@@ -3449,7 +3449,7 @@ def list_hbas(kwargs=None, call=None):
         "config.storageDevice.hostBusAdapter"
     ]
 
-    if hba_type and hba_type not in ["parallel", "block", "iscsi", "fibre"]:
+    if hba_type and hba_type not in {"parallel", "block", "iscsi", "fibre"}:
         raise SaltCloudSystemExit(
             'Specified hba type {0} currently not supported.'.format(hba_type)
         )

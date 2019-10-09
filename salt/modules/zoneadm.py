@@ -62,7 +62,7 @@ def __virtual__():
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
     if _is_globalzone() and salt.utils.path.which('zoneadm'):
-        if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
+        if __grains__['os'] in {'OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana'}:
             return __virtualname__
         elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:
             return __virtualname__

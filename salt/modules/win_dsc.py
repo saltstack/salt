@@ -442,7 +442,7 @@ def get_config():
         for item in raw_config:
             config[item['ConfigurationName']][item['ResourceId']] = {}
             for key in item:
-                if key not in ['ConfigurationName', 'ResourceId']:
+                if key not in {'ConfigurationName', 'ResourceId'}:
                     config[item['ConfigurationName']][item['ResourceId']][key] = item[key]
 
     return config

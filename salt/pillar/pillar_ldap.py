@@ -242,7 +242,7 @@ def _result_to_dict(data, result, conf, source):
                         ret[key] = item
                 if key in lists:
                     ret[key] = record.get(key)
-            if dict_key_attr in ['dn', 'distinguishedName']:
+            if dict_key_attr in {'dn', 'distinguishedName'}:
                 dict_key = distinguished_name
             else:
                 dict_key = ','.join(sorted(record.get(dict_key_attr, [])))

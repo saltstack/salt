@@ -56,7 +56,7 @@ def __virtual__():
 
     enabled = ('amazon', 'xcp', 'xenserver', 'VirtuozzoLinux')
 
-    if os_family in ['redhat', 'suse'] or os_grain in enabled:
+    if os_family in {'redhat', 'suse'} or os_grain in enabled:
         return __virtualname__
     return (False, 'The rpm execution module failed to load: only available on redhat/suse type systems '
         'or amazon, xcp or xenserver.')
@@ -584,7 +584,7 @@ def info(*packages, **kwargs):
                 pkg_name = value
 
             # Convert Unix ticks into ISO time format
-            if key in ['build_date', 'install_date']:
+            if key in {'build_date', 'install_date'}:
                 try:
                     pkg_data[key] = datetime.datetime.utcfromtimestamp(int(value)).isoformat() + "Z"
                 except ValueError:
@@ -592,13 +592,13 @@ def info(*packages, **kwargs):
                 continue
 
             # Convert Unix ticks into an Integer
-            if key in ['build_date_time_t', 'install_date_time_t']:
+            if key in {'build_date_time_t', 'install_date_time_t'}:
                 try:
                     pkg_data[key] = int(value)
                 except ValueError:
                     log.warning('Could not convert "%s" into Unix time', value)
                 continue
-            if key not in ['description', 'name'] and value:
+            if key not in {'description', 'name'} and value:
                 pkg_data[key] = value
         if attr and 'description' in attr or not attr:
             pkg_data['description'] = os.linesep.join(descr)

@@ -325,7 +325,7 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
     ret = {}
     for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
+        if 'type' in resource and resource['type'] in {'openvz', 'qemu', 'lxc'}:
             name = resource['name']
             ret[name] = resource
 
@@ -679,7 +679,7 @@ def create_node(vm_, newid):
     if 'technology' not in vm_:
         vm_['technology'] = 'openvz'  # default virt tech if none is given
 
-    if vm_['technology'] not in ['qemu', 'openvz', 'lxc']:
+    if vm_['technology'] not in {'qemu', 'openvz', 'lxc'}:
         # Wrong VM type given
         log.error('Wrong VM type. Valid options are: qemu, openvz (proxmox3) or lxc (proxmox4)')
         raise SaltCloudExecutionFailure

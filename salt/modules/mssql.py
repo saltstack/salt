@@ -142,7 +142,7 @@ def db_create(database, containment='NONE', new_database_options=None, **kwargs)
 
         salt minion mssql.db_create DB_NAME
     '''
-    if containment not in ['NONE', 'PARTIAL']:
+    if containment not in {'NONE', 'PARTIAL'}:
         return 'CONTAINMENT can be one of NONE and PARTIAL'
     sql = "CREATE DATABASE [{0}] CONTAINMENT = {1} ".format(database, containment)
     if new_database_options:
@@ -175,7 +175,7 @@ def db_remove(database_name, **kwargs):
         salt minion mssql.db_remove database_name='DBNAME'
     '''
     try:
-        if db_exists(database_name, **kwargs) and database_name not in ['master', 'model', 'msdb', 'tempdb']:
+        if db_exists(database_name, **kwargs) and database_name not in {'master', 'model', 'msdb', 'tempdb'}:
             conn = _get_connection(**kwargs)
             conn.autocommit(True)
             cur = conn.cursor()

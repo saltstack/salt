@@ -58,7 +58,7 @@ def _nodegroup_regex(nodegroup, words, opers):
         if not [x for x in ret if '*' in x or group_type_re.match(x)]:
             # No group type specifiers and no wildcards.
             # Treat this as an expression.
-            if [x for x in ret if x in [x for y in regex_chars if y in x]]:
+            if [x for x in ret if x in {x for y in regex_chars if y in x}]:
                 joined = 'E@' + ','.join(ret)
                 log.debug(
                     'Nodegroup \'%s\' (%s) detected as an expression. '

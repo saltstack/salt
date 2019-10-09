@@ -110,7 +110,7 @@ def _action(action='get', search=None, one=True, force=False):
 
     ## perform action
     ret = {}
-    if action in ['start', 'stop', 'reboot', 'get']:
+    if action in {'start', 'stop', 'reboot', 'get'}:
         for vm in matched_vms:
             vmadm_args = {
                 'key': 'uuid',
@@ -124,7 +124,7 @@ def _action(action='get', search=None, one=True, force=False):
                         ret[vm] = vmadm_res[vms[vm]['node']]['ret']
             except SaltClientError as client_error:
                 ret[vm] = False
-    elif action in ['is_running']:
+    elif action in {'is_running'}:
         ret = True
         for vm in matched_vms:
             if vms[vm]['state'] != 'running':

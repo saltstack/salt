@@ -2663,7 +2663,7 @@ def _uninstall(
     new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     failed = []
     for x in pkg_params:
-        if __grains__['os_family'] in ['Suse', 'RedHat']:
+        if __grains__['os_family'] in {'Suse', 'RedHat'}:
             # Check if the package version set to be removed is actually removed:
             if x in new and not pkg_params[x]:
                 failed.append(x)

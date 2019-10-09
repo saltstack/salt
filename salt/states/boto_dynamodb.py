@@ -409,7 +409,7 @@ def present(name=None,
         )
         # Add comments and changes if successful changes were made (True for live mode,
         # None for test mode).
-        if datapipeline_ret['result'] in [True, None]:
+        if datapipeline_ret['result'] in {True, None}:
             ret['result'] = datapipeline_ret['result']
             comments.append(datapipeline_ret['comment'])
             if datapipeline_ret.get('changes'):

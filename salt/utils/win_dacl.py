@@ -641,7 +641,7 @@ def dacl(obj_name=None, obj_type='file'):
                     log.exception(msg)
                     raise CommandExecutionError(msg, exc)
 
-            if access_mode.lower() not in ['grant', 'deny']:
+            if access_mode.lower() not in {'grant', 'deny'}:
                 raise SaltInvocationError('Invalid Access Mode: {0}'.format(access_mode))
 
             # Add ACE to the DACL
@@ -899,7 +899,7 @@ def dacl(obj_name=None, obj_type='file'):
             ace_prop = 'NA'
 
             # Get the ace propagation properties
-            if self.dacl_type in ['file', 'registry', 'registry32']:
+            if self.dacl_type in {'file', 'registry', 'registry32'}:
 
                 ace_prop = ace[0][1]
 
@@ -1026,7 +1026,7 @@ def dacl(obj_name=None, obj_type='file'):
                 else:
                     sec_info = sec_info | self.inheritance['unprotected']
 
-            if self.dacl_type in ['registry', 'registry32']:
+            if self.dacl_type in {'registry', 'registry32'}:
                 obj_name = self.get_reg_name(obj_name)
 
             try:
@@ -1247,7 +1247,7 @@ def get_owner(obj_name, obj_type='file'):
         raise SaltInvocationError(
             'Invalid "obj_type" passed: {0}'.format(obj_type))
 
-    if obj_type in ['registry', 'registry32']:
+    if obj_type in {'registry', 'registry32'}:
         obj_name = dacl().get_reg_name(obj_name)
 
     try:
@@ -1734,7 +1734,7 @@ def has_permission(obj_name,
             'C:\\Temp', 'joe', 'full_control', 'grant')
     '''
     # Validate access_mode
-    if access_mode.lower() not in ['grant', 'deny']:
+    if access_mode.lower() not in {'grant', 'deny'}:
         raise SaltInvocationError(
             'Invalid "access_mode" passed: {0}'.format(access_mode))
     access_mode = access_mode.lower()
@@ -1807,7 +1807,7 @@ def set_inheritance(obj_name, enabled, obj_type='file', clear=False):
 
         salt.utils.win_dacl.set_inheritance('C:\\Temp', False)
     '''
-    if obj_type not in ['file', 'registry', 'registry32']:
+    if obj_type not in {'file', 'registry', 'registry32'}:
         raise SaltInvocationError(
             'obj_type called with incorrect parameter: {0}'.format(obj_name))
 
@@ -2149,7 +2149,7 @@ def _check_perms(obj_name, obj_type, new_perms, cur_perms, access_mode, ret):
                                     if salt.utils.win_dacl.flags().ace_prop[obj_type][flag1] == at_flag:
                                         applies_to = flag1
                     if not applies_to:
-                        if obj_type.lower() in ['registry', 'registry32']:
+                        if obj_type.lower() in {'registry', 'registry32'}:
                             applies_to = 'this_key_subkeys'
                         else:
                             applies_to = 'this_folder_subfolders_files'
@@ -2435,7 +2435,7 @@ def _set_perms(obj_dacl, obj_type, new_perms, cur_perms, access_mode):
         # Get applies_to
         applies_to = None
         # Propagation only applies to file and registry object types
-        if obj_type in ['file', 'registry', 'registry32']:
+        if obj_type in {'file', 'registry', 'registry32'}:
             if 'applies_to' not in new_perms[user]:
                 # Get current "applies to" settings from the object
                 if user_name in cur_perms['Not Inherited'] and \

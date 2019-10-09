@@ -45,7 +45,7 @@ def down(iface, iface_type=None):
         salt '*' ip.down eth0
     '''
     # Slave devices are controlled by the master.
-    if iface_type not in ['slave']:
+    if iface_type not in {'slave'}:
         return __salt__['cmd.run']('ip link set {0} down'.format(iface))
     return None
 
@@ -114,7 +114,7 @@ def up(iface, iface_type=None):
         salt '*' ip.up eth0
     '''
     # Slave devices are controlled by the master.
-    if iface_type not in ['slave']:
+    if iface_type not in {'slave'}:
         return __salt__['cmd.run']('ip link set {0} up'.format(iface))
     return None
 

@@ -99,7 +99,7 @@ def installed(name, version=None, source=None, force=False, pre_versions=False,
 
     # Determine action
     # Package not installed
-    if name.lower() not in [package.lower() for package in pre_install.keys()]:
+    if name.lower() not in {package.lower() for package in pre_install.keys()}:
         if version:
             ret['changes'] = {name: 'Version {0} will be installed'.format(version)}
         else:
@@ -233,7 +233,7 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
     pre_uninstall = __salt__['chocolatey.list'](local_only=True)
 
     # Determine if package is installed
-    if name.lower() in [package.lower() for package in pre_uninstall.keys()]:
+    if name.lower() in {package.lower() for package in pre_uninstall.keys()}:
         try:
             ret['changes'] = {
                 name: '{0} version {1} will be removed'.format(
@@ -343,7 +343,7 @@ def upgraded(name,
 
     # Determine if there are changes
     # Package not installed
-    if name.lower() not in [package.lower() for package in pre_install.keys()]:
+    if name.lower() not in {package.lower() for package in pre_install.keys()}:
         if version:
             ret['changes'][name] = 'Version {0} will be installed'.format(version)
             ret['comment'] = 'Install version {0}'.format(version)

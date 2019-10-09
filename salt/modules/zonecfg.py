@@ -102,7 +102,7 @@ def __virtual__():
     Solaris 10, OmniOS, OpenIndiana, OpenSolaris, or Smartos.
     '''
     if _is_globalzone() and salt.utils.path.which('zonecfg'):
-        if __grains__['os'] in ['OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana']:
+        if __grains__['os'] in {'OpenSolaris', 'SmartOS', 'OmniOS', 'OpenIndiana'}:
             return __virtualname__
         elif __grains__['os'] == 'Oracle Solaris' and int(__grains__['osmajorrelease']) == 10:
             return __virtualname__
@@ -408,7 +408,7 @@ def _property(methode, zone, key, value):
 
     # generate update script
     cfg_file = None
-    if methode not in ['set', 'clear']:
+    if methode not in {'set', 'clear'}:
         ret['status'] = False
         ret['message'] = 'unkown methode {0}!'.format(methode)
     else:
@@ -514,11 +514,11 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     for k in kwargs:
         if isinstance(kwargs[k], dict) or isinstance(kwargs[k], list):
             kwargs[k] = _sanitize_value(kwargs[k])
-    if methode not in ['add', 'update']:
+    if methode not in {'add', 'update'}:
         ret['status'] = False
         ret['message'] = 'unknown methode {0}'.format(methode)
         return ret
-    if methode in ['update'] and resource_selector and resource_selector not in kwargs:
+    if methode in {'update'} and resource_selector and resource_selector not in kwargs:
         ret['status'] = False
         ret['message'] = 'resource selector {0} not found in parameters'.format(resource_selector)
         return ret
@@ -526,9 +526,9 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
     # generate update script
     cfg_file = salt.utils.files.mkstemp()
     with salt.utils.files.fpopen(cfg_file, 'w+', mode=0o600) as fp_:
-        if methode in ['add']:
+        if methode in {'add'}:
             fp_.write("add {0}\n".format(resource_type))
-        elif methode in ['update']:
+        elif methode in {'update'}:
             if resource_selector:
                 value = kwargs[resource_selector]
                 if isinstance(value, dict) or isinstance(value, list):
@@ -538,7 +538,7 @@ def _resource(methode, zone, resource_type, resource_selector, **kwargs):
             else:
                 fp_.write("select {0}\n".format(resource_type))
         for k, v in six.iteritems(kwargs):
-            if methode in ['update'] and k == resource_selector:
+            if methode in {'update'} and k == resource_selector:
                 continue
             if isinstance(v, dict) or isinstance(v, list):
                 value = _sanitize_value(value)

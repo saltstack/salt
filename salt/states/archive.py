@@ -119,7 +119,7 @@ def _update_checksum(path):
                     if line[0] == hash_type:
                         line[1] = hsum
                     fp_.write('{0}:{1}\n'.format(*line))
-                if hash_type not in [x[0] for x in lines]:
+                if hash_type not in {x[0] for x in lines}:
                     fp_.write('{0}:{1}\n'.format(hash_type, hsum))
         except (IOError, OSError) as exc:
             log.warning(

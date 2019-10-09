@@ -498,7 +498,7 @@ def source_add(source, source_type='imgapi'):
 
     # NOTE: there are some undocumented deprecated source types
     #       so we just warn instead of error on those
-    if source_type not in ['imgapi', 'docker']:
+    if source_type not in {'imgapi', 'docker'}:
         log.warning('Possible unsupported imgage source type specified!')
 
     cmd = 'imgadm sources -a {0} -t {1}'.format(source, source_type)

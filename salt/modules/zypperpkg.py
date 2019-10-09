@@ -926,7 +926,7 @@ def _get_repo_info(alias, repos_cfg=None):
         meta = dict((repos_cfg or _get_configured_repos()).items(alias))
         meta['alias'] = alias
         for key, val in six.iteritems(meta):
-            if val in ['0', '1']:
+            if val in {'0', '1'}:
                 meta[key] = int(meta[key]) == 1
             elif val == 'NONE':
                 meta[key] = None
@@ -2132,8 +2132,8 @@ def list_products(all=False, refresh=False):
     for prd in product_list[0].getElementsByTagName('product'):
         p_nfo = dict()
         for k_p_nfo, v_p_nfo in prd.attributes.items():
-            if k_p_nfo in ['isbase', 'installed']:
-                p_nfo[k_p_nfo] = bool(v_p_nfo in ['true', '1'])
+            if k_p_nfo in {'isbase', 'installed'}:
+                p_nfo[k_p_nfo] = bool(v_p_nfo in {'true', '1'})
             elif v_p_nfo:
                 p_nfo[k_p_nfo] = v_p_nfo
 

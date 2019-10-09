@@ -639,8 +639,8 @@ def _parse_interfaces(interface_files=None):
                             iface_dict['bridging'] = salt.utils.odict.OrderedDict()
                         iface_dict['bridging'][opt] = valuestr
 
-                    elif attr in ['up', 'pre-up', 'post-up',
-                                  'down', 'pre-down', 'post-down']:
+                    elif attr in {'up', 'pre-up', 'post-up',
+                                  'down', 'pre-down', 'post-down'}:
                         cmd = valuestr
                         cmd_key = '{0}_cmds'.format(re.sub('-', '_', attr))
                         if cmd_key not in iface_dict:
@@ -800,44 +800,44 @@ def _parse_settings_bond(opts, iface):
         'xmit_hash_policy': 'layer2',
     }
 
-    if opts['mode'] in ['balance-rr', '0']:
+    if opts['mode'] in {'balance-rr', '0'}:
         log.info(
             'Device: {0} Bonding Mode: load balancing (round-robin)'.format(
                 iface
             )
         )
         return _parse_settings_bond_0(opts, iface, bond_def)
-    elif opts['mode'] in ['active-backup', '1']:
+    elif opts['mode'] in {'active-backup', '1'}:
         log.info(
             'Device: {0} Bonding Mode: fault-tolerance (active-backup)'.format(
                 iface
             )
         )
         return _parse_settings_bond_1(opts, iface, bond_def)
-    elif opts['mode'] in ['balance-xor', '2']:
+    elif opts['mode'] in {'balance-xor', '2'}:
         log.info(
             'Device: {0} Bonding Mode: load balancing (xor)'.format(iface)
         )
         return _parse_settings_bond_2(opts, iface, bond_def)
-    elif opts['mode'] in ['broadcast', '3']:
+    elif opts['mode'] in {'broadcast', '3'}:
         log.info(
             'Device: {0} Bonding Mode: fault-tolerance (broadcast)'.format(
                 iface
             )
         )
         return _parse_settings_bond_3(opts, iface, bond_def)
-    elif opts['mode'] in ['802.3ad', '4']:
+    elif opts['mode'] in {'802.3ad', '4'}:
         log.info(
             'Device: {0} Bonding Mode: IEEE 802.3ad Dynamic link '
             'aggregation'.format(iface)
         )
         return _parse_settings_bond_4(opts, iface, bond_def)
-    elif opts['mode'] in ['balance-tlb', '5']:
+    elif opts['mode'] in {'balance-tlb', '5'}:
         log.info(
             'Device: {0} Bonding Mode: transmit load balancing'.format(iface)
         )
         return _parse_settings_bond_5(opts, iface, bond_def)
-    elif opts['mode'] in ['balance-alb', '6']:
+    elif opts['mode'] in {'balance-alb', '6'}:
         log.info(
             'Device: {0} Bonding Mode: adaptive load balancing'.format(iface)
         )
@@ -1259,7 +1259,7 @@ def _parse_settings_eth(opts, iface_type, enabled, iface):
         # If enable_ipv6=False|None, IPv6 settings should not be set.
         iface_data['inet']['addrfam'] = 'inet'
 
-    if iface_type not in ['bridge']:
+    if iface_type not in {'bridge'}:
         tmp_ethtool = _parse_ethtool_opts(opts, iface)
         if tmp_ethtool:
             ethtool = {}
@@ -1733,10 +1733,10 @@ def build_interface(iface, iface_type, enabled, **settings):
             raise AttributeError(msg)
         __salt__['pkg.install']('bridge-utils')
 
-    if iface_type in ['eth', 'bond', 'bridge', 'slave', 'vlan', 'pppoe']:
+    if iface_type in {'eth', 'bond', 'bridge', 'slave', 'vlan', 'pppoe'}:
         opts = _parse_settings_eth(settings, iface_type, enabled, iface)
 
-    if iface_type in ['source']:
+    if iface_type in {'source'}:
         opts = _parse_settings_source(settings, iface_type, enabled, iface)
 
     if 'test' in settings and settings['test']:
@@ -1807,7 +1807,7 @@ def down(iface, iface_type):
     '''
     # Slave devices are controlled by the master.
     # Source 'interfaces' aren't brought down.
-    if iface_type not in ['slave', 'source']:
+    if iface_type not in {'slave', 'source'}:
         return __salt__['cmd.run'](['ifdown', iface])
     return None
 

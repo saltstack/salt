@@ -422,7 +422,7 @@ def list_values(hive, key=None, use_32bit_registry=False, include_default=True):
             # Only convert text types to unicode
             if vtype == win32con.REG_MULTI_SZ:
                 value['vdata'] = [_to_mbcs(i) for i in vdata]
-            elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+            elif vtype in {win32con.REG_SZ, win32con.REG_EXPAND_SZ}:
                 value['vdata'] = _to_mbcs(vdata)
             else:
                 value['vdata'] = vdata
@@ -522,12 +522,12 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         try:
             # RegQueryValueEx returns and accepts unicode data
             vdata, vtype = win32api.RegQueryValueEx(handle, local_vname)
-            if vdata or vdata in [0, '']:
+            if vdata or vdata in {0, ''}:
                 # Only convert text types to unicode
                 ret['vtype'] = registry.vtype_reverse[vtype]
                 if vtype == win32con.REG_MULTI_SZ:
                     ret['vdata'] = [_to_mbcs(i) for i in vdata]
-                elif vtype in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+                elif vtype in {win32con.REG_SZ, win32con.REG_EXPAND_SZ}:
                     ret['vdata'] = _to_mbcs(vdata)
                 else:
                     ret['vdata'] = vdata
@@ -756,7 +756,7 @@ def cast_vdata(vdata=None, vtype='REG_SZ'):
     vtype_value = registry.vtype[vtype]
 
     # String Types to Unicode
-    if vtype_value in [win32con.REG_SZ, win32con.REG_EXPAND_SZ]:
+    if vtype_value in {win32con.REG_SZ, win32con.REG_EXPAND_SZ}:
         return _to_unicode(vdata)
     # Don't touch binary... if it's binary
     elif vtype_value == win32con.REG_BINARY:

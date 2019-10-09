@@ -60,10 +60,10 @@ def write(name, domain, value, vtype='string', user=None):
 
     current_value = __salt__['macdefaults.read'](domain, name, user)
 
-    if (vtype in ['bool', 'boolean']) and ((value in [True, 'TRUE', 'YES'] and current_value == '1') or
-                                           (value in [False, 'FALSE', 'NO'] and current_value == '0')):
+    if (vtype in {'bool', 'boolean'}) and ((value in {True, 'TRUE', 'YES'} and current_value == '1') or
+                                           (value in {False, 'FALSE', 'NO'} and current_value == '0')):
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)
-    elif vtype in ['int', 'integer'] and safe_cast(current_value, int) == safe_cast(value, int):
+    elif vtype in {'int', 'integer'} and safe_cast(current_value, int) == safe_cast(value, int):
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)
     elif current_value == value:
         ret['comment'] += '{0} {1} is already set to {2}'.format(domain, name, value)

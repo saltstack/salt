@@ -495,7 +495,7 @@ def _bsd_memdata(osdata):
             mem = __salt__['cmd.run']('{0} -n hw.physmem64'.format(sysctl))
         grains['mem_total'] = int(mem) // 1024 // 1024
 
-        if osdata['kernel'] in ['OpenBSD', 'NetBSD']:
+        if osdata['kernel'] in {'OpenBSD', 'NetBSD'}:
             swapctl = salt.utils.path.which('swapctl')
             swap_data = __salt__['cmd.run']('{0} -sk'.format(swapctl))
             if swap_data == 'no swap devices configured':
@@ -1015,7 +1015,7 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
         if 'manufacturer' in osdata:
-            if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
+            if osdata['manufacturer'] in {'QEMU', 'Red Hat', 'Joyent'}:
                 grains['virtual'] = 'kvm'
             if osdata['manufacturer'] == 'OpenBSD':
                 grains['virtual'] = 'vmm'
@@ -1225,7 +1225,7 @@ def _windows_os_release_grain(caption, product_type):
     # If the version is still Unknown, revert back to the old way of getting
     # the os_release
     # https://github.com/saltstack/salt/issues/52339
-    if os_release in ['Unknown']:
+    if os_release in {'Unknown'}:
         os_release = platform.release()
         server = {'Vista': '2008Server',
                   '7': '2008ServerR2',
@@ -1820,7 +1820,7 @@ def os_data():
                         cpe = _parse_cpe_name(os_release['CPE_NAME'])
                         if not cpe:
                             log.error('Broken CPE_NAME format in /etc/os-release!')
-                        elif cpe.get('vendor', '').lower() in ['suse', 'opensuse']:
+                        elif cpe.get('vendor', '').lower() in {'suse', 'opensuse'}:
                             grains['os'] = "SUSE"
                             # openSUSE `osfullname` grain normalization
                             if os_release.get("NAME") == "openSUSE Leap":
@@ -1992,10 +1992,10 @@ def os_data():
                     else:
                         uname_v = os.name
                     grains['os'] = grains['osfullname'] = osname
-                    if osname in ['Oracle Solaris'] and uname_v.startswith(osmajorrelease):
+                    if osname in {'Oracle Solaris'} and uname_v.startswith(osmajorrelease):
                         # Oracla Solars 11 and up have minor version in uname
                         grains['osrelease'] = uname_v
-                    elif osname in ['OmniOS']:
+                    elif osname in {'OmniOS'}:
                         # OmniOS
                         osrelease = []
                         osrelease.append(osmajorrelease[1:])
@@ -2065,7 +2065,7 @@ def os_data():
     # architecture.
     if grains.get('os_family') == 'Debian':
         osarch = __salt__['cmd.run']('dpkg --print-architecture').strip()
-    elif grains.get('os_family') in ['RedHat', 'Suse']:
+    elif grains.get('os_family') in {'RedHat', 'Suse'}:
         osarch = salt.utils.pkg.rpm.get_osarch()
     elif grains.get('os_family') in ('NILinuxRT', 'Poky'):
         archinfo = {}

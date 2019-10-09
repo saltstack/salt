@@ -308,7 +308,7 @@ def _get_adapter_mode_info(interface):
     return adaptermode for given interface
     '''
     mode = _load_config(interface, ['mode'])['mode'].lower()
-    return mode if mode in ['disabled', 'ethercat'] else 'tcpip'
+    return mode if mode in {'disabled', 'ethercat'} else 'tcpip'
 
 
 def _get_possible_adapter_modes(interface, blacklist):

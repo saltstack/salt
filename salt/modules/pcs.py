@@ -55,7 +55,7 @@ def item_show(item, item_id=None, item_type=None, show='show', extra_args=None, 
         cmd += item
 
     # constraint command follows a different order
-    if item in ['constraint']:
+    if item in {'constraint'}:
         cmd += [item_type]
 
     if isinstance(show, six.string_types):
@@ -70,7 +70,7 @@ def item_show(item, item_id=None, item_type=None, show='show', extra_args=None, 
         cmd += extra_args
 
     # constraint command only shows id, when using '--full'-parameter
-    if item in ['constraint']:
+    if item in {'constraint'}:
         if not isinstance(extra_args, (list, tuple)) or '--full' not in extra_args:
             cmd += ['--full']
 
@@ -105,7 +105,7 @@ def item_create(item, item_id, item_type, create='create', extra_args=None, cibf
         cmd += item
 
     # constraint command follows a different order
-    if item in ['constraint']:
+    if item in {'constraint'}:
         if isinstance(item_type, six.string_types):
             cmd += [item_type]
 
@@ -116,14 +116,14 @@ def item_create(item, item_id, item_type, create='create', extra_args=None, cibf
 
     # constraint command needs item_id in format 'id=<id' after all params
     # constraint command follows a different order
-    if item not in ['constraint']:
+    if item not in {'constraint'}:
         cmd += [item_id]
         if isinstance(item_type, six.string_types):
             cmd += [item_type]
 
     if isinstance(extra_args, (list, tuple)):
         # constraint command needs item_id in format 'id=<id' after all params
-        if item in ['constraint']:
+        if item in {'constraint'}:
             extra_args = extra_args + ['id={0}'.format(item_id)]
         cmd += extra_args
 

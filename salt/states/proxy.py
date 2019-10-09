@@ -75,7 +75,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
         services = valid_services
 
     # Darwin
-    if __grains__['os'] in ['MacOS', 'Darwin']:
+    if __grains__['os'] in {'MacOS', 'Darwin'}:
         ret['changes'] = {'new': []}
 
         for service in services:
@@ -109,7 +109,7 @@ def managed(name, port, services=None, user=None, password=None, bypass_domains=
         return ret
 
     # Windows - Needs its own branch as all settings need to be set at the same time
-    if __grains__['os'] in ['Windows']:
+    if __grains__['os'] in {'Windows'}:
         changes_needed = False
         current_settings = __salt__['proxy.get_proxy_win']()
         current_domains = __salt__['proxy.get_proxy_bypass']()

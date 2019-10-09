@@ -246,7 +246,7 @@ def _get_serv(ret=None, commit=False):
         # effectively connect w/o SSL.
         ssl_options = {
             k: v for k, v in six.iteritems(_options)
-            if k in ['sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'sslcrl']
+            if k in {'sslmode', 'sslcert', 'sslkey', 'sslrootcert', 'sslcrl'}
         }
         conn = psycopg2.connect(
             host=_options.get('host'),

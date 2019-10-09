@@ -328,7 +328,7 @@ def modify(
     # update password
     if password:
         ret = create(login, password, password_hashed)[login]
-        if ret not in ['updated', 'created', 'unchanged']:
+        if ret not in {'updated', 'created', 'unchanged'}:
             return {login: ret}
     elif login not in list_users(False):
         return {login: 'absent'}
@@ -337,16 +337,16 @@ def modify(
     current = get_user(login, hashes=True)
     changes = {}
     for key, val in provided.items():
-        if key in ['user sid', 'machine sid']:
+        if key in {'user sid', 'machine sid'}:
             if val is not None and key in current and not current[key].endswith(six.text_type(val)):
                 changes[key] = six.text_type(val)
-        elif key in ['account flags']:
+        elif key in {'account flags'}:
             if val is not None:
                 if val.startswith('['):
                     val = val[1:-1]
                 new = []
                 for f in val.upper():
-                    if f not in ['N', 'D', 'H', 'L', 'X']:
+                    if f not in {'N', 'D', 'H', 'L', 'X'}:
                         log.warning(
                             'pdbedit.modify - unknown {f} flag for account_control, ignored'.format(f=f)
                         )

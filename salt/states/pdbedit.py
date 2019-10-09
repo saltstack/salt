@@ -65,9 +65,9 @@ def absent(name):
     # remove if needed
     if name in __salt__['pdbedit.list'](False):
         res = __salt__['pdbedit.delete'](name)
-        if res[name] in ['deleted']:  # check if we need to update changes
+        if res[name] in {'deleted'}:  # check if we need to update changes
             ret['changes'].update(res)
-        elif res[name] not in ['absent']:  # oops something went wrong
+        elif res[name] not in {'absent'}:  # oops something went wrong
             ret['result'] = False
     else:
         ret['comment'] = 'account {login} is absent'.format(login=name)
@@ -132,14 +132,14 @@ def managed(name, **kwargs):
     res = __salt__['pdbedit.modify'](**kwargs)
 
     # calculate changes
-    if res[name] in ['created']:
+    if res[name] in {'created'}:
         ret['changes'] = res
-    elif res[name] in ['updated']:
+    elif res[name] in {'updated'}:
         ret['changes'][name] = salt.utils.data.compare_dicts(
             saved,
             __salt__['pdbedit.list'](hashes=True)[name],
         )
-    elif res[name] not in ['unchanged']:
+    elif res[name] not in {'unchanged'}:
         ret['result'] = False
         ret['comment'] = res[name]
 

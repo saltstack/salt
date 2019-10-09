@@ -156,7 +156,7 @@ def kernel_integrity(attrs=None, where=None):
 
         salt '*' osquery.kernel_integrity
     '''
-    if __grains__['os_family'] in ['RedHat', 'Debian']:
+    if __grains__['os_family'] in {'RedHat', 'Debian'}:
         return _osquery_cmd(table='kernel_integrity', attrs=attrs, where=where)
     return {'result': False, 'comment': 'Only available on Red Hat or Debian based systems.'}
 
@@ -171,7 +171,7 @@ def kernel_modules(attrs=None, where=None):
 
         salt '*' osquery.kernel_modules
     '''
-    if __grains__['os_family'] in ['RedHat', 'Debian']:
+    if __grains__['os_family'] in {'RedHat', 'Debian'}:
         return _osquery_cmd(table='kernel_modules', attrs=attrs, where=where)
     return {'result': False, 'comment': 'Only available on Red Hat or Debian based systems.'}
 
@@ -186,7 +186,7 @@ def memory_map(attrs=None, where=None):
 
         salt '*' osquery.memory_map
     '''
-    if __grains__['os_family'] in ['RedHat', 'Debian']:
+    if __grains__['os_family'] in {'RedHat', 'Debian'}:
         return _osquery_cmd(table='memory_map', attrs=attrs, where=where)
     return {'result': False, 'comment': 'Only available on Red Hat or Debian based systems.'}
 
@@ -201,7 +201,7 @@ def process_memory_map(attrs=None, where=None):
 
         salt '*' osquery.process_memory_map
     '''
-    if __grains__['os_family'] in ['RedHat', 'Debian']:
+    if __grains__['os_family'] in {'RedHat', 'Debian'}:
         return _osquery_cmd(table='process_memory_map', attrs=attrs, where=where)
     return {'result': False, 'comment': 'Only available on Red Hat or Debian based systems.'}
 
@@ -216,7 +216,7 @@ def shared_memory(attrs=None, where=None):
 
         salt '*' osquery.shared_memory
     '''
-    if __grains__['os_family'] in ['RedHat', 'Debian']:
+    if __grains__['os_family'] in {'RedHat', 'Debian'}:
         return _osquery_cmd(table='shared_memory', attrs=attrs, where=where)
     return {'result': False, 'comment': 'Only available on Red Hat or Debian based systems.'}
 

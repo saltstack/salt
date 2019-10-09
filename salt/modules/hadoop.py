@@ -104,7 +104,7 @@ def dfsadmin_report(arg=None):
         salt '*' hadoop.dfsadmin -report
     '''
     if arg is not None:
-        if arg in ['live', 'dead', 'decommissioning']:
+        if arg in {'live', 'dead', 'decommissioning'}:
             return _hadoop_cmd('dfsadmin', 'report', arg)
         else:
             return "Error: the arg is wrong, it must be in ['live', 'dead', 'decommissioning']"

@@ -584,7 +584,7 @@ def get_system_info():
     ret.update({'chassis_sku_number': product.SKUNumber})
     system = conn.Win32_ComputerSystem()[0]
     # Get pc_system_type depending on Windows version
-    if platform.release() in ['Vista', '7', '8']:
+    if platform.release() in {'Vista', '7', '8'}:
         # Types for Vista, 7, and 8
         pc_system_type = pc_system_types[system.PCSystemType]
     else:

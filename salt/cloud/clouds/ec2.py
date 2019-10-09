@@ -2103,7 +2103,7 @@ def request_instance(vm_=None, call=None):
                 log.info('Spot instance status: %s', data[0]['status']['message'])
                 return None
 
-            if state in ['cancelled', 'failed', 'closed']:
+            if state in {'cancelled', 'failed', 'closed'}:
                 # Request will never be active, fail
                 log.error('Spot instance request resulted in state \'{0}\'. '
                           'Nothing else we can do here.')

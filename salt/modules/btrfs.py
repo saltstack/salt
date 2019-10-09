@@ -201,7 +201,7 @@ def _usage_overall(raw):
         keyset = [item.strip() for item in re.sub(r"\s+", " ", line).split(":", 1) if item.strip()]
         if len(keyset) == 2:
             key = re.sub(r"[()]", "", keyset[0]).replace(" ", "_").lower()
-            if key in ['free_estimated', 'global_reserve']:  # An extra field
+            if key in {'free_estimated', 'global_reserve'}:  # An extra field
                 subk = keyset[1].split("(")
                 data[key] = subk[0].strip()
                 subk = subk[1].replace(")", "").split(": ")
@@ -438,7 +438,7 @@ def convert(device, permanent=False, keeplf=False):
     if not devices.get(device):
         raise CommandExecutionError("The device \"{0}\" was is not found.".format(device))
 
-    if not devices[device]["type"] in ['ext2', 'ext3', 'ext4']:
+    if not devices[device]["type"] in {'ext2', 'ext3', 'ext4'}:
         raise CommandExecutionError("The device \"{0}\" is a \"{1}\" file system.".format(
             device, devices[device]["type"]))
 
@@ -642,7 +642,7 @@ def properties(obj, type=None, set=None):
         salt '*' btrfs.properties /mountpoint
         salt '*' btrfs.properties /dev/sda1 type=subvol set='ro=false,label="My Storage"'
     '''
-    if type and type not in ['s', 'subvol', 'f', 'filesystem', 'i', 'inode', 'd', 'device']:
+    if type and type not in {'s', 'subvol', 'f', 'filesystem', 'i', 'inode', 'd', 'device'}:
         raise CommandExecutionError("Unknown property type: \"{0}\" specified".format(type))
 
     cmd = ['btrfs']

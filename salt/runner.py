@@ -232,7 +232,7 @@ class Runner(RunnerClient):
                 else:
                     user = salt.utils.user.get_specific_user()
 
-                if low['fun'] in ['state.orchestrate', 'state.orch', 'state.sls']:
+                if low['fun'] in {'state.orchestrate', 'state.orch', 'state.sls'}:
                     low['kwarg']['orchestration_jid'] = async_pub['jid']
 
                 # Run the runner!

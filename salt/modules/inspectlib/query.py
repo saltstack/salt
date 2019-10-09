@@ -446,17 +446,17 @@ class Query(EnvLoader):
         offset = kwargs.get('offset', 0)
 
         timeformat = kwargs.get("time", "tz")
-        if timeformat not in ["ticks", "tz"]:
+        if timeformat not in {"ticks", "tz"}:
             raise InspectorQueryException('Unknown "{0}" value for parameter "time"'.format(timeformat))
         tfmt = lambda param: timeformat == "tz" and time.strftime("%b %d %Y %H:%M:%S", time.gmtime(param)) or int(param)
 
         size_fmt = kwargs.get("size")
-        if size_fmt is not None and size_fmt.lower() not in ["b", "kb", "mb", "gb"]:
+        if size_fmt is not None and size_fmt.lower() not in {"b", "kb", "mb", "gb"}:
             raise InspectorQueryException('Unknown "{0}" value for parameter "size". '
                                           'Should be either B, Kb, Mb or Gb'.format(timeformat))
 
         owners = kwargs.get("owners", "id")
-        if owners not in ["name", "id"]:
+        if owners not in {"name", "id"}:
             raise InspectorQueryException('Unknown "{0}" value for parameter "owners". '
                                           'Should be either name or id (default)'.format(owners))
 
@@ -465,7 +465,7 @@ class Query(EnvLoader):
             incl_type.append("file")
 
         for i_type in incl_type:
-            if i_type not in ["directory", "dir", "d", "file", "f", "link", "l"]:
+            if i_type not in {"directory", "dir", "d", "file", "f", "link", "l"}:
                 raise InspectorQueryException('Unknown "{0}" values for parameter "type". '
                                               'Should be comma separated one or more of '
                                               'dir, file and/or link.'.format(", ".join(incl_type)))

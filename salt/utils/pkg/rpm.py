@@ -143,7 +143,7 @@ def version_to_evr(verstring):
     "1.0" => ('0', '1.0', '')
     "" => ('0', '', '')
     '''
-    if verstring in [None, '']:
+    if verstring in {None, ''}:
         return '0', '', ''
 
     idx_e = verstring.find(':')

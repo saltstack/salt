@@ -543,7 +543,7 @@ def _gen_xml(name,
         'cpu': six.text_type(cpu),
         'mem': six.text_type(mem),
     }
-    if hypervisor in ['qemu', 'kvm']:
+    if hypervisor in {'qemu', 'kvm'}:
         context['controller_model'] = False
     elif hypervisor == 'vmware':
         # TODO: make bus and model parameterized, this works for 64-bit Linux
@@ -601,10 +601,10 @@ def _gen_xml(name,
         if 'source_file' and disk['source_file']:
             disk_context['source_file'] = disk['source_file']
 
-        if hypervisor in ['qemu', 'kvm', 'bhyve', 'xen']:
+        if hypervisor in {'qemu', 'kvm', 'bhyve', 'xen'}:
             disk_context['address'] = False
             disk_context['driver'] = True
-        elif hypervisor in ['esxi', 'vmware']:
+        elif hypervisor in {'esxi', 'vmware'}:
             disk_context['address'] = True
             disk_context['driver'] = False
         context['disks'].append(disk_context)
@@ -869,7 +869,7 @@ def _disk_profile(profile, hypervisor, disks=None, vm_name=None, image=None, poo
                    'model': 'scsi',
                    'device': 'disk',
                    'pool': '[{0}] '.format(pool if pool else '0')}
-    elif hypervisor in ['qemu', 'kvm']:
+    elif hypervisor in {'qemu', 'kvm'}:
         overlay = {'format': 'qcow2',
                    'device': 'disk',
                    'model': 'virtio'}
@@ -927,7 +927,7 @@ def _fill_disk_filename(vm_name, disk, hypervisor, **kwargs):
     Compute the disk file name and update it in the disk value.
     '''
     base_dir = disk.get('pool', None)
-    if hypervisor in ['qemu', 'kvm', 'xen']:
+    if hypervisor in {'qemu', 'kvm', 'xen'}:
         # Compute the base directory from the pool property. We may have either a path
         # or a libvirt pool name there.
         # If the pool is a known libvirt one with a target path, use it as target path
@@ -1009,7 +1009,7 @@ def _complete_nics(interfaces, hypervisor, dmac=None):
                 msg = 'Malformed MAC address: {0}'.format(dmac)
                 raise CommandExecutionError(msg)
         else:
-            if hypervisor in ['qemu', 'kvm']:
+            if hypervisor in {'qemu', 'kvm'}:
                 attributes['mac'] = salt.utils.network.gen_mac(
                     prefix='52:54:00')
             else:
@@ -1458,7 +1458,7 @@ def init(name,
                 )
                 define_vol_xml_str(vol_xml)
 
-        elif hypervisor in ['qemu', 'kvm', 'xen']:
+        elif hypervisor in {'qemu', 'kvm', 'xen'}:
 
             create_overlay = enable_qcow
             if create_overlay:
@@ -1857,7 +1857,7 @@ def update(name,
             try:
                 ret = getattr(domain, cmd['cmd'])(*cmd['args'])
                 device_type = cmd['device']
-                if device_type in ['cpu', 'mem']:
+                if device_type in {'cpu', 'mem'}:
                     status[device_type] = not bool(ret)
                 else:
                     actions = {'attachDevice': 'attached', 'detachDevice': 'detached'}
@@ -3180,7 +3180,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         return False
     directories = set()
     for disk in disks:
-        if not removables and disks[disk]['type'] in ['cdrom', 'floppy']:
+        if not removables and disks[disk]['type'] in {'cdrom', 'floppy'}:
             continue
         os.remove(disks[disk]['file'])
         directories.add(os.path.dirname(disks[disk]['file']))

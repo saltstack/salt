@@ -7678,7 +7678,7 @@ def _create_adapter_type(network_adapter, adapter_type,
     '''
     log.trace('Configuring virtual machine network '
               'adapter adapter_type={0}'.format(adapter_type))
-    if adapter_type in ['vmxnet', 'vmxnet2', 'vmxnet3', 'e1000', 'e1000e']:
+    if adapter_type in {'vmxnet', 'vmxnet2', 'vmxnet3', 'e1000', 'e1000e'}:
         edited_network_adapter = salt.utils.vmware.get_network_adapter_type(
             adapter_type)
         if isinstance(network_adapter, type(edited_network_adapter)):

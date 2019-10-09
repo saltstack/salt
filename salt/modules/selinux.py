@@ -645,7 +645,7 @@ def _fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, s
 
     Returns the result of the call to semanage.
     '''
-    if action not in ['add', 'delete']:
+    if action not in {'add', 'delete'}:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
     cmd = 'semanage fcontext --{0}'.format(action)
     # "semanage --ftype a" isn't valid on Centos 6,
@@ -854,7 +854,7 @@ def _port_add_or_delete_policy(action, name, sel_type=None, protocol=None, port=
 
     Returns the result of the call to semanage.
     '''
-    if action not in ['add', 'delete']:
+    if action not in {'add', 'delete'}:
         raise SaltInvocationError('Actions supported are "add" and "delete", not "{0}".'.format(action))
     if action == 'add' and not sel_type:
         raise SaltInvocationError('SELinux Type is required to add a policy')

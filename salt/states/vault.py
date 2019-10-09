@@ -73,7 +73,7 @@ def _create_new_policy(name, rules):
     payload = {'rules': rules}
     url = "v1/sys/policy/{0}".format(name)
     response = __utils__['vault.make_request']('PUT', url, json=payload)
-    if response.status_code not in [200, 204]:
+    if response.status_code not in {200, 204}:
         return {
             'name': name,
             'changes': {},
@@ -108,7 +108,7 @@ def _handle_existing_policy(name, new_rules, existing_rules):
 
     url = "v1/sys/policy/{0}".format(name)
     response = __utils__['vault.make_request']('PUT', url, json=payload)
-    if response.status_code not in [200, 204]:
+    if response.status_code not in {200, 204}:
         return {
             'name': name,
             'changes': {},

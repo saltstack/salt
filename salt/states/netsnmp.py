@@ -125,7 +125,7 @@ def _clear_community_details(community_details):
     if _mode in _COMMUNITY_MODE_MAP.keys():
         community_details['mode'] = _COMMUNITY_MODE_MAP.get(_mode)
 
-    if community_details['mode'] not in ['ro', 'rw']:
+    if community_details['mode'] not in {'ro', 'rw'}:
         community_details['mode'] = 'ro'  # default is read-only
 
     return community_details

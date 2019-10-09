@@ -662,7 +662,7 @@ class Client(object):
                     except HTTPInputError:
                         # Not the first line, do nothing
                         return
-                    write_body[0] = hdr.code not in [301, 302, 303, 307]
+                    write_body[0] = hdr.code not in {301, 302, 303, 307}
                     write_body[1] = HTTPHeaders()
 
             if no_cache:

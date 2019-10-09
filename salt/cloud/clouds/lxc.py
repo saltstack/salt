@@ -234,7 +234,7 @@ def _salt(fun, *args, **kw):
             # special case, some answers may be crafted
             # to handle the unresponsivness of a specific command
             # which is also meaningful, e.g. a minion not yet provisioned
-            if fun in ['test.ping'] and not wait_for_res:
+            if fun in {'test.ping'} and not wait_for_res:
                 ret = {
                     'test.ping': False,
                 }.get(fun, False)
@@ -298,7 +298,7 @@ def list_nodes(conn=None, call=None):
             # so we hide the running vm from being seen as already installed
             # do not also mask half configured nodes which are explicitly asked
             # to be acted on, on the command line
-            if (call in ['full'] or not hide) and ((lxcc in names and call in ['action']) or call in ['full']):
+            if (call in {'full'} or not hide) and ((lxcc in names and call in {'action'}) or call in {'full'}):
                 nodes[lxcc] = {
                     'id': lxcc,
                     'name': lxcc,  # required for cloud cache

@@ -159,7 +159,7 @@ def enter_mainloop(target,
         ret = pool.apply(target, [queue, args, kwargs])
     while True:
         test = queue.get()
-        if test in ['ERROR', 'KEYBOARDINT']:
+        if test in {'ERROR', 'KEYBOARDINT'}:
             type_ = queue.get()
             trace = queue.get()
             msg = 'Caught {0}, terminating workers\n'.format(type_)
@@ -168,7 +168,7 @@ def enter_mainloop(target,
             pool.terminate()
             pool.join()
             raise SaltCloudSystemExit('Exception caught\n{0}'.format(msg))
-        elif test in ['END'] or (callback and callback(test)):
+        elif test in {'END'} or (callback and callback(test)):
             pool.close()
             pool.join()
             break

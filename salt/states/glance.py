@@ -243,7 +243,7 @@ def image_present(name, visibility='public', protected=None,
             else:
                 ret['comment'] += '"checksum" is correct ({0}).\n'.format(
                     checksum)
-        elif image['status'] in ['saving', 'queued']:
+        elif image['status'] in {'saving', 'queued'}:
             ret['comment'] += 'Checksum won\'t be verified as image ' +\
                 'hasn\'t reached\n\t "status=active" yet.\n'
     log.debug('glance.image_present will return: {0}'.format(ret))

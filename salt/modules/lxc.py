@@ -391,7 +391,7 @@ def cloud_init_interface(name, vm_=None, **kwargs):
         name = vm_['name']
     # if we are on ubuntu, default to ubuntu
     default_template = ''
-    if __grains__.get('os', '') in ['Ubuntu']:
+    if __grains__.get('os', '') in {'Ubuntu'}:
         default_template = 'ubuntu'
     image = _cloud_get('image')
     if not image:
@@ -817,10 +817,10 @@ def _network_conf(conf_tuples=None, **kwargs):
             if key == 'link' and bridge:
                 val = bridge
             val = opts.get(key, val)
-            if key in [
+            if key in {
                 'type', 'flags', 'name',
                 'gateway', 'mac', 'link', 'ipv4', 'ipv6'
-            ]:
+            }:
                 continue
             ret.append({'lxc.network.{0}'.format(key): val})
         # gateway (in automode) must be appended following network conf !
@@ -868,8 +868,8 @@ def _network_conf(conf_tuples=None, **kwargs):
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
     if _LooseVersion(version()) <= _LooseVersion('1.0.7') and \
-            True not in ['lxc.network.ipv4.gateway' in a for a in ret] and \
-            True in ['lxc.network.ipv4' in a for a in ret]:
+            True not in {'lxc.network.ipv4.gateway' in a for a in ret} and \
+            True in {'lxc.network.ipv4' in a for a in ret}:
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret
 

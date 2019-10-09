@@ -413,7 +413,7 @@ def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_
            'comment': ''}
 
     ## fallback dataset_type to filesystem if out of range
-    if dataset_type not in ['filesystem', 'volume']:
+    if dataset_type not in {'filesystem', 'volume'}:
         dataset_type = 'filesystem'
 
     ## ensure properties are zfs values

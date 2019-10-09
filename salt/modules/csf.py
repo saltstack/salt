@@ -147,7 +147,7 @@ def _access_rule(method,
             args = _build_args(method, ip, comment)
             return __csf_cmd(args)
         else:
-            if method not in ['allow', 'deny']:
+            if method not in {'allow', 'deny'}:
                 return {'error': 'Only allow and deny rules are allowed when specifying a port.'}
             return _access_rule_with_port(method=method,
                                             ip=ip,
@@ -589,11 +589,11 @@ def get_ports(proto='tcp', direction='in'):
 
 
 def _validate_direction_and_proto(direction, proto):
-    if direction.upper() not in ['IN', 'OUT', 'BOTH']:
+    if direction.upper() not in {'IN', 'OUT', 'BOTH'}:
         raise SaltInvocationError(
             'You must supply a direction of in, out, or both'
         )
-    if proto.upper() not in ['TCP', 'UDP', 'TCP6', 'UDP6']:
+    if proto.upper() not in {'TCP', 'UDP', 'TCP6', 'UDP6'}:
         raise SaltInvocationError(
             'You must supply tcp, udp, tcp6, or udp6 for the proto keyword'
         )
