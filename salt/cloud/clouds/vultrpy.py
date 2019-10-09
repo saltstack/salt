@@ -393,7 +393,8 @@ def create(vm_):
         data = show_instance(vm_['name'], call='action')
         # print("Waiting for default password")
         # pprint.pprint(data)
-        if six.text_type(data.get('default_password', '')) == '':
+        default_password = six.text_type(data.get('default_password', ''))
+        if default_password == '' or default_password == 'not supported':
             time.sleep(1)
             return False
         return data['default_password']
