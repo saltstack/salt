@@ -12,7 +12,6 @@ repos:
           - -v
           - --py-version=2.7
           - --platform=linux
-          - --out-prefix=zeromq
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -25,7 +24,6 @@ repos:
           - -v
           - --py-version=2.7
           - --platform=darwin
-          - --out-prefix=zeromq
           - --include=pkg/osx/req.txt
           - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
@@ -41,7 +39,6 @@ repos:
           - -v
           - --py-version=2.7
           - --platform=windows
-          - --out-prefix=zeromq
           - --include=pkg/windows/req.txt
           - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
@@ -76,7 +73,6 @@ repos:
           - -v
           - --py-version=3.4
           - --platform=linux
-          - --out-prefix=zeromq
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -99,7 +95,6 @@ repos:
           - -v
           - --py-version=3.5
           - --platform=linux
-          - --out-prefix=zeromq
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -112,7 +107,6 @@ repos:
           - -v
           - --py-version=3.5
           - --platform=darwin
-          - --out-prefix=zeromq
           - --include=pkg/osx/req.txt
           - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
@@ -128,7 +122,6 @@ repos:
           - -v
           - --py-version=3.5
           - --platform=windows
-          - --out-prefix=zeromq
           - --include=pkg/windows/req.txt
           - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
@@ -162,7 +155,6 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=linux
-          - --out-prefix=zeromq
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -175,7 +167,6 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=darwin
-          - --out-prefix=zeromq
           - --include=pkg/osx/req.txt
           - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
@@ -191,7 +182,6 @@ repos:
           - -v
           - --py-version=3.6
           - --platform=windows
-          - --out-prefix=zeromq
           - --include=pkg/windows/req.txt
           - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
@@ -225,7 +215,6 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=linux
-          - --out-prefix=zeromq
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
@@ -238,7 +227,6 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=darwin
-          - --out-prefix=zeromq
           - --include=pkg/osx/req.txt
           - --include=pkg/osx/req_ext.txt
           - --include=requirements/base.txt
@@ -254,7 +242,6 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=windows
-          - --out-prefix=zeromq
           - --include=pkg/windows/req.txt
           - --include=pkg/windows/req_win.txt
           - --include=requirements/base.txt
