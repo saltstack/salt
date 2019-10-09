@@ -959,7 +959,7 @@ class Schedule(object):
                             log.error(data['_error'])
                             return
                         when_ = self.opts['pillar']['whens'][i]
-                    elif ('whens' in self.opts['grains'] and
+                    elif ('grains' in self.opts and 'whens' in self.opts['grains'] and
                           i in self.opts['grains']['whens']):
                         if not isinstance(self.opts['grains']['whens'],
                                           dict):
