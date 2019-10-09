@@ -64,6 +64,7 @@ import salt.utils.path
 import salt.log.setup
 import salt.log.mixins
 import salt.utils.platform
+from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 
 # Import Pytest Salt libs
@@ -906,7 +907,7 @@ def salt_fail_hard():
 @pytest.fixture(scope='session')
 def session_master_default_options(request, session_root_dir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'master')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         tests_known_hosts_file = session_root_dir.join('salt_ssh_known_hosts').strpath
         with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
@@ -1002,7 +1003,7 @@ def session_master_config_overrides(session_root_dir):
 @pytest.fixture(scope='session')
 def session_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
@@ -1034,7 +1035,7 @@ def session_minion_config_overrides():
 @pytest.fixture(scope='session')
 def session_secondary_minion_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
@@ -1046,7 +1047,7 @@ def session_secondary_minion_default_options(request, tempdir):
 @pytest.fixture(scope='session')
 def session_master_of_masters_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
@@ -1111,7 +1112,7 @@ def session_master_of_masters_config_overrides(session_master_of_masters_root_di
 @pytest.fixture(scope='session')
 def session_syndic_master_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
@@ -1123,7 +1124,7 @@ def session_syndic_master_default_options(request, tempdir):
 @pytest.fixture(scope='session')
 def session_syndic_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
@@ -1135,7 +1136,7 @@ def session_syndic_default_options(request, tempdir):
 @pytest.fixture(scope='session')
 def session_proxy_default_options(request, tempdir):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'proxy')) as rfh:
-        opts = yaml.load(rfh.read())
+        opts = yaml.deserialize(rfh.read())
 
         opts['hosts.file'] = tempdir.join('hosts').strpath
         opts['aliases.file'] = tempdir.join('aliases').strpath
