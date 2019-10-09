@@ -697,6 +697,8 @@ class SSH(object):
                     data = {"return": data}
                 if "id" not in data:
                     data["id"] = id_
+                if "fun" not in data:
+                    data["fun"] = fun
                 data[
                     "jid"
                 ] = jid  # make the jid in the payload the same as the jid in the tag
@@ -815,6 +817,8 @@ class SSH(object):
                     data = {"return": data}
                 if "id" not in data:
                     data["id"] = id_
+                if "fun" not in data:
+                    data["fun"] = fun
                 data[
                     "jid"
                 ] = jid  # make the jid in the payload the same as the jid in the tag
