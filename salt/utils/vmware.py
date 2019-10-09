@@ -79,6 +79,7 @@ import atexit
 import errno
 import logging
 import time
+import requests
 import sys
 import ssl
 
