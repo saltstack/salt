@@ -27,6 +27,9 @@
 # modified files cause conflicts, set verify_env to False.
 #user: root
 
+# Tell the master to also use salt-ssh when running commands against minions.
+#enable_ssh_minions: False
+
 # The port used by the communication interface. The ret (return) port is the
 # interface used for the file server, authentication, job returns, etc.
 #ret_port: 4506
