@@ -31,7 +31,7 @@ dnspython==1.16.0
 docker-pycreds==0.4.0     # via docker
 docker==3.7.2
 docutils==0.14            # via botocore
-ecdsa==0.13.2             # via python-jose
+ecdsa==0.13.3             # via python-jose
 future==0.17.1            # via python-jose
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.11
@@ -52,7 +52,7 @@ keyring==5.7.1
 kubernetes==3.0.0
 lxml==4.3.3               # via junos-eznc, ncclient
 markupsafe==1.1.1
-mock==2.0.0 ; python_version < "3.6"
+mock==3.0.5 ; python_version < "3.6"
 more-itertools==5.0.0
 moto==1.3.7
 msgpack==0.5.6
@@ -61,7 +61,6 @@ netaddr==0.7.19           # via junos-eznc
 paramiko==2.4.2
 pathlib2==2.3.3           # via pytest
 pathtools==0.1.2          # via watchdog
-pbr==5.1.3                # via mock
 pluggy==0.9.0             # via pytest
 portend==2.4              # via cherrypy
 psutil==5.6.1
@@ -91,7 +90,7 @@ python-gnupg==0.4.4
 python-jose==2.0.2        # via moto
 pytz==2019.1              # via moto, tempora
 pyvmomi==6.7.1.2018.12
-pyyaml==3.13
+pyyaml==5.1.2
 pyzmq==17.0.0 ; python_version == "3.4"
 requests==2.21.0
 responses==0.10.6         # via moto
@@ -115,7 +114,7 @@ urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
 watchdog==0.9.0
 websocket-client==0.40.0  # via docker, kubernetes
-werkzeug==0.15.2          # via moto
+werkzeug==0.15.6          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
 xmltodict==0.12.0         # via moto
 zc.lockfile==1.4          # via cherrypy
