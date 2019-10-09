@@ -23,12 +23,12 @@ def __virtual__():
 
 
 def _normalize_options(options):
-    if type(options) in {dict, collections.OrderedDict}:
+    if isinstance(options, (dict, collections.OrderedDict)):
         return ['{0}={1}'.format(k, v) for k, v in options.items()]
-    if type(options) is list and (not len(options) or type(options[0]) is str):
+    if isinstance(options, list) and (not len(options) or isinstance(options[0], str)):
         return options
     # Invalid options
-    if type(options) is not list or type(options[0]) not in {dict, collections.OrderedDict}:
+    if not isinstance(options, list) or not isinstance(options[0], (dict, collections.OrderedDict)):
         return []
     return [o for d in options for o in _normalize_options(d)]
 
