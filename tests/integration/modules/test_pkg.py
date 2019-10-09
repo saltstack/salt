@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import pwd
 import pprint
 
 # Import Salt Testing libs
@@ -16,6 +17,7 @@ from tests.support.helpers import (
 
 # Import Salt libs
 from salt.utils import six
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -224,8 +226,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict):
                 self.skipTest('Upstream repo did not return coherent results. Skipping test.')
             self.assertNotEqual(ret, {})
-        elif grains['os_family'] == 'Suse':
-            self.assertNotEqual(ret, {})
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
 
@@ -254,6 +254,11 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             keys = ret.keys()
             self.assertIn('less', keys)
             self.assertIn('zypper', keys)
+        else:
+            ret = self.run_function(func, [self.pkg, 'python'])
+            keys = ret.keys()
+            self.assertIn('pip', keys)
+            self.assertIn('python', keys)
 
     @destructiveTest
     @requires_network()
@@ -346,8 +351,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':
-            self.skipTest('TODO the following command needs to be run as a non-root user')
-            #cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)])
+            brew_bin = salt.utils.path.which('brew')
+            mac_user = pwd.getpwuid(os.stat(brew_bin).st_uid).pw_name
+            cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)], run_as=mac_user)
         else:
             self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
