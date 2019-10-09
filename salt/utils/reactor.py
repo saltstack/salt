@@ -21,6 +21,7 @@ import salt.utils.cache
 import salt.utils.data
 import salt.utils.event
 import salt.utils.files
+import salt.utils.master
 import salt.utils.process
 import salt.utils.yaml
 import salt.wheel
@@ -38,6 +39,7 @@ REACTOR_INTERNAL_KEYWORDS = frozenset([
     'name',
     'order',
     'fun',
+    'key',
     'state',
 ])
 
@@ -62,6 +64,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         self.event = salt.utils.event.get_master_event(opts, opts['sock_dir'], listen=False)
         self.stats = collections.defaultdict(lambda: {'mean': 0, 'latency': 0, 'runs': 0})
         self.stat_clock = time.time()
+        self.is_leader = True
 
     # We need __setstate__ and __getstate__ to avoid pickling errors since
     # 'self.rend' (from salt.state.Compiler) contains a function reference
@@ -251,51 +254,75 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
-        self.event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 self.opts['__role'],
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,
-                listen=True)
-        self.wrap = ReactWrap(self.opts)
+                listen=True) as event:
+            self.wrap = ReactWrap(self.opts)
 
-        for data in self.event.iter_events(full=True):
-            # skip all events fired by ourselves
-            if data['data'].get('user') == self.wrap.event_user:
-                continue
-
-            if data['tag'].endswith('salt/reactors/manage/add'):
-                _data = data['data']
-                res = self.add_reactor(_data['event'], _data['reactors'])
-                self.event.fire_event({'reactors': self.list_all(),
-                                       'result': res},
-                                      'salt/reactors/manage/add-complete')
-            elif data['tag'].endswith('salt/reactors/manage/delete'):
-                _data = data['data']
-                res = self.delete_reactor(_data['event'])
-                self.event.fire_event({'reactors': self.list_all(),
-                                       'result': res},
-                                      'salt/reactors/manage/delete-complete')
-            elif data['tag'].endswith('salt/reactors/manage/list'):
-                self.event.fire_event({'reactors': self.list_all()},
-                                      'salt/reactors/manage/list-results')
-            else:
-                reactors = self.list_reactors(data['tag'])
-                if not reactors:
+            for data in event.iter_events(full=True):
+                # skip all events fired by ourselves
+                if data['data'].get('user') == self.wrap.event_user:
                     continue
-                chunks = self.reactions(data['tag'], data['data'], reactors)
-                if chunks:
-                    if self.opts['master_stats']:
-                        _data = data['data']
-                        start = time.time()
-                    try:
-                        self.call_reactions(chunks)
-                    except SystemExit:
-                        log.warning('Exit ignored by reactor')
+                # NOTE: these events must contain the masters key in order to be accepted
+                # see salt.runners.reactor for the requesting interface
+                if 'salt/reactors/manage' in data['tag']:
+                    master_key = salt.utils.master.get_master_key('root', self.opts)
+                    if data['data'].get('key') != master_key:
+                        log.error('received salt/reactors/manage event without matching master_key. discarding')
+                        continue
+                if data['tag'].endswith('salt/reactors/manage/is_leader'):
+                    event.fire_event({'result': self.is_leader,
+                                           'user': self.wrap.event_user},
+                                          'salt/reactors/manage/leader/value')
+                if data['tag'].endswith('salt/reactors/manage/set_leader'):
+                    # we only want to register events from the local master
+                    if data['data'].get('id') == self.opts['id']:
+                        self.is_leader = data['data']['value']
+                    event.fire_event({'result': self.is_leader,
+                                           'user': self.wrap.event_user},
+                                          'salt/reactors/manage/leader/value')
+                if data['tag'].endswith('salt/reactors/manage/add'):
+                    _data = data['data']
+                    res = self.add_reactor(_data['event'], _data['reactors'])
+                    event.fire_event({'reactors': self.list_all(),
+                                           'result': res,
+                                           'user': self.wrap.event_user},
+                                          'salt/reactors/manage/add-complete')
+                elif data['tag'].endswith('salt/reactors/manage/delete'):
+                    _data = data['data']
+                    res = self.delete_reactor(_data['event'])
+                    event.fire_event({'reactors': self.list_all(),
+                                           'result': res,
+                                           'user': self.wrap.event_user},
+                                          'salt/reactors/manage/delete-complete')
+                elif data['tag'].endswith('salt/reactors/manage/list'):
+                    event.fire_event({'reactors': self.list_all(),
+                                           'user': self.wrap.event_user},
+                                          'salt/reactors/manage/list-results')
 
-                    if self.opts['master_stats']:
-                        stats = salt.utils.event.update_stats(self.stats, start, _data)
-                        self._post_stats(stats)
+                # do not handle any reactions if not leader in cluster
+                if not self.is_leader:
+                    continue
+                else:
+                    reactors = self.list_reactors(data['tag'])
+                    if not reactors:
+                        continue
+                    chunks = self.reactions(data['tag'], data['data'], reactors)
+                    if chunks:
+                        if self.opts['master_stats']:
+                            _data = data['data']
+                            start = time.time()
+                        try:
+                            self.call_reactions(chunks)
+                        except SystemExit:
+                            log.warning('Exit ignored by reactor')
+
+                        if self.opts['master_stats']:
+                            stats = salt.utils.event.update_stats(self.stats, start, _data)
+                            self._post_stats(stats)
 
 
 class ReactWrap(object):

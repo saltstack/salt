@@ -2,6 +2,8 @@
 '''
 Send events based on a script's stdout
 
+.. versionadded:: Neon
+
 Example Config
 
 .. code-block:: yaml
@@ -55,7 +57,9 @@ def _get_serializer(output):
     try:
         return getattr(serializers, output)
     except AttributeError:
-        raise CommandExecutionError("Unknown serializer '%s' found for output option", output)
+        raise CommandExecutionError(
+            "Unknown serializer '{0}' found for output option".format(output)
+        )
 
 
 def start(cmd, output='json', interval=1):
@@ -73,16 +77,18 @@ def start(cmd, output='json', interval=1):
 
         Given the following json output from a script:
 
-            { "tag" : "lots/of/tacos",
-              "data" : { "toppings" : "cilantro" }
-            }
+            .. code-block:: json
+
+                { "tag" : "lots/of/tacos",
+                "data" : { "toppings" : "cilantro" }
+                }
 
         This will fire the event 'lots/of/tacos'
         on the event bus with the data obj as is.
 
     :param cmd: The command to execute
     :param output: How to deserialize stdout of the script
-    :param interval: How often to execute the script.
+    :param interval: How often to execute the script
     '''
     try:
         cmd = shlex.split(cmd)

@@ -37,7 +37,7 @@ if salt.utils.path.which('initctl'):
     try:
         # Don't re-invent the wheel, import the helper functions from the
         # upstart module.
-        from salt.modules.upstart import _upstart_enable, _upstart_disable, _upstart_is_enabled
+        from salt.modules.upstart_service import _upstart_enable, _upstart_disable, _upstart_is_enabled
     except Exception as exc:
         log.error('Unable to import helper functions from '
                   'salt.modules.upstart: %s', exc)
@@ -71,7 +71,7 @@ def __virtual__():
         'McAfee  OS Server',
         'VirtuozzoLinux'
     ))
-    if __grains__['os'] in enable:
+    if __grains__.get('os') in enable:
 
         if __grains__['os'] == 'SUSE':
             if six.text_type(__grains__['osrelease']).startswith('11'):

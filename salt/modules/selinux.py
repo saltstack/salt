@@ -52,7 +52,7 @@ def __virtual__():
         if not salt.utils.path.which(cmd):
             return (False, cmd + ' is not in the path')
     # SELinux only makes sense on Linux *obviously*
-    if __grains__['kernel'] == 'Linux':
+    if __grains__.get('kernel') == 'Linux':
         return 'selinux'
     return (False, 'Module only works on Linux with selinux installed')
 
@@ -390,7 +390,7 @@ def _validate_filetype(filetype):
 
 def _parse_protocol_port(name, protocol, port):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Validates and parses the protocol and port/port range from the name
     if both protocol and port are not provided.
@@ -505,7 +505,7 @@ def fcontext_get_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
 
 def fcontext_add_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Adds the SELinux policy for a given filespec and other optional parameters.
 
@@ -544,7 +544,7 @@ def fcontext_add_policy(name, filetype=None, sel_type=None, sel_user=None, sel_l
 
 def fcontext_delete_policy(name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Deletes the SELinux policy for a given filespec and other optional parameters.
 
@@ -598,7 +598,7 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
         Use :mod:`selinux.fcontext_add_policy()<salt.modules.selinux.fcontext_add_policy>`,
         or :mod:`selinux.fcontext_delete_policy()<salt.modules.selinux.fcontext_delete_policy>`.
 
-    .. deprecated:: Fluorine
+    .. deprecated:: 2019.2.0
 
     action
         The action to perform. Either ``add`` or ``delete``.
@@ -639,7 +639,7 @@ def fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, se
 
 def _fcontext_add_or_delete_policy(action, name, filetype=None, sel_type=None, sel_user=None, sel_level=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Performs the action as called from ``fcontext_add_policy`` or ``fcontext_delete_policy``.
 
@@ -717,7 +717,7 @@ def fcontext_apply_policy(name, recursive=False):
     ret.update(apply_ret)
     if apply_ret['retcode'] == 0:
         changes_list = re.findall('restorecon reset (.*) context (.*)->(.*)$', changes_text, re.M)
-        if len(changes_list) > 0:
+        if changes_list:
             ret.update({'changes': {}})
         for item in changes_list:
             filespec = item[0]
@@ -736,7 +736,7 @@ def fcontext_apply_policy(name, recursive=False):
 
 def port_get_policy(name, sel_type=None, protocol=None, port=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Returns the current entry in the SELinux policy list as a
     dictionary. Returns None if no exact match was found.
@@ -788,7 +788,7 @@ def port_get_policy(name, sel_type=None, protocol=None, port=None):
 
 def port_add_policy(name, sel_type=None, protocol=None, port=None, sel_range=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Adds the SELinux policy for a given protocol and port.
 
@@ -821,7 +821,7 @@ def port_add_policy(name, sel_type=None, protocol=None, port=None, sel_range=Non
 
 def port_delete_policy(name, protocol=None, port=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Deletes the SELinux policy for a given protocol and port.
 
@@ -848,7 +848,7 @@ def port_delete_policy(name, protocol=None, port=None):
 
 def _port_add_or_delete_policy(action, name, sel_type=None, protocol=None, port=None, sel_range=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Performs the action as called from ``port_add_policy`` or ``port_delete_policy``.
 

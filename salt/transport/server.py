@@ -86,7 +86,7 @@ class PubServerChannel(object):
             raise Exception('Channels are only defined for ZeroMQ and TCP')
             # return NewKindOfChannel(opts, **kwargs)
 
-    def pre_fork(self, process_manager):
+    def pre_fork(self, process_manager, kwargs=None):
         '''
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be used to create IPC channels and create our daemon process to

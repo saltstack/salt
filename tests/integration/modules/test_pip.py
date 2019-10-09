@@ -1,23 +1,23 @@
 # -*- coding: utf-8 -*-
 '''
-    :codeauthor: Pedro Algarvio (pedro@algarvio.me)
-
-    tests.integration.modules.pip
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+tests.integration.modules.pip
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
+import sys
+import pprint
 import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
-from tests.support.helpers import skip_if_not_root
+from tests.support.helpers import patched_environ
 
 # Import salt libs
 import salt.utils.files
@@ -32,29 +32,47 @@ class PipModuleTest(ModuleCase):
     def setUp(self):
         super(PipModuleTest, self).setUp()
 
-        self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
+        self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        # Remove the venv test directory
+        self.addCleanup(shutil.rmtree, self.venv_test_dir, ignore_errors=True)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
-        for key in os.environ.copy():
-            if key.startswith('PIP_'):
-                os.environ.pop(key)
         self.pip_temp = os.path.join(self.venv_test_dir, '.pip-temp')
+        # Remove the pip-temp directory
+        self.addCleanup(shutil.rmtree, self.pip_temp, ignore_errors=True)
         if not os.path.isdir(self.pip_temp):
             os.makedirs(self.pip_temp)
-        os.environ['PIP_SOURCE_DIR'] = os.environ['PIP_BUILD_DIR'] = ''
+        self.patched_environ = patched_environ(
+            PIP_SOURCE_DIR='',
+            PIP_BUILD_DIR='',
+            __cleanup__=[k for k in os.environ if k.startswith('PIP_')]
+        )
+        self.patched_environ.__enter__()
+        self.addCleanup(self.patched_environ.__exit__)
+        for item in ('venv_dir', 'venv_test_dir', 'pip_temp'):
+            self.addCleanup(delattr, self, item)
 
-    def tearDown(self):
-        super(PipModuleTest, self).tearDown()
-        if os.path.isdir(self.venv_test_dir):
-            shutil.rmtree(self.venv_test_dir, ignore_errors=True)
-        if os.path.isdir(self.pip_temp):
-            shutil.rmtree(self.pip_temp, ignore_errors=True)
-        del self.venv_dir
-        del self.venv_test_dir
-        del self.pip_temp
-        if 'PIP_SOURCE_DIR' in os.environ:
-            os.environ.pop('PIP_SOURCE_DIR')
-        if 'PIP_BUILD_DIR' in os.environ:
-            os.environ.pop('PIP_BUILD_DIR')
+    def _create_virtualenv(self, path):
+        '''
+        The reason why the virtualenv creation is proxied by this function is mostly
+        because under windows, we can't seem to properly create a virtualenv off of
+        another virtualenv(we can on linux) and also because, we really don't want to
+        test virtualenv creation off of another virtualenv, we want a virtualenv created
+        from the original python.
+        Also, one windows, we must also point to the virtualenv binary outside the existing
+        virtualenv because it will fail otherwise
+        '''
+        try:
+            if salt.utils.platform.is_windows():
+                python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+            else:
+                python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+            # We're running off a virtualenv, and we don't want to create a virtualenv off of
+            # a virtualenv
+            kwargs = {'python': python}
+        except AttributeError:
+            # We're running off of the system python
+            kwargs = {}
+        self.run_function('virtualenv.create', [path], **kwargs)
 
     def _check_download_error(self, ret):
         '''
@@ -84,7 +102,7 @@ class PipModuleTest(ModuleCase):
 
     def test_issue_2087_missing_pip(self):
         # Let's create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Let's remove the pip binary
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
@@ -113,9 +131,8 @@ class PipModuleTest(ModuleCase):
                 ret
             )
 
-    @skip_if_not_root
     def test_requirements_as_list_of_chains__cwd_set__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -139,20 +156,25 @@ class PipModuleTest(ModuleCase):
             'pip.install', requirements=requirements_list,
             bin_env=self.venv_dir, cwd=self.venv_dir
         )
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
-
             found = self.pip_successful_install(ret['stdout'])
-
             self.assertTrue(found)
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
-    @skip_if_not_root
     def test_requirements_as_list_of_chains__cwd_not_set__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -175,21 +197,26 @@ class PipModuleTest(ModuleCase):
         ret = self.run_function(
             'pip.install', requirements=requirements_list, bin_env=self.venv_dir
         )
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
-
             found = self.pip_successful_install(ret['stdout'])
-
             self.assertTrue(found)
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
-
-    @skip_if_not_root
     def test_requirements_as_list__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
         req2_filename = os.path.join(self.venv_dir, 'requirements2.txt')
@@ -205,20 +232,25 @@ class PipModuleTest(ModuleCase):
             'pip.install', requirements=requirements_list, bin_env=self.venv_dir
         )
 
-        found = self.pip_successful_install(ret['stdout'])
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
 
         try:
             self.assertEqual(ret['retcode'], 0)
+            found = self.pip_successful_install(ret['stdout'])
             self.assertTrue(found)
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
-
-    @skip_if_not_root
     def test_requirements_as_list__non_absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -240,20 +272,26 @@ class PipModuleTest(ModuleCase):
             'pip.install', requirements=requirements_list,
             bin_env=self.venv_dir, cwd=req_cwd
         )
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
-
             found = self.pip_successful_install(ret['stdout'])
             self.assertTrue(found)
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
-
-    @skip_if_not_root
     def test_chained_requirements__absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
 
@@ -268,17 +306,24 @@ class PipModuleTest(ModuleCase):
         ret = self.run_function(
             'pip.install', requirements=req1_filename, bin_env=self.venv_dir
         )
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
-    @skip_if_not_root
     def test_chained_requirements__non_absolute_file_path(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
         req_basepath = (self.venv_dir)
@@ -298,17 +343,24 @@ class PipModuleTest(ModuleCase):
             'pip.install', requirements=req1_filename, cwd=req_basepath,
             bin_env=self.venv_dir
         )
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
-    @skip_if_not_root
     def test_issue_4805_nested_requirements(self):
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
 
         # Create a requirements file that depends on another one.
         req1_filename = os.path.join(self.venv_dir, 'requirements.txt')
@@ -320,50 +372,91 @@ class PipModuleTest(ModuleCase):
 
         ret = self.run_function(
             'pip.install', requirements=req1_filename, bin_env=self.venv_dir, timeout=300)
-        if self._check_download_error(ret['stdout']):
-            self.skipTest('Test skipped due to pip download error')
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
+            if self._check_download_error(ret['stdout']):
+                self.skipTest('Test skipped due to pip download error')
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except (AssertionError, TypeError):
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
     def test_pip_uninstall(self):
         # Let's create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function('pip.install', ['pep8'], bin_env=self.venv_dir)
-        if self._check_download_error(ret['stdout']):
-            self.skipTest('Test skipped due to pip download error')
-        self.assertEqual(ret['retcode'], 0)
-        self.assertIn('installed pep8', ret['stdout'])
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
+        try:
+            if self._check_download_error(ret['stdout']):
+                self.skipTest('Test skipped due to pip download error')
+            self.assertEqual(ret['retcode'], 0)
+            self.assertIn('installed pep8', ret['stdout'])
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
         ret = self.run_function(
             'pip.uninstall', ['pep8'], bin_env=self.venv_dir
         )
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.uninstall\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('uninstalled pep8', ret['stdout'])
-        except AssertionError:
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
     def test_pip_install_upgrade(self):
         # Create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function(
             'pip.install', ['pep8==1.3.4'], bin_env=self.venv_dir
         )
-        if self._check_download_error(ret['stdout']):
-            self.skipTest('Test skipped due to pip download error')
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
+            if self._check_download_error(ret['stdout']):
+                self.skipTest('Test skipped due to pip download error')
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except AssertionError:
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
         ret = self.run_function(
             'pip.install',
@@ -371,27 +464,44 @@ class PipModuleTest(ModuleCase):
             bin_env=self.venv_dir,
             upgrade=True
         )
-        if self._check_download_error(ret['stdout']):
-            self.skipTest('Test skipped due to pip download error')
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
+            if self._check_download_error(ret['stdout']):
+                self.skipTest('Test skipped due to pip download error')
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('installed pep8', ret['stdout'])
-        except AssertionError:
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
         ret = self.run_function(
             'pip.uninstall', ['pep8'], bin_env=self.venv_dir
         )
 
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.uninstall\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
             self.assertEqual(ret['retcode'], 0)
             self.assertIn('uninstalled pep8', ret['stdout'])
-        except AssertionError:
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
     def test_pip_install_multiple_editables(self):
         editables = [
@@ -400,23 +510,32 @@ class PipModuleTest(ModuleCase):
         ]
 
         # Create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function(
             'pip.install', [],
             editable='{0}'.format(','.join(editables)),
             bin_env=self.venv_dir
         )
-        if self._check_download_error(ret['stdout']):
-            self.skipTest('Test skipped due to pip download error')
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
+            if self._check_download_error(ret['stdout']):
+                self.skipTest('Test skipped due to pip download error')
             self.assertEqual(ret['retcode'], 0)
             self.assertIn(
                 'Successfully installed Blinker SaltTesting', ret['stdout']
             )
-        except AssertionError:
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
     def test_pip_install_multiple_editables_and_pkgs(self):
         editables = [
@@ -425,25 +544,34 @@ class PipModuleTest(ModuleCase):
         ]
 
         # Create the testing virtualenv
-        self.run_function('virtualenv.create', [self.venv_dir])
+        self._create_virtualenv(self.venv_dir)
         ret = self.run_function(
             'pip.install', ['pep8'],
             editable='{0}'.format(','.join(editables)),
             bin_env=self.venv_dir
         )
-        if self._check_download_error(ret['stdout']):
-            self.skipTest('Test skipped due to pip download error')
+
+        if not isinstance(ret, dict):
+            self.fail(
+                'The \'pip.install\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+            )
+
         try:
+            if self._check_download_error(ret['stdout']):
+                self.skipTest('Test skipped due to pip download error')
             self.assertEqual(ret['retcode'], 0)
             for package in ('Blinker', 'SaltTesting', 'pep8'):
                 self.assertRegex(
                     ret['stdout'],
                     r'(?:.*)(Successfully installed)(?:.*)({0})(?:.*)'.format(package)
                 )
-        except AssertionError:
-            import pprint
-            pprint.pprint(ret)
-            raise
+        except KeyError as exc:
+            self.fail(
+                'The returned dictionary is missing an expected key. Error: \'{}\'. Dictionary: {}'.format(
+                    exc,
+                    pprint.pformat(ret)
+                )
+            )
 
     @skipIf(not os.path.isfile('pip3'), 'test where pip3 is installed')
     @skipIf(salt.utils.platform.is_windows(), 'test specific for linux usage of /bin/python')

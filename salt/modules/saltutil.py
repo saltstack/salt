@@ -42,20 +42,22 @@ import salt
 import salt.config
 import salt.client
 import salt.client.ssh.client
+import salt.defaults.events
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
 import salt.utils.files
 import salt.utils.functools
+import salt.utils.master
 import salt.utils.minion
 import salt.utils.path
 import salt.utils.process
 import salt.utils.url
 import salt.wheel
+import salt.transport.client
 
 HAS_PSUTIL = True
 try:
@@ -66,6 +68,7 @@ except ImportError:
 from salt.exceptions import (
     SaltReqTimeoutError, SaltRenderError, CommandExecutionError, SaltInvocationError
 )
+
 
 __proxyenabled__ = ['*']
 
@@ -549,7 +552,7 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
 
 def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Flourine
+    .. versionadded:: 2019.2.0
 
     Sync engine modules from ``salt://_matchers`` to the minion
 
@@ -697,6 +700,7 @@ def sync_output(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         refresh_modules()
     return ret
 
+
 sync_outputters = salt.utils.functools.alias_function(sync_output, 'sync_outputters')
 
 
@@ -776,7 +780,7 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
 
 def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Sync serializers from ``salt://_serializers`` to the minion
 
@@ -917,6 +921,45 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     return ret
 
 
+def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: 2019.2.1
+
+    Sync executors from ``salt://_executors`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for log handlers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new log handlers are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_executors
+        salt '*' saltutil.sync_executors saltenv=dev
+        salt '*' saltutil.sync_executors saltenv=base,dev
+    '''
+    ret = _sync('executors', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
     .. versionchanged:: 2015.8.11,2016.3.2
@@ -977,6 +1020,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['output'] = sync_output(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['utils'] = sync_utils(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['executors'] = sync_executors(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
@@ -1026,20 +1070,36 @@ def refresh_matchers():
     return ret
 
 
-def refresh_pillar():
+def refresh_pillar(**kwargs):
     '''
     Signal the minion to refresh the pillar data.
+
+    .. versionchanged:: Neon
+        The ``async`` argument has been added. The default value is True.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.refresh_pillar
+        salt '*' saltutil.refresh_pillar async=False
     '''
+    asynchronous = bool(kwargs.get('async', True))
     try:
-        ret = __salt__['event.fire']({}, 'pillar_refresh')
+        if asynchronous:
+            #  If we're going to block, first setup a listener
+            ret = __salt__['event.fire']({}, 'pillar_refresh')
+        else:
+            eventer = salt.utils.event.get_event(
+                'minion', opts=__opts__, listen=True)
+            ret = __salt__['event.fire']({'notify': True}, 'pillar_refresh')
+            # Wait for the finish event to fire
+            log.trace('refresh_pillar waiting for pillar refresh to complete')
+            # Blocks until we hear this event or until the timeout expires
+            eventer.get_event(
+                tag=salt.defaults.events.MINION_PILLAR_COMPLETE, wait=30)
     except KeyError:
-        log.error('Event module not available. Module refresh failed.')
+        log.error('Event module not available. Pillar refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
     return ret
 
@@ -1067,12 +1127,12 @@ def refresh_modules(**kwargs):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
-            ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
-            # Wait for the finish event to fire
-            log.trace('refresh_modules waiting for module refresh to complete')
-            # Blocks until we hear this event or until the timeout expires
-            eventer.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=True) as event_bus:
+                ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
+                # Wait for the finish event to fire
+                log.trace('refresh_modules waiting for module refresh to complete')
+                # Blocks until we hear this event or until the timeout expires
+                event_bus.get_event(tag=salt.defaults.events.MINION_MOD_COMPLETE, wait=30)
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1111,7 +1171,7 @@ def running():
     return salt.utils.minion.running(__opts__)
 
 
-def clear_cache():
+def clear_cache(days=-1):
     '''
     Forcibly removes all caches on a minion.
 
@@ -1124,12 +1184,16 @@ def clear_cache():
 
     .. code-block:: bash
 
-        salt '*' saltutil.clear_cache
+        salt '*' saltutil.clear_cache days=7
     '''
+    threshold = time.time() - days * 24 * 60 * 60
     for root, dirs, files in salt.utils.files.safe_walk(__opts__['cachedir'], followlinks=False):
         for name in files:
             try:
-                os.remove(os.path.join(root, name))
+                file = os.path.join(root, name)
+                mtime = os.path.getmtime(file)
+                if mtime < threshold:
+                    os.remove(file)
             except OSError as exc:
                 log.error(
                     'Attempt to clear cache with saltutil.clear_cache '
@@ -1154,7 +1218,7 @@ def clear_job_cache(hours=24):
 
         salt '*' saltutil.clear_job_cache hours=12
     '''
-    threshold = time.time() - hours * 3600
+    threshold = time.time() - hours * 60 * 60
     for root, dirs, files in salt.utils.files.safe_walk(os.path.join(__opts__['cachedir'], 'minion_jobs'),
                                                   followlinks=False):
         for name in dirs:
@@ -1375,7 +1439,8 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    channel = salt.transport.Channel.factory(__opts__)
+    channel = salt.transport.client.ReqChannel.factory(__opts__)
+    channel.close()
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1402,7 +1467,7 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__['master_uri'])
 
     for master in masters:
-        channel = salt.transport.Channel.factory(__opts__, master_uri=master)
+        channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
         tok = channel.auth.gen_token(b'salt')
         load = {'cmd': 'revoke_auth',
                 'id': __opts__['id'],
@@ -1412,6 +1477,8 @@ def revoke_auth(preserve_minion_cache=False):
             channel.send(load)
         except SaltReqTimeoutError:
             ret = False
+        finally:
+            channel.close()
     return ret
 
 
@@ -1440,6 +1507,14 @@ def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
             'ret': ret, 'cli': True, 'kwarg': kwarg, 'sub': kwargs['subset'],
         }
         del kwargs['subset']
+    elif kwargs.get('asynchronous'):
+        cmd_kwargs = {
+            'tgt': tgt, 'fun': fun, 'arg': arg, 'tgt_type': tgt_type,
+            'ret': ret, 'kwarg': kwarg
+        }
+        del kwargs['asynchronous']
+        # run_job doesnt need processing like the others
+        return client.run_job(**cmd_kwargs)
     else:
         _cmd = client.cmd_iter
         cmd_kwargs = {
@@ -1546,7 +1621,7 @@ def cmd_iter(tgt,
         yield ret
 
 
-def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=None, **kwargs):
+def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=None, asynchronous=False, **kwargs):
     '''
     Execute a runner function. This function must be run on the master,
     either by targeting a minion running on a master or by using
@@ -1559,6 +1634,11 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
 
     kwargs
         Any keyword arguments to pass to the runner function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
 
     CLI Example:
 
@@ -1604,11 +1684,16 @@ def runner(name, arg=None, kwarg=None, full_return=False, saltenv='base', jid=No
             prefix='run'
         )
 
-    return rclient.cmd(name,
-                       arg=arg,
-                       kwarg=kwarg,
-                       print_event=False,
-                       full_return=full_return)
+    if asynchronous:
+        master_key = salt.utils.master.get_master_key('root', __opts__)
+        low = {'arg': arg, 'kwarg': kwarg, 'fun': name, 'key': master_key}
+        return rclient.cmd_async(low)
+    else:
+        return rclient.cmd(name,
+                           arg=arg,
+                           kwarg=kwarg,
+                           print_event=False,
+                           full_return=full_return)
 
 
 def wheel(name, *args, **kwargs):
@@ -1629,6 +1714,11 @@ def wheel(name, *args, **kwargs):
 
     kwargs
         Any keyword arguments to pass to the wheel function
+
+    asynchronous
+        Run the salt command but don't wait for a reply.
+
+        .. versionadded:: neon
 
     CLI Example:
 
@@ -1683,13 +1773,18 @@ def wheel(name, *args, **kwargs):
                 prefix='run'
             )
 
-        ret = wheel_client.cmd(name,
-                               arg=args,
-                               pub_data=pub_data,
-                               kwarg=valid_kwargs,
-                               print_event=False,
-                               full_return=True)
-    except SaltInvocationError:
+        if kwargs.pop('asynchronous', False):
+            master_key = salt.utils.master.get_master_key('root', __opts__)
+            low = {'arg': args, 'kwarg': kwargs, 'fun': name, 'key': master_key}
+            ret = wheel_client.cmd_async(low)
+        else:
+            ret = wheel_client.cmd(name,
+                                   arg=args,
+                                   pub_data=pub_data,
+                                   kwarg=valid_kwargs,
+                                   print_event=False,
+                                   full_return=True)
+    except SaltInvocationError as e:
         raise CommandExecutionError(
             'This command can only be executed on a minion that is located on '
             'the master.'

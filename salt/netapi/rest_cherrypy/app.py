@@ -5,6 +5,15 @@ A REST API for Salt
 
 .. py:currentmodule:: salt.netapi.rest_cherrypy.app
 
+.. note::
+
+    This module is Experimental on Windows platforms, and supports limited
+    configurations:
+
+    - doesn't support PAM authentication (i.e. external_auth: auto)
+    - doesn't support SSL (i.e. disable_ssl: True)
+
+
 :depends:
     - CherryPy Python module.
 
@@ -711,11 +720,11 @@ def salt_api_acl_tool(username, request):
     :type request: cherrypy.request
     '''
     failure_str = ("[api_acl] Authentication failed for "
-                   "user {0} from IP {1}")
+                   "user %s from IP %s")
     success_str = ("[api_acl] Authentication sucessful for "
-                   "user {0} from IP {1}")
+                   "user %s from IP %s")
     pass_str = ("[api_acl] Authentication not checked for "
-                "user {0} from IP {1}")
+                "user %s from IP %s")
 
     acl = None
     # Salt Configuration
@@ -733,23 +742,23 @@ def salt_api_acl_tool(username, request):
         if users:
             if username in users:
                 if ip in users[username] or '*' in users[username]:
-                    logger.info(success_str.format(username, ip))
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             elif username not in users and '*' in users:
                 if ip in users['*'] or '*' in users['*']:
-                    logger.info(success_str.format(username, ip))
+                    logger.info(success_str, username, ip)
                     return True
                 else:
-                    logger.info(failure_str.format(username, ip))
+                    logger.info(failure_str, username, ip)
                     return False
             else:
-                logger.info(failure_str.format(username, ip))
+                logger.info(failure_str, username, ip)
                 return False
     else:
-        logger.info(pass_str.format(username, ip))
+        logger.info(pass_str, username, ip)
         return True
 
 
@@ -766,11 +775,11 @@ def salt_ip_verify_tool():
         if cherrypy_conf:
             auth_ip_list = cherrypy_conf.get('authorized_ips', None)
             if auth_ip_list:
-                logger.debug("Found IP list: {0}".format(auth_ip_list))
+                logger.debug('Found IP list: %s', auth_ip_list)
                 rem_ip = cherrypy.request.headers.get('Remote-Addr', None)
-                logger.debug("Request from IP: {0}".format(rem_ip))
+                logger.debug('Request from IP: %s', rem_ip)
                 if rem_ip not in auth_ip_list:
-                    logger.error("Blocked IP: {0}".format(rem_ip))
+                    logger.error('Blocked IP: %s', rem_ip)
                     raise cherrypy.HTTPError(403, 'Bad IP')
 
 
@@ -1082,7 +1091,7 @@ def lowdata_fmt():
     # headers for form encoded data (including charset or something similar)
     if data and isinstance(data, collections.Mapping):
         # Make the 'arg' param a list if not already
-        if 'arg' in data and not isinstance(data['arg'], list):
+        if 'arg' in data and not isinstance(data['arg'], list):  # pylint: disable=unsupported-membership-test
             data['arg'] = [data['arg']]
 
         # Finally, make a Low State and put it in request
@@ -1167,6 +1176,20 @@ class LowDataAdapter(object):
             if token:
                 chunk['token'] = token
 
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
+            if 'token' in chunk:
+                # Make sure that auth token is hex
+                try:
+                    int(chunk['token'], 16)
+                except (TypeError, ValueError):
+                    raise cherrypy.HTTPError(401, 'Invalid token')
+
             if client:
                 chunk['client'] = client
 
@@ -1216,7 +1239,7 @@ class LowDataAdapter(object):
             HTTP/1.1 200 OK
             Content-Type: application/json
         '''
-        import inspect
+        import inspect  # pylint: disable=unused-import
 
         return {
             'return': "Welcome",
@@ -1708,16 +1731,21 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO()
+        fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO(priv_key))
+
+        if six.PY3:
+            pub_key = pub_key.encode(__salt_system_encoding__)
+            priv_key = priv_key.encode(__salt_system_encoding__)
+
+        tarball.addfile(pub_key_file, BytesIO(pub_key))
+        tarball.addfile(priv_key_file, BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
         headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
-        headers['Content-Length'] = fileobj.len
+        headers['Content-Length'] = len(fileobj.getvalue())
         headers['Cache-Control'] = 'no-cache'
 
         fileobj.seek(0)
@@ -1887,9 +1915,11 @@ class Login(LowDataAdapter):
             if not perms:
                 logger.debug("Eauth permission list not found.")
         except Exception:
-            logger.debug("Configuration for external_auth malformed for "
-                "eauth '{0}', and user '{1}'."
-                .format(token.get('eauth'), token.get('name')), exc_info=True)
+            logger.debug(
+                "Configuration for external_auth malformed for eauth '%s', "
+                "and user '%s'.", token.get('eauth'), token.get('name'),
+                exc_info=True
+            )
             perms = None
 
         return {'return': [{
@@ -2167,7 +2197,11 @@ class Events(object):
 
         :return bool: True if valid, False if not valid.
         '''
-        if auth_token is None:
+        # Make sure that auth token is hex. If it's None, or something other
+        # than hex, this will raise a ValueError.
+        try:
+            int(auth_token, 16)
+        except (TypeError, ValueError):
             return False
 
         # First check if the given token is in our session table; if so it's a
@@ -2528,8 +2562,7 @@ class WebsocketEndpoint(object):
                             )
                     except UnicodeDecodeError:
                         logger.error(
-                                "Error: Salt event has non UTF-8 data:\n{0}"
-                                .format(data))
+                            "Error: Salt event has non UTF-8 data:\n%s", data)
 
         parent_pipe, child_pipe = Pipe()
         handler.pipe = parent_pipe

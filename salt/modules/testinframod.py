@@ -14,6 +14,8 @@ import operator
 import re
 import types
 
+from salt.utils.stringutils import camel_to_snake_case, snake_to_camel_case
+
 log = logging.getLogger(__name__)
 
 try:
@@ -51,38 +53,7 @@ def _get_module(module_name, backend=default_backend):
 
     """
     backend_instance = testinfra.get_backend(backend)
-    return backend_instance.get_module(_to_pascal_case(module_name))
-
-
-def _to_pascal_case(snake_case):
-    """Convert a snake_case string to its PascalCase equivalent.
-
-    :param snake_case: snake_cased string to be converted
-    :returns: PascalCase string
-    :rtype: str
-
-    """
-    space_case = re.sub('_', ' ', snake_case)
-    wordlist = []
-    for word in space_case.split():
-        wordlist.append(word[0].upper())
-        wordlist.append(word[1:])
-    return ''.join(wordlist)
-
-
-def _to_snake_case(pascal_case):
-    """Convert a PascalCase string to its snake_case equivalent.
-
-    :param pascal_case: PascalCased string to be converted
-    :returns: snake_case string
-    :rtype: str
-
-    """
-    snake_case = re.sub('(^|[a-z])([A-Z])',
-                        lambda match: '{0}_{1}'.format(match.group(1).lower(),
-                                                       match.group(2).lower()),
-                        pascal_case)
-    return snake_case.lower().strip('_')
+    return backend_instance.get_module(snake_to_camel_case(module_name, uppercamel=True))
 
 
 def _get_method_result(module_, module_instance, method_name, method_arg=None):
@@ -297,7 +268,7 @@ def _register_functions():
     can be called via salt.
     """
     try:
-        modules_ = [_to_snake_case(module_) for module_ in modules.__all__]
+        modules_ = [camel_to_snake_case(module_) for module_ in modules.__all__]
     except AttributeError:
         modules_ = [module_ for module_ in modules.modules]
 
@@ -306,6 +277,7 @@ def _register_functions():
         mod_func.__doc__ = _build_doc(mod_name)
         __all__.append(mod_name)
         globals()[mod_name] = mod_func
+
 
 if TESTINFRA_PRESENT:
     _register_functions()

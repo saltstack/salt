@@ -18,6 +18,7 @@ Set up the cloud configuration at ``/etc/salt/cloud.providers`` or
       user: myuser@pam or myuser@pve
       password: mypassword
       url: hypervisor.domain.tld
+      port: 8006
       driver: proxmox
       verify_ssl: True
 
@@ -105,6 +106,7 @@ def get_dependencies():
 
 
 url = None
+port = None
 ticket = None
 csrf = None
 verify_ssl = None
@@ -115,9 +117,13 @@ def _authenticate():
     '''
     Retrieve CSRF and API tickets for the Proxmox API
     '''
-    global url, ticket, csrf, verify_ssl
+    global url, port, ticket, csrf, verify_ssl
     url = config.get_cloud_config_value(
         'url', get_configured_provider(), __opts__, search_global=False
+    )
+    port = config.get_cloud_config_value(
+        'port', get_configured_provider(), __opts__,
+        default=8006, search_global=False
     )
     username = config.get_cloud_config_value(
         'user', get_configured_provider(), __opts__, search_global=False
@@ -131,7 +137,7 @@ def _authenticate():
     )
 
     connect_data = {'username': username, 'password': passwd}
-    full_url = 'https://{0}:8006/api2/json/access/ticket'.format(url)
+    full_url = 'https://{0}:{1}/api2/json/access/ticket'.format(url, port)
 
     returned_data = requests.post(
         full_url, verify=verify_ssl, data=connect_data).json()
@@ -148,7 +154,7 @@ def query(conn_type, option, post_data=None):
         log.debug('Not authenticated yet, doing that now..')
         _authenticate()
 
-    full_url = 'https://{0}:8006/api2/json/{1}'.format(url, option)
+    full_url = 'https://{0}:{1}/api2/json/{2}'.format(url, port, option)
 
     log.debug('%s: %s (%s)', conn_type, full_url, post_data)
 
@@ -320,22 +326,42 @@ def get_resources_vms(call=None, resFilter=None, includeConfig=True):
 
         salt-cloud -f get_resources_vms my-proxmox-config
     '''
-    log.debug('Getting resource: vms.. (filter: %s)', resFilter)
-    resources = query('get', 'cluster/resources')
 
-    ret = {}
-    for resource in resources:
-        if 'type' in resource and resource['type'] in ['openvz', 'qemu', 'lxc']:
-            name = resource['name']
-            ret[name] = resource
+    timeoutTime = time.time() + 60
+    while True:
+        log.debug('Getting resource: vms.. (filter: %s)', resFilter)
+        resources = query('get', 'cluster/resources')
+        ret = {}
+        badResource = False
+        for resource in resources:
+            if 'type' in resource and resource['type'] in ['openvz', 'qemu',
+                                                           'lxc']:
+                try:
+                    name = resource['name']
+                except KeyError:
+                    badResource = True
+                    log.debug('No name in VM resource %s', repr(resource))
+                    break
 
-            if includeConfig:
-                # Requested to include the detailed configuration of a VM
-                ret[name]['config'] = get_vmconfig(
-                    ret[name]['vmid'],
-                    ret[name]['node'],
-                    ret[name]['type']
-                )
+                ret[name] = resource
+
+                if includeConfig:
+                    # Requested to include the detailed configuration of a VM
+                    ret[name]['config'] = get_vmconfig(
+                        ret[name]['vmid'],
+                        ret[name]['node'],
+                        ret[name]['type']
+                    )
+
+        if time.time() > timeoutTime:
+            raise SaltCloudExecutionTimeout('FAILED to get the proxmox '
+                                            'resources vms')
+
+        # Carry on if there wasn't a bad resource return from Proxmox
+        if not badResource:
+            break
+
+        time.sleep(0.5)
 
     if resFilter is not None:
         log.debug('Filter given: %s, returning requested '
@@ -505,7 +531,7 @@ def _stringlist_to_dictionary(input_string):
     for item in li:
         pair = str(item).replace(' ', '').split('=')
         if len(pair) != 2:
-            log.warn("Cannot process stringlist item %s", item)
+            log.warning('Cannot process stringlist item %s', item)
             continue
 
         ret[pair[0]] = pair[1]
@@ -848,7 +874,7 @@ def _import_api():
     Load this json content into global variable "api"
     '''
     global api
-    full_url = 'https://{0}:8006/pve-docs/api-viewer/apidoc.js'.format(url)
+    full_url = 'https://{0}:{1}/pve-docs/api-viewer/apidoc.js'.format(url, port)
     returned_data = requests.get(full_url, verify=verify_ssl)
 
     re_filter = re.compile('(?<=pveapi =)(.*)(?=^;)', re.DOTALL | re.MULTILINE)
@@ -950,6 +976,9 @@ def create_node(vm_, newid):
             if prop in vm_:  # if the property is set, use it for the VM request
                 newnode[prop] = vm_[prop]
 
+        if 'pubkey' in vm_:
+            newnode['ssh-public-keys'] = vm_['pubkey']
+
         # inform user the "disk" option is not supported for LXC hosts
         if 'disk' in vm_:
             log.warning('The "disk" option is not supported for LXC hosts and was ignored')
@@ -999,9 +1028,12 @@ def create_node(vm_, newid):
         if 'host' in vm_:
             postParams['target'] = vm_['host']
 
-        if ':' in vm_['clone_from']:
-            vmhost = vm_['clone_from'].split(':')[0]
-            vm_['clone_from'] = vm_['clone_from'].split(':')[1]
+        try:
+            int(vm_['clone_from'])
+        except ValueError:
+            if ':' in vm_['clone_from']:
+                vmhost = vm_['clone_from'].split(':')[0]
+                vm_['clone_from'] = vm_['clone_from'].split(':')[1]
 
         node = query('post', 'nodes/{0}/qemu/{1}/clone'.format(
             vmhost, vm_['clone_from']), postParams)
@@ -1146,7 +1178,7 @@ def destroy(name, call=None):
 
         # required to wait a bit here, otherwise the VM is sometimes
         # still locked and destroy fails.
-        time.sleep(1)
+        time.sleep(3)
 
         query('delete', 'nodes/{0}/{1}'.format(
             vmobj['node'], vmobj['id']

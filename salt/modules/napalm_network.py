@@ -5,7 +5,7 @@ NAPALM Network
 
 Basic methods for interaction with the network device through the virtual proxy 'napalm'.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -216,7 +216,7 @@ def _config_logic(napalm_device,
         # will discard the config
         if loaded_result['comment']:
             loaded_result['comment'] += '\n'
-        if not len(loaded_result.get('diff', '')) > 0:
+        if not loaded_result.get('diff', ''):
             loaded_result['already_configured'] = True
         discarded = _safe_dicard_config(loaded_result, napalm_device)
         if not discarded['result']:
@@ -236,7 +236,7 @@ def _config_logic(napalm_device,
             removed = cancel_commit(commit_jid)
             log.debug('Cleaned up the commit from the schedule')
             log.debug(removed['comment'])
-        if len(loaded_result.get('diff', '')) > 0:
+        if loaded_result.get('diff', ''):
             # if not testing mode
             # and also the user wants to commit (default)
             # and there are changes to commit
@@ -1378,7 +1378,7 @@ def load_config(filename=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -1402,7 +1402,7 @@ def load_config(filename=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -1433,7 +1433,7 @@ def load_config(filename=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -1463,7 +1463,7 @@ def load_config(filename=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     saltenv: ``base``
         Specifies the Salt environment name.
@@ -1616,7 +1616,7 @@ def load_template(template_name=None,
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             This argument can now support a list of templates to be rendered.
             The resulting configuration text is loaded at once, as a single
             configuration chunk.
@@ -1632,7 +1632,7 @@ def load_template(template_name=None,
     context: None
         Overrides default context variables passed to the template.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     template_hash_name: None
         When ``template_hash`` refers to a remote file,
@@ -1707,7 +1707,7 @@ def load_template(template_name=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -1731,7 +1731,7 @@ def load_template(template_name=None,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -1762,7 +1762,7 @@ def load_template(template_name=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -1792,7 +1792,7 @@ def load_template(template_name=None,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     defaults: None
         Default variables/context passed to the template.
@@ -1994,10 +1994,10 @@ def load_template(template_name=None,
                 if not isinstance(_managed, (list, tuple)) and isinstance(_managed, six.string_types):
                     _loaded['comment'] += _managed
                     _loaded['result'] = False
-                elif isinstance(_managed, (list, tuple)) and not len(_managed) > 0:
+                elif isinstance(_managed, (list, tuple)) and not _managed:
                     _loaded['result'] = False
                     _loaded['comment'] += 'Error while rendering the template.'
-                elif isinstance(_managed, (list, tuple)) and not len(_managed[0]) > 0:
+                elif isinstance(_managed, (list, tuple)) and not _managed[0]:
                     _loaded['result'] = False
                     _loaded['comment'] += _managed[-1]  # contains the error message
                 if _loaded['result']:  # all good
@@ -2237,7 +2237,7 @@ def config_control(inherit_napalm_device=None, **kwargs):  # pylint: disable=unu
 
 def cancel_commit(jid):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Cancel a commit scheduled to be executed via the ``commit_in`` and
     ``commit_at`` arguments from the
@@ -2264,7 +2264,7 @@ def cancel_commit(jid):
 
 def confirm_commit(jid):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
     ``revert_at``  arguments from the
@@ -2294,7 +2294,7 @@ def confirm_commit(jid):
 def save_config(source=None,
                 path=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Save the configuration to a file on the local file system.
 
@@ -2348,7 +2348,7 @@ def replace_pattern(pattern,
                     debug=False,
                     commit=True):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Replace occurrences of a pattern in the configuration source. If
     ``show_changes`` is ``True``, then a diff of what changed will be returned,
@@ -2487,7 +2487,7 @@ def blockreplace(marker_start,
                  debug=False,
                  replace=True):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Replace content of the configuration source, delimited by the line markers.
 
@@ -2594,7 +2594,7 @@ def patch(patchfile,
           debug=False,
           replace=True):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Apply a patch to the configuration source, and load the result into the
     running config of the device.

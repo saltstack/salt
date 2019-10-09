@@ -2,7 +2,7 @@
 '''
 Azure (ARM) Network State Module
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 :maintainer: <devops@decisionlab.io>
 :maturity: new
@@ -20,8 +20,8 @@ Azure (ARM) Network State Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as a dictionary of
-keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
-parameters are sensitive, it's recommended to pass them to the states via pillar.
+    keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
+    parameters are sensitive, it's recommended to pass them to the states via pillar.
 
     Required provider parameters:
 
@@ -62,7 +62,7 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure virtual network exists:
@@ -112,7 +112,7 @@ def __virtual__():
 def virtual_network_present(name, address_prefixes, resource_group, dns_servers=None,
                             tags=None, connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a virtual network exists.
 
@@ -260,7 +260,7 @@ def virtual_network_present(name, address_prefixes, resource_group, dns_servers=
 
 def virtual_network_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a virtual network does not exist in the resource group.
 
@@ -324,7 +324,7 @@ def virtual_network_absent(name, resource_group, connection_auth=None):
 def subnet_present(name, address_prefix, virtual_network, resource_group,
                    security_group=None, route_table=None, connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a subnet exists.
 
@@ -465,7 +465,7 @@ def subnet_present(name, address_prefix, virtual_network, resource_group,
 
 def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a virtual network does not exist in the virtual network.
 
@@ -533,7 +533,7 @@ def subnet_absent(name, virtual_network, resource_group, connection_auth=None):
 def network_security_group_present(name, resource_group, tags=None, security_rules=None, connection_auth=None,
                                    **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a network security group exists.
 
@@ -673,7 +673,7 @@ def network_security_group_present(name, resource_group, tags=None, security_rul
 
 def network_security_group_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a network security group does not exist in the resource group.
 
@@ -740,7 +740,7 @@ def security_rule_present(name, access, direction, priority, protocol, security_
                           destination_port_ranges=None, source_address_prefixes=None, source_port_ranges=None,
                           connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a security rule exists.
 
@@ -1054,7 +1054,7 @@ def security_rule_present(name, access, direction, priority, protocol, security_
 
 def security_rule_absent(name, security_group, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a security rule does not exist in the network security group.
 
@@ -1123,7 +1123,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
                           load_balancing_rules=None, probes=None, inbound_nat_rules=None, inbound_nat_pools=None,
                           outbound_nat_rules=None, tags=None, connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a load balancer exists.
 
@@ -1480,7 +1480,7 @@ def load_balancer_present(name, resource_group, sku=None, frontend_ip_configurat
 
 def load_balancer_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a load balancer does not exist in the resource group.
 
@@ -1545,7 +1545,7 @@ def public_ip_address_present(name, resource_group, tags=None, sku=None, public_
                               public_ip_address_version=None, dns_settings=None, idle_timeout_in_minutes=None,
                               connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a public IP address exists.
 
@@ -1729,7 +1729,7 @@ def public_ip_address_present(name, resource_group, tags=None, sku=None, public_
 
 def public_ip_address_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a public IP address does not exist in the resource group.
 
@@ -1795,7 +1795,7 @@ def network_interface_present(name, ip_configurations, subnet, virtual_network, 
                               primary=None, enable_accelerated_networking=None, enable_ip_forwarding=None,
                               connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a network interface exists.
 
@@ -2049,7 +2049,7 @@ def network_interface_present(name, ip_configurations, subnet, virtual_network, 
 
 def network_interface_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a network interface does not exist in the resource group.
 
@@ -2113,7 +2113,7 @@ def network_interface_absent(name, resource_group, connection_auth=None):
 def route_table_present(name, resource_group, tags=None, routes=None, disable_bgp_route_propagation=None,
                         connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a route table exists.
 
@@ -2253,7 +2253,7 @@ def route_table_present(name, resource_group, tags=None, routes=None, disable_bg
 
 def route_table_absent(name, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a route table does not exist in the resource group.
 
@@ -2317,7 +2317,7 @@ def route_table_absent(name, resource_group, connection_auth=None):
 def route_present(name, address_prefix, next_hop_type, route_table, resource_group, next_hop_ip_address=None,
                   connection_auth=None, **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a route exists within a route table.
 
@@ -2449,7 +2449,7 @@ def route_present(name, address_prefix, next_hop_type, route_table, resource_gro
 
 def route_absent(name, route_table, resource_group, connection_auth=None):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Ensure a route table does not exist in the resource group.
 

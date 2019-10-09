@@ -2,7 +2,7 @@
 '''
 Module for sending messages to google chat.
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 To use this module you need to configure a webhook in the google chat room
 where you would like the message to be sent, see:

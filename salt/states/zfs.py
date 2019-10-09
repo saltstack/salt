@@ -68,13 +68,13 @@ def __virtual__():
     '''
     Provides zfs state
     '''
-    if __grains__['zfs_support']:
+    if __grains__.get('zfs_support'):
         return __virtualname__
     else:
         return (False, "The zfs state cannot be loaded: zfs not supported")
 
 
-def _absent(name, dataset_type, force=False, recursive=False):
+def _absent(name, dataset_type, force=False, recursive=False, recursive_all=False):
     '''
     internal shared function for *_absent
 
@@ -86,6 +86,9 @@ def _absent(name, dataset_type, force=False, recursive=False):
         try harder to destroy the dataset
     recursive : boolean
         also destroy all the child datasets
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     '''
     ret = {'name': name,
@@ -104,7 +107,7 @@ def _absent(name, dataset_type, force=False, recursive=False):
     if __salt__['zfs.exists'](name, **{'type': dataset_type}):
         ## NOTE: dataset found with the name and dataset_type
         if not __opts__['test']:
-            mod_res = __salt__['zfs.destroy'](name, **{'force': force, 'recursive': recursive})
+            mod_res = __salt__['zfs.destroy'](name, **{'force': force, 'recursive': recursive, 'recursive_all': recursive_all})
         else:
             mod_res = OrderedDict([('destroyed', True)])
 
@@ -186,7 +189,7 @@ def volume_absent(name, force=False, recursive=False):
     return ret
 
 
-def snapshot_absent(name, force=False, recursive=False):
+def snapshot_absent(name, force=False, recursive=False, recursive_all=False):
     '''
     ensure snapshot is absent on the system
 
@@ -196,6 +199,9 @@ def snapshot_absent(name, force=False, recursive=False):
         try harder to destroy the dataset (zfs destroy -f)
     recursive : boolean
         also destroy all the child datasets (zfs destroy -r)
+    recursive_all : boolean
+        recursively destroy all dependents, including cloned file systems
+        outside the target hierarchy. (-R)
 
     '''
     if not __utils__['zfs.is_snapshot'](name):
@@ -204,7 +210,7 @@ def snapshot_absent(name, force=False, recursive=False):
                'result': False,
                'comment': 'invalid snapshot name: {0}'.format(name)}
     else:
-        ret = _absent(name, 'snapshot', force, recursive)
+        ret = _absent(name, 'snapshot', force, recursive, recursive_all)
     return ret
 
 
@@ -440,7 +446,7 @@ def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_
     ## check we have valid filesystem name/volume name/clone snapshot
     if not __utils__['zfs.is_dataset'](name):
         ret['result'] = False
-        ret['comment'] = 'invalid dataset name: {1}'.format(name)
+        ret['comment'] = 'invalid dataset name: {0}'.format(name)
         return ret
 
     if cloned_from and not __utils__['zfs.is_snapshot'](cloned_from):

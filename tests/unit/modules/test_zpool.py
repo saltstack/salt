@@ -43,8 +43,10 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     This class contains a set of functions that test salt.modules.zpool module
     '''
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
-        utils = salt.loader.utils(opts, whitelist=['zfs'])
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        utils = salt.loader.utils(
+            opts,
+            whitelist=['zfs', 'args', 'systemd', 'path', 'platform'])
         zpool_obj = {
             zpool: {
                 '__opts__': opts,

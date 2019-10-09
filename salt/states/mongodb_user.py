@@ -96,7 +96,7 @@ def present(name,
 
     # check if user exists
     users = __salt__['mongodb.user_find'](name, user, password, host, port, database, authdb)
-    if len(users) > 0:
+    if users:
         # check for errors returned in users e.g.
         #    users= (False, 'Failed to connect to MongoDB database localhost:27017')
         #    users= (False, 'not authorized on admin to execute command { usersInfo: "root" }')
@@ -118,8 +118,12 @@ def present(name,
             # fill changes if the roles and current roles differ
             if not set(current_roles) == set(roles):
                 ret['changes'].update({name: {'database': database, 'roles': {'old': current_roles, 'new': roles}}})
+                ret['comment'] = 'User {0} is already present, but has new roles'.format(name)
+                ret['result'] = None
 
-            __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb, roles=roles)
+            if not __opts__['test']:
+                __salt__['mongodb.user_create'](name, passwd, user, password, host, port, database=database, authdb=authdb, roles=roles)
+                ret['result'] = True
         return ret
 
     # if the check does not return a boolean, return an error

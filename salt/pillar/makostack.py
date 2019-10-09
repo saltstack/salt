@@ -452,7 +452,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
         else:
             namespace = None
         if not os.path.isfile(cfg):
-            log.warning('Ignoring MakoStack cfg `{}`: file not found'.format(cfg))
+            log.warning('Ignoring MakoStack cfg `%s`: file not found', cfg)
             continue
         stack = _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config)
     return stack
@@ -479,13 +479,13 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar, namespace, config):
                 for sub in namespace.split(':')[::-1]:
                     obj = {sub: obj}
             stack = _merge_dict(stack, obj)
-            log.debug('MakoStack template `{}` parsed'.format(line))
+            log.debug('MakoStack template `%s` parsed', line)
         except exceptions.TopLevelLookupException as err:
             if config.get('fail_on_missing_file'):
                 msg = 'MakoStack template `{}` not found - aborting compilation.'.format(line)
                 log.error(msg)
                 raise CommandExecutionError(msg)
-            log.info('MakoStack template `{}` not found.'.format(line))
+            log.info('MakoStack template `%s` not found.', line)
             continue
         except Exception as err:
             # Catches the above KeyError, and any other parsing errors...
@@ -531,7 +531,7 @@ def _merge_dict(stack, obj):
                     stack[k] = _cleanup(v)
                     v = stack_k
                 if type(stack[k]) != type(v):
-                    log.debug('Force overwrite, types differ: `{}` != `{}`'.format(stack[k], v))
+                    log.debug('Force overwrite, types differ: `%s` != `%s`', stack[k], v)
                     stack[k] = _cleanup(v)
                 elif isinstance(v, dict):
                     stack[k] = _merge_dict(stack[k], v)
@@ -568,9 +568,9 @@ def _parse_top_cfg(content, filename):
     try:
         obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
-            log.debug('MakoStack cfg `{}` parsed as YAML'.format(filename))
+            log.debug('MakoStack cfg `%s` parsed as YAML', filename)
             return obj
     except Exception as err:
         pass
-    log.debug('MakoStack cfg `{}` parsed as plain text'.format(filename))
+    log.debug('MakoStack cfg `%s` parsed as plain text', filename)
     return content.splitlines()

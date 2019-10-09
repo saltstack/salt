@@ -69,13 +69,12 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback):
     # Log the exception
     logging.getLogger(__name__).error(
         'An un-handled exception was caught by salt-testing\'s global '
-        'exception handler:\n{0}: {1}\n{2}'.format(
-            exc_type.__name__,
-            exc_value,
-            ''.join(traceback.format_exception(
-                exc_type, exc_value, exc_traceback
-            )).strip()
-        )
+        'exception handler:\n%s: %s\n%s',
+        exc_type.__name__,
+        exc_value,
+        ''.join(traceback.format_exception(
+            exc_type, exc_value, exc_traceback
+        )).strip()
     )
     # Call the original sys.excepthook
     __GLOBAL_EXCEPTION_HANDLER(exc_type, exc_value, exc_traceback)
@@ -379,7 +378,7 @@ class SaltTestingParser(optparse.OptionParser):
         try:
             return self.__test_mods
         except AttributeError:
-            self.__test_mods = set(tests.support.paths.test_mods())
+            self.__test_mods = set(tests.support.paths.list_test_mods())
             return self.__test_mods
 
     def _map_files(self, files):
@@ -417,6 +416,8 @@ class SaltTestingParser(optparse.OptionParser):
             match = re.match(r'^(salt/|tests/(integration|unit)/)(.+\.py)$', path)
             if match:
                 comps = match.group(3).split('/')
+                if len(comps) < 2:
+                    continue
 
                 # Find matches for a source file
                 if match.group(1) == 'salt/':
@@ -456,6 +457,14 @@ class SaltTestingParser(optparse.OptionParser):
                 if salt.utils.stringutils.expr_match(filename, path_expr):
                     ret.update(filename_map[path_expr])
                     break
+
+        if any(x.startswith('integration.proxy.') for x in ret):
+            # Ensure that the salt-proxy daemon is started for these tests.
+            self.options.proxy = True
+
+        if any(x.startswith('integration.ssh.') for x in ret):
+            # Ensure that an ssh daemon is started for these tests.
+            self.options.ssh = True
 
         return ret
 
@@ -602,6 +611,9 @@ class SaltTestingParser(optparse.OptionParser):
         # Default logging level: ERROR
         logging.root.setLevel(logging.NOTSET)
 
+        log_levels_to_evaluate = [
+            logging.ERROR,  # Default log level
+        ]
         if self.options.tests_logfile:
             filehandler = logging.FileHandler(
                 mode='w',           # Not preserved between re-runs
@@ -612,6 +624,7 @@ class SaltTestingParser(optparse.OptionParser):
             filehandler.setLevel(logging.DEBUG)
             filehandler.setFormatter(formatter)
             logging.root.addHandler(filehandler)
+            log_levels_to_evaluate.append(logging.DEBUG)
 
             print(' * Logging tests on {0}'.format(self.options.tests_logfile))
 
@@ -625,16 +638,17 @@ class SaltTestingParser(optparse.OptionParser):
                 logging_level = logging.TRACE
             elif self.options.verbosity == 4:   # -vvv
                 logging_level = logging.DEBUG
-                print('DEBUG')
             elif self.options.verbosity == 3:   # -vv
-                print('INFO')
                 logging_level = logging.INFO
             else:
                 logging_level = logging.ERROR
+            log_levels_to_evaluate.append(logging_level)
             os.environ['TESTS_LOG_LEVEL'] = str(self.options.verbosity)  # future lint: disable=blacklisted-function
             consolehandler.setLevel(logging_level)
             logging.root.addHandler(consolehandler)
             log.info('Runtests logging has been setup')
+
+        os.environ['TESTS_MIN_LOG_LEVEL_NAME'] = logging.getLevelName(min(log_levels_to_evaluate))
 
     def pre_execution_cleanup(self):
         '''
@@ -836,9 +850,8 @@ class SaltTestingParser(optparse.OptionParser):
                 log.info('Second run at terminating test suite child processes: %s', children)
                 helpers.terminate_process(children=children, kill_children=True)
         log.info(
-            'Test suite execution finalized with exit code: {0}'.format(
-                exit_code
-            )
+            'Test suite execution finalized with exit code: %s',
+            exit_code
         )
         self.exit(exit_code)
 

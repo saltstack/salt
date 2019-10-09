@@ -361,7 +361,7 @@ def table_absent(name, db):
                 changes['changes']['old'] = tables[0][0]
                 changes['result'] = True
                 changes['comment'] = "'" + name + "' was dropped"
-        elif len(tables) == 0:
+        elif not tables:
             changes['result'] = True
             changes['comment'] = "'" + name + "' is already absent"
         else:
@@ -439,7 +439,7 @@ def table_present(name, db, schema, force=False):
                 changes['result'] = True
                 changes['comment'] = "'" + name + \
                                      "' exists with matching schema"
-        elif len(tables) == 0:
+        elif not tables:
             # Create the table
             sql = None
             if isinstance(schema, six.string_types):

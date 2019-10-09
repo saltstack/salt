@@ -6,8 +6,8 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -31,7 +31,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
             event: {
                 '__opts__': {
                     'id': 'id',
-                    'sock_dir': TMP,
+                    'sock_dir': RUNTIME_VARS.TMP,
                     'transport': 'zeromq'
                 }
             }
@@ -42,7 +42,7 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         Test for Fire an event off up to the master server
         '''
         with patch('salt.crypt.SAuth') as salt_crypt_sauth, \
-                patch('salt.transport.Channel.factory') as salt_transport_channel_factory:
+                patch('salt.transport.client.ReqChannel.factory') as salt_transport_channel_factory:
 
             preload = {'id': 'id', 'tag': 'tag', 'data': 'data',
                        'tok': 'salt', 'cmd': '_minion_event'}

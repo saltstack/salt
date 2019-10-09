@@ -31,7 +31,7 @@ import salt.config
 import salt.cache
 import salt.defaults.exitcodes
 import salt.payload
-import salt.transport
+import salt.transport.client
 import salt.loader
 import salt.utils.args
 import salt.utils.event
@@ -319,7 +319,7 @@ class LocalClient(object):
             >>> local.run_job('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
 
         try:
             pub_data = self.pub(
@@ -379,7 +379,7 @@ class LocalClient(object):
             >>> local.run_job_async('*', 'test.sleep', [300])
             {'jid': '20131219215650131543', 'minions': ['jerry']}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
 
         try:
             pub_data = yield self.pub_async(
@@ -431,13 +431,13 @@ class LocalClient(object):
             >>> local.cmd_async('*', 'test.sleep', [300])
             '20131219215921857715'
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
         pub_data = self.run_job(tgt,
                                 fun,
                                 arg,
                                 tgt_type,
                                 ret,
                                 jid=jid,
+                                kwarg=kwarg,
                                 listen=False,
                                 **kwargs)
         try:
@@ -528,16 +528,15 @@ class LocalClient(object):
             {'dave': {...}}
             {'stewart': {...}}
         '''
-        # We need to re-import salt.utils.args here
-        # even though it has already been imported.
-        # when cmd_batch is called via the NetAPI
-        # the module is unavailable.
-        import salt.utils.args
-
         # Late import - not used anywhere else in this file
         import salt.cli.batch
+        opts = salt.cli.batch.batch_get_opts(
+            tgt, fun, batch, self.opts,
+            arg=arg, tgt_type=tgt_type, ret=ret, kwarg=kwarg, **kwargs)
 
-        arg = salt.utils.args.condition_input(arg, kwarg)
+        eauth = salt.cli.batch.batch_get_eauth(kwargs)
+
+        arg = salt.utils.args.parse_input(arg, kwargs=kwarg)
         opts = {'tgt': tgt,
                 'fun': fun,
                 'arg': arg,
@@ -567,6 +566,7 @@ class LocalClient(object):
         for key, val in six.iteritems(self.opts):
             if key not in opts:
                 opts[key] = val
+
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret in batch.run():
             yield ret
@@ -685,7 +685,6 @@ class LocalClient(object):
             minion ID. A compound command will return a sub-dictionary keyed by
             function name.
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -696,6 +695,7 @@ class LocalClient(object):
                                     ret,
                                     timeout,
                                     jid,
+                                    kwarg=kwarg,
                                     listen=True,
                                     **kwargs)
 
@@ -745,8 +745,29 @@ class LocalClient(object):
         :param verbose: Print extra information about the running command
         :returns: A generator
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
+
+        if fun.startswith('state.'):
+            ref = {'compound': '-C',
+                    'glob': '',
+                    'grain': '-G',
+                    'grain_pcre': '-P',
+                    'ipcidr': '-S',
+                    'list': '-L',
+                    'nodegroup': '-N',
+                    'pcre': '-E',
+                    'pillar': '-I',
+                    'pillar_pcre': '-J'}
+            if HAS_RANGE:
+                ref['range'] = '-R'
+            if ref[tgt_type].startswith('-'):
+                self.target_data = "{0} '{1}'".format(
+                    ref[tgt_type],
+                    ','.join(tgt) if isinstance(tgt, list) else tgt)
+            else:
+                self.target_data = ','.join(tgt) if isinstance(tgt, list) else tgt
+        else:
+            self.target_data = ''
 
         try:
             self.pub_data = self.run_job(
@@ -756,6 +777,7 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
                 **kwargs)
 
@@ -778,16 +800,21 @@ class LocalClient(object):
 
                         yield fn_ret
                 except KeyboardInterrupt:
-                    raise SystemExit(
+                    exit_msg = (
+                        '\nExiting gracefully on Ctrl-c'
                         '\n'
                         'This job\'s jid is: {0}\n'
-                        'Exiting gracefully on Ctrl-c\n'
                         'The minions may not have all finished running and any '
-                        'remaining minions will return upon completion. To look '
-                        'up the return data for this job later, run the following '
-                        'command:\n\n'
-                        'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid'])
-                    )
+                        'remaining minions will return upon completion.\n\n'
+                        'To look up the return data for this job later, run the '
+                        'following command:\n'
+                        'salt-run jobs.lookup_jid {0}'.format(self.pub_data['jid']))
+                    if self.target_data:
+                        exit_msg += (
+                            '\n\n'
+                            'To set up the state run to safely exit, run the following command:\n'
+                            'salt {0} state.soft_kill {1}'.format(self.target_data, self.pub_data['jid']))
+                    raise SystemExit(exit_msg)
         finally:
             if not was_listening:
                 self.event.close_pub()
@@ -823,7 +850,6 @@ class LocalClient(object):
             {'dave': {'ret': True}}
             {'stewart': {'ret': True}}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -834,6 +860,7 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
                 **kwargs)
 
@@ -890,7 +917,6 @@ class LocalClient(object):
             None
             {'stewart': {'ret': True}}
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -901,6 +927,7 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
                 **kwargs)
 
@@ -938,7 +965,6 @@ class LocalClient(object):
         '''
         Execute a salt command and return
         '''
-        arg = salt.utils.args.condition_input(arg, kwarg)
         was_listening = self.event.cpub
 
         try:
@@ -949,6 +975,7 @@ class LocalClient(object):
                 tgt_type,
                 ret,
                 timeout,
+                kwarg=kwarg,
                 listen=True,
                 **kwargs)
 
@@ -1203,6 +1230,13 @@ class LocalClient(object):
 
                 # if the job isn't running there anymore... don't count
                 if raw['data']['return'] == {}:
+                    continue
+
+                # if the minion throws an exception containing the word "return"
+                # the master will try to handle the string as a dict in the next
+                # step. Check if we have a string, log the issue and continue.
+                if isinstance(raw['data']['return'], six.string_types):
+                    log.error("unexpected return from minion: %s", raw)
                     continue
 
                 if 'return' in raw['data']['return'] and \
@@ -1545,7 +1579,12 @@ class LocalClient(object):
                             yield {
                                 id_: {
                                     'out': 'no_return',
-                                    'ret': 'Minion did not return. [No response]',
+                                    'ret': 'Minion did not return. [No response]'
+                                    '\nThe minions may not have all finished running and any '
+                                    'remaining minions will return upon completion. To look '
+                                    'up the return data for this job later, run the following '
+                                    'command:\n\n'
+                                    'salt-run jobs.lookup_jid {0}'.format(jid),
                                     'retcode': salt.defaults.exitcodes.EX_GENERIC
                                 }
                             }
@@ -1712,9 +1751,9 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 master_uri=master_uri)
+        channel = salt.transport.client.ReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           master_uri=master_uri)
 
         try:
             # Ensure that the event subscriber is connected.
@@ -1722,7 +1761,8 @@ class LocalClient(object):
             if listen and not self.event.connect_pub(timeout=timeout):
                 raise SaltReqTimeoutError()
             payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
+        except SaltReqTimeoutError as err:
+            log.error(err)
             raise SaltReqTimeoutError(
                 'Salt request timed out. The master is not responding. You '
                 'may need to run your command with `--async` in order to '
@@ -1759,7 +1799,7 @@ class LocalClient(object):
             return payload
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1867,7 +1907,7 @@ class LocalClient(object):
             raise tornado.gen.Return(payload)
 
         # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        del channel
+        channel.close()
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
@@ -2006,8 +2046,7 @@ class Caller(object):
         func = self.sminion.functions[fun]
         args, kwargs = salt.minion.load_args_and_kwargs(
             func,
-            salt.utils.args.parse_input(args),
-            kwargs)
+            salt.utils.args.parse_input(args, kwargs=kwargs),)
         return func(*args, **kwargs)
 
 

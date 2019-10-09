@@ -19,6 +19,7 @@ import salt.minion
 import salt.output
 import salt.payload
 import salt.transport
+import salt.transport.client
 import salt.utils.args
 import salt.utils.files
 import salt.utils.jid
@@ -200,7 +201,13 @@ class BaseCaller(object):
             }
             data.update(kwargs)
             executors = getattr(self.minion, 'module_executors', []) or \
-                        self.opts.get('module_executors', ['direct_call'])
+                        salt.utils.args.yamlify_arg(
+                            self.opts.get('module_executors', '[direct_call]')
+                        )
+            if self.opts.get('executor_opts', None):
+                data['executor_opts'] = salt.utils.args.yamlify_arg(
+                    self.opts['executor_opts']
+                )
             if isinstance(executors, six.string_types):
                 executors = [executors]
             try:
@@ -298,18 +305,15 @@ class ZeroMQCaller(BaseCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     '''
-    def __init__(self, opts):
-        '''
-        Pass in the command line options
-        '''
-        super(ZeroMQCaller, self).__init__(opts)
-
     def return_pub(self, ret):
         '''
         Return the data up to the master
         '''
-        channel = salt.transport.Channel.factory(self.opts, usage='salt_call')
+        channel = salt.transport.client.ReqChannel.factory(self.opts, usage='salt_call')
         load = {'cmd': '_return', 'id': self.opts['id']}
         for key, value in six.iteritems(ret):
             load[key] = value
-        channel.send(load)
+        try:
+            channel.send(load)
+        finally:
+            channel.close()

@@ -303,5 +303,6 @@ def run(extension=None, name=None, description=None, salt_dir=None, merge=False,
     log.info('New module stored in %s', path)
     return path
 
+
 if __name__ == '__main__':
     run()

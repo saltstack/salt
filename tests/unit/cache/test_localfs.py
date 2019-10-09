@@ -10,8 +10,8 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -93,7 +93,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         Tests that the store function writes the data to the serializer for storage.
         '''
         # Create a temporary cache dir
-        tmp_dir = tempfile.mkdtemp(dir=TMP)
+        tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
@@ -127,7 +127,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         Tests that the fetch function is able to read the cache file and return its data.
         '''
         # Create a temporary cache dir
-        tmp_dir = tempfile.mkdtemp(dir=TMP)
+        tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Create a new serializer object to use in function patches
         serializer = salt.payload.Serial(self)
@@ -164,7 +164,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         Test that the updated function returns the modification time of the cache file
         '''
         # Create a temporary cache dir
-        tmp_dir = tempfile.mkdtemp(dir=TMP)
+        tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
@@ -197,7 +197,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
             # Create a temporary cache dir
-            tmp_dir = tempfile.mkdtemp(dir=TMP)
+            tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
             # Use the helper function to create the cache file using localfs.store()
             self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
@@ -239,7 +239,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         Tests the return of the ls function containing bank entries.
         '''
         # Create a temporary cache dir
-        tmp_dir = tempfile.mkdtemp(dir=TMP)
+        tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
@@ -256,7 +256,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         is provided.
         '''
         # Create a temporary cache dir
-        tmp_dir = tempfile.mkdtemp(dir=TMP)
+        tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # Use the helper function to create the cache file using localfs.store()
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))

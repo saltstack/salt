@@ -71,6 +71,10 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Pass userdata to the instance to be created
       userdata_file: /etc/salt/my-userdata-file
 
+      # Instance termination protection setting
+      # Default is disabled
+      termination_protection: False
+
 :depends: requests
 '''
 # pylint: disable=invalid-name,function-redefined
@@ -78,7 +82,6 @@ To use the EC2 cloud module, set up the cloud configuration at
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import sys
 import stat
 import time
 import uuid
@@ -91,15 +94,16 @@ import hashlib
 import binascii
 import datetime
 import base64
-import msgpack
 import re
 import decimal
 
 # Import Salt Libs
 import salt.utils.cloud
+import salt.utils.compat
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.utils.yaml
 from salt._compat import ElementTree as ET
@@ -221,10 +225,7 @@ def _xml_to_dict(xmltree):
     '''
     Convert an XML tree into a dict
     '''
-    if sys.version_info < (2, 7):
-        children_len = len(xmltree.getchildren())
-    else:
-        children_len = len(xmltree)
+    children_len = len(xmltree)
 
     if children_len < 1:
         name = xmltree.tag
@@ -240,10 +241,7 @@ def _xml_to_dict(xmltree):
             comps = name.split('}')
             name = comps[1]
         if name not in xmldict:
-            if sys.version_info < (2, 7):
-                children_len = len(item.getchildren())
-            else:
-                children_len = len(item)
+            children_len = len(item)
 
             if children_len > 0:
                 xmldict[name] = _xml_to_dict(item)
@@ -448,10 +446,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
         items = root
 
     if setname:
-        if sys.version_info < (2, 7):
-            children_len = len(root.getchildren())
-        else:
-            children_len = len(root)
+        children_len = len(root)
 
         for item in range(0, children_len):
             comps = root[item].tag.split('}')
@@ -1225,7 +1220,7 @@ def get_imageid(vm_):
     _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
     image_id = sorted(aws.query(params, location=get_location(),
                                  provider=get_provider(), opts=__opts__, sigver='4'),
-                      lambda i, j: cmp(_t(i), _t(j))
+                      lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))
                       )[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
@@ -1818,7 +1813,9 @@ def request_instance(vm_=None, call=None):
 
     if userdata is not None:
         try:
-            params[spot_prefix + 'UserData'] = base64.b64encode(userdata)
+            params[spot_prefix + 'UserData'] = base64.b64encode(
+                salt.utils.stringutils.to_bytes(userdata)
+            )
         except Exception as exc:
             log.exception('Failed to encode userdata: %s', exc)
 
@@ -1927,6 +1924,18 @@ def request_instance(vm_=None, call=None):
     set_del_root_vol_on_destroy = config.get_cloud_config_value(
         'del_root_vol_on_destroy', vm_, __opts__, search_global=False
     )
+
+    set_termination_protection = config.get_cloud_config_value(
+        'termination_protection', vm_, __opts__, search_global=False
+    )
+
+    if set_termination_protection is not None:
+        if not isinstance(set_termination_protection, bool):
+            raise SaltCloudConfigError(
+                '\'termination_protection\' should be a boolean value.'
+            )
+        params.update(_param_from_config(spot_prefix + 'DisableApiTermination',
+                                         set_termination_protection))
 
     if set_del_root_vol_on_destroy and not isinstance(set_del_root_vol_on_destroy, bool):
         raise SaltCloudConfigError(
@@ -2641,7 +2650,7 @@ def create(vm_=None, call=None):
             vm_['instance_id_list'].append(instance['instanceId'])
 
         vm_['instance_id'] = vm_['instance_id_list'].pop()
-        if len(vm_['instance_id_list']) > 0:
+        if vm_['instance_id_list']:
             # Multiple instances were spun up, get one now, and queue the rest
             queue_instances(vm_['instance_id_list'])
 
@@ -4887,6 +4896,8 @@ def get_password_data(
         ret[next(six.iterkeys(item))] = next(six.itervalues(item))
 
     if not HAS_M2 and not HAS_PYCRYPTO:
+        if 'key' in kwargs or 'key_file' in kwargs:
+            log.warning("No crypto library is installed, can not decrypt password")
         return ret
 
     if 'key' not in kwargs:
@@ -4908,7 +4919,7 @@ def get_password_data(
                 key_obj = Crypto.PublicKey.RSA.importKey(rsa_key)
                 key_obj = PKCS1_v1_5.new(key_obj)
                 password = key_obj.decrypt(pwdata, sentinel)
-            ret['password'] = password
+            ret['password'] = salt.utils.stringutils.to_unicode(password)
 
     return ret
 
@@ -4997,7 +5008,7 @@ def _parse_pricing(url, name):
         __opts__['cachedir'], 'ec2-pricing-{0}.p'.format(name)
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(regions, fho)
+        salt.utils.msgpack.dump(regions, fho)
 
     return True
 
@@ -5065,7 +5076,8 @@ def show_pricing(kwargs=None, call=None):
         update_pricing({'type': name}, 'function')
 
     with salt.utils.files.fopen(pricefile, 'r') as fhi:
-        ec2_price = salt.utils.stringutils.to_unicode(msgpack.load(fhi))
+        ec2_price = salt.utils.stringutils.to_unicode(
+            salt.utils.msgpack.load(fhi))
 
     region = get_location(profile)
     size = profile.get('size', None)

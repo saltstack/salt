@@ -479,10 +479,10 @@ def _ext_pillar(minion_id,
 
     ngroup_pillar = {}
     nodegroups_dir = os.path.join(root_dir, 'nodegroups')
-    if os.path.exists(nodegroups_dir) and len(__opts__.get('nodegroups', ())) > 0:
+    if os.path.exists(nodegroups_dir) and __opts__.get('nodegroups'):
         master_ngroups = __opts__['nodegroups']
         ext_pillar_dirs = os.listdir(nodegroups_dir)
-        if len(ext_pillar_dirs) > 0:
+        if ext_pillar_dirs:
             for nodegroup in ext_pillar_dirs:
                 if (os.path.isdir(nodegroups_dir) and
                         nodegroup in master_ngroups):

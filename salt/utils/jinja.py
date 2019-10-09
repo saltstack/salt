@@ -145,6 +145,7 @@ class SaltCacheLoader(BaseLoader):
                 'tplfile': tplfile,
                 'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
+                'tplroot': tpldir.split('/')[0],
             }
             environment.globals.update(tpldata)
 
@@ -305,7 +306,7 @@ def to_bool(val):
     if isinstance(val, six.integer_types):
         return val > 0
     if not isinstance(val, collections.Hashable):
-        return len(val) > 0
+        return bool(val)
     return False
 
 

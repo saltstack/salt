@@ -234,10 +234,10 @@ def returner(ret):
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            log.error('Nothing logged! Lost data. Unable to create database "{0}"'.format(options['db']))
-            log.debug('_response object is: {0}'.format(_response))
+            log.error('Nothing logged! Lost data. Unable to create database "%s"', options['db'])
+            log.debug('_response object is: %s', _response)
             return
-        log.info('Created database "{0}"'.format(options['db']))
+        log.info('Created database "%s"', options['db'])
 
     if boltons_lib:
         # redact all passwords if options['redact_pws'] is True
@@ -266,7 +266,7 @@ def returner(ret):
 
     # Sanity check regarding the response..
     if 'ok' not in _response or _response['ok'] is not True:
-        log.error('Nothing logged! Lost data. Unable to create document: "{0}"'.format(_response))
+        log.error('Nothing logged! Lost data. Unable to create document: "%s"', _response)
 
 
 def event_return(events):
@@ -281,7 +281,7 @@ def event_return(events):
       - couchdb
 
     '''
-    log.debug('events data is: {}'.format(events))
+    log.debug('events data is: %s', events)
 
     options = _get_options()
 
@@ -291,7 +291,7 @@ def event_return(events):
     if event_db not in _response:
 
         # Make a PUT request to create the database.
-        log.info('Creating database "{0}"'.format(event_db))
+        log.info('Creating database "%s"', event_db)
         _response = _request("PUT",
                              options['url'] + event_db,
                              user=options['user'],
@@ -299,13 +299,13 @@ def event_return(events):
 
         # Confirm that the response back was simple 'ok': true.
         if 'ok' not in _response or _response['ok'] is not True:
-            log.error('Nothing logged! Lost data. Unable to create database "{0}"'.format(event_db))
+            log.error('Nothing logged! Lost data. Unable to create database "%s"', event_db)
             return
-        log.info('Created database "{0}"'.format(event_db))
+        log.info('Created database "%s"', event_db)
 
     for event in events:
         # Call _generate_doc to get a dict object of the document we're going to shove into the database.
-        log.debug('event data is: {}'.format(event))
+        log.debug('event data is: %s', event)
         doc = _generate_event_doc(event)
 
         # Make the actual HTTP PUT request to create the doc.
@@ -315,7 +315,7 @@ def event_return(events):
                              salt.utils.json.dumps(doc))
         # Sanity check regarding the response..
         if 'ok' not in _response or _response['ok'] is not True:
-            log.error('Nothing logged! Lost data. Unable to create document: "{0}"'.format(_response))
+            log.error('Nothing logged! Lost data. Unable to create document: "%s"', _response)
 
 
 def get_jid(jid):
@@ -325,7 +325,7 @@ def get_jid(jid):
     options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + '/' + jid)
     if 'error' in _response:
-        log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
+        log.error('Unable to get JID "%s" : "%s"', jid, _response)
         return {}
     return {_response['id']: _response}
 
@@ -339,7 +339,7 @@ def get_jids():
 
     # Make sure the 'total_rows' is returned.. if not error out.
     if 'total_rows' not in _response:
-        log.error('Didn\'t get valid response from requesting all docs: {0}'.format(_response))
+        log.error('Didn\'t get valid response from requesting all docs: %s', _response)
         return {}
 
     # Return the rows.
@@ -384,13 +384,13 @@ def get_fun(fun):
                                                         fun))
         # Skip the minion if we got an error..
         if 'error' in _response:
-            log.warning('''Got an error when querying for last command
-                         by a minion: {0}'''.format(_response['error']))
+            log.warning('Got an error when querying for last command '
+                        'by a minion: %s', _response['error'])
             continue
 
         # Skip the minion if we didn't get any rows back. ( IE function that
         # they're looking for has a typo in it or some such ).
-        if len(_response['rows']) < 1:
+        if not _response['rows']:
             continue
 
         # Set the respnse ..
@@ -417,7 +417,7 @@ def get_minions():
 
     # Verify that we got a response back.
     if 'rows' not in _response:
-        log.error('Unable to get available minions: {0}'.format(_response))
+        log.error('Unable to get available minions: %s', _response)
         return []
 
     # Iterate over the rows to build up a list return it.
@@ -492,7 +492,7 @@ def set_salt_view():
                          options['url'] + options['db'] + "/_design/salt",
                          "application/json", salt.utils.json.dumps(new_doc))
     if 'error' in _response:
-        log.warning('Unable to set the salt design document: {0}'.format(_response['error']))
+        log.warning('Unable to set the salt design document: %s', _response['error'])
         return False
     return True
 
@@ -525,6 +525,6 @@ def get_load(jid):
     options = _get_options(ret=None)
     _response = _request("GET", options['url'] + options['db'] + '/' + jid)
     if 'error' in _response:
-        log.error('Unable to get JID "{0}" : "{1}"'.format(jid, _response))
+        log.error('Unable to get JID "%s" : "%s"', jid, _response)
         return {}
     return {_response['id']: _response}

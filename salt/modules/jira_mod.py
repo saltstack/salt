@@ -3,7 +3,7 @@
 JIRA Execution module
 =====================
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Execution module to manipulate JIRA tickets via Salt.
 

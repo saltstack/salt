@@ -6,6 +6,7 @@ Module for viewing and modifying sysctl parameters
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
+import os
 
 # Import salt libs
 import salt.utils.files
@@ -23,7 +24,7 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (False, 'The freebsd_sysctl execution module cannot be loaded: '
             'only available on FreeBSD systems.')
@@ -66,6 +67,10 @@ def show(config_file=False):
     comps = ['']
 
     if config_file:
+        # If the file doesn't exist, return an empty list
+        if not os.path.exists(config_file):
+            return []
+
         try:
             with salt.utils.files.fopen(config_file, 'r') as f:
                 for line in f.readlines():

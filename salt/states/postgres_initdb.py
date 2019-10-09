@@ -19,6 +19,9 @@ data directory.
         - encoding: UTF8
         - locale: C
         - runas: postgres
+        - allow_group_access: True
+        - data_checksums: True
+        - wal_segsize: 32
 
 '''
 from __future__ import absolute_import, unicode_literals, print_function
@@ -67,14 +70,14 @@ def present(name,
         The transaction log (WAL) directory (default is to keep WAL
         inside the data directory)
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     checksums
         If True, the cluster will be created with data page checksums.
 
         .. note::  Data page checksums are supported since PostgreSQL 9.3.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     runas
         The system user the operation should be performed on behalf of

@@ -68,7 +68,7 @@ try:
     if LooseVersion(azure.storage.__version__) < LooseVersion('0.20.0'):
         raise ImportError('azure.storage.__version__ must be >= 0.20.0')
     HAS_AZURE = True
-except ImportError:
+except (ImportError, AttributeError):
     HAS_AZURE = False
 
 # Import third party libs

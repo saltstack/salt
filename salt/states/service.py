@@ -66,6 +66,7 @@ import salt.utils.data
 import salt.utils.platform
 from salt.utils.args import get_function_argspec as _argspec
 from salt.exceptions import CommandExecutionError
+from salt.state import _gen_tag
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -85,7 +86,7 @@ def __virtual__():
     else:
         return (False, 'No service execution module loaded: '
                 'check support for service management on {0} '
-                ''.format(__grains__.get('osfinger', __grains__['os']))
+                ''.format(__grains__.get('osfinger', __grains__.get('os', 'NO OS')))
                )
 
 
@@ -119,20 +120,21 @@ def _enabled_used_error(ret):
     return ret
 
 
-def _enable(name, started, result=True, **kwargs):
+def _enable(name, started, result=True, skip_verify=False, **kwargs):
     '''
     Enable the service
     '''
     ret = {}
 
-    # is service available?
-    try:
-        if not _available(name, ret):
+    if not skip_verify:
+        # is service available?
+        try:
+            if not _available(name, ret):
+                return ret
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
             return ret
-    except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = exc.strerror
-        return ret
 
     # Set default expected result
     ret['result'] = result
@@ -221,21 +223,22 @@ def _enable(name, started, result=True, **kwargs):
     return ret
 
 
-def _disable(name, started, result=True, **kwargs):
+def _disable(name, started, result=True, skip_verify=False, **kwargs):
     '''
     Disable the service
     '''
     ret = {}
 
-    # is service available?
-    try:
-        if not _available(name, ret):
-            ret['result'] = True
+    if not skip_verify:
+        # is service available?
+        try:
+            if not _available(name, ret):
+                ret['result'] = True
+                return ret
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
             return ret
-    except CommandExecutionError as exc:
-        ret['result'] = False
-        ret['comment'] = exc.strerror
-        return ret
 
     # Set default expected result
     ret['result'] = result
@@ -422,19 +425,28 @@ def running(name,
     else:
         before_toggle_enable_status = True
 
+    unmask_ret = {'comment': ''}
+    if unmask:
+        unmask_ret = unmasked(name, unmask_runtime)
+
     # See if the service is already running
     if before_toggle_status:
-        ret['comment'] = 'The service {0} is already running'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['The service {0} is already running'.format(name),
+                           unmask_ret['comment']] if _f]
+        )
         if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
+            ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
+            ret.update(_disable(name, None, skip_verify=False, **kwargs))
         return ret
 
     # Run the tests
     if __opts__['test']:
         ret['result'] = None
-        ret['comment'] = 'Service {0} is set to start'.format(name)
+        ret['comment'] = '\n'.join(
+            [_f for _f in ['Service {0} is set to start'.format(name),
+                           unmask_ret['comment']] if _f])
         return ret
 
     # Conditionally add systemd-specific args to call to service.start
@@ -443,8 +455,10 @@ def running(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
-        start_kwargs.update({'timeout': kwargs.get('timeout')})
+    if salt.utils.platform.is_windows():
+        for arg in ['timeout', 'with_deps', 'with_parents']:
+            if kwargs.get(arg, False):
+                start_kwargs.update({arg: kwargs.get(arg)})
 
     try:
         func_ret = __salt__['service.start'](name, **start_kwargs)
@@ -457,9 +471,9 @@ def running(name,
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to start'.format(name)
         if enable is True:
-            ret.update(_enable(name, False, result=False, **kwargs))
+            ret.update(_enable(name, False, result=False, skip_verify=False, **kwargs))
         elif enable is False:
-            ret.update(_disable(name, False, result=False, **kwargs))
+            ret.update(_disable(name, False, result=False, skip_verify=False, **kwargs))
         return ret
 
     if init_delay:
@@ -484,15 +498,18 @@ def running(name,
         ret['result'] = False
 
     if enable is True:
-        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, **kwargs))
+        ret.update(_enable(name, after_toggle_status, result=after_toggle_status, skip_verify=False, **kwargs))
     elif enable is False:
-        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, **kwargs))
+        ret.update(_disable(name, after_toggle_status, result=after_toggle_status, skip_verify=False, **kwargs))
 
     if init_delay:
         ret['comment'] = (
             '{0}\nDelayed return for {1} seconds'
             .format(ret['comment'], init_delay)
         )
+
+    if unmask:
+        ret['comment'] = '\n'.join([ret['comment'], unmask_ret['comment']])
 
     return ret
 
@@ -573,9 +590,9 @@ def dead(name,
     if not before_toggle_status:
         ret['comment'] = 'The service {0} is already dead'.format(name)
         if enable is True and not before_toggle_enable_status:
-            ret.update(_enable(name, None, **kwargs))
+            ret.update(_enable(name, None, skip_verify=False, **kwargs))
         elif enable is False and before_toggle_enable_status:
-            ret.update(_disable(name, None, **kwargs))
+            ret.update(_disable(name, None, skip_verify=False, **kwargs))
         return ret
 
     # Run the tests
@@ -589,17 +606,19 @@ def dead(name,
     if warnings:
         ret.setdefault('warnings', []).extend(warnings)
 
-    if salt.utils.platform.is_windows() and kwargs.get('timeout', False):
-        stop_kwargs.update({'timeout': kwargs.get('timeout')})
+    if salt.utils.platform.is_windows():
+        for arg in ['timeout', 'with_deps', 'with_parents']:
+            if kwargs.get(arg, False):
+                stop_kwargs.update({arg: kwargs.get(arg)})
 
     func_ret = __salt__['service.stop'](name, **stop_kwargs)
     if not func_ret:
         ret['result'] = False
         ret['comment'] = 'Service {0} failed to die'.format(name)
         if enable is True:
-            ret.update(_enable(name, True, result=False, **kwargs))
+            ret.update(_enable(name, True, result=False, skip_verify=False, **kwargs))
         elif enable is False:
-            ret.update(_disable(name, True, result=False, **kwargs))
+            ret.update(_disable(name, True, result=False, skip_verify=False, **kwargs))
         return ret
 
     if init_delay:
@@ -625,14 +644,16 @@ def dead(name,
         ret['comment'] = 'Service {0} was killed'.format(name)
 
     if enable is True:
-        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
+        ret.update(_enable(name, after_toggle_status, result=not after_toggle_status, skip_verify=False, **kwargs))
     elif enable is False:
-        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, **kwargs))
+        ret.update(_disable(name, after_toggle_status, result=not after_toggle_status, skip_verify=False, **kwargs))
 
     return ret
 
 
-def enabled(name, **kwargs):
+def enabled(name,
+            skip_verify=False,
+            **kwargs):
     '''
     Ensure that the service is enabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -641,17 +662,24 @@ def enabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    skip_verify
+        Skip verifying that the service is available before enabling it.
+        ``True`` will skip the verification. The default is ``False``,
+        which will ensure the service is available before enabling it.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    ret.update(_enable(name, None, **kwargs))
+    ret.update(_enable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
-def disabled(name, **kwargs):
+def disabled(name,
+            skip_verify=False,
+             **kwargs):
     '''
     Ensure that the service is disabled on boot, only use this state if you
     don't want to manage the running process, remember that if you want to
@@ -660,13 +688,18 @@ def disabled(name, **kwargs):
 
     name
         The name of the init or rc script used to manage the service
+
+    skip_verify
+        Skip verifying that the service is available before disabling it.
+        ``True`` will skip the verification. The default is ``False``,
+        which will ensure the service is available before disabling it.
     '''
     ret = {'name': name,
            'changes': {},
            'result': True,
            'comment': ''}
 
-    ret.update(_disable(name, None, **kwargs))
+    ret.update(_disable(name, None, skip_verify=skip_verify, **kwargs))
     return ret
 
 
@@ -825,7 +858,6 @@ def unmasked(name, runtime=False):
 def mod_watch(name,
               sfun=None,
               sig=None,
-              reload=False,
               full_restart=False,
               init_delay=None,
               force=False,
@@ -852,6 +884,12 @@ def mod_watch(name,
         The string to search for when looking for the service process with ps
 
     reload
+        If True use reload instead of the default restart. If value is a list of
+        requisites; reload only if all watched changes are contained in the reload list.
+        Otherwise watch will restart.
+
+    full_restart
+        Use service.full_restart instead of restart.
         When set, reload the service instead of restarting it.
         (i.e. ``service nginx reload``)
 
@@ -866,6 +904,7 @@ def mod_watch(name,
     init_delay
         Add a sleep command (in seconds) before the service is restarted/reloaded
     '''
+    reload_ = kwargs.pop('reload', False)
     ret = {'name': name,
            'changes': {},
            'result': True,
@@ -883,13 +922,40 @@ def mod_watch(name,
             return ret
     elif sfun == 'running':
         if __salt__['service.status'](name, sig):
-            if 'service.reload' in __salt__ and reload:
-                if 'service.force_reload' in __salt__ and force:
-                    func = __salt__['service.force_reload']
-                    verb = 'forcefully reload'
+            if 'service.reload' in __salt__ and reload_:
+                if isinstance(reload_, list):
+                    only_reload_needed = True
+                    for watch_item in kwargs['__reqs__']['watch']:
+                        if __running__[_gen_tag(watch_item)]['changes']:
+                            match_found = False
+                            for this_reload in reload_:
+                                for state, id_ in six.iteritems(this_reload):
+                                    if state == watch_item['state'] \
+                                            and id_ == watch_item['__id__']:
+                                        match_found = True
+                            if not match_found:
+                                only_reload_needed = False
+                    if only_reload_needed:
+                        if 'service.force_reload' in __salt__ and force:
+                            func = __salt__['service.force_reload']
+                            verb = 'forcefully reload'
+                        else:
+                            func = __salt__['service.reload']
+                            verb = 'reload'
+                    else:
+                        if 'service.full_restart' in __salt__ and full_restart:
+                            func = __salt__['service.full_restart']
+                            verb = 'fully restart'
+                        else:
+                            func = __salt__['service.restart']
+                            verb = 'restart'
                 else:
-                    func = __salt__['service.reload']
-                    verb = 'reload'
+                    if 'service.force_reload' in __salt__ and force:
+                        func = __salt__['service.force_reload']
+                        verb = 'forcefully reload'
+                    else:
+                        func = __salt__['service.reload']
+                        verb = 'reload'
             elif 'service.full_restart' in __salt__ and full_restart:
                 func = __salt__['service.full_restart']
                 verb = 'fully restart'

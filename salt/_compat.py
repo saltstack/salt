@@ -7,8 +7,8 @@ Salt compatibility code
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import sys
-import types
 import logging
+import binascii
 
 # Import 3rd-party libs
 from salt.exceptions import SaltException
@@ -150,7 +150,6 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
             # and we need check this differently anyway
             self._is_packed_binary = lambda p: isinstance(p, bytes)
         # pylint: enable-all
-
         if isinstance(address, string_types) and '%' in address:
             buff = address.split('%')
             if len(buff) != 2:
@@ -174,7 +173,7 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
             self._ip = address
         elif self._is_packed_binary(address):
             self._check_packed_address(address, 16)
-            self._ip = ipaddress._int_from_bytes(address, 'big')
+            self._ip = int(binascii.hexlify(address), 16)
         else:
             address = str(address)
             if '/' in address:
@@ -189,9 +188,9 @@ class IPv6AddressScoped(ipaddress.IPv6Address):
         :return:
         '''
         packed = False
-        if len(data) == 16 and ':' not in data:
+        if isinstance(data, bytes) and len(data) == 16 and b':' not in data:
             try:
-                packed = bool(int(str(bytearray(data)).encode('hex'), 16))
+                packed = bool(int(binascii.hexlify(data), 16))
             except (ValueError, TypeError):
                 pass
 
@@ -230,81 +229,7 @@ class IPv6InterfaceScoped(ipaddress.IPv6Interface, IPv6AddressScoped):
         self.hostmask = self.network.hostmask
 
 
-def ip_address(address):
-    """Take an IP string/int and return an object of the correct type.
-
-    Args:
-        address: A string or integer, the IP address.  Either IPv4 or
-          IPv6 addresses may be supplied; integers less than 2**32 will
-          be considered to be IPv4 by default.
-
-    Returns:
-        An IPv4Address or IPv6Address object.
-
-    Raises:
-        ValueError: if the *address* passed isn't either a v4 or a v6
-          address
-
-    """
-    try:
-        return ipaddress.IPv4Address(address)
-    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as err:
-        log.debug('Error while parsing IPv4 address: %s', address)
-        log.debug(err)
-
-    try:
-        return IPv6AddressScoped(address)
-    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as err:
-        log.debug('Error while parsing IPv6 address: %s', address)
-        log.debug(err)
-
-    if isinstance(address, bytes):
-        raise ipaddress.AddressValueError('{} does not appear to be an IPv4 or IPv6 address. '
-                                          'Did you pass in a bytes (str in Python 2) instead '
-                                          'of a unicode object?'.format(repr(address)))
-
-    raise ValueError('{} does not appear to be an IPv4 or IPv6 address'.format(repr(address)))
-
-
-def ip_interface(address):
-    """Take an IP string/int and return an object of the correct type.
-
-    Args:
-        address: A string or integer, the IP address.  Either IPv4 or
-          IPv6 addresses may be supplied; integers less than 2**32 will
-          be considered to be IPv4 by default.
-
-    Returns:
-        An IPv4Interface or IPv6Interface object.
-
-    Raises:
-        ValueError: if the string passed isn't either a v4 or a v6
-          address.
-
-    Notes:
-        The IPv?Interface classes describe an Address on a particular
-        Network, so they're basically a combination of both the Address
-        and Network classes.
-
-    """
-    try:
-        return ipaddress.IPv4Interface(address)
-    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as err:
-        log.debug('Error while getting IPv4 interface for address %s', address)
-        log.debug(err)
-
-    try:
-        return ipaddress.IPv6Interface(address)
-    except (ipaddress.AddressValueError, ipaddress.NetmaskValueError) as err:
-        log.debug('Error while getting IPv6 interface for address %s', address)
-        log.debug(err)
-
-    raise ValueError('{} does not appear to be an IPv4 or IPv6 interface'.format(address))
-
-
 if ipaddress:
     ipaddress.IPv6Address = IPv6AddressScoped
     if sys.version_info.major == 2:
         ipaddress.IPv6Interface = IPv6InterfaceScoped
-    ipaddress.ip_address = ip_address
-    ipaddress.ip_interface = ip_interface

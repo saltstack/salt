@@ -5,10 +5,14 @@ Execution module for Cisco NX OS Switches.
 .. versionadded:: 2016.11.0
 
 This module supports execution using a Proxy Minion or Native Minion:
-1) Proxy Minion: Connect over SSH or NX-API HTTP(S).
-   See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
-2) Native Minion: Connect over NX-API Unix Domain Socket (UDS).
-   Install the minion inside the GuestShell running on the NX-OS device.
+
+- Proxy Minion: Connect over SSH or NX-API HTTP(S).
+
+  - See :mod:`salt.proxy.nxos <salt.proxy.nxos>` for proxy minion setup details.
+
+- Native Minion: Connect over NX-API Unix Domain Socket (UDS).
+
+  - Install the minion inside the GuestShell running on the NX-OS device.
 
 :maturity:   new
 :platform:   nxos
@@ -45,22 +49,26 @@ Native minon configuration options:
       cookie: 'username'
       no_save_config: True
 
-cookie
-    Use the option to override the default cookie 'admin:local' when
-    connecting over UDS and use 'username:local' instead. This is needed when
-    running the salt-minion in the GuestShell using a non-admin user.
+``cookie``
 
-    This option is ignored for SSH and NX-API Proxy minions.
+- Use the option to override the default cookie 'admin:local' when connecting
+  over UDS and use 'username:local' instead. This is needed when running the
+  salt-minion in the GuestShell using a non-admin user.
 
-no_save_config:
-    If False, 'copy running-config starting-config' is issues for every
-        configuration command.
-    If True, Running config is not saved to startup config
-    Default: False
+- This option is ignored for SSH and NX-API Proxy minions.
 
-    The recommended approach is to use the `save_running_config` function
-    instead of this option to improve performance.  The default behavior
-    controlled by this option is preserved for backwards compatibility.
+``no_save_config``
+
+- If False, 'copy running-config starting-config' is issues for every
+  configuration command.
+
+- If True, Running config is not saved to startup config
+
+- Default: False
+
+- The recommended approach is to use the `save_running_config` function instead
+  of this option to improve performance.  The default behavior controlled by
+  this option is preserved for backwards compatibility.
 
 
 The APIs defined in this execution module can also be executed using
@@ -75,13 +83,17 @@ salt-call from the GuestShell environment as follows.
     The functions in this module can be executed using either of the
     following syntactic forms.
 
-    salt '*' nxos.cmd <function>
-    salt '*' nxos.cmd get_user username=admin
+    .. code-block:: bash
+
+        salt '*' nxos.cmd <function>
+        salt '*' nxos.cmd get_user username=admin
 
     or
 
-    salt '*' nxos.<function>
-    salt '*' nxos.get_user username=admin
+    .. code-block:: bash
+
+        salt '*' nxos.<function>
+        salt '*' nxos.get_user username=admin
 
     The nxos.cmd <function> syntax is preserved for backwards compatibility.
 '''
@@ -91,6 +103,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import difflib
 import re
+import ast
 
 # Import Salt libs
 from salt.utils.pycrypto import gen_hash, secure_password
@@ -209,7 +222,7 @@ def cmd(command, *args, **kwargs):
         if k.startswith('__pub_'):
             kwargs.pop(k)
     local_command = '.'.join(['nxos', command])
-    log.info('local command: {}'.format(local_command))
+    log.info('local command: %s', local_command)
     if local_command not in __salt__:
         return False
     return __salt__[local_command](*args, **kwargs)
@@ -279,7 +292,6 @@ def grains(**kwargs):
 
         salt '*' nxos.cmd grains
     '''
-    import __main__ as main
     if not DEVICE_DETAILS['grains_cache']:
         ret = salt.utils.nxos.system_info(show_ver(**kwargs))
         log.debug(ret)
@@ -318,8 +330,17 @@ def sendline(command, method='cli_show_ascii', **kwargs):
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
+    smethods = ['cli_show_ascii', 'cli_show', 'cli_conf']
+    if method not in smethods:
+        msg = """
+        INPUT ERROR: Second argument 'method' must be one of {0}
+        Value passed: {1}
+        Hint: White space separated commands should be wrapped by double quotes
+        """.format(smethods, method)
+        return msg
+
     if salt.utils.platform.is_proxy():
-        return __proxy__['nxos.sendline'](command, method)
+        return __proxy__['nxos.sendline'](command, method, **kwargs)
     else:
         return _nxapi_request(command, method, **kwargs)
 
@@ -344,6 +365,14 @@ def show(commands, raw_text=True, **kwargs):
         salt '*' nxos.show 'show bgp sessions ; show processes' raw_text=False
         salt 'regular-minion' nxos.show 'show interfaces' host=sw01.example.com username=test password=test
     '''
+    if not isinstance(raw_text, bool):
+        msg = """
+        INPUT ERROR: Second argument 'raw_text' must be either True or False
+        Value passed: {0}
+        Hint: White space separated show commands should be wrapped by double quotes
+        """.format(raw_text)
+        return msg
+
     if raw_text:
         method = 'cli_show_ascii'
     else:
@@ -564,7 +593,15 @@ def delete_config(lines, **kwargs):
         lines = [lines]
     for i, _ in enumerate(lines):
         lines[i] = 'no ' + lines[i]
-    return config(lines, **kwargs)
+    result = None
+    try:
+        result = config(lines, **kwargs)
+    except CommandExecutionError as e:
+        # Some commands will generate error code 400 if they do not exist
+        # and we try to remove them.  These can be ignored.
+        if ast.literal_eval(e.message)['code'] != '400':
+            raise
+    return result
 
 
 def remove_user(username, **kwargs):

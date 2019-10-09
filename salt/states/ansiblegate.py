@@ -16,8 +16,6 @@
 # limitations under the License.
 
 r'''
-:codeauthor: :email:`Bo Maryniuk <bo@suse.de>`
-
 Execution of Ansible modules from within states
 ===============================================
 

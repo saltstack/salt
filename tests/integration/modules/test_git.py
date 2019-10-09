@@ -20,9 +20,9 @@ import tarfile
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
@@ -83,7 +83,7 @@ class GitModuleTest(ModuleCase):
         super(GitModuleTest, self).setUp()
         self.orig_cwd = os.getcwd()
         self.addCleanup(os.chdir, self.orig_cwd)
-        self.repo = tempfile.mkdtemp(dir=TMP)
+        self.repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.repo, ignore_errors=True)
         self.files = ('foo', 'bar', 'baz', 'питон')
         self.dirs = ('', 'qux')
@@ -193,7 +193,7 @@ class GitModuleTest(ModuleCase):
         '''
         Test git.archive
         '''
-        tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
+        tar_archive = os.path.join(RUNTIME_VARS.TMP, 'test_archive.tar.gz')
         try:
             self.assertTrue(
                 self.run_function(
@@ -224,7 +224,7 @@ class GitModuleTest(ModuleCase):
         Test git.archive on a subdir, giving only a partial copy of the repo in
         the resulting archive
         '''
-        tar_archive = os.path.join(TMP, 'test_archive.tar.gz')
+        tar_archive = os.path.join(RUNTIME_VARS.TMP, 'test_archive.tar.gz')
         try:
             self.assertTrue(
                 self.run_function(
@@ -306,7 +306,7 @@ class GitModuleTest(ModuleCase):
         '''
         Test cloning an existing repo
         '''
-        clone_parent_dir = tempfile.mkdtemp(dir=TMP)
+        clone_parent_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.assertTrue(
             self.run_function('git.clone', [clone_parent_dir, self.repo])
         )
@@ -317,7 +317,7 @@ class GitModuleTest(ModuleCase):
         '''
         Test cloning an existing repo with an alternate name for the repo dir
         '''
-        clone_parent_dir = tempfile.mkdtemp(dir=TMP)
+        clone_parent_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         clone_name = os.path.basename(self.repo)
         # Change to newly-created temp dir
         self.assertTrue(
@@ -617,7 +617,7 @@ class GitModuleTest(ModuleCase):
         '''
         Use git.init to init a new repo
         '''
-        new_repo = tempfile.mkdtemp(dir=TMP)
+        new_repo = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
         # `tempfile.mkdtemp` gets the path to the Temp directory using
         # environment variables. As a result, folder names longer than 8
@@ -971,9 +971,9 @@ class GitModuleTest(ModuleCase):
         else:
             worktree_add_prefix = 'Enter '
 
-        worktree_path = tempfile.mkdtemp(dir=TMP)
+        worktree_path = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         worktree_basename = os.path.basename(worktree_path)
-        worktree_path2 = tempfile.mkdtemp(dir=TMP)
+        worktree_path2 = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         worktree_basename2 = os.path.basename(worktree_path2)
 
         # Even though this is Windows, git commands return a unix style path
@@ -997,7 +997,7 @@ class GitModuleTest(ModuleCase):
         # Check if the main repo is a worktree
         self.assertFalse(self.run_function('git.is_worktree', [self.repo]))
         # Check if a non-repo directory is a worktree
-        empty_dir = tempfile.mkdtemp(dir=TMP)
+        empty_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.assertFalse(self.run_function('git.is_worktree', [empty_dir]))
         shutil.rmtree(empty_dir)
         # Remove the first worktree

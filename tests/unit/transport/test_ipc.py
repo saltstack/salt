@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import errno
 import socket
+import threading
 import logging
 
 import tornado.gen
@@ -25,8 +26,8 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -40,9 +41,10 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
+            salt.config.master_config(None),
             self.socket_path,
             io_loop=self.io_loop,
             payload_handler=self._handle_payload,
@@ -85,13 +87,14 @@ class IPCMessageClient(BaseIPCReqCase):
     '''
 
     def _get_channel(self):
-        channel = salt.transport.ipc.IPCMessageClient(
-            socket_path=self.socket_path,
-            io_loop=self.io_loop,
-        )
-        channel.connect(callback=self.stop)
-        self.wait()
-        return channel
+        if not hasattr(self, 'channel') or self.channel is None:
+            self.channel = salt.transport.ipc.IPCMessageClient(
+                socket_path=self.socket_path,
+                io_loop=self.io_loop,
+            )
+            self.channel.connect(callback=self.stop)
+            self.wait()
+        return self.channel
 
     def setUp(self):
         super(IPCMessageClient, self).setUp()
@@ -100,11 +103,26 @@ class IPCMessageClient(BaseIPCReqCase):
     def tearDown(self):
         super(IPCMessageClient, self).tearDown()
         try:
-            self.channel.close()
+            # Make sure we close no matter what we've done in the tests
+            del self.channel
         except socket.error as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+        finally:
+            self.channel = None
+
+    def test_singleton(self):
+        channel = self._get_channel()
+        assert self.channel is channel
+        # Delete the local channel. Since there's still one more refefence
+        # __del__ wasn't called
+        del channel
+        assert self.channel
+        msg = {'foo': 'bar', 'stop': True}
+        self.channel.send(msg)
+        self.wait()
+        self.assertEqual(self.payloads[0], msg)
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
@@ -154,3 +172,103 @@ class IPCMessageClient(BaseIPCReqCase):
         self.channel.send({'stop': True})
         self.wait()
         self.assertEqual(self.payloads[:-1], [None, None, 'foo', 'foo'])
+
+
+@skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
+class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
+    '''
+    Test all of the clear msg stuff
+    '''
+    def setUp(self):
+        super(IPCMessagePubSubCase, self).setUp()
+        self.opts = {
+                'ipc_write_buffer': 0,
+                'ipc_so_backlog': 128,
+                }
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
+        self.pub_channel = self._get_pub_channel()
+        self.sub_channel = self._get_sub_channel()
+
+    def _get_pub_channel(self):
+        pub_channel = salt.transport.ipc.IPCMessagePublisher(
+                self.opts,
+                self.socket_path,
+                )
+        pub_channel.start()
+        return pub_channel
+
+    def _get_sub_channel(self):
+        sub_channel = salt.transport.ipc.IPCMessageSubscriber(
+            socket_path=self.socket_path,
+            io_loop=self.io_loop,
+        )
+        sub_channel.connect(callback=self.stop)
+        self.wait()
+        return sub_channel
+
+    def tearDown(self):
+        super(IPCMessagePubSubCase, self).tearDown()
+        try:
+            self.pub_channel.close()
+        except socket.error as exc:
+            if exc.errno != errno.EBADF:
+                # If its not a bad file descriptor error, raise
+                raise
+        try:
+            self.sub_channel.close()
+        except socket.error as exc:
+            if exc.errno != errno.EBADF:
+                # If its not a bad file descriptor error, raise
+                raise
+        os.unlink(self.socket_path)
+        del self.pub_channel
+        del self.sub_channel
+
+    def test_multi_client_reading(self):
+        # To be completely fair let's create 2 clients.
+        client1 = self.sub_channel
+        client2 = self._get_sub_channel()
+        call_cnt = []
+
+        # Create a watchdog to be safe from hanging in sync loops (what old code did)
+        evt = threading.Event()
+
+        def close_server():
+            if evt.wait(1):
+                return
+            client2.close()
+            self.stop()
+
+        watchdog = threading.Thread(target=close_server)
+        watchdog.start()
+
+        # Runs in ioloop thread so we're safe from race conditions here
+        def handler(raw):
+            call_cnt.append(raw)
+            if len(call_cnt) >= 2:
+                evt.set()
+                self.stop()
+
+        # Now let both waiting data at once
+        client1.callbacks.add(handler)
+        client2.callbacks.add(handler)
+        client1.read_async()
+        client2.read_async()
+        self.pub_channel.publish('TEST')
+        self.wait()
+        self.assertEqual(len(call_cnt), 2)
+        self.assertEqual(call_cnt[0], 'TEST')
+        self.assertEqual(call_cnt[1], 'TEST')
+
+    def test_sync_reading(self):
+        # To be completely fair let's create 2 clients.
+        client1 = self.sub_channel
+        client2 = self._get_sub_channel()
+        call_cnt = []
+
+        # Now let both waiting data at once
+        self.pub_channel.publish('TEST')
+        ret1 = client1.read_sync()
+        ret2 = client2.read_sync()
+        self.assertEqual(ret1, 'TEST')
+        self.assertEqual(ret2, 'TEST')

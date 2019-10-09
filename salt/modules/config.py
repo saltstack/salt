@@ -218,8 +218,8 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
     '''
     .. versionadded: 0.14.0
 
-    Attempt to retrieve the named value from the minion config file, pillar,
-    grains or the master config. If the named value is not available, return the
+    Attempt to retrieve the named value from the minion config file, grains,
+    pillar or the master config. If the named value is not available, return the
     value specified by ``default``. If not specified, the default is an empty
     string.
 
@@ -400,8 +400,8 @@ def get(key, default='', delimiter=':', merge=None, omit_opts=False,
             return sdb.sdb_get(ret, __opts__)
     else:
         if merge not in ('recurse', 'overwrite'):
-            log.warning('Unsupported merge strategy \'{0}\'. Falling back '
-                        'to \'recurse\'.'.format(merge))
+            log.warning('Unsupported merge strategy \'%s\'. Falling back '
+                        'to \'recurse\'.', merge)
             merge = 'recurse'
 
         merge_lists = salt.config.master_config('/etc/salt/master').get('pillar_merge_lists')
@@ -459,7 +459,7 @@ def gather_bootstrap_script(bootstrap=None):
     if not HAS_CLOUD:
         return False, 'config.gather_bootstrap_script is unavailable'
     ret = salt.utils.cloud.update_bootstrap(__opts__, url=bootstrap)
-    if 'Success' in ret and len(ret['Success']['Files updated']) > 0:
+    if 'Success' in ret and ret['Success']['Files updated']:
         return ret['Success']['Files updated'][0]
 
 

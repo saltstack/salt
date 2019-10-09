@@ -6,6 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import salt libs
 import salt.pillar
+import salt.loader
 import salt.utils.minions
 
 
@@ -21,6 +22,8 @@ def show_top(minion=None, saltenv='base'):
         salt-run pillar.show_top
     '''
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+    if not grains and minion == __opts__['id']:
+        grains = salt.loader.grains(__opts__)
     pillar = salt.pillar.Pillar(
         __opts__,
         grains,
@@ -89,6 +92,8 @@ def show_pillar(minion='*', **kwargs):
     pillarenv = None
     saltenv = 'base'
     id_, grains, _ = salt.utils.minions.get_minion_data(minion, __opts__)
+    if not grains and minion == __opts__['id']:
+        grains = salt.loader.grains(__opts__)
     if grains is None:
         grains = {'fqdn': minion}
 

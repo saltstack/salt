@@ -57,7 +57,7 @@ def __virtual__():
     '''
     Only work on systems that have been booted with systemd
     '''
-    if __grains__['kernel'] == 'Linux' \
+    if __grains__.get('kernel') == 'Linux' \
             and salt.utils.systemd.booted(__context__):
         if salt.utils.systemd.version() is None:
             log.error('nspawn: Unable to determine systemd version')
@@ -882,6 +882,7 @@ def list_running():
             pass
     return sorted(ret)
 
+
 # 'machinectl list' shows only running containers, so allow this to work as an
 # alias to nspawn.list_running
 list_ = salt.utils.functools.alias_function(list_running, 'list_')
@@ -1313,6 +1314,7 @@ def copy_to(name, source, dest, overwrite=False, makedirs=False):
         overwrite=overwrite,
         makedirs=makedirs)
 
+
 cp = salt.utils.functools.alias_function(copy_to, 'cp')
 
 
@@ -1477,5 +1479,6 @@ def pull_dkr(url, name, index):
         salt myminion nspawn.pull_docker centos/centos6 cent6 index=https://get.docker.com
     '''
     return _pull_image('dkr', url, name, index=index)
+
 
 pull_docker = salt.utils.functools.alias_function(pull_dkr, 'pull_docker')

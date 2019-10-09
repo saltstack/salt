@@ -8,16 +8,23 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import time
 import textwrap
+import threading
+import shutil
+import datetime
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-from tests.support.paths import TMP_PILLAR_TREE
 from tests.support.unit import skipIf
 
 # Import Salt Libs
+import salt.config
+import salt.defaults.events
+import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.files
 
 
 class SaltUtilModuleTest(ModuleCase):
@@ -100,8 +107,10 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'proxymodules': [],
                            'output': [],
                            'thorium': [],
-                           'serializers': []}
+                           'serializers': [],
+                           'executors': []}
         ret = self.run_function('saltutil.sync_all')
+        print(ret)
         self.assertEqual(ret, expected_return)
 
     def test_sync_all_whitelist(self):
@@ -123,7 +132,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'proxymodules': [],
                            'output': [],
                            'thorium': [],
-                           'serializers': []}
+                           'serializers': [],
+                           'executors': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['salttest']})
         self.assertEqual(ret, expected_return)
 
@@ -149,7 +159,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'proxymodules': [],
                            'output': [],
                            'thorium': [],
-                           'serializers': []}
+                           'serializers': [],
+                           'executors': []}
         ret = self.run_function('saltutil.sync_all', extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
 
@@ -172,7 +183,8 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'proxymodules': [],
                            'output': [],
                            'thorium': [],
-                           'serializers': []}
+                           'serializers': [],
+                           'executors': []}
         ret = self.run_function('saltutil.sync_all', extmod_whitelist={'modules': ['runtests_decorators']},
                                 extmod_blacklist={'modules': ['runtests_decorators']})
         self.assertEqual(ret, expected_return)
@@ -184,6 +196,22 @@ class SaltUtilSyncPillarTest(ModuleCase):
     Testcase for the saltutil sync pillar module
     '''
 
+    class WaitForEvent(threading.Thread):
+        def __init__(self, opts, event_tag):
+            self.__eventer = salt.utils.event.get_event(
+                'minion', opts=opts, listen=True)
+            self.__event_tag = event_tag
+            self.__event_complete = False
+
+            threading.Thread.__init__(self)
+
+        def run(self):
+            if self.__eventer.get_event(tag=self.__event_tag, wait=30):
+                self.__event_complete = True
+
+        def is_complete(self):
+            return self.__event_complete
+
     @flaky
     def test_pillar_refresh(self):
         '''
@@ -194,12 +222,12 @@ class SaltUtilSyncPillarTest(ModuleCase):
         pre_pillar = self.run_function('pillar.raw')
         self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
 
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
             fp.write(salt.utils.stringutils.to_str(
                 '{0}: itworked'.format(pillar_key)
             ))
 
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      base:
                        '*':
@@ -223,6 +251,86 @@ class SaltUtilSyncPillarTest(ModuleCase):
         post_pillar = self.run_function('pillar.raw')
         self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
 
+    def test_pillar_refresh_sync(self):
+        '''
+        test pillar refresh module with sync enabled
+        '''
+        pillar_key = 'itworked_sync'
+
+        pre_pillar = self.run_function('pillar.raw')
+        self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork_sync'))
+
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'add_pillar_sync.sls'), 'w') as fp:
+            fp.write(salt.utils.stringutils.to_str(
+                '{0}: itworked_sync'.format(pillar_key)
+            ))
+
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+            fp.write(textwrap.dedent('''\
+                     base:
+                       '*':
+                         - add_pillar_sync
+                     '''))
+
+        opts = self.run_function('test.get_opts')
+        wait = self.WaitForEvent(
+            opts, salt.defaults.events.MINION_PILLAR_COMPLETE)
+        wait.start()
+        kwargs = {'async': False}
+        self.run_function('saltutil.refresh_pillar', **kwargs)
+        while wait.is_alive():
+            time.sleep(1)
+        self.assertTrue(wait.is_complete())
+
+        pillar = False
+        timeout = time.time() + 30
+        while not pillar:
+            post_pillar = self.run_function('pillar.raw')
+            try:
+                self.assertIn(pillar_key, post_pillar.get(
+                    pillar_key, 'didnotwork_sync'))
+                pillar = True
+            except AssertionError:
+                if time.time() > timeout:
+                    self.assertIn(pillar_key, post_pillar.get(
+                        pillar_key, 'didnotwork_sync'))
+                continue
+
+        post_pillar = self.run_function('pillar.raw')
+        self.assertIn(pillar_key, post_pillar.get(
+            pillar_key, 'didnotwork_sync'))
+
     def tearDown(self):
-        for filename in os.listdir(TMP_PILLAR_TREE):
-            os.remove(os.path.join(TMP_PILLAR_TREE, filename))
+        for filename in os.listdir(RUNTIME_VARS.TMP_PILLAR_TREE):
+            os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, filename))
+
+
+class SaltUtilClearCacheTest(ModuleCase):
+    '''
+    Testcase for the saltutil clear cache module
+    '''
+    def setUp(self):
+        '''
+        Creates a temporary directory for this test class
+        '''
+        self.tmp_dir = os.path.join(self.master_opts['cachedir'], 'SaltUtilClearCacheTest')
+        os.makedirs(self.tmp_dir)
+
+    def tearDown(self):
+        '''
+        Recursively deletes the temporary directory created for this test scenario
+        '''
+        shutil.rmtree(self.tmp_dir)
+
+    def createDummyCachedFile(self, filename, mtime=time.time()):
+        target_file = os.path.join(self.tmp_dir, filename)
+        with salt.utils.files.fopen(target_file, 'a'):
+            os.utime(target_file, (int(mtime), int(mtime)))
+        return target_file
+
+    def test_clear_cache_files_older_than_seven_days(self):
+        old_file = self.createDummyCachedFile('old', time.time() - datetime.timedelta(days=10).total_seconds())
+        new_file = self.createDummyCachedFile('new')
+        self.run_function('saltutil.clear_cache', days=7)
+        self.assertFalse(os.path.exists(old_file))
+        self.assertTrue(os.path.exists(new_file))

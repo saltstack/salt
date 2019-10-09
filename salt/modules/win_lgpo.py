@@ -39,13 +39,14 @@ Current known limitations
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import csv
 import io
 import os
 import logging
 import re
 import locale
 import ctypes
-import time
+import tempfile
 import uuid
 
 # Import Salt libs
@@ -56,6 +57,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
+import salt.utils.win_lgpo_netsh
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -131,13 +133,13 @@ try:
     # Default to `en-US` (1033)
     windll = ctypes.windll.kernel32
     INSTALL_LANGUAGE = locale.windows_locale.get(
-        windll.GetSystemDefaultUILanguage(), 1033).replace('_', '-')
+        windll.GetSystemDefaultUILanguage(), 'en_US').replace('_', '-')
 except ImportError:
     HAS_WINDOWS_MODULES = False
 
 
 class _policy_info(object):
-    '''
+    r'''
     Policy Helper Class
     ===================
 
@@ -225,7 +227,7 @@ class _policy_info(object):
              Access"
     =======  ===================================================================
 
-    LsaRights mechanism
+    LsaRights Mechanism
     -------------------
 
     LSA Rights policies are configured via the LsaRights mechanism. The value of
@@ -238,7 +240,7 @@ class _policy_info(object):
             **SeNetworkLogonRight**
     ======  ====================================================================
 
-    NetUserModal mechanism
+    NetUserModal Mechanism
     ----------------------
 
     Some policies are configurable by the **NetUserModalGet** and
@@ -254,6 +256,47 @@ class _policy_info(object):
     Option  The name of the structure member which contains the data for the
             policy, for example **max_passwd_age**
     ======  ====================================================================
+
+    NetSH Mechanism
+    ---------------
+
+    The firewall policies are configured by the ``netsh.exe`` executable. The
+    value of this key is a dict with the following make-up:
+
+    =======  ===================================================================
+    Key      Value
+    =======  ===================================================================
+    Profile  The firewall profile to modify. Can be one of Domain, Private, or
+             Public
+    Section  The section of the firewall to modify. Can be one of state,
+             firewallpolicy, settings, or logging.
+    Option   The setting within that section
+    Value    The value of the setting
+    =======  ===================================================================
+
+    More information can be found in the advfirewall context in netsh. This can
+    be access by opening a netsh prompt. At a command prompt type the following:
+
+    c:\>netsh
+    netsh>advfirewall
+    netsh advfirewall>set help
+    netsh advfirewall>set domain help
+
+    AdvAudit Mechanism
+    ------------------
+
+    The Advanced Audit Policies are configured using a combination of the
+    auditpol command-line utility and modifying the audit.csv file in two
+    locations. The value of this key is a dict with the following make-up:
+
+    ======  ===================================
+    Key     Value
+    ======  ===================================
+    Option  The Advanced Audit Policy to modify
+    ======  ===================================
+
+    Transforms
+    ----------
 
     Optionally, each policy definition can contain a "Transform" key. The
     Transform key is used to handle data that is stored and viewed differently.
@@ -281,6 +324,13 @@ class _policy_info(object):
             3: 'Success, Failure',
             'Not Defined': 'Not Defined',
             None: 'Not Defined',
+        }
+        self.advanced_audit_lookup = {
+            0: 'No Auditing',
+            1: 'Success',
+            2: 'Failure',
+            3: 'Success and Failure',
+            None: 'Not Configured',
         }
         self.sc_removal_lookup = {
             0: 'No Action',
@@ -344,6 +394,18 @@ class _policy_info(object):
                 'value_lookup': True,
             },
         }
+        self.advanced_audit_transform = {
+            'Get': '_dict_lookup',
+            'Put': '_dict_lookup',
+            'GetArgs': {
+                'lookup': self.advanced_audit_lookup,
+                'value_lookup': False,
+            },
+            'PutArgs': {
+                'lookup': self.advanced_audit_lookup,
+                'value_lookup': True,
+            },
+        }
         self.enabled_one_disabled_zero_strings = {
             '0': 'Disabled',
             '1': 'Enabled',
@@ -369,6 +431,13 @@ class _policy_info(object):
             'Local Policies',
             'Security Options'
         ]
+        self.windows_firewall_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Windows Firewall with Advanced Security',
+            'Windows Firewall with Advanced Security - Local Group Policy Object'
+        ]
         self.password_policy_gpedit_path = [
             'Computer Configuration',
             'Windows Settings',
@@ -382,6 +451,13 @@ class _policy_info(object):
             'Security Settings',
             'Local Policies',
             'Audit Policy'
+        ]
+        self.advanced_audit_policy_gpedit_path = [
+            'Computer Configuration',
+            'Windows Settings',
+            'Security Settings',
+            'Advanced Audit Policy Configuration',
+            'System Audit Policies - Local Group Policy Object'
         ]
         self.account_lockout_policy_gpedit_path = [
             'Computer Configuration',
@@ -436,6 +512,37 @@ class _policy_info(object):
             2: 'User must enter a password each time they use a key',
             None: 'Not Defined',
             '(value not set)': 'Not Defined'
+        }
+        self.firewall_inbound_connections = {
+            'blockinbound': 'Block (default)',
+            'blockinboundalways': 'Block all connections',
+            'allowinbound': 'Allow',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_outbound_connections = {
+            'blockoutbound': 'Block',
+            'allowoutbound': 'Allow (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_rule_merging = {
+            'enable': 'Yes (default)',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_log_packets_connections = {
+            'enable': 'Yes',
+            'disable': 'No (default)',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_notification = {
+            'enable': 'Yes',
+            'disable': 'No',
+            'notconfigured': 'Not configured'
+        }
+        self.firewall_state = {
+            'on': 'On (recommended)',
+            'off': 'Off',
+            'notconfigured': 'Not configured'
         }
         self.krb_encryption_types = {
             0: 'No minimum',
@@ -665,6 +772,20 @@ class _policy_info(object):
                         },
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
+                    'RestrictRemoteSAM': {
+                        'Policy': 'Network access: Restrict clients allowed to '
+                                  'make remote calls to SAM',
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\Lsa',
+                            'Value': 'RestrictRemoteSAM',
+                            'Type': 'REG_SZ'
+                        },
+                        'Transform': {
+                            'Put': '_string_put_transform'
+                        }
+                    },
                     'RestrictAnonymous': {
                         'Policy': 'Network access: Do not allow anonymous '
                                   'enumeration of SAM accounts and shares',
@@ -800,6 +921,717 @@ class _policy_info(object):
                             },
                             'PutArgs': {
                                 'lookup': self.force_guest,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainState': {
+                        'Policy': 'Network firewall: Domain: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateState': {
+                        'Policy': 'Network firewall: Private: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicState': {
+                        'Policy': 'Network firewall: Public: State',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - On (recommended)
+                        # - Off
+                        # - Not configured
+                        'Settings': self.firewall_state.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'state',
+                            'Option': 'State'  # Unused, but needed
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_state,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainInboundConnections': {
+                        'Policy': 'Network firewall: Domain: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateInboundConnections': {
+                        'Policy': 'Network firewall: Private: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicInboundConnections': {
+                        'Policy': 'Network firewall: Public: Inbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block (default)
+                        # - Block all connections
+                        # - Allow
+                        # - Not configured
+                        'Settings': self.firewall_inbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Inbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_inbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainOutboundConnections': {
+                        'Policy': 'Network firewall: Domain: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateOutboundConnections': {
+                        'Policy': 'Network firewall: Private: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicOutboundConnections': {
+                        'Policy': 'Network firewall: Public: Outbound connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Block
+                        # - Allow (default)
+                        # - Not configured
+                        'Settings': self.firewall_outbound_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'firewallpolicy',
+                            'Option': 'Outbound'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_outbound_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsNotification': {
+                        'Policy': 'Network firewall: Domain: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsNotification': {
+                        'Policy': 'Network firewall: Private: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsNotification': {
+                        'Policy': 'Network firewall: Public: Settings: Display a notification',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_notification.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'InboundUserNotification'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_notification,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalFirewallRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local firewall rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalFirewallRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Domain: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Private: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicSettingsLocalConnectionRules': {
+                        'Policy': 'Network firewall: Public: Settings: Apply '
+                                  'local connection security rules',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes (default)
+                        # - No
+                        # - Not configured
+                        'Settings': self.firewall_rule_merging.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'settings',
+                            'Option': 'LocalConSecRules'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_rule_merging,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingName': {
+                        'Policy': 'Network firewall: Domain: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPrivateLoggingName': {
+                        'Policy': 'Network firewall: Private: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwPublicLoggingName': {
+                        'Policy': 'Network firewall: Public: Logging: Name',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <a full path to a file>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'FileName'
+                        }
+                    },
+                    'WfwDomainLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Domain: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPrivateLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Private: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwPublicLoggingMaxFileSize': {
+                        'Policy': 'Network firewall: Public: Logging: Size limit (KB)',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - <int between 1 and 32767>
+                        # - Not configured
+                        'Settings': None,
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'MaxFileSize'
+                        }
+                    },
+                    'WfwDomainLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingAllowedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log successful connections',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogAllowedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwDomainLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Domain: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'domain',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPrivateLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Private: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'private',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': True,
+                            },
+                        },
+                    },
+                    'WfwPublicLoggingDroppedConnections': {
+                        'Policy': 'Network firewall: Public: Logging: Log dropped packets',
+                        'lgpo_section': self.windows_firewall_gpedit_path,
+                        # Settings available are:
+                        # - Yes
+                        # - No (default)
+                        # - Not configured
+                        'Settings': self.firewall_log_packets_connections.keys(),
+                        'NetSH': {
+                            'Profile': 'public',
+                            'Section': 'logging',
+                            'Option': 'LogDroppedConnections'
+                        },
+                        'Transform': {
+                            'Get': '_dict_lookup',
+                            'Put': '_dict_lookup',
+                            'GetArgs': {
+                                'lookup': self.firewall_log_packets_connections,
+                                'value_lookup': False,
+                            },
+                            'PutArgs': {
+                                'lookup': self.firewall_log_packets_connections,
                                 'value_lookup': True,
                             },
                         },
@@ -1553,6 +2385,21 @@ class _policy_info(object):
                         },
                         'Transform': self.enabled_one_disabled_zero_transform,
                     },
+                    'AddPrinterDrivers': {
+                        'Policy': 'Devices: Prevent users from installing '
+                                  'printer drivers',
+                        'Settings': self.enabled_one_disabled_zero_strings.keys(),
+                        'lgpo_section': self.security_options_gpedit_path,
+                        'Registry': {
+                            'Hive': 'HKEY_LOCAL_MACHINE',
+                            'Path': 'System\\CurrentControlSet\\Control\\'
+                                    'Print\\Providers\\LanMan Print Services\\'
+                                    'Servers',
+                            'Value': 'AddPrinterDrivers',
+                            'Type': 'REG_DWORD',
+                        },
+                        'Transform': self.enabled_one_disabled_zero_strings_transform,
+                    },
                     'AllocateDASD': {
                         'Policy': 'Devices: Allowed to format and eject '
                                   'removable media',
@@ -1797,6 +2644,11 @@ class _policy_info(object):
                             'Put': '_minutes_to_seconds'
                         },
                     },
+                    ########## LEGACY AUDIT POLICIES ##########
+                    # To use these set the following policy to DISABLED
+                    # "Audit: Force audit policy subcategory settings (Windows Vista or later) to override audit policy category settings"
+                    # or it's alias...
+                    # SceNoApplyLegacyAuditPolicy
                     'AuditAccountLogon': {
                         'Policy': 'Audit account logon events',
                         'lgpo_section': self.audit_policy_gpedit_path,
@@ -1887,6 +2739,557 @@ class _policy_info(object):
                         },
                         'Transform': self.audit_transform,
                     },
+                    ########## END OF LEGACY AUDIT POLICIES ##########
+                    ########## ADVANCED AUDIT POLICIES ##########
+                    # Advanced Audit Policies
+                    # To use these set the following policy to ENABLED
+                    # "Audit: Force audit policy subcategory settings (Windows
+                    # Vista or later) to override audit policy category
+                    # settings"
+                    # or it's alias...
+                    # SceNoApplyLegacyAuditPolicy
+
+                    # Account Logon Section
+                    'AuditCredentialValidation': {
+                        'Policy': 'Audit Credential Validation',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Credential Validation',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditKerberosAuthenticationService': {
+                        'Policy': 'Audit Kerberos Authentication Service',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Kerberos Authentication Service',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditKerberosServiceTicketOperations': {
+                        'Policy': 'Audit Kerberos Service Ticket Operations',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Kerberos Service Ticket Operations',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherAccountLogonEvents': {
+                        'Policy': 'Audit Other Account Logon Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Account Logon Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Account Management Section
+                    'AuditApplicationGroupManagement': {
+                        'Policy': 'Audit Application Group Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Application Group Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditComputerAccountManagement': {
+                        'Policy': 'Audit Computer Account Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Computer Account Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDistributionGroupManagement': {
+                        'Policy': 'Audit Distribution Group Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Distribution Group Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherAccountManagementEvents': {
+                        'Policy': 'Audit Other Account Management Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Account Management Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSecurityGroupManagement': {
+                        'Policy': 'Audit Security Group Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Security Group Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditUserAccountManagement': {
+                        'Policy': 'Audit User Account Management',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit User Account Management',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Detailed Tracking Settings
+                    'AuditDPAPIActivity': {
+                        'Policy': 'Audit DPAPI Activity',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit DPAPI Activity',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditPNPActivity': {
+                        'Policy': 'Audit PNP Activity',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit PNP Activity',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditProcessCreation': {
+                        'Policy': 'Audit Process Creation',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Process Creation',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditProcessTermination': {
+                        'Policy': 'Audit Process Termination',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Process Termination',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditRPCEvents': {
+                        'Policy': 'Audit RPC Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit RPC Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditTokenRightAdjusted': {
+                        'Policy': 'Audit Token Right Adjusted',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Token Right Adjusted',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # DS Access Section
+                    'AuditDetailedDirectoryServiceReplication': {
+                        'Policy': 'Audit Detailed Directory Service Replication',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Detailed Directory Service Replication',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDirectoryServiceAccess': {
+                        'Policy': 'Audit Directory Service Access',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Directory Service Access',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDirectoryServiceChanges': {
+                        'Policy': 'Audit Directory Service Changes',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Directory Service Changes',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDirectoryServiceReplication': {
+                        'Policy': 'Audit Directory Service Replication',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Directory Service Replication',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Logon/Logoff Section
+                    'AuditAccountLockout': {
+                        'Policy': 'Audit Account Lockout',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Account Lockout',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditUserDeviceClaims': {
+                        'Policy': 'Audit User / Device Claims',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit User / Device Claims',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditGroupMembership': {
+                        'Policy': 'Audit Group Membership',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Group Membership',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditIPsecExtendedMode': {
+                        'Policy': 'Audit IPsec Extended Mode',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Extended Mode',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditIPsecMainMode': {
+                        'Policy': 'Audit IPsec Main Mode',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Main Mode',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditIPsecQuickMode': {
+                        'Policy': 'Audit IPsec Quick Mode',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Quick Mode',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditLogoff': {
+                        'Policy': 'Audit Logoff',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Logoff',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditLogon': {
+                        'Policy': 'Audit Logon',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Logon',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditNetworkPolicyServer': {
+                        'Policy': 'Audit Network Policy Server',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Network Policy Server',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherLogonLogoffEvents': {
+                        'Policy': 'Audit Other Logon/Logoff Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Logon/Logoff Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSpecialLogon': {
+                        'Policy': 'Audit Special Logon',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Special Logon',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Object Access Section
+                    'AuditApplicationGenerated': {
+                        'Policy': 'Audit Application Generated',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Application Generated',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditCertificationServices': {
+                        'Policy': 'Audit Certification Services',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Certification Services',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditDetailedFileShare': {
+                        'Policy': 'Audit Detailed File Share',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Detailed File Share',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFileShare': {
+                        'Policy': 'Audit File Share',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit File Share',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFileSystem': {
+                        'Policy': 'Audit File System',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit File System',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFilteringPlatformConnection': {
+                        'Policy': 'Audit Filtering Platform Connection',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Filtering Platform Connection',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFilteringPlatformPacketDrop': {
+                        'Policy': 'Audit Filtering Platform Packet Drop',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Filtering Platform Packet Drop',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditHandleManipulation': {
+                        'Policy': 'Audit Handle Manipulation',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Handle Manipulation',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditKernelObject': {
+                        'Policy': 'Audit Kernel Object',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Kernel Object',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherObjectAccessEvents': {
+                        'Policy': 'Audit Other Object Access Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Object Access Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditRegistry': {
+                        'Policy': 'Audit Registry',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Registry',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditRemovableStorage': {
+                        'Policy': 'Audit Removable Storage',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Removable Storage',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSAM': {
+                        'Policy': 'Audit SAM',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit SAM',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditCentralAccessPolicyStaging': {
+                        'Policy': 'Audit Central Access Policy Staging',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Central Access Policy Staging',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Policy Change Section
+                    'AuditAuditPolicyChange': {
+                        'Policy': 'Audit Audit Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Audit Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditAuthenticationPolicyChange': {
+                        'Policy': 'Audit Authentication Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Authentication Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditAuthorizationPolicyChange': {
+                        'Policy': 'Audit Authorization Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Authorization Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditFilteringPlatformPolicyChange': {
+                        'Policy': 'Audit Filtering Platform Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Filtering Platform Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditMPSSVCRuleLevelPolicyChange': {
+                        'Policy': 'Audit MPSSVC Rule-Level Policy Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit MPSSVC Rule-Level Policy Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherPolicyChangeEvents': {
+                        'Policy': 'Audit Other Policy Change Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Policy Change Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # Privilege Use Section
+                    'AuditNonSensitivePrivilegeUse': {
+                        'Policy': 'Audit Non Sensitive Privilege Use',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Non Sensitive Privilege Use',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherPrivilegeUseEvents': {
+                        'Policy': 'Audit Other Privilege Use Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other Privilege Use Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSensitivePrivilegeUse': {
+                        'Policy': 'Audit Sensitive Privilege Use',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Sensitive Privilege Use',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    # System Section
+                    'AuditIPsecDriver': {
+                        'Policy': 'Audit IPsec Driver',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit IPsec Driver',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditOtherSystemEvents': {
+                        'Policy': 'Audit Other System Events',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Other System Events',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSecurityStateChange': {
+                        'Policy': 'Audit Security State Change',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Security State Change',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSecuritySystemExtension': {
+                        'Policy': 'Audit Security System Extension',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit Security System Extension',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    'AuditSystemIntegrity': {
+                        'Policy': 'Audit System Integrity',
+                        'lgpo_section': self.advanced_audit_policy_gpedit_path,
+                        'Settings': self.advanced_audit_lookup.keys(),
+                        'AdvAudit': {
+                            'Option': 'Audit System Integrity',
+                        },
+                        'Transform': self.advanced_audit_transform,
+                    },
+                    ########## END OF ADVANCED AUDIT POLICIES ##########
                     'SeTrustedCredManAccessPrivilege': {
                         'Policy': 'Access Credential Manager as a trusted '
                                   'caller',
@@ -2512,19 +3915,6 @@ class _policy_info(object):
                         'Transform': {
                             'Put': '_string_put_transform'
                         }
-                    },
-                    'AddPrinterDrivers': {
-                        'Policy': 'Devices: Prevent users from installing printer drivers',
-                        'Settings': self.enabled_one_disabled_zero.keys(),
-                        'lgpo_section': self.security_options_gpedit_path,
-                        'Registry': {
-                            'Hive': 'HKEY_LOCAL_MACHINE',
-                            'Path': 'SYSTEM\\CurrentControlSet\\Control\\Print\\'
-                                    'Providers\\LanMan Print Services\\Servers',
-                            'Value': 'AddPrinterDrivers',
-                            'Type': 'REG_DWORD',
-                        },
-                        'Transform': self.enabled_one_disabled_zero_transform,
                     },
                     'UseMachineId': {
                         'Policy': 'Network security: Allow Local System to use computer '
@@ -3194,8 +4584,8 @@ class _policy_info(object):
                     userSid = '{0}'.format(userSid[0])
             # TODO: This needs to be more specific
             except Exception:
-                log.exception('Handle this explicitly')
                 userSid = win32security.ConvertSidToStringSid(_sid)
+                log.warning('Unable to convert SID "%s" to a friendly name.  The SID will be disaplayed instead of a user/group name.', userSid)
             usernames.append(userSid)
         return usernames
 
@@ -3484,24 +4874,30 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                 # the passed language (eg: en-US). Then we'll try the
                 # abbreviated version (en) to account for alternate locations.
                 # We'll do the same for the display_language_fallback (en_US).
-                adml_file = os.path.join(root, language,
-                                         os.path.splitext(t_admfile)[0] + '.adml')
+                adml_file = os.path.join(
+                    root,
+                    language,
+                    os.path.splitext(t_admfile)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     log.info('An ADML file in the specified ADML language '
                              '"%s" does not exist for the ADMX "%s", the '
                              'the abbreviated language code will be tried.',
                              language, t_admfile)
 
-                    adml_file = os.path.join(root, language.split('-')[0],
-                                             os.path.splitext(t_admfile)[0] + '.adml')
+                    adml_file = os.path.join(
+                        root,
+                        language.split('-')[0],
+                        os.path.splitext(t_admfile)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         log.info('An ADML file in the specified ADML language '
                                  'code %s does not exist for the ADMX "%s", '
                                  'the fallback language will be tried.',
                                  language[:2], t_admfile)
 
-                        adml_file = os.path.join(root, display_language_fallback,
-                                                 os.path.splitext(t_admfile)[0] + '.adml')
+                        adml_file = os.path.join(
+                            root,
+                            display_language_fallback,
+                            os.path.splitext(t_admfile)[0] + '.adml')
                         if not __salt__['file.file_exists'](adml_file):
                             log.info('An ADML file in the specified ADML '
                                      'fallback language "%s" '
@@ -3510,8 +4906,10 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                                      'will be tried.',
                                      display_language_fallback, t_admfile)
 
-                            adml_file = os.path.join(root, display_language_fallback.split('-')[0],
-                                                     os.path.splitext(t_admfile)[0] + '.adml')
+                            adml_file = os.path.join(
+                                root,
+                                display_language_fallback.split('-')[0],
+                                os.path.splitext(t_admfile)[0] + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
                                        '"{0}" and the fallback language "{1}" do not '
@@ -3572,6 +4970,348 @@ def _buildElementNsmap(using_elements):
     return thisMap
 
 
+def _get_advaudit_defaults(option=None):
+    '''
+    Loads audit.csv defaults into a dict in __context__ called
+    'lgpo.audit_defaults'. The dictionary includes fieldnames and all
+    configurable policies as keys. The values are used to create/modify the
+    ``audit.csv`` file. The first entry is `fieldnames` used to create the
+    header for the csv file. The rest of the entries are the audit policy names.
+    Sample data follows:
+
+    {
+        'fieldnames': ['Machine Name',
+                       'Policy Target',
+                       'Subcategory',
+                       'Subcategory GUID',
+                       'Inclusion Setting',
+                       'Exclusion Setting',
+                       'Setting Value'],
+        'Audit Sensitive Privilege Use': {'Auditpol Name': 'Sensitive Privilege Use',
+                                          'Exclusion Setting': '',
+                                          'Inclusion Setting': 'No Auditing',
+                                          'Machine Name': 'WIN-8FGT3E045SE',
+                                          'Policy Target': 'System',
+                                          'Setting Value': '0',
+                                          'Subcategory': u'Audit Sensitive Privilege Use',
+                                          'Subcategory GUID': '{0CCE9228-69AE-11D9-BED3-505054503030}'},
+        'Audit Special Logon': {'Auditpol Name': 'Special Logon',
+                                'Exclusion Setting': '',
+                                'Inclusion Setting': 'No Auditing',
+                                'Machine Name': 'WIN-8FGT3E045SE',
+                                'Policy Target': 'System',
+                                'Setting Value': '0',
+                                'Subcategory': u'Audit Special Logon',
+                                'Subcategory GUID': '{0CCE921B-69AE-11D9-BED3-505054503030}'},
+        'Audit System Integrity': {'Auditpol Name': 'System Integrity',
+                                   'Exclusion Setting': '',
+                                   'Inclusion Setting': 'No Auditing',
+                                   'Machine Name': 'WIN-8FGT3E045SE',
+                                   'Policy Target': 'System',
+                                   'Setting Value': '0',
+                                   'Subcategory': u'Audit System Integrity',
+                                   'Subcategory GUID': '{0CCE9212-69AE-11D9-BED3-505054503030}'},
+        ...
+    }
+
+    .. note::
+        `Auditpol Name` designates the value to use when setting the value with
+        the auditpol command
+
+    Args:
+        option (str): The item from the dictionary to return. If ``None`` the
+            entire dictionary is returned. Default is ``None``
+
+    Returns:
+        dict: If ``None`` or one of the audit settings is passed
+        list: If ``fieldnames`` is passed
+    '''
+    if 'lgpo.audit_defaults' not in __context__:
+        # Get available setting names and GUIDs
+        # This is used to get the fieldnames and GUIDs for individual policies
+        log.debug('Loading auditpol defaults into __context__')
+        dump = __utils__['auditpol.get_auditpol_dump']()
+        reader = csv.DictReader(dump)
+        audit_defaults = {'fieldnames': reader.fieldnames}
+        for row in reader:
+            row['Machine Name'] = ''
+            row['Auditpol Name'] = row['Subcategory']
+            # Special handling for snowflake scenarios where the audit.csv names
+            # don't match the auditpol names
+            if row['Subcategory'] == 'Central Policy Staging':
+                row['Subcategory'] = 'Audit Central Access Policy Staging'
+            elif row['Subcategory'] == 'Plug and Play Events':
+                row['Subcategory'] = 'Audit PNP Activity'
+            elif row['Subcategory'] == 'Token Right Adjusted Events':
+                row['Subcategory'] = 'Audit Token Right Adjusted'
+            else:
+                row['Subcategory'] = 'Audit {0}'.format(row['Subcategory'])
+            audit_defaults[row['Subcategory']] = row
+
+        __context__['lgpo.audit_defaults'] = audit_defaults
+
+    if option:
+        return __context__['lgpo.audit_defaults'][option]
+    else:
+        return __context__['lgpo.audit_defaults']
+
+
+def _get_advaudit_value(option):
+    '''
+    Get the Advanced Auditing policy as configured in
+    ``C:\\Windows\\Security\\Audit\\audit.csv``
+
+    Args:
+        option (str): The name of the setting as it appears in audit.csv
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    if 'lgpo.adv_audit_data' not in __context__:
+        system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+        f_audit = os.path.join(system_root, 'security', 'audit', 'audit.csv')
+        f_audit_gpo = os.path.join(system_root, 'System32', 'GroupPolicy',
+                                   'Machine', 'Microsoft', 'Windows NT',
+                                   'Audit', 'audit.csv')
+
+        # Make sure there is an existing audit.csv file on the machine
+        if not __salt__['file.file_exists'](f_audit):
+            if __salt__['file.file_exists'](f_audit_gpo):
+                # If the GPO audit.csv exists, we'll use that one
+                __salt__['file.copy'](f_audit_gpo, f_audit)
+            else:
+                field_names = _get_advaudit_defaults('fieldnames')
+                # If the file doesn't exist anywhere, create it with default
+                # fieldnames
+                __salt__['file.makedirs'](f_audit)
+                __salt__['file.write'](f_audit, ','.join(field_names))
+
+        audit_settings = {}
+        with salt.utils.files.fopen(f_audit, mode='r') as csv_file:
+            reader = csv.DictReader(csv_file)
+
+            for row in reader:
+                audit_settings.update(
+                    {row['Subcategory']: row['Setting Value']})
+
+        __context__['lgpo.adv_audit_data'] = audit_settings
+
+    return __context__['lgpo.adv_audit_data'].get(option, None)
+
+
+def _set_audit_file_data(option, value):
+    '''
+    Helper function that sets the Advanced Audit settings in the two .csv files
+    on Windows. Those files are located at:
+    C:\\Windows\\Security\\Audit\\audit.csv
+    C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit\\audit.csv
+
+    Args:
+        option (str): The name of the option to set
+        value (str): The value to set. ['None', '0', '1', '2', '3']
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    # Set up some paths here
+    system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+    f_audit = os.path.join(system_root, 'security', 'audit', 'audit.csv')
+    f_audit_gpo = os.path.join(system_root, 'System32', 'GroupPolicy',
+                               'Machine', 'Microsoft', 'Windows NT',
+                               'Audit', 'audit.csv')
+    f_temp = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.csv',
+                                         prefix='audit')
+
+    # Lookup dict for "Inclusion Setting" field
+    auditpol_values = {'None': 'No Auditing',
+                       '0': 'No Auditing',
+                       '1': 'Success',
+                       '2': 'Failure',
+                       '3': 'Success and Failure'}
+
+    try:
+        # Open the existing audit.csv and load the csv `reader`
+        with salt.utils.files.fopen(f_audit, mode='r') as csv_file:
+            reader = csv.DictReader(csv_file)
+
+            # Open the temporary .csv and load the csv `writer`
+            with salt.utils.files.fopen(f_temp.name, mode='w') as tmp_file:
+                writer = csv.DictWriter(tmp_file, fieldnames=reader.fieldnames)
+
+                # Write the header values (labels)
+                writer.writeheader()
+
+                value_written = False
+                # Loop through the current audit.csv and write the changes to
+                # the temp csv file for existing settings
+                for row in reader:
+                    # If the row matches the value we're setting, update it with
+                    # the new value
+                    if row['Subcategory'] == option:
+                        if not value == 'None':
+                            # The value is not None, make the change
+                            row['Inclusion Setting'] = auditpol_values[value]
+                            row['Setting Value'] = value
+                            log.debug('LGPO: Setting {0} to {1}'
+                                      ''.format(option, value))
+                            writer.writerow(row)
+                        else:
+                            # value is None, remove it by not writing it to the
+                            # temp file
+                            log.debug('LGPO: Removing {0}'.format(option))
+                        value_written = True
+                    # If it's not the value we're setting, just write it
+                    else:
+                        writer.writerow(row)
+
+                # If a value was not written, it is a new setting not found in
+                # the existing audit.cvs file. Add the new setting with values
+                # from the defaults
+                if not value_written:
+                    if not value == 'None':
+                        # value is not None, write the new value
+                        log.debug('LGPO: Setting {0} to {1}'
+                                  ''.format(option, value))
+                        defaults = _get_advaudit_defaults(option)
+                        writer.writerow({
+                            'Machine Name': defaults['Machine Name'],
+                            'Policy Target': defaults['Policy Target'],
+                            'Subcategory': defaults['Subcategory'],
+                            'Subcategory GUID': defaults['Subcategory GUID'],
+                            'Inclusion Setting': auditpol_values[value],
+                            'Exclusion Setting': defaults['Exclusion Setting'],
+                            'Setting Value': value})
+                    value_written = True
+
+        if value_written:
+            # Copy the temporary csv file over the existing audit.csv in both
+            # locations if a value was written
+            __salt__['file.copy'](f_temp.name, f_audit, remove_existing=True)
+            __salt__['file.makedirs'](f_audit_gpo)
+            __salt__['file.copy'](f_temp.name, f_audit_gpo, remove_existing=True)
+    finally:
+        f_temp.close()
+        __salt__['file.remove'](f_temp.name)
+
+    return value_written
+
+
+def _set_advaudit_pol_data(option, value):
+    '''
+    Helper function that updates the current applied settings to match what has
+    just been set in the audit.csv files. We're doing it this way instead of
+    running `gpupdate`
+
+    Args:
+        option (str): The name of the option to set
+        value (str): The value to set. ['None', '0', '1', '2', '3']
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    auditpol_values = {'None': 'No Auditing',
+                       '0': 'No Auditing',
+                       '1': 'Success',
+                       '2': 'Failure',
+                       '3': 'Success and Failure'}
+    defaults = _get_advaudit_defaults(option)
+    return __utils__['auditpol.set_setting'](
+        name=defaults['Auditpol Name'],
+        value=auditpol_values[value])
+
+
+def _set_advaudit_value(option, value):
+    '''
+    Helper function to update the Advanced Audit policy on the machine. This
+    function modifies the two ``audit.csv`` files in the following locations:
+
+    C:\\Windows\\Security\\Audit\\audit.csv
+    C:\\Windows\\System32\\GroupPolicy\\Machine\\Microsoft\\Windows NT\\Audit\\audit.csv
+
+    Then it applies those settings using ``auditpol``
+
+    After that, it updates ``__context__`` with the new setting
+
+    Args:
+        option (str): The name of the option to set
+        value (str): The value to set. ['None', '0', '1', '2', '3']
+
+    Returns:
+        bool: ``True`` if successful, otherwise ``False``
+    '''
+    # Set the values in both audit.csv files
+    if not _set_audit_file_data(option=option, value=value):
+        raise CommandExecutionError('Failed to set audit.csv option: {0}'
+                                    ''.format(option))
+    # Apply the settings locally
+    if not _set_advaudit_pol_data(option=option, value=value):
+        # Only log this error, it will be in effect the next time the machine
+        # updates its policy
+        log.debug('Failed to apply audit setting: {0}'.format(option))
+
+    # Update __context__
+    if value is None:
+        log.debug('LGPO: Removing Advanced Audit data: {0}'.format(option))
+        __context__['lgpo.adv_audit_data'].pop(option)
+    else:
+        log.debug('LGPO: Updating Advanced Audit data: {0}: {1}'
+                  ''.format(option, value))
+        __context__['lgpo.adv_audit_data'][option] = value
+
+    return True
+
+
+def _get_netsh_value(profile, option):
+    if 'lgpo.netsh_data' not in __context__:
+        __context__['lgpo.netsh_data'] = {}
+
+    if profile not in __context__['lgpo.netsh_data']:
+        log.debug('LGPO: Loading netsh data for %s profile', profile)
+        settings = salt.utils.win_lgpo_netsh.get_all_settings(profile=profile,
+                                                              store='lgpo')
+        __context__['lgpo.netsh_data'].update({profile: settings})
+    log.debug('LGPO: netsh returning value: %s', __context__['lgpo.netsh_data'][profile][option])
+    return __context__['lgpo.netsh_data'][profile][option]
+
+
+def _set_netsh_value(profile, section, option, value):
+    if section not in ('firewallpolicy', 'settings', 'logging', 'state'):
+        raise ValueError('LGPO: Invalid section: {0}'.format(section))
+    log.debug('LGPO: Setting the following\n'
+              'Profile: %s\n'
+              'Section: %s\n'
+              'Option: %s\n'
+              'Value: %s',
+              profile, section, option, value)
+    if section == 'firewallpolicy':
+        salt.utils.win_lgpo_netsh.set_firewall_settings(
+            profile=profile,
+            inbound=value if option == 'Inbound' else None,
+            outbound=value if option == 'Outbound' else None,
+            store='lgpo')
+    if section == 'settings':
+        salt.utils.win_lgpo_netsh.set_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+    if section == 'state':
+        salt.utils.win_lgpo_netsh.set_state(
+            profile=profile, state=value, store='lgpo')
+        option = 'State'
+    if section == 'logging':
+        if option in ('FileName', 'MaxFileSize'):
+            if value == 'Not configured':
+                value = 'notconfigured'
+        # Trim log for the two logging options
+        orig_option = option
+        if option.startswith('Log'):
+            option = option[3:]
+        salt.utils.win_lgpo_netsh.set_logging_settings(
+            profile=profile, setting=option, value=value, store='lgpo')
+        option = orig_option
+    log.debug('LGPO: Setting {0} for {1} profile'.format(option, profile))
+    __context__['lgpo.netsh_data'][profile][option] = value
+    return True
+
+
 def _load_secedit_data():
     '''
     Helper function that loads secedit data. It runs `secedit /export /cfg
@@ -3602,7 +5342,13 @@ def _get_secedit_data():
     '''
     if 'lgpo.secedit_data' not in __context__:
         log.debug('LGPO: Loading secedit data')
-        __context__['lgpo.secedit_data'] = _load_secedit_data()
+        data = _load_secedit_data()
+        secedit_data = {}
+        for line in data:
+            if '=' in line:
+                key, value = line.split('=')
+                secedit_data[key.strip()] = value.strip()
+        __context__['lgpo.secedit_data'] = secedit_data
     return __context__['lgpo.secedit_data']
 
 
@@ -3610,20 +5356,40 @@ def _get_secedit_value(option):
     '''
     Helper function that looks for the passed option in the secedit data
     '''
-    secedit_data = _get_secedit_data()
-    for _line in secedit_data:
-        if _line.startswith(option):
-            return _line.split('=')[1].strip()
-    return 'Not Defined'
+    return _get_secedit_data().get(option, 'Not Defined')
 
 
-def _write_secedit_data(inf_data):
+def _write_secedit_data(secedit_data):
     '''
     Helper function to write secedit data to the database
     '''
     # Set file names
     f_sdb = os.path.join(__opts__['cachedir'], 'secedit-{0}.sdb'.format(UUID))
     f_inf = os.path.join(__opts__['cachedir'], 'secedit-{0}.inf'.format(UUID))
+
+    # Generate inf data in this format:
+    # [Unicode]
+    # Unicode = yes
+    # [System Access]         <==== Section
+    # EnableGuestAccount = 0  <==== value to set
+    # [Version]
+    # signature = "$CHICAGO$"
+    # Revision = 1
+
+    log.debug(secedit_data)
+    ini_data = ['[Unicode]', 'Unicode=yes']
+    sections = ['System Access',
+                'Event Audit',
+                'Registry Values',
+                'Privilege Rights']
+    for section in sections:
+        if section in secedit_data:
+            ini_data.append('[{0}]'.format(section))
+            ini_data.append(secedit_data[section][0])
+            option, value = secedit_data[section][0].split('=')
+    ini_data.extend(['[Version]', 'signature="$CHICAGO$"', 'Revision=1'])
+    inf_data = os.linesep.join(ini_data)
+    log.debug('inf_data == %s', inf_data)
 
     try:
         # Write the changes to the inf file
@@ -3633,8 +5399,8 @@ def _write_secedit_data(inf_data):
         retcode = __salt__['cmd.retcode'](cmd)
         # Success
         if retcode == 0:
-            # Pop secedit data so it will always be current
-            __context__.pop('lgpo.secedit_data')
+            # Update __context__['lgpo.secedit_data']
+            __context__['lgpo.secedit_data'][option.strip()] = value.strip()
             return True
         # Failure
         return False
@@ -3678,7 +5444,7 @@ def _validateSetting(value, policy):
         True
     if the Policy has 'Children', we'll validate their settings too
     '''
-    log.debug('validating {0} for policy {1}'.format(value, policy))
+    log.debug('validating %s for policy %s', value, policy)
     if 'Settings' in policy:
         if policy['Settings']:
             if isinstance(policy['Settings'], list):
@@ -3778,9 +5544,9 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                         else:
                             if etree.QName(p_item.tag).localname == 'text':
                                 if prepended_text:
-                                    prepended_text = ' '.join([prepended_text, p_item.text.rstrip()])
+                                    prepended_text = ' '.join((text for text in (prepended_text, getattr(p_item, 'text', '').rstrip()) if text))
                                 else:
-                                    prepended_text = p_item.text.rstrip()
+                                    prepended_text = getattr(p_item, 'text', '').rstrip()
                             else:
                                 prepended_text = ''
                     if prepended_text.endswith('.'):
@@ -3868,7 +5634,7 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                                                        )
                                         ].split(encoded_semicolon)
                 if len(pol_entry) >= 2:
-                    valueName = pol_entry[1]
+                    valueName = pol_entry[1].decode('utf-16-le').rstrip(chr(0))
                 if len(pol_entry) >= 5:
                     value = pol_entry[4]
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
@@ -4120,7 +5886,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                 check_deleted = True
             if not check_deleted:
                 this_vtype = 'REG_DWORD'
-            this_element_value = chr(1).encode('utf-16-le')
+            this_element_value = struct.pack('I', 1)
             standard_element_expected_string = False
         elif etree.QName(element).localname == 'decimal':
             # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
@@ -4179,25 +5945,25 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                          encoded_semicolon,
                                          chr(registry.vtype[this_vtype]).encode('utf-32-le'),
                                          encoded_semicolon,
-                                         chr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
+                                         six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
                                          encoded_semicolon,
                                          ' '.encode('utf-16-le'),
                                          encoded_null,
                                          ']'.encode('utf-16-le')])
             if 'expandable' in element.attrib:
                 this_vtype = 'REG_EXPAND_SZ'
-            if 'explicitValue' in element.attrib and element.attrib['explicitValue'].lower() == 'true':
+            if element.attrib.get('explicitValue', 'false').lower() == 'true':
                 if this_element_value is not None:
-                    element_valuenames = this_element_value.keys()
-                    element_values = this_element_value.values()
-            if 'valuePrefix' in element.attrib:
+                    element_valuenames = [str(k) for k in this_element_value.keys()]
+                    element_values = [str(v) for v in this_element_value.values()]
+            elif 'valuePrefix' in element.attrib:
                 # if the valuePrefix attribute exists, the valuenames are <prefix><number>
                 # most prefixes attributes are empty in the admx files, so the valuenames
                 # end up being just numbers
                 if element.attrib['valuePrefix'] != '':
                     if this_element_value is not None:
-                        element_valuenames = ['{0}{1}'.format(element.attrib['valuePrefix'],
-                                                              k) for k in element_valuenames]
+                        element_valuenames = ['{0}{1}'.format(
+                            element.attrib['valuePrefix'], k) for k in element_valuenames]
             else:
                 # if there is no valuePrefix attribute, the valuename is the value
                 if element_values is not None:
@@ -4240,7 +6006,7 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
                                             encoded_semicolon,
                                             chr(registry.vtype[this_vtype]).encode('utf-32-le'),
                                             encoded_semicolon,
-                                            chr(len(' {0}'.format(chr(0)))).encode('utf-32-le'),
+                                            six.unichr(len(' {0}'.format(chr(0)).encode('utf-16-le'))).encode('utf-32-le'),
                                             encoded_semicolon,
                                             ' '.encode('utf-16-le'),
                                             encoded_null,
@@ -4331,7 +6097,7 @@ def _checkAllAdmxPolicies(policy_class,
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     adml_policy_resources = _get_policy_resources(language=adml_language)
     if policy_file_data:
-        log.debug('POLICY CLASS {0} has file data'.format(policy_class))
+        log.debug('POLICY CLASS %s has file data', policy_class)
         policy_filedata_split = re.sub(
             salt.utils.stringutils.to_bytes(r'\]{0}$'.format(chr(0))),
             b'',
@@ -4678,12 +6444,12 @@ def _checkAllAdmxPolicies(policy_class,
                                                             policy_file_data):
                                     configured_elements[this_element_name] = "Disabled"
                                     policy_disabled_elements = policy_disabled_elements + 1
-                                    log.debug('element {0} is disabled'.format(child_item.attrib['id']))
+                                    log.debug('element %s is disabled', child_item.attrib['id'])
                     if element_only_enabled_disabled:
-                        if len(required_elements.keys()) > 0 \
-                                    and len(configured_elements.keys()) == len(required_elements.keys()):
-                            if policy_disabled_elements == len(required_elements.keys()):
-                                log.debug('{0} is disabled by all enum elements'.format(this_policyname))
+                        if required_elements \
+                                    and len(configured_elements) == len(required_elements):
+                            if policy_disabled_elements == len(required_elements):
+                                log.debug('%s is disabled by all enum elements', this_policyname)
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][this_policyname] = 'Disabled'
@@ -4691,7 +6457,7 @@ def _checkAllAdmxPolicies(policy_class,
                                 if this_policynamespace not in policy_vals:
                                     policy_vals[this_policynamespace] = {}
                                 policy_vals[this_policynamespace][this_policyname] = configured_elements
-                                log.debug('{0} is enabled by enum elements'.format(this_policyname))
+                                log.debug('%s is enabled by enum elements', this_policyname)
                     else:
                         if this_policy_setting == 'Enabled':
                             if this_policynamespace not in policy_vals:
@@ -4785,10 +6551,13 @@ def _build_parent_list(policy_definition,
     admx_policy_definitions = _get_policy_definitions(language=adml_language)
     if parent_category:
         parent_category = parent_category[0]
-        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*'.format(policy_namespace)
+        nsmap_xpath = '/policyDefinitions/policyNamespaces/{0}:*' \
+                      ''.format(policy_namespace)
         this_namespace_map = _buildElementNsmap(
-            admx_policy_definitions.xpath(nsmap_xpath, namespaces=policy_definition.nsmap))
-        this_namespace_map = dictupdate.update(this_namespace_map, policy_definition.nsmap)
+            admx_policy_definitions.xpath(
+                nsmap_xpath, namespaces=policy_definition.nsmap))
+        this_namespace_map = dictupdate.update(this_namespace_map,
+                                               policy_definition.nsmap)
         parent_list = _admx_policy_parent_walk(
             path=parent_list,
             policy_namespace=policy_namespace,
@@ -4868,7 +6637,9 @@ def _regexSearchKeyValueCombo(policy_data, policy_regpath, policy_regkey):
                                b'\00;'])
         match = re.search(_thisSearch, policy_data, re.IGNORECASE)
         if match:
-            return policy_data[match.start():(policy_data.index(']', match.end())) + 1]
+            # add 2 so we get the ']' and the \00
+            # to return the full policy entry
+            return policy_data[match.start():(policy_data.index(b']', match.end())) + 2]
 
     return None
 
@@ -5262,7 +7033,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                                                                                       TRUE_LIST_XPATH,
                                                                                       None,
                                                                                       test_items=False)
-                                                        log.debug('working with trueList portion of {0}'.format(admPolicy))
+                                                        log.debug('working with trueList portion of %s', admPolicy)
                                                     else:
                                                         list_strings = _checkListItem(child_item,
                                                                                       admPolicy,
@@ -5366,8 +7137,8 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     # TODO: This needs to be more specific or removed
-    except Exception:
-        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File')
+    except Exception as e:
+        log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File', e)
         return False
     return True
 
@@ -5489,10 +7260,10 @@ def _lookup_admin_template(policy_name,
             full_path_list.reverse()
             full_path_list.append(policy_display_name)
             policy_aliases.append('\\'.join(full_path_list))
-            return (True, the_policy, policy_aliases, None)
+            return True, the_policy, policy_aliases, None
         else:
             msg = 'ADMX policy name/id "{0}" is used in multiple ADMX files'
-            return (False, None, [], msg)
+            return False, None, [], msg
     else:
         adml_search_results = ADML_SEARCH_XPATH(adml_policy_resources,
                                                 policy_name=policy_name)
@@ -5509,12 +7280,14 @@ def _lookup_admin_template(policy_name,
             suggested_policies = ''
             adml_to_remove = []
             if len(adml_search_results) > 1:
+                log.debug('multiple ADML entries found matching the policy name %s', policy_name)
                 multiple_adml_entries = True
                 for adml_search_result in adml_search_results:
                     if not getattr(adml_search_result, 'text', '').strip() == policy_name:
                         adml_to_remove.append(adml_search_result)
                     else:
                         if hierarchy:
+                            log.debug('we have hierarchy of %s', hierarchy)
                             display_name_searchval = '$({0}.{1})'.format(
                                     adml_search_result.tag.split('}')[1],
                                     adml_search_result.attrib['id'])
@@ -5524,8 +7297,11 @@ def _lookup_admin_template(policy_name,
                                 display_name_searchval,
                                 policy_class)
                             admx_results = []
-                            admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
-                            for search_result in admx_search_results:
+                            these_admx_search_results = admx_policy_definitions.xpath(policy_search_string, namespaces=adml_search_result.nsmap)
+                            if not these_admx_search_results:
+                                log.debug('No admx was found for the adml entry %s, it will be removed', display_name_searchval)
+                                adml_to_remove.append(adml_search_result)
+                            for search_result in these_admx_search_results:
                                 log.debug('policy_name == %s', policy_name)
                                 this_hierarchy = _build_parent_list(
                                     policy_definition=search_result,
@@ -5533,11 +7309,29 @@ def _lookup_admin_template(policy_name,
                                     adml_language=adml_language)
                                 this_hierarchy.reverse()
                                 if hierarchy != this_hierarchy:
-                                    adml_to_remove.append(adml_search_result)
+                                    msg = 'hierarchy %s does not match this item\'s hierarchy of %s'
+                                    log.debug(msg, hierarchy, this_hierarchy)
+                                    if len(these_admx_search_results) == 1:
+                                        log.debug('only 1 admx was found and it does not match this adml, it is safe to remove from the list')
+                                        adml_to_remove.append(adml_search_result)
                                 else:
+                                    log.debug('hierarchy %s matches item\'s hierarchy of %s', hierarchy, this_hierarchy)
+                                    log.debug('search_result %s added to results', search_result)
                                     admx_results.append(search_result)
                             if len(admx_results) == 1:
-                                admx_search_results = admx_results
+                                admx_search_results.append(admx_results[0])
+                        else:
+                            # verify the ADMX correlated to this ADML is in the same class
+                            # that we are looking for
+                            display_name_searchval = '$({0}.{1})'.format(
+                                    adml_search_result.tag.split('}')[1],
+                                    adml_search_result.attrib['id'])
+                            these_admx_search_results = ADMX_DISPLAYNAME_SEARCH_XPATH(
+                                    admx_policy_definitions,
+                                    display_name=display_name_searchval,
+                                    registry_class=policy_class)
+                            if not these_admx_search_results:
+                                adml_to_remove.append(adml_search_result)
             for adml in adml_to_remove:
                 if adml in adml_search_results:
                     adml_search_results.remove(adml)
@@ -5552,12 +7346,15 @@ def _lookup_admin_template(policy_name,
                         adml_search_result.attrib['id'])
                 log.debug('searching for displayName == %s', display_name_searchval)
                 if not admx_search_results:
+                    log.debug('search for an admx entry matching display_name %s and registry_class %s', display_name_searchval, policy_class)
                     admx_search_results = ADMX_DISPLAYNAME_SEARCH_XPATH(
                             admx_policy_definitions,
                             display_name=display_name_searchval,
                             registry_class=policy_class)
                 if admx_search_results:
-                    if len(admx_search_results) == 1 or hierarchy and not multiple_adml_entries:
+                    log.debug('processing admx_search_results of %s', admx_search_results)
+                    log.debug('multiple_adml_entries is %s', multiple_adml_entries)
+                    if (len(admx_search_results) == 1 or hierarchy) and not multiple_adml_entries:
                         found = False
                         for search_result in admx_search_results:
                             found = False
@@ -5591,15 +7388,15 @@ def _lookup_admin_template(policy_name,
                                     full_path_list.reverse()
                                     full_path_list.append(policy_display_name)
                                     policy_aliases.append('\\'.join(full_path_list))
-                                    return (True, search_result, policy_aliases, None)
+                                    return True, search_result, policy_aliases, None
                                 else:
                                     msg = ('ADMX policy with the display name {0} does not'
                                            'have the required name attribtue')
                                     msg = msg.format(policy_name)
-                                    return (False, None, [], msg)
+                                    return False, None, [], msg
                         if not found:
                             msg = 'Unable to correlate {0} to any policy'.format(hierarchy_policy_name)
-                            return (False, None, [], msg)
+                            return False, None, [], msg
                     else:
                         for possible_policy in admx_search_results:
                             this_parent_list = _build_parent_list(
@@ -5613,9 +7410,6 @@ def _lookup_admin_template(policy_name,
                                                                '\\'.join(this_parent_list)])
                             else:
                                 suggested_policies = '\\'.join(this_parent_list)
-                else:
-                    msg = 'Unable to find a policy with the name "{0}".'.format(policy_name)
-                    return False, None, [], msg
             if suggested_policies:
                 msg = ('ADML policy name "{0}" is used as the display name'
                        ' for multiple policies.'
@@ -5780,12 +7574,14 @@ def get_policy_info(policy_name,
     policy_class = policy_class.title()
     policy_data = _policy_info()
     if policy_class not in policy_data.policies.keys():
-        ret['message'] = 'The requested policy class "{0}" is invalid, policy_class should be one of: {1}'.format(
-                policy_class,
-                ', '.join(policy_data.policies.keys()))
+        policy_classes = ', '.join(policy_data.policies.keys())
+        ret['message'] = 'The requested policy class "{0}" is invalid, ' \
+                         'policy_class should be one of: {1}' \
+                         ''.format(policy_class, policy_classes)
         return ret
     if policy_name in policy_data.policies[policy_class]['policies']:
-        ret['policy_aliases'].append(policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
+        ret['policy_aliases'].append(
+            policy_data.policies[policy_class]['policies'][policy_name]['Policy'])
         ret['policy_found'] = True
         ret['message'] = ''
         if 'LsaRights' in policy_data.policies[policy_class]['policies'][policy_name]:
@@ -5866,8 +7662,6 @@ def get(policy_class=None, return_full_policy_names=True,
 
         salt '*' lgpo.get machine return_full_policy_names=True
     '''
-    timing = {}
-    start_time = time.time()
 
     vals = {}
     modal_returns = {}
@@ -5883,67 +7677,82 @@ def get(policy_class=None, return_full_policy_names=True,
     else:
         policy_class = [policy_class.title()]
 
-    sub_time = start_time
-    timing['1 - policy defs'] = time.time() - sub_time
-
     # handle policies statically defined in this module
     for p_class in policy_class:
+        this_class_policy_names = _policydata.policies[p_class]['policies']
         class_vals = {}
-        sub_time = start_time
-        for policy_name in _policydata.policies[p_class]['policies']:
-            _pol = _policydata.policies[p_class]['policies'][policy_name]
-            vals_key_name = policy_name
-            if 'Registry' in _pol:
-                # get value from registry
-                class_vals[policy_name] = __salt__['reg.read_value'](
-                    _pol['Registry']['Hive'],
-                    _pol['Registry']['Path'],
-                    _pol['Registry']['Value'])['vdata']
-                log.debug(
-                    'Value %r found for reg policy %s',
-                    class_vals[policy_name], policy_name
-                )
-            elif 'Secedit' in _pol:
-                # get value from secedit
-                _val = _get_secedit_value(option=_pol['Secedit']['Option'])
-                class_vals[policy_name] = _val
-            elif 'NetUserModal' in _pol:
-                # get value from UserNetMod
-                if _pol['NetUserModal']['Modal'] not in modal_returns:
-                    modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
-                            None,
-                            _pol['NetUserModal']['Modal'])
-                class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
-            elif 'LsaRights' in _pol:
-                class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
-            elif 'ScriptIni' in _pol:
-                log.debug('Working with ScriptIni setting %s', policy_name)
-                class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
-            if policy_name in class_vals:
-                class_vals[policy_name] = _transform_value(
-                    value=class_vals[policy_name],
-                    policy=_policydata.policies[p_class]['policies'][policy_name],
-                    transform_type='Get')
-            if return_full_policy_names:
-                class_vals[_pol['Policy']] = class_vals.pop(policy_name)
-                vals_key_name = _pol['Policy']
-            if hierarchical_return:
-                if 'lgpo_section' in _pol:
-                    firstItem = True
-                    tdict = {}
-                    for level in reversed(_pol['lgpo_section']):
-                        newdict = {}
-                        if firstItem:
-                            newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
-                            firstItem = False
-                        else:
-                            newdict[level] = tdict
-                        tdict = newdict
-                    if tdict:
-                        class_vals = dictupdate.update(class_vals, tdict)
-        timing['2 - for loop'] = time.time() - sub_time
-
-        sub_time = time.time()
+        for policy_name in this_class_policy_names:
+            _pol = None
+            if policy_name in _policydata.policies[p_class]['policies']:
+                _pol = _policydata.policies[p_class]['policies'][policy_name]
+            else:
+                for policy in _policydata.policies[p_class]['policies']:
+                    if _policydata.policies[p_class]['policies'][policy]['Policy'].upper() == policy_name.upper():
+                        _pol = _policydata.policies[p_class]['policies'][policy]
+                        policy_name = policy
+            if _pol:
+                vals_key_name = policy_name
+                if 'Registry' in _pol:
+                    # get value from registry
+                    class_vals[policy_name] = __utils__['reg.read_value'](
+                        _pol['Registry']['Hive'],
+                        _pol['Registry']['Path'],
+                        _pol['Registry']['Value'])['vdata']
+                    log.debug(
+                        'Value %r found for reg policy %s',
+                        class_vals[policy_name], policy_name
+                    )
+                elif 'Secedit' in _pol:
+                    # get value from secedit
+                    _val = _get_secedit_value(option=_pol['Secedit']['Option'])
+                    class_vals[policy_name] = _val
+                elif 'NetSH' in _pol:
+                    # get value from netsh
+                    class_vals[policy_name] = _get_netsh_value(
+                        profile=_pol['NetSH']['Profile'],
+                        option=_pol['NetSH']['Option'])
+                elif 'AdvAudit' in _pol:
+                    # get value from auditpol
+                    class_vals[policy_name] = _get_advaudit_value(
+                        option=_pol['AdvAudit']['Option'])
+                elif 'NetUserModal' in _pol:
+                    # get value from UserNetMod
+                    if _pol['NetUserModal']['Modal'] not in modal_returns:
+                        modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
+                                None,
+                                _pol['NetUserModal']['Modal'])
+                    class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
+                elif 'LsaRights' in _pol:
+                    class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
+                elif 'ScriptIni' in _pol:
+                    log.debug('Working with ScriptIni setting %s', policy_name)
+                    class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
+                if policy_name in class_vals:
+                    class_vals[policy_name] = _transform_value(
+                        value=class_vals[policy_name],
+                        policy=_policydata.policies[p_class]['policies'][policy_name],
+                        transform_type='Get')
+                if return_full_policy_names:
+                    class_vals[_pol['Policy']] = class_vals.pop(policy_name)
+                    vals_key_name = _pol['Policy']
+                if hierarchical_return:
+                    if 'lgpo_section' in _pol:
+                        firstItem = True
+                        tdict = {}
+                        for level in reversed(_pol['lgpo_section']):
+                            newdict = {}
+                            if firstItem:
+                                newdict[level] = {vals_key_name: class_vals.pop(vals_key_name)}
+                                firstItem = False
+                            else:
+                                newdict[level] = tdict
+                            tdict = newdict
+                        if tdict:
+                            class_vals = dictupdate.update(class_vals, tdict)
+            else:
+                msg = 'The specified policy {0} is not currently available ' \
+                      'to be configured via this module'
+                raise SaltInvocationError(msg.format(policy_name))
         class_vals = dictupdate.update(
             class_vals,
             _checkAllAdmxPolicies(policy_class=p_class,
@@ -5951,19 +7760,12 @@ def get(policy_class=None, return_full_policy_names=True,
                                   return_full_policy_names=return_full_policy_names,
                                   hierarchical_return=hierarchical_return,
                                   return_not_configured=return_not_configured))
-        timing['3 - check policies'] = time.time() - sub_time
-
-        sub_time = time.time()
         if _policydata.policies[p_class]['lgpo_section'] not in class_vals:
             temp_dict = {
                 _policydata.policies[p_class]['lgpo_section']: class_vals}
             class_vals = temp_dict
         vals = dictupdate.update(vals, class_vals)
-        timing['4 - dict update'] = time.time() - sub_time
 
-        timing['Total'] = time.time() - start_time
-
-    # return timing
     return vals
 
 
@@ -6138,6 +7940,8 @@ def set_(computer_policy=None,
         adml_policy_resources = _get_policy_resources(language=adml_language)
         for p_class in policies:
             _secedits = {}
+            _netshs = {}
+            _advaudits = {}
             _modal_sets = {}
             _admTemplateData = {}
             _regedits = {}
@@ -6146,7 +7950,6 @@ def set_(computer_policy=None,
             if policies[p_class]:
                 for policy_name in policies[p_class]:
                     _pol = None
-                    policy_namespace = None
                     policy_key_name = policy_name
                     if policy_name in _policydata.policies[p_class]['policies']:
                         _pol = _policydata.policies[p_class]['policies'][policy_name]
@@ -6179,6 +7982,21 @@ def set_(computer_policy=None,
                             _secedits[_pol['Secedit']['Section']].append(
                                     ' '.join([_pol['Secedit']['Option'],
                                              '=', six.text_type(_value)]))
+                        elif 'NetSH' in _pol:
+                            # set value with netsh
+                            log.debug('%s is a NetSH policy', policy_name)
+                            _netshs.setdefault(policy_name, {
+                                'profile': _pol['NetSH']['Profile'],
+                                'section': _pol['NetSH']['Section'],
+                                'option': _pol['NetSH']['Option'],
+                                'value': six.text_type(_value)
+                            })
+                        elif 'AdvAudit' in _pol:
+                            # set value with advaudit
+                            _advaudits.setdefault(policy_name, {
+                                'option': _pol['AdvAudit']['Option'],
+                                'value': six.text_type(_value)
+                            })
                         elif 'NetUserModal' in _pol:
                             # set value via NetUserModal
                             log.debug('%s is a NetUserModal policy', policy_name)
@@ -6310,19 +8128,19 @@ def set_(computer_policy=None,
                         log.debug('%s is a Registry policy', regedit)
                         # if the value setting is None or "(value not set)", we will delete the value from the registry
                         if _regedits[regedit]['value'] is not None and _regedits[regedit]['value'] != '(value not set)':
-                            _ret = __salt__['reg.set_value'](
+                            _ret = __utils__['reg.set_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'],
                                     _regedits[regedit]['value'],
                                     _regedits[regedit]['policy']['Registry']['Type'])
                         else:
-                            _ret = __salt__['reg.read_value'](
+                            _ret = __utils__['reg.read_value'](
                                     _regedits[regedit]['policy']['Registry']['Hive'],
                                     _regedits[regedit]['policy']['Registry']['Path'],
                                     _regedits[regedit]['policy']['Registry']['Value'])
                             if _ret['success'] and _ret['vdata'] != '(value not set)':
-                                _ret = __salt__['reg.delete_value'](
+                                _ret = __utils__['reg.delete_value'](
                                         _regedits[regedit]['policy']['Registry']['Hive'],
                                         _regedits[regedit]['policy']['Registry']['Path'],
                                         _regedits[regedit]['policy']['Registry']['Value'])
@@ -6353,22 +8171,25 @@ def set_(computer_policy=None,
                                         raise SaltInvocationError(msg.format(lsaright))
                 if _secedits:
                     # we've got secedits to make
-                    log.debug(_secedits)
-                    ini_data = '\r\n'.join(['[Unicode]', 'Unicode=yes'])
-                    _seceditSections = ['System Access', 'Event Audit', 'Registry Values', 'Privilege Rights']
-                    for _seceditSection in _seceditSections:
-                        if _seceditSection in _secedits:
-                            ini_data = '\r\n'.join([ini_data, ''.join(['[', _seceditSection, ']']),
-                                                   '\r\n'.join(_secedits[_seceditSection])])
-                    ini_data = '\r\n'.join([ini_data, '[Version]',
-                                            'signature="$CHICAGO$"',
-                                            'Revision=1'])
-                    log.debug('ini_data == %s', ini_data)
-                    if not _write_secedit_data(ini_data):
+                    if not _write_secedit_data(_secedits):
                         msg = ('Error while attempting to set policies via '
                                'secedit. Some changes may not be applied as '
                                'expected')
                         raise CommandExecutionError(msg)
+                if _netshs:
+                    # we've got netsh settings to make
+                    for setting in _netshs:
+                        log.debug('Setting firewall policy: %s', setting)
+                        log.debug(_netshs[setting])
+                        _set_netsh_value(**_netshs[setting])
+
+                if _advaudits:
+                    # We've got AdvAudit settings to make
+                    for setting in _advaudits:
+                        log.debug('Setting Advanced Audit policy: {0}'.format(setting))
+                        log.debug(_advaudits[setting])
+                        _set_advaudit_value(**_advaudits[setting])
+
                 if _modal_sets:
                     # we've got modalsets to make
                     log.debug(_modal_sets)

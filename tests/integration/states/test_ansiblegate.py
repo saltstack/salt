@@ -19,7 +19,8 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import (
     destructiveTest,
     requires_sshd_server,
-    requires_system_grains
+    requires_system_grains,
+    flaky
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -35,7 +36,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
 
     @requires_system_grains
-    def setUp(self, grains=None):
+    def setUp(self, grains=None):  # pylint: disable=arguments-differ
         if grains.get('os_family') == 'RedHat' and grains.get('osmajorrelease') == 6:
             self.skipTest('This test hangs the test suite on RedHat 6. Skipping for now.')
 
@@ -66,6 +67,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, 'tempdir')
         delattr(self, 'inventory')
 
+    @flaky
     def test_ansible_playbook(self):
         ret = self.run_state(
             'ansible.playbooks',

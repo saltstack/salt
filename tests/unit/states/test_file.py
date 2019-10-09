@@ -596,6 +596,27 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
     # 'managed' function tests: 1
 
+    def test_file_managed_should_fall_back_to_binary(self):
+        expected_contents = b'\x8b'
+        filename = '/tmp/blarg'
+        mock_manage = MagicMock(return_value={'fnord': 'fnords'})
+        with patch('salt.states.file._load_accumulators',
+                   MagicMock(return_value=([], []))):
+            with patch.dict(filestate.__salt__,
+                            {
+                             'file.get_managed': MagicMock(return_value=['', '', '']),
+                             'file.source_list': MagicMock(return_value=['', '']),
+                             'file.manage_file': mock_manage,
+                             'pillar.get': MagicMock(return_value=expected_contents),
+                            }):
+                ret = filestate.managed(
+                    filename,
+                    contents_pillar='fnord',
+                    encoding='utf-8'
+                )
+                actual_contents = mock_manage.call_args[0][14]
+                self.assertEqual(actual_contents, expected_contents)
+
     def test_managed(self):
         '''
         Test to manage a given file, this function allows for a file to be
@@ -777,6 +798,34 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                      (name, user=user, group=group),
                                                      ret)
 
+                        if salt.utils.platform.is_windows():
+                            mock_ret = MagicMock(return_value=ret)
+                            comt = ('File {0} not updated'.format(name))
+                        else:
+                            perms = {'luser': user,
+                                     'lmode': '0644',
+                                     'lgroup': group}
+                            mock_ret = MagicMock(return_value=(ret, perms))
+                            comt = ('File {0} will be updated with '
+                                    'permissions 0400 from its current '
+                                    'state of 0644'.format(name))
+
+                        with patch.dict(filestate.__salt__,
+                                        {'file.check_perms': mock_ret}):
+                            with patch.object(os.path, 'exists', mock_t):
+                                with patch.dict(filestate.__opts__, {'test': True}):
+                                    ret.update({'comment': comt})
+                                    if salt.utils.platform.is_windows():
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group
+                                                              ), ret)
+                                    else:
+                                        self.assertDictEqual(filestate.managed
+                                                             (name, user=user,
+                                                              group=group,
+                                                              mode=400), ret)
+
     # 'directory' function tests: 1
 
     def test_directory(self):
@@ -826,8 +875,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.check_perms': mock_perms,
                                              'file.mkdir': mock_t}), \
              patch('salt.utils.win_dacl.get_sid', mock_error), \
-             patch('os.path.isdir', mock_t), \
-             patch('salt.states.file._check_directory_win', mock_check):
+             patch('os.path.isdir', mock_t):
+                 #, \
+             #patch('salt.states.file._check_directory_win', mock_check):
             if salt.utils.platform.is_windows():
                 comt = ('User salt is not available Group salt'
                         ' is not available')
@@ -835,8 +885,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 comt = ('User salt is not available Group saltstack'
                         ' is not available')
             ret.update({'comment': comt, 'name': name})
-            self.assertDictEqual(
-                filestate.directory(name, user=user, group=group), ret)
+            with patch('salt.states.file._check_directory_win', mock_check):
+                self.assertDictEqual(
+                    filestate.directory(name, user=user, group=group), ret)
 
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'
@@ -903,7 +954,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         with patch.object(os.path, 'isdir',
-                                          MagicMock(side_effect=[True, False, True, True])):
+                                          MagicMock(side_effect=[True, False, True, True])), \
+                              patch('salt.states.file._check_directory_win', mock_check):
                             comt = ('Failed to create directory {0}'
                                     .format(name))
                             ret.update({'comment': comt, 'result': False})
@@ -917,7 +969,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                '"ignore_dirs" at the same '
                                                'time.',
                                     'changes': {}})
-                        with patch.object(os.path, 'isdir', mock_t):
+                        with patch.object(os.path, 'isdir', mock_t), \
+                              patch('salt.states.file._check_directory_win', mock_check):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user,
                                                   recurse=recurse, group=group),
@@ -926,6 +979,25 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
+                    changes = {}
+                    mock_check = MagicMock(
+                        return_value=(True, 'The directory {0} is in the correct state'.format(name), changes)
+                    )
+                    with patch('salt.states.file._check_directory_win', mock_check):
+                        recurse = ['mode']
+                        ret.update({'comment': 'The directory {} is in the '
+                                               'correct state'.format(name),
+                                    'changes': {},
+                                    'result': True})
+                        with patch.object(os.path, 'isdir', mock_t):
+                            self.assertDictEqual(
+                                filestate.directory(
+                                    name, user=user, dir_mode=700,
+                                    recurse=recurse, group=group,
+                                    children_only=True
+                                ),
+                                ret,
+                            )
 
     # 'recurse' function tests: 1
 
@@ -1116,7 +1188,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             with patch.object(os.path, 'isabs', mock_t):
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[True, True, True, False, False])}):
+                                {'file.search': MagicMock(side_effect=[False, True, False, False])}):
                     comt = ('Pattern already commented')
                     ret.update({'comment': comt, 'result': True})
                     self.assertDictEqual(filestate.comment(name, regex), ret)
@@ -1126,7 +1198,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(filestate.comment(name, regex), ret)
 
                 with patch.dict(filestate.__salt__,
-                                {'file.search': MagicMock(side_effect=[False, True, False, True, True]),
+                                {'file.search': MagicMock(side_effect=[True, True, True]),
                                  'file.comment': mock_t,
                                  'file.comment_line': mock_t}):
                     with patch.dict(filestate.__opts__, {'test': True}):
@@ -1164,7 +1236,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
             mock_t = MagicMock(return_value=True)
             mock_f = MagicMock(return_value=False)
-            mock = MagicMock(side_effect=[True, False, False, False, True, False,
+            mock = MagicMock(side_effect=[False, True,
+                                          False, False,
+                                          True,
                                           True, True])
             with patch.object(os.path, 'isabs', mock_f):
                 comt = ('Specified file {0} is not an absolute path'.format(name))
@@ -1877,18 +1951,23 @@ class TestFindKeepFiles(TestCase):
 
     @skipIf(not salt.utils.platform.is_windows(), 'Only run on Windows')
     def test__find_keep_files_win32(self):
+        '''
+        Test _find_keep_files. The `_find_keep_files` function is only called by
+        _clean_dir, so case doesn't matter. Should return all lower case.
+        '''
         keep = filestate._find_keep_files(
             'c:\\test\\parent_folder',
-            ['C:\\test\\parent_folder\\meh-2.txt']
+            ['C:\\test\\parent_folder\\meh-1.txt',
+             'C:\\Test\\Parent_folder\\Meh-2.txt']
         )
         expected = [
             'c:\\',
             'c:\\test',
             'c:\\test\\parent_folder',
-            'c:\\test\\parent_folder\\meh-2.txt'
-        ]
+            'c:\\test\\parent_folder\\meh-1.txt',
+            'c:\\test\\parent_folder\\meh-2.txt']
         actual = sorted(list(keep))
-        assert actual == expected, actual
+        self.assertListEqual(actual, expected)
 
 
 class TestFileTidied(TestCase):

@@ -25,9 +25,8 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto3', 'yaml'],
-            context={}
-        )
+            whitelist=['boto3', 'yaml', 'args', 'systemd', 'path', 'platform'],
+            context={})
         return {
             boto_sqs: {
                 '__utils__': utils,
@@ -36,7 +35,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
     @classmethod
     def tearDownClass(cls):

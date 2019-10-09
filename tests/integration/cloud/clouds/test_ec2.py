@@ -16,10 +16,11 @@ import salt.utils.yaml
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import expensiveTest, generate_random_name
 from tests.support.unit import skipIf
 from tests.support import win_installer
+
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
@@ -28,6 +29,7 @@ HAS_WINRM = salt.utils.cloud.HAS_WINRM and salt.utils.cloud.HAS_SMB
 TIMEOUT = 1200
 
 
+@expensiveTest
 class EC2Test(ShellCase):
     '''
     Integration tests for the EC2 cloud provider in Salt-Cloud
@@ -38,7 +40,7 @@ class EC2Test(ShellCase):
         Determine the downloaded installer name by searching the files
         directory for the firt file that loosk like an installer.
         '''
-        for path, dirs, files in os.walk(FILES):
+        for path, dirs, files in os.walk(RUNTIME_VARS.FILES):
             for file in files:
                 if file.startswith(win_installer.PREFIX):
                     return file
@@ -50,7 +52,7 @@ class EC2Test(ShellCase):
         Download the latest Windows installer executable
         '''
         name = win_installer.latest_installer_name()
-        path = os.path.join(FILES, name)
+        path = os.path.join(RUNTIME_VARS.FILES, name)
         with salt.utils.files.fopen(path, 'wb') as fp:
             win_installer.download_and_verify(fp, name)
         return name
@@ -64,7 +66,6 @@ class EC2Test(ShellCase):
             return name
         return self._fetch_latest_installer()
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
@@ -86,7 +87,7 @@ class EC2Test(ShellCase):
         # and provider are present
         config = cloud_providers_config(
             os.path.join(
-                FILES,
+                RUNTIME_VARS.FILES,
                 'conf',
                 'cloud.providers.d',
                 PROVIDER_NAME + '.conf'
@@ -132,7 +133,7 @@ class EC2Test(ShellCase):
         configuration directory. The path to the file which is created will be
         returned.
         '''
-        src = os.path.join(FILES, name)
+        src = os.path.join(RUNTIME_VARS.FILES, name)
         dst = os.path.join(self.config_dir, name)
         with salt.utils.files.fopen(src, 'rb') as sfp:
             with salt.utils.files.fopen(dst, 'wb') as dfp:

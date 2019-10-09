@@ -3,7 +3,7 @@
 Netmiko
 =======
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Proxy module for managing network devices via
 `Netmiko <https://github.com/ktbyers/netmiko>`_.

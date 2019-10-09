@@ -79,6 +79,8 @@ def _localectl_status():
             ctl_key = ctl_key.strip().lower().replace(' ', '_')
         else:
             ctl_data = line.strip()
+        if not ctl_data:
+            continue
         if ctl_key:
             if '=' in ctl_data:
                 loc_set = ctl_data.split('=')
@@ -137,7 +139,7 @@ def get_locale():
     if lc_ctl and not (__grains__['os_family'] in ['Suse'] and __grains__['osmajorrelease'] in [12]):
         ret = (_parse_dbus_locale() if dbus is not None else _localectl_status()['system_locale']).get('LANG', '')
     else:
-        if 'Suse' in __grains__['os_family'] and __grains__['osmajorrelease'] == 12:
+        if 'Suse' in __grains__['os_family']:
             cmd = 'grep "^RC_LANG" /etc/sysconfig/language'
         elif 'RedHat' in __grains__['os_family']:
             cmd = 'grep "^LANG=" /etc/sysconfig/i18n'

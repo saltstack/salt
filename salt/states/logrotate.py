@@ -62,20 +62,20 @@ def set_(name, key, value, setting=None, conf_file=_DEFAULT_CONF):
     .. code-block:: yaml
 
         logrotate-rotate:
-            logrotate.set:
-                - key: rotate
-                - value: 2
+          logrotate.set:
+            - key: rotate
+            - value: 2
 
     Example of usage specifying all available arguments:
 
     .. code-block:: yaml
 
         logrotate-wtmp-rotate:
-            logrotate.set:
-                - key: /var/log/wtmp
-                - value: rotate
-                - setting: 2
-                - conf_file: /etc/logrotate.conf
+          logrotate.set:
+            - key: /var/log/wtmp
+            - value: rotate
+            - setting: 2
+            - conf_file: /etc/logrotate.conf
     '''
     ret = {'name': name,
            'changes': dict(),

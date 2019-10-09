@@ -3,7 +3,7 @@
 NAPALM Formula helpers
 ======================
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 This is an Execution Module providing helpers for various NAPALM formulas,
 e.g., napalm-interfaces-formula, napalm-bgp-formula, napalm-ntp-formula etc.,

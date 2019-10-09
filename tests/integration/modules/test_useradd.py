@@ -130,7 +130,7 @@ class UseraddModuleTestWindows(ModuleCase):
         helper class to add user
         '''
         if self.run_function('user.add', [self.user_name]) is False:
-            self.run_function('user.delete', [self.user_name, True, True])
+            # Skip because creating is not what we're testing here
             self.skipTest('Failed to create user')
 
     def _add_group(self):
@@ -139,77 +139,33 @@ class UseraddModuleTestWindows(ModuleCase):
         '''
         if self.run_function('group.add', [self.group_name]) is False:
             # Skip because creating is not what we're testing here
-            self.run_function('group.delete', [self.group_name, True, True])
             self.skipTest('Failed to create group')
 
     def test_add_user(self):
         '''
         Test adding a user
         '''
-        user_name = self.__random_string()
-
-        try:
-            if self.run_function('user.add', [user_name]) is False:
-                self.run_function('user.delete', [user_name, True, True])
-                self.skipTest('Failed to create user')
-
-            user_list = self.run_function('user.list_users')
-            self.assertIn(user_name, user_list)
-
-        except AssertionError:
-            raise
-
-        finally:
-            self.run_function('user.delete', [user_name, True, True])
+        self._add_user()
+        user_list = self.run_function('user.list_users')
+        self.assertIn(self.user_name, user_list)
 
     def test_add_group(self):
         '''
         Test adding a user
         '''
-        group_name = self.__random_string()
-        try:
-            if self.run_function('group.add', [group_name]) is False:
-                # Skip because creating is not what we're testing here
-                self.run_function('group.delete', [group_name, True, True])
-                self.skipTest('Failed to create group')
-
-            group_list = self.run_function('group.list_groups')
-            self.assertIn(group_name, group_list)
-
-        except AssertionError:
-            raise
-
-        finally:
-            self.run_function('group.delete', [group_name])
+        self._add_group()
+        group_list = self.run_function('group.list_groups')
+        self.assertIn(self.group_name, group_list)
 
     def test_add_user_to_group(self):
         '''
         Test adding a user to a group
         '''
-        group_name = self.__random_string()
-        user_name = self.__random_string()
-        try:
-            # Let's create a group
-            if self.run_function(
-                    'group.add', [group_name])['result'] is not True:
-                self.run_function('group.delete', [group_name, True, True])
-                self.skipTest('Failed to create group')
-
-            # And create the user as a member of that group
-            if self.run_function(
-                    'user.add', [user_name], groups=group_name) is False:
-                self.run_function('user.delete', [user_name, True, True])
-                self.skipTest('Failed to create user')
-
-            user_info = self.run_function('user.info', [user_name])
-            self.assertIn(group_name, user_info['groups'])
-
-        except AssertionError:
-            raise
-
-        finally:
-            self.run_function('user.delete', [user_name, True, True])
-            self.run_function('group.delete', [group_name])
+        self._add_group()
+        # And create the user as a member of that group
+        self.run_function('user.add', [self.user_name], groups=self.group_name)
+        user_info = self.run_function('user.info', [self.user_name])
+        self.assertIn(self.group_name, user_info['groups'])
 
     def test_add_user_addgroup(self):
         '''

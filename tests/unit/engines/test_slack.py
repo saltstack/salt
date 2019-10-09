@@ -30,7 +30,7 @@ class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
         return {slack: {}}
 
     def setUp(self):
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         token = 'xoxb-xxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx'
 
         with patch.dict(slack.__opts__, mock_opts):

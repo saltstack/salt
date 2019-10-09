@@ -8,7 +8,7 @@ import shutil
 
 # salt testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import(
+from tests.support.mock import (
     patch,
     mock_open,
     NO_MOCK,

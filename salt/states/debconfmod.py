@@ -36,6 +36,30 @@ set_file
 .. note::
     Due to how PyYAML imports nested dicts (see :ref:`here <yaml-idiosyncrasies>`),
     the values in the ``data`` dict must be indented four spaces instead of two.
+
+If you're setting debconf values that requires `dpkg-reconfigure`, you can use
+the ``onchanges`` requisite to reconfigure your package:
+
+.. code-block:: yaml
+
+    set-default-shell:
+      debconf.set:
+        - name: dash
+        - data:
+              'dash/sh': {'type': 'boolean', 'value': false}
+
+    reconfigure-dash:
+      cmd.run:
+        - name: dpkg-reconfigure -f noninteractive dash
+        - onchanges:
+          - debconf: set-default-shell
+
+Every time the ``set-default-shell`` state changes, the ``reconfigure-dash``
+state will also run.
+
+.. note::
+    For boolean types, the value should be ``true`` or ``false``, not
+    ``'true'`` or ``'false'``.
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 from salt.ext import six
@@ -49,7 +73,7 @@ def __virtual__():
     '''
     Confirm this module is on a Debian based system
     '''
-    if __grains__['os_family'] != 'Debian':
+    if __grains__.get('os_family') != 'Debian':
         return False
     # Check that debconf was loaded
     if 'debconf.show' not in __salt__:

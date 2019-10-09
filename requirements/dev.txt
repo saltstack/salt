@@ -2,8 +2,6 @@
 
 mock>=2.0.0
 SaltPyLint>=v2017.3.6
-pytest>=3.5.0
-git+https://github.com/saltstack/pytest-salt.git@master#egg=pytest-salt
 testinfra>=1.7.0,!=1.17.0
 
 # httpretty Needs to be here for now even though it's a dependency of boto.

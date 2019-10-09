@@ -1,6 +1,6 @@
 ---
 <% vagrant = system('gem list -i kitchen-vagrant 2>/dev/null >/dev/null') %>
-<% version = '2017.7.6' %>
+<% version = '2018.3.3' %>
 <% platformsfile = ENV['SALT_KITCHEN_PLATFORMS'] || '.kitchen/platforms.yml' %>
 <% driverfile = ENV['SALT_KITCHEN_DRIVER'] || '.kitchen/driver.yml' %>
 <% verifierfile = ENV['SALT_KITCHEN_VERIFIER'] || '.kitchen/verifier.yml' %>
@@ -30,7 +30,7 @@ provisioner:
   salt_install: bootstrap
   salt_version: latest
   salt_bootstrap_url: https://bootstrap.saltstack.com
-  salt_bootstrap_options: -X -p rsync stable <%= version %>
+  salt_bootstrap_options: -X -p rsync git v<%= version %>
   log_level: info
   sudo: true
   require_chef: false
@@ -39,7 +39,7 @@ provisioner:
   max_retries: 2
   remote_states:
     name: git://github.com/saltstack/salt-jenkins.git
-    branch: master
+    branch: develop
     repo: git
     testingdir: /testing
   salt_copy_filter:
@@ -47,6 +47,7 @@ provisioner:
     - '*.pyc'
     - .bundle
     - .tox
+    - .nox
     - .kitchen
     - artifacts
     - Gemfile.lock
@@ -54,7 +55,7 @@ provisioner:
     base:
       "os:Windows":
         - match: grain
-        - prep_windows
+        - windows
       "*":
         - <%= ENV['KITCHEN_STATE'] || 'git.salt' %>
   pillars:
@@ -114,7 +115,7 @@ platforms:
       run_command: /lib/systemd/systemd
   - name: arch
     driver_config:
-      image: base/archlinux
+      image: archlinux/base
       run_command: /usr/lib/systemd/systemd
       provision_command:
         - pacman -Syu --noconfirm systemd
@@ -122,14 +123,24 @@ platforms:
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
       salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
-  - name: opensuse
+  - name: opensuse-15
     driver_config:
+      image: opensuse/leap:15.0
       run_command: /usr/lib/systemd/systemd
       provision_command:
+        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
         - systemctl enable sshd.service
         - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
     provisioner:
-      salt_bootstrap_options: -X -p rsync git v<%= version %> >/dev/null
+      salt_bootstrap_options: -qXU -x python2 git v<%= @version %>
+  - name: opensuse-42.3
+    driver_config:
+      image: opensuse/leap:42.3
+      run_command: /usr/lib/systemd/systemd
+      provision_command:
+        - zypper --non-interactive install --auto-agree-with-licenses dbus-1
+        - systemctl enable sshd.service
+        - echo 'L /run/docker.sock - - - - /docker.sock' > /etc/tmpfiles.d/docker.conf
 <% if vagrant != false %>
   - name: windows-2012r2
     driver:

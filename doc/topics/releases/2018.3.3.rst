@@ -1,9 +1,8 @@
-========================================
-In Progress: Salt 2018.3.3 Release Notes
-========================================
+===========================
+Salt 2018.3.3 Release Notes
+===========================
 
-Version 2018.3.3 is an **unreleased** bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
-This release is still in progress and has not been released yet.
+Version 2018.3.3 is a security and bugfix release for :ref:`2018.3.0 <release-2018-3-0>`.
 
 Statistics
 ==========
@@ -43,6 +42,15 @@ Statistics
           - source: salt://foo.conf
           - template: jinja
           - defaults: {{ mydict | tojson }}
+
+Security Fix
+============
+
+CVE-2018-15751 Remote command execution and incorrect access control when using salt-api.
+
+CVE-2018-15750 Directory traversal vulnerability when using salt-api. Allows an attacker to determine what files exist on a server when querying /run or /events.
+
+Credit and thanks for discovery and responsible disclosure: nullbr4in, xcuter, koredge, loupos, blackcon, Naver Business Platform
 
 Changes to win_timezone
 =======================
@@ -86,7 +94,7 @@ Example:
     cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser
 
 Changelog for v2018.3.2..v2018.3.3
-=================================================================
+==================================
 
 *Generated at: 2018-09-21 17:45:27 UTC*
 
@@ -501,7 +509,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * 3d26affa10 Fix remaining file state integration tests (py3)
 
-* **PR** `#49171`_: (`Ch3LL`_) [2018.3.3] cherry pick `#49103`_ 
+* **PR** `#49171`_: (`Ch3LL`_) [2018.3.3] cherry pick `#49103`_
   @ *2018-08-17 20:23:32 UTC*
 
   * **PR** `#49103`_: (`dwoz`_) Install the launcher so we can execute py files (refs: `#49171`_)
@@ -1624,7 +1632,7 @@ Changelog for v2018.3.2..v2018.3.3
 
 * **ISSUE** `#46896`_: (`Poil`_) Proxy + file.managed => Comment: Failed to cache xxx invalid arguments to setopt (refs: `#48754`_)
 
-* **PR** `#48754`_: (`lomeroe`_) send proxy/ca_cert parameters as strings (not unicode) to tornado httpclient 
+* **PR** `#48754`_: (`lomeroe`_) send proxy/ca_cert parameters as strings (not unicode) to tornado httpclient
   @ *2018-07-25 14:55:42 UTC*
 
   * 030c921914 Merge pull request `#48754`_ from lomeroe/fix-tornado-proxy
@@ -3069,7 +3077,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * dae65da256 Merge branch '2018.3.1' into '2018.3'
 
-* **PR** `#48186`_: (`rallytime`_) Add autodoc module for saltcheck.py 
+* **PR** `#48186`_: (`rallytime`_) Add autodoc module for saltcheck.py
   @ *2018-06-19 19:03:55 UTC*
 
   * 5b4897f050 Merge pull request `#48186`_ from rallytime/saltcheck-docs
@@ -3356,11 +3364,11 @@ Changelog for v2018.3.2..v2018.3.3
 * **PR** `#48109`_: (`rallytime`_) Back-port `#47851`_ to 2018.3
   @ *2018-06-14 13:09:04 UTC*
 
-  * **PR** `#47851`_: (`rares-pop`_) Fixup! add master.py:FileserverUpdate **kwargs (refs: `#48109`_)
+  * **PR** `#47851`_: (`rares-pop`_) Fixup! add master.py:FileserverUpdate \*\*kwargs (refs: `#48109`_)
 
   * 2902ee0b14 Merge pull request `#48109`_ from rallytime/bp-47851
 
-  * e9dc30bf8e Fixup! add master.py:FileserverUpdate **kwargs
+  * e9dc30bf8e Fixup! add master.py:FileserverUpdate \*\*kwargs
 
 * **ISSUE** `#47925`_: (`JonGriggs`_) GitFS looking for files in the master branch only (refs: `#47943`_)
 
@@ -3371,7 +3379,7 @@ Changelog for v2018.3.2..v2018.3.3
 
   * 534e1a7100 Merge branch '2018.3' into issue47925
 
-* **PR** `#48089`_: (`rallytime`_) Update release versions for the 2018.3 branch 
+* **PR** `#48089`_: (`rallytime`_) Update release versions for the 2018.3 branch
   @ *2018-06-13 14:03:44 UTC*
 
   * 9e1d0040e4 Merge pull request `#48089`_ from rallytime/update_version_doc_2018.3

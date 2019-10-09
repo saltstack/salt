@@ -147,14 +147,14 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
 
     if not master_port:
         emsg = "Invalid or missing opts['master_port']."
-        log.error(emsg + '\n')
+        log.error(emsg)
         raise ValueError(emsg)
 
     entries = opts.get(masters, [])
 
     if not entries:
         emsg = "Invalid or missing opts['{0}'].".format(masters)
-        log.error(emsg + '\n')
+        log.error(emsg)
         if raise_if_empty:
             raise ValueError(emsg)
 

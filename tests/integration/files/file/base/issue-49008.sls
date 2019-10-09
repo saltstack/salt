@@ -1,6 +1,6 @@
-/test-ca-49008.crt:
+{{ pillar['crtfile'] }}:
   x509.certificate_managed:
-    - signing_private_key: /test-ca-49008.key
+    - signing_private_key: {{ pillar['keyfile'] }}
     - CN: testy-mctest
     - basicConstraints: "critical CA:true"
     - keyUsage: "critical cRLSign, keyCertSign"
@@ -10,9 +10,9 @@
     - days_remaining: 0
     - backup: True
     - watch:
-      - x509: /test-ca-49008.key
+      - x509: {{ pillar['keyfile'] }}
 
-/test-ca-49008.key:
+{{ pillar['keyfile'] }}:
   x509.private_key_managed:
     - bits: 4096
     - backup: True

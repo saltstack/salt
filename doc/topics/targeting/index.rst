@@ -37,7 +37,7 @@ the target is the grain key followed by a glob expression: "os:Arch*".
 
 .. code-block:: bash
 
-    salt -G 'os:Fedora' test.ping
+    salt -G 'os:Fedora' test.version
 
 Will return True from all of the minions running Fedora.
 
@@ -62,7 +62,7 @@ This is well defined with an example:
 
 .. code-block:: bash
 
-    salt -C 'G@os:Debian and webser* or E@db.*' test.ping
+    salt -C 'G@os:Debian and webser* or E@db.*' test.version
 
 In this example any minion who's id starts with ``webser`` and is running
 Debian, or any minion who's id starts with db will be matched.
@@ -90,9 +90,9 @@ shorthand for having to type out complicated compound expressions.
 .. code-block:: yaml
 
     nodegroups:
-      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
-      group2: 'G@os:Debian and foo.domain.com'
-      group3: 'G@os:Debian and N@group1'
+      group1: 'L@foo.domain.com,bar.domain.com,baz.domain.com and bl*.domain.com'
+      group2: 'G@os:Debian and foo.domain.com'
+      group3: 'G@os:Debian and N@group1'
 
 
 Advanced Targeting Methods
@@ -116,10 +116,10 @@ There are many ways to target individual minions or groups of minions in Salt:
 Loadable Matchers
 =================
 
-.. versionadded:: Flourine
+.. versionadded:: 2019.2.0
 
 Internally targeting is implemented with chunks of code called Matchers.  As of
-the Flourine release, matchers can be loaded dynamically.  Currently new matchers
+the 2019.2.0 release, matchers can be loaded dynamically.  Currently new matchers
 cannot be created, but existing matchers can have their functionality altered or
 extended.  For more information on Matchers see
 

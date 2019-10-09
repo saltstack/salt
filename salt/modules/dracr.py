@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Manage Dell DRAC.
+Manage Dell DRAC
 
 .. versionadded:: 2015.8.2
 '''
@@ -51,7 +51,7 @@ def __parse_drac(output):
         if i.strip().endswith(':') and '=' not in i:
             section = i[0:-1]
             drac[section] = {}
-        if len(i.rstrip()) > 0 and '=' in i:
+        if i.rstrip() and '=' in i:
             if section in drac:
                 drac[section].update(dict(
                     [[prop.strip() for prop in i.split('=')]]
@@ -141,7 +141,7 @@ def __execute_ret(command, host=None,
             if l.startswith('Continuing execution'):
                 continue
 
-            if len(l.strip()) == 0:
+            if not l.strip():
                 continue
             fmtlines.append(l)
             if '=' in l:
@@ -154,6 +154,7 @@ def __execute_ret(command, host=None,
 def get_property(host=None, admin_username=None, admin_password=None, property=None):
     '''
     .. versionadded:: Fluorine
+
     Return specific property
 
     host
@@ -176,7 +177,7 @@ def get_property(host=None, admin_username=None, admin_password=None, property=N
     '''
     if property is None:
         raise SaltException('No property specified!')
-    ret = __execute_ret('get {0}'.format(property), host=host,
+    ret = __execute_ret('get \'{0}\''.format(property), host=host,
                         admin_username=admin_username,
                         admin_password=admin_password)
     return ret
@@ -185,6 +186,7 @@ def get_property(host=None, admin_username=None, admin_password=None, property=N
 def set_property(host=None, admin_username=None, admin_password=None, property=None, value=None):
     '''
     .. versionadded:: Fluorine
+
     Set specific property
 
     host
@@ -212,7 +214,7 @@ def set_property(host=None, admin_username=None, admin_password=None, property=N
         raise SaltException('No property specified!')
     elif value is None:
         raise SaltException('No value specified!')
-    ret = __execute_ret('set {0} {1}'.format(property, value), host=host,
+    ret = __execute_ret('set \'{0}\' \'{1}\''.format(property, value), host=host,
                         admin_username=admin_username,
                         admin_password=admin_password)
     return ret
@@ -221,7 +223,8 @@ def set_property(host=None, admin_username=None, admin_password=None, property=N
 def ensure_property_set(host=None, admin_username=None, admin_password=None, property=None, value=None):
     '''
     .. versionadded:: Fluorine
-    Ensure that property is set to specific value.
+
+    Ensure that property is set to specific value
 
     host
         The chassis host.
@@ -508,7 +511,7 @@ def list_users(host=None,
                 else:
                     break
             else:
-                if len(_username) > 0:
+                if _username:
                     users[_username].update({key: val})
 
     return users
@@ -1254,7 +1257,7 @@ def inventory(host=None, admin_username=None, admin_password=None):
             in_chassis = True
             continue
 
-        if len(l) < 1:
+        if not l:
             continue
 
         line = re.split('  +', l.strip())

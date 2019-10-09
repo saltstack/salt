@@ -2,7 +2,7 @@
 '''
 Proxy Minion to manage Cisco Nexus Switches (NX-OS) over the NX-API
 
-.. versionadded:: Fluorine
+.. versionadded:: 2019.2.0
 
 Proxy module for managing Cisco Nexus switches via the NX-API.
 

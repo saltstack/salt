@@ -234,7 +234,7 @@ def index_template_absent(name):
 
 def index_template_present(name, definition, check_definition=False):
     '''
-    Ensure that the named index templat eis present.
+    Ensure that the named index template is present.
 
     name
         Name of the index to add
@@ -248,7 +248,7 @@ def index_template_present(name, definition, check_definition=False):
     .. code-block:: yaml
 
         mytestindex2_template:
-          elasticsearch_index_template.present:
+          elasticsearch.index_template_present:
             - definition:
                 template: logstash-*
                 order: 1
@@ -282,10 +282,10 @@ def index_template_present(name, definition, check_definition=False):
                 current_template = __salt__['elasticsearch.index_template_get'](name=name)[name]
                 # Prune empty keys (avoid false positive diff)
                 for key in ("mappings", "aliases", "settings"):
-                    if current_template[key] == {}:
+                    if current_template[key] == {} and key not in definition_parsed:
                         del current_template[key]
                 diff = __utils__['dictdiffer.deep_diff'](current_template, definition_parsed)
-                if len(diff) != 0:
+                if diff:
                     if __opts__['test']:
                         ret['comment'] = 'Index template {0} exist but need to be updated'.format(name)
                         ret['changes'] = diff

@@ -41,6 +41,16 @@ def validate(config):
         _config = {}
         list(map(_config.update, config))
 
+        if 'emitatstartup' in _config:
+            if not isinstance(_config['emitatstartup'], bool):
+                return False, ('Configuration for load beacon option '
+                               'emitatstartup must be a boolean.')
+
+        if 'onchangeonly' in _config:
+            if not isinstance(_config['onchangeonly'], bool):
+                return False, ('Configuration for load beacon option '
+                               'onchangeonly must be a boolean.')
+
         if 'averages' not in _config:
             return False, ('Averages configuration is required'
                            ' for load beacon.')
@@ -61,6 +71,7 @@ def validate(config):
                         return False, ('Configuration for load beacon: '
                                        '1m, 5m and 15m items must be '
                                        'a list of two items.')
+
     return True, 'Valid beacon configuration'
 
 
@@ -118,7 +129,7 @@ def beacon(config):
         if not LAST_STATUS:
             for k in ['1m', '5m', '15m']:
                 LAST_STATUS[k] = avg_dict[k]
-            if not config['emitatstartup']:
+            if not _config['emitatstartup']:
                 log.debug("Don't emit because emitatstartup is False")
                 return ret
 

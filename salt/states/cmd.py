@@ -341,7 +341,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     if onlyif is not None:
         if isinstance(onlyif, six.string_types):
             cmd = __salt__['cmd.retcode'](onlyif, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-            log.debug('Last command return code: {0}'.format(cmd))
+            log.debug('Last command return code: %s', cmd)
             if cmd != 0:
                 return {'comment': 'onlyif condition is false',
                         'skip_watch': True,
@@ -349,7 +349,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
         elif isinstance(onlyif, list):
             for entry in onlyif:
                 cmd = __salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-                log.debug('Last command \'{0}\' return code: {1}'.format(entry, cmd))
+                log.debug('Last command \'%s\' return code: %s', entry, cmd)
                 if cmd != 0:
                     return {'comment': 'onlyif condition is false: {0}'.format(entry),
                             'skip_watch': True,
@@ -364,7 +364,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     if unless is not None:
         if isinstance(unless, six.string_types):
             cmd = __salt__['cmd.retcode'](unless, ignore_retcode=True, python_shell=True, **cmd_kwargs)
-            log.debug('Last command return code: {0}'.format(cmd))
+            log.debug('Last command return code: %s', cmd)
             if cmd == 0:
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
@@ -373,7 +373,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
             cmd = []
             for entry in unless:
                 cmd.append(__salt__['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_kwargs))
-                log.debug('Last command return code: {0}'.format(cmd))
+                log.debug('Last command return code: %s', cmd)
             if all([c == 0 for c in cmd]):
                 return {'comment': 'unless condition is true',
                         'skip_watch': True,
@@ -403,6 +403,7 @@ def wait(name,
          unless=None,
          creates=None,
          cwd=None,
+         root=None,
          runas=None,
          shell=None,
          env=(),
@@ -412,6 +413,8 @@ def wait(name,
          hide_output=False,
          use_vt=False,
          success_retcodes=None,
+         success_stdout=None,
+         success_stderr=None,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it.
@@ -436,6 +439,10 @@ def wait(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -524,7 +531,21 @@ def wait(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -551,6 +572,9 @@ def wait_script(name,
                 use_vt=False,
                 output_loglevel='debug',
                 hide_output=False,
+                success_retcodes=None,
+                success_stdout=None,
+                success_stderr=None,
                 **kwargs):
     '''
     Download a script from a remote source and execute it only if a watch
@@ -663,7 +687,21 @@ def wait_script(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -677,6 +715,7 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
+        root=None,
         runas=None,
         shell=None,
         env=None,
@@ -689,6 +728,8 @@ def run(name,
         ignore_timeout=False,
         use_vt=False,
         success_retcodes=None,
+        success_stdout=None,
+        success_stderr=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -709,6 +750,10 @@ def run(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -826,7 +871,21 @@ def run(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
+
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
 
     .. note::
 
@@ -887,6 +946,7 @@ def run(name,
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
+                       'root': root,
                        'runas': runas,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
@@ -896,7 +956,9 @@ def run(name,
                        'output_loglevel': output_loglevel,
                        'hide_output': hide_output,
                        'quiet': quiet,
-                       'success_retcodes': success_retcodes})
+                       'success_retcodes': success_retcodes,
+                       'success_stdout': success_stdout,
+                       'success_stderr': success_stderr})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -917,10 +979,11 @@ def run(name,
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](
-            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        run_cmd = 'cmd.run_all' if not root else 'cmd.run_chroot'
+        cmd_all = __salt__[run_cmd](
+            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except CommandExecutionError as err:
+    except Exception as err:
         ret['comment'] = six.text_type(err)
         return ret
 
@@ -961,6 +1024,8 @@ def script(name,
            defaults=None,
            context=None,
            success_retcodes=None,
+           success_stdout=None,
+           success_stderr=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -1101,8 +1166,21 @@ def script(name,
         return code returned from the run matches any in the provided list,
         the return code will be overridden with zero.
 
-      .. versionadded:: Fluorine
+      .. versionadded:: 2019.2.0
 
+    success_stdout: This parameter will be allow a list of
+        strings that when found in standard out should be considered a success.
+        If stdout returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
+
+    success_stderr: This parameter will be allow a list of
+        strings that when found in standard error should be considered a success.
+        If stderr returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: Neon
     '''
     test_name = None
     if not isinstance(stateful, list):
@@ -1152,7 +1230,9 @@ def script(name,
                        'use_vt': use_vt,
                        'context': tmpctx,
                        'saltenv': __env__,
-                       'success_retcodes': success_retcodes})
+                       'success_retcodes': success_retcodes,
+                       'success_stdout': success_stdout,
+                       'success_stderr': success_stderr})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,

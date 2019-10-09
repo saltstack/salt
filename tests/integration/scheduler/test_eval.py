@@ -24,7 +24,7 @@ import tests.integration as integration
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611
@@ -43,21 +43,25 @@ DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
 DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
 DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
+JOB_FUNCTION = 'test.ping'
+
 
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     '''
-    Validate the pkg module
+    Validate the scheduler
     '''
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             functions = {'test.ping': ping}
             self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
+        self.schedule.opts['run_schedule_jobs_in_background'] = False
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
 
     def tearDown(self):
         self.schedule.reset()
+        salt.utils.schedule.clean_proc_dir(self.schedule.opts)
 
     def test_eval(self):
         '''
@@ -67,7 +71,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -96,7 +100,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': [
                 '11/29/2017 4:00pm',
                 '11/29/2017 5:00pm',
@@ -131,7 +135,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': 'tea time',
             }
           }
@@ -154,7 +158,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -182,7 +186,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': [
                 '11/29/2017 4:00pm',
                 '11/29/2017 5:00pm',
@@ -221,7 +225,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'once': '2017-12-13T13:00:00',
             }
           }
@@ -245,7 +249,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'once': '2017-12-13T13:00:00',
             }
           }
@@ -274,7 +278,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'cron': '0 16 29 11 *',
             }
           }
@@ -299,7 +303,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'cron': '0 16 29 11 *',
             }
           }
@@ -327,7 +331,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'hours': '1',
               'until': '11/29/2017 5:00pm',
             }
@@ -374,7 +378,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'hours': '1',
               'after': '11/29/2017 5:00pm',
             }
@@ -425,7 +429,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': True,
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -451,7 +455,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': True,
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -481,8 +485,34 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': False,
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate 1 second at the run time
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status(job_name)
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_skip_reason'], 'disabled')
+
+    def test_eval_global_disabled_job_enabled(self):
+        '''
+        verify that scheduled job does not run
+        '''
+        job_name = 'test_eval_global_disabled'
+        job = {
+          'schedule': {
+            'enabled': False,
+            job_name: {
+              'function': JOB_FUNCTION,
+              'when': '11/29/2017 4:00pm',
+              'enabled': True,
             }
           }
         }
@@ -505,7 +535,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'hours': '1',
               'run_on_start': True,
             }
@@ -534,7 +564,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'seconds': '30',
               'splay': '10',
             }
@@ -564,7 +594,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'seconds': '30',
               'splay': {'start': 5, 'end': 10},
             }
@@ -595,7 +625,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'splay': {'start': 5, 'end': 10},
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'seconds': '30',
             }
           }
@@ -624,7 +654,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'seconds': '30',
             }
           }
@@ -682,7 +712,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'minutes': '30',
             }
           }
@@ -734,7 +764,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'hours': '2',
             }
           }
@@ -786,7 +816,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': 'test.ping',
+              'function': JOB_FUNCTION,
               'days': '2',
               'dry_run': True
             }
@@ -845,3 +875,72 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
         self.assertEqual(ret['_next_fire_time'], next_run_time)
+
+    def test_eval_when_splay(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job_name = 'test_eval_when_splay'
+        splay = 300
+        job = {
+          'schedule': {
+            job_name: {
+              'function': JOB_FUNCTION,
+              'when': '11/29/2017 4:00pm',
+              'splay': splay
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+        run_time2 = run_time1 + datetime.timedelta(seconds=splay)
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        with patch('random.randint', MagicMock(return_value=splay)):
+            # Evaluate to prime
+            run_time = dateutil_parser.parse('11/29/2017 3:00pm')
+            self.schedule.eval(now=run_time)
+            ret = self.schedule.job_status(job_name)
+
+            # Evaluate at expected runtime1, should not run
+            self.schedule.eval(now=run_time1)
+            ret = self.schedule.job_status(job_name)
+            self.assertNotIn('_last_run', ret)
+
+            # Evaluate at expected runtime2, should run
+            self.schedule.eval(now=run_time2)
+            ret = self.schedule.job_status(job_name)
+            self.assertEqual(ret['_last_run'], run_time2)
+
+    def test_eval_when_splay_in_past(self):
+        '''
+        verify that scheduled job runs
+        '''
+        job_name = 'test_eval_when_splay_in_past'
+        splay = 300
+        job = {
+          'schedule': {
+            job_name: {
+              'function': JOB_FUNCTION,
+              'when': ['11/29/2017 6:00am'],
+              'splay': splay
+            }
+          }
+        }
+        run_time1 = dateutil_parser.parse('11/29/2017 4:00pm')
+
+        # Add the job to the scheduler
+        self.schedule.opts.update(job)
+
+        # Evaluate to prime
+        run_time = dateutil_parser.parse('11/29/2017 3:00pm')
+        self.schedule.eval(now=run_time)
+        ret = self.schedule.job_status(job_name)
+
+        # Evaluate at expected runtime1, should not run
+        # and _next_fire_time should be None
+        self.schedule.eval(now=run_time1)
+        ret = self.schedule.job_status(job_name)
+        self.assertNotIn('_last_run', ret)
+        self.assertEqual(ret['_next_fire_time'], None)

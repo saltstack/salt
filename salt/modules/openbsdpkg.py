@@ -48,7 +48,7 @@ def __virtual__():
     '''
     Set the virtual pkg module if the os is OpenBSD
     '''
-    if __grains__['os'] == 'OpenBSD':
+    if __grains__.get('os') == 'OpenBSD':
         return __virtualname__
     return (False, 'The openbsdpkg execution module cannot be loaded: '
             'only available on OpenBSD systems.')
@@ -216,7 +216,7 @@ def install(name=None, pkgs=None, sources=None, **kwargs):
     except MinionError as exc:
         raise CommandExecutionError(exc)
 
-    if pkg_params is None or len(pkg_params) == 0:
+    if not pkg_params:
         return {}
 
     old = list_pkgs()
@@ -344,11 +344,11 @@ def purge(name=None, pkgs=None, **kwargs):
     return remove(name=name, pkgs=pkgs, purge=True)
 
 
-def upgrade_available(name):
+def upgrade_available(name, **kwargs):
     '''
     Check whether or not an upgrade is available for a given package
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     CLI Example:
 
@@ -369,7 +369,7 @@ def upgrade(name=None,
 
     Returns a dictionary containing the changes:
 
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     .. code-block:: python
 

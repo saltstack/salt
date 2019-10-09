@@ -40,7 +40,7 @@ def alias(name, collections, **kwargs):
         alias_content = __salt__['solrcloud.alias_get_collections'](name, **kwargs)
         diff = set(alias_content).difference(set(collections))
 
-        if len(diff) == 0:
+        if not diff:
             ret['result'] = True
             ret['comment'] = 'Alias is in desired state'
             return ret
@@ -119,7 +119,7 @@ def collection(name, options=None, **kwargs):
             if key not in current_options or current_options[key] != value:
                 diff[key] = value
 
-        if len(diff) == 0:
+        if not diff:
             ret['result'] = True
             ret['comment'] = 'Collection options are in desired state'
             return ret

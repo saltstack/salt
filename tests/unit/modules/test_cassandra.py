@@ -118,9 +118,12 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertCountEqual(cassandra.column_families(),
                                       {'A': ['a', 'b'], 'B': ['c', 'd']})
             else:
-                self.assertEqual(cassandra.column_families('A'),
+                self.assertEqual(sorted(cassandra.column_families('A')),
                                  ['a', 'b'])
-                self.assertEqual(cassandra.column_families(),
+                column_families = cassandra.column_families()
+                for key in ('A', 'B'):
+                    column_families[key] = sorted(column_families[key])
+                self.assertEqual(column_families,
                                  {'A': ['a', 'b'], 'B': ['c', 'd']})
 
     def test_column_family_definition(self):

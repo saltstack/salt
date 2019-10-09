@@ -74,15 +74,15 @@ be overridden with the ``method`` argument:
     salt.utils.http.query('http://example.com/delete/url', 'DELETE')
 
 When using the ``POST`` method (and others, such as ``PUT``), extra data is usually
-sent as well. This data can be sent directly, in whatever format is
-required by the remote server (XML, JSON, plain text, etc).
+sent as well. This data can be sent directly (would be URL encoded when necessary),
+or in whatever format is required by the remote server (XML, JSON, plain text, etc).
 
 .. code-block:: python
 
     salt.utils.http.query(
-        'http://example.com/delete/url',
+        'http://example.com/post/url',
         method='POST',
-        data=json.loads(mydict)
+        data=json.dumps(mydict)
     )
 
 Data Formatting and Templating

@@ -5,7 +5,7 @@ Network Config
 
 Manage the configuration on a network device given a specific static config or template.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -118,7 +118,7 @@ def replace_pattern(name,
                     debug=False,
                     commit=True):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Replace occurrences of a pattern in the configuration source. If
     ``show_changes`` is ``True``, then a diff of what changed will be returned,
@@ -270,7 +270,7 @@ def saved(name,
           win_perms_reset=False,
           **kwargs):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Save the configuration to a file on the local file system.
 
@@ -303,7 +303,7 @@ def saved(name,
     attrs
         The attributes to have on this file, e.g. ``a``, ``i``. The attributes
         can be any or a combination of the following characters:
-        ``acdijstuADST``.
+        ``aAcCdDeijPsStTu``.
 
         .. note::
             This option is **not** supported on Windows.
@@ -511,7 +511,7 @@ def managed(name,
         - ``https:/example.com/template.mako``
         - ``ftp://example.com/template.py``
 
-        .. versionchanged:: Fluorine
+        .. versionchanged:: 2019.2.0
             This argument can now support a list of templates to be rendered.
             The resulting configuration text is loaded at once, as a single
             configuration chunk.
@@ -585,7 +585,7 @@ def managed(name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     commit_at: ``None``
         Commit the changes at a specific time. Example of accepted formats:
@@ -609,7 +609,7 @@ def managed(name,
             applies a manual configuration change, or a different process or
             command changes the configuration in the meanwhile).
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     revert_in: ``None``
         Commit and revert the changes in a specific number of minutes / hours.
@@ -640,7 +640,7 @@ def managed(name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     revert_at: ``None``
         Commit and revert the changes at a specific time. Example of accepted
@@ -670,7 +670,7 @@ def managed(name,
             commit and till the changes are reverted), these changes would be
             equally reverted, as Salt cannot be aware of them.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     replace: False
         Load and replace the configuration. Default: ``False`` (will apply load merge).
@@ -678,7 +678,7 @@ def managed(name,
     context: None
         Overrides default context variables passed to the template.
 
-        .. versionadded:: Fluorine
+        .. versionadded:: 2019.2.0
 
     defaults: None
         Default variables/context passed to the template.
@@ -850,7 +850,7 @@ def managed(name,
 
 def commit_cancelled(name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Cancel a commit scheduled to be executed via the ``commit_in`` and
     ``commit_at`` arguments from the
@@ -882,7 +882,7 @@ def commit_cancelled(name):
 
 def commit_confirmed(name):
     '''
-    .. versionadded:: Fluorine
+    .. versionadded:: 2019.2.0
 
     Confirm a commit scheduled to be reverted via the ``revert_in`` and
     ``revert_at`` arguments from the

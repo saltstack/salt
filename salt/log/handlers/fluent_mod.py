@@ -96,14 +96,17 @@ log = logging.getLogger(__name__)
 try:
     # Attempt to import msgpack
     import msgpack
+    import salt.utils.msgpack
     # There is a serialization issue on ARM and potentially other platforms
     # for some msgpack bindings, check for it
     if msgpack.loads(msgpack.dumps([1, 2, 3]), use_list=True) is None:
         raise ImportError
+    import salt.utils.msgpack
 except ImportError:
     # Fall back to msgpack_pure
     try:
         import msgpack_pure as msgpack
+        import salt.utils.msgpack
     except ImportError:
         # TODO: Come up with a sane way to get a configured logfile
         #       and write to the logfile when this error is hit also
@@ -165,7 +168,7 @@ def setup_handlers():
         payload_type = __opts__['fluent_handler'].get('payload_type', None)
         # in general, you want the value of tag to ALSO be a member of tags
         tags = __opts__['fluent_handler'].get('tags', ['salt'])
-        tag = tags[0] if len(tags) else 'salt'
+        tag = tags[0] if tags else 'salt'
         if payload_type == 'graylog':
             version = 0
         elif payload_type == 'gelf':
@@ -199,7 +202,7 @@ class MessageFormatter(logging.Formatter, NewStyleClassMixIn):
     def __init__(self, payload_type, version, tags, msg_type=None, msg_path=None):
         self.payload_type = payload_type
         self.version = version
-        self.tag = tags[0] if len(tags) else 'salt'  # 'salt' for backwards compat
+        self.tag = tags[0] if tags else 'salt'  # 'salt' for backwards compat
         self.tags = tags
         self.msg_path = msg_path if msg_path else payload_type
         self.msg_type = msg_type if msg_type else payload_type
@@ -455,7 +458,7 @@ class FluentSender(object):
         packet = (tag, timestamp, data)
         if self.verbose:
             print(packet)
-        return msgpack.packb(packet)
+        return salt.utils.msgpack.packb(packet, _msgpack_module=msgpack)
 
     def _send(self, bytes_):
         self.lock.acquire()

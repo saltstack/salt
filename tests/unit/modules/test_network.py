@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import logging
 import socket
 import os.path
 
@@ -25,6 +26,8 @@ import salt.utils.path
 import salt.modules.network as network
 from salt.exceptions import CommandExecutionError
 from salt._compat import ipaddress
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -110,14 +113,15 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Performs a traceroute to a 3rd party host
         '''
-        with patch.object(salt.utils.path, 'which', side_effect=[False, True]):
-            self.assertListEqual(network.traceroute('host'), [])
+        with patch('salt.utils.path.which', MagicMock(return_value='traceroute')):
+            with patch.dict(network.__salt__, {'cmd.run': MagicMock(return_value='')}):
+                self.assertListEqual(network.traceroute('gentoo.org'), [])
 
             with patch.object(salt.utils.network, 'sanitize_host',
-                              return_value='A'):
+                              return_value='gentoo.org'):
                 with patch.dict(network.__salt__, {'cmd.run':
-                                                   MagicMock(return_value="")}):
-                    self.assertListEqual(network.traceroute('host'), [])
+                                                   MagicMock(return_value='')}):
+                    self.assertListEqual(network.traceroute('gentoo.org'), [])
 
     def test_dig(self):
         '''
@@ -355,3 +359,47 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
             with patch.dict(network.__grains__, {'kernel': 'Linux'}):
                 self.assertListEqual(network.default_route('inet'), [])
+
+    def test_get_route(self):
+        '''
+        Test for return output from get_route
+        '''
+        mock_iproute = MagicMock(return_value='8.8.8.8 via 10.10.10.1 dev eth0 src 10.10.10.10 uid 0\ncache')
+        with patch.dict(network.__grains__, {'kernel': 'Linux'}):
+            with patch.dict(network.__salt__, {'cmd.run': mock_iproute}):
+                expected = {'interface': 'eth0',
+                            'source': '10.10.10.10',
+                            'destination': '8.8.8.8',
+                            'gateway': '10.10.10.1'}
+                ret = network.get_route('8.8.8.8')
+                self.assertEqual(ret, expected)
+
+        mock_iproute = MagicMock(return_value='8.8.8.8 via 10.10.10.1 dev eth0.1 src 10.10.10.10 uid 0\ncache')
+        with patch.dict(network.__grains__, {'kernel': 'Linux'}):
+            with patch.dict(network.__salt__, {'cmd.run': mock_iproute}):
+                expected = {'interface': 'eth0.1',
+                            'source': '10.10.10.10',
+                            'destination': '8.8.8.8',
+                            'gateway': '10.10.10.1'}
+                ret = network.get_route('8.8.8.8')
+                self.assertEqual(ret, expected)
+
+        mock_iproute = MagicMock(return_value='8.8.8.8 via 10.10.10.1 dev eth0:1 src 10.10.10.10 uid 0\ncache')
+        with patch.dict(network.__grains__, {'kernel': 'Linux'}):
+            with patch.dict(network.__salt__, {'cmd.run': mock_iproute}):
+                expected = {'interface': 'eth0:1',
+                            'source': '10.10.10.10',
+                            'destination': '8.8.8.8',
+                            'gateway': '10.10.10.1'}
+                ret = network.get_route('8.8.8.8')
+                self.assertEqual(ret, expected)
+
+        mock_iproute = MagicMock(return_value='8.8.8.8 via 10.10.10.1 dev lan-br0 src 10.10.10.10 uid 0\ncache')
+        with patch.dict(network.__grains__, {'kernel': 'Linux'}):
+            with patch.dict(network.__salt__, {'cmd.run': mock_iproute}):
+                expected = {'interface': 'lan-br0',
+                            'source': '10.10.10.10',
+                            'destination': '8.8.8.8',
+                            'gateway': '10.10.10.1'}
+                ret = network.get_route('8.8.8.8')
+                self.assertEqual(ret, expected)

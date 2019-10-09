@@ -267,7 +267,7 @@ def running(name,
         ret.update(_check_error(result, comment))
         log.debug(six.text_type(result))
 
-    if ret['result'] and len(changes):
+    if ret['result'] and changes:
         ret['changes'][name] = ' '.join(changes)
     return ret
 
@@ -338,6 +338,7 @@ def dead(name,
         else:
             # process name doesn't exist
             ret['comment'] = "Service {0} doesn't exist".format(name)
+            return ret
 
         if is_stopped is True:
             ret['comment'] = "Service {0} is not running".format(name)
