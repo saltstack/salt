@@ -9,10 +9,12 @@ import random
 import string
 import logging
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root, flaky
+from tests.support.helpers import destructiveTest, flaky
 
 # Import salt libs
 import salt.utils.path
@@ -37,7 +39,7 @@ SET_COMPUTER_NAME = __random_string()
 SET_SUBNET_NAME = __random_string()
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @flaky(attempts=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
@@ -237,7 +239,7 @@ class MacSystemModuleTest(ModuleCase):
             self.run_function('system.set_boot_arch', ['spongebob']))
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 class MacSystemComputerNameTest(ModuleCase):
 

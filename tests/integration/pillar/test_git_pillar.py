@@ -69,6 +69,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import random
 import string
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.gitfs import (
     USERNAME,
@@ -79,7 +81,6 @@ from tests.support.gitfs import (
 from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
-    skip_if_not_root
 )
 from tests.support.unit import skipIf
 
@@ -517,7 +518,7 @@ class GitPythonMixin(object):
 
 @destructiveTest
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
@@ -531,7 +532,7 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
@@ -542,7 +543,7 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
@@ -577,7 +578,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 @destructiveTest
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
 class TestPygit2SSH(GitPillarSSHTestBase):
@@ -1862,7 +1863,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')
@@ -2265,7 +2266,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_NGINX, 'nginx not present')
 @skipIf(not HAS_VIRTUALENV, 'virtualenv not present')

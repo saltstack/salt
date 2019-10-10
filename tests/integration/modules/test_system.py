@@ -10,10 +10,12 @@ import subprocess
 import time
 import textwrap
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf, SkipTest
-from tests.support.helpers import destructiveTest, skip_if_not_root, flaky, requires_system_grains
+from tests.support.helpers import destructiveTest, flaky, requires_system_grains
 
 # Import Salt libs
 import salt.utils.files
@@ -196,7 +198,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(t1, t2, seconds_diff=2), msg=msg)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -214,7 +216,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time_utc(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -232,7 +234,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time_utcoffset_east(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -252,7 +254,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_system_date_time_utcoffset_west(self):
         '''
         Test changing the system clock. We are only able to set it up to a
@@ -273,7 +275,7 @@ class SystemModuleTest(ModuleCase):
 
     @flaky
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_system_time(self):
         '''
         Test setting the system time without adjusting the date.
@@ -292,7 +294,7 @@ class SystemModuleTest(ModuleCase):
         self._test_hwclock_sync()
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_system_date(self):
         '''
         Test setting the system date without adjusting the time.
@@ -313,7 +315,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(self._same_times(time_now, cmp_time), msg=msg)
         self._test_hwclock_sync()
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_get_computer_desc(self):
         '''
         Test getting the system hostname
@@ -333,7 +335,7 @@ class SystemModuleTest(ModuleCase):
                     self.assertIn(res, data.decode('string_escape'))
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_computer_desc(self):
         '''
         Test setting the computer description
@@ -347,7 +349,7 @@ class SystemModuleTest(ModuleCase):
         self.assertIn(desc, computer_desc)
 
     @destructiveTest
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_set_computer_desc_multiline(self):
         '''
         Test setting the computer description with a multiline string with tabs
@@ -368,7 +370,7 @@ class SystemModuleTest(ModuleCase):
         self.assertTrue(ret)
         self.assertIn(desc, computer_desc)
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_has_hwclock(self):
         '''
         Verify platform has a settable hardware clock, if possible.
