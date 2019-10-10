@@ -10,7 +10,7 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.helpers import requires_network, requires_system_grains
+from tests.support.helpers import requires_system_grains
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -78,7 +78,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules('pkg.mod_repo', 'pkg.del_repo', 'pkg.get_repo')
-    @requires_network()
+    @pytest.mark.requires_network
     @requires_system_grains
     def test_mod_del_repo(self, grains):
         '''
@@ -144,7 +144,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules('pkg.version', 'pkg.install', 'pkg.remove')
-    @requires_network()
+    @pytest.mark.requires_network
     def test_install_remove(self):
         '''
         successfully install and uninstall a package
@@ -171,7 +171,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.install', 'pkg.version', 'pkg.remove')
-    @requires_network()
+    @pytest.mark.requires_network
     @requires_system_grains
     def test_hold_unhold(self, grains):
         '''
@@ -204,7 +204,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules('pkg.refresh_db')
-    @requires_network()
+    @pytest.mark.requires_network
     @requires_system_grains
     def test_refresh_db(self, grains):
         '''
@@ -260,7 +260,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertIn(self.pkg, keys)
 
     @pytest.mark.destructive_test
-    @requires_network()
+    @pytest.mark.requires_network
     @pytest.mark.requires_salt_modules('pkg.refresh_db', 'pkg.upgrade', 'pkg.install', 'pkg.list_repo_pkgs', 'pkg.list_upgrades')
     @requires_system_grains
     def test_pkg_upgrade_has_pending_upgrades(self, grains):
