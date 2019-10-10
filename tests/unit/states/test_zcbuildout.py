@@ -4,8 +4,9 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 
+import pytest
+
 # Import Salt Testing libs
-from tests.support.helpers import requires_network
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAMES
@@ -38,8 +39,8 @@ class BuildoutTestCase(Base):
     # I don't have the time to invest in learning more about buildout,
     # and given we don't have support yet, and there are other priorities
     # I'm going to punt on this for now - WW
-    @requires_network()
     @skipIf(True, "Buildout is still in beta. Test needs fixing.")
+    @pytest.mark.requires_network
     def test_quiet(self):
         c_dir = os.path.join(self.tdir, 'c')
         assert False, os.listdir(self.rdir)
@@ -49,7 +50,7 @@ class BuildoutTestCase(Base):
         self.assertFalse('Log summary:' in cret['comment'], cret['comment'])
         self.assertTrue(cret['result'], cret['comment'])
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_error(self):
         b_dir = os.path.join(self.tdir, 'e')
         ret = buildout.installed(b_dir, python=self.py_st)
@@ -59,7 +60,7 @@ class BuildoutTestCase(Base):
         )
         self.assertFalse(ret['result'])
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_installed(self):
         if salt.modules.virtualenv_mod.virtualenv_ver(self.ppy_st) >= (20, 0, 0):
             self.skipTest("Skiping until upstream resolved https://github.com/pypa/virtualenv/issues/1715")
