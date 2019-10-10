@@ -79,45 +79,6 @@ def no_symlinks():
     return not HAS_SYMLINKS
 
 
-def expensiveTest(caller):
-    '''
-    Mark a test case as an expensive test, for example, a test which can cost
-    money(Salt's cloud provider tests).
-
-    .. code-block:: python
-
-        class MyTestCase(TestCase):
-
-            @expensiveTest
-            def test_create_user(self):
-                pass
-    '''
-    # Late import
-    from tests.support.runtests import RUNTIME_VARS
-    if RUNTIME_VARS.PYTEST_SESSION:
-        setattr(caller, '__expensive_test__', True)
-
-    if inspect.isclass(caller):
-        # We're decorating a class
-        old_setup = getattr(caller, 'setUp', None)
-
-        def setUp(self, *args, **kwargs):
-            if os.environ.get('EXPENSIVE_TESTS', 'False').lower() == 'false':
-                self.skipTest('Expensive tests are disabled')
-            if old_setup is not None:
-                old_setup(self, *args, **kwargs)
-        caller.setUp = setUp
-        return caller
-
-    # We're simply decorating functions
-    @functools.wraps(caller)
-    def wrap(cls):
-        if os.environ.get('EXPENSIVE_TESTS', 'False').lower() == 'false':
-            cls.skipTest('Expensive tests are disabled')
-        return caller(cls)
-    return wrap
-
-
 def flaky(caller=None, condition=True, attempts=4):
     '''
     Mark a test as flaky. The test will attempt to run five times,

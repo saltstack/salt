@@ -13,15 +13,16 @@ from salt.config import cloud_providers_config
 # Import Salt Testing Libs
 from tests.support.case import ShellCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import expensiveTest, generate_random_name
+from tests.support.helpers import generate_random_name
 
+import pytest
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'tencentcloud'
 
 
-@expensiveTest
+@pytest.mark.expensive_test
 class TencentCloudTest(ShellCase):
     '''
     Integration tests for the Tencent Cloud cloud provider in Salt-Cloud
