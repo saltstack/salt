@@ -624,3 +624,36 @@ class RefreshPillarTest(ModuleCase):
         val = self.run_function('pillar.items')
         assert key in val
         assert val[key] is True
+
+    def test_pillar_refresh_pillar_ping(self):
+        '''
+        Validate the minion's test.ping does not update pillars
+
+        See: https://github.com/saltstack/salt/issues/54941
+        '''
+        key = 'issue-54941-ping'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        self.create_pillar(key)
+
+        val = self.run_function('test.ping')
+        assert val is True
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] is True
