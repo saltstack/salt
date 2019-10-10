@@ -10,12 +10,13 @@ import string
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from salt.ext import six
 
@@ -39,7 +40,7 @@ REP_USER_GROUP = __random_string()
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacGroupModuleTest(ModuleCase):
     '''
     Integration tests for the mac_group module

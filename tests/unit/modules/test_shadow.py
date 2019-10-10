@@ -10,7 +10,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 import salt.utils.platform
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import skip_if_not_root
 
 # Import salt libs
 try:
@@ -20,6 +19,7 @@ except ImportError:
     HAS_SHADOW = False
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 
@@ -64,7 +64,7 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
                 hash_info['pw_hash']
             )
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_list_users(self):
         '''
         Test if it returns a list of all users
