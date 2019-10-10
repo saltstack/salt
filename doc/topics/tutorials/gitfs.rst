@@ -381,7 +381,7 @@ In the example configuration above, the following is true:
 
 2. The first remote will serve all files in the repository. The second
    remote will only serve files from the ``salt`` directory (and its
-   subdirectories). The third remote will only server files from the
+   subdirectories). The third remote will only serve files from the
    ``other/salt`` directory (and its subdirectories), while the fourth remote
    will only serve files from the ``salt/states`` directory (and its
    subdirectories).
