@@ -37,10 +37,7 @@ import types
 import pytest
 from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
-try:
-    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
-except ImportError:
-    from tests.integration import get_unused_localhost_port
+from pytestsalt.utils import get_unused_localhost_port
 
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id, SkipTest

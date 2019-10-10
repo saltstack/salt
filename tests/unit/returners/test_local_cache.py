@@ -16,8 +16,7 @@ import tempfile
 import time
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixin
-from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 from tests.support.mock import (
