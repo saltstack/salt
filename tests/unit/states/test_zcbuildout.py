@@ -4,9 +4,10 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.unit import skipIf
-from tests.support.helpers import requires_network
 
 # Import Salt libs
 import salt.utils.path
@@ -33,7 +34,7 @@ class BuildoutTestCase(Base):
         }
         return {buildout: module_globals, modbuildout: module_globals}
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_quiet(self):
         c_dir = os.path.join(self.tdir, 'c')
         cret = buildout.installed(c_dir, python=self.py_st, quiet=True)
@@ -41,7 +42,7 @@ class BuildoutTestCase(Base):
         self.assertFalse('OUTPUT:' in cret['comment'])
         self.assertFalse('Log summary:' in cret['comment'])
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_error(self):
         b_dir = os.path.join(self.tdir, 'e')
         ret = buildout.installed(b_dir, python=self.py_st)
@@ -55,7 +56,7 @@ class BuildoutTestCase(Base):
             in ret['comment'])
         self.assertFalse(ret['result'])
 
-    @requires_network()
+    @pytest.mark.requires_network
     def test_installed(self):
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
