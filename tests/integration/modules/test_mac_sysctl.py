@@ -16,14 +16,13 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 # Module Variables
 ASSIGN_CMD = 'net.inet.icmp.icmplim'
 CONFIG = '/etc/sysctl.conf'
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class DarwinSysctlModuleTest(ModuleCase):
     '''

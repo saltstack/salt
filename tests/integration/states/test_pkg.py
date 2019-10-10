@@ -15,7 +15,6 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    destructiveTest,
     requires_salt_modules,
 )
 
@@ -26,6 +25,7 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -91,7 +91,7 @@ def runs_on(platforms=None, os_like=None, reason=''):
     return decorator
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):

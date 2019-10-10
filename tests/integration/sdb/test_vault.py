@@ -8,17 +8,19 @@ from __future__ import absolute_import, print_function, unicode_literals
 import inspect
 import time
 
+import pytest
+
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.utils.path
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 @skipIf(not salt.utils.path.which('vault'), 'Vault not installed')
 class VaultTestCase(ModuleCase, ShellCase):

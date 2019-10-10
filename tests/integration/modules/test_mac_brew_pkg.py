@@ -9,7 +9,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.utils.path
@@ -26,7 +25,7 @@ ADD_PKG = 'algol68g'
 DEL_PKG = 'acme'
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only applies to macOS')
 @skipIf(not salt.utils.path.which('brew'), 'This test requires the brew binary')
