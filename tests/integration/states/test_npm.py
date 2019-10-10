@@ -13,7 +13,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import requires_network
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -28,7 +27,7 @@ MAX_NPM_VERSION = '5.0.0'
 @skipIf(salt.utils.path.which('npm') is None, 'npm not installed')
 class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
-    @requires_network()
+    @pytest.mark.requires_network
     @pytest.mark.destructive_test
     def test_npm_installed_removed(self):
         '''
@@ -41,7 +40,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_darwin(), 'TODO this test hangs on mac.')
-    @requires_network()
+    @pytest.mark.requires_network
     @pytest.mark.destructive_test
     def test_npm_install_url_referenced_package(self):
         '''
@@ -66,7 +65,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         if npm_dir is not None:
             self.run_state('file.absent', name=npm_dir)
 
-    @requires_network()
+    @pytest.mark.requires_network
     @pytest.mark.destructive_test
     def test_npm_installed_pkgs(self):
         '''

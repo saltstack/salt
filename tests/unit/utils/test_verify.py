@@ -13,6 +13,8 @@ import shutil
 import tempfile
 import socket
 
+import pytest
+
 # Import third party libs
 if sys.platform.startswith('win'):
     import win32file
@@ -22,14 +24,8 @@ else:
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import (
-    requires_network,
-    TstSuiteLoggingHandler
-)
-from tests.support.mock import (
-    MagicMock,
-    patch,
-)
+from tests.support.helpers import TstSuiteLoggingHandler
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.files
@@ -122,7 +118,7 @@ class TestVerify(TestCase):
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXG, 40)
         self.assertEqual(dir_stat.st_mode & stat.S_IRWXO, 5)
 
-    @requires_network(only_local_network=True)
+    @pytest.mark.requires_network(only_local_network=True)
     def test_verify_socket(self):
         self.assertTrue(verify_socket('', 18000, 18001))
         if socket.has_ipv6:
