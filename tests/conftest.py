@@ -389,7 +389,7 @@ def pytest_runtest_setup(item):
     os.environ[str('EXPENSIVE_TESTS')] = str(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
-    if skip_if_not_root_marker is not None or _has_unittest_attr(item, '__skip_if_not_root__'):
+    if skip_if_not_root_marker is not None:
         if not sys.platform.startswith('win'):
             if os.getuid() != 0:
                 pytest.skip('You must be logged in as root to run this test')

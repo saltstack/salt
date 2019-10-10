@@ -10,17 +10,18 @@ import os
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacKeychainModuleTest(ModuleCase):
     '''
     Integration tests for the mac_keychain module

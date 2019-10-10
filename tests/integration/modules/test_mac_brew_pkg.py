@@ -9,7 +9,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.utils.path
@@ -17,6 +17,7 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 # Brew doesn't support local package installation - So, let's
@@ -26,7 +27,7 @@ DEL_PKG = 'acme'
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only applies to macOS')
 @skipIf(not salt.utils.path.which('brew'), 'This test requires the brew binary')
 class BrewModuleTest(ModuleCase):

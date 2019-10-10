@@ -17,13 +17,14 @@ import random
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.platform
 from salt.utils.pycrypto import gen_hash
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def gen_password():
     return (password, hashed_pwd)
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(pwd is None, 'Skip if no pwd module exists')
 @destructiveTest
 class AuthTest(ShellCase):

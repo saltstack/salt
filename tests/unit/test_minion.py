@@ -8,11 +8,11 @@ from __future__ import absolute_import
 import copy
 import os
 
+import pytest
 # Import Salt Testing libs
 from tests.support.unit import TestCase
 from tests.support.mock import patch, MagicMock
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.helpers import skip_if_not_root
 # Import salt libs
 import salt.minion
 import salt.utils.event as event
@@ -347,7 +347,7 @@ class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.t
         self.opts = {}
         self.addCleanup(delattr, self, 'opts')
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_sock_path_len(self):
         '''
         This tests whether or not a larger hash causes the sock path to exceed
