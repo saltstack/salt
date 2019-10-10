@@ -12,7 +12,6 @@ from subprocess import Popen, PIPE
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import skip_if_binaries_missing
 
 # Import Salt libs
 import salt.utils.files
@@ -20,11 +19,12 @@ import salt.utils.json
 import salt.modules.k8s as k8s
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error
 from salt.ext import six
 
 
-@skip_if_binaries_missing(['kubectl'])
+@pytest.mark.skip_if_binaries_missing('kubectl')
 class TestK8SNamespace(TestCase):
 
     maxDiff = None
@@ -56,7 +56,7 @@ class TestK8SNamespace(TestCase):
         self.assertTrue(isinstance(kubectl_out, dict))
 
 
-@skip_if_binaries_missing(['kubectl'])
+@pytest.mark.skip_if_binaries_missing('kubectl')
 class TestK8SSecrets(TestCase):
 
     maxDiff = None
@@ -174,7 +174,7 @@ class TestK8SSecrets(TestCase):
         self.assertEqual('Error from server: secrets "{0}" not found\n'.format(name), err)
 
 
-@skip_if_binaries_missing(['kubectl'])
+@pytest.mark.skip_if_binaries_missing('kubectl')
 class TestK8SResourceQuotas(TestCase):
 
     maxDiff = None
@@ -304,7 +304,7 @@ spec:
         self.assertEqual("2Gi", limit)
 
 
-@skip_if_binaries_missing(['kubectl'])
+@pytest.mark.skip_if_binaries_missing('kubectl')
 class TestK8SLimitRange(TestCase):
 
     maxDiff = None
