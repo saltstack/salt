@@ -19,8 +19,8 @@ import salt.utils.user
 # Acl package should be installed to test linux_acl module
 @skip_if_binaries_missing(['getfacl'])
 # Doesn't work. Why?
-# @requires_salt_modules('acl')
-# @requires_salt_modules('linux_acl')
+# @pytest.mark.requires_salt_modules('acl')
+# @pytest.mark.requires_salt_modules('linux_acl')
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the linux_acl module
