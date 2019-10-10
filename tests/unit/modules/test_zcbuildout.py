@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 
 # Import 3rd-party libs
-
+import pytest
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
@@ -155,6 +155,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         "The 'virtualenv' packaged needs to be installed")
+@pytest.mark.skip_if_binaries_missing('tar')
 class BuildoutTestCase(Base):
 
     @requires_network()

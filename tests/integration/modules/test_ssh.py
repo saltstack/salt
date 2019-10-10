@@ -11,13 +11,13 @@ import shutil
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils.files
 import salt.utils.platform
 
 # Import 3rd-party libs
+import pytest
 from tornado.httpclient import HTTPClient
 
 GITHUB_FINGERPRINT = '9d:38:5b:83:a9:17:52:92:56:1a:5e:c4:d4:81:8e:0a:ca:51:a2:64:f1:74:20:11:2e:f8:8a:c3:a1:39:49:8f'
@@ -33,7 +33,7 @@ def check_status():
         return False
 
 
-@skip_if_binaries_missing(['ssh', 'ssh-keygen'], check_all=True)
+@pytest.mark.skip_if_binaries_missing('ssh', 'ssh-keygen', check_all=True)
 class SSHModuleTest(ModuleCase):
     '''
     Test the ssh module

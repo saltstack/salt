@@ -40,7 +40,7 @@ from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,r
 from pytestsalt.utils import get_unused_localhost_port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id, SkipTest
+from tests.support.unit import SkipTest
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
@@ -1114,39 +1114,6 @@ def requires_salt_states(*names):
         return wrapper
 
     return decorator
-
-
-def skip_if_binaries_missing(*binaries, **kwargs):
-    import salt.utils.path
-    if len(binaries) == 1:
-        if isinstance(binaries[0], (list, tuple, set, frozenset)):
-            binaries = binaries[0]
-    check_all = kwargs.pop('check_all', False)
-    message = kwargs.pop('message', None)
-    if kwargs:
-        raise RuntimeError(
-            'The only supported keyword argument is \'check_all\' and '
-            '\'message\'. Invalid keyword arguments: {0}'.format(
-                ', '.join(kwargs.keys())
-            )
-        )
-    if check_all:
-        for binary in binaries:
-            if salt.utils.path.which(binary) is None:
-                return skip(
-                    '{0}The {1!r} binary was not found'.format(
-                        message and '{0}. '.format(message) or '',
-                        binary
-                    )
-                )
-    elif salt.utils.path.which_bin(binaries) is None:
-        return skip(
-            '{0}None of the following binaries was found: {1}'.format(
-                message and '{0}. '.format(message) or '',
-                ', '.join(binaries)
-            )
-        )
-    return _id
 
 
 def repeat(caller=None, condition=True, times=5):
