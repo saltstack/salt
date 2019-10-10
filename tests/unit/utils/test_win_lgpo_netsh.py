@@ -3,8 +3,9 @@
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 
+import pytest
+
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -125,7 +126,7 @@ class WinLgpoNetshTestCase(TestCase):
         self.assertIn('Private Profile', ret)
         self.assertIn('Public Profile', ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_inbound_local(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='firewallpolicy',
@@ -145,7 +146,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                        store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_inbound_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='firewallpolicy',
@@ -163,7 +164,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                        store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_inbound_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='firewallpolicy',
@@ -183,7 +184,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                        store='lgpo')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_outbound_local(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='firewallpolicy',
@@ -203,7 +204,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                        store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_logging_allowed_local_enable(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
@@ -225,7 +226,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                       store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_logging_allowed_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
@@ -245,7 +246,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                       store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_logging_allowed_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
@@ -330,7 +331,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                       store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_fwrules_local_enable(self):
         self.assertRaises(
             CommandExecutionError,
@@ -340,7 +341,7 @@ class WinLgpoNetshTestCase(TestCase):
             value='enable',
             store='local')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_fwrules_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
@@ -362,7 +363,7 @@ class WinLgpoNetshTestCase(TestCase):
                                               store='lgpo')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_consecrules_local_enable(self):
         self.assertRaises(
             CommandExecutionError,
@@ -393,7 +394,7 @@ class WinLgpoNetshTestCase(TestCase):
                                               store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_settings_notification_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
@@ -476,7 +477,7 @@ class WinLgpoNetshTestCase(TestCase):
                                               store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_state_local_on(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='state',
@@ -496,7 +497,7 @@ class WinLgpoNetshTestCase(TestCase):
                                            store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_state_local_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='state',
@@ -514,7 +515,7 @@ class WinLgpoNetshTestCase(TestCase):
                                            store='local')
             self.assertTrue(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_firewall_state_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
                                               section='state',

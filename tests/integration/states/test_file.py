@@ -24,12 +24,10 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    destructiveTest,
     with_system_user_and_group,
     with_tempdir,
     with_tempfile,
     Webserver,
-    destructiveTest,
     dedent,
 )
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -2604,7 +2602,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(source)
         os.remove(dest)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @with_tempfile()
     def test_file_copy_make_dirs(self, source):
         '''
@@ -4703,7 +4701,7 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
 WIN_TEST_FILE = 'c:/testfile'
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not IS_WINDOWS, 'windows test only')
 class WinFileTest(ModuleCase):
     '''

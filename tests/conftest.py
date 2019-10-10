@@ -377,10 +377,9 @@ def pytest_runtest_setup(item):
     Fixtures injection based on markers or test skips based on CLI arguments
     '''
     destructive_tests_marker = item.get_closest_marker('destructive_test')
-    if destructive_tests_marker is not None or _has_unittest_attr(item, '__destructive_test__'):
+    if destructive_tests_marker is not None:
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
-    os.environ[str('DESTRUCTIVE_TESTS')] = str(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_closest_marker('expensive_test')
     if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):

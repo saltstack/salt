@@ -17,7 +17,6 @@ import random
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.platform
@@ -50,7 +49,7 @@ def gen_password():
 
 @pytest.mark.skip_if_not_root
 @skipIf(pwd is None, 'Skip if no pwd module exists')
-@destructiveTest
+@pytest.mark.destructive_test
 class AuthTest(ShellCase):
     '''
     Test auth mechanisms

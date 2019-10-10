@@ -7,17 +7,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import shutil
 
+import pytest
+
 # Import Salt libs
 import salt.utils.files
 import salt.utils.path
 
 # Import Salt Testing libs
 from tests.support.case import SPMCase, ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class SPMBuildTest(SPMCase, ModuleCase):
     '''
     Validate the spm build command
