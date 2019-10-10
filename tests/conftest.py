@@ -988,9 +988,47 @@ def session_minion_default_options(request, tempdir):
         return opts
 
 
+def _get_virtualenv_binary_path():
+    try:
+        return _get_virtualenv_binary_path.__virtualenv_binary__
+    except AttributeError:
+        # Under windows we can't seem to properly create a virtualenv off of another
+        # virtualenv, we can on linux but we will still point to the virtualenv binary
+        # outside the virtualenv running the test suite, if that's the case.
+        try:
+            real_prefix = sys.real_prefix
+            # The above attribute exists, this is a virtualenv
+            if salt.utils.platform.is_windows():
+                virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
+            else:
+                # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
+                # from within the virtualenv, we don't want that
+                path = os.environ.get('PATH')
+                if path is not None:
+                    path_items = path.split(os.pathsep)
+                    for item in path_items[:]:
+                        if item.startswith(sys.base_prefix):
+                            path_items.remove(item)
+                    os.environ['PATH'] = os.pathsep.join(path_items)
+                virtualenv_binary = salt.utils.path.which('virtualenv')
+                if path is not None:
+                    # Restore previous environ PATH
+                    os.environ['PATH'] = path
+                if not virtualenv_binary.startswith(real_prefix):
+                    virtualenv_binary = None
+            if virtualenv_binary and not os.path.exists(virtualenv_binary):
+                # It doesn't exist?!
+                virtualenv_binary = None
+        except AttributeError:
+            # We're not running inside a virtualenv
+            virtualenv_binary = None
+        _get_virtualenv_binary_path.__virtualenv_binary__ = virtualenv_binary
+        return virtualenv_binary
+
+
 @pytest.fixture(scope='session')
 def session_minion_config_overrides():
-    return {
+    opts = {
         'file_roots': {
             'base': [
                 os.path.join(RUNTIME_VARS.FILES, 'file', 'base'),
@@ -1006,6 +1044,10 @@ def session_minion_config_overrides():
             ]
         },
     }
+    virtualenv_binary = _get_virtualenv_binary_path()
+    if virtualenv_binary:
+        opts['venv_bin'] = virtualenv_binary
+    return opts
 
 
 @pytest.fixture(scope='session')
@@ -1018,6 +1060,15 @@ def session_secondary_minion_default_options(request, tempdir):
         opts['transport'] = request.config.getoption('--transport')
 
         return opts
+
+
+@pytest.fixture(scope='session')
+def session_seconary_minion_config_overrides():
+    opts = {}
+    virtualenv_binary = _get_virtualenv_binary_path()
+    if virtualenv_binary:
+        opts['venv_bin'] = virtualenv_binary
+    return opts
 
 
 @pytest.fixture(scope='session')
