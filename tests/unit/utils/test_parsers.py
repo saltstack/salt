@@ -23,6 +23,8 @@ import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
 
+import pytest
+
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
     '''
@@ -103,6 +105,8 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
+@destructiveTest
+@pytest.mark.skip_if_not_root
 class ParserBase(object):
     '''
     Unit Tests for Log Level Mixin with Salt parsers

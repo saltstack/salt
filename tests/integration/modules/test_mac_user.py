@@ -11,14 +11,14 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.utils.files
 from salt.exceptions import CommandExecutionError
-import salt.ext.six as six
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import salt.ext.six as six
 
@@ -41,7 +41,7 @@ CHANGE_USER = __random_string()
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacUserModuleTest(ModuleCase):
     '''
     Integration tests for the mac_user module

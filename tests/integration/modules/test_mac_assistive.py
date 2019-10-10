@@ -6,15 +6,17 @@
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 
+import pytest
+
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 
 OSA_SCRIPT = '/usr/bin/osascript'
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacAssistiveTest(ModuleCase):
     '''
     Integration tests for the mac_assistive module.
