@@ -8,16 +8,16 @@ import shutil
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.platform
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(salt.utils.platform.is_darwin(), 'No mtab on Darwin')
 @skipIf(salt.utils.platform.is_freebsd(), 'No mtab on FreeBSD')
 @skipIf(salt.utils.platform.is_windows(), 'No mtab on Windows')

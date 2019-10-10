@@ -10,12 +10,11 @@ import pytest
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 OSA_SCRIPT = '/usr/bin/osascript'
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacAssistiveTest(ModuleCase):
     '''

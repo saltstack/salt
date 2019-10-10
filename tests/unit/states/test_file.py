@@ -7,6 +7,7 @@ import os
 import pprint
 import shutil
 
+import pytest
 try:
     from dateutil.relativedelta import relativedelta
     HAS_DATEUTIL = True
@@ -18,7 +19,6 @@ NO_DATEUTIL_REASON = 'python-dateutil is not installed'
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest
 from tests.support.mock import (
     Mock,
     MagicMock,
@@ -2346,7 +2346,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
             }
         }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @skipIf(salt.utils.platform.is_windows(), 'File modes do not exist on windows')
     def test__check_directory(self):
         '''

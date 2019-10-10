@@ -78,10 +78,7 @@ from tests.support.gitfs import (
     GitPillarSSHTestBase,
     GitPillarHTTPTestBase,
 )
-from tests.support.helpers import (
-    destructiveTest,
-    requires_system_grains,
-)
+from tests.support.helpers import requires_system_grains
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -516,9 +513,9 @@ class GitPythonMixin(object):
         )
 
 
-@destructiveTest
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @pytest.mark.skip_if_not_root
+@pytest.mark.destructive_test
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
 class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
@@ -576,9 +573,9 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
         cls.ext_opts['password'] = cls.password
 
 
-@destructiveTest
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @pytest.mark.skip_if_not_root
+@pytest.mark.destructive_test
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(not HAS_SSHD, 'sshd not present')
 class TestPygit2SSH(GitPillarSSHTestBase):

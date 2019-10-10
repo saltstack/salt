@@ -7,7 +7,6 @@ import logging
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -15,6 +14,7 @@ import salt.utils.path
 from salt.modules import mysql as mysqlmod
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -43,7 +43,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
     user = 'root'
     password = 'poney'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -156,7 +156,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
             'Problem while removing db for db name: \'{0}\''.format(db_name)
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_database_creation_level1(self):
         '''
         Create database, test presence, then drop db. All theses with complex names.
@@ -251,7 +251,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                                connection_pass=self.password
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_mysql_dbname_character_percent(self):
         '''
         Play with the '%' character problems
@@ -307,7 +307,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertEqual(True, ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_database_creation_utf8(self):
         '''
         Test support of utf8 in database names
@@ -359,7 +359,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                                saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_database_maintenance(self):
         '''
         Test maintenance operations on a created database
@@ -623,7 +623,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
     user = 'root'
     password = 'poney'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -757,7 +757,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             repr(ret)
         ))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_user_management(self):
         '''
         Test various users creation settings
@@ -1304,7 +1304,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
         },
     }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password, create users
@@ -1380,7 +1380,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             connection_pass=self.password
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         '''
         Removes created users and db
@@ -1480,7 +1480,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             repr(ret)
         ))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def testGrants(self):
         '''
         Test user grant methods
@@ -1650,7 +1650,7 @@ class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
     password = 'poney'
     testdb = 'test_file_query'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password, create users
@@ -1691,7 +1691,7 @@ class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
             connection_db='mysql',
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         '''
         Removes created users and db
@@ -1704,7 +1704,7 @@ class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
             connection_db='mysql',
        )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_update_file_query(self):
         '''
         Test query without any output
@@ -1722,7 +1722,7 @@ class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
         ret.pop('query time')
         self.assertEqual(ret, {'rows affected': 2})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_select_file_query(self):
         '''
         Test query with table output

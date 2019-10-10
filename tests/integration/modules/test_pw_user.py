@@ -14,7 +14,6 @@ import pytest
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 # Import 3rd-party libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -38,7 +37,7 @@ class PwUserModuleTest(ModuleCase):
             for x in range(size)
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     def test_groups_includes_primary(self):
         # Let's create a user, which usually creates the group matching the

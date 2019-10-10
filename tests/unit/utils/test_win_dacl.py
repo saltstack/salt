@@ -6,7 +6,7 @@ import os
 import tempfile
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest, generate_random_name, patch
+from tests.support.helpers import generate_random_name, patch
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 
@@ -15,6 +15,7 @@ import salt.utils.platform
 import salt.utils.win_dacl as win_dacl
 import salt.utils.win_reg as win_reg
 
+import pytest
 try:
     import pywintypes
     import win32security
@@ -101,7 +102,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_owner(self):
         '''
         Test the set_owner function
@@ -114,7 +115,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                             obj_type=self.obj_type),
                          'Backup Operators')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_primary_group(self):
         '''
         Test the set_primary_group function
@@ -127,7 +128,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                     obj_type=self.obj_type),
                          'Backup Operators')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_permissions(self):
         '''
         Test the set_permissions function
@@ -150,7 +151,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                   obj_type=self.obj_type),
                          expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_permissions(self):
         '''
         Test the get_permissions function
@@ -173,7 +174,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                   obj_type=self.obj_type),
                          expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_has_permission(self):
         '''
         Test the has_permission function
@@ -200,7 +201,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                 obj_type=self.obj_type,
                                                 exact=False))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_rm_permissions(self):
         '''
         Test the rm_permissions function
@@ -220,7 +221,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                   obj_type=self.obj_type),
                          {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_inheritance(self):
         '''
         Test the set_inheritance function
@@ -239,7 +240,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(win_dacl.get_inheritance(obj_name=self.obj_name,
                                                   obj_type=self.obj_type))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms(self):
         '''
         Test the check_perms function
@@ -309,7 +310,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                 obj_type=self.obj_type),
             'Users')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms_test_true(self):
         '''
         Test the check_perms function
@@ -399,7 +400,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         os.remove(self.obj_name)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_owner(self):
         '''
         Test the set_owner function
@@ -412,7 +413,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                             obj_type=self.obj_type),
                          'Backup Operators')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_primary_group(self):
         '''
         Test the set_primary_group function
@@ -425,7 +426,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                     obj_type=self.obj_type),
                          'Backup Operators')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_permissions(self):
         '''
         Test the set_permissions function
@@ -448,7 +449,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                   obj_type=self.obj_type),
                          expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_permissions(self):
         '''
         Test the get_permissions function
@@ -471,7 +472,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                   obj_type=self.obj_type),
                          expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_has_permission(self):
         '''
         Test the has_permission function
@@ -498,7 +499,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                 obj_type=self.obj_type,
                                                 exact=False))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_rm_permissions(self):
         '''
         Test the rm_permissions function
@@ -518,7 +519,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                   obj_type=self.obj_type),
                          {})
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_inheritance(self):
         '''
         Test the set_inheritance function
@@ -537,7 +538,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         self.assertFalse(win_dacl.get_inheritance(obj_name=self.obj_name,
                                                   obj_type=self.obj_type))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms(self):
         '''
         Test the check_perms function
@@ -608,7 +609,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                 obj_type=self.obj_type),
             'Users')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_check_perms_test_true(self):
         '''
         Test the check_perms function

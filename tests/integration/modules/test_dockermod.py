@@ -12,13 +12,13 @@ import sys
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 import salt.utils.path
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
@@ -29,7 +29,7 @@ def _random_name(prefix=''):
     return ret
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''

@@ -8,14 +8,13 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 # Import 3rd-party libs
 import pytest
 from salt.ext import six
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacDesktopTestCase(ModuleCase):
     '''
