@@ -989,67 +989,6 @@ def requires_system_grains(func):
     return decorator
 
 
-def requires_salt_modules(*names):
-    '''
-    Makes sure the passed salt module is available. Skips the test if not
-
-    .. versionadded:: 0.5.2
-    '''
-    def _check_required_salt_modules(*required_salt_modules):
-        # Late import
-        from tests.support.sminion import create_sminion
-        required_salt_modules = set(required_salt_modules)
-        sminion = create_sminion(minion_id='runtests-internal-sminion')
-        available_modules = list(sminion.functions)
-        not_available_modules = set()
-        try:
-            cached_not_available_modules = sminion.__not_availiable_modules__
-        except AttributeError:
-            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
-
-        if cached_not_available_modules:
-            for not_available_module in cached_not_available_modules:
-                if not_available_module in required_salt_modules:
-                    not_available_modules.add(not_available_module)
-                    required_salt_modules.remove(not_available_module)
-
-        for required_module_name in required_salt_modules:
-            search_name = required_module_name
-            if '.' not in search_name:
-                search_name += '.*'
-            if not fnmatch.filter(available_modules, search_name):
-                not_available_modules.add(required_module_name)
-                cached_not_available_modules.add(required_module_name)
-
-        if not_available_modules:
-            if len(not_available_modules) == 1:
-                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
-            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
-
-    def decorator(caller):
-        if inspect.isclass(caller):
-            # We're decorating a class
-            old_setup = getattr(caller, 'setUp', None)
-
-            def setUp(self, *args, **kwargs):
-                _check_required_salt_modules(*names)
-                if old_setup is not None:
-                    old_setup(self, *args, **kwargs)
-
-            caller.setUp = setUp
-            return caller
-
-        # We're simply decorating functions
-        @functools.wraps(caller)
-        def wrapper(cls):
-            _check_required_salt_modules(*names)
-            return caller(cls)
-
-        return wrapper
-
-    return decorator
-
-
 def skip_if_binaries_missing(*binaries, **kwargs):
     import salt.utils.path
     if len(binaries) == 1:
