@@ -40,7 +40,6 @@ EXCLUDED_FILES = [
     os.path.join('tests', 'saltsh.py'),
     os.path.join('tests', 'minionswarm.py'),
     os.path.join('tests', 'wheeltest.py'),
-    os.path.join('tests', 'runtests.py'),
     os.path.join('tests', 'jenkins.py'),
     os.path.join('tests', 'salt-tcpdump.py'),
     os.path.join('tests', 'packdump.py'),
