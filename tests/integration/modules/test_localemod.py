@@ -8,9 +8,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import (
-    requires_salt_modules,
-)
 
 # Import Salt libs
 import salt.utils.platform
@@ -24,7 +21,7 @@ def _find_new_locale(current_locale):
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 @skipIf(salt.utils.platform.is_darwin(), 'locale method is not supported on mac')
-@requires_salt_modules('locale')
+@pytest.mark.requires_salt_modules('locale')
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')

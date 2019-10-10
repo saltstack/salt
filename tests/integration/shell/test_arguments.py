@@ -6,15 +6,16 @@
 # Import Python libs
 from __future__ import absolute_import
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import requires_salt_modules
 
 # Import Salt libs
 import salt.utils.args
 
 
-@requires_salt_modules('test.ping', 'test.arg')
+@pytest.mark.requires_salt_modules('test.ping', 'test.arg')
 class ArgumentTestCase(ModuleCase):
     def test_unsupported_kwarg(self):
         '''
