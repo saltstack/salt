@@ -364,7 +364,6 @@ def pytest_runtest_setup(item):
         if item.config.getoption('--run-expensive') is False:
             item._skipped_by_mark = True
             pytest.skip('Expensive tests are disabled')
-    os.environ[str('EXPENSIVE_TESTS')] = str(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None or _has_unittest_attr(item, '__skip_if_not_root__'):

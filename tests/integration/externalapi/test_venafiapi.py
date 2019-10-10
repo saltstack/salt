@@ -42,7 +42,7 @@ def with_random_name(func):
 
 
 @pytest.mark.destructive_test
-@expensiveTest
+@pytest.mark.expensive_test
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner
