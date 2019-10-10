@@ -105,7 +105,7 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class ParserBase(object):
     '''

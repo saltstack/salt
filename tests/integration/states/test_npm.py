@@ -8,10 +8,12 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import os
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, requires_network
+from tests.support.helpers import requires_network
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -27,7 +29,7 @@ MAX_NPM_VERSION = '5.0.0'
 class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @requires_network()
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_npm_installed_removed(self):
         '''
         Basic test to determine if NPM module was successfully installed and
@@ -40,7 +42,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(salt.utils.platform.is_darwin(), 'TODO this test hangs on mac.')
     @requires_network()
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_npm_install_url_referenced_package(self):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
@@ -65,7 +67,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_state('file.absent', name=npm_dir)
 
     @requires_network()
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_npm_installed_pkgs(self):
         '''
         Basic test to determine if NPM module successfully installs multiple
@@ -74,7 +76,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.installed', name='unused', pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_npm_cache_clean(self):
         '''
         Basic test to determine if NPM successfully cleans its cached packages.

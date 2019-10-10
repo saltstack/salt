@@ -10,12 +10,12 @@ import logging
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
 import salt.utils.path
 
+import pytest
 try:
     import kazoo  # pylint: disable=import-error,unused-import
     HAS_KAZOO = True
@@ -25,7 +25,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 @skipIf(not HAS_KAZOO, 'kazoo python library not installed')
 class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):

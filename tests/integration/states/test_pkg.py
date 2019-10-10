@@ -14,7 +14,6 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    destructiveTest,
     requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
@@ -28,13 +27,14 @@ import salt.utils.pkg.rpm
 import salt.utils.platform
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []

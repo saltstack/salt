@@ -8,6 +8,7 @@ import functools
 import random
 import string
 
+import pytest
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -40,6 +41,8 @@ def with_random_name(func):
     return wrapper
 
 
+@pytest.mark.destructive_test
+@expensiveTest
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner

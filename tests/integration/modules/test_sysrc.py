@@ -4,9 +4,10 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import sys
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 
@@ -24,7 +25,7 @@ class SysrcModuleTest(ModuleCase):
         self.assertIn('/etc/rc.conf', ret, 'sysrc.get should have an rc.conf key in it.')
 
     @skipIf(not sys.platform.startswith('freebsd'), 'FreeBSD specific')
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set(self):
         ret = self.run_function('sysrc.set', ['test_var', '1'])
         self.assertIsInstance(ret, dict, 'sysrc.get returned wrong type, expecting dictionary')
@@ -34,7 +35,7 @@ class SysrcModuleTest(ModuleCase):
         self.assertEqual('test_var removed', ret)
 
     @skipIf(not sys.platform.startswith('freebsd'), 'FreeBSD specific')
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_set_bool(self):
         ret = self.run_function('sysrc.set', ['test_var', True])
         self.assertIsInstance(ret, dict, 'sysrc.get returned wrong type, expecting dictionary')

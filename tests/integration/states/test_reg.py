@@ -6,11 +6,13 @@ Tests for the Reg State
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, generate_random_name
+from tests.support.helpers import generate_random_name
 
 # Import Salt libs
 import salt.utils.platform
@@ -26,7 +28,7 @@ UNICODE_VALUE = 'Unicode Value ' \
 FAKE_KEY = 'SOFTWARE\\{0}'.format(generate_random_name('SaltTesting-'))
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), 'Windows Specific Test')
 class RegTest(ModuleCase, SaltReturnAssertsMixin):
     '''

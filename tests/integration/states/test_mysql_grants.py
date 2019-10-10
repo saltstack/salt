@@ -10,7 +10,6 @@ import logging
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -20,6 +19,7 @@ from salt.modules import mysql as mysqlmod
 
 log = logging.getLogger(__name__)
 
+import pytest
 NO_MYSQL = False
 try:
     import MySQLdb  # pylint: disable=import-error,unused-import
@@ -70,7 +70,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
         },
     }
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         '''
         Test presence of MySQL server, enforce a root password
@@ -150,7 +150,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             connection_pass=self.password
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def tearDown(self):
         '''
         Removes created users and db
@@ -203,7 +203,7 @@ class MysqlGrantsStateTest(ModuleCase, SaltReturnAssertsMixin):
             saltenv={"LC_ALL": "en_US.utf8"}
         )
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_grant_present_absent(self):
         '''
         mysql_database.present

@@ -10,14 +10,13 @@ import pytest
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 DEFAULT_DOMAIN = 'com.apple.AppleMultitouchMouse'
 DEFAULT_KEY = 'MouseHorizontalScroll'
 DEFAULT_VALUE = '0'
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacDefaultsModuleTest(ModuleCase):
     '''

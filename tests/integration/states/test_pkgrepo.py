@@ -12,7 +12,6 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    destructiveTest,
     requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
@@ -23,10 +22,11 @@ import salt.utils.platform
 import salt.utils.files
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''

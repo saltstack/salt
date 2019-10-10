@@ -9,7 +9,6 @@ import random
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    destructiveTest,
     requires_system_grains
 )
 
@@ -21,7 +20,7 @@ import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 @pytest.mark.skip_if_not_root
 class UseraddModuleTestLinux(ModuleCase):
@@ -107,7 +106,7 @@ class UseraddModuleTestLinux(ModuleCase):
             raise
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), 'These tests can only be run on Windows')
 @pytest.mark.skip_if_not_root
 class UseraddModuleTestWindows(ModuleCase):

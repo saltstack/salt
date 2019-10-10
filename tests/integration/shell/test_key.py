@@ -11,7 +11,6 @@ import textwrap
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import destructiveTest
 
 # Import 3rd-party libs
 import pytest
@@ -190,7 +189,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
 
     @pytest.mark.skip_if_not_root
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_list_acc_eauth(self):
         '''
         test salt-key -l with eauth
@@ -202,7 +201,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self._remove_user()
 
     @pytest.mark.skip_if_not_root
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_list_acc_eauth_bad_creds(self):
         '''
         test salt-key -l with eauth and bad creds

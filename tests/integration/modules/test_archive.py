@@ -12,7 +12,6 @@ import textwrap
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import salt libs
 import salt.utils.files
@@ -21,6 +20,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 # Import 3rd party libs
+import pytest
 from salt.ext import six
 try:
     import zipfile  # pylint: disable=W0611
@@ -29,7 +29,7 @@ except ImportError:
     HAS_ZIPFILE = False
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class ArchiveTest(ModuleCase):
     '''
     Validate the archive module

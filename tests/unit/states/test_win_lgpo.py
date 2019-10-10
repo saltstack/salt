@@ -6,7 +6,6 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
@@ -25,6 +24,9 @@ import salt.ext.six as six
 opts = salt.config.DEFAULT_MINION_OPTS.copy()
 utils = salt.loader.utils(opts)
 modules = salt.loader.minion_mods(opts, utils=utils)
+
+import pytest
+
 
 LOADER_DICTS = {
     win_lgpo: {
@@ -148,7 +150,7 @@ class WinLGPOComparePoliciesTestCase(TestCase):
         )
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
     '''
@@ -267,7 +269,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
         self.assertFalse(expected['result'])
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOPolicyElementNamesTestTrue(TestCase, LoaderModuleMockMixin):
     '''

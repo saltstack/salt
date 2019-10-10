@@ -10,7 +10,6 @@ import string
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
@@ -39,7 +38,7 @@ ADD_USER = __random_string()
 REP_USER_GROUP = __random_string()
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacGroupModuleTest(ModuleCase):
     '''
