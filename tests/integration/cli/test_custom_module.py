@@ -28,11 +28,6 @@
     $ salt-ssh localhost state.sls custom_module
     localhost:
         olleh
-
-
-    This test can be run in a small test suite with:
-
-    $ python tests/runtests.py -C --ssh
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
