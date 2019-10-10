@@ -3,7 +3,6 @@
 Tests for the salt fileclient
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
 import errno
@@ -11,16 +10,13 @@ import logging
 import os
 import shutil
 
-# Import Salt libs
 import salt.utils.files
 from salt import fileclient
-from salt.ext import six
-from salt.ext.six.moves import range
-from tests.integration import AdaptedConfigurationTestCaseMixin
-from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mixins import (
+    AdaptedConfigurationTestCaseMixin,
+    LoaderModuleMockMixin,
+)
 from tests.support.mock import MagicMock, Mock, patch
-
-# Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase
 
@@ -220,7 +216,7 @@ class FileclientCacheTest(
         """
         Ensure entire directory is cached to correct location
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -259,7 +255,7 @@ class FileclientCacheTest(
         Ensure entire directory is cached to correct location when an alternate
         cachedir is specified and that cachedir is an absolute path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = os.path.join(RUNTIME_VARS.TMP, "abs_cachedir")
 
@@ -295,7 +291,7 @@ class FileclientCacheTest(
         Ensure entire directory is cached to correct location when an alternate
         cachedir is specified and that cachedir is a relative path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = "foo"
 
@@ -335,7 +331,7 @@ class FileclientCacheTest(
         """
         Ensure file is cached to correct location
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -365,7 +361,7 @@ class FileclientCacheTest(
         Ensure file is cached to correct location when an alternate cachedir is
         specified and that cachedir is an absolute path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = os.path.join(RUNTIME_VARS.TMP, "abs_cachedir")
 
@@ -394,7 +390,7 @@ class FileclientCacheTest(
         Ensure file is cached to correct location when an alternate cachedir is
         specified and that cachedir is a relative path
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = "foo"
 
@@ -428,7 +424,7 @@ class FileclientCacheTest(
         """
         Tests functionality for cache_dest
         """
-        patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
+        patched_opts = dict((x, y) for x, y in self.minion_opts.items())
         patched_opts.update(self.MOCKED_OPTS)
 
         relpath = "foo.com/bar.txt"

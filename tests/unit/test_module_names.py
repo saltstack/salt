@@ -4,17 +4,13 @@
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 
-# Import Python libs
 from __future__ import absolute_import
 
 import fnmatch
 import os
 
-# Import Salt libs
 import salt.utils.path
 import salt.utils.stringutils
-
-# Import Salt Testing libs
 from tests.support.paths import list_test_mods
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
@@ -47,7 +43,6 @@ EXCLUDED_FILES = [
     os.path.join("tests", "minionswarm.py"),
     os.path.join("tests", "modparser.py"),
     os.path.join("tests", "packdump.py"),
-    os.path.join("tests", "runtests.py"),
     os.path.join("tests", "salt-tcpdump.py"),
     os.path.join("tests", "saltsh.py"),
     os.path.join("tests", "unit", "test_pytest_pass_fail.py"),

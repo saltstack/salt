@@ -3,7 +3,6 @@ mock >= 3.0.0
 pytest >= 5.4.2; sys_platform != "win32"
 # https://github.com/pytest-dev/pytest/issues/6964#issuecomment-632727439
 pytest >=4.6.9,<4.7; sys_platform == "win32"
-pytest-salt
-pytest-salt-factories >= 0.10.7
+pytest-salt-factories >= 0.11.1
 pytest-tempdir >= 2019.10.12
 pytest-helpers-namespace >= 2019.1.8
