@@ -23,7 +23,6 @@ import tempfile
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import skip_if_binaries_missing
 
 # Import salt libs
 import salt.utils.data
@@ -32,6 +31,7 @@ import salt.utils.platform
 from salt.utils.versions import LooseVersion
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ def _makedirs(path):
             raise
 
 
-@skip_if_binaries_missing('git')
+@pytest.mark.skip_if_binaries_missing('git')
 class GitModuleTest(ModuleCase):
 
     def setUp(self):
