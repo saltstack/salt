@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import types
 import logging
+import sys
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -39,13 +40,15 @@ from salt.exceptions import CommandExecutionError, CommandNotFoundError
 # Import 3rd-party libs
 import salt.ext.six as six
 # pylint: disable=import-error
-try:
-    import pip
-    HAS_PIP = True
-except ImportError:
-    HAS_PIP = False
+
+
+def purge_pip():
+    '''
+    Purge pip and it's sub-modules
+    '''
     # Remove references to the loaded pip module above so reloading works
-    import sys
+    if 'pip' not in sys.modules:
+        return
     pip_related_entries = [
         (k, v) for (k, v) in sys.modules.items()
         or getattr(v, '__module__', '').startswith('pip.')
@@ -55,19 +58,56 @@ except ImportError:
         sys.modules.pop(name)
         del entry
 
-    del pip
+    if 'pip' in globals():
+        del globals()['pip']
+    if 'pip' in locals():
+        del locals()['pip']
     sys_modules_pip = sys.modules.pop('pip', None)
     if sys_modules_pip is not None:
         del sys_modules_pip
 
+
+def pip_has_internal_exceptions_mod(ver):
+    '''
+    True when the pip version has the `pip._internal.exceptions` module
+    '''
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper='>=',
+        ver2='10.0',
+    )
+
+
+def pip_has_exceptions_mod(ver):
+    '''
+    True when the pip version has the `pip.exceptions` module
+    '''
+    if pip_has_internal_exceptions_mod(ver):
+        return False
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper='>=',
+        ver2='1.0'
+    )
+
+
+try:
+    import pip
+    HAS_PIP = True
+except ImportError:
+    HAS_PIP = False
+
+
 if HAS_PIP is True:
-    if salt.utils.versions.compare(ver1=pip.__version__,
-                                   oper='>=',
-                                   ver2='18.1'):
+    if not hasattr(purge_pip, '__pip_ver__'):
+        purge_pip.__pip_ver__ = pip.__version__
+    elif purge_pip.__pip_ver__ != pip.__version__:
+        purge_pip()
+        import pip
+        purge_pip.__pip_ver__ = pip.__version__
+    if pip_has_internal_exceptions_mod(pip.__version__):
         from pip._internal.exceptions import InstallationError  # pylint: disable=E0611,E0401
-    elif salt.utils.versions.compare(ver1=pip.__version__,
-                                     oper='>=',
-                                     ver2='1.0'):
+    elif pip_has_exceptions_mod(pip.__version__):
         from pip.exceptions import InstallationError  # pylint: disable=E0611,E0401
     else:
         InstallationError = ValueError
