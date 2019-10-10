@@ -406,27 +406,6 @@ class TestsLoggingHandler(object):
             return self.handler.release()
 
 
-def relative_import(import_name, relative_from='../'):
-    '''
-    Update sys.path to include `relative_from` before importing `import_name`
-    '''
-    try:
-        return __import__(import_name)
-    except ImportError:
-        previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
-        sys.path.insert(
-            0, os.path.realpath(
-                os.path.join(
-                    os.path.abspath(
-                        os.path.dirname(previous_frame.filename)
-                    ),
-                    relative_from
-                )
-            )
-        )
-    return __import__(import_name)
-
-
 class ForceImportErrorOn(object):
     '''
     This class is meant to be used in mock'ed test cases which require an
