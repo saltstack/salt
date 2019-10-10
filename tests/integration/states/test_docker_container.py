@@ -16,7 +16,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.docker import with_network, random_name
-from tests.support.helpers import destructiveTest, with_tempdir
+from tests.support.helpers import with_tempdir
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt Libs
@@ -26,6 +26,7 @@ import salt.utils.path
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ def container_name(func):
     return wrapper
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which('busybox'), 'Busybox not installed')
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):

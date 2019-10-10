@@ -11,9 +11,10 @@ import salt.utils.path
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 from tests.support.mixins import SaltReturnAssertsMixin
 
+import pytest
 try:
     import pylxd  # pylint: disable=import-error,unused-import
     HAS_PYLXD = True
@@ -21,7 +22,7 @@ except ImportError:
     HAS_PYLXD = False
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which('lxd'), 'LXD not installed')
 @skipIf(not salt.utils.path.which('lxc'), 'LXC not installed')
 @skipIf(not HAS_PYLXD, 'pylxd not installed')

@@ -9,12 +9,12 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import salt libs
 import salt.utils.path
 
 # Import 3rd-party libs
+import pytest
 from tornado.httpclient import HTTPClient
 
 
@@ -28,7 +28,7 @@ def check_status():
         return False
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.path.which('gem'), 'Gem is not available')
 class GemModuleTest(ModuleCase):
     '''

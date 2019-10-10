@@ -6,11 +6,12 @@ Tests for the Chocolatey State
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.platform
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 __testcontext__ = {}
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), 'Windows Specific Test')
 class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
     '''

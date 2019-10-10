@@ -79,7 +79,6 @@ from tests.support.gitfs import (
     GitPillarHTTPTestBase,
 )
 from tests.support.helpers import (
-    destructiveTest,
     requires_system_grains,
 )
 from tests.support.unit import skipIf
@@ -516,7 +515,7 @@ class GitPythonMixin(object):
         )
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @pytest.mark.skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
@@ -577,7 +576,7 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
         cls.ext_opts['password'] = cls.password
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @pytest.mark.skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))

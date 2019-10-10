@@ -9,7 +9,6 @@ from __future__ import absolute_import
 # Import test support libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 import tests.support.cherrypy_testclasses as cptc
 
 # Import Salt Libs
@@ -37,7 +36,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
     Test auth with pam using salt-api
     '''
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     def setUp(self):
         super(TestAuthPAM, self).setUp()
@@ -122,7 +121,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
                                              })
         self.assertEqual(response.status, '200 OK')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     def tearDown(self):
         '''

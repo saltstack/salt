@@ -11,7 +11,7 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky
 
 # Import Salt libs
 import salt.utils.path
@@ -43,7 +43,7 @@ class MacPowerModuleTest(ModuleCase):
         self.run_function('power.set_display_sleep', [self.DISPLAY_SLEEP])
         self.run_function('power.set_harddisk_sleep', [self.HARD_DISK_SLEEP])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_computer_sleep(self):
         '''
         Test power.get_computer_sleep
@@ -71,7 +71,7 @@ class MacPowerModuleTest(ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_computer_sleep', [True]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_display_sleep(self):
         '''
         Test power.get_display_sleep
@@ -99,7 +99,7 @@ class MacPowerModuleTest(ModuleCase):
             'Invalid Boolean Value for Minutes',
             self.run_function('power.set_display_sleep', [True]))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_harddisk_sleep(self):
         '''
         Test power.get_harddisk_sleep

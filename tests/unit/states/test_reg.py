@@ -6,10 +6,11 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 
+import pytest
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import patch
 
@@ -43,7 +44,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
     def tearDown(self):
         salt.utils.win_reg.delete_key_recursive(hive=self.hive, key=self.key)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_present(self):
         '''
         Test to set a registry entry.
@@ -121,7 +122,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
         self.assertDictEqual(ret, expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_absent(self):
         '''
         Test to remove a registry entry.
@@ -144,7 +145,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
         ret = reg.absent(self.name, self.vname)
         self.assertDictEqual(ret, expected)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_absent_test_true(self):
         # Create the reg key for testing
         salt.utils.win_reg.set_value(hive=self.hive,

@@ -5,11 +5,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import pprint
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.helpers import (
-    destructiveTest,
     requires_network,
     requires_salt_modules,
     requires_system_grains)
@@ -75,7 +76,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(self.run_function(func, eq), 0)
         self.assertEqual(self.run_function(func, gt), 1)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules('pkg.mod_repo', 'pkg.del_repo', 'pkg.get_repo')
     @requires_network()
     @requires_system_grains
@@ -142,7 +143,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(func, ['/bin/ls'])
         self.assertNotEqual(len(ret), 0)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules('pkg.version', 'pkg.install', 'pkg.remove')
     @requires_network()
     def test_install_remove(self):
@@ -169,7 +170,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             test_install()
             test_remove()
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.install', 'pkg.version', 'pkg.remove')
     @requires_network()
     @requires_system_grains
@@ -202,7 +203,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(unhold_ret[self.pkg]['result'])
         self.run_function('pkg.remove', [self.pkg])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_salt_modules('pkg.refresh_db')
     @requires_network()
     @requires_system_grains
@@ -259,7 +260,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             keys = ret.keys()
             self.assertIn(self.pkg, keys)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @requires_network()
     @requires_salt_modules('pkg.refresh_db', 'pkg.upgrade', 'pkg.install', 'pkg.list_repo_pkgs', 'pkg.list_upgrades')
     @requires_system_grains
@@ -331,8 +332,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_function(func, args)
                 self.assertNotEqual(ret, {})
 
-    @destructiveTest
     @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
+    @pytest.mark.destructive_test
     @requires_salt_modules('pkg.remove', 'pkg.latest_version')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):

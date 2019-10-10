@@ -10,7 +10,6 @@ import os
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 import pytest
 
@@ -75,7 +74,7 @@ class MacPkgutilModuleTest(ModuleCase):
         self.assertFalse(
             self.run_function('pkgutil.is_installed', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_install_forget(self):
         '''
         Test pkgutil.install
