@@ -18,12 +18,12 @@ import time
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     get_unused_localhost_port,
-    skip_if_not_root,
     with_tempfile)
 from tests.support.unit import skipIf
 from tests.support.runtests import RUNTIME_VARS
 
 # Import 3rd party libs
+import pytest
 import salt.ext.six as six
 
 # Import salt libs
@@ -517,7 +517,7 @@ class CPModuleTest(ModuleCase):
             )
 
     @skipIf(not salt.utils.path.which('nginx'), 'nginx not installed')
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_cache_remote_file(self):
         '''
         cp.cache_file

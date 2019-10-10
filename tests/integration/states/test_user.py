@@ -13,10 +13,12 @@ import os
 import sys
 from random import randint
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, requires_system_grains, skip_if_not_root
+from tests.support.helpers import destructiveTest, requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -45,7 +47,7 @@ else:
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class UserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     test for user absent
@@ -272,7 +274,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
 
 @destructiveTest
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_windows(), 'Windows only tests')
 class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
     '''

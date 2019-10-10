@@ -10,7 +10,9 @@ import os
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
+
+import pytest
 
 # Import Salt libs
 import salt.utils.path
@@ -20,7 +22,7 @@ TEST_PKG_URL = 'https://distfiles.macports.org/MacPorts/MacPorts-2.3.4-10.11-ElC
 TEST_PKG_NAME = 'org.macports.MacPorts'
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 class MacPkgutilModuleTest(ModuleCase):
     '''
     Validate the mac_pkgutil module

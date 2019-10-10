@@ -10,19 +10,19 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    skip_if_not_root,
     skip_if_binaries_missing
 )
 from tests.support.unit import skipIf
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 
 @skipIf(True,
         'Needs rewrite to be more distro agnostic. Also, the tearDown '
         'function destroys ALL containers on the box, which is BAD.')
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
 class LXCModuleTest(ModuleCase):
     '''

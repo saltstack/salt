@@ -22,6 +22,8 @@ import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 
+import pytest
+
 
 class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -38,7 +40,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'RedHat':
             cls.pkg = 'units'
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     @requires_salt_modules('pkg.refresh_db')
     def setUp(self):
         if 'refresh' not in self.ctx:
