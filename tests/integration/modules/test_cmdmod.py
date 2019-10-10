@@ -11,7 +11,6 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    skip_if_binaries_missing,
     this_user,
 )
 from tests.support.runtests import RUNTIME_VARS
@@ -216,7 +215,7 @@ class CMDModuleTest(ModuleCase):
                 ret = self.run_function('cmd.tty', [tty, 'apply salt liberally'])
                 self.assertTrue('Success' in ret)
 
-    @skip_if_binaries_missing(['which'])
+    @pytest.mark.skip_if_binaries_missing(['which'])
     def test_which(self):
         '''
         cmd.which
@@ -224,7 +223,7 @@ class CMDModuleTest(ModuleCase):
         self.assertEqual(self.run_function('cmd.which', ['cat']).rstrip(),
                          self.run_function('cmd.run', ['which cat']).rstrip())
 
-    @skip_if_binaries_missing(['which'])
+    @pytest.mark.skip_if_binaries_missing(['which'])
     def test_which_bin(self):
         '''
         cmd.which_bin

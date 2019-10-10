@@ -8,6 +8,7 @@ import logging
 import shutil
 
 # Import 3rd-party libs
+import pytest
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves.urllib.error import URLError
@@ -18,7 +19,7 @@ from salt.ext.six.moves.urllib.request import urlopen
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import requires_network, skip_if_binaries_missing
+from tests.support.helpers import requires_network
 
 # Import Salt libs
 import salt.utils.files
@@ -123,7 +124,7 @@ class Base(TestCase, LoaderModuleMockMixin):
 @skipIf(True, 'These tests are not running reliably')
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
         "The 'virtualenv' packaged needs to be installed")
-@skip_if_binaries_missing(['tar'])
+@pytest.mark.skip_if_binaries_missing(['tar'])
 class BuildoutTestCase(Base):
 
     @requires_network()
