@@ -382,10 +382,9 @@ def pytest_runtest_setup(item):
             pytest.skip('Destructive tests are disabled')
 
     expensive_tests_marker = item.get_closest_marker('expensive_test')
-    if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):
+    if expensive_tests_marker is not None:
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
-    os.environ[str('EXPENSIVE_TESTS')] = str(item.config.getoption('--run-expensive'))
 
     skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None:
