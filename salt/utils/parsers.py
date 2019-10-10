@@ -1664,7 +1664,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help=('Display a list of locations available in configured cloud '
                   'providers. Pass the cloud provider that available '
-                  'locations are desired on, aka "linode", or pass "all" to '
+                  'locations are desired on, such as "linode", or pass "all" to '
                   'list locations for all configured cloud providers.')
         )
         group.add_option(
@@ -1672,7 +1672,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help=('Display a list of images available in configured cloud '
                   'providers. Pass the cloud provider that available images '
-                  'are desired on, aka "linode", or pass "all" to list images '
+                  'are desired on, such as "linode", or pass "all" to list images '
                   'for all configured cloud providers.')
         )
         group.add_option(
@@ -1680,7 +1680,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help=('Display a list of sizes available in configured cloud '
                   'providers. Pass the cloud provider that available sizes '
-                  'are desired on, aka "AWS", or pass "all" to list sizes '
+                  'are desired on, such as "AWS", or pass "all" to list sizes '
                   'for all configured cloud providers.')
         )
         self.add_option_group(group)

@@ -296,7 +296,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -333,7 +333,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -370,7 +370,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -408,7 +408,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -445,7 +445,7 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -484,7 +484,7 @@ class TestDaemon(object):
                     daemon_class=SaltProxy,
                     bin_dir_path=SCRIPT_DIR,
                     fail_hard=True,
-                    start_timeout=60)
+                    start_timeout=120)
                 sys.stdout.write(
                     '\r{0}\r'.format(
                         ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -768,6 +768,12 @@ class TestDaemon(object):
         }
         master_opts['ext_pillar'].append({'file_tree': file_tree})
 
+        # Config settings to test `event_return`
+        if 'returner_dirs' not in master_opts:
+            master_opts['returner_dirs'] = []
+        master_opts['returner_dirs'].append(os.path.join(RUNTIME_VARS.FILES, 'returners'))
+        master_opts['event_return'] = 'runtests_noop'
+
         # Under windows we can't seem to properly create a virtualenv off of another
         # virtualenv, we can on linux but we will still point to the virtualenv binary
         # outside the virtualenv running the test suite, if that's the case.
@@ -884,10 +890,10 @@ class TestDaemon(object):
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
-                os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                RUNTIME_VARS.TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(FILES, 'file', 'base'),
             ],
             # Alternate root to test __env__ choices
             'prod': [
@@ -897,10 +903,10 @@ class TestDaemon(object):
         }
         minion_opts['file_roots'] = {
             'base': [
-                os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                RUNTIME_VARS.TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(FILES, 'file', 'base'),
             ],
             # Alternate root to test __env__ choices
             'prod': [
