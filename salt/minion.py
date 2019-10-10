@@ -2206,6 +2206,8 @@ class Minion(MinionBase):
         self.module_refresh(force_refresh)
         self.matchers_refresh()
         self.beacons_refresh()
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True}, tag='/salt/minion/minion_pillar_refresh_complete')
 
     def manage_schedule(self, tag, data):
         '''
