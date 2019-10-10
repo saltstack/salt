@@ -8,7 +8,7 @@ import shutil
 import hashlib
 
 # Import Salt Testing Libs
-from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import patched_environ
 from tests.support.runtests import RUNTIME_VARS
