@@ -14,7 +14,6 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
     runs_on,
@@ -122,8 +121,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             else:
                 raise Exception('Package database locked after 60 seconds, bailing out')
 
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -212,8 +211,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing')
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_005_installed_32bit(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -312,10 +311,10 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.version', 'pkg.info_installed')
     @requires_salt_states('pkg.installed', 'pkg.removed')
     @runs_on(kernel='linux')
     @not_runs_on(os='Amazon')
+    @pytest.mark.requires_salt_modules('pkg.version', 'pkg.info_installed')
     def test_pkg_009_latest_with_epoch(self):
         '''
         This tests for the following issue:
@@ -353,9 +352,9 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.list_pkgs', 'pkg.list_upgrades', 'pkg.version')
     @requires_salt_states('pkg.latest')
     @runs_on(kernel='linux', os_family='Debian')
+    @pytest.mark.requires_salt_modules('pkg.list_pkgs', 'pkg.list_upgrades', 'pkg.version')
     def test_pkg_011_latest_only_upgrade(self):
         '''
         WARNING: This test will pick a package with an available upgrade (if
@@ -405,8 +404,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
     @skipIf(not _WILDCARDS_SUPPORTED, 'Wildcards in pkg.install are not supported')
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_012_installed_with_wildcard_version(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -455,8 +454,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.version', 'pkg.latest_version')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version', 'pkg.latest_version')
     @runs_on(kernel='linux', os_family=['Debian', 'RedHat'])
     def test_pkg_013_installed_with_comparison_operator(self):
         '''
@@ -492,8 +491,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version')
     @runs_on(kernel='linux', os_familiy='RedHat')
     def test_pkg_014_installed_missing_release(self):
         '''
@@ -520,8 +519,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.version', 'pkg.list_pkgs')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.version', 'pkg.list_pkgs')
     @requires_system_grains
     def test_pkg_015_installed_held(self, grains=None):
         '''
@@ -592,8 +591,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not provided')
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_cap_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -697,8 +696,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.latest', 'pkg.removed')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_cap_004_latest(self):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -728,8 +727,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed', 'pkg.downloaded')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_cap_005_downloaded(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -754,8 +753,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.version')
     @requires_salt_states('pkg.installed', 'pkg.removed', 'pkg.uptodate')
+    @pytest.mark.requires_salt_modules('pkg.version')
     def test_pkg_cap_006_uptodate(self):
         '''
         This is a destructive test as it installs and then removes a package
