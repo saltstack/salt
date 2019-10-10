@@ -6,9 +6,10 @@ Integration tests for functions located in the salt.cloud.__init__.py file.
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import pytest
+
 # Import Salt Testing libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
-from tests.support.helpers import expensiveTest
 
 # Import Salt libs
 import salt.cloud
@@ -22,7 +23,7 @@ class CloudClientTestCase(CloudTest):
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
     IMAGE_NAME = '14.04.5 x64'
 
-    @expensiveTest
+    @pytest.mark.expensive_test
     def setUp(self):
 
         # Use a --list-images salt-cloud call to see if the DigitalOcean provider is

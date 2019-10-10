@@ -10,9 +10,11 @@ import logging
 import os
 import shutil
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.helpers import generate_random_name, expensiveTest
+from tests.support.helpers import generate_random_name
 from tests.support.paths import FILES
 from tests.support.runtests import RUNTIME_VARS
 
@@ -26,7 +28,7 @@ TIMEOUT = 500
 log = logging.getLogger(__name__)
 
 
-@expensiveTest
+@pytest.mark.expensive_test
 class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()

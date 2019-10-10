@@ -12,7 +12,6 @@ import pytest
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.helpers import expensiveTest
 from salt.ext.six.moves import range
 
 
@@ -35,7 +34,7 @@ def with_random_name(func):
 
 
 @pytest.mark.destructive_test
-@expensiveTest
+@pytest.mark.expensive_test
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner
