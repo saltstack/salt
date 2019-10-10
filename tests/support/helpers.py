@@ -34,7 +34,6 @@ import tornado.web
 import types
 
 # Import 3rd-party libs
-import pytest
 from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 from pytestsalt.utils import get_unused_localhost_port
@@ -336,27 +335,6 @@ class TstSuiteLoggingHandler(object):
     def release(self):
         if self.activated:
             return self.handler.release()
-
-
-def relative_import(import_name, relative_from='../'):
-    '''
-    Update sys.path to include `relative_from` before importing `import_name`
-    '''
-    try:
-        return __import__(import_name)
-    except ImportError:
-        previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
-        sys.path.insert(
-            0, os.path.realpath(
-                os.path.join(
-                    os.path.abspath(
-                        os.path.dirname(previous_frame.filename)
-                    ),
-                    relative_from
-                )
-            )
-        )
-    return __import__(import_name)
 
 
 class ForceImportErrorOn(object):
