@@ -1024,19 +1024,6 @@ def requires_system_grains(func):
     return decorator
 
 
-def requires_salt_modules(*names):
-    '''
-    Makes sure the passed salt module is available. Skips the test if not
-
-    .. versionadded:: 0.5.2
-    '''
-    def decorator(caller):
-        pytest.mark.requires_salt_modules(*names)(caller)
-        return caller
-
-    return decorator
-
-
 def skip_if_binaries_missing(*binaries, **kwargs):
     import salt.utils.path
     if len(binaries) == 1:
