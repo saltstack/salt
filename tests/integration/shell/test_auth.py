@@ -19,11 +19,7 @@ import string
 from tests.support.unit import skipIf
 from tests.support.case import ShellCase, ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.helpers import (
-    destructiveTest,
-    requires_salt_modules,
-    requires_salt_states,
-)
+from tests.support.helpers import requires_salt_modules, requires_salt_states
 
 # Import Salt libs
 import salt.utils.platform
@@ -48,9 +44,9 @@ def gen_password():
 
 @requires_salt_states('user.absent', 'user.present')
 @requires_salt_modules('shadow.set_password')
-@pytest.mark.skip_if_not_root
 @skipIf(pwd is None or grp is None, 'No pwd or grp module available')
-@destructiveTest
+@pytest.mark.skip_if_not_root
+@pytest.mark.destructive_test
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     '''
     Test user auth mechanisms
@@ -98,9 +94,9 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
 
 @requires_salt_states('group.absent', 'group.present', 'user.absent', 'user.present')
 @requires_salt_modules('shadow.set_password', 'user.chgroups')
-@pytest.mark.skip_if_not_root
 @skipIf(pwd is None or grp is None, 'No pwd or grp module available')
-@destructiveTest
+@pytest.mark.skip_if_not_root
+@pytest.mark.destructive_test
 class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     '''
     Test group auth mechanisms

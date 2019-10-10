@@ -11,7 +11,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.path
@@ -67,7 +66,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIsInstance(
             self.run_function('softwareupdate.list_available'), dict)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_ignore(self):
         '''
         Test softwareupdate.ignore
@@ -92,7 +91,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             'squidward',
             self.run_function('softwareupdate.list_ignored'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_schedule(self):
         '''
         Test softwareupdate.schedule_enable
@@ -108,7 +107,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             self.run_function('softwareupdate.schedule_enable', [False]))
         self.assertFalse(self.run_function('softwareupdate.schedule_enabled'))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_update(self):
         '''
         Test softwareupdate.update_all
@@ -139,7 +138,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIsInstance(
             self.run_function('softwareupdate.list_downloads'), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_download(self):
         '''
         Test softwareupdate.download
@@ -152,7 +151,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
             'Update not available',
             self.run_function('softwareupdate.download', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_download_all(self):
         '''
         Test softwareupdate.download_all
@@ -160,7 +159,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         self.assertIsInstance(
             self.run_function('softwareupdate.download_all'), list)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_get_set_reset_catalog(self):
         '''
         Test softwareupdate.download_all

@@ -6,9 +6,10 @@ Tests for the service state
 from __future__ import absolute_import, print_function, unicode_literals
 import re
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import salt libs
@@ -18,7 +19,7 @@ import salt.utils.platform
 INIT_DELAY = 5
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state

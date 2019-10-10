@@ -11,7 +11,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.path
@@ -95,7 +94,7 @@ class MacServiceModuleTest(ModuleCase):
             'Service not found',
             self.run_function('service.list', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_enable(self):
         '''
         Test service.enable
@@ -107,7 +106,7 @@ class MacServiceModuleTest(ModuleCase):
             'Service not found',
             self.run_function('service.enable', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_disable(self):
         '''
         Test service.disable
@@ -119,7 +118,7 @@ class MacServiceModuleTest(ModuleCase):
             'Service not found',
             self.run_function('service.disable', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_start(self):
         '''
         Test service.start
@@ -132,7 +131,7 @@ class MacServiceModuleTest(ModuleCase):
             'Service not found',
             self.run_function('service.start', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_stop(self):
         '''
         Test service.stop
@@ -143,7 +142,7 @@ class MacServiceModuleTest(ModuleCase):
             'Service not found',
             self.run_function('service.stop', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_status(self):
         '''
         Test service.status
@@ -177,7 +176,7 @@ class MacServiceModuleTest(ModuleCase):
         self.assertFalse(self.run_function('service.missing', [self.SERVICE_NAME]))
         self.assertTrue(self.run_function('service.missing', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_enabled(self):
         '''
         Test service.enabled
@@ -192,7 +191,7 @@ class MacServiceModuleTest(ModuleCase):
 
         self.assertFalse(self.run_function('service.enabled', ['spongebob']))
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_disabled(self):
         '''
         Test service.disabled

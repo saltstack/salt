@@ -11,7 +11,6 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 
 # Import Salt Libs
 import salt.utils.files
@@ -40,7 +39,7 @@ PRIMARY_GROUP_USER = __random_string()
 CHANGE_USER = __random_string()
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class MacUserModuleTest(ModuleCase):
     '''

@@ -25,7 +25,6 @@ except ImportError:
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
-    destructiveTest,
     requires_system_grains,
     with_system_user,
     with_tempdir,
@@ -302,7 +301,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if salt.utils.versions.compare(ver1=pip_version, oper='>=', ver2='7.0.0'):
                 self.skipTest('the --mirrors arg has been deprecated and removed in pip==7.0.0')
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
@@ -343,7 +342,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(
                         salt.utils.win_dacl.get_owner(path), username)
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
     @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @with_system_user('issue-6912', on_existing='delete', delete=True,

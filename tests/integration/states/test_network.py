@@ -8,13 +8,14 @@
 # Python libs
 from __future__ import absolute_import, unicode_literals, print_function
 
+import pytest
+
 # Import salt testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 class NetworkTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate network state module

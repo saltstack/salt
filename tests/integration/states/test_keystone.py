@@ -10,11 +10,11 @@ import logging
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 
 log = logging.getLogger(__name__)
 
+import pytest
 NO_KEYSTONE = False
 try:
     import keystoneclient  # pylint: disable=import-error,unused-import
@@ -34,7 +34,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
     endpoint = 'http://localhost:35357/v2.0'
     token = 'administrator'
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def setUp(self):
         ret = self.run_state('keystone.service_present',
                              name='keystone',
@@ -100,7 +100,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              connection_token=self.token)
         self.assertTrue(ret['keystone_|-demo_|-demo_|-user_present']['result'])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_keystone_v2(self):
         ret = self.run_state('keystone.service_present',
                              name='testv2',
@@ -173,7 +173,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              profile='adminv2')
         self.assertTrue(ret['keystone_|-testv2_|-testv2_|-service_absent']['result'])
 
-    @destructiveTest
+    @pytest.mark.destructive_test
     def test_keystone_v3(self):
         ret = self.run_state('keystone.service_present',
                              name='testv3',

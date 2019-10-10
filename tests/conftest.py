@@ -358,7 +358,6 @@ def pytest_runtest_setup(item):
         if item.config.getoption('--run-destructive') is False:
             item._skipped_by_mark = True
             pytest.skip('Destructive tests are disabled')
-    os.environ[str('DESTRUCTIVE_TESTS')] = str(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_closest_marker('expensive_test')
     if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):

@@ -18,7 +18,7 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, requires_system_grains
+from tests.support.helpers import requires_system_grains
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -46,7 +46,7 @@ else:
     NOGROUPGID = 'nogroup'
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 class UserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
@@ -273,7 +273,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
 
-@destructiveTest
+@pytest.mark.destructive_test
 @pytest.mark.skip_if_not_root
 @skipIf(not salt.utils.platform.is_windows(), 'Windows only tests')
 class WinUserTest(ModuleCase, SaltReturnAssertsMixin):
