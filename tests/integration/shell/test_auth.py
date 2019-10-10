@@ -23,7 +23,6 @@ from tests.support.helpers import (
     destructiveTest,
     requires_salt_modules,
     requires_salt_states,
-    skip_if_not_root,
 )
 
 # Import Salt libs
@@ -31,6 +30,7 @@ import salt.utils.platform
 from salt.utils.pycrypto import gen_hash
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -48,8 +48,8 @@ def gen_password():
 
 @requires_salt_states('user.absent', 'user.present')
 @requires_salt_modules('shadow.set_password')
-@skip_if_not_root
-@skipIf(pwd is None or grp is None, 'No crypt module available')
+@pytest.mark.skip_if_not_root
+@skipIf(pwd is None or grp is None, 'No pwd or grp module available')
 @destructiveTest
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     '''
@@ -98,8 +98,8 @@ class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
 
 @requires_salt_states('group.absent', 'group.present', 'user.absent', 'user.present')
 @requires_salt_modules('shadow.set_password', 'user.chgroups')
-@skip_if_not_root
-@skipIf(pwd is None or grp is None, 'No crypt module available')
+@pytest.mark.skip_if_not_root
+@skipIf(pwd is None or grp is None, 'No pwd or grp module available')
 @destructiveTest
 class GroupAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     '''

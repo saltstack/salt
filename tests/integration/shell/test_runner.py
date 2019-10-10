@@ -8,11 +8,12 @@ Tests for the salt-run command
 # Import Python libs
 from __future__ import absolute_import
 
+import pytest
+
 # Import Salt Testing libs
 from tests.integration.utils import testprogram
 from tests.support.case import ShellCase
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import skip_if_not_root
 
 # Import Salt libs
 import salt.utils.files
@@ -132,7 +133,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             stdout=stdout, stderr=stderr
         )
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_salt_run_with_eauth_all_args(self):
         '''
         test salt-run with eauth
@@ -147,7 +148,7 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
             self.assertEqual(expect, run_cmd)
         self._remove_user()
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_salt_run_with_eauth_bad_passwd(self):
         '''
         test salt-run with eauth and bad password

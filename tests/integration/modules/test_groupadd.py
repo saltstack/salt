@@ -6,8 +6,9 @@ import random
 import string
 
 # Import Salt Testing libs
+import pytest
 from tests.support.case import ModuleCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.helpers import destructiveTest
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -21,7 +22,7 @@ if not salt.utils.platform.is_windows():
     import grp
 
 
-@skip_if_not_root
+@pytest.mark.skip_if_not_root
 @destructiveTest
 class GroupModuleTest(ModuleCase):
     '''

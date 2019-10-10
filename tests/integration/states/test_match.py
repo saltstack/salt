@@ -11,9 +11,10 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 
+import pytest
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import skip_if_not_root
 from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
@@ -26,7 +27,7 @@ class StateMatchTest(ModuleCase):
     Validate the file state
     '''
 
-    @skip_if_not_root
+    @pytest.mark.skip_if_not_root
     def test_issue_2167_ipcidr_no_AttributeError(self):
         subnets = self.run_function('network.subnets')
         self.assertTrue(len(subnets) > 0)
