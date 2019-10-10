@@ -12,7 +12,6 @@ from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.unit import skipIf
 from tests.support.helpers import (
-    requires_salt_modules,
     requires_salt_states,
     requires_system_grains,
 )
@@ -32,7 +31,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkgrepo state tests
     '''
-    @requires_salt_modules('pkgrepo.managed')
+    @pytest.mark.requires_salt_modules('pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_01_managed(self, grains):
         '''
@@ -59,7 +58,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_modules('pkgrepo.absent')
+    @pytest.mark.requires_salt_modules('pkgrepo.absent')
     @requires_system_grains
     def test_pkgrepo_02_absent(self, grains):
         '''
