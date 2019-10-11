@@ -50,13 +50,14 @@ import psutil
 from salt.ext import six
 
 # Import salt libs
-import salt.loader
 import salt.config
-import salt.utils.files
-import salt.utils.path
+import salt.loader
 import salt.log.setup
 import salt.log.mixins
+import salt.utils.files
+import salt.utils.path
 import salt.utils.platform
+import salt.utils.win_functions
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 
@@ -385,7 +386,6 @@ def pytest_runtest_setup(item):
             if os.getuid() != 0:
                 pytest.skip('You must be logged in as root to run this test')
         else:
-            import salt.utils.win_functions
             current_user = salt.utils.win_functions.get_current_user()
             if current_user != 'SYSTEM':
                 if not salt.utils.win_functions.is_admin(current_user):
