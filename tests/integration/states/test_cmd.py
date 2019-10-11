@@ -11,7 +11,7 @@ import tempfile
 import time
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 

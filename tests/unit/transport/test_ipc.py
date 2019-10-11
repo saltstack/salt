@@ -26,7 +26,7 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mock import MagicMock
 from tests.support.unit import skipIf
 

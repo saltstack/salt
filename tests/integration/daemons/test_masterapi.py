@@ -7,7 +7,7 @@ import shutil
 import stat
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ShellCase
 
 # Import 3rd-party libs

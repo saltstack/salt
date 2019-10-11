@@ -18,7 +18,7 @@ import salt.minion
 import salt.utils.stringutils
 
 # Import testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
 

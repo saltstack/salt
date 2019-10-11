@@ -18,7 +18,7 @@ import yaml
 from tests.support.case import ModuleCase
 from tests.support.mock import Mock
 from tests.support.unit import skipIf
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 from tests.support.helpers import (
     with_system_user,

@@ -19,7 +19,7 @@ except ImportError:
     pass
 
 # Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch

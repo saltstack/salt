@@ -17,7 +17,7 @@ import psutil
 import salt.utils.files
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from pytestsalt.fixtures.ports import get_unused_localhost_port
 from pytestsalt.fixtures.config import apply_master_config, apply_minion_config
 from pytestsalt.fixtures.daemons import SaltMaster, SaltMinion, start_daemon

@@ -15,7 +15,7 @@ import os
 log = logging.getLogger(__name__)
 
 # Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.unit import TestCase
 
 # Import salt libs

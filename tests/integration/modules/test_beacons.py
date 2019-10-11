@@ -11,7 +11,7 @@ import os
 from salt.exceptions import CommandExecutionError
 
 # Salttesting libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 

@@ -8,7 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 import os
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ModuleCase
 
 # Import Salt libs

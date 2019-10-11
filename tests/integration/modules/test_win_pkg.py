@@ -10,7 +10,7 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files

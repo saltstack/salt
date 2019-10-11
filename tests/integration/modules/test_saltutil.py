@@ -10,7 +10,7 @@ import time
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf

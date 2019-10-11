@@ -24,7 +24,7 @@ def get_script_path(bin_dir, script_name):
     Return the path to a testing runtime script, generating one if it does not yet exist
     '''
     # Late import
-    from tests.support.runtests import RUNTIME_VARS
+    from tests.support.runtime import RUNTIME_VARS
 
     extra_code = textwrap.dedent(
         r'''
@@ -63,5 +63,5 @@ class ScriptPathMixin(object):
         Return the path to a testing runtime script
         '''
         # Late import
-        from tests.support.runtests import RUNTIME_VARS
+        from tests.support.runtime import RUNTIME_VARS
         return get_script_path(RUNTIME_VARS.TMP_SCRIPT_DIR, script_name)

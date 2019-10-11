@@ -6,7 +6,7 @@ import os
 import time
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs

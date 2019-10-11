@@ -10,7 +10,7 @@ import socket
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.integration.cloud.helpers.virtualbox import (VirtualboxTestCase,
                                                         VirtualboxCloudTestCase,
                                                         CONFIG_NAME,

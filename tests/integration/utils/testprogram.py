@@ -30,7 +30,7 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 from tests.support.unit import TestCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.processes import terminate_process, terminate_process_list
 from tests.support.cli_scripts import ScriptPathMixin
 log = logging.getLogger(__name__)

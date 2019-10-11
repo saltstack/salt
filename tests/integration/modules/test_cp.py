@@ -19,7 +19,7 @@ from tests.support.helpers import (
     get_unused_localhost_port,
     with_tempfile)
 from tests.support.unit import skipIf
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import 3rd party libs
 import pytest

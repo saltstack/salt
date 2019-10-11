@@ -13,7 +13,7 @@ import textwrap
 from tests.support.helpers import with_tempdir, with_tempfile, patched_environ
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mock import (
     Mock,
     MagicMock,
