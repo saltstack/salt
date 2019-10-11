@@ -526,7 +526,7 @@ class AsyncAuth(object):
         result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
         memo[id(self)] = result
         for key in self.__dict__:
-            if key in {'io_loop',}:
+            if key in {'io_loop'}:
                 # The io_loop has a thread Lock which will fail to be deep
                 # copied. Skip it because it will just be recreated on the
                 # new copy.

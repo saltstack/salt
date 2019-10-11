@@ -278,7 +278,7 @@ def delete(name, remove=False, force=False, root=None):
         # There's a known bug in Debian based distributions, at least, that
         # makes the command exit with 12, see:
         #  https://bugs.launchpad.net/ubuntu/+source/shadow/+bug/1023509
-        if __grains__['os_family'] not in {'Debian',}:
+        if __grains__['os_family'] not in {'Debian'}:
             return False
 
         if 'var/mail' in ret['stderr'] or 'var/spool/mail' in ret['stderr']:

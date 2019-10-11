@@ -3252,7 +3252,7 @@ class SPMParser(six.with_metaclass(OptionParserMeta,
     def _mixin_after_parsed(self):
         # spm needs arguments
         if len(self.args) <= 1:
-            if not self.args or self.args[0] not in {'update_repo',}:
+            if not self.args or self.args[0] not in {'update_repo'}:
                 self.print_help()
                 self.error('Insufficient arguments')
 

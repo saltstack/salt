@@ -868,7 +868,7 @@ def _network_conf(conf_tuples=None, **kwargs):
     # if we didn't explicitly say no to
     # (lxc.network.ipv4.gateway: auto)
     if _LooseVersion(version()) <= _LooseVersion('1.0.7') and \
-            all('lxc.network.ipv4.gateway' not in a for a in ret} and \
+            all('lxc.network.ipv4.gateway' not in a for a in ret) and \
             any('lxc.network.ipv4' in a for a in ret):
         ret.append({'lxc.network.ipv4.gateway': 'auto'})
     return ret

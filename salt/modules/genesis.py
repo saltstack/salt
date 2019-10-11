@@ -272,9 +272,9 @@ def _mkfs(root, fs_format, fs_opts=None):
 
     if fs_format in {'ext2', 'ext3', 'ext4'}:
         __salt__['extfs.mkfs'](root, fs_format, **fs_opts)
-    elif fs_format in {'btrfs',}:
+    elif fs_format in {'btrfs'}:
         __salt__['btrfs.mkfs'](root, **fs_opts)
-    elif fs_format in {'xfs',}:
+    elif fs_format in {'xfs'}:
         __salt__['xfs.mkfs'](root, **fs_opts)
 
 

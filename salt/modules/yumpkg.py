@@ -2771,7 +2771,7 @@ def mod_repo(repo, basedir=None, **kwargs):
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = dict(
         (x, kwargs[x]) for x in kwargs
-        if not x.startswith('__') and x not in {'saltenv',}
+        if not x.startswith('__') and x not in {'saltenv'}
     )
 
     if all(x in repo_opts for x in ('mirrorlist', 'baseurl')):

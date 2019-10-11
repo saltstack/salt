@@ -303,7 +303,7 @@ def render_field(dictionary,
     if prepend is None:
         prepend = field.replace('_', '-')
     if append is None:
-        if __grains__['os'] in {'junos',}:
+        if __grains__['os'] in {'junos'}:
             append = ';'
         else:
             append = ''

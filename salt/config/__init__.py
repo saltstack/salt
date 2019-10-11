@@ -2090,7 +2090,7 @@ def _validate_ssh_minion_opts(opts):
     for opt_name in list(ssh_minion_opts):
         if re.match('^[a-z0-9]+fs_', opt_name, flags=re.IGNORECASE) \
                 or ('pillar' in opt_name and not 'ssh_merge_pillar' == opt_name) \
-                or opt_name in {'fileserver_backend',}:
+                or opt_name in {'fileserver_backend'}:
             log.warning(
                 '\'%s\' is not a valid ssh_minion_opts parameter, ignoring',
                 opt_name
