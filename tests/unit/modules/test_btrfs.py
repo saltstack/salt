@@ -9,7 +9,7 @@ import pytest
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     mock_open,
     MagicMock,
@@ -399,7 +399,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         subvolume_exists.return_value = True
         assert not btrfs.subvolume_create('var', dest='/mnt')
 
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    @pytest.mark.skipif(salt.utils.platform.is_windows(), reason='Skip on Windows')
     @patch('salt.modules.btrfs.subvolume_exists')
     def test_subvolume_create(self, subvolume_exists):
         '''
