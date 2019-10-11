@@ -10,9 +10,6 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    this_user,
-)
 from tests.support.runtime import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -302,7 +299,7 @@ class CMDModuleTest(ModuleCase):
 
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
 
-        runas = this_user()
+        runas = RUNTIME_VARS.RUNNING_TESTS_USER
 
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
@@ -319,7 +316,7 @@ class CMDModuleTest(ModuleCase):
         cmd = 'echo $(id -u)'
 
         root_id = self.run_function('cmd.run_stdout', [cmd])
-        runas_root_id = self.run_function('cmd.run_stdout', [cmd], runas=this_user())
+        runas_root_id = self.run_function('cmd.run_stdout', [cmd], runas=RUNTIME_VARS.RUNNING_TESTS_USER)
         with self._ensure_user_exists(self.runas_usr):
             user_id = self.run_function('cmd.run_stdout', [cmd], runas=self.runas_usr)
 
