@@ -10,7 +10,7 @@ import xml.parsers.expat
 import os
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     call,
     MagicMock,
@@ -25,11 +25,12 @@ import salt.utils.platform
 from salt.exceptions import SaltInvocationError, CommandExecutionError
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves import range
 from salt.ext import six
 
 
-@skipIf(not salt.utils.platform.is_darwin(), 'These tests run only on mac')
+@pytest.mark.skipif(not salt.utils.platform.is_darwin(), reason='These tests run only on mac')
 class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     test mac_utils salt utility
