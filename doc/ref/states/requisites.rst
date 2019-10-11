@@ -917,7 +917,7 @@ For example:
         - names:
           - first_deploy_cmd
           - second_deploy_cmd
-        - unless: ls /usr/bin/vim
+        - unless: some_check
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
