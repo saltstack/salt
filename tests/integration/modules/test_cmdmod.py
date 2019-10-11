@@ -14,7 +14,6 @@ from tests.support.helpers import (
     destructiveTest,
     skip_if_binaries_missing,
     skip_if_not_root,
-    this_user,
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
@@ -304,7 +303,7 @@ class CMDModuleTest(ModuleCase):
 
         expected_result = 'SELECT * FROM foo WHERE bar="baz"'
 
-        runas = this_user()
+        runas = RUNTIME_VARS.RUNNING_TESTS_USER
 
         result = self.run_function('cmd.run_stdout', [cmd],
                                    runas=runas).strip()
@@ -321,7 +320,7 @@ class CMDModuleTest(ModuleCase):
         cmd = 'echo $(id -u)'
 
         root_id = self.run_function('cmd.run_stdout', [cmd])
-        runas_root_id = self.run_function('cmd.run_stdout', [cmd], runas=this_user())
+        runas_root_id = self.run_function('cmd.run_stdout', [cmd], runas=RUNTIME_VARS.RUNNING_TESTS_USER)
         with self._ensure_user_exists(self.runas_usr):
             user_id = self.run_function('cmd.run_stdout', [cmd], runas=self.runas_usr)
 
