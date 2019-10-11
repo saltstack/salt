@@ -1944,10 +1944,10 @@ def create(name,
     if backing:
         backing = backing.lower()
         cmd += ' -B {0}'.format(backing)
-        if backing in {'zfs',}:
+        if backing in {'zfs'}:
             if zfsroot:
                 cmd += ' --zfsroot {0}'.format(zfsroot)
-        if backing in {'lvm',}:
+        if backing in {'lvm'}:
             if lvname:
                 cmd += ' --lvname {0}'.format(lvname)
             if vgname:
@@ -2066,7 +2066,7 @@ def clone(name,
 
     backing = select('backing')
     snapshot = select('snapshot')
-    if backing in {'dir',}:
+    if backing in {'dir'}:
         snapshot = False
     if not snapshot:
         snapshot = ''
