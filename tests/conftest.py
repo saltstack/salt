@@ -55,6 +55,7 @@ import salt.utils.path
 import salt.log.setup
 import salt.log.mixins
 import salt.utils.platform
+import salt.utils.win_functions
 from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 
@@ -373,7 +374,6 @@ def pytest_runtest_setup(item):
                 item._skipped_by_mark = True
                 pytest.skip('You must be logged in as root to run this test')
         else:
-            import salt.utils.win_functions
             current_user = salt.utils.win_functions.get_current_user()
             if current_user != 'SYSTEM':
                 if not salt.utils.win_functions.is_admin(current_user):
