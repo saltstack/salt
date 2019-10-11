@@ -34,7 +34,7 @@ from tests.support.case import ModuleCase
 from tests.support.unit import SkipTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.helpers import get_unused_localhost_port, requires_system_grains, patched_environ
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mock import patch
 from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase, terminate_process
 

@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 # Import Salt Testing Libs
 from tests.support.mock import patch
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.paths import CODE_DIR
 
 # Import salt libs

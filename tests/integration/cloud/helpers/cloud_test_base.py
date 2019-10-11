@@ -16,7 +16,7 @@ import pytest
 from tests.support.case import ShellCase
 from tests.support.helpers import generate_random_name
 from tests.support.paths import FILES
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt Libs
 from salt.config import cloud_config, cloud_providers_config

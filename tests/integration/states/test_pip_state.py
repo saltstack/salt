@@ -31,7 +31,7 @@ from tests.support.helpers import (
     patched_environ
 )
 from tests.support.mixins import SaltReturnAssertsMixin
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.unit import skipIf
 
 # Import salt libs

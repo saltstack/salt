@@ -10,7 +10,7 @@ from tests.support.mock import (
 )
 from tests.support import mixins
 from tests.support.unit import skipIf, TestCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.config

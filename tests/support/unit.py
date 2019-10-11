@@ -381,7 +381,7 @@ class TextTestRunner(_TextTestRunner):
 
 
 def skipIf(skip, reason):
-    from tests.support.runtests import RUNTIME_VARS
+    from tests.support.runtime import RUNTIME_VARS
     if RUNTIME_VARS.PYTEST_SESSION:
         import pytest
         return pytest.mark.skipif(skip, reason=reason)

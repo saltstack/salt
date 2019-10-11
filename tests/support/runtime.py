@@ -7,10 +7,10 @@
     Runtime Variables
     -----------------
 
-    :command:`salt-runtests` provides a variable, :py:attr:`RUNTIME_VARS` which has some common paths defined at
+    This module provides a variable, :py:attr:`RUNTIME_VARS` which has some common paths defined at
     startup:
 
-    .. autoattribute:: tests.support.runtests.RUNTIME_VARS
+    .. autoattribute:: tests.support.runtime.RUNTIME_VARS
         :annotation:
 
         :TMP: Tests suite temporary directory
@@ -18,7 +18,7 @@
                        configuration files.
         :TMP_CONF_MASTER_INCLUDES: Salt Master configuration files includes directory. See
                                    :salt_conf_master:`default_include`.
-        :TMP_CONF_MINION_INCLUDES: Salt Minion configuration files includes directory. Seei
+        :TMP_CONF_MINION_INCLUDES: Salt Minion configuration files includes directory. See
                                    :salt_conf_minion:`include`.
         :TMP_CONF_CLOUD_INCLUDES: Salt cloud configuration files includes directory. The same as the salt master and
                                   minion includes configuration, though under a different directory name.
@@ -37,13 +37,12 @@
     .. code-block:: python
 
         import os
-        from tests.support.runtests import RUNTIME_VARS
+        from tests.support.runtime import RUNTIME_VARS
 
         # Path to the testing minion configuration file
         minion_config_path = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
 
     .. _`pytest`: http://pytest.org
-    .. _`nose`: https://nose.readthedocs.org
     '''
 
 # Import Python modules

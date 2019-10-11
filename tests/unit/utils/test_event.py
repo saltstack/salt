@@ -17,7 +17,7 @@ import warnings
 
 # Import Salt Testing libs
 from tests.support.unit import expectedFailure, skipIf, TestCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.events import eventpublisher_process, eventsender_process
 
 # Import salt libs

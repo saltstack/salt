@@ -10,7 +10,7 @@ import shutil
 import tempfile
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mock import (
     MagicMock,
     patch,

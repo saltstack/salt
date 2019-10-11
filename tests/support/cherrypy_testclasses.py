@@ -11,7 +11,7 @@ import os
 
 import salt.config
 from tests.support.mock import patch
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 if HAS_CHERRYPY:
     from tests.support.cptestcase import BaseCherryPyTestCase

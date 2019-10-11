@@ -16,7 +16,7 @@ import shutil
 import sys
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.mixins import ShellCaseCommonTestsMixin

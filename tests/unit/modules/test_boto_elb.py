@@ -9,7 +9,7 @@ import os.path
 import sys
 
 # Import test support libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error

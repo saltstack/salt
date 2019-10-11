@@ -11,7 +11,7 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 from tests.support.mock import patch, Mock, MagicMock
 from tests.support.unit import TestCase

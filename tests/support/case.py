@@ -29,7 +29,7 @@ from datetime import datetime, timedelta
 from tests.support.unit import TestCase
 from tests.support.helpers import RedirectStdStreams, requires_sshd_server
 from tests.support.processes import terminate_process
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.mixins import (AdaptedConfigurationTestCaseMixin,
                                   SaltClientTestCaseMixin,
                                   SaltMultimasterClientTestCaseMixin)

@@ -35,7 +35,7 @@ if CODE_DIR in sys.path:
 sys.path.insert(0, CODE_DIR)
 
 # Import test libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.sminion import create_sminion
 
 # Import pytest libs

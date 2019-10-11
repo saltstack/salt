@@ -13,7 +13,7 @@ import pytest
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 from tests.support.helpers import generate_random_name
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files

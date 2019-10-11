@@ -16,7 +16,7 @@ import textwrap
 import threading
 
 # Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky
 from tests.support.mock import MagicMock, patch

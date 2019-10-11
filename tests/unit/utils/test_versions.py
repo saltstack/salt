@@ -18,7 +18,7 @@ import warnings
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt libs
 import salt.modules.cmdmod

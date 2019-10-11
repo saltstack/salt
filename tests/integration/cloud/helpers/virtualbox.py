@@ -9,7 +9,7 @@ import os
 import tests.integration.cloud.helpers
 from tests.support.case import ShellCase
 from tests.support.unit import TestCase, skipIf
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt libs
 from salt.ext import six

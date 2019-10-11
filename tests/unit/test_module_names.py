@@ -16,7 +16,7 @@ import salt.utils.stringutils
 # Import Salt Testing libs
 from tests.support.unit import TestCase
 from tests.support.paths import list_test_mods
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 EXCLUDED_DIRS = [
     os.path.join('tests', 'pkg'),

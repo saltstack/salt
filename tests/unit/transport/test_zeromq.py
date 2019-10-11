@@ -34,7 +34,7 @@ from salt.ext.six.moves import range
 from salt.transport.zeromq import AsyncReqMessageClientPool
 
 # Import test support libs
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 from tests.support.unit import TestCase
 from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin

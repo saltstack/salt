@@ -15,7 +15,7 @@ from tests.support.mock import (
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.runtests import RUNTIME_VARS
+from tests.support.runtime import RUNTIME_VARS
 
 # Import Salt libs
 import salt.exceptions
