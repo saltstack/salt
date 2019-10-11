@@ -229,8 +229,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                 'No command was sent, no jid was '
                 'assigned.'
             )
-        elif self.master_opts['transport'] == 'raet':
-            expect = ''
         self.assertEqual(
             ''.join(data),
             expect
