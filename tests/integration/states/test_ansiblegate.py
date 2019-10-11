@@ -20,27 +20,23 @@ import salt.utils.path
 from tests.support.case import ModuleCase
 from tests.support.helpers import (
     requires_sshd_server,
-    requires_system_grains,
     flaky
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtime import RUNTIME_VARS
-from tests.support.unit import skipIf
 
 
 @pytest.mark.destructive_test
 @requires_sshd_server
-@skipIf(not salt.utils.path.which('ansible-playbook'), 'ansible-playbook is not installed')
+@pytest.mark.skipif(not salt.utils.path.which('ansible-playbook'), reason='ansible-playbook is not installed')
+@pytest.mark.skipif("grains['os_family'] == 'RedHat' and grains.get('osmajorrelease') == 6",
+                    reason='This test hangs the test suite on RedHat 6. Skipping for now.')
 class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test ansible.playbooks states
     '''
 
-    @requires_system_grains
-    def setUp(self, grains=None):
-        if grains.get('os_family') == 'RedHat' and grains.get('osmajorrelease') == 6:
-            self.skipTest('This test hangs the test suite on RedHat 6. Skipping for now.')
-
+    def setUp(self):
         priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test')
         data = {
             'all': {
