@@ -504,7 +504,7 @@ def set_hwclock(clock):
         return __salt__['cmd.retcode'](cmd, python_shell=False) == 0
     else:
         os_family = __grains__['os_family']
-        if os_family in {'AIX', 'NILinuxRT'}:
+        if os_family in ['AIX', 'NILinuxRT']:
             if clock.lower() != 'utc':
                 raise SaltInvocationError(
                     'UTC is the only permitted value'
