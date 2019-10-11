@@ -155,15 +155,6 @@ ZeroMQ Transport:
     pip install -e .
 
 
-RAET Transport:
-
-.. code-block:: bash
-
-    pip install -r requirements/raet.txt
-    pip install psutil
-    pip install -e .
-
-
 Running a self-contained development version
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

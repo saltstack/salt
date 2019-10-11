@@ -2730,7 +2730,7 @@ class Minion(MinionBase):
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
-            self.remove_periodic_callbback('ping', ping_master)
+            self.remove_periodic_callback('ping')
             self.add_periodic_callback('ping', ping_master, ping_interval)
 
         # add handler to subscriber
