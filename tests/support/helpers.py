@@ -42,6 +42,7 @@ from pytestsalt.utils import get_unused_localhost_port
 from tests.support.unit import SkipTest
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
+from tests.support.sminion import build_minion_opts
 
 # Import Salt libs
 import salt.utils.files
@@ -910,20 +911,11 @@ def requires_system_grains(func):
     @functools.wraps(func)
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, '__grains__'):
-            import salt.config
             root_dir = tempfile.mkdtemp(dir=TMP)
-            defaults = salt.config.DEFAULT_MINION_OPTS.copy()
-            defaults.pop('conf_file')
-            defaults.update({
-                'root_dir': root_dir,
-                'cachedir': 'cachedir',
-                'sock_dir': 'sock',
-                'pki_dir': 'pki',
-                'log_file': 'logs/minion',
-                'pidfile': 'pids/minion.pid'
-            })
-            opts = salt.config.minion_config(None, defaults=defaults)
-            requires_system_grains.__grains__ = salt.loader.grains(opts)
+            minion_config = build_minion_opts(minion_id='requires-system-grains-minion',
+                                              root_dir=root_dir,
+                                              cache_opts=False)
+            requires_system_grains.__grains__ = salt.loader.grains(minion_config)
             shutil.rmtree(root_dir, ignore_errors=True)
         kwargs['grains'] = requires_system_grains.__grains__
         return func(*args, **kwargs)
