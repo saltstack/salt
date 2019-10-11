@@ -71,6 +71,7 @@ from salt.ext.six.moves import range
 
 # Import third party libs
 from salt.ext import six
+import tornado.gen
 import tornado.ioloop
 import tornado.iostream
 
@@ -694,6 +695,34 @@ class SaltEvent(object):
                 continue
             yield data
 
+    @tornado.gen.coroutine
+    def throttle_send(self, tag, msg):
+        event_throttles = self.opts.get('event_throttles', None)
+        cache_path = None
+        cache_ttl = 0
+        rules = None
+
+        if event_throttles:
+            cache_path = event_throttles.get('cache_path', None)
+            cache_ttl = event_throttles.get('cache_ttl', 0)
+            rules = event_throttles.get('rules', None)
+
+        if cache_path and cache_ttl and rules:
+            for rule in rules:
+                matched = getattr(tag, rule['method'])
+                if matched(rule['match']):
+                    throttles = salt.utils.cache.CacheDisk(cache_ttl, cache_path, rules)
+                    if tag in throttles:
+                        log.error('Skipped event due to throttle: %s', tag)
+                        raise tornado.gen.Return(None)
+
+                    else:
+                        throttles[tag] = None
+                        break
+
+        yield self.pusher.send(msg)
+
+
     def fire_event(self, data, tag, timeout=1000):
         '''
         Send a single event into the publisher with payload dict "data" and
@@ -744,12 +773,12 @@ class SaltEvent(object):
         if self._run_io_loop_sync:
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
-                    self.io_loop.run_sync(lambda: self.pusher.send(msg))
+                    self.io_loop.run_sync(lambda: self.throttle_send(tag, msg))
                 except Exception as ex:
                     log.debug(ex)
                     raise
         else:
-            self.io_loop.spawn_callback(self.pusher.send, msg)
+            self.io_loop.spawn_callback(self.throttle_send, tag, msg)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
