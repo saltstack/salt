@@ -11,11 +11,12 @@ import subprocess
 import tempfile
 import time
 
+import pytest
+
 import salt.utils.files
 import salt.utils.path
 import salt.utils.smb
 
-from tests.support.unit import skipIf
 from tests.support.case import TestCase
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,10 @@ def which_smbd():
     return smbd
 
 
-@skipIf(not which_smbd(), 'Skip when no smbd binary found')
+@pytest.mark.skipif(not which_smbd(), reason='smbd binary not found')
+@pytest.mark.skipif(any([salt.utils.smb.HAS_IMPACKET,
+                         salt.utils.smb.HAS_SMBPROTOCOL]),
+                    reason='Either "impacket" or "smbprotocol" needs to be installed.')
 class TestSmb(TestCase):
 
     _smbd = None
