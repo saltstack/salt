@@ -103,7 +103,6 @@ class AdaptedConfigurationTestCaseMixin(object):
                     os.path.join(rdict['pki_dir'], 'minions_rejected'),
                     os.path.join(rdict['pki_dir'], 'minions_denied'),
                     os.path.join(rdict['cachedir'], 'jobs'),
-                    os.path.join(rdict['cachedir'], 'raet'),
                     os.path.join(rdict['cachedir'], 'tokens'),
                     os.path.join(rdict['root_dir'], 'cache', 'tokens'),
                     os.path.join(rdict['pki_dir'], 'accepted'),
