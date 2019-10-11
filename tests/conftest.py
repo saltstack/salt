@@ -22,24 +22,17 @@ import logging
 import tempfile
 import textwrap
 from contextlib import contextmanager
-TESTS_DIR = os.path.dirname(
-    os.path.normpath(os.path.abspath(__file__))
-)
+
+TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 CODE_DIR = os.path.dirname(TESTS_DIR)
+
+# Change to code checkout directory
 os.chdir(CODE_DIR)
-try:
-    # If we have a system-wide salt module imported, unload it
-    import salt
-    for module in list(sys.modules):
-        if module.startswith(('salt',)):
-            try:
-                if not sys.modules[module].__file__.startswith(CODE_DIR):
-                    sys.modules.pop(module)
-            except AttributeError:
-                continue
-    sys.path.insert(0, CODE_DIR)
-except ImportError:
-    sys.path.insert(0, CODE_DIR)
+
+# Make sure the current directory is the first item in sys.path
+if CODE_DIR in sys.path:
+    sys.path.remove(CODE_DIR)
+sys.path.insert(0, CODE_DIR)
 
 # Import test libs
 from tests.support.runtests import RUNTIME_VARS
