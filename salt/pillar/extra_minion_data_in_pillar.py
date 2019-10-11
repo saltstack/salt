@@ -82,7 +82,7 @@ def ext_pillar(minion_id, pillar, include, extra_minion_data=None):
 
     if not extra_minion_data:
         return {}
-    if include in {'*', '<all>'}:
+    if include in ('*', '<all>'):
         return extra_minion_data
     data = {}
     for key in include:

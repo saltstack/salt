@@ -522,7 +522,7 @@ def read_value(hive, key, vname=None, use_32bit_registry=False):
         try:
             # RegQueryValueEx returns and accepts unicode data
             vdata, vtype = win32api.RegQueryValueEx(handle, local_vname)
-            if vdata or vdata in {0, ''}:
+            if vdata or vdata in (0, ''):
                 # Only convert text types to unicode
                 ret['vtype'] = registry.vtype_reverse[vtype]
                 if vtype == win32con.REG_MULTI_SZ:

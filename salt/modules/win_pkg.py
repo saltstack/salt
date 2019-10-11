@@ -602,7 +602,7 @@ def _get_reg_software(include_components=True,
 
         if (not d_name_regdata['success'] or
                 d_name_regdata['vtype'] not in {'REG_SZ', 'REG_EXPAND_SZ'} or
-                d_name_regdata['vdata'] in {'(value not set)', None, False}):
+                d_name_regdata['vdata'] in ('(value not set)', None, False)):
             return
         d_name = d_name_regdata['vdata']
 

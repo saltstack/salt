@@ -111,7 +111,7 @@ def check_onfail_requisites(state_id, state_result, running, highstate):
                         st = {'__id__': id_, 'state': mod_}
                     if mod_ == st['state'] and fstate == st['__id__']:
                         ofresult = rstate.get('result', _empty)
-                        if ofresult in {False, True}:
+                        if ofresult in (False, True):
                             nret = ofresult
                         if ofresult is False:
                             # as soon as we find an errored onfail, we stop
