@@ -103,10 +103,6 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         source=grail,
     )
 
-    if IS_WINDOWS:
-        testcase.assertSaltFalseReturn(ret)
-        return
-
     testcase.assertSaltTrueReturn(ret)
 
     try:
@@ -284,12 +280,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(IS_WINDOWS, 'Test does not support Win32')
     def test_managed_file_mode_keep(self):
         '''
         Test using "mode: keep" in a file.managed state
         '''
         _test_managed_file_mode_keep_helper(self, local=False)
 
+    @skipIf(IS_WINDOWS, 'Test does not support Win32')
     def test_managed_file_mode_keep_local_source(self):
         '''
         Test using "mode: keep" in a file.managed state, with a local file path
@@ -2608,6 +2606,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     @with_tempfile()
+    @skipIf(IS_WINDOWS, 'Test does not support Win32')
     def test_file_copy_make_dirs(self, source):
         '''
         ensure make_dirs creates correct user perms
