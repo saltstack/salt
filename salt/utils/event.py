@@ -722,7 +722,6 @@ class SaltEvent(object):
 
         yield self.pusher.send(msg)
 
-
     def fire_event(self, data, tag, timeout=1000):
         '''
         Send a single event into the publisher with payload dict "data" and
