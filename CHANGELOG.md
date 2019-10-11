@@ -10,6 +10,8 @@ Versions are `MAJOR.PATCH`.
 
 ### Removed
 
+- [#54943](https://github.com/saltstack/salt/pull/54943) - RAET transport method has been removed per the deprecation schedule - [@s0undt3ch](https://github.com/s0undt3ch)
+
 ### Deprecated
 
 ### Changed
@@ -25,6 +27,5 @@ Versions are `MAJOR.PATCH`.
 
 ## [2019.2.1] - 2019-09-25 [YANKED]
 
-Due to the instability and high-severity bugs we felt was appropriate to yank this release.
 
 - See [old release notes](https://docs.saltstack.com/en/latest/topics/releases/2019.2.1.html) 
