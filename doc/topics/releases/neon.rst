@@ -3,8 +3,6 @@
 ==================================
 Salt Release Notes - Codename Neon
 ==================================
-<<<<<<< HEAD
-=======
 
 
 Saltcheck Updates
@@ -295,4 +293,3 @@ State Deprecations
     - Support for the ``force`` kwarg has been removed from the
       :py:func:`win_servermanager.installed <salt.statues.win_servermanager.installed>`
       function. Please use ``recurse`` instead.
->>>>>>> 560a1db1e1... Merge pull request #50141 from mchugh19/ssh_auth_manage

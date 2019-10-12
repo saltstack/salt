@@ -102,3 +102,40 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Removed'}})
                 self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+
+def test_manage(self):
+        '''
+        Test to verifies that the specified SSH key is absent.
+        '''
+        name = 'sshkeys'
+        user = 'root'
+        source = 'salt://ssh_keys/id_rsa.pub'
+
+        ret = {'name': name,
+               'changes': {},
+               'result': None,
+               'comment': ''}
+
+        mock = MagicMock(side_effect=['User authorized keys file not present',
+                                      'Key removed'])
+        mock_up = MagicMock(side_effect=['update', 'updated'])
+        with patch.dict(ssh_auth.__salt__, {'ssh.rm_auth_key': mock,
+                                            'ssh.check_key': mock_up}):
+            with patch.dict(ssh_auth.__opts__, {'test': True}):
+                comt = ('Key sshkeys for user root is set for removal')
+                ret.update({'comment': comt})
+                self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+
+                comt = ('Key is already absent')
+                ret.update({'comment': comt, 'result': True})
+                self.assertDictEqual(ssh_auth.manage(name, user, source), ret)
+
+            with patch.dict(ssh_auth.__opts__, {'test': False}):
+                comt = ('User authorized keys file not present')
+                ret.update({'comment': comt, 'result': False})
+                self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+
+                comt = ('Key removed')
+                ret.update({'comment': comt, 'result': True,
+                            'changes': {name: 'Removed'}})
+                self.assertDictEqual(ssh_auth.manage(name, user, source), ret)
