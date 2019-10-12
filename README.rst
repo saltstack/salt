@@ -60,7 +60,6 @@ services`_ offerings.
 * Facebook - `<https://www.facebook.com/SaltStack/>`_
 * LinkedIn - `<https://www.linkedin.com/company/salt-stack-inc>`_
 * LinkedIn Group - `<https://www.linkedin.com/groups/4877160>`_
-* Google+ - `<https://plus.google.com/b/112856352920437801867/+SaltStackInc/posts>`_
 
 .. _global community: http://www.meetup.com/pro/saltstack/
 .. _SaltConf: http://saltconf.com/
