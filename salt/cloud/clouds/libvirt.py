@@ -24,8 +24,10 @@ Example profile:
       num_cpus: 2
       # Amount of virtual memory (unit: MB or GB)
       memory: 2048MB
-      # Network interfaces
+      # Serial number visible in DMI data (string)
+      serial: 01234456789
       devices:
+        # Network interfaces
         network:
           eth0:
             # Type of networking: [bridge | network]
@@ -365,6 +367,10 @@ def create(vm_):
         'memory', vm_, __opts__, default=None
     )
 
+    serial = config.get_cloud_config_value(
+        'serial', vm_, __opts__, default=None
+    )
+
     devices = config.get_cloud_config_value(
         'devices', vm_, __opts__, default=None
     )
@@ -429,6 +435,12 @@ def create(vm_):
                 vcpu_xml = domain_xml.find('./vcpu')
                 vcpu_xml.text = str(num_cpus)
                 log.debug("Setting CPU number to: %s", num_cpus)
+
+            # Configure serial number
+            if serial:
+                entry_xml = domain_xml.find('./sysinfo/system/entry')
+                entry_xml.text = str(serial)
+                log.debug("Setting Serial to %s", serial)
 
             # Configure amount of memory
             if memory:
