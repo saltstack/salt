@@ -576,6 +576,7 @@ def create(vm_):
                         new_volume = pool.createXMLFrom(
                             create_volume_xml(volume), volume, 0
                         )
+                    pool.refresh()
                     cleanup.append({"what": "volume", "item": new_volume})
 
                     disk.find("./source").attrib["file"] = new_volume.path()
@@ -586,6 +587,7 @@ def create(vm_):
                     new_volume = pool.createXMLFrom(
                         create_volume_xml(volume), volume, 0
                     )
+                    pool.refresh()
                     cleanup.append({"what": "volume", "item": new_volume})
 
                     disk.find("./source").attrib["file"] = new_volume.path()
