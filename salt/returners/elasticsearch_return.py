@@ -406,5 +406,8 @@ def get_load(jid):
                                                   id=jid,
                                                   doc_type=doc_type)
     if data:
-        return salt.utils.json.loads(data)
+        if type(data) == str:
+            return salt.utils.json.loads(data)
+        else:
+            return data
     return {}
