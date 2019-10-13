@@ -303,7 +303,7 @@ def get_domain_ip(domain, idx, ip_source, skip_loopback=True):
     ips = get_domain_ips(domain, ip_source)
 
     if skip_loopback:
-        ips = [ip for ip in ips if not ip.startswith("127.")]
+        ips = [ip for ip in ips if not ip.startswith(("127.", "169."))]
 
     if not ips or len(ips) <= idx:
         return None
