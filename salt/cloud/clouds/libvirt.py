@@ -27,6 +27,18 @@ Example profile:
       # Serial number visible in DMI data (string)
       serial: 01234456789
       devices:
+        # Supplementary disks for cloned domain
+        disks:
+          # Disk name, may be 'hdX' for ide bus, 'sdX' for sata/scsi/usb bus, or 'vdX' for virtio bus
+          vdb:
+            # Bus can be 'ide', 'sata', 'scsi', 'usb' or 'virtio' (default: 'virtio')
+            bus: virtio
+            # Format can be 'raw' or 'qcow2' (default: 'qcow2')
+            format: qcow2
+            # Pool name, must exist prior to instantiate domain (default: 'default')
+            pool: Data
+            # Size in GB (default: '1')
+            size: 3
         # Network interfaces
         network:
           eth0:
@@ -595,6 +607,80 @@ def create(vm_):
                     raise SaltCloudExecutionFailure(
                         "Disk type '{}' not supported".format(disk_type)
                     )
+
+            # Add new disks to domain
+            if 'disk' in list(devices.keys()):
+                # Get list of existing storage pools
+                virt_pools = conn.listAllStoragePools()
+
+                # Add new disk to cloned domain
+                for disk in sorted(devices['disk']):
+                    # bus: should be 'scsi' or 'virtio' (default)
+                    if 'bus' in devices['disk'][disk]:
+                        bus = devices['disk'][disk]['bus']
+                    else:
+                        bus = 'virtio'
+
+                    # format: should be 'raw' or 'qcow2' (default)
+                    if 'format' in devices['disk'][disk]:
+                        format = devices['disk'][disk]['format']
+                    else:
+                        format = 'qcow2'
+
+                    # pool: name of the libvirt pool that will contain the new disk (default is 'default')
+                    if 'pool' in devices['disk'][disk]:
+                        pool_name = devices['disk'][disk]['pool']
+                    else:
+                        pool_name = "default"
+
+                    # size: should be a size in GB (default: 1 GB)
+                    if 'size' in devices['disk'][disk]:
+                        size = devices['disk'][disk]['size']
+                    else:
+                        size = 1
+
+                    pool = None
+                    for p in virt_pools:
+                        if p.name() == devices['disk'][disk]['pool']:
+                            pool = p
+
+                    if pool:
+                        pool_xml = ElementTree.fromstring(pool.XMLDesc())
+                        pool_target = pool_xml.find('./target/path').text
+
+                        vol_name = name + "-" + disk + "." + format
+                        vol_path = pool_target + "/" + vol_name
+
+                        try:
+                            vol = pool.storageVolLookupByName(vol_name)
+                            log.debug("Volume '%s' in pool '%s' already exists", vol_name, pool.name())
+                        except:
+                            log.debug("Creating volume '%s' in pool '%s'", vol_name, pool.name())
+                            vol_xml = """
+                            <volume>
+                              <name>"""+vol_name+"""</name>
+                              <allocation>0</allocation>
+                              <capacity unit="G">"""+str(size)+"""</capacity>
+                              <target>
+                                <path>"""+vol_path+"""</path>
+                                <format type='"""+format+"""'/>
+                                <permissions>
+                                   <owner>107</owner>
+                                   <group>107</group>
+                                   <mode>0644</mode>
+                                   <label>virt_image_t</label>
+                                 </permissions>
+                              </target>
+                            </volume>"""
+                            vol = pool.createXML(vol_xml, 0)
+
+                        log.debug("Adding volume '%s' to domain '%s'", vol_name, name)
+                        devices_xml.append(ElementTree.Element('disk', type='file', device='disk'))
+                        disk_xml = devices_xml.findall('./disk')[-1]
+                        disk_xml.append(ElementTree.Element('driver', cache='none', io='native', name='qemu', type=format))
+                        disk_xml.append(ElementTree.Element('source', file=vol_path))
+                        disk_xml.append(ElementTree.Element('target', dev=disk, bus=bus))
+                        pool.refresh()
 
             clone_xml = salt.utils.stringutils.to_str(ElementTree.tostring(domain_xml))
             log.debug("Clone XML '%s'", clone_xml)
