@@ -595,7 +595,7 @@ def manage(
             ret['changes'].update(run_return['changes'])
         else:
             ret['comment'] += '\n' + run_return['comment']
-            ret['comment'].strip()
+            ret['comment'] = ret['comment'].strip()
 
         if run_return['result'] is None:
             ret['result'] = None
