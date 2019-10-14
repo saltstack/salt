@@ -413,6 +413,9 @@ def _generate_out_list(results):
     out_list.append({'TEST RESULTS': {'Execution Time': round(total_time, 4),
                                       'Passed': passed, 'Failed': failed, 'Skipped': skipped,
                                       'Missing Tests': missing_tests}})
+    # Set exist code to 1 if failed tests
+    # Use-cases for exist code handling of missing or skipped?
+    __context__['retcode'] = (1 if failed else 0)
     return out_list
 
 
