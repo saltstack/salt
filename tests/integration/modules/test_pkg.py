@@ -34,6 +34,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif cls.run_function('grains.get', ['os_family']) == 'RedHat':
             cls.pkg = 'units'
 
+    @requires_salt_modules('pkg.refresh_db')
     def setUp(self):
         if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
