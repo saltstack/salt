@@ -571,10 +571,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__opts__, {'test': True}):
-            expected =  (
-                            'Hard link {0} to {1} is set for creation'.format(
-                            name, target)
-                        )
+            expected =  'Hard link {0} to {1} is set for creation'.format(name, target)
             changes = dict(new=name)
             ret = return_val(result=None, comment=expected, name=name, changes=changes)
             self.assertDictEqual(filestate.hardlink(name, target,
@@ -588,10 +585,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.stats': mock_stats}),\
                 patch.object(os.path, 'exists', mock_t),\
                 patch.dict(filestate.__opts__, {'test': True}):
-            expected =  (
-                            'The hard link {0} is presently targetting {1}'.format(
-                            name, target)
-                        )
+            expected = 'The hard link {0} is presently targetting {1}'.format(name, target)
             ret = return_val(result=True, comment=expected, name=name)
             self.assertDictEqual(filestate.hardlink(name, target,
                                                     user=user, group=group), ret)
@@ -604,10 +598,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os.path, 'exists', mock_t),\
                 patch.dict(filestate.__opts__, {'test': True}):
-            expected =  (
-                            'Link {0} target is set to be changed to {1}'.format(
-                            name, target)
-                        )
+            expected = 'Link {0} target is set to be changed to {1}'.format(name, target)
             changes = dict(change=name)
             ret = return_val(result=None, comment=expected, name=name, changes=changes)
             self.assertDictEqual(filestate.hardlink(name, target,

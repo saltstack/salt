@@ -3440,7 +3440,7 @@ def hardlink(src, path):
         os.link(src, path)
 
     except (OSError, IOError):
-        raise CommandExecutionError('Could not create {0!r}'.format(path))
+        raise CommandExecutionError('Could not create \'{0}\''.format(path))
     return True
 
 
