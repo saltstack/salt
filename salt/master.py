@@ -396,7 +396,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 update_func = self.fileserver.servers[fstr]
             except KeyError:
                 log.debug(
-                    'No update function for the %s filserver backend',
+                    'No update function for the %s fileserver backend',
                     backend
                 )
                 continue
