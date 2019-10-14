@@ -468,7 +468,7 @@ def get_entry(user, identifier=None, cmd=None):
 
     .. code-block:: bash
 
-        salt '*' cron.identifier_exists root identifier=task1
+        salt '*' cron.get_entry root identifier=task1
     '''
     cron_entries = list_tab(user).get('crons', False)
     for cron_entry in cron_entries:
