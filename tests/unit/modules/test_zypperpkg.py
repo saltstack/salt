@@ -1402,6 +1402,44 @@ Repository 'DUMMY' not found by its alias, number, or URI.
                 ):
                     zypper.install(advisory_ids=["SUSE-PATCH-XXX"])
 
+    @patch("salt.modules.zypperpkg._systemd_scope", MagicMock(return_value=False))
+    @patch(
+        "salt.modules.zypperpkg.list_products",
+        MagicMock(return_value={"openSUSE": {"installed": False, "summary": "test"}}),
+    )
+    @patch(
+        "salt.modules.zypperpkg.list_pkgs",
+        MagicMock(
+            side_effect=[{"product:openSUSE": "15.2"}, {"product:openSUSE": "15.3"}]
+        ),
+    )
+    def test_install_product_ok(self):
+        """
+        Test successfully product installation.
+        """
+        with patch.dict(
+            zypper.__salt__,
+            {
+                "pkg_resource.parse_targets": MagicMock(
+                    return_value=(["product:openSUSE"], None)
+                )
+            },
+        ):
+            with patch(
+                "salt.modules.zypperpkg.__zypper__.noraise.call", MagicMock()
+            ) as zypper_mock:
+                ret = zypper.install("product:openSUSE", includes=["product"])
+                zypper_mock.assert_called_once_with(
+                    "--no-refresh",
+                    "install",
+                    "--auto-agree-with-licenses",
+                    "--name",
+                    "product:openSUSE",
+                )
+                self.assertDictEqual(
+                    ret, {"product:openSUSE": {"old": "15.2", "new": "15.3"}}
+                )
+
     def test_remove_purge(self):
         """
         Test package removal

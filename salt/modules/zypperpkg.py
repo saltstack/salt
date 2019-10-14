@@ -932,22 +932,36 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
             _ret[pkgname] = sorted(ret[pkgname], key=lambda d: d["version"])
 
         for include in includes:
+            if include == "product":
+                products = list_products(all=False, root=root)
+                for product in products:
+                    extended_name = "{}:{}".format(include, product["name"])
+                    _ret[extended_name] = [
+                        {
+                            "epoch": product["epoch"],
+                            "version": product["version"],
+                            "release": product["release"],
+                            "arch": product["arch"],
+                            "install_date": None,
+                            "install_date_time_t": None,
+                        }
+                    ]
             if include in ("pattern", "patch"):
                 if include == "pattern":
-                    pkgs = list_installed_patterns(root=root)
+                    elements = list_installed_patterns(root=root)
                 elif include == "patch":
-                    pkgs = list_installed_patches(root=root)
+                    elements = list_installed_patches(root=root)
                 else:
-                    pkgs = []
-                for pkg in pkgs:
-                    pkg_extended_name = "{}:{}".format(include, pkg)
-                    info = info_available(pkg_extended_name, refresh=False, root=root)
-                    _ret[pkg_extended_name] = [
+                    elements = []
+                for element in elements:
+                    extended_name = "{}:{}".format(include, element)
+                    info = info_available(extended_name, refresh=False, root=root)
+                    _ret[extended_name] = [
                         {
                             "epoch": None,
-                            "version": info[pkg]["version"],
+                            "version": info[element]["version"],
                             "release": None,
-                            "arch": info[pkg]["arch"],
+                            "arch": info[element]["arch"],
                             "install_date": None,
                             "install_date_time_t": None,
                         }
