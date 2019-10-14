@@ -996,13 +996,6 @@ def _check_touch(name, atime, mtime):
     return ret
 
 
-def _get_hardlink_ownership(path):
-    return (
-        __salt__['file.get_user'](path),
-        __salt__['file.get_group'](path)
-    )
-
-
 def _get_symlink_ownership(path):
     if salt.utils.platform.is_windows():
         owner = salt.utils.win_dacl.get_owner(path)
@@ -1012,14 +1005,6 @@ def _get_symlink_ownership(path):
             __salt__['file.get_user'](path, follow_symlinks=False),
             __salt__['file.get_group'](path, follow_symlinks=False)
         )
-
-
-def _check_hardlink_ownership(path, user, group):
-    '''
-    Check if the hard link ownership matches the specified user and group
-    '''
-    cur_user, cur_group = _get_hardlink_ownership(path)
-    return (cur_user == user) and (cur_group == group)
 
 
 def _check_symlink_ownership(path, user, group, win_owner):
@@ -1049,18 +1034,6 @@ def _set_symlink_ownership(path, user, group, win_owner):
         except OSError:
             pass
     return _check_symlink_ownership(path, user, group, win_owner)
-
-
-def _set_hardlink_ownership(path, user, group):
-    '''
-    Set the ownership of a hardlink and return a boolean indicating
-    success/failure
-    '''
-    try:
-        __salt__['file.lchown'](path, user, group)
-    except OSError:
-        pass
-    return _check_hardlink_ownership(path, user, group)
 
 
 def _symlink_check(name, target, force, user, group, win_owner):
@@ -1097,6 +1070,68 @@ def _symlink_check(name, target, force, user, group, win_owner):
                           .format(name, target)), changes
         return False, ('File or directory exists where the symlink {0} '
                        'should be. Did you mean to use force?'.format(name)), changes
+
+
+def _hardlink_same(name, target):
+    '''
+    Check to see if the inodes match for the name and the target
+    '''
+    res = __salt__['file.stats'](name, None, follow_symlinks=False)
+    if 'inode' not in res:
+        return False
+    name_i = res['inode']
+
+    res = __salt__['file.stats'](target, None, follow_symlinks=False)
+    if 'inode' not in res:
+        return False
+    target_i = res['inode']
+
+    return name_i == target_i
+
+
+def _hardlink_check(name, target, force):
+    '''
+    Check the hardlink function
+    '''
+    changes = {}
+    if not os.path.exists(target):
+        msg = 'Target {0} for hard link does not exist'.format(target)
+        return False, msg, changes
+
+    elif os.path.isdir(target):
+        msg = 'Unable to hard link from directory {0}'.format(target)
+        return False, msg, changes
+
+    if os.path.isdir(name):
+        msg = 'Unable to hard link to directory {0}'.format(name)
+        return False, msg, changes
+
+    elif not os.path.exists(name):
+        msg = 'Hard link {0} to {1} is set for creation'.format(name, target)
+        changes['new'] = name
+        return None, msg, changes
+
+    elif __salt__['file.is_hardlink'](name):
+        if _hardlink_same(name, target):
+            msg = 'The hard link {0} is presently targetting {1}'.format(name, target)
+            return True, msg, changes
+
+        msg = 'Link {0} target is set to be changed to {1}'.format(name, target)
+        changes['change'] = name
+        return None, msg, changes
+
+    if force:
+        msg = (
+            'The file or directory {0} is set for removal to '
+            'make way for a new hard link targeting {1}'.format(name, target)
+        )
+        return None, msg, changes
+
+    msg = (
+        'File or directory exists where the hard link {0} '
+        'should be. Did you mean to use force?'.format(name)
+    )
+    return False, msg, changes
 
 
 def _test_owner(kwargs, user=None):
@@ -1366,41 +1401,43 @@ def hardlink(
         makedirs=False,
         user=None,
         group=None,
-        mode=None,
+        dir_mode=None,
         **kwargs):
     '''
     Create a hard link
     If the file already exists and is a hard link pointing to any location other
-    than the specified target, the hard link will be replaced. If the hard link is
-    a regular file or directory then the state will return False. If the
-    regular file or directory is desired to be replaced with a hard link pass
-    force: True, if it is to be renamed, pass a backupname.
+    than the specified target, the hard link will be replaced. If the hard link
+    is a regular file or directory then the state will return False. If the
+    regular file is desired to be replaced with a hard link pass force: True
+
     name
         The location of the hard link to create
     target
         The location that the hard link points to
     force
-        If the name of the hard link exists and
-        force is set to False, the state will fail. If force is set to
-        True, the file or directory in the way of the hard link file
-        will be deleted to make room for the hard link, unless
-        backupname is set, when it will be renamed
+        If the name of the hard link exists and force is set to False, the
+        state will fail. If force is set to True, the file or directory in the
+        way of the hard link file will be deleted to make room for the hard
+        link, unless backupname is set, when it will be renamed
     makedirs
         If the location of the hard link does not already have a parent directory
         then the state will fail, setting makedirs to True will allow Salt to
         create the parent directory
     user
-        The user to own the file, this defaults to the user salt is running as
-        on the minion
+        The user to own any directories made if makedirs is set to true. This
+        defaults to the user salt is running as on the minion
     group
-        The group ownership set for the file, this defaults to the group salt
-        is running as on the minion. On Windows, this is ignored
-    mode
-        The permissions to set on this file, aka 644, 0775, 4664. Not supported
-        on Windows
+        The group ownership set on any directories made if makedirs is set to
+        true. This defaults to the group salt is running as on the minion. On
+        Windows, this is ignored
+    dir_mode
+        If directories are to be created, passing this option specifies the
+        permissions for those directories.
     '''
+    name = os.path.expanduser(name)
+
     # Make sure that leading zeros stripped by YAML loader are added back
-    mode = __salt__['config.manage_mode'](mode)
+    dir_mode = salt.utils.files.normalize_mode(dir_mode)
 
     user = _test_owner(kwargs, user=user)
     ret = {'name': name,
@@ -1441,6 +1478,11 @@ def hardlink(
             'Specified file {0} is not an absolute path'.format(name)
         )
 
+    if not os.path.isabs(target):
+        preflight_errors.append(
+            'Specified target {0} is not an absolute path'.format(target)
+        )
+
     if preflight_errors:
         msg = '. '.join(preflight_errors)
         if len(preflight_errors) > 1:
@@ -1448,17 +1490,30 @@ def hardlink(
         return _error(ret, msg)
 
     if __opts__['test']:
-        ret['result'], ret['comment'] = _hardlink_check(name, target, force,
-                                                       user, group)
+        presult, pcomment, pchanges = _hardlink_check(name, target, force)
+        ret['result'] = presult
+        ret['comment'] = pcomment
+        ret['changes'] = pchanges
         return ret
 
+    for direction, item in zip(['to', 'from'], [name, target]):
+        if os.path.isdir(item):
+            msg = 'Unable to hard link {0} directory {1}'.format(direction, item)
+            return _error(ret, msg)
+
+    if not os.path.exists(target):
+        msg = 'Target {0} for hard link does not exist'.format(target)
+        return _error(ret, msg)
+
+    # Check that the directory to write the hard link to exists
     if not os.path.isdir(os.path.dirname(name)):
         if makedirs:
             __salt__['file.makedirs'](
                 name,
                 user=user,
                 group=group,
-                mode=mode)
+                mode=dir_mode)
+
         else:
             return _error(
                 ret,
@@ -1467,61 +1522,67 @@ def hardlink(
                 )
             )
 
-        if _check_hardlink_ownership(name, user, group):
-            # The link looks good!
-            ret['comment'] = ('hard link {0} is present and owned by '
-                              '{1}:{2}'.format(name, user, group))
+    # If file is not a hard link and we're actually overwriting it, then verify
+    # that this was forced.
+    if os.path.isfile(name) and not __salt__['file.is_hardlink'](name):
+
+        # Remove whatever is in the way. This should then hit the else case
+        # of the file.is_hardlink check below
+        if force:
+            os.remove(name)
+            ret['changes']['forced'] = 'File for hard link was forcibly replaced'
+
+        # Otherwise throw an error
         else:
-            if _set_hardlink_ownership(name, user, group):
-                ret['comment'] = ('Set ownership of hard link {0} to '
-                                  '{1}:{2}'.format(name, user, group))
-                ret['changes']['ownership'] = '{0}:{1}'.format(user, group)
-            else:
-                ret['result'] = False
-                ret['comment'] += (
-                    'Failed to set ownership of hard link {0} to '
-                    '{1}:{2}'.format(name, user, group)
-                )
+            return _error(ret,
+                          ('File exists where the hard link {0} should be'
+                           .format(name)))
+
+    # If the file is a hard link, then we can simply rewrite its target since
+    # nothing is really being lost here.
+    if __salt__['file.is_hardlink'](name):
+
+        # If the inodes point to the same thing, then there's nothing to do
+        # except for let the user know that this has already happened.
+        if _hardlink_same(name, target):
+            ret['result'] = True
+            ret['comment'] = ('Target of hard link {0} is already pointing '
+                                'to {1}'.format(name, target))
             return ret
 
-    elif os.path.isfile(name) or os.path.isdir(name):
-        elif force:
-            # Remove whatever is in the way
-            if os.path.isfile(name):
-                os.remove(name)
-                ret['changes']['forced'] = 'hard link was forcibly replaced'
-            else:
-                shutil.rmtree(name)
-        else:
-            # Otherwise throw an error
-            if os.path.isfile(name):
-                return _error(ret,
-                              ('File exists where the hard link {0} should be'
-                               .format(name)))
-            else:
-                return _error(ret, ((
-                    'Directory exists where the hard link {0} should be'
-                ).format(name)))
-
-    if not os.path.exists(name):
-        # The link is not present, make it
+        # Now we can make the hard link
         try:
             __salt__['file.hardlink'](target, name)
-        except OSError as exc:
+
+        # Or not...
+        except OSError as E:
+            ret['result'] = False
+            ret['comment'] = ('Unable to set target of hard link {0} -> '
+                              '{1}: {2}'.format(name, target, E))
+            return ret
+
+        # Good to go
+        ret['result'] = True
+        ret['comment'] = 'Set target of hard link {0} -> {1}'.format(name, target)
+        ret['changes']['new'] = name
+
+    # The link is not present, so simply make it
+    elif not os.path.exists(name):
+        try:
+            __salt__['file.hardlink'](target, name)
+
+        # Or not...
+        except OSError as E:
             ret['result'] = False
             ret['comment'] = ('Unable to create new hard link {0} -> '
-                              '{1}: {2}'.format(name, target, exc))
+                              '{1}: {2}'.format(name, target, E))
             return ret
-        else:
-            ret['comment'] = ('Created new hard link {0} -> '
-                              '{1}'.format(name, target))
-            ret['changes']['new'] = name
 
-        if not _check_hardlink_ownership(name, user, group):
-            if not _set_hardlink_ownership(name, user, group):
-                ret['result'] = False
-                ret['comment'] += (', but was unable to set ownership to '
-                                   '{0}:{1}'.format(user, group))
+        # Made a new hard link, things are ok
+        ret['result'] = True
+        ret['comment'] = 'Created new hard link {0} -> {1}'.format(name, target)
+        ret['changes']['new'] = name
+
     return ret
 
 
