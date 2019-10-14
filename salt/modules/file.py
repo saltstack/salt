@@ -3406,6 +3406,27 @@ def symlink(src, path):
     return False
 
 
+def hardlink(src, path):
+    '''
+    Create a hard link to a file
+    CLI Example:
+    .. code-block:: bash
+        salt '*' file.hardlink /path/to/file /path/to/link
+    '''
+    path = os.path.expanduser(path)
+
+    if not os.path.isabs(path):
+        raise SaltInvocationError('File path must be absolute.')
+
+    try:
+        os.link(src, path)
+        return True
+
+    except (OSError, IOError):
+        raise CommandExecutionError('Could not create {0!r}'.format(path))
+    return False
+
+
 def rename(src, dst):
     '''
     Rename a file or directory
