@@ -369,7 +369,7 @@ def _read_plist_file(root, file_name):
 
     if 'Label' not in plist:
         # not all launchd plists contain a Label key
-        log.debug('read_plist: Service does not contain a Label key. Skipping.'.format(file_path))
+        log.debug('read_plist: Service does not contain a Label key. Skipping {}.'.format(file_path))
         return {}
 
     return {
