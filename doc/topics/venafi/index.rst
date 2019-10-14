@@ -54,7 +54,7 @@ This command is used to enroll a certificate from Venafi Cloud or Venafi Platfor
     Full path name of certificate signing request file to enroll. Required if ``dns_name`` is not specified.
     
 ``zone``
-    Venafi Cloud zone or Venafi Platform folder that specify key and certificate policy. Defaults to "Default".
+    Venafi Cloud zone ID or Venafi Platform folder that specify key and certificate policy. Defaults to "Default". For Venafi Cloud, the Zone ID can be found in the Zone page for your Venafi Cloud project.
     
 ``org_unit``
     Business Unit, Department, etc. Do not specify if it does not apply.
