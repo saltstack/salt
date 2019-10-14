@@ -462,7 +462,7 @@ def create(vm_):
                     if memory_unit.lower() == "mb":
                         memory_mb = int(memory_num)
                     elif memory_unit.lower() == "gb":
-                        memory_mb = int(float(memory_num)*1024.0)
+                        memory_mb = int(float(memory_num) * 1024.0)
                     else:
                         err_msg = "Invalid memory type specified: '{0}'".format(memory_unit)
                         log.error(err_msg)
@@ -497,7 +497,8 @@ def create(vm_):
                     devices_xml.append(ElementTree.Element('interface', type=type))
                     iface_xml = devices_xml.findall('./interface')[-1]
 
-                    # Interface source: should be either the host bridge name or host network name (default network name is 'default')
+                    # Interface source: should be either the host bridge name or host network name
+                    # (default network name is 'default')
                     if 'source' in devices['network'][network]:
                         source = devices['network'][network]['source']
                     else:
@@ -654,7 +655,7 @@ def create(vm_):
                         try:
                             vol = pool.storageVolLookupByName(vol_name)
                             log.debug("Volume '%s' in pool '%s' already exists", vol_name, pool.name())
-                        except:
+                        except libvirtError:
                             log.debug("Creating volume '%s' in pool '%s'", vol_name, pool.name())
                             vol_xml = """
                             <volume>
