@@ -479,17 +479,17 @@ class Fileserver(object):
                 errors.extend(bad)
         return cleared, errors
 
-    def update(self, back=None):
+    def update(self, back=None, **kwargs):
         """
         Update all of the enabled fileserver backends which support the update
-        function, or
+        function
         """
         back = self.backends(back)
         for fsb in back:
             fstr = "{0}.update".format(fsb)
             if fstr in self.servers:
                 log.debug("Updating %s fileserver cache", fsb)
-                self.servers[fstr]()
+                self.servers[fstr](**kwargs)
 
     def update_intervals(self, back=None):
         """
