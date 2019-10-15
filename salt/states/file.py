@@ -1550,7 +1550,10 @@ def hardlink(
                                 'to {1}'.format(name, target))
             return ret
 
-        # Now we can make the hard link
+        # First remove the old hard link since a reference to it already exists
+        os.remove(name)
+
+        # Now we can remake it
         try:
             __salt__['file.hardlink'](target, name)
 
