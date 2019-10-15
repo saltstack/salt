@@ -470,7 +470,7 @@ def get_entry(user, identifier=None, cmd=None):
 
         salt '*' cron.identifier_exists root identifier=task1
     '''
-    cron_entries = list_tab(user).get('crons', False)
+    cron_entries = list_tab(user).get('crons', []) + list_tab(user).get('special', [])
     for cron_entry in cron_entries:
         if identifier and cron_entry.get('identifier') == identifier:
             return cron_entry
