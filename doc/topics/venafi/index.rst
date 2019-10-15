@@ -19,7 +19,7 @@ For Venafi Cloud:
 
 If you don't have a Venafi Cloud account, you can sign up for one 'here'_
 
-.. here:: https://www.venafi.com/platform/cloud/devops
+.. _here page: https://www.venafi.com/platform/cloud/devops
 
 For Venafi Platform:
 
