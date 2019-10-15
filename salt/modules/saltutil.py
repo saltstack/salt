@@ -1027,9 +1027,15 @@ def refresh_matchers():
     return ret
 
 
-def refresh_pillar():
+def refresh_pillar(wait=False, timeout=30):
     '''
     Signal the minion to refresh the pillar data.
+
+    :param wait:            Wait for pillar refresh to complete, defaults to False.
+    :type wait:             bool, optional
+    :param timeout:         How long to wait in seconds, only used when wait is True, defaults to 30.
+    :type timeout:          int, optional
+    :return:                Boolean status, True when the pillar_refresh event was fired successfully.
 
     CLI Example:
 
@@ -1042,6 +1048,13 @@ def refresh_pillar():
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
+    if wait:
+        eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
+        event_ret = eventer.get_event(
+            tag='/salt/minion/minion_pillar_refresh_complete',
+            wait=timeout)
+        if not event_ret or event_ret['complete'] is False:
+            log.warn("Pillar refresh did not complete within timeout %s", timeout)
     return ret
 
 
