@@ -935,7 +935,7 @@ class Client(object):
 def run_winexe_command(cmd, args, host, username, password, port=445):
     '''
     Run a command remotly via the winexe executable
-    '''    
+    '''
     creds = "-U '{0}%{1}' //{2}".format(
         username,
         password,
@@ -1371,12 +1371,14 @@ def deploy_windows(host,
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc query salt-minion', host, username, password
             )
-            log.info('%s',stdout) 
+            log.debug('%s',stdout) 
             
-            while "STOP_PENDING" in stdout:
+            retry=0
+            while 'STOP_PENDING' in stdout and retry<100:
                 stdout, stderr, ret_code = run_psexec_command(
                     'cmd.exe', '/c sc query salt-minion', host, username, password
                 )
+                retry+=1
             
             log.debug('Run psexec: sc start salt-minion')
             stdout, stderr, ret_code = run_psexec_command(
