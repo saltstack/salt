@@ -7,16 +7,34 @@ Version 2019.2.2 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 Statistics
 ==========
 
-- Total Merges: **26**
-- Total Issue References: **12**
-- Total PR References: **26**
+- Total Merges: **28**
+- Total Issue References: **13**
+- Total PR References: **28**
 
 - Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
 
 Changelog for v2019.2.1..v2019.2.2
 ==================================
 
-*Generated at: 2019-10-11 20:54:15 UTC*
+*Generated at: 2019-10-15 01:38:25 UTC*
+
+* **ISSUE** `#54817`_: (`tomlaredo`_) [REGRESSION] git.latest displays errors (refs: `#54844`_)
+
+* **PR** `#54844`_: (`garethgreenaway`_) [master] Fix to git state module when calling git.config_get_regexp
+  @ *2019-10-14 23:20:29 UTC*
+
+  * 52fee6f Merge pull request `#54844`_ from garethgreenaway/54817_git_latest_error_calling_git_config_get_regexp
+
+  * cb1b75a Adding test.
+
+  * 6ba8ff2 When calling git.config_get_regexp to check for filter\.lfs\. in git config, if the option is not available this would result with a return code of 1 which would result in an error being logged.  Since one possible result is that the configuration would not be there, we ignore the return code.
+
+* **PR** `#54973`_: (`frogunder`_) update 2019.2.2 release notes
+  @ *2019-10-11 21:41:22 UTC*
+
+  * d6593c2 Merge pull request `#54973`_ from frogunder/update_releasenotes_2019.2.2
+
+  * 0c01cfb update 2019.2.2 release notes
 
 * **PR** `#54919`_: (`twangboy`_) Add missing docs for win_wusa state and module (2019.2.1)
   @ *2019-10-11 18:28:11 UTC*
@@ -153,7 +171,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * c585550 fix broken salt-cloud openstack query
 
-* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54784`_, `#54823`_, `#54807`_)
 
 * **PR** `#54823`_: (`dhiltonp`_) ip_bracket can now accept ipv6 addresses with brackets
   @ *2019-10-01 01:13:34 UTC*
@@ -162,7 +180,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * faa1d98 ip_bracket can now accept ipv6 addresses with brackets
 
-* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54784`_, `#54823`_, `#54807`_)
 
 * **PR** `#54807`_: (`dwoz`_) Fix pip state pip >=10.0 and <=18.0
   @ *2019-09-30 09:20:14 UTC*
@@ -249,7 +267,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * a35e609 Adding __init__.py to metaproxy directory so that metaproxy is included when running setup.py.
 
-* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54784`_, `#54823`_, `#54807`_)
 
 * **PR** `#54784`_: (`dhiltonp`_) fix dns_check to return uri-compatible ipv6 addresses, add tests
   @ *2019-09-28 08:36:51 UTC*
@@ -322,11 +340,13 @@ Changelog for v2019.2.1..v2019.2.2
 .. _`#54805`: https://github.com/saltstack/salt/pull/54805
 .. _`#54806`: https://github.com/saltstack/salt/pull/54806
 .. _`#54807`: https://github.com/saltstack/salt/pull/54807
+.. _`#54817`: https://github.com/saltstack/salt/issues/54817
 .. _`#54820`: https://github.com/saltstack/salt/issues/54820
 .. _`#54823`: https://github.com/saltstack/salt/pull/54823
 .. _`#54826`: https://github.com/saltstack/salt/pull/54826
 .. _`#54828`: https://github.com/saltstack/salt/pull/54828
 .. _`#54830`: https://github.com/saltstack/salt/pull/54830
+.. _`#54844`: https://github.com/saltstack/salt/pull/54844
 .. _`#54845`: https://github.com/saltstack/salt/pull/54845
 .. _`#54852`: https://github.com/saltstack/salt/pull/54852
 .. _`#54854`: https://github.com/saltstack/salt/pull/54854
@@ -336,6 +356,7 @@ Changelog for v2019.2.1..v2019.2.2
 .. _`#54919`: https://github.com/saltstack/salt/pull/54919
 .. _`#54941`: https://github.com/saltstack/salt/issues/54941
 .. _`#54942`: https://github.com/saltstack/salt/pull/54942
+.. _`#54973`: https://github.com/saltstack/salt/pull/54973
 .. _`Akm0d`: https://github.com/Akm0d
 .. _`Ch3LL`: https://github.com/Ch3LL
 .. _`Oloremo`: https://github.com/Oloremo
@@ -356,4 +377,5 @@ Changelog for v2019.2.1..v2019.2.2
 .. _`paul-palmer`: https://github.com/paul-palmer
 .. _`pizzapanther`: https://github.com/pizzapanther
 .. _`s0undt3ch`: https://github.com/s0undt3ch
+.. _`tomlaredo`: https://github.com/tomlaredo
 .. _`twangboy`: https://github.com/twangboy
