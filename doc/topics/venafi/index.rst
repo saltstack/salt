@@ -17,6 +17,10 @@ For Venafi Cloud:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
       base_url: "https://cloud.venafi.example.com/"    (optional)
 
+If you don't have a Venafi Cloud account, you can sign up for one 'here'_
+
+.. here:: https://www.venafi.com/platform/cloud/devops
+
 For Venafi Platform:
 
 .. code-block:: yaml
