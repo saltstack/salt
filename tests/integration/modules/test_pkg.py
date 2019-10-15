@@ -26,12 +26,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
 
     @classmethod
-    def setUpClass(cls):
+    @requires_system_grains
+    def setUpClass(cls, grains=None):
         cls.ctx = {}
         cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():
             cls.pkg = 'putty'
-        elif cls.run_function('grains.get', ['os_family']) == 'RedHat':
+        elif grains['os_family'] == 'RedHat':
             cls.pkg = 'units'
 
     @requires_salt_modules('pkg.refresh_db')
