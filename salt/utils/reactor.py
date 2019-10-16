@@ -39,7 +39,7 @@ REACTOR_INTERNAL_KEYWORDS = frozenset([
 ])
 
 
-class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.state.Compiler):
+class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.

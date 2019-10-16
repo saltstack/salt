@@ -12,7 +12,7 @@ import logging
 import salt
 import salt.loader
 import salt.utils.platform
-from salt.utils.process import SignalHandlingMultiprocessingProcess
+from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ def start_engines(opts, proc_mgr, proxy=None):
                     )
 
 
-class Engine(SignalHandlingMultiprocessingProcess):
+class Engine(SignalHandlingProcess):
     '''
     Execute the given engine in a new process
     '''

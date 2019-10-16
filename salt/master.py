@@ -138,7 +138,7 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class Maintenance(salt.utils.process.SignalHandlingProcess):
     '''
     A generalized maintenance process which performs maintenance routines.
     '''
@@ -353,7 +353,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             old_present.update(present)
 
 
-class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     '''
     A process from which to update any dynamic fileserver backends
     '''
@@ -782,7 +782,7 @@ class Master(SMaster):
         sys.exit(0)
 
 
-class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class Halite(salt.utils.process.SignalHandlingProcess):
     '''
     Manage the Halite server
     '''
@@ -821,7 +821,7 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
         halite.start(self.hopts)
 
 
-class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class ReqServer(salt.utils.process.SignalHandlingProcess):
     '''
     Starts up the master request server, minions send results to this
     interface.
@@ -951,7 +951,7 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.destroy()
 
 
-class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class MWorker(salt.utils.process.SignalHandlingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.

@@ -14,7 +14,7 @@ import salt.utils.process
 log = logging.getLogger(__name__)
 
 
-class RunNetapi(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class RunNetapi(salt.utils.process.SignalHandlingProcess):
     '''
     Runner class that's pickable for netapi modules
     '''
