@@ -571,7 +571,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__opts__, {'test': True}):
-            expected =  'Hard link {0} to {1} is set for creation'.format(name, target)
+            expected = 'Hard link {0} to {1} is set for creation'.format(name, target)
             changes = dict(new=name)
             ret = return_val(result=None, comment=expected, name=name, changes=changes)
             self.assertDictEqual(filestate.hardlink(name, target,
