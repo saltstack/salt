@@ -297,7 +297,7 @@ def _write_hosts(hosts):
             if ip.startswith('comment'):
                 line = ''.join(aliases)
             else:
-                line = '{0}\t\t{1}'.format(
+                line = '{0}  {1}'.format(
                     ip,
                     ' '.join(aliases)
                     )
