@@ -75,6 +75,7 @@ pycurl==7.43.0.2
 pygit2==0.28.2
 pymysql==0.9.3
 pyopenssl==19.0.0
+pypiwin32==223            # via cherrypy
 pytest-cov==2.6.1
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.1.30

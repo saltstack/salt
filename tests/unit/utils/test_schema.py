@@ -1734,7 +1734,9 @@ class ConfigTestCase(TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': {'sides': '4', 'color': 'blue'}}, TestConf.serialize())
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn('\'4\' is not of type \'boolean\'', excinfo.exception.message)
+            self.assertIn("'4'", excinfo.exception.message)
+            self.assertIn("is not of type", excinfo.exception.message)
+            self.assertIn("'boolean'", excinfo.exception.message)
         else:
             self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
@@ -1840,7 +1842,9 @@ class ConfigTestCase(TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn('\'maybe\' is not one of [\'yes\']', excinfo.exception.message)
+            self.assertIn("'maybe'", excinfo.exception.message)
+            self.assertIn("is not one of", excinfo.exception.message)
+            self.assertIn("'yes'", excinfo.exception.message)
         else:
             self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 
@@ -1895,7 +1899,9 @@ class ConfigTestCase(TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({'item': ['maybe']}, TestConf.serialize())
         if JSONSCHEMA_VERSION >= _LooseVersion('3.0.0'):
-            self.assertIn('\'maybe\' is not one of [\'yes\']', excinfo.exception.message)
+            self.assertIn("'maybe'", excinfo.exception.message)
+            self.assertIn("is not one of", excinfo.exception.message)
+            self.assertIn("'yes'", excinfo.exception.message)
         else:
             self.assertIn('is not valid under any of the given schemas', excinfo.exception.message)
 

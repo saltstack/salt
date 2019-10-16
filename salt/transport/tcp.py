@@ -10,12 +10,13 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
-import socket
 import os
-import weakref
+import socket
+import sys
 import time
 import threading
 import traceback
+import weakref
 
 # Import Salt Libs
 import salt.crypt
@@ -180,8 +181,10 @@ if USE_LOAD_BALANCER:
                 self._socket.close()
                 self._socket = None
 
+        # pylint: disable=W1701
         def __del__(self):
             self.close()
+        # pylint: enable=W1701
 
         def run(self):
             '''
@@ -321,6 +324,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             if not loop_instance_map:
                 del self.__class__.instance_map[self.io_loop]
 
+    # pylint: disable=W1701
     def __del__(self):
         with self._refcount_lock:
             # Make sure we actually close no matter if something
@@ -332,6 +336,7 @@ class AsyncTCPReqChannel(salt.transport.client.ReqChannel):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+    # pylint: enable=W1701
 
     def _package_load(self, load):
         return {
@@ -437,8 +442,10 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
         if hasattr(self, 'message_client'):
             self.message_client.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def _package_load(self, load):
         return {
@@ -610,7 +617,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     # Ignore this condition and continue.
                     pass
                 else:
-                    raise exc
+                    six.reraise(*sys.exc_info())
             self._socket.close()
             self._socket = None
         if hasattr(self.req_server, 'shutdown'):
@@ -626,8 +633,10 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
                     raise
                 log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def pre_fork(self, process_manager):
         '''
@@ -888,8 +897,10 @@ class SaltMessageClientPool(salt.transport.MessageClientPool):
     def __init__(self, opts, args=None, kwargs=None):
         super(SaltMessageClientPool, self).__init__(SaltMessageClient, opts, args=args, kwargs=kwargs)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def close(self):
         for message_client in self.message_clients:
@@ -1003,8 +1014,10 @@ class SaltMessageClient(object):
         self.connect_callback = None
         self.disconnect_callback = None
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def connect(self):
         '''
@@ -1245,8 +1258,10 @@ class Subscriber(object):
                 # 'StreamClosedError' when the stream is closed.
                 self._read_until_future.exception()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 class PubServer(tornado.tcpserver.TCPServer, object):
@@ -1285,8 +1300,10 @@ class PubServer(tornado.tcpserver.TCPServer, object):
             return
         self._closing = True
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def _add_client_present(self, client):
         id_ = client.id_

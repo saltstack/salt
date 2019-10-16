@@ -53,6 +53,7 @@ jsonpickle==1.1           # via aws-xray-sdk
 jsonschema==2.6.0
 keyring==5.7.1
 kubernetes==3.0.0
+libnacl==1.6.1
 markupsafe==1.1.1
 meld3==1.0.2              # via supervisor
 mock==3.0.5 ; python_version < "3.6"

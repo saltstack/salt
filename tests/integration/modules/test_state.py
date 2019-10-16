@@ -83,7 +83,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     fhw.write(line + ending)
 
         destpath = os.path.join(BASE_FILES, 'testappend', 'firstif')
-        _reline(destpath)
         destpath = os.path.join(BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
         cls.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
@@ -815,9 +814,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 'result': True,
                 'changes': True,
             },
-            'cmd_|-C_|-/bin/false_|-run': {
+            'cmd_|-C_|-$(which false)_|-run': {
                 '__run_num__': 1,
-                'comment': 'Command "/bin/false" run',
+                'comment': 'Command "$(which false)" run',
                 'result': False,
                 'changes': True,
             },
@@ -2007,48 +2006,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertEqual(val['comment'],
                              'File {0} updated'.format(file_name))
             self.assertEqual(val['changes']['diff'], 'New file')
-
-    def test_issue_30161_unless_and_onlyif_together(self):
-        '''
-        test cmd.run using multiple unless options where the first cmd in the
-        list will pass, but the second will fail. This tests the fix for issue
-        #35384. (The fix is in PR #35545.)
-        '''
-        sls = self.run_function('state.sls', mods='issue-30161')
-        self.assertSaltTrueReturn(sls)
-        # We must assert against the comment here to make sure the comment reads that the
-        # command "echo "hello"" was run. This ensures that we made it to the last unless
-        # command in the state. If the comment reads "unless condition is true", or similar,
-        # then the unless state run bailed out after the first unless command succeeded,
-        # which is the bug we're regression testing for.
-        _expected = {'file_|-unless_false_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
-                     {'comment': 'onlyif condition is false\nunless condition is false',
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
-                      'skip_watch': True,
-                      'changes': {},
-                      'result': True},
-                     'file_|-unless_false_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
-                     {'comment': 'Empty file',
-                      'pchanges': {},
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
-                      'start_time': '18:10:20.341753',
-                      'result': True,
-                      'changes': {'new': 'file {0}{1}test.txt created'.format(TMP, os.path.sep)}},
-                     'file_|-unless_true_onlyif_false_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
-                     {'comment': 'onlyif condition is false\nunless condition is true',
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
-                      'start_time': '18:10:22.936446',
-                      'skip_watch': True,
-                      'changes': {},
-                      'result': True},
-                     'file_|-unless_true_onlyif_true_|-{0}{1}test.txt_|-managed'.format(TMP, os.path.sep):
-                     {'comment': 'onlyif condition is true\nunless condition is true',
-                      'name': '{0}{1}test.txt'.format(TMP, os.path.sep),
-                      'skip_watch': True,
-                      'changes': {},
-                      'result': True}}
-        for id in _expected:
-            self.assertEqual(sls[id]['comment'], _expected[id]['comment'])
 
     @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_state_sls_unicode_characters(self):

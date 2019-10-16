@@ -104,6 +104,8 @@ def __decompressContent(coding, pgctnt):
     Currently supports identity/none, deflate, and gzip, which should
     cover 99%+ of the content on the internet.
     '''
+    if not pgctnt:
+        return pgctnt
 
     log.trace("Decompressing %s byte content with compression type: %s", len(pgctnt), coding)
 
@@ -121,9 +123,6 @@ def __decompressContent(coding, pgctnt):
         raise ValueError("Brotli compression is not currently supported")
     elif coding == "compress":
         raise ValueError("LZW compression is not currently supported")
-
-    elif coding == 'identity':
-        pass
 
     log.trace("Content size after decompression: %s", len(pgctnt))
     return pgctnt

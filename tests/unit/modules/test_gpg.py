@@ -17,14 +17,13 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.paths import TMP
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
-    MagicMock,
-    patch,
     NO_MOCK,
-    NO_MOCK_REASON
+    NO_MOCK_REASON,
+    MagicMock,
+    patch
 )
 
 # Import Salt libs
-import salt.utils.path
 import salt.utils.platform
 import salt.utils.files
 import salt.modules.gpg as gpg

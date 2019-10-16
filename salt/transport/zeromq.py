@@ -497,8 +497,10 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
@@ -617,7 +619,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
-                raise exc
+                six.reraise(*sys.exc_info())
             except (KeyboardInterrupt, SystemExit):
                 break
 
@@ -942,7 +944,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
         except KeyboardInterrupt:
             log.trace('Publish daemon caught Keyboard interupt, tearing down')
@@ -1160,8 +1162,10 @@ class AsyncReqMessageClient(object):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, 'stream'):

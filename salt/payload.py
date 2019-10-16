@@ -410,5 +410,7 @@ class SREQ(object):
         if self.context.closed is False:
             self.context.term()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701

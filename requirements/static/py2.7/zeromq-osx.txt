@@ -48,6 +48,7 @@ gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
 idna==2.8
 ipaddress==1.0.22
+jaraco.classes==2.0       # via cherrypy
 jaraco.functools==2.0     # via tempora
 jinja2==2.10.1
 jmespath==0.9.4           # via boto3, botocore

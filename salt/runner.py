@@ -270,14 +270,14 @@ class Runner(RunnerClient):
                                               async_pub['jid'],
                                               daemonize=False)
             except salt.exceptions.SaltException as exc:
-                evt = salt.utils.event.get_event('master', opts=self.opts)
-                evt.fire_event({'success': False,
-                                'return': '{0}'.format(exc),
-                                'retcode': 254,
-                                'fun': self.opts['fun'],
-                                'fun_args': fun_args,
-                                'jid': self.jid},
-                               tag='salt/run/{0}/ret'.format(self.jid))
+                with salt.utils.event.get_event('master', opts=self.opts) as evt:
+                    evt.fire_event({'success': False,
+                                    'return': '{0}'.format(exc),
+                                    'retcode': 254,
+                                    'fun': self.opts['fun'],
+                                    'fun_args': fun_args,
+                                    'jid': self.jid},
+                                   tag='salt/run/{0}/ret'.format(self.jid))
                 # Attempt to grab documentation
                 if 'fun' in low:
                     ret = self.get_docs('{0}*'.format(low['fun']))

@@ -5,6 +5,7 @@ Custom YAML loading in Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import sys
 import warnings
 
 import yaml  # pylint: disable=blacklisted-import
@@ -19,6 +20,9 @@ except Exception:
     pass
 
 import salt.utils.stringutils
+
+# Import 3rd-party libs
+from salt.ext import six
 
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 

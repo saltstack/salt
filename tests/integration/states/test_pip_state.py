@@ -72,7 +72,7 @@ class VirtualEnv(object):
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
 
-    def _create_virtualenv(self, path):
+    def _create_virtualenv(self, path, **kwargs):
         '''
         The reason why the virtualenv creation is proxied by this function is mostly
         because under windows, we can't seem to properly create a virtualenv off of
@@ -84,16 +84,16 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         self.addCleanup(shutil.rmtree, path, ignore_errors=True)
         try:
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
             else:
                 python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
             # We're running off a virtualenv, and we don't want to create a virtualenv off of
             # a virtualenv, let's point to the actual python that created the virtualenv
-            kwargs = {'python': python}
+            kwargs['python'] = python
         except AttributeError:
             # We're running off of the system python
-            kwargs = {}
+            pass
         return self.run_function('virtualenv.create', [path], **kwargs)
 
     def test_pip_installed_removed(self):
@@ -310,9 +310,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             os.chown(temp_dir, uid, -1)
 
         # Create the virtual environment
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], user=username,
-            password='PassWord1!')
+        venv_create = self._create_virtualenv(venv_dir, user=username, password='PassWord1!')
         if venv_create['retcode'] > 0:
             self.skipTest('Failed to create testcase virtual environment: {0}'
                           ''.format(venv_create))
@@ -354,9 +352,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             os.chown(temp_dir, uid, -1)
 
         # Create the virtual environment again as it should have been removed
-        venv_create = self.run_function(
-            'virtualenv.create', [venv_dir], user=username,
-            password='PassWord1!')
+        venv_create = self._create_virtualenv(venv_dir, user=username, password='PassWord1!')
         if venv_create['retcode'] > 0:
             self.skipTest('failed to create testcase virtual environment: {0}'
                           ''.format(venv_create))
@@ -510,7 +506,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 )
             )
 
-        false_cmd = salt.utils.path.which('false')
+        false_cmd = RUNTIME_VARS.SHELL_FALSE_PATH
         if salt.utils.platform.is_windows():
             false_cmd = 'exit 1 >nul'
         try:
