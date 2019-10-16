@@ -479,7 +479,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_gid = MagicMock(return_value='g1001')
         mock_nothing = MagicMock(return_value={})
         mock_stats = MagicMock(return_value={'inode': 1})
-        mock_oserror = MagicMock(side_effect=OSError)
+        mock_execerror = MagicMock(side_effect=CommandExecutionError)
 
         patches = {}
         patches['file.user_to_uid'] = mock_empty
@@ -683,7 +683,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
-                patch.dict(filestate.__salt__, {'file.hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_t}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
@@ -699,7 +699,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
-                patch.dict(filestate.__salt__, {'file.hardlink': mock_oserror}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_execerror}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
@@ -715,7 +715,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
-                patch.dict(filestate.__salt__, {'file.hardlink': mock_f}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_f}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
@@ -731,7 +731,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
-                patch.dict(filestate.__salt__, {'file.hardlink': mock_oserror}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_execerror}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
@@ -747,7 +747,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
-                patch.dict(filestate.__salt__, {'file.hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_t}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_t):
@@ -764,7 +764,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
                 patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
-                patch.dict(filestate.__salt__, {'file.hardlink': mock_oserror}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_execerror}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
                 patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_t):

@@ -1555,7 +1555,7 @@ def hardlink(
 
         # Now we can remake it
         try:
-            __salt__['file.hardlink'](target, name)
+            __salt__['file.link'](target, name)
 
         # Or not...
         except CommandExecutionError as E:
@@ -1572,7 +1572,7 @@ def hardlink(
     # The link is not present, so simply make it
     elif not os.path.exists(name):
         try:
-            __salt__['file.hardlink'](target, name)
+            __salt__['file.link'](target, name)
 
         # Or not...
         except CommandExecutionError as E:
