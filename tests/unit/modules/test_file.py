@@ -2078,14 +2078,14 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def test_hardlink_sanity(self):
         target = os.path.join(self.directory, 'a_hardlink')
         self.addCleanup(os.remove, target)
-        result = filemod.hardlink(self.tfile.name, target)
+        result = filemod.link(self.tfile.name, target)
         self.assertTrue(result)
 
     @skipIf(salt.utils.platform.is_windows(), 'os.link is not available on Windows')
     def test_hardlink_numlinks(self):
         target = os.path.join(self.directory, 'a_hardlink')
         self.addCleanup(os.remove, target)
-        result = filemod.hardlink(self.tfile.name, target)
+        result = filemod.link(self.tfile.name, target)
         name_i = os.stat(self.tfile.name).st_nlink
         self.assertTrue(name_i > 1)
 
@@ -2093,7 +2093,7 @@ class FileBasicsTestCase(TestCase, LoaderModuleMockMixin):
     def test_hardlink_working(self):
         target = os.path.join(self.directory, 'a_hardlink')
         self.addCleanup(os.remove, target)
-        result = filemod.hardlink(self.tfile.name, target)
+        result = filemod.link(self.tfile.name, target)
         name_i = os.stat(self.tfile.name).st_ino
         target_i = os.stat(target).st_ino
         self.assertTrue(name_i == target_i)
