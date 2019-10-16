@@ -44,7 +44,9 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        if LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION):
+        npm_bin = salt.utils.path.which('npm')
+        npm_version = cmd.run('{} -v'.format(npm_bin), timeout=10)
+        if LooseVersion(npm_version) >= LooseVersion(MAX_NPM_VERSION):
             user = os.environ.get('SUDO_USER', 'root')
             npm_dir = os.path.join(RUNTIME_VARS.TMP, 'git-install-npm')
             self.run_state('file.directory', name=npm_dir, user=user, dir_mode='755')
