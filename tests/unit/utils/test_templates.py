@@ -5,23 +5,19 @@ Unit tests for salt.utils.templates.py
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import sys, logging
+import sys
+import logging
 
 # Import Salt libs
 import salt.utils.templates
-from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    DEFAULT,
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch
-)
 
 log = logging.getLogger(__name__)
 
+
+### Default context for salt.utils.templates.render_*_tmpl to work
 context = {
     'opts': {
         'cachedir': '/D',
@@ -30,6 +26,8 @@ context = {
     'saltenv': None,
 }
 
+
+### Here we go!
 class RenderTestCase(TestCase):
 
     ### Tests for Jinja (whitespace-friendly)
