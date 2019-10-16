@@ -21,6 +21,7 @@ has been enhanced to:
 
 * Support saltenv environments
 * Associate tests with states by naming convention
+* Adds report_highstate_tests function
 * Adds empty and notempty assertions
 * Adds skip keyword
 * Adds print_result keyword

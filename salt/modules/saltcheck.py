@@ -324,6 +324,44 @@ def state_apply(state_name, **kwargs):
         return caller.cmd('state.apply', state_name)
 
 
+def report_highstate_tests(saltenv=None):
+    '''
+    Report on tests for states assigned to the minion through highstate.
+    Quits with the exit code for the number of missing tests.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltcheck.report_highstate_tests
+
+    .. versionadded:: Neon
+    '''
+    if not saltenv:
+        if 'saltenv' in __opts__ and __opts__['saltenv']:
+            saltenv = __opts__['saltenv']
+        else:
+            saltenv = 'base'
+
+    sls_list = []
+    sls_list = _get_top_states(saltenv)
+    stl = StateTestLoader()
+    missing_tests = 0
+    states_missing_tests = []
+    for state_name in sls_list:
+        stl.add_test_files_for_sls(state_name, False)
+        if state_name not in stl.found_states:
+            missing_tests = missing_tests + 1
+            states_missing_tests.append(state_name)
+    __context__['retcode'] = missing_tests
+    return {'TEST REPORT RESULTS': {
+                'Missing Tests': missing_tests,
+                'States missing tests': states_missing_tests,
+                'States with tests': stl.found_states
+                }
+           }
+
+
 def run_state_tests(state, saltenv=None, check_all=False):
     '''
     Execute all tests for a salt state and return results
@@ -849,6 +887,7 @@ class StateTestLoader(object):
         self.test_dict = OrderedDict()
         self.saltenv = 'base'
         self.saltcheck_test_location = __salt__['config.get']('saltcheck_test_location', 'saltcheck-tests')
+        self.found_states = []
 
     def load_test_suite(self):
         '''
@@ -886,7 +925,6 @@ class StateTestLoader(object):
             all_states = __salt__['cp.list_states']()
 
         ret = []
-        processed_states = []
         cached_copied_files = []
         if salt_ssh:
             # populate cached_copied_files from sent over file rather than attempting to run cp.cache_dir later
@@ -931,11 +969,16 @@ class StateTestLoader(object):
                 # path/to/formula/init.sls
                 #   with tests of
                 #       path/to/formula/saltcheck-tests/init.tst
+                # or if a custom saltcheck_test_location is used
+                # path/to/forumla.sls
+                #   with tests of
+                #       path/saltcheck_test_location/init.tst
 
                 state_name = low_data['__sls__']
-                if state_name in processed_states:
+                if state_name in self.found_states:
                     copy_states = False
 
+                # process /patch/to/formula/saltcheck_test_location
                 sls_path = 'salt://{0}/{1}'.format(state_name.replace('.', '/'), self.saltcheck_test_location)
                 if copy_states:
                     log.debug('looking in %s to cache tests', sls_path)
@@ -944,13 +987,14 @@ class StateTestLoader(object):
                                                               include_pat='*.tst')
 
                 if this_cache_ret:
-                    processed_states.append(state_name)
+                    self.found_states.append(state_name)
                     cached_copied_files.extend(this_cache_ret)
                 else:
+                    # process /path/to/saltcheck_test_location
                     sls_split = low_data['__sls__'].split('.')
                     sls_split.pop()
                     state_name = '.'.join(sls_split)
-                    if state_name in processed_states:
+                    if state_name in self.found_states:
                         copy_states = False
                     sls_path = 'salt://{0}/{1}'.format('/'.join(sls_split), self.saltcheck_test_location)
                     if copy_states:
@@ -959,8 +1003,22 @@ class StateTestLoader(object):
                                                                   saltenv=self.saltenv,
                                                                   include_pat='*.tst')
                     if this_cache_ret:
-                        processed_states.append(state_name)
+                        self.found_states.append(state_name)
                         cached_copied_files.extend(this_cache_ret)
+                    else:
+                        # process /path/saltcheck_test_location
+                        state_name = low_data['__sls__'].split('.')[0]
+                        if state_name in self.found_states:
+                            copy_states = False
+                        sls_path = 'salt://{0}/{1}'.format(state_name, self.saltcheck_test_location)
+                        if copy_states:
+                            log.debug('looking in %s to cache tests', sls_path)
+                            this_cache_ret = __salt__['cp.cache_dir'](sls_path,
+                                                                    saltenv=self.saltenv,
+                                                                    include_pat='*.tst')
+                        if this_cache_ret:
+                            self.found_states.append(state_name)
+                            cached_copied_files.extend(this_cache_ret)
 
                 if this_cache_ret:
                     if check_all:
