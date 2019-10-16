@@ -16,8 +16,8 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
-import salt.modules.cmdmod as cmd
 import salt.utils.path
+import salt.utils.platform
 from salt.utils.versions import LooseVersion
 
 MAX_NPM_VERSION = '5.0.0'
@@ -38,6 +38,7 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.platform.is_darwin(), 'TODO this test hangs on mac.')
     @requires_network()
     @destructiveTest
     def test_npm_install_url_referenced_package(self):
