@@ -685,6 +685,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
                 patch.dict(filestate.__salt__, {'file.hardlink': mock_t}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
 
             expected = 'Set target of hard link {0} -> {1}'.format(name, target)
@@ -700,6 +701,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
                 patch.dict(filestate.__salt__, {'file.hardlink': mock_oserror}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
 
             expected = ('Unable to set target of hard link {0} -> '
@@ -715,6 +717,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
                 patch.dict(filestate.__salt__, {'file.hardlink': mock_f}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
 
             expected = 'Created new hard link {0} -> {1}'.format(name, target)
@@ -730,6 +733,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
                 patch.dict(filestate.__salt__, {'file.hardlink': mock_oserror}),\
                 patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
                 patch.object(os.path, 'isfile', mock_f):
 
             expected = ('Unable to create new hard link {0} -> '
