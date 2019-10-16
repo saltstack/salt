@@ -43,6 +43,7 @@ _supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
 
 # linux_distribution deprecated in py3.7
 try:
+    #pylint: disable=W1505
     from platform import linux_distribution as _deprecated_linux_distribution
 
     def linux_distribution(**kwargs):
