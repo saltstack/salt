@@ -55,9 +55,9 @@ optional. The following ssl options are simply for illustration purposes:
     alternative.pgjsonb.pass: 'salt'
     alternative.pgjsonb.db: 'salt'
     alternative.pgjsonb.port: 5432
-    alternative.pgjsonb.ssl_ca: '/etc/pki/mysql/certs/localhost.pem'
-    alternative.pgjsonb.ssl_cert: '/etc/pki/mysql/certs/localhost.crt'
-    alternative.pgjsonb.ssl_key: '/etc/pki/mysql/certs/localhost.key'
+    alternative.pgjsonb.ssl_ca: '/etc/pki/postgresl/certs/localhost.pem'
+    alternative.pgjsonb.ssl_cert: '/etc/pki/postgresql/certs/localhost.crt'
+    alternative.pgjsonb.ssl_key: '/etc/pki/postgresql/certs/localhost.key'
 
 Should you wish the returner data to be cleaned out every so often, set
 ``keep_jobs`` to the number of hours for the jobs to live in the tables.
@@ -200,7 +200,7 @@ def __virtual__():
 
 def _get_options(ret=None):
     '''
-    Returns options used for the MySQL connection.
+    Returns options used for the psycopg2 connection.
     '''
     defaults = {
         'host': 'localhost',
@@ -242,7 +242,7 @@ def _get_serv(ret=None, commit=False):
     '''
     _options = _get_options(ret)
     try:
-        # An empty ssl_options dictionary passed to MySQLdb.connect will
+        # An empty ssl_options dictionary passed to psycopg2.connect will
         # effectively connect w/o SSL.
         ssl_options = {
             k: v for k, v in six.iteritems(_options)
@@ -373,6 +373,30 @@ def get_jid(jid):
         if data:
             for minion, full_ret in data:
                 ret[minion] = full_ret
+        return ret
+
+
+def get_jids_filter(count, filter_find_job=True):
+    '''
+    Return a list of all job ids
+    :param int count: show not more than the count of most recent jobs
+    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    '''
+    with _get_serv(ret=None, commit=True) as cur:
+
+        sql = '''SELECT * FROM (
+                     SELECT DISTINCT jid, load FROM jids
+                     {0}
+                     ORDER BY jid DESC limit {1}
+                 ) tmp
+                 ORDER BY jid;'''
+        where = '''WHERE NOT (load @> '{ "fun": "saltutil.find_job"}') '''
+
+        cur.execute(sql.format(where if filter_find_job else '', count))
+        data = cur.fetchall()
+        ret = {}
+        for jid, load in data:
+            ret[jid] = salt.utils.jid.format_jid_instance(jid, load)
         return ret
 
 
