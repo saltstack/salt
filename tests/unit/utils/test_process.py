@@ -238,7 +238,7 @@ class TestProcess(TestCase):
         # pylint: enable=assignment-from-none
 
 
-class TestSignalHandlingMultiprocessingProcess(TestCase):
+class TestSignalHandlingProcess(TestCase):
 
     @classmethod
     def Process(cls, pid):
@@ -256,7 +256,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     def test_process_does_not_exist(self):
         try:
             with patch('psutil.Process', self.Process):
-                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.target)
+                proc = salt.utils.process.SignalHandlingProcess(target=self.target)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
@@ -265,7 +265,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     def test_process_children_do_not_exist(self):
         try:
             with patch('psutil.Process.children', self.children):
-                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.target)
+                proc = salt.utils.process.SignalHandlingProcess(target=self.target)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
@@ -300,7 +300,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     @skipIf(sys.platform.startswith('win'), 'No os.fork on Windows')
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
-        sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        sh_proc = salt.utils.process.SignalHandlingProcess(
             target=self.run_forever_target,
             args=(self.run_forever_sub_target, evt)
         )
@@ -322,27 +322,27 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_signal_processing_test_after_fork_called(self):
-        'Validate MultiprocessingProcess and sub classes call after fork methods'
+        'Validate Process and sub classes call after fork methods'
         evt = multiprocessing.Event()
-        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
-        log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
+        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
         with patch(sig_to_mock) as ma, patch(log_to_mock) as mb:
-            self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
+            self.sh_proc = salt.utils.process.SignalHandlingProcess(target=self.no_op_target)
             self.sh_proc.run()
         ma.assert_called()
         mb.assert_called()
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_signal_processing_test_final_methods_called(self):
-        'Validate MultiprocessingProcess and sub classes call finalize methods'
+        'Validate Process and sub classes call finalize methods'
         evt = multiprocessing.Event()
         teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
-        log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
-        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
+        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):
             with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
-                self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
+                self.sh_proc = salt.utils.process.SignalHandlingProcess(target=self.no_op_target)
                 self.sh_proc.run()
         ma.assert_called()
         mb.assert_called()
@@ -356,13 +356,13 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'Required signals not supported on windows')
     def test_signal_processing_handle_signals_called(self):
-        'Validate SignalHandlingMultiprocessingProcess handles signals'
+        'Validate SignalHandlingProcess handles signals'
         # Gloobal event to stop all processes we're creating
         evt = multiprocessing.Event()
 
         # Create a process to test signal handler
         val = multiprocessing.Value('i', 0)
-        proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        proc = salt.utils.process.SignalHandlingProcess(
             target=self.pid_setting_target,
             args=(self.run_forever_sub_target, val, evt),
         )
