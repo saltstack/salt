@@ -186,23 +186,20 @@ class _Logger(object):
 LOG = _Logger()
 
 
-def _encode_string(string):
-    if isinstance(string, six.text_type):
-        string = string.encode('utf-8')
-    return string
-
-
 def _encode_status(status):
-    status['out'] = _encode_string(status['out'])
-    status['outlog_by_level'] = _encode_string(status['outlog_by_level'])
+    if status['out'] is None:
+        status['out'] = None
+    else:
+        status['out'] = salt.utils.stringutils.to_unicode(status['out'])
+    status['outlog_by_level'] = salt.utils.stringutils.to_unicode(status['outlog_by_level'])
     if status['logs']:
         for i, data in enumerate(status['logs'][:]):
-            status['logs'][i] = (data[0], _encode_string(data[1]))
+            status['logs'][i] = (data[0], salt.utils.stringutils.to_unicode(data[1]))
         for logger in 'error', 'warn', 'info', 'debug':
             logs = status['logs_by_level'].get(logger, [])[:]
             if logs:
                 for i, log in enumerate(logs):
-                    status['logs_by_level'][logger][i] = _encode_string(log)
+                    status['logs_by_level'][logger][i] = salt.utils.stringutils.to_unicode(log)
     return status
 
 
@@ -222,7 +219,7 @@ def _set_status(m,
     if out and isinstance(out, six.string_types):
         outlog += HR
         outlog += 'OUTPUT:\n'
-        outlog += '{0}\n'.format(_encode_string(out))
+        outlog += '{0}\n'.format(salt.utils.stringutils.to_unicode(out))
         outlog += HR
     if m['logs']:
         outlog += HR
@@ -233,13 +230,13 @@ def _set_status(m,
         outlog_by_level += HR
         for level, msg in m['logs']:
             outlog += '\n{0}: {1}\n'.format(level.upper(),
-                                            _encode_string(msg))
+                                            salt.utils.stringutils.to_unicode(msg))
         for logger in 'error', 'warn', 'info', 'debug':
             logs = m['logs_by_level'].get(logger, [])
             if logs:
                 outlog_by_level += '\n{0}:\n'.format(logger.upper())
                 for idx, log in enumerate(logs[:]):
-                    logs[idx] = _encode_string(log)
+                    logs[idx] = salt.utils.stringutils.to_unicode(log)
                 outlog_by_level += '\n'.join(logs)
                 outlog_by_level += '\n'
         outlog += HR
@@ -875,12 +872,12 @@ def _merge_statuses(statuses):
     status = BASE_STATUS.copy()
     status['status'] = None
     status['merged_statuses'] = True
-    status['out'] = []
+    status['out'] = ''
     for st in statuses:
         if status['status'] is not False:
             status['status'] = st['status']
         out = st['out']
-        comment = _encode_string(st['comment'])
+        comment = salt.utils.stringutils.to_unicode(st['comment'])
         logs = st['logs']
         logs_by_level = st['logs_by_level']
         outlog_by_level = st['outlog_by_level']
@@ -890,32 +887,32 @@ def _merge_statuses(statuses):
                 status['out'] = ''
             status['out'] += '\n'
             status['out'] += HR
-            out = _encode_string(out)
+            out = salt.utils.stringutils.to_unicode(out)
             status['out'] += '{0}\n'.format(out)
             status['out'] += HR
         if comment:
             if not status['comment']:
                 status['comment'] = ''
             status['comment'] += '\n{0}\n'.format(
-                _encode_string(comment))
+                salt.utils.stringutils.to_unicode(comment))
         if outlog:
             if not status['outlog']:
                 status['outlog'] = ''
-            outlog = _encode_string(outlog)
+            outlog = salt.utils.stringutils.to_unicode(outlog)
             status['outlog'] += '\n{0}'.format(HR)
             status['outlog'] += outlog
         if outlog_by_level:
             if not status['outlog_by_level']:
                 status['outlog_by_level'] = ''
             status['outlog_by_level'] += '\n{0}'.format(HR)
-            status['outlog_by_level'] += _encode_string(outlog_by_level)
+            status['outlog_by_level'] += salt.utils.stringutils.to_unicode(outlog_by_level)
         status['logs'].extend([
-            (a[0], _encode_string(a[1])) for a in logs])
+            (a[0], salt.utils.stringutils.to_unicode(a[1])) for a in logs])
         for log in logs_by_level:
             if log not in status['logs_by_level']:
                 status['logs_by_level'][log] = []
             status['logs_by_level'][log].extend(
-                [_encode_string(a) for a in logs_by_level[log]])
+                [salt.utils.stringutils.to_unicode(a) for a in logs_by_level[log]])
     return _encode_status(status)
 
 

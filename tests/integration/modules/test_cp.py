@@ -316,6 +316,7 @@ class CPModuleTest(ModuleCase):
             [
                 'https://repo.saltstack.com/index.html',
             ])
+
         with salt.utils.files.fopen(ret, 'r') as instructions:
             data = salt.utils.stringutils.to_unicode(instructions.read())
         self.assertIn('Bootstrap', data)

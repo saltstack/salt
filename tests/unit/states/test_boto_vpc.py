@@ -321,8 +321,8 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
     @mock_ec2_deprecated
     def test_present_with_subnets(self):
         vpc = self._create_vpc(name='test')
-        subnet1 = self._create_subnet(vpc_id=vpc.id, name='test1')
-        subnet2 = self._create_subnet(vpc_id=vpc.id, name='test2')
+        subnet1 = self._create_subnet(vpc_id=vpc.id, cidr_block='10.0.0.0/25', name='test1')
+        subnet2 = self._create_subnet(vpc_id=vpc.id, cidr_block='10.0.0.128/25', name='test2')
 
         route_table_present_result = self.salt_states['boto_vpc.route_table_present'](
                 name='test', vpc_name='test', subnet_names=['test1'], subnet_ids=[subnet2.id])
