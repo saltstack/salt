@@ -352,7 +352,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'MacOS':
             brew_bin = salt.utils.path.which('brew')
             mac_user = pwd.getpwuid(os.stat(brew_bin).st_uid).pw_name
-            self.skipIf(mac_user == 'root', 'brew cannot run as root, try a user in {}'.format(os.listdir('/Users/')))
+            if mac_user == 'root':
+                self.skipTest('brew cannot run as root, try a user in {}'.format(os.listdir('/Users/')))
             cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)], run_as=mac_user)
         else:
             self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
