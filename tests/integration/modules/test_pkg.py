@@ -4,10 +4,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import pprint
-try:
-    import pwd
-except ImportError:
-    pass
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -356,7 +352,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':
             brew_bin = salt.utils.path.which('brew')
-            mac_user = pwd.getpwuid(os.stat(brew_bin).st_uid).pw_name
+            mac_user = self.run_function('file.get_user', [brew_bin])
             if mac_user == 'root':
                 self.skipTest('brew cannot run as root, try a user in {}'.format(os.listdir('/Users/')))
             cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)], run_as=mac_user)
