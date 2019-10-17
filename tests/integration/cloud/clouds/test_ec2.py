@@ -10,6 +10,7 @@ import time
 import yaml
 
 # Import Salt Libs
+from salt.ext.six.moves import range
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
