@@ -14,6 +14,7 @@ from tests.support.helpers import (
     requires_network,
     requires_salt_modules,
     requires_system_grains)
+from tests.support.unit import skipIf
 
 # Import Salt libs
 from salt.utils import six
@@ -329,6 +330,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
     @requires_salt_modules('pkg.remove', 'pkg.latest_version')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):
