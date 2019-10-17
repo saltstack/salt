@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+from time import sleep
 import os
 import yaml
 
@@ -122,11 +123,10 @@ class EC2Test(CloudTest):
 
         changed_name = self.instance_name + '-changed'
 
-        rename_result = self.run_cloud(
-            '-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
-        self.assertFalse(self._instance_exists(), 'Instance wasn\'t renamed: |\n{}'.format(rename_result))
+        self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
+        sleep(20)
         self.assertInstanceExists(instance_name=changed_name)
-
+        self.assertFalse(self._instance_exists(), 'Initial name of renamed instance still exists: {}'.format(self.instance_name))
         self.assertDestroyInstance(changed_name)
 
     def test_instance(self):
