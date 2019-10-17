@@ -68,7 +68,6 @@ state modules
     bower
     btrfs
     cabal
-    ceph
     chef
     chocolatey
     chronos_job
