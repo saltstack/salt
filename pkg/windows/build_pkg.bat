@@ -265,8 +265,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\modules\bsd_shadow.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\bsd_shadow.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\btrfs.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\btrfs.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\modules\ceph.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\modules\ceph.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\container_resource.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\modules\container_resource.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\modules\cron.py"^
@@ -515,8 +513,6 @@ If Exist "%BinDir%\Lib\site-packages\salt\states\at.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\at.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\blockdev.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\blockdev.*" 1>nul
-If Exist "%BinDir%\Lib\site-packages\salt\states\ceph.py"^
-    del /Q "%BinDir%\Lib\site-packages\salt\states\ceph.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\cron.py"^
     del /Q "%BinDir%\Lib\site-packages\salt\states\cron.*" 1>nul
 If Exist "%BinDir%\Lib\site-packages\salt\states\csf.py"^

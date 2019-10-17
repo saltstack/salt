@@ -86,7 +86,6 @@ execution modules
     cassandra
     cassandra_cql
     celery
-    ceph
     chassis
     chef
     chocolatey

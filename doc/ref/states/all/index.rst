@@ -63,7 +63,6 @@ state modules
     boto_vpc
     bower
     cabal
-    ceph
     chef
     chocolatey
     chronos_job
