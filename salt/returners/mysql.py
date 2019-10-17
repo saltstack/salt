@@ -78,7 +78,6 @@ Use the following mysql database schema:
       `load` mediumtext NOT NULL,
       UNIQUE KEY `jid` (`jid`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-    CREATE INDEX jid ON jids(jid) USING BTREE;
 
     --
     -- Table structure for table `salt_returns`
