@@ -5,8 +5,8 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-from time import sleep
 import os
+import time
 import yaml
 
 # Import Salt Libs
@@ -124,7 +124,11 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + '-changed'
 
         self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
-        sleep(20)
+        for tries in range(20):
+            if self.instance_exists():
+                time.sleep(1)
+            else:
+                break
         self.assertInstanceExists(instance_name=changed_name)
         self.assertFalse(self._instance_exists(), 'Initial name of renamed instance still exists: {}'.format(self.instance_name))
         self.assertDestroyInstance(changed_name)
