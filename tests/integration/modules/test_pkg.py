@@ -3,8 +3,12 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import pwd
 import pprint
+try:
+    import pwd
+    HAS_PWD = True
+except ImportError:
+    HAS_PWD = False
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -330,7 +334,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
-    @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
+    @skipIf(salt.utils.platform.is_darwin() and not HAS_PWD, 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
     @requires_salt_modules('pkg.remove', 'pkg.latest_version')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):
