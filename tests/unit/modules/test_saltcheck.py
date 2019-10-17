@@ -28,7 +28,7 @@ except:
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
-class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
+class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.saltcheck module
     '''
@@ -367,3 +367,18 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
                                                 "args": ["This works!"]
                                                 })
             self.assertEqual(returned['status'], 'Pass')
+
+    def test_report_highstate_tests(self):
+        '''test report_highstate_tests'''
+        expected_output = {'TEST REPORT RESULTS': {
+                           'States missing tests': ['state1'],
+                           'Missing Tests': 1,
+                           'States with tests': ['found']
+                          }}
+        with patch('salt.modules.saltcheck._get_top_states') as mocked_get_top:
+            mocked_get_top.return_value = ['state1', 'found']
+            with patch('salt.modules.saltcheck.StateTestLoader') as mocked_stl:
+                instance = mocked_stl.return_value
+                instance.found_states = ['found']
+                returned = saltcheck.report_highstate_tests()
+                self.assertEqual(returned, expected_output)
