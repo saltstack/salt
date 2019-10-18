@@ -90,10 +90,14 @@ def _format_warning(message, category, filename, lineno, line=None):
 
 @contextlib.contextmanager
 def _patched_format_warning():
-    saved = warnings.formatwarning
-    warnings.formatwarning = _format_warning
-    yield
-    warnings.formatwarning = saved
+    if six.PY2:
+        saved = warnings.formatwarning
+        warnings.formatwarning = _format_warning
+        yield
+        warnings.formatwarning = saved
+    else:
+        # Under Py3 we no longer have to patch warnings.formatwarning
+        yield
 
 
 def warn_until(version,
