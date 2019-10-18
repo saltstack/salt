@@ -1212,8 +1212,52 @@ Returns:
 
   'default'
 
+
+.. jinja_ref:: json_query
+
+``json_query``
+--------------
+
+.. versionadded:: Neon
+
+A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
+Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
+Depends on the `jmespath`_ Python module.
+
+Examples:
+
+.. code-block:: jinja
+
+  Example 1: {{ [1, 2, 3, 4, [5, 6]] | json_query('[]') }}
+
+  Example 2: {{
+  {"machines": [
+    {"name": "a", "state": "running"},
+    {"name": "b", "state": "stopped"},
+    {"name": "b", "state": "running"}
+  ]} | json_query("machines[?state=='running'].name") }}
+
+  Example 3: {{
+  {"services": [
+    {"name": "http", "host": "1.2.3.4", "port": 80},
+    {"name": "smtp", "host": "1.2.3.5", "port": 25},
+    {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+  ]} | json_query("services[].port") }}
+
+Returns:
+
+.. code-block:: text
+
+  Example 1: [1, 2, 3, 4, 5, 6]
+
+  Example 2: ['a', 'b']
+
+  Example 3: [80, 25, 22]
+
 .. _`builtin filters`: http://jinja.pocoo.org/docs/templates/#builtin-filters
 .. _`timelib`: https://github.com/pediapress/timelib/
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Networking Filters
 ------------------

@@ -6,6 +6,7 @@ croniter>=0.3.0,!=0.3.22
 dnspython
 docker
 futures>=2.0; python_version < '3.0'
+jmespath
 jsonschema
 junos-eznc
 jxmlease

@@ -1322,6 +1322,16 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, 'random')
 
+    def test_json_query(self):
+        '''
+        Test the `json_query` Jinja filter.
+        '''
+        rendered = render_jinja_tmpl(
+            "{{ [1, 2, 3] | json_query('[1]')}}",
+            dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
+        )
+        self.assertEqual(rendered, '2')
+
     # def test_print(self):
     #     env = Environment(extensions=[SerializerExtension])
     #     source = '{% import_yaml "toto.foo" as docu %}'

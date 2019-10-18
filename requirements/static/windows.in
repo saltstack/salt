@@ -7,6 +7,7 @@ dnspython
 # We require docker < 3.0.0 because after that they also start locking their pywin32 requirement, actually
 # pypiwin32, which after version 223 it just makes pywin32 a dep and installs nothing else
 docker<3.0.0
+jmespath
 jsonschema
 keyring==5.7.1
 kubernetes<4.0
