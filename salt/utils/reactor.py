@@ -63,7 +63,6 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self._is_child = True
         Reactor.__init__(
             self, state['opts'],
             log_queue=state['log_queue'],

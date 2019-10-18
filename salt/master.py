@@ -161,7 +161,6 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -370,7 +369,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -799,7 +797,6 @@ class Halite(salt.utils.process.SignalHandlingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['hopts'],
             log_queue=state['log_queue'],
@@ -848,7 +845,6 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             state['key'],
@@ -991,7 +987,6 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self._is_child = True
         super(MWorker, self).__init__(
             log_queue=state['log_queue'],
             log_queue_level=state['log_queue_level']
