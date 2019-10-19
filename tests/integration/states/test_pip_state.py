@@ -598,30 +598,3 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(ographite, ignore_errors=True)
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
-
-
-class PipStateInRequisiteTest(ModuleCase, SaltReturnAssertsMixin):
-
-    @with_tempdir()
-    def test_issue_54755(self, tmpdir):
-        '''
-        Verify github issue 54755 is resolved. This only fails when there is no
-        pip module in the python environment. Since the test suite normally has
-        a pip module this test will pass and is here for posterity. See also
-
-        unit.states.test_pip_state.PipStateUtilsTest.test_pip_purge_method_with_pip
-
-         and
-
-        unit.states.test_pip_state.PipStateUtilsTest.test_pip_purge_method_without_pip
-
-        Which also validate this issue and will pass/fail regardless of whether
-        or not pip is installed.
-        '''
-        file_path = os.path.join(tmpdir, 'issue-54755')
-        ret = self.run_function('state.sls', mods='issue-54755', pillar={'file_path': file_path})
-        key = 'file_|-issue-54755_|-{}_|-managed'.format(file_path)
-        assert key in ret
-        assert ret[key]['result'] is True
-        with salt.utils.files.fopen(file_path, 'r') as fp:
-            assert fp.read().strip() == 'issue-54755'
