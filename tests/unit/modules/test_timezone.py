@@ -13,7 +13,8 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     patch,
-    mock_open
+    mock_open,
+    multi_mock_open
 )
 
 # Import Salt Libs
@@ -203,7 +204,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(timezone.__grains__, {'os_family': ['Gentoo']}):
-            with patch('salt.utils.files.fopen', mock_open()) as m_open:
+            with patch('salt.utils.files.fopen', multi_mock_open()) as m_open:
                 assert timezone.set_zone(self.TEST_TZ)
                 fh_ = m_open.filehandles['/etc/timezone'][0]
                 assert fh_.call.args == ('/etc/timezone', 'w'), fh_.call.args
@@ -220,7 +221,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(timezone.__grains__, {'os_family': ['Debian']}):
-            with patch('salt.utils.files.fopen', mock_open()) as m_open:
+            with patch('salt.utils.files.fopen', multi_mock_open()) as m_open:
                 assert timezone.set_zone(self.TEST_TZ)
                 fh_ = m_open.filehandles['/etc/timezone'][0]
                 assert fh_.call.args == ('/etc/timezone', 'w'), fh_.call.args

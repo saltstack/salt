@@ -11,6 +11,7 @@ from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     mock_open,
+    multi_mock_open,
     create_autospec,
     patch,
     NO_MOCK,
@@ -186,7 +187,7 @@ class NetworkTestCase(TestCase):
         ## ccc
         127.0.0.1       localhost thisismyhostname     # 本机
         ''')
-        fopen_mock = mock_open(read_data={'/etc/hosts': content})
+        fopen_mock = multi_mock_open(read_data={'/etc/hosts': content})
         with patch('salt.utils.files.fopen', fopen_mock):
             assert 'thisismyhostname' in network._generate_minion_id()
 

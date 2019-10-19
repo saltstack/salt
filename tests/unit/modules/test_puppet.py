@@ -13,6 +13,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     mock_open,
+    multi_mock_open,
     MagicMock,
     patch,
     NO_MOCK,
@@ -143,7 +144,7 @@ class PuppetTestCase(TestCase, LoaderModuleMockMixin):
 
             permission_error = IOError(errno.EACCES, 'Permission denied:', '/file')
             with patch('salt.utils.files.fopen',
-                       mock_open(read_data=permission_error)) as m_open:
+                       multi_mock_open(read_data=permission_error)) as m_open:
                 self.assertRaises(CommandExecutionError, puppet.summary)
 
     def test_plugin_sync(self):

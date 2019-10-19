@@ -23,6 +23,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
+    multi_mock_open,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -133,7 +134,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert core._parse_cpe_name(cpe) == {}
 
     def test_missing_os_release(self):
-        with patch('salt.utils.files.fopen', mock_open(read_data={})):
+        with patch('salt.utils.files.fopen', mock_open(read_data='')):
             os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
         self.assertEqual(os_release, {})
 
@@ -333,7 +334,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(os.path, 'isfile', path_isfile_mock), \
                 patch.object(core, '_parse_os_release', os_release_mock), \
                 patch.object(core, '_parse_lsb_release', empty_mock), \
-                patch('salt.utils.files.fopen', mock_open(read_data=file_contents)), \
+                patch('salt.utils.files.fopen', multi_mock_open(read_data=file_contents)), \
                 patch.object(core, 'linux_distribution', distro_mock), \
                 patch.object(core, '_linux_gpu_data', empty_mock), \
                 patch.object(core, '_linux_cpudata', empty_mock), \
@@ -1076,7 +1077,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         import platform
         path_isfile_mock = MagicMock(side_effect=lambda x: x in ['/etc/release'])
         with salt.utils.files.fopen(os.path.join(OS_RELEASE_DIR, "solaris-11.3")) as os_release_file:
-            os_release_content = os_release_file.readlines()
+            os_release_content = os_release_file.read()
         uname_mock = MagicMock(return_value=(
             'SunOS', 'testsystem', '5.11', '11.3', 'sunv4', 'sparc'
         ))

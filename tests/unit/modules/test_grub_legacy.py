@@ -11,7 +11,7 @@ import errno
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    mock_open,
+    multi_mock_open,
     MagicMock,
     patch,
     NO_MOCK,
@@ -45,12 +45,12 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
         Test for Parse GRUB conf file
         '''
         file_data = IOError(errno.EACCES, 'Permission denied')
-        with patch('salt.utils.files.fopen', mock_open(read_data=file_data)), \
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=file_data)), \
                 patch.object(grub_legacy, '_detect_conf', return_value='A'):
             self.assertRaises(CommandExecutionError, grub_legacy.conf)
 
         file_data = salt.utils.stringutils.to_str('\n'.join(['#', 'A B C D,E,F G H']))
-        with patch('salt.utils.files.fopen', mock_open(read_data=file_data)), \
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=file_data)), \
                 patch.object(grub_legacy, '_detect_conf', return_value='A'):
             conf = grub_legacy.conf()
             assert conf == {'A': 'B C D,E,F G H', 'stanzas': []}, conf

@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
-from tests.support.mock import patch, mock_open, PropertyMock, call, ANY
+from tests.support.mock import patch, multi_mock_open, PropertyMock, call, ANY
 from tests.support.unit import skipIf, TestCase
 
 # Import 3rd-party libs
@@ -1509,7 +1509,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
             mock_execute.return_value = etree.XML(
                 '<rpc-reply>text rpc reply</rpc-reply>')
-            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
+            with patch('salt.utils.files.fopen', multi_mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file', format='text')
                 writes = m_open.write_calls()
                 assert writes == ['text rpc reply'], writes
@@ -1518,7 +1518,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
         with patch('jnpr.junos.device.Device.execute') as mock_execute, \
                 patch('salt.utils.json.dumps') as mock_dumps:
             mock_dumps.return_value = 'json rpc reply'
-            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
+            with patch('salt.utils.files.fopen', multi_mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file', format='json')
                 writes = m_open.write_calls()
                 assert writes == ['json rpc reply'], writes
@@ -1528,7 +1528,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 patch('salt.modules.junos.etree.tostring') as mock_tostring, \
                 patch('jnpr.junos.device.Device.execute') as mock_execute:
             mock_tostring.return_value = 'xml rpc reply'
-            with patch('salt.utils.files.fopen', mock_open(), create=True) as m_open:
+            with patch('salt.utils.files.fopen', multi_mock_open(), create=True) as m_open:
                 junos.rpc('get-chassis-inventory', '/path/to/file')
                 writes = m_open.write_calls()
                 assert writes == ['xml rpc reply'], writes

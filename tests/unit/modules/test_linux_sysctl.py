@@ -17,6 +17,7 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
     mock_open,
+    multi_mock_open,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -111,7 +112,7 @@ class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
             sys_cmd = 'systemd 208\n+PAM +LIBWRAP'
             mock_sys_cmd = MagicMock(return_value=sys_cmd)
 
-            with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+            with patch('salt.utils.files.fopen', multi_mock_open()) as m_open, \
                     patch.dict(linux_sysctl.__context__,
                                {'salt.utils.systemd.version': 232}), \
                     patch.dict(linux_sysctl.__salt__,

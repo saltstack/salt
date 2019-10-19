@@ -38,6 +38,7 @@ try:
         NonCallableMock,
         NonCallableMagicMock,
         PropertyMock,
+        mock_open,
         __version__
     )
     NO_MOCK = False
@@ -512,4 +513,4 @@ class MockOpen(object):
 
 
 # reimplement mock_open to support multiple filehandles
-mock_open = MockOpen
+multi_mock_open = MockOpen

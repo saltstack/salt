@@ -7,7 +7,7 @@ import logging
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, mock_open
+from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, mock_open, multi_mock_open
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -64,7 +64,7 @@ class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
-        with patch('salt.utils.files.fopen', mock_open(b'')) as m_open:
+        with patch('salt.utils.files.fopen', multi_mock_open(b'')) as m_open:
             ret = wtmp.beacon(config)
             call_args = next(six.itervalues(m_open.filehandles))[0].call.args
             assert call_args == (wtmp.WTMP, 'rb'), call_args

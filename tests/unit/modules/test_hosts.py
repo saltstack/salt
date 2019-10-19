@@ -114,7 +114,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.hosts.__get_hosts_filename',
                    MagicMock(return_value='/etc/hosts')), \
                 patch('os.path.isfile', MagicMock(return_value=True)), \
-                    patch('salt.utils.files.fopen', mock_open(b'')):
+                    patch('salt.utils.files.fopen', mock_open(read_data=b'')):
             mock_opt = MagicMock(return_value=None)
             with patch.dict(hosts.__salt__, {'config.option': mock_opt}):
                 self.assertTrue(hosts.set_host('10.10.10.10', 'Salt1'))
@@ -212,7 +212,7 @@ class HostsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if specified host entry gets removed from the hosts file
         '''
-        with patch('salt.utils.files.fopen', mock_open(b'')), \
+        with patch('salt.utils.files.fopen', mock_open(read_data=b'')), \
                 patch('salt.modules.hosts.__get_hosts_filename',
                       MagicMock(return_value='/etc/hosts')), \
                 patch('salt.modules.hosts.has_pair',

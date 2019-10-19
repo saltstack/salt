@@ -12,7 +12,7 @@ from tests.support.helpers import with_tempfile
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, Mock, patch, mock_open, DEFAULT
+from tests.support.mock import MagicMock, Mock, patch, mock_open, multi_mock_open, DEFAULT
 
 try:
     import pytest
@@ -1379,7 +1379,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
         with patch('os.path.isfile', isfile_mock), \
                 patch('os.stat', MagicMock(return_value=DummyStat())), \
                 patch('salt.utils.files.fopen', mock_open(read_data=file_content)), \
-                patch('salt.utils.atomicfile.atomic_open', mock_open()) as atomic_open_mock:
+                patch('salt.utils.atomicfile.atomic_open', multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, after='- /srv/salt', mode='insert')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
@@ -1430,7 +1430,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen',
                           mock_open(read_data=file_content)), \
                     patch('salt.utils.atomicfile.atomic_open',
-                          mock_open()) as atomic_open_mock:
+                          multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content=cfg_content, after=after_line, mode='insert', indent=False)
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
@@ -1471,7 +1471,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen',
                           mock_open(read_data=file_content)), \
                     patch('salt.utils.atomicfile.atomic_open',
-                          mock_open()) as atomic_open_mock:
+                          multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content=cfg_content, after=after_line, mode='insert', indent=False)
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
@@ -1515,7 +1515,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen',
                           mock_open(read_data=file_content)), \
                     patch('salt.utils.atomicfile.atomic_open',
-                          mock_open()) as atomic_open_mock:
+                          multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content=cfg_content, before=before_line, mode='insert')
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
@@ -1587,7 +1587,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen',
                           mock_open(read_data=file_content)), \
                     patch('salt.utils.atomicfile.atomic_open',
-                          mock_open()) as atomic_open_mock:
+                          multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content=cfg_content, before=b_line, after=a_line, mode='insert')
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
@@ -1628,7 +1628,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen',
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+                      multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, location='start', mode='insert')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
@@ -1669,7 +1669,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen',
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+                      multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, location='end', mode='insert')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
@@ -1708,7 +1708,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
              patch('salt.utils.files.fopen',
                    mock_open(read_data=file_content)), \
              patch('salt.utils.atomicfile.atomic_open',
-                   mock_open()) as atomic_open_mock:
+                   multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, before='exit 0', mode='ensure')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
@@ -1748,7 +1748,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen',
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+                      multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, before='exit 0', mode='ensure')
             # If file not modified no handlers in dict
             assert atomic_open_mock.filehandles.get(name) is None
@@ -1776,7 +1776,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen',
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+                      multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, before='/etc/init.d/someservice restart', mode='ensure')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
@@ -1813,7 +1813,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen',
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+                      multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, after='/etc/init.d/someservice restart', mode='ensure')
             handles = atomic_open_mock.filehandles[name]
             # We should only have opened the file once
@@ -1851,7 +1851,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen',
                       mock_open(read_data=file_content)), \
                 patch('salt.utils.atomicfile.atomic_open',
-                      mock_open()) as atomic_open_mock:
+                      multi_mock_open()) as atomic_open_mock:
             filemod.line(name, content=cfg_content, after='/etc/init.d/someservice restart', mode='ensure')
             # If file not modified no handlers in dict
             assert atomic_open_mock.filehandles.get(name) is None
@@ -1879,7 +1879,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen',
                           mock_open(read_data=file_content)), \
                     patch('salt.utils.atomicfile.atomic_open',
-                          mock_open()) as atomic_open_mock:
+                          multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content=cfg_content, after=_after, before=_before, mode='ensure')
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
@@ -1916,7 +1916,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
                     patch('salt.utils.files.fopen',
                           mock_open(read_data=file_content)), \
                     patch('salt.utils.atomicfile.atomic_open',
-                          mock_open()) as atomic_open_mock:
+                          multi_mock_open()) as atomic_open_mock:
                 result = filemod.line('foo', content=cfg_content, after=_after, before=_before, mode='ensure')
                 # We should not have opened the file
                 assert not atomic_open_mock.filehandles
@@ -1976,7 +1976,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('os.path.isfile', isfile_mock), \
                     patch('os.stat', MagicMock(return_value=DummyStat())), \
                     patch('salt.utils.files.fopen', files_fopen), \
-                    patch('salt.utils.atomicfile.atomic_open', mock_open()) as atomic_open_mock:
+                    patch('salt.utils.atomicfile.atomic_open', multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content=content, mode='delete')
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once
@@ -2017,7 +2017,7 @@ class FilemodLineTests(TestCase, LoaderModuleMockMixin):
             with patch('os.path.isfile', isfile_mock), \
                     patch('os.stat', MagicMock(return_value=DummyStat())), \
                     patch('salt.utils.files.fopen', files_fopen), \
-                    patch('salt.utils.atomicfile.atomic_open', mock_open()) as atomic_open_mock:
+                    patch('salt.utils.atomicfile.atomic_open', multi_mock_open()) as atomic_open_mock:
                 filemod.line(name, content='- /srv/natrium-chloride', match=match, mode='replace')
                 handles = atomic_open_mock.filehandles[name]
                 # We should only have opened the file once

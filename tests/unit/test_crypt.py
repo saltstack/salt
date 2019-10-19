@@ -11,6 +11,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     mock_open,
+    multi_mock_open,
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
@@ -108,14 +109,14 @@ class CryptTestCase(TestCase):
 
         with patch.multiple(os, umask=MagicMock(), chmod=MagicMock(),
                             access=MagicMock(return_value=True)):
-            with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+            with patch('salt.utils.files.fopen', multi_mock_open()) as m_open, \
                     patch('os.path.isfile', return_value=True):
                 result = crypt.gen_keys('/keydir', 'keyname', 2048)
                 assert result == '/keydir{0}keyname.pem'.format(os.sep), result
                 assert open_priv_wb not in m_open.calls
                 assert open_pub_wb not in m_open.calls
 
-            with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+            with patch('salt.utils.files.fopen', multi_mock_open()) as m_open, \
                     patch('os.path.isfile', return_value=False):
                 crypt.gen_keys('/keydir', 'keyname', 2048)
                 assert open_priv_wb in m_open.calls
@@ -130,7 +131,7 @@ class CryptTestCase(TestCase):
         open_priv_wb = MockCall(os.path.join(key_path, 'keyname.pem'), 'wb+')
         open_pub_wb = MockCall(os.path.join(key_path, 'keyname.pub'), 'wb+')
 
-        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+        with patch('salt.utils.files.fopen', multi_mock_open()) as m_open, \
                 patch('os.path.isfile', return_value=True):
             self.assertEqual(crypt.gen_keys(key_path, 'keyname', 2048, passphrase='password'), os.path.join(key_path, 'keyname.pem'))
             result = crypt.gen_keys(key_path, 'keyname', 2048,
@@ -139,7 +140,7 @@ class CryptTestCase(TestCase):
             assert open_priv_wb not in m_open.calls
             assert open_pub_wb not in m_open.calls
 
-        with patch('salt.utils.files.fopen', mock_open()) as m_open, \
+        with patch('salt.utils.files.fopen', multi_mock_open()) as m_open, \
                 patch('os.path.isfile', return_value=False):
             crypt.gen_keys(key_path, 'keyname', 2048)
             assert open_priv_wb in m_open.calls

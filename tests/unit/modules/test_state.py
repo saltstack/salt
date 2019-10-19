@@ -963,7 +963,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                                                       mock):
                                         with patch(
                                                    'salt.utils.files.fopen',
-                                                   mock_open(b'')):
+                                                   mock_open(read_data=b'')):
                                             self.assertTrue(
                                                             state.sls(arg,
                                                                       None,
@@ -1336,10 +1336,12 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         self.addCleanup(shutil.rmtree, self.fileserver_root, ignore_errors=True)
 
         self.saltenvs = ['base', 'foo', 'bar', 'baz']
+        self.addCleanup(setattr, self, 'saltenvs', None)
         self.saltenv_roots = {
             x: os.path.join(self.fileserver_root, x)
             for x in ('base', 'foo', 'bar', 'baz')
         }
+        self.addCleanup(setattr, self, 'saltenv_roots', None)
         self.base_top_file = os.path.join(self.saltenv_roots['base'], 'top.sls')
         self.dunder_opts = salt.utils.yaml.safe_load(
             textwrap.dedent('''\
@@ -1359,6 +1361,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
             )
         )
         self.dunder_opts['env_order'] = self.saltenvs
+        self.addCleanup(setattr, self, 'dunder_opts', None)
 
         # Write top files for all but the "baz" environment
         for saltenv in self.saltenv_roots:

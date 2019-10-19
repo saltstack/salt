@@ -13,6 +13,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
+    multi_mock_open,
     NO_MOCK,
     NO_MOCK_REASON
 )
@@ -79,7 +80,7 @@ class DNSUtilTestCase(TestCase):
                                                      'fe80::1%lo0': ['localhost']})
 
     def test_hosts_append(self):
-        with patch('salt.utils.files.fopen', mock_open(read_data=mock_hosts_file)) as m_open, \
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=mock_hosts_file)) as m_open, \
                 patch('salt.modules.dnsutil.parse_hosts', MagicMock(return_value=mock_hosts_file_rtn)):
             dnsutil.hosts_append('/etc/hosts', '127.0.0.1', 'ad1.yuk.co,ad2.yuk.co')
             writes = m_open.write_calls()
@@ -93,7 +94,7 @@ class DNSUtilTestCase(TestCase):
     def test_hosts_remove(self):
         to_remove = 'ad1.yuk.co'
         new_mock_file = mock_hosts_file + '\n127.0.0.1 ' + to_remove + '\n'
-        with patch('salt.utils.files.fopen', mock_open(read_data=new_mock_file)) as m_open:
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=new_mock_file)) as m_open:
             dnsutil.hosts_remove('/etc/hosts', to_remove)
             writes = m_open.write_calls()
             assert writes == mock_writes_list, writes

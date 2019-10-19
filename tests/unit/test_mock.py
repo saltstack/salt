@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Tests for our mock_open helper
+Tests for our multi_mock_open helper
 '''
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -15,7 +15,7 @@ import salt.utils.stringutils
 from salt.ext import six
 
 # Import Salt Testing Libs
-from tests.support.mock import patch, mock_open, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, multi_mock_open, NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import TestCase, skipIf
 
 log = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 result = self.fh.read()
                 assert result == questions, result
@@ -67,7 +67,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 # Read 10 bytes
                 result = self.fh.read(10)
@@ -115,7 +115,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 result = self.fh.read(999999)
                 assert result == questions, result
@@ -140,7 +140,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile, split=True)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 index = 0
                 for line in self.fh:
@@ -174,7 +174,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile, split=True)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 size = 8
                 result = self.fh.read(size)
@@ -226,7 +226,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile, split=True)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 # Read the first line
                 result = self.fh.readline()
@@ -263,7 +263,7 @@ class MockOpenMixin(object):
         questions, answers, mode, read_data = \
             self._get_values(binary=binary, multifile=multifile, split=True)
 
-        with patch('salt.utils.files.fopen', mock_open(read_data=read_data)):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=read_data)):
             with salt.utils.files.fopen('foo.txt', mode) as self.fh:
                 result = self.fh.readlines()
                 assert result == questions, result
@@ -288,7 +288,7 @@ class MockOpenMixin(object):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class MockOpenTestCase(TestCase, MockOpenMixin):
     '''
-    Tests for our mock_open helper to ensure that it behaves as closely as
+    Tests for our multi_mock_open helper to ensure that it behaves as closely as
     possible to a real filehandle.
     '''
 
@@ -454,11 +454,11 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         contents = 'спам'
         normalized = salt.utils.stringutils.to_str(contents)
         with patch('salt.utils.files.fopen',
-                   mock_open(read_data=contents)) as m_open:
+                   multi_mock_open(read_data=contents)) as m_open:
             assert m_open.read_data == {'*': normalized}, m_open.read_data
 
         with patch('salt.utils.files.fopen',
-                   mock_open(read_data=self.read_data_as_list)) as m_open:
+                   multi_mock_open(read_data=self.read_data_as_list)) as m_open:
             assert m_open.read_data == {
                 '*': self.normalized_read_data_as_list,
             }, m_open.read_data
@@ -468,7 +468,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         Test read_data when it is a list
         '''
         with patch('salt.utils.files.fopen',
-                   mock_open(read_data=self.read_data_as_list)):
+                   multi_mock_open(read_data=self.read_data_as_list)):
             for value in self.normalized_read_data_as_list:
                 try:
                     with salt.utils.files.fopen('foo.txt') as self.fh:
@@ -485,7 +485,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         Test read_data when it is a list and the value is a bytestring
         '''
         with patch('salt.utils.files.fopen',
-                   mock_open(read_data=self.read_data_as_list_bytes)):
+                   multi_mock_open(read_data=self.read_data_as_list_bytes)):
             for value in self.read_data_as_list_bytes:
                 try:
                     with salt.utils.files.fopen('foo.txt', 'rb') as self.fh:
@@ -502,7 +502,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         Test the implementation of tell
         '''
         with patch('salt.utils.files.fopen',
-                   mock_open(read_data=self.contents)):
+                   multi_mock_open(read_data=self.contents)):
             # Try with reading explicit sizes and then reading the rest of the
             # file.
             with salt.utils.files.fopen('foo.txt') as self.fh:
@@ -556,35 +556,35 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         Test writing to a filehandle using .write()
         '''
         # Test opening for non-binary writing
-        with patch('salt.utils.files.fopen', mock_open()):
+        with patch('salt.utils.files.fopen', multi_mock_open()):
             with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
                 for line in self.questions_str_lines:
                     self.fh.write(line)
                 assert self.fh.write_calls == self.questions_str_lines, self.fh.write_calls
 
         # Test opening for binary writing using "wb"
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
                 for line in self.questions_bytes_lines:
                     self.fh.write(line)
                 assert self.fh.write_calls == self.questions_bytes_lines, self.fh.write_calls
 
         # Test opening for binary writing using "ab"
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'ab') as self.fh:
                 for line in self.questions_bytes_lines:
                     self.fh.write(line)
                 assert self.fh.write_calls == self.questions_bytes_lines, self.fh.write_calls
 
         # Test opening for read-and-write using "r+b"
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'r+b') as self.fh:
                 for line in self.questions_bytes_lines:
                     self.fh.write(line)
                 assert self.fh.write_calls == self.questions_bytes_lines, self.fh.write_calls
 
         # Test trying to write str types to a binary filehandle
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
                 try:
                     self.fh.write('foo\n')
@@ -617,7 +617,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                         )
 
         # Test trying to write bytestrings to a non-binary filehandle
-        with patch('salt.utils.files.fopen', mock_open()):
+        with patch('salt.utils.files.fopen', multi_mock_open()):
             with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
                 try:
                     self.fh.write(b'foo\n')
@@ -654,31 +654,31 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         Test writing to a filehandle using .writelines()
         '''
         # Test opening for non-binary writing
-        with patch('salt.utils.files.fopen', mock_open()):
+        with patch('salt.utils.files.fopen', multi_mock_open()):
             with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
                 self.fh.writelines(self.questions_str_lines)
                 assert self.fh.writelines_calls == [self.questions_str_lines], self.fh.writelines_calls
 
         # Test opening for binary writing using "wb"
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
                 self.fh.writelines(self.questions_bytes_lines)
                 assert self.fh.writelines_calls == [self.questions_bytes_lines], self.fh.writelines_calls
 
         # Test opening for binary writing using "ab"
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'ab') as self.fh:
                 self.fh.writelines(self.questions_bytes_lines)
                 assert self.fh.writelines_calls == [self.questions_bytes_lines], self.fh.writelines_calls
 
         # Test opening for read-and-write using "r+b"
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'r+b') as self.fh:
                 self.fh.writelines(self.questions_bytes_lines)
                 assert self.fh.writelines_calls == [self.questions_bytes_lines], self.fh.writelines_calls
 
         # Test trying to write str types to a binary filehandle
-        with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+        with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
             with salt.utils.files.fopen('foo.txt', 'wb') as self.fh:
                 try:
                     self.fh.writelines(['foo\n'])
@@ -711,7 +711,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                         )
 
         # Test trying to write bytestrings to a non-binary filehandle
-        with patch('salt.utils.files.fopen', mock_open()):
+        with patch('salt.utils.files.fopen', multi_mock_open()):
             with salt.utils.files.fopen('foo.txt', 'w') as self.fh:
                 try:
                     self.fh.write([b'foo\n'])
@@ -753,7 +753,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
         unicode types to str types.
         '''
         try:
-            with patch('salt.utils.files.fopen', mock_open()):
+            with patch('salt.utils.files.fopen', multi_mock_open()):
                 try:
                     with salt.utils.files.fopen('foo.txt', 'rb') as self.fh:
                         self.fh.read()
@@ -766,7 +766,7 @@ class MockOpenTestCase(TestCase, MockOpenMixin):
                             'non-bytestring read_data'
                         )
 
-            with patch('salt.utils.files.fopen', mock_open(read_data=b'')):
+            with patch('salt.utils.files.fopen', multi_mock_open(read_data=b'')):
                 try:
                     with salt.utils.files.fopen('foo.txt', 'r') as self.fh2:
                         self.fh2.read()

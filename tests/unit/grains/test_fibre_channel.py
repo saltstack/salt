@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    mock_open,
+    multi_mock_open,
     MagicMock,
     NO_MOCK,
     NO_MOCK_REASON
@@ -39,7 +39,7 @@ class FibreChannelGrainsTestCase(TestCase):
         contents = ['0x500143802426baf4', '0x500143802426baf5']
         files = ['file1', 'file2']
         with patch('glob.glob', MagicMock(return_value=files)), \
-                patch('salt.utils.files.fopen', mock_open(read_data=contents)):
+                patch('salt.utils.files.fopen', multi_mock_open(read_data=contents)):
             ret = fibre_channel._linux_wwns()
 
         assert ret == ['500143802426baf4', '500143802426baf5'], ret

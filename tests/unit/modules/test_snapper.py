@@ -19,6 +19,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
+    multi_mock_open
 )
 
 # Import Salt libs
@@ -365,7 +366,7 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
                 ],
                 '*/tmp/foo2': FILE_CONTENT['/tmp/foo2']['post'],
             }
-            with patch('salt.utils.files.fopen', mock_open(read_data=contents)):
+            with patch('salt.utils.files.fopen', multi_mock_open(read_data=contents)):
                 module_ret = {
                     "/tmp/foo": MODULE_RET['DIFF']["/tmp/foo"],
                     "/tmp/foo2": MODULE_RET['DIFF']["/tmp/foo2"],

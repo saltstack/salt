@@ -13,6 +13,7 @@ from tests.support.mock import (
     Mock,
     MagicMock,
     mock_open,
+    multi_mock_open,
     patch,
     NO_MOCK,
     NO_MOCK_REASON
@@ -142,7 +143,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                 patch.multiple('salt.modules.cp',
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
-                patch('salt.utils.files.fopen', mock_open(read_data=b'content')) as m_open, \
+                patch('salt.utils.files.fopen', multi_mock_open(read_data=b'content')) as m_open, \
                 patch('salt.transport.client.ReqChannel.factory', MagicMock()):
             response = cp.push(filename)
             assert response, response
