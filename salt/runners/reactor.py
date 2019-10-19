@@ -51,7 +51,7 @@ def list_(saltenv='base', test=None):
     __jid_event__.fire_event({}, 'salt/reactors/manage/list')
 
     results = sevent.get_event(wait=30, tag='salt/reactors/manage/list-results')
-    reactors = results['reactors']
+    reactors = results.get('reactors', None)
     return reactors
 
 
@@ -80,7 +80,7 @@ def add(event, reactors, saltenv='base', test=None):
                              'salt/reactors/manage/add')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/add-complete')
-    return res['result']
+    return res.get('result', None)
 
 
 def delete(event, saltenv='base', test=None):
@@ -103,4 +103,4 @@ def delete(event, saltenv='base', test=None):
     __jid_event__.fire_event({'event': event}, 'salt/reactors/manage/delete')
 
     res = sevent.get_event(wait=30, tag='salt/reactors/manage/delete-complete')
-    return res['result']
+    return res.get('result', None)
