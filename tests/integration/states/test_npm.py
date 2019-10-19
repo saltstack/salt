@@ -16,8 +16,8 @@ from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
-import salt.modules.cmdmod as cmd
 import salt.utils.path
+import salt.utils.platform
 from salt.utils.versions import LooseVersion
 
 MAX_NPM_VERSION = '5.0.0'
@@ -38,13 +38,15 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.removed', name='pm2')
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(salt.utils.platform.is_darwin(), 'TODO this test hangs on mac.')
     @requires_network()
     @destructiveTest
     def test_npm_install_url_referenced_package(self):
         '''
         Determine if URL-referenced NPM module can be successfully installed.
         '''
-        if LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION):
+        npm_version = self.run_function('cmd.run', ['npm -v'])
+        if LooseVersion(npm_version) >= LooseVersion(MAX_NPM_VERSION):
             user = os.environ.get('SUDO_USER', 'root')
             npm_dir = os.path.join(RUNTIME_VARS.TMP, 'git-install-npm')
             self.run_state('file.directory', name=npm_dir, user=user, dir_mode='755')
@@ -72,12 +74,13 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.installed', name='unused', pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
-            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @destructiveTest
     def test_npm_cache_clean(self):
         '''
         Basic test to determine if NPM successfully cleans its cached packages.
         '''
+        npm_version = self.run_function('cmd.run', ['npm -v'])
+        if LooseVersion(npm_version) >= LooseVersion(MAX_NPM_VERSION):
+            self.skipTest('Skip with npm >= 5.0.0 until #41770 is fixed')
         ret = self.run_state('npm.cache_cleaned', name='unused', force=True)
         self.assertSaltTrueReturn(ret)
