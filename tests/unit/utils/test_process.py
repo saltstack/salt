@@ -10,6 +10,8 @@ import time
 import signal
 import multiprocessing
 import functools
+import datetime
+import warnings
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -238,7 +240,7 @@ class TestProcess(TestCase):
         # pylint: enable=assignment-from-none
 
 
-class TestSignalHandlingMultiprocessingProcess(TestCase):
+class TestSignalHandlingProcess(TestCase):
 
     @classmethod
     def Process(cls, pid):
@@ -256,7 +258,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     def test_process_does_not_exist(self):
         try:
             with patch('psutil.Process', self.Process):
-                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.target)
+                proc = salt.utils.process.SignalHandlingProcess(target=self.target)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
@@ -265,7 +267,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     def test_process_children_do_not_exist(self):
         try:
             with patch('psutil.Process.children', self.children):
-                proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.target)
+                proc = salt.utils.process.SignalHandlingProcess(target=self.target)
                 proc.start()
         except psutil.NoSuchProcess:
             assert False, "psutil.NoSuchProcess raised"
@@ -300,7 +302,7 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
     @skipIf(sys.platform.startswith('win'), 'No os.fork on Windows')
     def test_signal_processing_regression_test(self):
         evt = multiprocessing.Event()
-        sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        sh_proc = salt.utils.process.SignalHandlingProcess(
             target=self.run_forever_target,
             args=(self.run_forever_sub_target, evt)
         )
@@ -322,27 +324,27 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_signal_processing_test_after_fork_called(self):
-        'Validate MultiprocessingProcess and sub classes call after fork methods'
+        'Validate Process and sub classes call after fork methods'
         evt = multiprocessing.Event()
-        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
-        log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
+        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
         with patch(sig_to_mock) as ma, patch(log_to_mock) as mb:
-            self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
+            self.sh_proc = salt.utils.process.SignalHandlingProcess(target=self.no_op_target)
             self.sh_proc.run()
         ma.assert_called()
         mb.assert_called()
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_signal_processing_test_final_methods_called(self):
-        'Validate MultiprocessingProcess and sub classes call finalize methods'
+        'Validate Process and sub classes call finalize methods'
         evt = multiprocessing.Event()
         teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
-        log_to_mock = 'salt.utils.process.MultiprocessingProcess._setup_process_logging'
-        sig_to_mock = 'salt.utils.process.SignalHandlingMultiprocessingProcess._setup_signals'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
+        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
         # Mock _setup_signals so we do not register one for this process.
         with patch(sig_to_mock):
             with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
-                self.sh_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.no_op_target)
+                self.sh_proc = salt.utils.process.SignalHandlingProcess(target=self.no_op_target)
                 self.sh_proc.run()
         ma.assert_called()
         mb.assert_called()
@@ -356,13 +358,13 @@ class TestSignalHandlingMultiprocessingProcess(TestCase):
 
     @skipIf(sys.platform.startswith('win'), 'Required signals not supported on windows')
     def test_signal_processing_handle_signals_called(self):
-        'Validate SignalHandlingMultiprocessingProcess handles signals'
+        'Validate SignalHandlingProcess handles signals'
         # Gloobal event to stop all processes we're creating
         evt = multiprocessing.Event()
 
         # Create a process to test signal handler
         val = multiprocessing.Value('i', 0)
-        proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        proc = salt.utils.process.SignalHandlingProcess(
             target=self.pid_setting_target,
             args=(self.run_forever_sub_target, val, evt),
         )
@@ -475,3 +477,101 @@ class TestProcessList(TestCase):
         assert not proc.is_alive()
         plist.cleanup()
         assert proc not in plist.processes
+
+
+class TestDeprecatedClassNames(TestCase):
+
+    def process_target(self):
+        time.sleep(1)
+
+    def test_multiprocessing_process_warning(self):
+        # We *always* want *all* warnings thrown on this module
+        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
+
+        fake_utcnow = datetime.date(2021, 1, 1)
+
+        proc = None
+
+        try:
+            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+                # Test warning
+                with warnings.catch_warnings(record=True) as recorded_warnings:
+                    proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
+                    self.assertEqual(
+                        'Please stop using \'salt.utils.process.MultiprocessingProcess\' '
+                        'and instead use \'salt.utils.process.Process\'. '
+                        '\'salt.utils.process.MultiprocessingProcess\' will go away '
+                        'after 2022-01-01.',
+                        six.text_type(recorded_warnings[0].message)
+                    )
+        finally:
+            if proc is not None:
+                del proc
+
+    def test_multiprocessing_process_runtime_error(self):
+        fake_utcnow = datetime.date(2022, 1, 1)
+
+        proc = None
+
+        try:
+            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+                with self.assertRaisesRegex(
+                        RuntimeError,
+                        r'Please stop using \'salt.utils.process.MultiprocessingProcess\' '
+                        r'and instead use \'salt.utils.process.Process\'. '
+                        r'\'salt.utils.process.MultiprocessingProcess\' will go away '
+                        r'after 2022-01-01. '
+                        r'This warning\(now exception\) triggered on '
+                        r'filename \'(.*)test_process.py\', line number ([\d]+), is '
+                        r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
+                        r'Please remove the warning.'):
+                    proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
+        finally:
+            if proc is not None:
+                del proc
+
+    def test_signal_handling_multiprocessing_process_warning(self):
+        # We *always* want *all* warnings thrown on this module
+        warnings.filterwarnings('always', '', DeprecationWarning, __name__)
+
+        fake_utcnow = datetime.date(2021, 1, 1)
+
+        proc = None
+
+        try:
+            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+                # Test warning
+                with warnings.catch_warnings(record=True) as recorded_warnings:
+                    proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)
+                    self.assertEqual(
+                        'Please stop using \'salt.utils.process.SignalHandlingMultiprocessingProcess\' '
+                        'and instead use \'salt.utils.process.SignalHandlingProcess\'. '
+                        '\'salt.utils.process.SignalHandlingMultiprocessingProcess\' will go away '
+                        'after 2022-01-01.',
+                        six.text_type(recorded_warnings[0].message)
+                    )
+        finally:
+            if proc is not None:
+                del proc
+
+    def test_signal_handling_multiprocessing_process_runtime_error(self):
+        fake_utcnow = datetime.date(2022, 1, 1)
+
+        proc = None
+
+        try:
+            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+                with self.assertRaisesRegex(
+                        RuntimeError,
+                        r'Please stop using \'salt.utils.process.SignalHandlingMultiprocessingProcess\' '
+                        r'and instead use \'salt.utils.process.SignalHandlingProcess\'. '
+                        r'\'salt.utils.process.SignalHandlingMultiprocessingProcess\' will go away '
+                        r'after 2022-01-01. '
+                        r'This warning\(now exception\) triggered on '
+                        r'filename \'(.*)test_process.py\', line number ([\d]+), is '
+                        r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
+                        r'Please remove the warning.'):
+                    proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)
+        finally:
+            if proc is not None:
+                del proc
