@@ -888,7 +888,7 @@ class MasterMinion(object):
         )
         self.opts.update(opts)
         self.whitelist = whitelist
-        self.opts['grains'] = salt.loader.grains(opts)
+        self.opts['grains'] = {}
         self.opts['pillar'] = {}
         self.mk_returners = returners
         self.mk_states = states
