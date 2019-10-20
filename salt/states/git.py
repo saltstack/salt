@@ -1572,7 +1572,8 @@ def latest(name,
                                              opts=checkout_opts,
                                              user=user,
                                              password=password,
-                                             output_encoding=output_encoding)
+                                             output_encoding=output_encoding,
+                                             **lfs_opts)
                     if '-b' in checkout_opts:
                         comments.append(
                             'New branch \'{0}\' was checked out, with {1} '
@@ -1910,7 +1911,8 @@ def latest(name,
                                 opts=['-b', branch],
                                 user=user,
                                 password=password,
-                                output_encoding=output_encoding)
+                                output_encoding=output_encoding,
+                                **lfs_opts)
                             comments.append(
                                 'Branch \'{0}\' checked out, with {1} '
                                 'as a starting point'.format(
