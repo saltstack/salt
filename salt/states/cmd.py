@@ -336,6 +336,10 @@ def mod_run_check(cmd_kwargs, onlyif, unless, creates):
     cmd_kwargs = copy.deepcopy(cmd_kwargs)
     cmd_kwargs['use_vt'] = False
     cmd_kwargs['bg'] = False
+    # set cwd to default if set and either not absolute or does not exist
+    if 'cwd' in cmd_kwargs and cmd_kwargs['cwd']:
+        if not os.path.isabs(cmd_kwargs['cwd']) or not os.path.isdir(cmd_kwargs['cwd']):
+            cmd_kwargs['cwd'] = None
 
     if onlyif is not None:
         if isinstance(onlyif, six.string_types):
