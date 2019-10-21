@@ -111,7 +111,7 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
 
 @destructiveTest
 @skip_if_not_root
-class LogSettingsParserTests(TestCase):
+class ParserBase(TestCase):
     '''
     Unit Tests for Log Level Mixin with Salt parsers
     '''
@@ -522,7 +522,7 @@ class LogSettingsParserTests(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
-class MasterOptionParserTestCase(LogSettingsParserTests):
+class MasterOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
     '''
@@ -549,7 +549,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
-class MinionOptionParserTestCase(LogSettingsParserTests):
+class MinionOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Minion options
     '''
@@ -575,7 +575,7 @@ class MinionOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
+class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Proxy Minion options
     '''
@@ -603,7 +603,7 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
-class SyndicOptionParserTestCase(LogSettingsParserTests):
+class SyndicOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Syndic options
     '''
@@ -633,7 +633,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCMDOptionParserTestCase(LogSettingsParserTests):
+class SaltCMDOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt CLI options
     '''
@@ -662,7 +662,7 @@ class SaltCMDOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCPOptionParserTestCase(LogSettingsParserTests):
+class SaltCPOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing salt-cp options
     '''
@@ -691,7 +691,7 @@ class SaltCPOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltKeyOptionParserTestCase(LogSettingsParserTests):
+class SaltKeyOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing salt-key options
     '''
@@ -808,7 +808,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCallOptionParserTestCase(LogSettingsParserTests):
+class SaltCallOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Minion options
     '''
@@ -837,7 +837,7 @@ class SaltCallOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltRunOptionParserTestCase(LogSettingsParserTests):
+class SaltRunOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
     '''
@@ -866,7 +866,7 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltSSHOptionParserTestCase(LogSettingsParserTests):
+class SaltSSHOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
     '''
@@ -899,7 +899,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCloudParserTestCase(LogSettingsParserTests):
+class SaltCloudParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
     '''
@@ -932,7 +932,7 @@ class SaltCloudParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SPMParserTestCase(LogSettingsParserTests):
+class SPMParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
     '''
@@ -966,7 +966,7 @@ class SPMParserTestCase(LogSettingsParserTests):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltAPIParserTestCase(LogSettingsParserTests):
+class SaltAPIParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
     '''
@@ -1074,7 +1074,3 @@ class DaemonMixInTestCase(TestCase):
             assert salt.utils.parsers.os.unlink.call_count == 1
             salt.utils.parsers.logger.info.assert_not_called()
             salt.utils.parsers.logger.debug.assert_not_called()
-
-
-# Hide the class from unittest framework when it searches for TestCase classes in the module
-del LogSettingsParserTests
