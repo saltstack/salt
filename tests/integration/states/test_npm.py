@@ -75,8 +75,6 @@ class NpmStateTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('npm.installed', name='unused', pkgs=['pm2@2.10.4', 'grunt@1.0.2'], registry="http://registry.npmjs.org/")
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(salt.utils.path.which('npm') and LooseVersion(cmd.run('npm -v')) >= LooseVersion(MAX_NPM_VERSION),
-            'Skip with npm >= 5.0.0 until #41770 is fixed')
     @pytest.mark.destructive_test
     def test_npm_cache_clean(self):
         '''
