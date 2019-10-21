@@ -1679,7 +1679,7 @@ class Schedule(object):
 
         try:
             if multiprocessing_enabled:
-                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                thread_cls = salt.utils.process.SignalHandlingProcess
             else:
                 thread_cls = threading.Thread
 
