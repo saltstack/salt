@@ -174,3 +174,20 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
                 ['pkg', 'upgrade', '--dry-run', '--quiet', '--no-repo-update'],
                 output_loglevel='trace', python_shell=False, ignore_retcode=True
             )
+
+    def test_is_installed(self):
+        '''
+        Test - Returns True if all packages are installed
+        '''
+        mock_all_installed = MagicMock(side_effect=['1.20.3', '2.9a'])
+        mock_one_installed = MagicMock(side_effect=['1.20.3', ''])
+        mock_none_installed = MagicMock(side_effect=['', ''])
+        with patch.dict(pkgng.__salt__, {'pkg_resource.version':
+                                          mock_all_installed}):
+            self.assertEqual(pkgng.is_installed('wget', 'tmux'), True)
+        with patch.dict(pkgng.__salt__, {'pkg_resource.version':
+                                          mock_one_installed}):
+            self.assertEqual(pkgng.is_installed('wget', 'tmux'), False)
+        with patch.dict(pkgng.__salt__, {'pkg_resource.version':
+                                          mock_none_installed}):
+            self.assertEqual(pkgng.is_installed('wget', 'tmux'), False)

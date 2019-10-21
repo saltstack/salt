@@ -2840,3 +2840,22 @@ def _get_http_proxy_url():
             )
 
     return http_proxy_url
+
+
+def is_installed(*names, **kwargs):
+    '''
+    Returns True if all packages in names are installed, else returns False.
+
+    Returns a boolean.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.is_installed <package>
+        salt '*' pkg.is_installed <package1> <package2>
+    '''
+    for name in names:
+        if not __salt__['pkg_resource.version'](name, **kwargs):
+            return False
+    return True
