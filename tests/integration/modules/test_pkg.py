@@ -103,13 +103,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                         pprint.pformat(ret)
                     )
                 )
-            elif os_grain == 'CentOS':
-                major_release = int(
-                    self.run_function(
-                        'grains.item',
-                        ['osmajorrelease']
-                    )['osmajorrelease']
-                )
             elif grains['os_family'] == 'RedHat':
                 repo = 'saltstack'
                 name = 'SaltStack repo for RHEL/CentOS {0}'.format(grains['osmajorrelease'])

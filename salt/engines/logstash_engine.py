@@ -43,6 +43,7 @@ def __virtual__():
         if logstash is not None \
         else (False, 'python-logstash not installed')
 
+
 def event_bus_context(opts):
     if opts.get('id').endswith('_master'):
         event_bus = salt.utils.event.get_master_event(
@@ -57,6 +58,7 @@ def event_bus_context(opts):
             sock_dir=opts['sock_dir'],
             listen=True)
     return event_bus
+
 
 def start(host, port=5959, tag='salt/engine/logstash', proto='udp'):
     '''

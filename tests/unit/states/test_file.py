@@ -341,7 +341,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 filestate.symlink(name, target, user=user, group=group),
                 ret)
 
-
         with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
                                              'file.user_to_uid': mock_uid,
                                              'file.group_to_gid': mock_gid,
@@ -746,8 +745,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                                 with patch.object(salt.utils.files, 'mkstemp',
                                                   return_value=name):
-                                    comt = ('Unable to copy file {0} to {1}: '
-                                            .format(name, name))
+                                    comt = ('Unable to copy file {0} to {0}: '
+                                            .format(name))
                                     ret.update({'comment': comt, 'result': False})
                                     self.assertDictEqual(filestate.managed
                                                          (name, user=user,

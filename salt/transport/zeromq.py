@@ -246,6 +246,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if not loop_instance_map:
                 del self.__class__.instance_map[self._io_loop]
 
+    # pylint: disable=W1701
     def __del__(self):
         with self._refcount_lock:
             # Make sure we actually close no matter if something
@@ -257,6 +258,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+    # pylint: enable=W1701
 
     @property
     def master_uri(self):
@@ -1084,8 +1086,10 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 # TODO: unit tests!
