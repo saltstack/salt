@@ -158,6 +158,20 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'pkg_resource.version': mock}):
             self.assertEqual(aptpkg.version(*['wget']), version)
 
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        version_installed = LOWPKG_INFO['wget']['version']
+        mock_installed = MagicMock(return_value=version_installed)
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(aptpkg.__salt__, {'pkg_resource.version':
+                                          mock_installed}):
+            self.assertEqual(aptpkg.is_installed('wget'), True)
+        with patch.dict(aptpkg.__salt__, {'pkg_resource.version':
+                                          mock_not_installed}):
+            self.assertEqual(aptpkg.is_installed('tmux'), False)
+
     def test_upgrade_available(self):
         '''
         Test - Check whether or not an upgrade is available for a given package.

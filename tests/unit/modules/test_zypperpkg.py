@@ -1295,3 +1295,16 @@ Repository 'DUMMY' not found by its alias, number, or URI.
         with self.assertRaises(CommandExecutionError):
             for op in ['>>', '==', '<<', '+']:
                 zypper.Wildcard(_zpr)('libzypp', '{0}*.1'.format(op))
+
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        mock_installed = MagicMock(return_value='1.6.23')
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(zypper.__salt__, {'pkg_resource.version':
+                                          mock_installed}):
+            self.assertEqual(zypper.is_installed('wget'), True)
+        with patch.dict(zypper.__salt__, {'pkg_resource.version':
+                                          mock_not_installed}):
+            self.assertEqual(zypper.is_installed('tmux'), False)

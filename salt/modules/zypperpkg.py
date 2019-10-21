@@ -2421,3 +2421,22 @@ def resolve_capabilities(pkgs, refresh, **kwargs):
         else:
             ret.append(name)
     return ret
+
+
+def is_installed(pkgname, **kwargs):
+    '''
+    Returns True or False if pkgname is installed.
+
+    Returns a boolean.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.is_installed <package>
+    '''
+    if (isinstance(pkgname, str) and
+        __salt__['pkg_resource.version'](pkgname, **kwargs)):
+        return True
+    else:
+        return False

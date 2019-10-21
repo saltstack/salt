@@ -131,3 +131,16 @@ class PacmanTestCase(TestCase, LoaderModuleMockMixin):
                 }):
             results = pacman.group_diff('testgroup')
             self.assertEqual(results['default'], {'installed': ['A'], 'not installed': ['C']})
+
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        mock_installed = MagicMock(return_value='1.6.23')
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(pacman.__salt__, {'pkg_resource.version':
+                                          mock_installed}):
+            self.assertEqual(pacman.is_installed('wget'), True)
+        with patch.dict(pacman.__salt__, {'pkg_resource.version':
+                                          mock_not_installed}):
+            self.assertEqual(pacman.is_installed('tmux'), False)

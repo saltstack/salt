@@ -127,6 +127,19 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
     # Only tested a few basics
     # Full functionality should be tested in integration phase
 
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        mock_installed = MagicMock(return_value='0.1.5')
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(mac_brew.__salt__, {'pkg_resource.version':
+                                            mock_installed}):
+            self.assertEqual(mac_brew.is_installed('wget'), True)
+        with patch.dict(mac_brew.__salt__, {'pkg_resource.version':
+                                            mock_not_installed}):
+            self.assertEqual(mac_brew.is_installed('tmux'), False)
+
     def test_remove(self):
         '''
         Tests if package to be removed exists

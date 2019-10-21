@@ -230,3 +230,16 @@ class PkgutilTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pkgutil.__salt__,
                         {'pkg_resource.parse_targets': mock_pkg}):
             self.assertRaises(CommandExecutionError, pkgutil.purge)
+
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        mock_installed = MagicMock(return_value='1.6.23')
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(pkgutil.__salt__, {'pkg_resource.version':
+                                           mock_installed}):
+            self.assertEqual(pkgutil.is_installed('wget'), True)
+        with patch.dict(pkgutil.__salt__, {'pkg_resource.version':
+                                           mock_not_installed}):
+            self.assertEqual(pkgutil.is_installed('tmux'), False)

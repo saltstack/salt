@@ -176,3 +176,16 @@ class PkginTestCase(TestCase, LoaderModuleMockMixin):
                     ]
                 }
             })
+
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        mock_installed = MagicMock(return_value='1.6.23')
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(pkgin.__salt__, {'pkg_resource.version':
+                                         mock_installed}):
+            self.assertEqual(pkgin.is_installed('wget'), True)
+        with patch.dict(pkgin.__salt__, {'pkg_resource.version':
+                                         mock_not_installed}):
+            self.assertEqual(pkgin.is_installed('tmux'), False)

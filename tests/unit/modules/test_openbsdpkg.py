@@ -112,6 +112,19 @@ class OpenbsdpkgTestCase(TestCase, LoaderModuleMockMixin):
         run_all_mock.assert_has_calls(expected_calls, any_order=True)
         self.assertEqual(run_all_mock.call_count, 3)
 
+    def test_is_installed(self):
+        '''
+        Test - Returns True is the package is installed or False if not
+        '''
+        mock_installed = MagicMock(return_value='1.6.23')
+        mock_not_installed = MagicMock(return_value='')
+        with patch.dict(openbsdpkg.__salt__, {'pkg_resource.version':
+                                              mock_installed}):
+            self.assertEqual(openbsdpkg.is_installed('wget'), True)
+        with patch.dict(openbsdpkg.__salt__, {'pkg_resource.version':
+                                              mock_not_installed}):
+            self.assertEqual(openbsdpkg.is_installed('tmux'), False)
+
     def test_upgrade_available(self):
         '''
         Test upgrade_available when an update is available.
