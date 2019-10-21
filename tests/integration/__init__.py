@@ -506,14 +506,6 @@ class TestDaemon(object):
         shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
         shutil.copy(roster_path, RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
 
-    def prep_syndic(self):
-        '''
-        Create a roster file for salt's syndic
-        '''
-        roster_path = os.path.join(FILES, 'conf/_ssh/roster')
-        shutil.copy(roster_path, RUNTIME_VARS.TMP_CONF_DIR)
-        shutil.copy(roster_path, RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
-
     def prep_ssh(self):
         '''
         Generate keys and start an ssh daemon on an alternate port
