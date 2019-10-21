@@ -720,7 +720,10 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         # we must wrap this class run method to allow for these extra steps
         # to be executed pre and post calling the actual run method,
         # having subclasses call super would just not work.
-        self.run = self.__decorate_run(self.run)
+        #
+        # We use setattr here to fool pylint not to complain that we're
+        # overriding run from the subclass here
+        setattr(self, 'run', self.__decorate_run(self.run))
 
     # __setstate__ and __getstate__ are only used on Windows.
     def __setstate__(self, state):
