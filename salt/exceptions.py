@@ -572,3 +572,9 @@ class MissingSmb(SaltException):
     '''
     Raised when no smb library is found.
     '''
+
+
+class LoggingRuntimeError(RuntimeError):
+    '''
+    Raised when we encounter an error while logging
+    '''

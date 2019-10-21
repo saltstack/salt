@@ -1054,7 +1054,7 @@ class AsyncEventPublisher(object):
     # pylint: enable=W1701
 
 
-class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventPublisher(salt.utils.process.SignalHandlingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -1069,7 +1069,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -1165,7 +1164,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # pylint: enable=W1701
 
 
-class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventReturn(salt.utils.process.SignalHandlingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
@@ -1195,7 +1194,6 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],

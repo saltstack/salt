@@ -100,7 +100,7 @@ from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess,
+                                SignalHandlingProcess,
                                 ProcessManager)
 from salt.exceptions import (
     CommandExecutionError,
@@ -1526,7 +1526,7 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
-                process = SignalHandlingMultiprocessingProcess(
+                process = SignalHandlingProcess(
                     target=self._target, args=(instance, self.opts, data, self.connected)
                 )
         else:

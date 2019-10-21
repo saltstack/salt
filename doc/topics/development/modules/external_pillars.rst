@@ -182,7 +182,7 @@ From above example, 'external_pillar' is the top dictionary name. Therefore:
 
 .. code-block:: bash
 
-    salt-call '*' pillar.get external_pillar
+    salt '*' pillar.get external_pillar
 
 
 You shouldn't just add items to ``pillar`` and return that, since that will
