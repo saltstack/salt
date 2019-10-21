@@ -826,6 +826,26 @@ class GitTest(ModuleCase, SaltReturnAssertsMixin):
             **{'global': False})
         self.assertSaltTrueReturn(ret)
 
+    @with_tempdir()
+    def test_config_unset_whole_section(self, name):
+        '''
+        git.config
+        '''
+        self.run_function('git.init', [name])
+
+        self.run_state(
+            'git.config_set',
+            name='http.proxy',
+            value='http://127.0.0.1:3128',
+            repo=name,
+            **{'global': False})
+        ret = self.run_state(
+            'git.config_unset',
+            name='http.proxy',
+            repo=name,
+            **{'global': False})
+        self.assertSaltTrueReturn(ret)
+
 
 @ensure_min_git
 @uses_git_opts

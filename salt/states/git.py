@@ -3166,9 +3166,10 @@ def config_unset(name,
     for key_name in pre:
         if key_name not in post:
             ret['changes'][key_name] = pre[key_name]
-        unset = [x for x in pre[key_name] if x not in post[key_name]]
-        if unset:
-            ret['changes'][key_name] = unset
+        else:
+            unset = [x for x in pre[key_name] if x not in post[key_name]]
+            if unset:
+                ret['changes'][key_name] = unset
 
     if value_regex is None:
         post_matches = post
