@@ -112,15 +112,15 @@ def parse_input(args, condition=True, no_parse=None):
             else:
                 _args.append(yamlify_arg(arg))
         elif isinstance(arg, dict):
-            # Yes, we're popping this key off and adding it back if
-            # condition_input is called below, but this is the only way to
-            # gracefully handle both CLI and API input.
-            if arg.pop('__kwarg__', False) is True:
+            if arg.get('__kwarg__'):
                 _kwargs.update(arg)
             else:
                 _args.append(arg)
         else:
             _args.append(arg)
+    _kwargs.update(kwargs)
+    # remove __kwargs__ if it was added above
+    _kwargs.pop('__kwargs__', None)
     if condition:
         return condition_input(_args, _kwargs)
     return _args, _kwargs
