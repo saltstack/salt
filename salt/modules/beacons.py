@@ -66,7 +66,6 @@ def list_(return_yaml=True,
                 event_ret = event_bus.get_event(
                     tag='/salt/minion/minion_beacons_list_complete',
                     wait=kwargs.get('timeout', default_event_wait))
-                )
                 log.debug('event_ret %s', event_ret)
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
@@ -111,7 +110,6 @@ def list_available(return_yaml=True, **kwargs):
                 event_ret = event_bus.get_event(
                     tag='/salt/minion/minion_beacons_list_available_complete',
                     wait=kwargs.get('timeout', default_event_wait))
-                )
                 if event_ret and event_ret['complete']:
                     beacons = event_ret['beacons']
     except KeyError:
@@ -172,7 +170,6 @@ def add(name, beacon_data, **kwargs):
                     event_ret = event_bus.get_event(
                        tag='/salt/minion/minion_beacon_validation_complete',
                        wait=kwargs.get('timeout', default_event_wait))
-                    )
                     valid = event_ret['valid']
                     vcomment = event_ret['vcomment']
 
@@ -194,7 +191,6 @@ def add(name, beacon_data, **kwargs):
                     event_ret = event_bus.get_event(
                         tag='/salt/minion/minion_beacon_add_complete',
                         wait=kwargs.get('timeout', default_event_wait))
-                    )
                     if event_ret and event_ret['complete']:
                         beacons = event_ret['beacons']
                         if name in beacons and beacons[name] == beacon_data:
