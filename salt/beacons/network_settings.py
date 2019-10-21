@@ -139,7 +139,7 @@ def beacon(config):
 
     ret = []
     interfaces = []
-    expanded_config = {}
+    expanded_config = {'interfaces': {}}
 
     global LAST_STATS
 
@@ -157,20 +157,19 @@ def beacon(config):
     log.debug('_stats %s', _stats)
     # Get list of interfaces included in config that are registered in the
     # system, including interfaces defined by wildcards (eth*, wlan*)
-    for interface in _config.get('interfaces', {}):
-        if interface in _stats:
-            interfaces.append(interface)
+    for interface_config in _config.get('interfaces', {}):
+        if interface_config in _stats:
+            interfaces.append(interface_config)
         else:
             # No direct match, try with * wildcard regexp
-            interface_regexp = interface.replace('*', '[0-9]+')
-            for interface in _stats:
-                match = re.search(interface_regexp, interface)
+            for interface_stat in _stats:
+                match = re.search(interface_config, interface_stat)
                 if match:
-                    interfaces.append(match.group())
-                    expanded_config[match.group()] = config['interfaces'][interface]
+                    interfaces.append(interface_stat)
+                    expanded_config['interfaces'][interface_stat] = _config['interfaces'][interface_config]
 
     if expanded_config:
-        config.update(expanded_config)
+        _config['interfaces'].update(expanded_config['interfaces'])
 
         # config updated so update _config
         list(map(_config.update, config))
