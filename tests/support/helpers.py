@@ -49,11 +49,6 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
 
-if salt.utils.platform.is_windows():
-    import salt.utils.win_functions
-else:
-    import pwd
-
 log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
