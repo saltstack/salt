@@ -534,6 +534,29 @@ class ParserBase(object):
         else:
             self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
 
+    def test_callbacks_uniqueness(self):
+        '''
+        Test that the callbacks are only added once, no matter
+        how many instances of the parser we create
+        '''
+        mixin_container_names = ('_mixin_setup_funcs',
+                                 '_mixin_process_funcs',
+                                 '_mixin_after_parsed_funcs',
+                                 '_mixin_before_exit_funcs')
+        parser = self.parser()
+        nums_1 = {}
+        for cb_container in mixin_container_names:
+            obj = getattr(parser, cb_container)
+            nums_1[cb_container] = len(obj)
+
+        # The next time we instantiate the parser, the counts should be equal
+        parser = self.parser()
+        nums_2 = {}
+        for cb_container in mixin_container_names:
+            obj = getattr(parser, cb_container)
+            nums_2[cb_container] = len(obj)
+        self.assertDictEqual(nums_1, nums_2)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
