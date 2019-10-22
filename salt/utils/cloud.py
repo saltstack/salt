@@ -1359,7 +1359,7 @@ def deploy_windows(host,
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
             time.sleep(10)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
-        else:            
+        else:
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc stop salt-minion', host, username, password
             )
