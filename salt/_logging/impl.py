@@ -563,6 +563,7 @@ def shutdown_console_handler():
     if console_handler is not None:
         logging.root.removeHandler(console_handler)
         setup_console_handler.__handler__ = None
+        console_handler.close()
 
 
 def setup_console_handler(log_level=None, log_format=None, date_format=None):
@@ -642,6 +643,7 @@ def shutdown_logfile_handler():
     if logfile_handler is not None:
         logging.root.removeHandler(logfile_handler)
         setup_logfile_handler.__handler__ = None
+        logfile_handler.close()
 
 
 def setup_logfile_handler(
@@ -1390,6 +1392,7 @@ def shutdown_log_forwarding():
         log_forwarding_handler.stop()
         logging.root.removeHandler(log_forwarding_handler)
         setup_log_forwarding.__handlers__.pop(os.getpid())
+        log_forwarding_handler.stop()
 
 
 def setup_log_forwarding(log_host=None, log_port=None, log_level=None, log_prefix=None):
