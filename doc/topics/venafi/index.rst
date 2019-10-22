@@ -129,7 +129,7 @@ To transfer a cached certificate to a minion, you can use Venafi pillar.
 
 Example state (SLS) file:
 
-.. code-block:: yml
+.. code-block:: yaml
 
     /etc/ssl/cert/www.example.com.crt:
       file.managed:
