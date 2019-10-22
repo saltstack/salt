@@ -125,7 +125,7 @@ $( document ).ready(function() {
             window.location.href = window.location.href.replace($currentVer.attr("href"), clickedVer);
         }
         else {
-            if ($currentVer.text().indexOf("Develop") == -1) {
+            if ($currentVer.text().indexOf("{{ repo_primary_branch | capitalize }}") == -1) {
                 window.location.href = clickedVer + "topics/releases/" + $currentVer.text().trim() + ".html";
             }
             else window.location.href = clickedVer + "topics/releases/";
