@@ -125,7 +125,7 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + '-changed'
 
         self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
-        for tries in range(20):
+        for _ in range(20):
             if self.instance_exists():
                 time.sleep(1)
             else:

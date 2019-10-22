@@ -1366,13 +1366,7 @@ def deploy_windows(host,
             if ret_code != 0:
                 return False
 
-            stdout, stderr, ret_code = run_psexec_command(
-                'cmd.exe', '/c sc query salt-minion', host, username, password
-            )
-            log.debug('%s', stdout) 
-            
-            retry = 0
-            while 'STOP_PENDING' in stdout and retry < 100:
+            for retry in range(100):
                 stdout, stderr, ret_code = run_psexec_command(
                     'cmd.exe', '/c sc query salt-minion', host, username, password
                 )
