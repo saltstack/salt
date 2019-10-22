@@ -106,6 +106,21 @@ When using ``ip-learning`` the IP is requested from libvirt. This needs a recent
 version and may only work for NAT networks. Another option is to use ``qemu-agent`` this requires
 that the qemu-agent is installed and configured to run at startup in the base domain.
 
+SSH Key Authentication
+======================
+Instead of specifying a password, an authorized key can be used for the minion setup. Ensure that
+the root user of your base image has the public key you want to use in .ssh/authorized_keys, then
+specify the private key in your config:
+
+.. code-block:: yaml
+
+    centos7:
+      provider: local-kvm
+      # the domain to clone
+      base_domain: base-centos7-64
+      ssh_username: root
+      private_key: /path/to/private/key
+
 Optional Settings
 =================
 
