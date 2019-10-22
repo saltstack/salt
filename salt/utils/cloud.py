@@ -1356,12 +1356,10 @@ def deploy_windows(host,
                 salt.utils.smb.delete_directory('salttemp', 'C$', conn=smb_conn)
         # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
-            
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
             time.sleep(10)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
-        else:
-            
+        else:            
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc stop salt-minion', host, username, password
             )
@@ -1371,15 +1369,13 @@ def deploy_windows(host,
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc query salt-minion', host, username, password
             )
-            log.debug('%s', stdout) 
-            
+            log.debug('%s', stdout)
             retry = 0
             while 'STOP_PENDING' in stdout and retry < 100:
                 stdout, stderr, ret_code = run_psexec_command(
                     'cmd.exe', '/c sc query salt-minion', host, username, password
                 )
                 retry += 1
-            
             log.debug('Run psexec: sc start salt-minion')
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc start salt-minion', host, username, password
