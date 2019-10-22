@@ -47,15 +47,15 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         cmd.run with output hidden
         '''
 
-        cmd = u'dir' if IS_WINDOWS else u'ls'
+        cmd = 'dir' if IS_WINDOWS else 'ls'
         ret = self.run_state(
-            u'cmd.run',
+            'cmd.run',
             name=cmd,
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret[u'changes'][u'stdout'], u'')
-        self.assertEqual(ret[u'changes'][u'stderr'], u'')
+        self.assertEqual(ret['changes']['stdout'], '')
+        self.assertEqual(ret['changes']['stderr'], '')
 
 
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
