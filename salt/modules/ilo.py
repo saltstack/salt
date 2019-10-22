@@ -42,6 +42,7 @@ def __execute_cmd(name, xml):
     with tempfile.NamedTemporaryFile(dir=tmp_dir,
                                      prefix=name + six.text_type(os.getpid()),
                                      suffix='.xml',
+                                     mode='w',
                                      delete=False) as fh:
         tmpfilename = fh.name
         fh.write(xml)

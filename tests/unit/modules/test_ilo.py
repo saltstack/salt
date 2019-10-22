@@ -6,6 +6,9 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+import tempfile
+
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
@@ -18,6 +21,9 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.modules.ilo as ilo
+import salt.modules.file
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -26,7 +32,22 @@ class IloTestCase(TestCase, LoaderModuleMockMixin):
     Test cases for salt.modules.ilo
     '''
     def setup_loader_modules(self):
-        return {ilo: {}}
+        return {ilo:
+                    {'__opts__': {'cachedir': tempfile.gettempdir()},
+                     '__salt__': {'file.remove': salt.modules.file.remove}}
+               }
+
+    # '__execute_cmd' function tests: 1
+
+    def test_execute_cmd(self):
+        '''
+        Test if __execute_command opens the temporary file
+        properly when calling global_settings.
+        '''
+        mock_cmd_run = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(ilo.__salt__, {'cmd.run_all': mock_cmd_run}):
+            ret = ilo.global_settings()
+            self.assertEqual(ret, True)
 
     # 'global_settings' function tests: 1
 
