@@ -128,27 +128,20 @@ def get_event(
     '''
     sock_dir = sock_dir or opts['sock_dir']
     # TODO: AIO core is separate from transport
-    if transport in ('zeromq', 'tcp'):
-        if node == 'master':
-            return MasterEvent(sock_dir,
-                               opts,
-                               listen=listen,
-                               io_loop=io_loop,
-                               keep_loop=keep_loop,
-                               raise_errors=raise_errors)
-        return SaltEvent(node,
-                         sock_dir,
-                         opts,
-                         listen=listen,
-                         io_loop=io_loop,
-                         keep_loop=keep_loop,
-                         raise_errors=raise_errors)
-    elif transport == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RAETEvent(node,
-                                              sock_dir=sock_dir,
-                                              listen=listen,
-                                              opts=opts)
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
 def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
@@ -158,11 +151,6 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen
-        )
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -1047,7 +1035,7 @@ class AsyncEventPublisher(object):
         self.close()
 
 
-class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventPublisher(salt.utils.process.SignalHandlingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -1062,7 +1050,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -1156,7 +1143,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.close()
 
 
-class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventReturn(salt.utils.process.SignalHandlingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
@@ -1186,7 +1173,6 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
