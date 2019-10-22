@@ -815,7 +815,18 @@ def _pytest(session, coverage, cmd_args):
 
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
-    session.install('--progress-bar=off', '-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
+    requirements_file = 'requirements/static/lint.in'
+    distro_constraints = [
+        'requirements/static/{}/lint.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
     session.run('pylint', '--version')
     pylint_report_path = os.environ.get('PYLINT_REPORT')
 
@@ -896,10 +907,18 @@ def docs(session):
     pydir = _get_pydir(session)
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
-    session.install(
-        '--progress-bar=off',
-        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
-        silent=PIP_INSTALL_SILENT)
+    requirements_file = 'requirements/static/docs.in'
+    distro_constraints = [
+        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
