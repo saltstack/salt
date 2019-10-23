@@ -373,7 +373,20 @@ def _run_with_coverage(session, *test_cmd):
             # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
             # exception
             pass
-        session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
+        # Generate report for salt code coverage
+        session.run(
+            'coverage', 'xml',
+            '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'salt.xml'),
+            '--omit=tests/*',
+            '--include=salt/*'
+        )
+        # Generate report for tests code coverage
+        session.run(
+            'coverage', 'xml',
+            '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'tests.xml'),
+            '--omit=salt/*',
+            '--include=tests/*'
+        )
 
 
 def _runtests(session, coverage, cmd_args):

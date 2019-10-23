@@ -130,11 +130,20 @@ wrappedNode('kitchen-slave-mac', global_timeout, '#jenkins-prod-pr') {
                 stage('Upload Coverage') {
                     script {
                         withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
-                          sh '''
-                          if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
-                              (curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}") || true
-                          fi
-                          '''
+                            sh '''
+                            if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/salt.xml ]; then
+                                export CODECOV_FLAGS="${CODECOV_FLAGS},salt"
+                                export REPORT_NAME="${TEST_PLATFORM}-${TEST_SUITE}-${TEST_TRANSPORT}-salt"
+                                (curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -n "${REPORT_NAME}" -f artifacts/coverage/salt.xml -F "${CODECOV_FLAGS}") || true
+                            fi
+                            '''
+                            sh '''
+                            if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/tests.xml ]; then
+                                export CODECOV_FLAGS="${CODECOV_FLAGS},tests"
+                                export REPORT_NAME="${TEST_PLATFORM}-${TEST_SUITE}-${TEST_TRANSPORT}-tests"
+                                (curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -n "${REPORT_NAME}" -f artifacts/coverage/tests.xml -F "${CODECOV_FLAGS}") || true
+                            fi
+                            '''
                         }
                     }
                 }
