@@ -74,7 +74,7 @@ if USE_LOAD_BALANCER:
     import threading
     import multiprocessing
     import tornado.util
-    from salt.utils.process import SignalHandlingMultiprocessingProcess
+    from salt.utils.process import SignalHandlingProcess
 
 log = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ def _set_tcp_keepalive(sock, opts):
 
 
 if USE_LOAD_BALANCER:
-    class LoadBalancerServer(SignalHandlingMultiprocessingProcess):
+    class LoadBalancerServer(SignalHandlingProcess):
         '''
         Raw TCP server which runs in its own process and will listen
         for incoming connections. Each incoming connection will be
@@ -158,7 +158,6 @@ if USE_LOAD_BALANCER:
         # process so that a register_after_fork() equivalent will work on
         # Windows.
         def __setstate__(self, state):
-            self._is_child = True
             self.__init__(
                 state['opts'],
                 state['socket_queue'],

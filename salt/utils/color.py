@@ -10,7 +10,7 @@ import os
 
 # Import Salt libs
 from salt.ext import six
-from salt.textformat import TextFormat
+from salt.utils.textformat import TextFormat
 
 log = logging.getLogger(__name__)
 
