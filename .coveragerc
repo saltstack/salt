@@ -1,14 +1,11 @@
 [run]
 branch = True
 cover_pylib = False
-source =
-  salt
 parallel = True
 concurrency = multiprocessing
 omit =
-  tests/*.py
   setup.py
-  salt/daemons/test/*
+  .nox/*
 
 [report]
 # Regexes for lines to exclude from consideration
@@ -30,7 +27,3 @@ exclude_lines =
 
 
 ignore_errors = True
-
-[paths]
-source =
-   salt
