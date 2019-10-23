@@ -16,7 +16,6 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-import re
 import sys
 import time
 import types
@@ -30,84 +29,25 @@ import multiprocessing
 from salt.ext import six
 from salt.ext.six.moves.urllib.parse import urlparse  # pylint: disable=import-error,no-name-in-module
 
-# Let's define these custom logging levels before importing the salt.log.mixins
-# since they will be used there
-PROFILE = logging.PROFILE = 15
-TRACE = logging.TRACE = 5
-GARBAGE = logging.GARBAGE = 1
-QUIET = logging.QUIET = 1000
-
 # Import salt libs
-from salt.textformat import TextFormat
-from salt.log.handlers import (TemporaryLoggingHandler,
-                               StreamHandler,
-                               SysLogHandler,
-                               FileHandler,
-                               WatchedFileHandler,
-                               RotatingFileHandler,
-                               QueueHandler)
-from salt.log.mixins import LoggingMixInMeta, NewStyleClassMixIn
-
-from salt.utils.ctx import RequestContext
-
-LOG_LEVELS = {
-    'all': logging.NOTSET,
-    'debug': logging.DEBUG,
-    'error': logging.ERROR,
-    'critical': logging.CRITICAL,
-    'garbage': GARBAGE,
-    'info': logging.INFO,
-    'profile': PROFILE,
-    'quiet': QUIET,
-    'trace': TRACE,
-    'warning': logging.WARNING,
-}
-
-LOG_VALUES_TO_LEVELS = dict((v, k) for (k, v) in LOG_LEVELS.items())
-
-LOG_COLORS = {
-    'levels': {
-        'QUIET': TextFormat('reset'),
-        'CRITICAL': TextFormat('bold', 'red'),
-        'ERROR': TextFormat('bold', 'red'),
-        'WARNING': TextFormat('bold', 'yellow'),
-        'INFO': TextFormat('bold', 'green'),
-        'PROFILE': TextFormat('bold', 'cyan'),
-        'DEBUG': TextFormat('bold', 'cyan'),
-        'TRACE': TextFormat('bold', 'magenta'),
-        'GARBAGE': TextFormat('bold', 'blue'),
-        'NOTSET': TextFormat('reset'),
-        'SUBDEBUG': TextFormat('bold', 'cyan'),  # used by multiprocessing.log_to_stderr()
-        'SUBWARNING': TextFormat('bold', 'yellow'),  # used by multiprocessing.log_to_stderr()
-    },
-    'msgs': {
-        'QUIET': TextFormat('reset'),
-        'CRITICAL': TextFormat('bold', 'red'),
-        'ERROR': TextFormat('red'),
-        'WARNING': TextFormat('yellow'),
-        'INFO': TextFormat('green'),
-        'PROFILE': TextFormat('bold', 'cyan'),
-        'DEBUG': TextFormat('cyan'),
-        'TRACE': TextFormat('magenta'),
-        'GARBAGE': TextFormat('blue'),
-        'NOTSET': TextFormat('reset'),
-        'SUBDEBUG': TextFormat('bold', 'cyan'),  # used by multiprocessing.log_to_stderr()
-        'SUBWARNING': TextFormat('bold', 'yellow'),  # used by multiprocessing.log_to_stderr()
-    },
-    'name': TextFormat('bold', 'green'),
-    'process': TextFormat('bold', 'blue'),
-}
-
-
-# Make a list of log level names sorted by log level
-SORTED_LEVEL_NAMES = [
-    l[0] for l in sorted(six.iteritems(LOG_LEVELS), key=lambda x: x[1])
-]
-
-# Store an instance of the current logging logger class
-LOGGING_LOGGER_CLASS = logging.getLoggerClass()
-
-MODNAME_PATTERN = re.compile(r'(?P<name>%%\(name\)(?:\-(?P<digits>[\d]+))?s)')
+# pylint: disable=unused-import
+from salt._logging import (LOG_COLORS,
+                           LOG_LEVELS,
+                           LOG_VALUES_TO_LEVELS,
+                           SORTED_LEVEL_NAMES)
+from salt._logging.impl import (SaltLogRecord,
+                                SaltColorLogRecord,
+                                LOGGING_NULL_HANDLER,
+                                LOGGING_STORE_HANDLER,
+                                LOGGING_TEMP_HANDLER)
+from salt._logging.impl import set_log_record_factory as setLogRecordFactory
+from salt._logging.handlers import (StreamHandler,
+                                    SysLogHandler,
+                                    FileHandler,
+                                    WatchedFileHandler,
+                                    RotatingFileHandler,
+                                    QueueHandler)
+# pylint: enable=unused-import
 
 __CONSOLE_CONFIGURED = False
 __LOGGING_CONSOLE_HANDLER = None
@@ -118,25 +58,11 @@ __EXTERNAL_LOGGERS_CONFIGURED = False
 __MP_LOGGING_LISTENER_CONFIGURED = False
 __MP_LOGGING_CONFIGURED = False
 __MP_LOGGING_QUEUE = None
-__MP_LOGGING_LEVEL = GARBAGE
+__MP_LOGGING_LEVEL = logging.GARBAGE
 __MP_LOGGING_QUEUE_PROCESS = None
 __MP_LOGGING_QUEUE_HANDLER = None
 __MP_IN_MAINPROCESS = multiprocessing.current_process().name == 'MainProcess'
 __MP_MAINPROCESS_ID = None
-
-
-class __NullLoggingHandler(TemporaryLoggingHandler):
-    '''
-    This class exists just to better identify which temporary logging
-    handler is being used for what.
-    '''
-
-
-class __StoreLoggingHandler(TemporaryLoggingHandler):
-    '''
-    This class exists just to better identify which temporary logging
-    handler is being used for what.
-    '''
 
 
 def is_console_configured():
@@ -167,285 +93,10 @@ def is_extended_logging_configured():
     return __EXTERNAL_LOGGERS_CONFIGURED
 
 
-# Store a reference to the temporary queue logging handler
-LOGGING_NULL_HANDLER = __NullLoggingHandler(logging.WARNING)
-
-# Store a reference to the temporary console logger
-LOGGING_TEMP_HANDLER = StreamHandler(sys.stderr)
-
-# Store a reference to the "storing" logging handler
-LOGGING_STORE_HANDLER = __StoreLoggingHandler()
-
-
 class SaltLogQueueHandler(QueueHandler):
     '''
     Subclassed just to differentiate when debugging
     '''
-
-
-class SaltLogRecord(logging.LogRecord):
-    def __init__(self, *args, **kwargs):
-        logging.LogRecord.__init__(self, *args, **kwargs)
-        # pylint: disable=E1321
-        self.bracketname = '[%-17s]' % self.name
-        self.bracketlevel = '[%-8s]' % self.levelname
-        self.bracketprocess = '[%5s]' % self.process
-        # pylint: enable=E1321
-
-
-class SaltColorLogRecord(SaltLogRecord):
-    def __init__(self, *args, **kwargs):
-        SaltLogRecord.__init__(self, *args, **kwargs)
-
-        reset = TextFormat('reset')
-        clevel = LOG_COLORS['levels'].get(self.levelname, reset)
-        cmsg = LOG_COLORS['msgs'].get(self.levelname, reset)
-
-        # pylint: disable=E1321
-        self.colorname = '%s[%-17s]%s' % (LOG_COLORS['name'],
-                                          self.name,
-                                          reset)
-        self.colorlevel = '%s[%-8s]%s' % (clevel,
-                                          self.levelname,
-                                          reset)
-        self.colorprocess = '%s[%5s]%s' % (LOG_COLORS['process'],
-                                           self.process,
-                                           reset)
-        self.colormsg = '%s%s%s' % (cmsg, self.getMessage(), reset)
-        # pylint: enable=E1321
-
-
-_LOG_RECORD_FACTORY = SaltLogRecord
-
-
-def setLogRecordFactory(factory):
-    '''
-    Set the factory to be used when instantiating a log record.
-
-    :param factory: A callable which will be called to instantiate
-    a log record.
-    '''
-    global _LOG_RECORD_FACTORY
-    _LOG_RECORD_FACTORY = factory
-
-
-def getLogRecordFactory():
-    '''
-    Return the factory to be used when instantiating a log record.
-    '''
-
-    return _LOG_RECORD_FACTORY
-
-
-setLogRecordFactory(SaltLogRecord)
-
-
-class SaltLoggingClass(six.with_metaclass(LoggingMixInMeta, LOGGING_LOGGER_CLASS, NewStyleClassMixIn)):
-    def __new__(cls, *args):  # pylint: disable=W0613,E0012
-        '''
-        We override `__new__` in our logging logger class in order to provide
-        some additional features like expand the module name padding if length
-        is being used, and also some Unicode fixes.
-
-        This code overhead will only be executed when the class is
-        instantiated, i.e.:
-
-            logging.getLogger(__name__)
-
-        '''
-        instance = super(SaltLoggingClass, cls).__new__(cls)
-
-        try:
-            max_logger_length = len(max(
-                list(logging.Logger.manager.loggerDict), key=len
-            ))
-            for handler in logging.root.handlers:
-                if handler in (LOGGING_NULL_HANDLER,
-                               LOGGING_STORE_HANDLER,
-                               LOGGING_TEMP_HANDLER):
-                    continue
-
-                formatter = handler.formatter
-                if not formatter:
-                    continue
-
-                if not handler.lock:
-                    handler.createLock()
-                handler.acquire()
-
-                fmt = formatter._fmt.replace('%', '%%')
-
-                match = MODNAME_PATTERN.search(fmt)
-                if not match:
-                    # Not matched. Release handler and return.
-                    handler.release()
-                    return instance
-
-                if 'digits' not in match.groupdict():
-                    # No digits group. Release handler and return.
-                    handler.release()
-                    return instance
-
-                digits = match.group('digits')
-                if not digits or not (digits and digits.isdigit()):
-                    # No valid digits. Release handler and return.
-                    handler.release()
-                    return instance
-
-                if int(digits) < max_logger_length:
-                    # Formatter digits value is lower than current max, update.
-                    fmt = fmt.replace(match.group('name'), '%%(name)-%ds')
-                    formatter = logging.Formatter(
-                        fmt % max_logger_length,
-                        datefmt=formatter.datefmt
-                    )
-                    handler.setFormatter(formatter)
-                handler.release()
-        except ValueError:
-            # There are no registered loggers yet
-            pass
-        return instance
-
-    def _log(self, level, msg, args, exc_info=None, extra=None,  # pylint: disable=arguments-differ
-             exc_info_on_loglevel=None):
-        # If both exc_info and exc_info_on_loglevel are both passed, let's fail
-        if extra is None:
-            extra = {}
-
-        current_jid = RequestContext.current.get('data', {}).get('jid', None)
-        log_fmt_jid = RequestContext.current.get('opts', {}).get('log_fmt_jid', None)
-
-        if current_jid is not None:
-            extra['jid'] = current_jid
-
-        if log_fmt_jid is not None:
-            extra['log_fmt_jid'] = log_fmt_jid
-
-        if exc_info and exc_info_on_loglevel:
-            raise RuntimeError(
-                'Only one of \'exc_info\' and \'exc_info_on_loglevel\' is '
-                'permitted'
-            )
-        if exc_info_on_loglevel is not None:
-            if isinstance(exc_info_on_loglevel, six.string_types):
-                exc_info_on_loglevel = LOG_LEVELS.get(exc_info_on_loglevel,
-                                                      logging.ERROR)
-            elif not isinstance(exc_info_on_loglevel, int):
-                raise RuntimeError(
-                    'The value of \'exc_info_on_loglevel\' needs to be a '
-                    'logging level or a logging level name, not \'{0}\''
-                    .format(exc_info_on_loglevel)
-                )
-        if extra is None:
-            extra = {'exc_info_on_loglevel': exc_info_on_loglevel}
-        else:
-            extra['exc_info_on_loglevel'] = exc_info_on_loglevel
-
-        LOGGING_LOGGER_CLASS._log(
-            self, level, msg, args, exc_info=exc_info, extra=extra
-        )
-
-    # pylint: disable=C0103
-    # pylint: disable=W0221
-    def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
-                   func=None, extra=None, sinfo=None):
-        # Let's remove exc_info_on_loglevel from extra
-        exc_info_on_loglevel = extra.pop('exc_info_on_loglevel')
-
-        jid = extra.pop('jid', '')
-        if jid:
-            log_fmt_jid = extra.pop('log_fmt_jid')
-            jid = log_fmt_jid % {'jid': jid}
-
-        if not extra:
-            # If nothing else is in extra, make it None
-            extra = None
-
-        # Let's try to make every logging message unicode
-        try:
-            salt_system_encoding = __salt_system_encoding__
-            if salt_system_encoding == 'ascii':
-                # Encoding detection most likely failed, let's use the utf-8
-                # value which we defaulted before __salt_system_encoding__ was
-                # implemented
-                salt_system_encoding = 'utf-8'
-        except NameError:
-            salt_system_encoding = 'utf-8'
-
-        if isinstance(msg, six.string_types) \
-                and not isinstance(msg, six.text_type):
-            try:
-                _msg = msg.decode(salt_system_encoding, 'replace')
-            except UnicodeDecodeError:
-                _msg = msg.decode(salt_system_encoding, 'ignore')
-        else:
-            _msg = msg
-
-        _args = []
-        for item in args:
-            if isinstance(item, six.string_types) \
-                    and not isinstance(item, six.text_type):
-                try:
-                    _args.append(item.decode(salt_system_encoding, 'replace'))
-                except UnicodeDecodeError:
-                    _args.append(item.decode(salt_system_encoding, 'ignore'))
-            else:
-                _args.append(item)
-        _args = tuple(_args)
-
-        if six.PY3:
-            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, _args,
-                                            exc_info, func, sinfo)
-        else:
-            logrecord = _LOG_RECORD_FACTORY(name, level, fn, lno, _msg, _args,
-                                            exc_info, func)
-
-        if extra is not None:
-            for key in extra:
-                if (key in ['message', 'asctime']) or (key in logrecord.__dict__):
-                    raise KeyError(
-                        'Attempt to overwrite \'{0}\' in LogRecord'.format(key)
-                    )
-                logrecord.__dict__[key] = extra[key]
-
-        if exc_info_on_loglevel is not None:
-            # Let's add some custom attributes to the LogRecord class in order
-            # to include the exc_info on a per handler basis. This will allow
-            # showing tracebacks on logfiles but not on console if the logfile
-            # handler is enabled for the log level "exc_info_on_loglevel" and
-            # console handler is not.
-            logrecord.exc_info_on_loglevel_instance = sys.exc_info()
-            logrecord.exc_info_on_loglevel_formatted = None
-
-        logrecord.exc_info_on_loglevel = exc_info_on_loglevel
-        logrecord.jid = jid
-        return logrecord
-
-    # pylint: enable=C0103
-
-
-# Override the python's logging logger class as soon as this module is imported
-if logging.getLoggerClass() is not SaltLoggingClass:
-
-    logging.setLoggerClass(SaltLoggingClass)
-    logging.addLevelName(QUIET, 'QUIET')
-    logging.addLevelName(PROFILE, 'PROFILE')
-    logging.addLevelName(TRACE, 'TRACE')
-    logging.addLevelName(GARBAGE, 'GARBAGE')
-
-    if not logging.root.handlers:
-        # No configuration to the logging system has been done so far.
-        # Set the root logger at the lowest level possible
-        logging.root.setLevel(GARBAGE)
-
-        # Add a Null logging handler until logging is configured(will be
-        # removed at a later stage) so we stop getting:
-        #   No handlers could be found for logger 'foo'
-        logging.root.addHandler(LOGGING_NULL_HANDLER)
-
-    # Add the queue logging handler so we can later sync all message records
-    # with the additional logging handlers
-    logging.root.addHandler(LOGGING_STORE_HANDLER)
 
 
 def getLogger(name):  # pylint: disable=C0103
