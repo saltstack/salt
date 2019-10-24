@@ -38,6 +38,7 @@ import salt.wheel
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+wheel = salt.wheel.WheelClient(__opts__)
 
 
 def __virtual__():
@@ -51,11 +52,15 @@ def _get_keys():
     minions = keys.all_keys()
     return minions['minions']
 
+def _delete_keys(keys):
+    for k in keys:
+        log.info('Removing stale key for %s', k)
+        wheel_client.cmd('key.delete', k)
+        del minions[k]
 
 def start(interval=3600, expire=604800):
     ck = salt.utils.minions.CkMinions(__opts__)
     presence_file = '{0}/presence.p'.format(__opts__['cachedir'])
-    wheel = salt.wheel.WheelClient(__opts__)
 
     while True:
         log.debug('Checking for present minions')
@@ -90,11 +95,7 @@ def start(interval=3600, expire=604800):
             if now - expire > seen:
                 stale_keys.append(m)
 
-        if stale_keys:
-            for k in stale_keys:
-                log.info('Removing stale key for %s', k)
-            wheel.cmd('key.delete', stale_keys)
-            del minions[k]
+        _delete_keys(stale_keys)
 
         try:
             with salt.utils.files.fopen(presence_file, 'w') as f:
