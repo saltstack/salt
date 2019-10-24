@@ -44,10 +44,15 @@ import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
+from salt.modules.cmdmon import run
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
+
+IS_WIN_SERVER = False
+if salt.utils.platform.is_windows():
+    IS_WIN_SERVER = 'serverstandard' in run('Get-WindowsEdition -Online', shell='powershell').lower()
 
 
 class VirtualEnv(object):
@@ -119,6 +124,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pip.removed', name=name, bin_env=venv_dir)
             self.assertSaltTrueReturn(ret)
 
+    @skipIf(IS_WIN_SERVER, 'test need to be fixed for Win 2019')
     def test_pip_installed_errors(self):
         venv_dir = os.path.join(
             RUNTIME_VARS.TMP, 'pip-installed-errors'
@@ -297,6 +303,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
+    @skipIf(IS_WIN_SERVER, 'test need to be fixed for Win 2019')
     def test_issue_6912_wrong_owner(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, '6912-wrong-owner')
