@@ -24,6 +24,7 @@ from tests.support.mock import (
 # Import salt libs
 import salt.utils.platform
 import salt.utils.process
+from salt.utils.versions import warn_until_date
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -481,8 +482,28 @@ class TestProcessList(TestCase):
 
 class TestDeprecatedClassNames(TestCase):
 
-    def process_target(self):
-        time.sleep(1)
+    @staticmethod
+    def process_target():
+        pass
+
+    @staticmethod
+    def patched_warn_until_date(current_date):
+        def _patched_warn_until_date(date,
+                                     message,
+                                     category=DeprecationWarning,
+                                     stacklevel=None,
+                                     _current_date=current_date,
+                                     _dont_call_warnings=False):
+            # Because we add another function in between, the stacklevel
+            # set in salt.utils.process, 3, needs to now be 4
+            stacklevel = 4
+            return warn_until_date(date,
+                                   message,
+                                   category=category,
+                                   stacklevel=stacklevel,
+                                   _current_date=_current_date,
+                                   _dont_call_warnings=_dont_call_warnings)
+        return _patched_warn_until_date
 
     def test_multiprocessing_process_warning(self):
         # We *always* want *all* warnings thrown on this module
@@ -493,7 +514,7 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 # Test warning
                 with warnings.catch_warnings(record=True) as recorded_warnings:
                     proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
@@ -514,15 +535,15 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 with self.assertRaisesRegex(
                         RuntimeError,
-                        r'Please stop using \'salt.utils.process.MultiprocessingProcess\' '
-                        r'and instead use \'salt.utils.process.Process\'. '
-                        r'\'salt.utils.process.MultiprocessingProcess\' will go away '
+                        r"Please stop using 'salt.utils.process.MultiprocessingProcess' "
+                        r"and instead use 'salt.utils.process.Process'. "
+                        r"'salt.utils.process.MultiprocessingProcess' will go away "
                         r'after 2022-01-01. '
                         r'This warning\(now exception\) triggered on '
-                        r'filename \'(.*)test_process.py\', line number ([\d]+), is '
+                        r"filename '(.*)test_process.py', line number ([\d]+), is "
                         r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
                         r'Please remove the warning.'):
                     proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
@@ -539,7 +560,7 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 # Test warning
                 with warnings.catch_warnings(record=True) as recorded_warnings:
                     proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)
@@ -560,15 +581,15 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 with self.assertRaisesRegex(
                         RuntimeError,
-                        r'Please stop using \'salt.utils.process.SignalHandlingMultiprocessingProcess\' '
-                        r'and instead use \'salt.utils.process.SignalHandlingProcess\'. '
-                        r'\'salt.utils.process.SignalHandlingMultiprocessingProcess\' will go away '
+                        r"Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
+                        r"and instead use 'salt.utils.process.SignalHandlingProcess'. "
+                        r"'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
                         r'after 2022-01-01. '
                         r'This warning\(now exception\) triggered on '
-                        r'filename \'(.*)test_process.py\', line number ([\d]+), is '
+                        r"filename '(.*)test_process.py', line number ([\d]+), is "
                         r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
                         r'Please remove the warning.'):
                     proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)
