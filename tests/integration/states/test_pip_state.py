@@ -44,7 +44,7 @@ import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from salt.modules.cmdmon import run
+from salt.modules.cmdmod import run
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
