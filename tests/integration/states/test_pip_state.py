@@ -44,7 +44,7 @@ import salt.utils.win_dacl
 import salt.utils.win_functions
 import salt.utils.win_runas
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
-from salt.modules.cmdmod import run
+import salt.modules.win_system as win_system
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
@@ -52,7 +52,7 @@ from salt.ext import six
 
 IS_WIN_SERVER = False
 if salt.utils.platform.is_windows():
-    IS_WIN_SERVER = 'serverstandard' in run('Get-WindowsEdition -Online', shell='powershell').lower()
+    IS_WIN_SERVER = win_system.get_system_info()['os_type'] == 'Server'
 
 
 class VirtualEnv(object):
