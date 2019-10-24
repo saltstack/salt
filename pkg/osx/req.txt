@@ -24,7 +24,7 @@ pyobjc==5.1.2
 pyopenssl
 python-dateutil==2.8.0
 python-gnupg==0.4.4
-pyyaml==3.13
+pyyaml==5.1.2
 pyzmq==18.0.1
 requests==2.21.0
 setproctitle
