@@ -437,6 +437,7 @@ html_context = {
     'build_type': build_type,
     'today': today,
     'copyright': copyright,
+    'primary_repo_branch': primary_repo_branch
 }
 
 html_use_index = True
