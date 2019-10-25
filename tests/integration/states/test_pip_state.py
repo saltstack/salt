@@ -97,7 +97,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             kwargs = {}
         return self.run_function('virtualenv.create', [path], **kwargs)
 
-    @flaky()
+    @flaky
     def test_pip_installed_removed(self):
         '''
         Tests installed and removed states
@@ -299,7 +299,6 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
-    @flaky()
     def test_issue_6912_wrong_owner(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, '6912-wrong-owner')
@@ -338,6 +337,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                     self.assertEqual(
                         salt.utils.win_dacl.get_owner(path), username)
 
+    @flaky
     @destructiveTest
     @skip_if_not_root
     @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
