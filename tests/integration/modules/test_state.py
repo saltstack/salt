@@ -2386,3 +2386,14 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         )
         assert state_run is not False
         assert os.path.exists(unzip_path)
+
+    def test_jinja_renderer_argline(self):
+        '''
+        This is a test case for https://github.com/saltstack/salt/issues/55124
+
+        Renderer for this is in tests/integration/files/file/base/_renderers/issue55124.py
+        '''
+        result = self.run_function('state.sls', mods='issue-55124')
+        assert isinstance(result, dict), result
+        result = result[next(iter(result))]
+        assert result['result'], result
