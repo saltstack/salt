@@ -253,7 +253,7 @@ intersphinx_mapping = {
 on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 project = 'Salt'
-primary_repo_branch = 'master'  # This is the default branch on GitHub for the Salt project
+repo_primary_branch = 'master'  # This is the default branch on GitHub for the Salt project
 version = salt.version.__version__
 latest_release = '2019.2.2'  # latest release
 previous_release = '2018.3.4'  # latest release from previous branch
@@ -306,6 +306,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'httpdomain',
     'youtube',
+    'saltrepo'
     #'saltautodoc', # Must be AFTER autodoc
     #'shorturls',
 ]
@@ -326,7 +327,6 @@ stripped_release = re.sub(r'-\d+-g[0-9a-f]+$', '', release)
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
-.. |primary_repo_branch| replace:: {primary_repo_branch}
 .. |current_release_doc| replace:: :doc:`/topics/releases/{release}`
 .. |saltrepo| replace:: https://github.com/saltstack/salt
 .. _`salt-users`: https://groups.google.com/forum/#!forum/salt-users
@@ -361,7 +361,7 @@ rst_prolog = """\
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-""".format(release=stripped_release, primary_repo_branch=primary_repo_branch)
+""".format(release=stripped_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
@@ -437,7 +437,7 @@ html_context = {
     'build_type': build_type,
     'today': today,
     'copyright': copyright,
-    'primary_repo_branch': primary_repo_branch
+    'repo_primary_branch': repo_primary_branch
 }
 
 html_use_index = True
