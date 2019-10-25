@@ -34,6 +34,7 @@ from tests.support.helpers import (
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
+from tests.support.helpers import flaky
 
 # Import salt libs
 import salt.utils.files
@@ -96,6 +97,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             kwargs = {}
         return self.run_function('virtualenv.create', [path], **kwargs)
 
+    @flaky()
     def test_pip_installed_removed(self):
         '''
         Tests installed and removed states
@@ -297,6 +299,7 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
     @with_system_user('issue-6912', on_existing='delete', delete=True,
                       password='PassWord1!')
     @with_tempdir()
+    @flaky()
     def test_issue_6912_wrong_owner(self, temp_dir, username):
         # Setup virtual environment directory to be used throughout the test
         venv_dir = os.path.join(temp_dir, '6912-wrong-owner')
