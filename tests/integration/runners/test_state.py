@@ -242,6 +242,32 @@ class StateRunnerTest(ShellCase):
             for item in out:
                 assert item in ret
 
+    def test_orchestrate_batch_with_failhard_error(self):
+        '''
+        test orchestration properly stops with failhard and batch.
+        '''
+        ret = self.run_run('state.orchestrate orch.batch --out=json -l critical')
+        ret_json = salt.utils.json.loads('\n'.join(ret))
+        retcode = ret_json['retcode']
+        result = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['result']
+        changes = ret_json['data']['master']['salt_|-call_fail_state_|-call_fail_state_|-state']['changes']
+
+        # Looks like there is a platform differences in execution.
+        # I see empty changes dict in MacOS for some reason. Maybe it's a bug?
+        if changes:
+            changes_ret = changes['ret']
+
+        # Debug
+        print('Retcode: {}'.format(retcode))
+        print('Changes: {}'.format(changes))
+        print('Result: {}'.format(result))
+
+        assert retcode != 0
+        assert result is False
+        if changes:
+            # The execution should stop after first error, so return dict should contain only one minion
+            assert len(changes_ret) == 1
+
     def test_state_event(self):
         '''
         test to ensure state.event

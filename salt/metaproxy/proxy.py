@@ -59,7 +59,7 @@ from salt.minion import ProxyMinion
 
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess)
+                                SignalHandlingProcess)
 
 
 import tornado.gen  # pylint: disable=F0401
@@ -725,7 +725,7 @@ def handle_decoded_payload(self, data):
             # running on windows
             instance = None
         with default_signals(signal.SIGINT, signal.SIGTERM):
-            process = SignalHandlingMultiprocessingProcess(
+            process = SignalHandlingProcess(
                 target=self._target, args=(instance, self.opts, data, self.connected)
             )
     else:
