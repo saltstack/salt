@@ -378,8 +378,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                'result': True}
 
         shutdown_mock = MagicMock(return_value=True)
+
+        # Normal case
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.shutdown': shutdown_mock
                 }):
             ret.update({'changes': {
@@ -389,8 +392,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(virt.stopped('myvm'), ret)
             shutdown_mock.assert_called_with('myvm', connection=None, username=None, password=None)
 
+        # Normal case with user-provided connection parameters
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.shutdown': shutdown_mock,
                 }):
             self.assertDictEqual(virt.stopped('myvm',
@@ -399,8 +404,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                               password='secret'), ret)
             shutdown_mock.assert_called_with('myvm', connection='myconnection', username='user', password='secret')
 
+        # Case where an error occurred during the shutdown
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.shutdown': MagicMock(side_effect=self.mock_libvirt.libvirtError('Some error'))
                 }):
             ret.update({'changes': {'ignored': [{'domain': 'myvm', 'issue': 'Some error'}]},
@@ -408,8 +415,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': 'No changes had happened'})
             self.assertDictEqual(virt.stopped('myvm'), ret)
 
+        # Case there the domain doesn't exist
         with patch.dict(virt.__salt__, {'virt.list_domains': MagicMock(return_value=[])}):  # pylint: disable=no-member
             ret.update({'changes': {}, 'result': False, 'comment': 'No changes had happened'})
+            self.assertDictEqual(virt.stopped('myvm'), ret)
+
+        # Case where the domain is already stopped
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'shutdown'})
+                }):
+            ret.update({'changes': {},
+                        'result': True,
+                        'comment': 'No changes had happened'})
             self.assertDictEqual(virt.stopped('myvm'), ret)
 
     def test_powered_off(self):
@@ -421,8 +439,11 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                'result': True}
 
         stop_mock = MagicMock(return_value=True)
+
+        # Normal case
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.stop': stop_mock
                 }):
             ret.update({'changes': {
@@ -432,8 +453,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             self.assertDictEqual(virt.powered_off('myvm'), ret)
             stop_mock.assert_called_with('myvm', connection=None, username=None, password=None)
 
+        # Normal case with user-provided connection parameters
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.stop': stop_mock,
                 }):
             self.assertDictEqual(virt.powered_off('myvm',
@@ -442,8 +465,10 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                   password='secret'), ret)
             stop_mock.assert_called_with('myvm', connection='myconnection', username='user', password='secret')
 
+        # Case where an error occurred during the poweroff
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
                     'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.stop': MagicMock(side_effect=self.mock_libvirt.libvirtError('Some error'))
                 }):
             ret.update({'changes': {'ignored': [{'domain': 'myvm', 'issue': 'Some error'}]},
@@ -451,8 +476,19 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': 'No changes had happened'})
             self.assertDictEqual(virt.powered_off('myvm'), ret)
 
+        # Case there the domain doesn't exist
         with patch.dict(virt.__salt__, {'virt.list_domains': MagicMock(return_value=[])}):  # pylint: disable=no-member
             ret.update({'changes': {}, 'result': False, 'comment': 'No changes had happened'})
+            self.assertDictEqual(virt.powered_off('myvm'), ret)
+
+        # Case where the domain is already stopped
+        with patch.dict(virt.__salt__, {  # pylint: disable=no-member
+                    'virt.list_domains': MagicMock(return_value=['myvm', 'vm1']),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'shutdown'})
+                }):
+            ret.update({'changes': {},
+                        'result': True,
+                        'comment': 'No changes had happened'})
             self.assertDictEqual(virt.powered_off('myvm'), ret)
 
     def test_snapshot(self):
