@@ -21,7 +21,6 @@ cachetools==3.1.0         # via google-auth
 certifi==2019.3.9
 cffi==1.12.2
 chardet==3.0.4            # via requests
-Cheetah3==3.1.0
 cheroot==6.5.5            # via cherrypy
 cherrypy==17.4.1
 click==7.0
@@ -36,7 +35,6 @@ docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 enum34==1.1.6
 future==0.17.1            # via python-jose
-Genshi==0.7.3
 gitdb2==2.0.5             # via gitpython
 gitdb==0.6.4
 gitpython==2.1.11
@@ -56,7 +54,7 @@ keyring==5.7.1
 kubernetes==3.0.0
 linode-python==1.1.1
 lxml==4.3.3               # via junos-eznc, ncclient
-Mako==1.1.0
+mako==1.0.7
 markupsafe==1.1.1
 mock==2.0.0               # via moto
 more-itertools==5.0.0
@@ -117,7 +115,6 @@ vultr==1.0.1
 watchdog==0.9.0
 wcwidth==0.1.7            # via pytest
 websocket-client==0.40.0  # via docker, kubernetes
-wempy==0.1.5
 werkzeug==0.15.6          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
 xmltodict==0.12.0         # via moto
