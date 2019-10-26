@@ -710,7 +710,7 @@ def latest(name,
     use_lfs = bool(
         __salt__['git.config_get_regexp'](
             r'filter\.lfs\.',
-            **{'global': True}))
+            **{'global': True, 'ignore_retcode': True}))
     lfs_opts = {'identity': identity} if use_lfs else {}
 
     if os.path.isfile(target):
