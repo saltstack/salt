@@ -108,7 +108,7 @@ class RenderTestCase(TestCase):
 
         ctx = dict(context)
         ctx['var'] = 'OK'
-        res = salt.utils.templates.render_genshi_tmpl(tmpl, ctx)
+        res = salt.utils.templates.render_wempy_tmpl(tmpl, ctx)
         self.assertEqual(res, '<RU>OK</RU>')
 
     ### Tests for genshi template (xml-based)
