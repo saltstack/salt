@@ -10,9 +10,3 @@ tornado>=4.2.1,<5.0; python_version >= '3.4'
 
 # Required by Tornado to handle threads stuff.
 futures>=2.0; python_version < '3.0'
-
-# Available template libraries that can be used
-Genshi
-Cheetah3==3.1.0
-Mako
-wempy
