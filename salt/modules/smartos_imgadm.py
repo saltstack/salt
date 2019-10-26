@@ -56,7 +56,7 @@ def _parse_image_meta(image=None, detail=False):
 
     if image and 'Error' in image:
         ret = image
-    elif image and 'manifest' in image:
+    elif image and 'manifest' in image and 'name' in image['manifest']:
         name = image['manifest']['name']
         version = image['manifest']['version']
         os = image['manifest']['os']
@@ -97,6 +97,11 @@ def _parse_image_meta(image=None, detail=False):
                 version=version,
                 published=published,
             )
+    else:
+        log.debug("smartos_image - encountered invalid image payload: {}".format(image))
+        ret = {
+            'Error': 'This looks like an orphaned image, image payload was invalid.'
+        }
 
     return ret
 
@@ -110,8 +115,7 @@ def _split_docker_uuid(uuid):
         if len(uuid) == 2:
             tag = uuid[1]
             repo = uuid[0]
-            if len(repo.split('/')) == 2:
-                return repo, tag
+            return repo, tag
     return None, None
 
 
