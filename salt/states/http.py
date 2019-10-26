@@ -48,12 +48,14 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
 
     status
         The status code for a URL for which to be checked. Can be used instead of
-        or in addition to the ``match`` setting.
+        or in addition to the ``match`` setting. This can be passed as an individual status code
+        or a list of status codes.
 
     status_type
         Specifies the type of pattern matching to use for status. Default is ``string``, but
         can also be set to ``pcre`` to use regular expression matching if a more
-        complex pattern matching is required.
+        complex pattern matching is required. Additionally, if a list of strings representing
+        statuses is given, the type ``list`` can be used.
 
         .. versionadded:: Neon
 
@@ -77,6 +79,14 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
           http.query:
             - name: 'http://example.com/'
             - status: 200
+
+        query_example2:
+          http.query:
+            - name: 'http://example.com/'
+            - status:
+                - 200
+                - 201
+            - status_type: list
 
     '''
     # Monitoring state, but changes may be made over HTTP
@@ -122,14 +132,18 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
                 ret['comment'] += ' Match pattern "{0}" was not found.'.format(match)
 
     if status is not None:
-        if status_type == 'string':
-            if str(data.get('status', '')) == str(status):
-                ret['comment'] += ' Status {0} was found.'.format(status)
-                if ret['result'] is None:
-                    ret['result'] = True
-            else:
-                ret['comment'] += ' Status {0} was not found.'.format(status)
+        # Deals with case of status_type as a list of strings representing statuses
+        if status_type == 'list':
+            for stat in status:
+                if str(data.get('status', '')) == str(stat):
+                    ret['comment'] += ' Status {0} was found.'.format(stat)
+                    if ret['result'] is None:
+                        ret['result'] = True
+            if ret['result'] is not True:
+                ret['comment'] += ' Statuses {0} were not found.'.format(status)
                 ret['result'] = False
+
+        # Deals with the case of status_type representing a regex
         elif status_type == 'pcre':
             if re.search(str(status), str(data.get('status', ''))):
                 ret['comment'] += ' Status pattern "{0}" was found.'.format(status)
@@ -137,6 +151,16 @@ def query(name, match=None, match_type='string', status=None, status_type='strin
                     ret['result'] = True
             else:
                 ret['comment'] += ' Status pattern "{0}" was not found.'.format(status)
+                ret['result'] = False
+
+        # Deals with the case of status_type as a single string representing a status
+        elif status_type == 'string':
+            if str(data.get('status', '')) == str(status):
+                ret['comment'] += ' Status {0} was found.'.format(status)
+                if ret['result'] is None:
+                    ret['result'] = True
+            else:
+                ret['comment'] += ' Status {0} was not found.'.format(status)
                 ret['result'] = False
 
     # cleanup spaces in comment

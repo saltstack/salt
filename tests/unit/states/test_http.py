@@ -45,9 +45,9 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(http.query("salt", "Dude", "stack"),
                                      ret[1])
 
-    def test_query_statustype(self):
+    def test_query_pcre_statustype(self):
         '''
-            Test to perform an HTTP query and statefully return the result
+            Test to perform an HTTP query with a regex used to match the status code and statefully return the result
         '''
         testurl = "salturl"
         http_result = {
@@ -67,4 +67,52 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
                                                 match="This page returned",
                                                 status="200|201",
                                                 status_type='pcre'
+                                                ), state_return)
+
+    def test_query_stringstatustype(self):
+        '''
+            Test to perform an HTTP query with a string status code and statefully return the result
+        '''
+        testurl = "salturl"
+        http_result = {
+                        "text": "This page returned a 201 status code",
+                        "status": "201"
+                      }
+        state_return = {'changes': {},
+                        'comment': 'Match text "This page returned" was found. Status 201 was found.',
+                        'data': {'status': '201', 'text': 'This page returned a 201 status code'},
+                        'name': testurl,
+                        'result': True}
+
+        with patch.dict(http.__opts__, {'test': False}):
+            mock = MagicMock(return_value=http_result)
+            with patch.dict(http.__salt__, {'http.query': mock}):
+                self.assertDictEqual(http.query(testurl,
+                                                match="This page returned",
+                                                status="201",
+                                                status_type='string'
+                                                ), state_return)
+
+    def test_query_liststatustype(self):
+        '''
+            Test to perform an HTTP query with a list of status codes and statefully return the result
+        '''
+        testurl = "salturl"
+        http_result = {
+                        "text": "This page returned a 201 status code",
+                        "status": "201"
+                      }
+        state_return = {'changes': {},
+                        'comment': 'Match text "This page returned" was found. Status 201 was found.',
+                        'data': {'status': '201', 'text': 'This page returned a 201 status code'},
+                        'name': testurl,
+                        'result': True}
+
+        with patch.dict(http.__opts__, {'test': False}):
+            mock = MagicMock(return_value=http_result)
+            with patch.dict(http.__salt__, {'http.query': mock}):
+                self.assertDictEqual(http.query(testurl,
+                                                match="This page returned",
+                                                status=["200", "201"],
+                                                status_type='list'
                                                 ), state_return)
