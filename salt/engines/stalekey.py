@@ -35,41 +35,97 @@ from salt.ext import six
 import msgpack
 
 log = logging.getLogger(__name__)
-wheel = salt.wheel.WheelClient(__opts__)
 
 
 def __virtual__():
     if not __opts__.get('minion_data_cache'):
-        return (False, 'stalekey engine requires minion_data_cache to be enabled')
+        return (False, 'stalekey engine requires '
+                       'minion_data_cache to be enabled')
     return True
 
 
 def _get_keys():
+    '''
+    Get the keys
+    '''
     keys = salt.key.get_key(__opts__)
     minions = keys.all_keys()
     return minions['minions']
 
-def _delete_keys(keys):
-    for k in keys:
+
+def _delete_keys(stale_keys, minions):
+    '''
+    Delete the keys
+    '''
+    wheel = salt.wheel.WheelClient(__opts__)
+    for k in stale_keys:
         log.info('Removing stale key for %s', k)
-        wheel_client.cmd('key.delete', k)
+        wheel.cmd('key.delete', [salt.utils.stringutils.to_unicode(k)])
         del minions[k]
+    return minions
+
+
+def _read_presence(presence_file):
+    '''
+    Read minion data from presence file
+    '''
+    error = False
+    minions = {}
+    if os.path.exists(presence_file):
+        try:
+            with salt.utils.files.fopen(presence_file, 'rb') as f:
+                minions = msgpack.load(f)
+
+                # ensure all keys are strs
+                _minions = {}
+                for minion in minions:
+                    _minion = salt.utils.stringutils.to_unicode(minion)
+                    _minions[_minion] = minions[minion]
+
+        except IOError as e:
+            error = True
+            log.error('Could not open presence file %s: %s', presence_file, e)
+
+    return error, _minions
+
+
+def _write_presence(presence_file, minions):
+    '''
+    Write minion data to presence file
+    '''
+    error = False
+    try:
+        with salt.utils.files.fopen(presence_file, 'wb') as f:
+            msgpack.dump(minions, f)
+    except IOError as e:
+        error = True
+        log.error('Could not write to presence file %s: %s', presence_file, e)
+    return error
+
+
+def _running():
+    '''
+    Indicate if engine should continue running
+    Useful when running tests and we want to ensure
+    the engine only makes one pass
+    '''
+    return True
+
 
 def start(interval=3600, expire=604800):
+    '''
+    Start the engine
+    '''
     ck = salt.utils.minions.CkMinions(__opts__)
     presence_file = '{0}/presence.p'.format(__opts__['cachedir'])
 
-    while True:
+    while _running():
         log.debug('Checking for present minions')
         minions = {}
-        if os.path.exists(presence_file):
-            try:
-                with salt.utils.files.fopen(presence_file, 'r') as f:
-                    minions = msgpack.load(f)
-            except IOError as e:
-                log.error('Could not open presence file %s: %s', presence_file, e)
-                time.sleep(interval)
-                continue
+        error, minions = _read_presence(presence_file)
+        if error:
+            time.sleep(interval)
+            continue
 
         minion_keys = _get_keys()
         now = time.time()
@@ -77,8 +133,9 @@ def start(interval=3600, expire=604800):
 
         # For our existing keys, check which are present
         for m in minion_keys:
-            # If we have a key that's not in the presence file, it may be a new minion
-            # It could also mean this is the first time this engine is running and no
+            # If we have a key that's not in the presence file,
+            # it may be a new minion # It could also mean this
+            # is the first time this engine is running and no
             # presence file was found
             if m not in minions:
                 minions[m] = now
@@ -92,11 +149,9 @@ def start(interval=3600, expire=604800):
             if now - expire > seen:
                 stale_keys.append(m)
 
-        _delete_keys(stale_keys)
+        if stale_keys:
+            minions = _delete_keys(stale_keys, minions)
 
-        try:
-            with salt.utils.files.fopen(presence_file, 'w') as f:
-                msgpack.dump(minions, f)
-        except IOError as e:
-            log.error('Could not write to presence file %s: %s', presence_file, e)
+        error = _write_presence(presence_file, minions)
+
         time.sleep(interval)

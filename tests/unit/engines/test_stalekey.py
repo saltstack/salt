@@ -6,6 +6,8 @@ unit tests for the stalekey engine
 from __future__ import absolute_import, print_function, unicode_literals
 
 import logging
+import tempfile
+import msgpack
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -14,6 +16,7 @@ from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
     MagicMock,
+    mock_open,
     patch)
 
 # Import Salt Libs
@@ -23,6 +26,14 @@ import salt.config
 log = logging.getLogger(__name__)
 
 
+class MockKey(object):
+    def __init__(self, opts):
+        pass
+
+    def delete_key(self, key):
+        pass
+
+
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class EngineStalekeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -30,16 +41,56 @@ class EngineStalekeyTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {stalekey: {}}
+        self.opts = salt.config.DEFAULT_MASTER_OPTS
+        self.opts['id'] = 'master'
 
-    # 'present' function tests: 1
-    def test_test(self):
+        return {stalekey: {'__opts__': self.opts}}
+
+    def test_delete_keys_single_stale_key(self):
         '''
-        Test to ensure the SQS engine logs a warning when queue not present
+        Test to ensure single stale key is deleted
         '''
-        log.debug('=== testing ====')
-        with patch('salt.key.get_key', MagicMock()) as mock_key:
-            mock_key.delete_key.return_value = True
-            ret = stalekey._delete_keys(['foo', 'bar', 'baz'])
-        log.debug('=== ret %s ====', ret)
-        self.assertTrue(True, True)
+        _minions = {'foo': '', 'bar': '', 'baz': ''}
+        stale_key = ['foo']
+
+        with patch('salt.key.get_key', return_value=MockKey(self.opts)):
+            ret = stalekey._delete_keys(stale_key, _minions)
+        expected = {'bar': '', 'baz': ''}
+        self.assertTrue(ret, expected)
+
+    def test_delete_keys_multiple_stale_keys(self):
+        '''
+        Test to ensure multiple stale keys are deleted
+        '''
+        _minions = {'foo': '', 'bar': '', 'baz': ''}
+        stale_keys = ['foo', 'bar']
+
+        with patch('salt.key.get_key', return_value=MockKey(self.opts)):
+            ret = stalekey._delete_keys(stale_keys, _minions)
+        expected = {'baz': ''}
+        self.assertTrue(ret, expected)
+
+    def test_read_presence(self):
+        '''
+        Test to ensure we can read from a presence file
+        '''
+        data = {'minion': 1572049887.15425}
+        msgpack_data = msgpack.dumps(data)
+        with patch('os.path.exists', return_value=True):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=msgpack_data)) as dummy_file:
+                ret = stalekey._read_presence('presence.p')
+        expected = (False, {'minion': 1572049887.15425})
+        self.assertEqual(ret, expected)
+
+    def test_write_presence(self):
+        '''
+        Test to ensure we can read from a presence file
+        '''
+        minions = {'minion': 1572049887.15425}
+        with patch('salt.utils.files.fopen',
+                   mock_open()) as dummy_file:
+            ret = stalekey._write_presence('presence.p', minions)
+        expected = False
+        self.assertEqual(ret, expected)
+
