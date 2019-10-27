@@ -102,6 +102,12 @@ Saltcheck Keywords
 **print_result:**
     (bool) Optional keyword to show results in the ``assertEqual``, ``assertNotEqual``,
     ``assertIn``, and ``assertNotIn`` output. Defaults to True.
+**output_details:**
+    (bool) Optional keyword to display ``module_and_function``, ``args``, ``assertion_section``,
+    and assertion results text in the output. If print_result is False, assertion results will be hidden.
+    This is a per test setting, but can be set for all tests by adding ``saltcheck_output_details: True``
+    in the minion configuration file.
+    Defaults to False
 **pillar-data:**
     (dict) Optional keyword for passing in pillar data. Intended for use in potential test
     setup or teardown with the ``saltcheck.state_apply`` function.
@@ -368,6 +374,7 @@ def run_state_tests(state, saltenv=None, check_all=False):
     Nested states will also be tested
 
     :param str state: the name of a user defined state
+    :param str saltenv: optional saltenv. Defaults to base
     :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
 
     CLI Example:
@@ -649,6 +656,8 @@ class SaltCheck(object):
                 assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
             assert_print_result = test_dict.get('print_result', True)
+            global_output_details = __salt__['config.get']('saltcheck_output_details', False)
+            output_details = test_dict.get('output_details', global_output_details)
             actual_return = self._call_salt_command(mod_and_func,
                                                     args,
                                                     kwargs,
@@ -658,28 +667,40 @@ class SaltCheck(object):
                                  "assertTrue", "assertFalse"]:
                 expected_return = self._cast_expected_to_returned_type(expected_return, actual_return)
             if assertion == "assertEqual":
+                assertion_desc = "=="
                 value = self.__assert_equal(expected_return, actual_return, assert_print_result)
             elif assertion == "assertNotEqual":
+                assertion_desc = "!="
                 value = self.__assert_not_equal(expected_return, actual_return, assert_print_result)
             elif assertion == "assertTrue":
+                assertion_desc = "True is"
                 value = self.__assert_true(actual_return)
             elif assertion == "assertFalse":
+                assertion_desc = "False is"
                 value = self.__assert_false(actual_return)
             elif assertion == "assertIn":
+                assertion_desc = "IN"
                 value = self.__assert_in(expected_return, actual_return, assert_print_result)
             elif assertion == "assertNotIn":
+                assertion_desc = "NOT IN"
                 value = self.__assert_not_in(expected_return, actual_return, assert_print_result)
             elif assertion == "assertGreater":
+                assertion_desc = ">"
                 value = self.__assert_greater(expected_return, actual_return)
             elif assertion == "assertGreaterEqual":
+                assertion_desc = ">="
                 value = self.__assert_greater_equal(expected_return, actual_return)
             elif assertion == "assertLess":
+                assertion_desc = "<"
                 value = self.__assert_less(expected_return, actual_return)
             elif assertion == "assertLessEqual":
+                assertion_desc = "<="
                 value = self.__assert_less_equal(expected_return, actual_return)
             elif assertion == "assertEmpty":
+                assertion_desc = "IS EMPTY"
                 value = self.__assert_empty(actual_return)
             elif assertion == "assertNotEmpty":
+                assertion_desc = "IS NOT EMPTY"
                 value = self.__assert_not_empty(actual_return)
             else:
                 value = "Fail - bad assertion"
@@ -688,6 +709,27 @@ class SaltCheck(object):
         end = time.time()
         result = {}
         result['status'] = value
+
+        if output_details:
+            if assertion_section:
+                assertion_section_repr_title = '.{0}'.format('assertion_section')
+                assertion_section_repr_value = '.{0}'.format(assertion_section)
+            else:
+                assertion_section_repr_title = ''
+                assertion_section_repr_value = ''
+            result['module.function [args]{0}'.format(
+                assertion_section_repr_title
+            )] = '{0} {1}{2}'.format(
+                mod_and_func,
+                dumps(args),
+                assertion_section_repr_value,
+            )
+            result['saltcheck assertion'] = '{0}{1} {2}'.format(
+                ('' if expected_return is None else '{0} '.format(expected_return)),
+                assertion_desc,
+                ('hidden' if not assert_print_result else actual_return)
+            )
+
         result['duration'] = round(end - start, 4)
         return result
 
@@ -910,6 +952,9 @@ class StateTestLoader(object):
             self.test_dict[key] = value
         return
 
+    def copy_state_files(self, sls_name):
+
+
     def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
         Detects states used, caches needed files, and adds to test list
@@ -920,7 +965,7 @@ class StateTestLoader(object):
             log.debug('Running on salt-ssh minion. Reading file %s', sls_name)
             cp_output_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, 'cp_output.txt')
             with salt.utils.files.fopen(cp_output_file, 'r') as fp:
-                all_states = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read()))
+                all_states = loads(salt.utils.stringutils.to_unicode(fp.read()))
         else:
             all_states = __salt__['cp.list_states']()
 
@@ -932,21 +977,21 @@ class StateTestLoader(object):
             state_copy_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_name + '.copy')
             try:
                 with salt.utils.files.fopen(state_copy_file, 'r') as fp:
-                    cached_copied_files.extend(salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read())))
+                    cached_copied_files.extend(loads(salt.utils.stringutils.to_unicode(fp.read())))
             except IOError:
                 # likely attempting to find state.nested.copy when file was sent as just state.copy
                 sls_name_list = sls_name.split('.')
                 sls_root_name = '.'.join(sls_name_list[:-1])
                 state_copy_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_root_name + '.copy')
                 with salt.utils.files.fopen(state_copy_file, 'r') as fp:
-                    cached_copied_files.extend(salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read())))
+                    cached_copied_files.extend(loads(salt.utils.stringutils.to_unicode(fp.read())))
 
         if sls_name in all_states:
             if salt_ssh:
                 log.debug('Running on salt-ssh minion. Reading file %s', sls_name + '.low')
                 state_low_file = os.path.join(__opts__['cachedir'], 'files', self.saltenv, sls_name + '.low')
                 with salt.utils.files.fopen(state_low_file, 'r') as fp:
-                    ret = salt.utils.json.loads(salt.utils.stringutils.to_unicode(fp.read()))
+                    ret = loads(salt.utils.stringutils.to_unicode(fp.read()))
             else:
                 ret = __salt__['state.show_low_sls'](sls_name, test=True)
         else:
@@ -977,6 +1022,8 @@ class StateTestLoader(object):
                 state_name = low_data['__sls__']
                 if state_name in self.found_states:
                     copy_states = False
+                else:
+                    self.found_states.append(state_name)
 
                 # process /patch/to/formula/saltcheck_test_location
                 sls_path = 'salt://{0}/{1}'.format(state_name.replace('.', '/'), self.saltcheck_test_location)
@@ -987,7 +1034,6 @@ class StateTestLoader(object):
                                                               include_pat='*.tst')
 
                 if this_cache_ret:
-                    self.found_states.append(state_name)
                     cached_copied_files.extend(this_cache_ret)
                 else:
                     # process /path/to/saltcheck_test_location
@@ -996,6 +1042,8 @@ class StateTestLoader(object):
                     state_name = '.'.join(sls_split)
                     if state_name in self.found_states:
                         copy_states = False
+                    else:
+                        self.found_states.append(state_name)
                     sls_path = 'salt://{0}/{1}'.format('/'.join(sls_split), self.saltcheck_test_location)
                     if copy_states:
                         log.debug('looking in %s to cache tests', sls_path)
@@ -1003,13 +1051,14 @@ class StateTestLoader(object):
                                                                   saltenv=self.saltenv,
                                                                   include_pat='*.tst')
                     if this_cache_ret:
-                        self.found_states.append(state_name)
                         cached_copied_files.extend(this_cache_ret)
                     else:
                         # process /path/saltcheck_test_location
                         state_name = low_data['__sls__'].split('.')[0]
                         if state_name in self.found_states:
                             copy_states = False
+                        else:
+                            self.found_states.append(state_name)
                         sls_path = 'salt://{0}/{1}'.format(state_name, self.saltcheck_test_location)
                         if copy_states:
                             log.debug('looking in %s to cache tests', sls_path)
@@ -1017,21 +1066,18 @@ class StateTestLoader(object):
                                                                     saltenv=self.saltenv,
                                                                     include_pat='*.tst')
                         if this_cache_ret:
-                            self.found_states.append(state_name)
                             cached_copied_files.extend(this_cache_ret)
 
                 if this_cache_ret:
                     if check_all:
                         # check_all, load all tests cached
                         self.test_files.update(this_cache_ret)
-                        break
 
                 if salt_ssh:
                     if check_all:
                         # load all tests for this state on ssh minion
                         tst_files = [file_string for file_string in cached_copied_files if file_string.endswith('.tst')]
                         self.test_files.update(tst_files)
-                        break
 
                 split_sls = low_data['__sls__'].split('.')
                 sls_path_names = [
