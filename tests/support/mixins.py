@@ -103,7 +103,6 @@ class AdaptedConfigurationTestCaseMixin(object):
                     os.path.join(rdict['pki_dir'], 'minions_rejected'),
                     os.path.join(rdict['pki_dir'], 'minions_denied'),
                     os.path.join(rdict['cachedir'], 'jobs'),
-                    os.path.join(rdict['cachedir'], 'raet'),
                     os.path.join(rdict['cachedir'], 'tokens'),
                     os.path.join(rdict['root_dir'], 'cache', 'tokens'),
                     os.path.join(rdict['pki_dir'], 'accepted'),
@@ -754,7 +753,7 @@ class SaltMinionEventAssertsMixin(object):
     def __new__(cls, *args, **kwargs):
         # We have to cross-call to re-gen a config
         cls.q = multiprocessing.Queue()
-        cls.fetch_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
             target=_fetch_events, args=(cls.q,)
         )
         cls.fetch_proc.start()

@@ -4,6 +4,25 @@ Salt 2019.2.1 Release Notes
 
 Version 2019.2.1 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 
+Known Issues
+============
+
+* **ISSUE** `#54751`_: Proxy minion fails to start. Fix planned in 2019.2.2 release.
+
+* **ISSUE** `#54762`_: URIs with IPv6 addresses are broken, preventing master-minion communication in IPv6-only environments. Fix planned in 2019.2.2 release.
+
+* **ISSUE** `#54776`_: Minion fails to start when it contains `ping_interval` in minion configuration file. Fix planned in 2019.2.2 release.
+
+* **ISSUE** `#54731`_: Returners (except for default salt master returner) not loading properly in Py3. Fix planned in 2019.2.2 release.
+
+* **ISSUE** `#54758`_: salt-call state.show_states gives  "Passed invalid arguments" error when a sls defined in top.sls file is missing. Fix planned in 2019.2.2 release.
+
+* **ISSUE** `#54765`_: Jinja from import is broken. Fix planned in 2019.2.2 release.
+
+* **ISSUE** `#54771`_: Affects only Debian 10. pkgrepo.managed does not work if used with proxy (configured at salt-minion). No fix date available yet.
+
+* **ISSUE** `#54759`_: Deprecation warnings for pyzmq. No fix date available yet.
+
 Change to YAML Renderer
 =======================
 
@@ -6779,6 +6798,14 @@ Changelog for v2019.2.0..v2019.2.1
 .. _`#54429`: https://github.com/saltstack/salt/issues/54429
 .. _`#54433`: https://github.com/saltstack/salt/pull/54433
 .. _`#54434`: https://github.com/saltstack/salt/pull/54434
+.. _`#54751`: https://github.com/saltstack/salt/issues/54751
+.. _`#54762`: https://github.com/saltstack/salt/issues/54762
+.. _`#54776`: https://github.com/saltstack/salt/issues/54776
+.. _`#54731`: https://github.com/saltstack/salt/pull/54731
+.. _`#54758`: https://github.com/saltstack/salt/issues/54758
+.. _`#54765`: https://github.com/saltstack/salt/issues/54765
+.. _`#54771`: https://github.com/saltstack/salt/issues/54771
+.. _`#54759`: https://github.com/saltstack/salt/issues/54759
 .. _`#5`: https://github.com/saltstack/salt/issues/5
 .. _`#6`: https://github.com/saltstack/salt/issues/6
 .. _`#7745`: https://github.com/saltstack/salt/issues/7745
