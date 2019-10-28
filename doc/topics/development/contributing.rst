@@ -78,12 +78,12 @@ Fork a Repo Guide_>`_ and is well worth reading.
         git fetch upstream
         git checkout -b fix-broken-thing upstream/2016.11
 
-    If you're working on a feature, create your branch from the develop branch.
+    If you're working on a feature, create your branch from the |repo_primary_branch| branch.
 
     .. code-block:: bash
 
         git fetch upstream
-        git checkout -b add-cool-feature upstream/develop
+        git checkout -b add-cool-feature upstream/|repo_primary_branch|
 
 #.  Edit and commit changes to your branch.
 
@@ -149,7 +149,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
         .. code-block:: bash
 
             git fetch upstream
-            git rebase upstream/develop add-cool-feature
+            git rebase upstream/|repo_primary_branch| add-cool-feature
             git push -u origin add-cool-feature
 
         If you do rebase, and the push is rejected with a
@@ -185,9 +185,9 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
         https://github.com/my-account/salt/compare/saltstack:2016.11...fix-broken-thing
 
-        If your branch is a feature, choose ``develop`` as the base branch,
+        If your branch is a feature, choose ``|repo_primary_branch|`` as the base branch,
 
-        https://github.com/my-account/salt/compare/saltstack:develop...add-cool-feature
+        https://github.com/my-account/salt/compare/saltstack:|repo_primary_branch|...add-cool-feature
 
     #.  Review that the proposed changes are what you expect.
     #.  Write a descriptive comment.  Include links to related issues (e.g.
@@ -219,10 +219,10 @@ Fork a Repo Guide_>`_ and is well worth reading.
 Salt's Branch Topology
 ----------------------
 
-There are three different kinds of branches in use: develop, main release
+There are three different kinds of branches in use: |repo_primary_branch|, main release
 branches, and dot release branches.
 
-- All feature work should go into the ``develop`` branch.
+- All feature work should go into the ``|repo_primary_branch|`` branch.
 - Bug fixes and documentation changes should go into the oldest **supported
   main** release branch affected by the the bug or documentation change (you
   can use the blame button in github to figure out when the bug was introduced).
@@ -236,22 +236,22 @@ branches, and dot release branches.
 
 .. note::
 
-    GitHub will open pull requests against Salt's main branch, ``develop``,
+    GitHub will open pull requests against Salt's main branch, ``|repo_primary_branch|``,
     by default. Be sure to check which branch is selected when creating the
     pull request.
 
-The Develop Branch
-==================
+The |repo_primary_branch| Branch
+================================
 
-The ``develop`` branch is unstable and bleeding-edge. Pull requests containing
-feature additions or non-bug-fix changes should be made against the ``develop``
+The ``|repo_primary_branch|`` branch is unstable and bleeding-edge. Pull requests containing
+feature additions or non-bug-fix changes should be made against the ``|repo_primary_branch|``
 branch.
 
 .. note::
 
     If you have a bug fix or documentation change and have already forked your
-    working branch from ``develop`` and do not know how to rebase your commits
-    against another branch, then submit it to ``develop`` anyway. SaltStack's
+    working branch from ``|repo_primary_branch|`` and do not know how to rebase your commits
+    against another branch, then submit it to ``|repo_primary_branch|`` anyway. SaltStack's
     development team will be happy to back-port it to the correct branch.
 
     **Please make sure you let the maintainers know that the pull request needs
@@ -298,7 +298,7 @@ automatically be "merged-forward" into the newer branches.
 
 For example, a pull request is merged into ``2017.7``. Then, the entire
 ``2017.7`` branch is merged-forward into the ``2018.3`` branch, and the
-``2018.3`` branch is merged-forward into the ``develop`` branch.
+``2018.3`` branch is merged-forward into the ``|repo_primary_branch|`` branch.
 
 This process makes is easy for contributors to make only one pull-request
 against an older branch, but allows the change to propagate to all **main**
@@ -338,7 +338,7 @@ message text directly. Only including the text in a pull request will not
 close the issue.
 
 GitHub will close the referenced issue once the *commit* containing the
-magic text is merged into the default branch (``develop``). Any magic text
+magic text is merged into the default branch (``|repo_primary_branch|``). Any magic text
 input only into the pull request description will not be seen at the
 Git-level when those commits are merged-forward. In other words, only the
 commits are merged-forward and not the pull request text.
@@ -348,7 +348,7 @@ commits are merged-forward and not the pull request text.
 Backporting Pull Requests
 =========================
 
-If a bug is fixed on ``develop`` and the bug is also present on a
+If a bug is fixed on ``|repo_primary_branch|`` and the bug is also present on a
 currently-supported release branch, it will need to be back-ported to an
 applicable branch.
 
@@ -363,11 +363,11 @@ applicable branch.
     changes themselves.
 
 It is often easiest to fix a bug on the oldest supported release branch and
-then merge that branch forward into ``develop`` (as described earlier in this
+then merge that branch forward into ``|repo_primary_branch|`` (as described earlier in this
 document). When that is not possible the fix must be back-ported, or copied,
 into any other affected branches.
 
-These steps assume a pull request ``#1234`` has been merged into ``develop``.
+These steps assume a pull request ``#1234`` has been merged into ``|repo_primary_branch|``.
 And ``upstream`` is the name of the remote pointing to the main Salt repo.
 
 #.  Identify the oldest supported release branch that is affected by the bug.
@@ -450,20 +450,20 @@ the name of the main `saltstack/salt`_ repository.
 
         git fetch upstream
 
-#.  Update your copy of the ``develop`` branch.
+#.  Update your copy of the ``|repo_primary_branch|`` branch.
 
     .. code-block:: bash
 
-        git checkout develop
-        git merge --ff-only upstream/develop
+        git checkout |repo_primary_branch|
+        git merge --ff-only upstream/|repo_primary_branch|
 
     If Git complains that a fast-forward merge is not possible, you have local
     commits.
 
-    * Run ``git pull --rebase origin develop`` to rebase your changes on top of
+    * Run ``git pull --rebase origin |repo_primary_branch|`` to rebase your changes on top of
       the upstream changes.
     * Or, run ``git branch <branch-name>`` to create a new branch with your
-      commits. You will then need to reset your ``develop`` branch before
+      commits. You will then need to reset your ``|repo_primary_branch|`` branch before
       updating it with the changes from upstream.
 
     If Git complains that local files will be overwritten, you have changes to
@@ -474,7 +474,7 @@ the name of the main `saltstack/salt`_ repository.
 
     .. code-block:: bash
 
-        git push origin develop
+        git push origin |repo_primary_branch|
 
 #.  Repeat the previous two steps for any other branches you work with, such as
     the current release branch.
@@ -551,6 +551,6 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _GPG Probot: https://probot.github.io/apps/gpg/
 .. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
 .. _GPG Signature Verification feature announcement: https://github.com/blog/2144-gpg-signature-verification
-.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/develop/salt/cloud/deploy/bootstrap-salt.sh
+.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/|repo_primary_branch|/salt/cloud/deploy/bootstrap-salt.sh
 .. _salt-bootstrap repo: https://github.com/saltstack/salt-bootstrap
 .. _Contributing Guidelines: https://github.com/saltstack/salt-bootstrap/blob/develop/CONTRIBUTING.md

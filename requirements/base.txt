@@ -2,7 +2,7 @@ Jinja2
 # This should be changed to msgpack-python for Packages
 # msgpack-python>0.3,!=0.5.5
 msgpack>=0.5,!=0.5.5
-PyYAML<5.1
+PyYAML
 MarkupSafe
 requests>=1.0.0
 tornado>=4.2.1,<6.0; python_version < '3'
