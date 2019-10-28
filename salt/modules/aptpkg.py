@@ -164,7 +164,7 @@ def _call_apt(args, scope=True, **kwargs):
     '''
     cmd = []
     if scope and salt.utils.systemd.has_scope(__context__) and __salt__['config.get']('systemd.scope', True):
-        cmd.extend(['systemd-run', '--scope', '--description "{0}"'.format(__name__)])
+        cmd.extend(['systemd-run', '--scope', '--description', '"{0}"'.format(__name__)])
     cmd.extend(args)
 
     params = {'output_loglevel': 'trace',
