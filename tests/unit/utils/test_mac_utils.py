@@ -32,6 +32,7 @@ from salt.ext import six
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@skipIf(not salt.utils.platform.is_darwin(), 'These tests run only on mac')
 class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     test mac_utils salt utility
