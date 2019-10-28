@@ -75,3 +75,63 @@ class BatchTest(ShellCase):
             timeout=self.run_timeout,
         )
         self.assertEqual(cmd[-1], 2)
+
+# Test for failhard + batch. The best possible solution here was to do something like that:
+# assertRaises(StopIteration)
+# But it's impossible due to nature of the tests execution via fork()
+
+    def test_batch_module_stopping_after_error(self):
+        '''
+        Test that a failed command stops the batch run
+        '''
+
+        minions_list = []
+        retcode = None
+
+        # Executing salt with batch: 1 and with failhard. It should stop after the first error.
+        cmd = self.run_salt(
+            '"*minion" test.retcode 42 -b 1 --out=yaml --failhard',
+            timeout=self.run_timeout,
+        )
+
+        # Parsing the output. Idea is to fetch number on minions and retcode of the execution.
+        # retcode var could be overwritten in case of broken failhard but number of minions check should still fail.
+        for line in cmd:
+            if line.startswith('Executing run on'):
+                minions_list.append(line)
+            if line.startswith('retcode'):
+                retcode = line[-1]
+        # We expect to have only one minion to be run
+        self.assertEqual(1, len(minions_list))
+        # We expect to find a retcode in the output
+        self.assertIsNot(None, retcode)
+        # We expect retcode to be non-zero
+        self.assertNotEqual(0, retcode)
+
+    def test_batch_state_stopping_after_error(self):
+        '''
+        Test that a failed state stops the batch run
+        '''
+
+        minions_list = []
+        retcode = None
+
+        # Executing salt with batch: 1 and with failhard. It should stop after the first error.
+        cmd = self.run_salt(
+            '"*minion" state.single test.fail_without_changes name=test_me -b 1 --out=yaml --failhard',
+            timeout=self.run_timeout,
+        )
+
+        # Parsing the output. Idea is to fetch number on minions and retcode of the execution.
+        # retcode var could be overwritten in case of broken failhard but number of minions check should still fail.
+        for line in cmd:
+            if line.startswith('Executing run on'):
+                minions_list.append(line)
+            if line.startswith('retcode'):
+                retcode = line[-1]
+        # We expect to have only one minion to be run
+        self.assertEqual(1, len(minions_list))
+        # We expect to find a retcode in the output
+        self.assertIsNot(None, retcode)
+        # We expect retcode to be non-zero
+        self.assertNotEqual(0, retcode)
