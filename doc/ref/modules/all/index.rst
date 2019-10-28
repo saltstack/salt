@@ -362,7 +362,6 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris
@@ -505,6 +504,7 @@ execution modules
     win_timezone
     win_useradd
     win_wua
+    win_wusa
     x509
     xapi_virt
     xbpspkg

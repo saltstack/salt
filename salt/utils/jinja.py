@@ -56,16 +56,18 @@ class SaltCacheLoader(BaseLoader):
     and only loaded once per loader instance.
     '''
 
+    _cached_pillar_client = None
     _cached_client = None
 
     @classmethod
     def shutdown(cls):
-        if cls._cached_client is None:
-            return
-        # PillarClient and LocalClient objects do not have a destroy method
-        if hasattr(cls._cached_client, 'destroy'):
-            cls._cached_client.destroy()
-        cls._cached_client = None
+        for attr in ('_cached_client', '_cached_pillar_client'):
+            client = getattr(cls, attr, None)
+            if client is not None:
+                # PillarClient and LocalClient objects do not have a destroy method
+                if hasattr(client, 'destroy'):
+                    client.destroy()
+                setattr(cls, attr, None)
 
     def __init__(self, opts, saltenv='base', encoding='utf-8',
                  pillar_rend=False, _file_client=None):
@@ -94,10 +96,12 @@ class SaltCacheLoader(BaseLoader):
         # and use that. This avoids opening a new file_client every time this
         # class is instantiated
         if self._file_client is None:
-            if not SaltCacheLoader._cached_client:
-                SaltCacheLoader._cached_client = salt.fileclient.get_file_client(
-                    self.opts, self.pillar_rend)
-            self._file_client = SaltCacheLoader._cached_client
+            attr = '_cached_pillar_client' if self.pillar_rend else '_cached_client'
+            cached_client = getattr(self, attr, None)
+            if cached_client is None:
+                cached_client = salt.fileclient.get_file_client(self.opts, self.pillar_rend)
+                setattr(SaltCacheLoader, attr, cached_client)
+            self._file_client = cached_client
         return self._file_client
 
     def cache_file(self, template):
