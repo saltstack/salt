@@ -73,7 +73,7 @@ def _init_connection():
     tpp_password = __opts__.get('venafi', {}).get('tpp_password', '')
     trust_bundle = __opts__.get('venafi', {}).get('trust_bundle', '')
     log.info("Finished config processing")
-    return vcert.Connection(fake=true)
+    return vcert.Connection(fake=True)
     # if trust_bundle:
     #     log.info("Will use trust bundle from file %s", trust_bundle)
     #     return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password,
