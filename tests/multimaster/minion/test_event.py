@@ -65,7 +65,8 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
             # Since minion could be not responsive now use `salt-call --local` for this.
             res = self.run_call(
                     "iptables.delete filter INPUT rule='{0}'".format(disconnect_master_rule),
-                    local=True)
+                    local=True,
+                    timeout=30)
             self.assertEqual(res, ['local:'])
             # Ensure the master is back.
             res = self.run_function(
