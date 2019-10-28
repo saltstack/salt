@@ -76,7 +76,7 @@ def _read_presence(presence_file):
             with salt.utils.files.fopen(presence_file, 'rb') as f:
                 minions = msgpack.load(f)
 
-                # ensure all keys are strs
+                # ensure all keys are unicode, not bytes.
                 _minions = {}
                 for minion in minions:
                     _minion = salt.utils.stringutils.to_unicode(minion)

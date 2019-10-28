@@ -46,7 +46,24 @@ class EngineStalekeyTestCase(TestCase, LoaderModuleMockMixin):
 
         return {stalekey: {'__opts__': self.opts}}
 
-    def test_delete_keys_single_stale_key(self):
+    def test_start(self):
+        '''
+        Test to ensure start works
+        '''
+        presence_file = {'foo': '', 'bar': ''}
+        connected_ids = {'foo': '', 'bar': '', 'baz': ''}
+        stale_key = ['foo']
+
+        with patch('salt.engines.stalekey._running', side_effect=[True, False]):
+            with patch('salt.engines.stalekey._read_presence', return_value=presence_file):
+                with patch('salt.utils.minions.CkMinions.connected_ids', return_value=connected_ids):
+                    with patch('salt.engines.stalekey._delete_keys', return_value=connected_ids):
+                        with patch('salt.engines.stalekey._write_presence', return_value=False):
+                            with patch('time.sleep', return_value=None):
+                                ret = stalekey.start()
+        self.assertTrue(True)
+
+    def test_delete_keysTrue(self):
         '''
         Test to ensure single stale key is deleted
         '''
@@ -56,7 +73,7 @@ class EngineStalekeyTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.key.get_key', return_value=MockKey(self.opts)):
             ret = stalekey._delete_keys(stale_key, _minions)
         expected = {'bar': '', 'baz': ''}
-        self.assertTrue(ret, expected)
+        self.assertEqual(ret, expected)
 
     def test_delete_keys_multiple_stale_keys(self):
         '''
@@ -68,7 +85,7 @@ class EngineStalekeyTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.key.get_key', return_value=MockKey(self.opts)):
             ret = stalekey._delete_keys(stale_keys, _minions)
         expected = {'baz': ''}
-        self.assertTrue(ret, expected)
+        self.assertEqual(ret, expected)
 
     def test_read_presence(self):
         '''
@@ -93,4 +110,3 @@ class EngineStalekeyTestCase(TestCase, LoaderModuleMockMixin):
             ret = stalekey._write_presence('presence.p', minions)
         expected = False
         self.assertEqual(ret, expected)
-
