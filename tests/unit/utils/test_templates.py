@@ -109,7 +109,7 @@ class RenderTestCase(TestCase):
         ctx = dict(context)
         ctx['var'] = 'OK'
         res = salt.utils.templates.render_wempy_tmpl(tmpl, ctx)
-        self.assertEqual(res, '<RU>OK</RU>')
+        self.assertEqual(res, 'OK')
 
     ### Tests for genshi template (xml-based)
     def test_render_genshi_sanity(self):
