@@ -42,6 +42,19 @@ def module_exists(name):
     '''
     return name in get_modules()
 
+def format_path_variables(paths):
+    import re
+    formatted = []
+    regex = r'%(.+?)%'
+    for path in paths:
+        matches = re.findall(regex, path)
+        for match in matches:
+            target = '%{0}%'.format(match)
+            envvar = os.environ.get(match)
+            path = path.replace(target, envvar)
+        formatted.append(path)
+
+    return formatted
 
 def get_modules():
     '''
@@ -88,6 +101,7 @@ def get_modules():
 
     # Check if defaults exist, add them if they do
     ps_module_path = ps_module_path.split(';')
+    ps_module_path = format_path_variables(ps_module_path)
     for item in ps_module_path:
         if os.path.exists(item):
             root_paths.append(item)
