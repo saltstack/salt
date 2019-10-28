@@ -220,6 +220,12 @@ def _get_distro_pip_constraints(session, transport):
                                            'windows.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           'windows-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
     elif IS_DARWIN:
         _distro_constraints = os.path.join('requirements',
                                            'static',
@@ -260,7 +266,20 @@ def _get_distro_pip_constraints(session, transport):
             _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
+                                               '{}-crypto.txt'.format(distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join('requirements',
+                                               'static',
+                                               pydir,
                                                '{}-{}.txt'.format(transport, distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join('requirements',
+                                               'static',
+                                               pydir,
+                                               '{}-{}-crypto.txt'.format(transport, distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
     return distro_constraints
@@ -277,11 +296,11 @@ def _install_requirements(session, transport, *extra_requirements):
 
     if transport == 'raet':
         _requirements_files.append(
-            os.path.join(REPO_ROOT, 'requirements', 'raet.txt'),
+            os.path.join('requirements', 'raet.txt'),
         )
     else:
         _requirements_files.append(
-            os.path.join(REPO_ROOT, 'requirements', 'zeromq.txt'),
+            os.path.join('requirements', 'zeromq.txt'),
         )
 
     if sys.platform.startswith('linux'):
