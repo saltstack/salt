@@ -367,23 +367,17 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
                     aptpkg.upgrade()
-                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args.args if "--download-only" in args]
-                    print("=============================================================")
-                    [print(args) for args in patch_kwargs['__salt__']['cmd.run_all'].call_args.args]
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
                     # Here we shouldn't see the parameter and args_matching should be empty.
                     self.assertFalse(any(args_matching))
 
                     aptpkg.upgrade(downloadonly=True)
-                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args.args if "--download-only" in args]
-                    print("=============================================================")
-                    [print(args) for args in patch_kwargs['__salt__']['cmd.run_all'].call_args.args]
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
                     # --download-only should be in the args list and we should have at least on True in the list.
                     self.assertTrue(any(args_matching))
 
                     aptpkg.upgrade(download_only=True)
-                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args.args if "--download-only" in args]
-                    print("=============================================================")
-                    [print(args) for args in patch_kwargs['__salt__']['cmd.run_all'].call_args.args]
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
                     # --download-only should be in the args list and we should have at least on True in the list.
                     self.assertTrue(any(args_matching))
 
