@@ -15,7 +15,7 @@ def golden_images_branch = '2019.2'
 def nox_passthrough_opts = '--unit'
 
 properties([
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
     parameters([
         booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])

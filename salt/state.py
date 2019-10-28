@@ -1794,7 +1794,7 @@ class State(object):
         if not name:
             name = low.get('name', low.get('__id__'))
 
-        proc = salt.utils.process.MultiprocessingProcess(
+        proc = salt.utils.process.Process(
                 target=self._call_parallel_target,
                 args=(name, cdata, low))
         proc.start()
