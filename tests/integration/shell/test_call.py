@@ -65,7 +65,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
 
     def test_local_sls_call(self):
         fileroot = os.path.join(FILES, 'file', 'base')
-        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
+        out = self.run_call('--file-root {0} state.sls saltcalllocal'.format(fileroot), local=True)
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
         self.assertIn('hello', ''.join(out))
@@ -78,8 +78,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         function twice, see https://github.com/saltstack/salt/pull/49552
         '''
         def _run_call(cmd):
-            cmd = '--out=json --local ' + cmd
-            return salt.utils.json.loads(''.join(self.run_call(cmd)))['local']
+            cmd = '--out=json ' + cmd
+            return salt.utils.json.loads(''.join(self.run_call(cmd, local=True)))['local']
 
         ret = _run_call('state.single file.append name={0} text="foo"'.format(name))
         ret = ret[next(iter(ret))]
@@ -92,8 +92,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             contents = fp_.read()
         assert contents.count('foo') == 1, contents
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @flaky
+    @skipIf(salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(), 'This test requires a supported master')
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
         assert 'salt \'*\' user.delete name remove=True force=True' in ''.join(ret)
@@ -322,7 +321,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         Teardown method to remove installed packages
         '''
         user = ''
-        user_info = self.run_call('--local grains.get username')
+        user_info = self.run_call(' grains.get username', local=True)
         if user_info and isinstance(user_info, (list, tuple)) and isinstance(user_info[-1], six.string_types):
             user = user_info[-1].strip()
         super(CallTest, self).tearDown()
