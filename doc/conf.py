@@ -253,7 +253,7 @@ intersphinx_mapping = {
 on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 project = 'Salt'
-
+repo_primary_branch = 'master'  # This is the default branch on GitHub for the Salt project
 version = salt.version.__version__
 latest_release = '2019.2.2'  # latest release
 previous_release = '2018.3.4'  # latest release from previous branch
@@ -306,6 +306,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'httpdomain',
     'youtube',
+    'saltrepo'
     #'saltautodoc', # Must be AFTER autodoc
     #'shorturls',
 ]
@@ -436,6 +437,7 @@ html_context = {
     'build_type': build_type,
     'today': today,
     'copyright': copyright,
+    'repo_primary_branch': repo_primary_branch
 }
 
 html_use_index = True

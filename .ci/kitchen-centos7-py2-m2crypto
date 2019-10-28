@@ -1,18 +1,18 @@
 @Library('salt@1.1') _
 
 // Define the maximum time, in hours, that a test run should run for
-def testrun_timeout = 8
+def testrun_timeout = 6
 // Now define a global pipeline timeout. This is the test run timeout with one(1) additional
 // hour to allow for artifacts to be downloaded, if possible.
 def global_timeout = testrun_timeout + 1;
 
-def distro_name = 'windows'
-def distro_version = '2016'
-def python_version = 'py3'
-def test_transport = 'ZeroMQ'
+def distro_name = 'centos'
+def distro_version = '7'
+def python_version = 'py2'
+def test_transport = 'ZeroMQ-M2Crypto'
 def salt_target_branch = 'master'
 def golden_images_branch = '2019.2'
-def nox_passthrough_opts = '--unit'
+def nox_passthrough_opts = '--ssh-tests'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
@@ -65,7 +65,8 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
             retry(3) {
                 sh '''
                 t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
-                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                cp -f ~/workspace/spot.yml .kitchen.local.yml
+                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM || (bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; rm .kitchen.local.yml; bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM); echo "ExitCode: $?";
                 '''
                 sh """
                 if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
@@ -83,7 +84,7 @@ wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
         }
 
         try {
-            timeout(time: testrun_timeout, unit: 'HOURS') {
+            timeout(time: testrun_timeout * 60 - 15, unit: 'MINUTES') {
                 stage('Converge VM') {
                     sh '''
                     ssh-agent /bin/bash -c 'ssh-add ~/.ssh/kitchen.pem; bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?"'
