@@ -539,7 +539,7 @@ class AptUtilsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(aptpkg.__salt__, {'cmd.run_all': MagicMock(), 'config.get': MagicMock(return_value=True)}):
             aptpkg._call_apt(['apt-get', 'purge', 'vim'])  # pylint: disable=W0106
             aptpkg.__salt__['cmd.run_all'].assert_called_once_with(
-                ['systemd-run', '--scope', '--description "salt.modules.aptpkg"', 'apt-get', 'purge', 'vim'], env={},
+                ['systemd-run', '--scope', '--description', '"salt.modules.aptpkg"', 'apt-get', 'purge', 'vim'], env={},
                 output_loglevel='trace', python_shell=False)
 
     def test_call_apt_with_kwargs(self):
