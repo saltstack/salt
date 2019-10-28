@@ -34,6 +34,7 @@ PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or o
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
+IS_DARWIN = sys.platform.lower().startswith('darwin')
 IS_WINDOWS = sys.platform.lower().startswith('win')
 
 # Python versions to run against
@@ -200,6 +201,35 @@ def _get_distro_pip_constraints(session, transport):
                                            'windows.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'windows-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+    elif IS_DARWIN:
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           '{}-darwin.txt'.format(transport))
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
     else:
         _install_system_packages(session)
         distro = _get_distro_info(session)
@@ -221,7 +251,22 @@ def _get_distro_pip_constraints(session, transport):
                                                'requirements',
                                                'static',
                                                pydir,
+                                               '{}-crypto.txt'.format(distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join(REPO_ROOT,
+                                               'requirements',
+                                               'static',
+                                               pydir,
                                                '{}-{}.txt'.format(transport, distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join(REPO_ROOT,
+                                               'requirements',
+                                               'static',
+                                               pydir,
+                                               '{}-{}-crypto.txt'.format(transport, distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
     return distro_constraints
