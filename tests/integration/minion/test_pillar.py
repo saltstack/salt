@@ -17,7 +17,8 @@ import subprocess
 from tests.support.case import ModuleCase
 from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import skipIf
-from tests.support.helpers import requires_system_grains
+from tests.support.helpers import requires_system_grains, dedent
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.files
@@ -490,3 +491,169 @@ class DecryptGPGPillarTest(ModuleCase):
                          expected['secrets']['vault']['baz'])
         self.assertEqual(ret['secrets']['vault']['qux'],
                          expected['secrets']['vault']['qux'])
+
+
+class RefreshPillarTest(ModuleCase):
+    '''
+    These tests validate the behavior defined in the documentation:
+
+    https://docs.saltstack.com/en/latest/topics/pillar/#in-memory-pillar-data-vs-on-demand-pillar-data
+
+    These tests also serve as a regression test for:
+
+    https://github.com/saltstack/salt/issues/54941
+    '''
+
+    def cleanup_pillars(self, top_path, pillar_path):
+        os.remove(top_path)
+        os.remove(pillar_path)
+        self.run_function('saltutil.refresh_pillar', arg=(True,))
+
+    def create_pillar(self, key):
+        '''
+        Utility method to create a pillar for the minion and a value of true,
+        this method also removes and cleans up the pillar at the end of the
+        test.
+        '''
+        top_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
+        pillar_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'test_pillar.sls')
+        with salt.utils.files.fopen(top_path, 'w') as fd:
+            fd.write(dedent('''
+            base:
+              'minion':
+                - test_pillar
+            '''))
+        with salt.utils.files.fopen(pillar_path, 'w') as fd:
+            fd.write(dedent('''
+            {}: true
+            '''.format(key)))
+        self.addCleanup(self.cleanup_pillars, top_path, pillar_path)
+
+    def test_pillar_refresh_pillar_raw(self):
+        '''
+        Validate the minion's pillar.raw call behavior for new pillars
+        '''
+        key = 'issue-54941-raw'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.raw', arg=(key,))
+        assert val == {}
+
+        self.create_pillar(key)
+
+        # The pillar exists now but raw reads it from in-memory pillars
+        val = self.run_function('pillar.raw', arg=(key,))
+        assert val == {}
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.raw', arg=(key,))
+        assert val is True, repr(val)
+
+    def test_pillar_refresh_pillar_get(self):
+        '''
+        Validate the minion's pillar.get call behavior for new pillars
+        '''
+        key = 'issue-54941-get'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.get', arg=(key,))
+        assert val == ''
+        top_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls')
+        pillar_path = os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'test_pillar.sls')
+
+        self.create_pillar(key)
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.get', arg=(key,))
+        assert val == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.get', arg=(key,))
+        assert val is True, repr(val)
+
+    def test_pillar_refresh_pillar_item(self):
+        '''
+        Validate the minion's pillar.item call behavior for new pillars
+        '''
+        key = 'issue-54941-item'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        self.create_pillar(key)
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] is True
+
+    def test_pillar_refresh_pillar_items(self):
+        '''
+        Validate the minion's pillar.item call behavior for new pillars
+        '''
+        key = 'issue-54941-items'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.items')
+        assert key not in val
+
+        self.create_pillar(key)
+
+        # A pillar.items call sees the pillar right away because a
+        # refresh_pillar event is fired.
+        val = self.run_function('pillar.items')
+        assert key in val
+        assert val[key] is True
+
+    def test_pillar_refresh_pillar_ping(self):
+        '''
+        Validate the minion's test.ping does not update pillars
+
+        See: https://github.com/saltstack/salt/issues/54941
+        '''
+        key = 'issue-54941-ping'
+
+        # We do not expect to see the pillar beacuse it does not exist yet
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        self.create_pillar(key)
+
+        val = self.run_function('test.ping')
+        assert val is True
+
+        # The pillar exists now but get reads it from in-memory pillars, no
+        # refresh happens
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] == ''
+
+        # Calling refresh_pillar to update in-memory pillars
+        ret = self.run_function('saltutil.refresh_pillar', arg=(True,))
+        assert ret is True
+
+        # The pillar can now be read from in-memory pillars
+        val = self.run_function('pillar.item', arg=(key,))
+        assert key in val
+        assert val[key] is True
