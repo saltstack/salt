@@ -52,7 +52,8 @@
             SEARCH_CX:   '{{ search_cx }}',
             COLLAPSE_INDEX: false,
             FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
-            HAS_SOURCE:  '{{ has_source|lower }}'
+            HAS_SOURCE:  '{{ has_source|lower }}',
+            REPO_PRIMARY_BRANCH_TAB_NAME: '{{ repo_primary_branch | capitalize }}'
         };
     </script>
     {%- for scriptfile in script_files %}
@@ -184,9 +185,12 @@
                                 <ul class="nav navbar-nav">
                                     {%- block relbar_small %}{{ relbar() }}{% endblock %}
 
-                                    {% if not (build_type == "{{ repo_primary_branch }}" or build_type == "next") and on_saltstack %}
+                                    {% if not (build_type == repo_primary_branch or build_type == "next") and on_saltstack %}
                                     <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
                                     <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                    {% elif build_type == repo_primary_branch and on_saltstack %}
+                                    <li><a class="icon-dl" href="/en/pdf/Salt-{{ repo_primary_branch }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
+                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ repo_primary_branch }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                     {% endif %}
                                 </ul>
                             </nav>
@@ -285,12 +289,12 @@
 <!--                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 {% if on_saltstack %}
-
+                {#
                 {% if [True, False]|random %}
                 <a href="http://saltconf.com/register" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-saltconf.png', 1) }}"/></a>
                 {% else %}
                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
-                {% endif %}-->
+                {% endif %} #}-->
                 <a href="https://saltconf.com/menu-ad" target="_blank"><img class="nolightbox sidebar-banner center" src="https://get.saltstack.com/rs/304-PHQ-615/images/Salt-docs-menu-ad-250x63.jpg"/></a>
 
 
@@ -304,11 +308,11 @@
 
                 <div class="releaselinks versions {{ build_type }}">
 
-                <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
+                <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
                 <a  class="btn btn-secondary{% if build_type == "latest" %} active{% endif %}" id="latest"{% if build_type == "latest" %} title="View release notes"{% else %} title="Switch to docs for the latest stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/latest/">{{ latest_release }}{% if build_type == "latest" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
-                <a  class="btn btn-secondary{% if build_type == "{{ repo_primary_branch }}" %} active{% endif %}" id="{{ repo_primary_branch }}"{% if build_type == "{{ repo_primary_branch }}" %} title="View all release notes"{% endif %} title="Switch to docs built recently from the {{ repo_primary_branch }} branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch | capitalize }}{% if build_type == "{{ repo_primary_branch }}" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
+                <a  class="btn btn-secondary{% if build_type == repo_primary_branch %} active{% endif %}" id="{{ repo_primary_branch }}"{% if build_type == repo_primary_branch %} title="View all release notes"{% endif %} title="Switch to docs built recently from the {{ repo_primary_branch }} branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch | capitalize }}{% if build_type == repo_primary_branch %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
                 </div>
 
