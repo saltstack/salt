@@ -2,10 +2,12 @@
 '''
 Connection module for Amazon S3
 
+.. highlight:: yaml
+
 :configuration: This module accepts explicit s3 credentials but can also utilize
     IAM roles assigned to the instance through Instance Profiles. Dynamic
     credentials are then automatically obtained from AWS API and no further
-    configuration is necessary. More Information available at::
+    configuration is necessary. More Information available at:
 
        http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html
 
@@ -15,37 +17,40 @@ Connection module for Amazon S3
         s3.keyid: GKTADJGHEIQSXMKKRBJ08H
         s3.key: askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs
 
-    (Note: this is literally the pillar key 's3.keyid' or the config option 's3.keyid',
-    not "s3:\\n  keyid: blah".)
+    .. warning:: This is literally the pillar key ``s3.keyid`` or the config option ``s3.keyid``,
+        not::
 
-    A service_url may also be specified in the configuration::
+            s3:
+              keyid: blah
+
+    A ``service_url`` may also be specified in the configuration::
 
         s3.service_url: s3.amazonaws.com
 
-    A role_arn may also be specified in the configuration::
+    A ``role_arn`` may also be specified in the configuration::
 
         s3.role_arn: arn:aws:iam::111111111111:role/my-role-to-assume
 
-    If a service_url is not specified, the default is s3.amazonaws.com. This
+    If a ``service_url`` is not specified, the default is ``s3.amazonaws.com``. This
     may appear in various documentation as an "endpoint". A comprehensive list
-    for Amazon S3 may be found at::
+    for Amazon S3 may be found at:
 
         http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
 
-    The service_url will form the basis for the final endpoint that is used to
+    The ``service_url`` will form the basis for the final endpoint that is used to
     query the service.
 
-    Path style can be enabled:
+    Path style can be enabled::
 
         s3.path_style: True
 
-    This can be useful if you need to use salt with a proxy for an s3 compatible storage
+    This can be useful if you need to use Salt with a proxy for a S3 compatible storage.
 
-    You can use either https protocol or http protocol:
+    You can use either HTTPS protocol or HTTP protocol::
 
         s3.https_enable: True
 
-    SSL verification may also be turned off in the configuration:
+    SSL verification may also be turned off in the configuration::
 
         s3.verify_ssl: False
 
@@ -53,14 +58,16 @@ Connection module for Amazon S3
     these will not match Amazon's S3 wildcard certificates. Certificate
     verification is enabled by default.
 
-    AWS region may be specified in the configuration:
+    AWS region may be specified in the configuration::
 
         s3.location: eu-central-1
 
-    Default is us-east-1.
+    Default is ``us-east-1``.
 
     This module should be usable to query other S3-like services, such as
     Eucalyptus.
+
+.. highlight:: bash
 
 :depends: requests
 '''
@@ -84,6 +91,7 @@ def delete(bucket, path=None, action=None, key=None, keyid=None,
            role_arn=None, path_style=None, https_enable=None):
     '''
     Delete a bucket, or delete an object from a bucket.
+
 
     CLI Example to delete a bucket::
 
@@ -131,25 +139,17 @@ def get(bucket='', path='', return_bin=False, action=None,
 
     CLI Example to list buckets:
 
-    .. code-block:: bash
-
         salt myminion s3.get
 
     CLI Example to list the contents of a bucket:
-
-    .. code-block:: bash
 
         salt myminion s3.get mybucket
 
     CLI Example to return the binary contents of an object:
 
-    .. code-block:: bash
-
         salt myminion s3.get mybucket myfile.png return_bin=True
 
     CLI Example to save the binary contents of an object to a local file:
-
-    .. code-block:: bash
 
         salt myminion s3.get mybucket myfile.png local_file=/tmp/myfile.png
 
@@ -170,8 +170,6 @@ def get(bucket='', path='', return_bin=False, action=None,
         website
 
     To perform an action on a bucket:
-
-    .. code-block:: bash
 
         salt myminion s3.get mybucket myfile.png action=acl
     '''
@@ -212,8 +210,6 @@ def head(bucket, path='', key=None, keyid=None, service_url=None,
 
     CLI Examples:
 
-    .. code-block:: bash
-
         salt myminion s3.head mybucket
         salt myminion s3.head mybucket myfile.png
     '''
@@ -253,13 +249,9 @@ def put(bucket, path=None, return_bin=False, action=None, local_file=None,
 
     CLI Example to create a bucket:
 
-    .. code-block:: bash
-
         salt myminion s3.put mybucket
 
     CLI Example to upload an object to a bucket:
-
-    .. code-block:: bash
 
         salt myminion s3.put mybucket remotepath local_file=/path/to/file
     '''
