@@ -688,11 +688,9 @@ def _gen_pool_xml(name,
     Generate the XML string to define a libvirt storage pool
     '''
     hosts = [host.split(':') for host in source_hosts or []]
-    context = {
-        'name': name,
-        'ptype': ptype,
-        'target': {'path': target, 'permissions': permissions},
-        'source': {
+    source = None
+    if any([source_devices, source_dir, source_adapter, hosts, source_auth, source_name, source_format]):
+        source = {
             'devices': source_devices or [],
             'dir': source_dir,
             'adapter': source_adapter,
@@ -701,6 +699,12 @@ def _gen_pool_xml(name,
             'name': source_name,
             'format': source_format
         }
+
+    context = {
+        'name': name,
+        'ptype': ptype,
+        'target': {'path': target, 'permissions': permissions},
+        'source': source
     }
     fn_ = 'libvirt_pool.jinja'
     try:
