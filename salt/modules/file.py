@@ -3850,7 +3850,7 @@ def get_selinux_context(path):
 
         salt '*' file.get_selinux_context /etc/hosts
     '''
-    out = __salt__['cmd.run'](['ls', '-Z', path], python_shell=False)
+    out = __salt__['cmd.run'](['ls', '-dZ', path], python_shell=False)
 
     try:
         ret = re.search(r'\w+:\w+:\w+:\w+', out).group(0)
