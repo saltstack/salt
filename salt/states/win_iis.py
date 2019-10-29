@@ -11,6 +11,7 @@ from Microsoft IIS.
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
+from salt.ext.six.moves import map
 
 
 # Define the module's virtual name
@@ -944,13 +945,15 @@ def webconfiguration_settings(name, settings=None):
         for setting_name, value in filter_settings.items():
             settings_list.append({'filter': filter, 'name': setting_name, 'value': value})
 
-    current_settings_list = __salt__['win_iis.get_webconfiguration_settings'](name=name,
-                                                                                  settings=settings_list)
+    current_settings_list = __salt__['win_iis.get_webconfiguration_settings'](name=name, settings=settings_list)
     for idx, setting in enumerate(settings_list):
 
         is_collection = setting['name'].split('.')[-1] == 'Collection'
-
-        if ((is_collection and list(map(dict, setting['value'])) != list(map(dict, current_settings_list[idx]['value'])))
+        # If this is a new setting and not an update to an existing setting
+        if len(current_settings_list) <= idx:
+            ret_settings['changes'][setting['filter'] + '.' + setting['name']] = {'old': {},
+                                                                                   'new': settings_list[idx]['value']}
+        elif ((is_collection and list(map(dict, setting['value'])) != list(map(dict, current_settings_list[idx]['value'])))
                 or (not is_collection and str(setting['value']) != str(current_settings_list[idx]['value']))):
             ret_settings['changes'][setting['filter'] + '.' + setting['name']] = {'old': current_settings_list[idx]['value'],
                                                                                   'new': settings_list[idx]['value']}
@@ -963,19 +966,17 @@ def webconfiguration_settings(name, settings=None):
         ret['changes'] = ret_settings
         return ret
 
-    __salt__['win_iis.set_webconfiguration_settings'](name=name, settings=settings_list)
+    success = __salt__['win_iis.set_webconfiguration_settings'](name=name, settings=settings_list)
 
-    new_settings_list = __salt__['win_iis.get_webconfiguration_settings'](name=name,
-                                                                              settings=settings_list)
+    new_settings_list = __salt__['win_iis.get_webconfiguration_settings'](name=name, settings=settings_list)
     for idx, setting in enumerate(settings_list):
 
         is_collection = setting['name'].split('.')[-1] == 'Collection'
-
         if ((is_collection and setting['value'] != new_settings_list[idx]['value'])
                 or (not is_collection and str(setting['value']) != str(new_settings_list[idx]['value']))):
             ret_settings['failures'][setting['filter'] + '.' + setting['name']] = {'old': current_settings_list[idx]['value'],
                                                                                    'new': new_settings_list[idx]['value']}
-            ret_settings['changes'].pop(setting['filter'] + '.' + setting['name'], None)
+            ret_settings['changes'].get(setting['filter'] + '.' + setting['name'], None)
 
     if ret_settings['failures']:
         ret['comment'] = 'Some settings failed to change.'
@@ -984,6 +985,6 @@ def webconfiguration_settings(name, settings=None):
     else:
         ret['comment'] = 'Set settings to contain the provided values.'
         ret['changes'] = ret_settings['changes']
-        ret['result'] = True
+        ret['result'] = success
 
     return ret
