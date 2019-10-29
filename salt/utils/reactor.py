@@ -39,7 +39,7 @@ REACTOR_INTERNAL_KEYWORDS = frozenset([
 ])
 
 
-class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.state.Compiler):
+class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
@@ -63,7 +63,6 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self._is_child = True
         Reactor.__init__(
             self, state['opts'],
             log_queue=state['log_queue'],

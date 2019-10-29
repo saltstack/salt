@@ -7,16 +7,72 @@ Version 2019.2.2 is a bugfix release for :ref:`2019.2.0 <release-2019-2-0>`.
 Statistics
 ==========
 
-- Total Merges: **20**
-- Total Issue References: **11**
-- Total PR References: **20**
+- Total Merges: **26**
+- Total Issue References: **12**
+- Total PR References: **26**
 
-- Contributors: **12** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_)
+- Contributors: **13** (`Akm0d`_, `Ch3LL`_, `Oloremo`_, `OrlandoArcapix`_, `bryceml`_, `dhiltonp`_, `dwoz`_, `frogunder`_, `garethgreenaway`_, `javierbertoli`_, `pizzapanther`_, `s0undt3ch`_, `twangboy`_)
 
 Changelog for v2019.2.1..v2019.2.2
 ==================================
 
-*Generated at: 2019-10-02 18:33:46 UTC*
+*Generated at: 2019-10-11 20:54:15 UTC*
+
+* **PR** `#54919`_: (`twangboy`_) Add missing docs for win_wusa state and module (2019.2.1)
+  @ *2019-10-11 18:28:11 UTC*
+
+  * 7d253bc Merge pull request `#54919`_ from twangboy/update_docs
+
+  * 57ff199 Add docs for win_wusa
+
+* **ISSUE** `#54941`_: (`UtahDave`_) Pillar data is refreshed for EVERY salt command in 2019.2.1 and 2019.2.2 (refs: `#54942`_)
+
+* **PR** `#54942`_: (`dwoz`_) Fix for 54941 pillar_refresh regression
+  @ *2019-10-11 18:27:31 UTC*
+
+  * 2f817bc Merge pull request `#54942`_ from dwoz/fix-54941
+
+  * cb5d326 Add a test for 54941 using test.ping
+
+  * 348d1c4 Add regression tests for issue 54941
+
+  * 766f3ca Initial commit of a potential fix for 54941
+
+* **PR** `#54897`_: (`bryceml`_) update version numbers to be correct
+  @ *2019-10-05 01:59:14 UTC*
+
+  * f783108 Merge pull request `#54897`_ from bryceml/2019.2.1_fix_docs
+
+  * e9a2a70 update version numbers to be correct
+
+* **PR** `#54894`_: (`bryceml`_) 2019.2.1 fix docs
+  @ *2019-10-04 22:31:26 UTC*
+
+  * 3233663 Merge pull request `#54894`_ from bryceml/2019.2.1_fix_docs
+
+  * 2456aaa Porting PR `#52948`_ to 2019.2.1
+
+  * 94a1e3b Porting PR `#52752`_ to 2019.2.1
+
+  * c7b7474 modifying saltconf ads
+
+  * d48057b add new saltconf ads
+
+* **PR** `#54858`_: (`frogunder`_) remove in progress from releasenotes 2019.2.2
+  @ *2019-10-02 20:42:59 UTC*
+
+  * 4b06eca Merge pull request `#54858`_ from frogunder/releasenotes_remove2019.2.2
+
+  * a697abd remove in progress from releasenotes 2019.2.2
+
+* **PR** `#54854`_: (`frogunder`_) releasenotes 2019.2.2
+  @ *2019-10-02 18:58:21 UTC*
+
+  * aaf2d1c Merge pull request `#54854`_ from frogunder/release_notes_2019.2.2
+
+  * a41dc59 Update 2019.2.2.rst
+
+  * 9bea043 releasenotes 2019.2.2
 
 * **PR** `#54852`_: (`frogunder`_) Update man pages for 2019.2.2
   @ *2019-10-02 18:27:07 UTC*
@@ -97,7 +153,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * c585550 fix broken salt-cloud openstack query
 
-* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54807`_, `#54784`_, `#54823`_)
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
 
 * **PR** `#54823`_: (`dhiltonp`_) ip_bracket can now accept ipv6 addresses with brackets
   @ *2019-10-01 01:13:34 UTC*
@@ -106,7 +162,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * faa1d98 ip_bracket can now accept ipv6 addresses with brackets
 
-* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54807`_, `#54784`_, `#54823`_)
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
 
 * **PR** `#54807`_: (`dwoz`_) Fix pip state pip >=10.0 and <=18.0
   @ *2019-09-30 09:20:14 UTC*
@@ -193,7 +249,7 @@ Changelog for v2019.2.1..v2019.2.2
 
   * a35e609 Adding __init__.py to metaproxy directory so that metaproxy is included when running setup.py.
 
-* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54807`_, `#54784`_, `#54823`_)
+* **ISSUE** `#54762`_: (`margau`_) 2019.2.1: Breaks Minion-Master Communication (refs: `#54823`_, `#54784`_, `#54807`_)
 
 * **PR** `#54784`_: (`dhiltonp`_) fix dns_check to return uri-compatible ipv6 addresses, add tests
   @ *2019-09-28 08:36:51 UTC*
@@ -242,6 +298,8 @@ Changelog for v2019.2.1..v2019.2.2
   * 168a6c1 switch to ruby 2.6.3
 
 .. _`#1`: https://github.com/saltstack/salt/issues/1
+.. _`#52752`: https://github.com/saltstack/salt/pull/52752
+.. _`#52948`: https://github.com/saltstack/salt/pull/52948
 .. _`#54521`: https://github.com/saltstack/salt/issues/54521
 .. _`#54706`: https://github.com/saltstack/salt/pull/54706
 .. _`#54731`: https://github.com/saltstack/salt/pull/54731
@@ -271,12 +329,20 @@ Changelog for v2019.2.1..v2019.2.2
 .. _`#54830`: https://github.com/saltstack/salt/pull/54830
 .. _`#54845`: https://github.com/saltstack/salt/pull/54845
 .. _`#54852`: https://github.com/saltstack/salt/pull/54852
+.. _`#54854`: https://github.com/saltstack/salt/pull/54854
+.. _`#54858`: https://github.com/saltstack/salt/pull/54858
+.. _`#54894`: https://github.com/saltstack/salt/pull/54894
+.. _`#54897`: https://github.com/saltstack/salt/pull/54897
+.. _`#54919`: https://github.com/saltstack/salt/pull/54919
+.. _`#54941`: https://github.com/saltstack/salt/issues/54941
+.. _`#54942`: https://github.com/saltstack/salt/pull/54942
 .. _`Akm0d`: https://github.com/Akm0d
 .. _`Ch3LL`: https://github.com/Ch3LL
 .. _`Oloremo`: https://github.com/Oloremo
 .. _`OrangeDog`: https://github.com/OrangeDog
 .. _`OrlandoArcapix`: https://github.com/OrlandoArcapix
 .. _`Reiner030`: https://github.com/Reiner030
+.. _`UtahDave`: https://github.com/UtahDave
 .. _`awerner`: https://github.com/awerner
 .. _`bryceml`: https://github.com/bryceml
 .. _`dhiltonp`: https://github.com/dhiltonp
@@ -290,3 +356,4 @@ Changelog for v2019.2.1..v2019.2.2
 .. _`paul-palmer`: https://github.com/paul-palmer
 .. _`pizzapanther`: https://github.com/pizzapanther
 .. _`s0undt3ch`: https://github.com/s0undt3ch
+.. _`twangboy`: https://github.com/twangboy
