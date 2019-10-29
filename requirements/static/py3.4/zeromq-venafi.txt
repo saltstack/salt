@@ -42,6 +42,6 @@ scandir==1.10.0           # via pathlib2
 six==1.12.0               # via cryptography, packaging, pathlib2, pytest, python-dateutil, vcert
 tornado==4.5.3 ; python_version >= "3.4"
 urllib3==1.24.3           # via requests
-vcert==0.6.5
+vcert==0.6.7
 wcwidth==0.1.7            # via pytest
 zipp==0.6.0               # via importlib-metadata
