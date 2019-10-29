@@ -1032,6 +1032,7 @@ def systemctl_reload(name):
                 ret['comment'] = 'SystemD would have been reloaded'
             else:
                 __salt__['service.systemctl_reload']()
+                ret['changes'] = {'systemD reloaded': True}
         except CommandExecutionError as exc:
             ret['result'] = False
             ret['comment'] = exc.strerror
