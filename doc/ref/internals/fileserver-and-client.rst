@@ -44,8 +44,8 @@ will be skipped if the ``update`` function is run on the fileserver.
 Backends for the fileserver are located in `salt/fileserver/`_ (the files not
 named ``__init__.py``).
 
-.. _`salt/fileserver/__init__.py`: https://github.com/saltstack/salt/tree/develop/salt/fileserver/__init__.py
-.. _`salt/fileserver/`: https://github.com/saltstack/salt/tree/develop/salt/fileserver
+.. _`salt/fileserver/__init__.py`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/fileserver/__init__.py
+.. _`salt/fileserver/`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/fileserver
 
 Fileclient
 ----------
