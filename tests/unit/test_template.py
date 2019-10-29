@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt libs
 from salt import template
 from salt.ext.six.moves import StringIO
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
@@ -21,6 +21,7 @@ class TemplateTestCase(TestCase):
         "jinja": "fake_jinja_func",
         "json": "fake_json_func",
         "mako": "fake_make_func",
+        "py": "fake_py_func",
     }
 
     def test_compile_template_bad_type(self):
@@ -113,3 +114,31 @@ class TemplateTestCase(TestCase):
             "jinja|json", self.render_dict, ["jinja"], ["jinja", "json"]
         )
         self.assertListEqual([("fake_json_func", "")], ret)
+
+    def test_check_renderer_py_warning(self):
+        """
+        Check that warning is emitted if "py" has preceding renderers.
+        """
+        warn = "ignores previously processed results"
+        mock_log = MagicMock()
+        with patch.object(template.log, "warning", mock_log):
+            template.check_render_pipe_str("jinja|py", self.render_dict, None, None)
+            mock_log.assert_called_once()
+            args = mock_log.mock_calls[0][1]
+            self.assertIn(warn, args[0])
+            self.assertEqual("jinja|py", args[1])
+            self.assertEqual("py", args[2])
+
+            mock_log.reset_mock()
+            template.check_render_pipe_str("py", self.render_dict, None, None)
+            mock_log.assert_not_called()
+
+            mock_log.reset_mock()
+            template.check_render_pipe_str(
+                "jinja|py|json", self.render_dict, None, None
+            )
+            mock_log.assert_called_once()
+            args = mock_log.mock_calls[0][1]
+            self.assertIn(warn, args[0])
+            self.assertEqual("jinja|py|json", args[1])
+            self.assertEqual("py|json", args[2])

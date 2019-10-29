@@ -232,6 +232,13 @@ def check_render_pipe_str(pipestr, renderers, blacklist, whitelist):
     try:
         if parts[0] == pipestr and pipestr in OLD_STYLE_RENDERERS:
             parts = OLD_STYLE_RENDERERS[pipestr].split("|")
+        if "py" in parts[1:]:
+            log.warning(
+                'The "py" renderer ignores previously processed results. '
+                'The "#!%s" pipeline would be equivalent to just "#!%s"',
+                pipestr,
+                "|".join(parts[parts.index("py") :]),
+            )
         for part in parts:
             name, argline = (part + " ").split(" ", 1)
             if whitelist and name not in whitelist or blacklist and name in blacklist:

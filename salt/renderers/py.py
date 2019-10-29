@@ -109,6 +109,10 @@ Full Example
 
         return config
 
+.. note::
+    Currently, this renderer can't be preceded by any other renderer (previous results
+    are ignored). For example, the ``#!jinja|py`` pipeline is equivalent to just ``#!py``.
+
 """
 from __future__ import absolute_import, print_function, unicode_literals
 
