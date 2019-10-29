@@ -2711,3 +2711,98 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('vnc', graphics['type'])
         self.assertEqual('5900', graphics['port'])
         self.assertEqual('0.0.0.0', graphics['listen'])
+
+    def test_pool_update(self):
+        '''
+        Test the pool_update function
+        '''
+        current_xml = '''<pool type='dir'>
+          <name>default</name>
+          <uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>
+          <capacity unit='bytes'>1999421108224</capacity>
+          <allocation unit='bytes'>713207042048</allocation>
+          <available unit='bytes'>1286214066176</available>
+          <source>
+          </source>
+          <target>
+            <path>/path/to/pool</path>
+            <permissions>
+              <mode>0775</mode>
+              <owner>0</owner>
+              <group>100</group>
+            </permissions>
+          </target>
+        </pool>'''
+
+        expected_xml = '<pool type="netfs">' \
+                       '<name>default</name>' \
+                         '<uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>' \
+                         '<capacity unit="bytes">1999421108224</capacity>' \
+                         '<allocation unit="bytes">713207042048</allocation>' \
+                         '<available unit="bytes">1286214066176</available>' \
+                         '<target>' \
+                           '<path>/mnt/cifs</path>' \
+                           '<permissions>' \
+                             '<mode>0774</mode>' \
+                             '<owner>1234</owner>' \
+                             '<group>123</group>' \
+                           '</permissions>' \
+                         '</target>' \
+                         '<source>' \
+                           '<dir path="samba_share" />' \
+                           '<host name="one.example.com" />' \
+                           '<host name="two.example.com" />' \
+                           '<format type="cifs" />' \
+                         '</source>' \
+                       '</pool>'
+
+        mocked_pool = MagicMock()
+        mocked_pool.XMLDesc = MagicMock(return_value=current_xml)
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
+        self.mock_conn.storagePoolDefineXML = MagicMock()
+
+        self.assertTrue(
+            virt.pool_update('default',
+                             'netfs',
+                             target='/mnt/cifs',
+                             permissions={'mode': '0774', 'owner': '1234', 'group': '123'},
+                             source_format='cifs',
+                             source_dir='samba_share',
+                             source_hosts=['one.example.com', 'two.example.com']))
+        self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
+
+    def test_pool_update_nochange(self):
+        '''
+        Test the pool_update function when no change is needed
+        '''
+
+        current_xml = '''<pool type='dir'>
+          <name>default</name>
+          <uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>
+          <capacity unit='bytes'>1999421108224</capacity>
+          <allocation unit='bytes'>713207042048</allocation>
+          <available unit='bytes'>1286214066176</available>
+          <source>
+          </source>
+          <target>
+            <path>/path/to/pool</path>
+            <permissions>
+              <mode>0775</mode>
+              <owner>0</owner>
+              <group>100</group>
+            </permissions>
+          </target>
+        </pool>'''
+
+        mocked_pool = MagicMock()
+        mocked_pool.XMLDesc = MagicMock(return_value=current_xml)
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
+        self.mock_conn.storagePoolDefineXML = MagicMock()
+
+        self.assertFalse(
+            virt.pool_update('default',
+                             'dir',
+                             target='/path/to/pool',
+                             permissions={'mode': '0775', 'owner': '0', 'group': '100'},
+                             test=True))
+        self.mock_conn.storagePoolDefineXML.assert_not_called()
