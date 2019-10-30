@@ -117,7 +117,8 @@ def request(
         log.info("Will use generated CSR from %s", csr_path)
         log.info("Using CN %s", dns_name)
         try:
-            csr = salt.utils.fopen(csr_path).read()
+            with salt.utils.files.fopen(csr_path) as csr_file:
+                csr = csr_file.read()
             request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
             log.error(msg=str(e))

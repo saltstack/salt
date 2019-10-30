@@ -7,11 +7,11 @@ from __future__ import absolute_import
 import functools
 import random
 import string
-import salt
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from salt.ext.six.moves import range
+from salt.utils.files import fopen
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import NameOID
@@ -129,11 +129,10 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
         """
 
         tmp_dir = tempfile.gettempdir()
-        f = salt.utils.fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), "w+")
-        print("Saving test CSR to temp file", f.name)
-        f.write(csr_pem)
-        f.close()
-        csr_path = f.name
+        with fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), 'w+') as f:
+            print("Saving test CSR to temp file", f.name)
+            f.write(csr_pem)
+            csr_path = f.name
 
         print("Using venafi config:", self.master_opts['venafi'])
         cn = "test-csr-32313131.venafi.example.com"
