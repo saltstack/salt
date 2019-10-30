@@ -103,15 +103,6 @@ def _write_presence(presence_file, minions):
     return error
 
 
-def _running():
-    '''
-    Indicate if engine should continue running
-    Useful when running tests and we want to ensure
-    the engine only makes one pass
-    '''
-    return True
-
-
 def start(interval=3600, expire=604800):
     '''
     Start the engine
@@ -119,7 +110,7 @@ def start(interval=3600, expire=604800):
     ck = salt.utils.minions.CkMinions(__opts__)
     presence_file = '{0}/presence.p'.format(__opts__['cachedir'])
 
-    while _running():
+    while True:
         log.debug('Checking for present minions')
         minions = {}
         error, minions = _read_presence(presence_file)
@@ -155,3 +146,7 @@ def start(interval=3600, expire=604800):
         error = _write_presence(presence_file, minions)
 
         time.sleep(interval)
+
+        if callable(_check_running_callable) and \
+                _check_running_callable() is False:
+            break
