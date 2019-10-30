@@ -27,18 +27,7 @@ Support for Venafi
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
-import tempfile
 
-try:
-    from M2Crypto import RSA
-
-    HAS_M2 = True
-except ImportError:
-    HAS_M2 = False
-    try:
-        from Cryptodome.PublicKey import RSA
-    except ImportError:
-        from Crypto.PublicKey import RSA
 
 # Import Salt libs
 import sys
@@ -82,6 +71,7 @@ def _init_connection():
                                 http_request_kwargs={"verify": trust_bundle})
     else:
         return vcert.Connection(url=base_url, token=api_key, user=tpp_user, password=tpp_password)
+
 
 def __virtual__():
     '''
@@ -127,7 +117,7 @@ def request(
         log.info("Will use generated CSR from %s", csr_path)
         log.info("Using CN %s", dns_name)
         try:
-            csr = open(csr_path).read()
+            csr = salt.utils.fopen(csr_path).read()
             request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
             log.error(msg=str(e))

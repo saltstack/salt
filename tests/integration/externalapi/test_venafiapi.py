@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import functools
 import random
 import string
+import salt
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -19,6 +20,7 @@ import pytest
 import tempfile
 from os import path
 from os import environ
+
 
 def _random_name(prefix=''):
     ret = prefix
@@ -50,9 +52,6 @@ class VenafiTest(ShellCase):
     @with_random_name
     def test_request(self, name):
         print("Testing Venafi request cert")
-        '''
-        venafi.request
-        '''
         print("Using venafi config:", self.master_opts['venafi'])
         cn = '{0}.example.com'.format(name)
         ret = self.run_run_plus(fun='venafi.request',
@@ -95,9 +94,6 @@ class VenafiTest(ShellCase):
     @with_random_name
     def test_sign(self, name):
         print("Testing Venafi sign CSR")
-        '''
-        venafi.request
-        '''
 
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----
 MIIFbDCCA1QCAQAwgbQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
@@ -133,7 +129,7 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
         """
 
         tmp_dir = tempfile.gettempdir()
-        f = open(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), "w+")
+        f = salt.utils.fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), "w+")
         print("Saving test CSR to temp file", f.name)
         f.write(csr_pem)
         f.close()
