@@ -121,9 +121,9 @@ LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 class SaltLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
-        self.bracketname = '[{:<17}]'.format(self.name)
-        self.bracketlevel = '[{:<8}]'.format(self.levelname)
-        self.bracketprocess = '[{:>5}]'.format(self.process)
+        self.bracketname = '[{:<17}]'.format(str(self.name))
+        self.bracketlevel = '[{:<8}]'.format(str(self.levelname))
+        self.bracketprocess = '[{:>5}]'.format(str(self.process))
 
 
 class SaltColorLogRecord(SaltLogRecord):
