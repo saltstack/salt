@@ -763,55 +763,115 @@ def pool_running(name,
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': True if not __opts__['test'] else None,
            'comment': ''
            }
 
     try:
         info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
+        needs_autostart = False
         if info:
-            if info[name]['state'] == 'running':
-                ret['comment'] = 'Pool {0} exists and is running'.format(name)
+            needs_autostart = info[name]['autostart'] and not autostart or not info[name]['autostart'] and autostart
+
+            # Update can happen for both running and stopped pools
+            needs_update = __salt__['virt.pool_update'](name,
+                                                        ptype=ptype,
+                                                        target=target,
+                                                        permissions=permissions,
+                                                        source_devices=(source or {}).get('devices'),
+                                                        source_dir=(source or {}).get('dir'),
+                                                        source_adapter=(source or {}).get('adapter'),
+                                                        source_hosts=(source or {}).get('hosts'),
+                                                        source_auth=(source or {}).get('auth'),
+                                                        source_name=(source or {}).get('name'),
+                                                        source_format=(source or {}).get('format'),
+                                                        test=True,
+                                                        connection=connection,
+                                                        username=username,
+                                                        password=password)
+            if needs_update:
+                if not __opts__['test']:
+                    __salt__['virt.pool_update'](name,
+                                                 ptype=ptype,
+                                                 target=target,
+                                                 permissions=permissions,
+                                                 source_devices=(source or {}).get('devices'),
+                                                 source_dir=(source or {}).get('dir'),
+                                                 source_adapter=(source or {}).get('adapter'),
+                                                 source_hosts=(source or {}).get('hosts'),
+                                                 source_auth=(source or {}).get('auth'),
+                                                 source_name=(source or {}).get('name'),
+                                                 source_format=(source or {}).get('format'),
+                                                 connection=connection,
+                                                 username=username,
+                                                 password=password)
+
+                action = "started"
+                if info[name]['state'] == 'running':
+                    action = "restarted"
+                    if not __opts__['test']:
+                        __salt__['virt.pool_stop'](name, connection=connection, username=username, password=password)
+
+                if not __opts__['test']:
+                    __salt__['virt.pool_build'](name, connection=connection, username=username, password=password)
+                    __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
+
+                autostart_str = ', autostart flag changed' if needs_autostart else ''
+                ret['changes'][name] = 'Pool updated, built{0} and {1}'.format(autostart_str, action)
+                ret['comment'] = 'Pool {0} updated, built{1} and {2}'.format(name, autostart_str, action)
+
             else:
-                __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
-                ret['changes'][name] = 'Pool started'
-                ret['comment'] = 'Pool {0} started'.format(name)
+                if info[name]['state'] == 'running':
+                    ret['comment'] = 'Pool {0} unchanged and is running'.format(name)
+                    ret['result'] = True
+                else:
+                    ret['changes'][name] = 'Pool started'
+                    ret['comment'] = 'Pool {0} started'.format(name)
+                    if not __opts__['test']:
+                        __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
         else:
-            __salt__['virt.pool_define'](name,
-                                         ptype=ptype,
-                                         target=target,
-                                         permissions=permissions,
-                                         source_devices=(source or {}).get('devices', None),
-                                         source_dir=(source or {}).get('dir', None),
-                                         source_adapter=(source or {}).get('adapter', None),
-                                         source_hosts=(source or {}).get('hosts', None),
-                                         source_auth=(source or {}).get('auth', None),
-                                         source_name=(source or {}).get('name', None),
-                                         source_format=(source or {}).get('format', None),
-                                         transient=transient,
-                                         start=False,
-                                         connection=connection,
-                                         username=username,
-                                         password=password)
-            if autostart:
+            needs_autostart = autostart
+            if not __opts__['test']:
+                __salt__['virt.pool_define'](name,
+                                             ptype=ptype,
+                                             target=target,
+                                             permissions=permissions,
+                                             source_devices=(source or {}).get('devices'),
+                                             source_dir=(source or {}).get('dir'),
+                                             source_adapter=(source or {}).get('adapter'),
+                                             source_hosts=(source or {}).get('hosts'),
+                                             source_auth=(source or {}).get('auth'),
+                                             source_name=(source or {}).get('name'),
+                                             source_format=(source or {}).get('format'),
+                                             transient=transient,
+                                             start=False,
+                                             connection=connection,
+                                             username=username,
+                                             password=password)
+
+                __salt__['virt.pool_build'](name,
+                                            connection=connection,
+                                            username=username,
+                                            password=password)
+
+                __salt__['virt.pool_start'](name,
+                                            connection=connection,
+                                            username=username,
+                                            password=password)
+            if needs_autostart:
+                ret['changes'][name] = 'Pool defined, started and marked for autostart'
+                ret['comment'] = 'Pool {0} defined, started and marked for autostart'.format(name)
+            else:
+                ret['changes'][name] = 'Pool defined and started'
+                ret['comment'] = 'Pool {0} defined and started'.format(name)
+
+        if needs_autostart:
+            if not __opts__['test']:
                 __salt__['virt.pool_set_autostart'](name,
                                                     state='on' if autostart else 'off',
                                                     connection=connection,
                                                     username=username,
                                                     password=password)
-
-            __salt__['virt.pool_build'](name,
-                                        connection=connection,
-                                        username=username,
-                                        password=password)
-
-            __salt__['virt.pool_start'](name,
-                                        connection=connection,
-                                        username=username,
-                                        password=password)
-
-            ret['changes'][name] = 'Pool defined and started'
-            ret['comment'] = 'Pool {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
         ret['comment'] = err.get_error_message()
         ret['result'] = False
