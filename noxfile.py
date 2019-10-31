@@ -46,10 +46,13 @@ nox.options.reuse_existing_virtualenvs = True
 #  Don't fail on missing interpreters
 nox.options.error_on_missing_interpreters = False
 
+# Change current directory to REPO_ROOT
+os.chdir(REPO_ROOT)
+
 
 def _create_ci_directories():
     for dirname in ('logs', 'coverage', 'xml-unittests-output'):
-        path = os.path.join(REPO_ROOT, 'artifacts', dirname)
+        path = os.path.join('artifacts', dirname)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -187,44 +190,38 @@ def _get_distro_pip_constraints(session, transport):
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            '{}-windows.txt'.format(transport))
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            'windows.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            'windows-crypto.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
     elif IS_DARWIN:
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            '{}-darwin.txt'.format(transport))
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            'darwin.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            'darwin-crypto.txt')
@@ -240,30 +237,26 @@ def _get_distro_pip_constraints(session, transport):
             '{id}-{version_parts[major]}'.format(**distro)
         ]
         for distro_key in distro_keys:
-            _distro_constraints = os.path.join(REPO_ROOT,
-                                               'requirements',
+            _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}.txt'.format(distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join(REPO_ROOT,
-                                               'requirements',
+            _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}-crypto.txt'.format(distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join(REPO_ROOT,
-                                               'requirements',
+            _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}-{}.txt'.format(transport, distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
                 distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join(REPO_ROOT,
-                                               'requirements',
+            _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}-{}-crypto.txt'.format(transport, distro_key))
@@ -277,24 +270,24 @@ def _install_requirements(session, transport, *extra_requirements):
     distro_constraints = _get_distro_pip_constraints(session, transport)
 
     _requirements_files = [
-        os.path.join(REPO_ROOT, 'requirements', 'base.txt'),
-        os.path.join(REPO_ROOT, 'requirements', 'zeromq.txt'),
-        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+        os.path.join('requirements', 'base.txt'),
+        os.path.join('requirements', 'zeromq.txt'),
+        os.path.join('requirements', 'pytest.txt')
     ]
     if sys.platform.startswith('linux'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'linux.in')
+            os.path.join('requirements', 'static', 'linux.in')
         ]
     elif sys.platform.startswith('win'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.in')
+            os.path.join('pkg', 'windows', 'req.txt'),
+            os.path.join('requirements', 'static', 'windows.in')
         ]
     elif sys.platform.startswith('darwin'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'osx.in')
+            os.path.join('pkg', 'osx', 'req.txt'),
+            os.path.join('pkg', 'osx', 'req_ext.txt'),
+            os.path.join('requirements', 'static', 'osx.in')
         ]
 
     while True:
@@ -376,14 +369,14 @@ def _run_with_coverage(session, *test_cmd):
         # Generate report for salt code coverage
         session.run(
             'coverage', 'xml',
-            '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'salt.xml'),
+            '-o', os.path.join('artifacts', 'coverage', 'salt.xml'),
             '--omit=tests/*',
             '--include=salt/*'
         )
         # Generate report for tests code coverage
         session.run(
             'coverage', 'xml',
-            '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'tests.xml'),
+            '-o', os.path.join('artifacts', 'coverage', 'tests.xml'),
             '--omit=salt/*',
             '--include=tests/*'
         )
@@ -477,7 +470,7 @@ def runtests_parametrized(session, coverage, transport, crypto):
 
     cmd_args = [
         '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+            os.path.join('artifacts', 'logs', 'runtests.log')
         ),
         '--transport={}'.format(transport)
     ] + session.posargs
@@ -617,13 +610,13 @@ def runtests_cloud(session, coverage):
     _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
 
     pydir = _get_pydir(session)
-    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
 
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+            os.path.join('artifacts', 'logs', 'runtests.log')
         ),
         '--cloud-provider-tests'
     ] + session.posargs
@@ -640,7 +633,7 @@ def runtests_tornado(session, coverage):
 
     cmd_args = [
         '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+            os.path.join('artifacts', 'logs', 'runtests.log')
         ),
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
@@ -673,7 +666,7 @@ def pytest_parametrized(session, coverage, transport, crypto):
     cmd_args = [
         '--rootdir', REPO_ROOT,
         '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+            os.path.join('artifacts', 'logs', 'runtests.log')
         ),
         '--no-print-logs',
         '-ra',
@@ -815,19 +808,19 @@ def pytest_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, 'zeromq')
     pydir = _get_pydir(session)
-    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
 
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
         '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+            os.path.join('artifacts', 'logs', 'runtests.log')
         ),
         '--no-print-logs',
         '-ra',
         '-s',
-        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud', 'providers')
+        os.path.join('tests', 'integration', 'cloud', 'providers')
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
@@ -843,7 +836,7 @@ def pytest_tornado(session, coverage):
     cmd_args = [
         '--rootdir', REPO_ROOT,
         '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
+            os.path.join('artifacts', 'logs', 'runtests.log')
         ),
         '--no-print-logs',
         '-ra',
