@@ -47,6 +47,9 @@ nox.options.reuse_existing_virtualenvs = True
 #  Don't fail on missing interpreters
 nox.options.error_on_missing_interpreters = False
 
+# Change current directory to REPO_ROOT
+os.chdir(REPO_ROOT)
+
 RUNTESTS_LOGFILE = os.path.join(
     'artifacts', 'logs',
     'runtests-{}.log'.format(datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f'))
@@ -55,7 +58,7 @@ RUNTESTS_LOGFILE = os.path.join(
 
 def _create_ci_directories():
     for dirname in ('logs', 'coverage', 'xml-unittests-output'):
-        path = os.path.join(REPO_ROOT, 'artifacts', dirname)
+        path = os.path.join('artifacts', dirname)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -199,15 +202,13 @@ def _get_distro_pip_constraints(session, transport):
         session.install('--progress-bar=off', 'setuptools-git', silent=PIP_INSTALL_SILENT)
 
     if IS_WINDOWS:
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            '{}-windows.txt'.format(transport))
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            'windows.txt')
@@ -264,8 +265,8 @@ def _install_requirements(session, transport, *extra_requirements):
     distro_constraints = _get_distro_pip_constraints(session, transport)
 
     _requirements_files = [
-        os.path.join(REPO_ROOT, 'requirements', 'base.txt'),
-        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+        os.path.join('requirements', 'base.txt'),
+        os.path.join('requirements', 'pytest.txt')
     ]
 
     if transport == 'raet':
@@ -279,18 +280,18 @@ def _install_requirements(session, transport, *extra_requirements):
 
     if sys.platform.startswith('linux'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'linux.in')
+            os.path.join('requirements', 'static', 'linux.in')
         ]
     elif sys.platform.startswith('win'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.in')
+            os.path.join('pkg', 'windows', 'req.txt'),
+            os.path.join('requirements', 'static', 'windows.in')
         ]
     elif sys.platform.startswith('darwin'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'darwin.in')
+            os.path.join('pkg', 'osx', 'req.txt'),
+            os.path.join('pkg', 'osx', 'req_ext.txt'),
+            os.path.join('requirements', 'static', 'darwin.in')
         ]
 
     while True:
@@ -376,14 +377,14 @@ def _run_with_coverage(session, *test_cmd):
         # Generate report for salt code coverage
         session.run(
             'coverage', 'xml',
-            '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'salt.xml'),
+            '-o', os.path.join('artifacts', 'coverage', 'salt.xml'),
             '--omit=tests/*',
             '--include=salt/*'
         )
         # Generate report for tests code coverage
         session.run(
             'coverage', 'xml',
-            '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'tests.xml'),
+            '-o', os.path.join('artifacts', 'coverage', 'tests.xml'),
             '--omit=salt/*',
             '--include=tests/*'
         )
@@ -663,7 +664,7 @@ def runtests_cloud(session, coverage):
     _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
 
     pydir = _get_pydir(session)
-    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
 
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
@@ -897,7 +898,7 @@ def pytest_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, 'zeromq')
     pydir = _get_pydir(session)
-    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
 
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
@@ -907,7 +908,7 @@ def pytest_cloud(session, coverage):
         '--no-print-logs',
         '-ra',
         '-s',
-        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud', 'providers')
+        os.path.join('tests', 'integration', 'cloud', 'providers')
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
