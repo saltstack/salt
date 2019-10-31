@@ -34,6 +34,7 @@ PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or o
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
+IS_DARWIN = sys.platform.lower().startswith('darwin')
 IS_WINDOWS = sys.platform.lower().startswith('win')
 
 # Python versions to run against
@@ -200,6 +201,35 @@ def _get_distro_pip_constraints(session, transport):
                                            'windows.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'windows-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+    elif IS_DARWIN:
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           '{}-darwin.txt'.format(transport))
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join(REPO_ROOT,
+                                           'requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
     else:
         _install_system_packages(session)
         distro = _get_distro_info(session)
@@ -221,7 +251,22 @@ def _get_distro_pip_constraints(session, transport):
                                                'requirements',
                                                'static',
                                                pydir,
+                                               '{}-crypto.txt'.format(distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join(REPO_ROOT,
+                                               'requirements',
+                                               'static',
+                                               pydir,
                                                '{}-{}.txt'.format(transport, distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join(REPO_ROOT,
+                                               'requirements',
+                                               'static',
+                                               pydir,
+                                               '{}-{}-crypto.txt'.format(transport, distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
     return distro_constraints
@@ -815,7 +860,18 @@ def _pytest(session, coverage, cmd_args):
 
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
-    session.install('--progress-bar=off', '-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
+    requirements_file = 'requirements/static/lint.in'
+    distro_constraints = [
+        'requirements/static/{}/lint.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
     session.run('pylint', '--version')
     pylint_report_path = os.environ.get('PYLINT_REPORT')
 
@@ -889,19 +945,73 @@ def lint_tests(session):
 
 
 @nox.session(python='3')
-def docs(session):
+@nox.parametrize('update', [False, True])
+@nox.parametrize('compress', [False, True])
+def docs(session, compress, update):
     '''
     Build Salt's Documentation
+    '''
+    session.notify('docs-html(compress={})'.format(compress))
+    session.notify('docs-man(compress={}, update={})'.format(compress, update))
+
+
+@nox.session(name='docs-html', python='3')
+@nox.parametrize('compress', [False, True])
+def docs_html(session, compress):
+    '''
+    Build Salt's HTML Documentation
     '''
     pydir = _get_pydir(session)
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
-    session.install(
-        '--progress-bar=off',
-        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
-        silent=PIP_INSTALL_SILENT)
+    requirements_file = 'requirements/static/docs.in'
+    distro_constraints = [
+        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
-    session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
+    if compress:
+        session.run('tar', '-czvf', 'html-archive.tar.gz', '_build/html', external=True)
+    os.chdir('..')
+
+
+@nox.session(name='docs-man', python='3')
+@nox.parametrize('update', [False, True])
+@nox.parametrize('compress', [False, True])
+def docs_man(session, compress, update):
+    '''
+    Build Salt's Manpages Documentation
+    '''
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    requirements_file = 'requirements/static/docs.in'
+    distro_constraints = [
+        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    os.chdir('doc/')
+    session.run('make', 'clean', external=True)
+    session.run('make', 'man', 'SPHINXOPTS=-W', external=True)
+    if update:
+        session.run('rm', '-rf', 'man/', external=True)
+        session.run('cp', '-Rp', '_build/man', 'man/', external=True)
+    if compress:
+        session.run('tar', '-czvf', 'man-archive.tar.gz', '_build/man', external=True)
     os.chdir('..')
