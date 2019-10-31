@@ -87,7 +87,22 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if salt.utils.is_windows():
                 python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
             else:
-                python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+                python_binary_names = [
+                    'python{}.{}'.format(*sys.version_info),
+                    'python{}'.format(*sys.version_info),
+                    'python'
+                ]
+                for binary_name in python_binary_names:
+                    python = os.path.join(sys.real_prefix, 'bin', binary_name)
+                    if os.path.exists(python):
+                        break
+                else:
+                    self.fail(
+                        'Couldn\'t find a python binary name under \'{}\' matching: {}'.format(
+                            os.path.join(sys.real_prefix, 'bin'),
+                            python_binary_names
+                        )
+                    )
             # We're running off a virtualenv, and we don't want to create a virtualenv off of
             # a virtualenv, let's point to the actual python that created the virtualenv
             kwargs = {'python': python}
