@@ -1376,8 +1376,10 @@ def deploy_windows(host,
                 stdout, stderr, ret_code = run_psexec_command(
                     'cmd.exe', '/c sc query salt-minion', host, username, password
                 )
-                retry += 1
-            
+                log.debug('Cloud winrm command #{}: {}'.format(retry, stdout))
+                if 'STOP_PENDING' not in six.text_type(stdout):
+                    break
+
             log.debug('Run psexec: sc start salt-minion')
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c sc start salt-minion', host, username, password
