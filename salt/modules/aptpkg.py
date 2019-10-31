@@ -384,6 +384,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             reinstall=False,
+            downloadonly=False,
             ignore_epoch=False,
             **kwargs):
     '''
@@ -729,6 +730,9 @@ def install(name=None,
             cmd.insert(-1, '--force-yes')
         cmd.extend(downgrade)
         cmds.append(cmd)
+
+    if downloadonly:
+        cmd.append("--download-only")
 
     if to_reinstall:
         all_pkgs.extend(to_reinstall)
@@ -2840,3 +2844,37 @@ def _get_http_proxy_url():
             )
 
     return http_proxy_url
+
+
+def list_downloaded(root=None, **kwargs):
+    '''
+    .. versionadded:: 3000?
+
+    List prefetched packages downloaded by apt in the local disk.
+
+    root
+        operate on a different root directory.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/apt'
+    if root:
+        CACHE_DIR = os.path.join(root, os.path.relpath(CACHE_DIR, os.path.sep))
+
+    ret = {}
+    for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.deb'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
+            }
+    return ret
