@@ -1357,7 +1357,7 @@ def deploy_windows(host,
         # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
-            time.sleep(5)
+            time.sleep(10)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
             stdout, stderr, ret_code = run_psexec_command(
