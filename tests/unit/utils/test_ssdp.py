@@ -35,9 +35,40 @@ class Mocks(object):
 
         sock_mock = MagicMock()
         sock_mock.socket = MagicMock(return_value=sck)
-        sock_mock.gethostbyname = MagicMock(return_value=expected_hostname)
+        sock_mock.gethostname = MagicMock(return_value=expected_hostname)
+        sock_mock.gethostbyname = MagicMock(return_value=expected_ip)
 
         return sock_mock
+
+    def get_ssdp_factory(self, expected_ip=None, expected_hostname=None, **config):
+        if expected_ip is None:
+            expected_ip = '127.0.0.1'
+        if expected_hostname is None:
+            expected_hostname = 'localhost'
+        sock_mock = self.get_socket_mock(expected_ip, expected_hostname)
+        with patch('salt.utils.ssdp.socket', sock_mock):
+            factory = ssdp.SSDPFactory(**config)
+        return factory
+
+    def get_ssdp_discovery_client(self, expected_ip=None, expected_hostname=None, **config):
+        if expected_ip is None:
+            expected_ip = '127.0.0.1'
+        if expected_hostname is None:
+            expected_hostname = 'localhost'
+        sock_mock = self.get_socket_mock(expected_ip, expected_hostname)
+        with patch('salt.utils.ssdp.socket', sock_mock):
+            factory = ssdp.SSDPDiscoveryClient(**config)
+        return factory
+
+    def get_ssdp_discovery_server(self, expected_ip=None, expected_hostname=None, **config):
+        if expected_ip is None:
+            expected_ip = '127.0.0.1'
+        if expected_hostname is None:
+            expected_hostname = 'localhost'
+        sock_mock = self.get_socket_mock(expected_ip, expected_hostname)
+        with patch('salt.utils.ssdp.socket', sock_mock):
+            factory = ssdp.SSDPDiscoveryServer(**config)
+        return factory
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -115,16 +146,15 @@ class SSDPBaseTestCase(TestCase, Mocks):
 
         sock_mock.socket().getsockname.side_effect = SSDPBaseTestCase.exception_generic
         with patch('salt.utils.ssdp.socket', sock_mock):
-            assert base.get_self_ip() == expected_host
+            assert base.get_self_ip() == expected_ip
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
-class SSDPFactoryTestCase(TestCase):
+class SSDPFactoryTestCase(TestCase, Mocks):
     '''
     Test socket protocol
     '''
-    @patch('salt.utils.ssdp.socket.gethostbyname', MagicMock(return_value='10.10.10.10'))
     def test_attr_check(self):
         '''
         Tests attributes are set to the base class
@@ -135,12 +165,13 @@ class SSDPFactoryTestCase(TestCase):
             ssdp.SSDPBase.SIGNATURE: '-signature-',
             ssdp.SSDPBase.ANSWER: {'this-is': 'the-answer'}
         }
-        factory = ssdp.SSDPFactory(**config)
+        expected_ip = '10.10.10.10'
+        factory = self.get_ssdp_factory(expected_ip=expected_ip, **config)
         for attr in [ssdp.SSDPBase.SIGNATURE, ssdp.SSDPBase.ANSWER]:
             assert hasattr(factory, attr)
             assert getattr(factory, attr) == config[attr]
         assert not factory.disable_hidden
-        assert factory.my_ip == '10.10.10.10'
+        assert factory.my_ip == expected_ip
 
     def test_transport_sendto_success(self):
         '''
@@ -150,7 +181,7 @@ class SSDPFactoryTestCase(TestCase):
         '''
         transport = MagicMock()
         log = MagicMock()
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         with patch.object(factory, 'transport', transport), patch.object(factory, 'log', log):
             data = {'some': 'data'}
             addr = '10.10.10.10'
@@ -161,26 +192,26 @@ class SSDPFactoryTestCase(TestCase):
             assert factory.log.debug.called
             assert factory.log.debug.mock_calls[0][1][0] == 'Sent successfully'
 
-    @patch('salt.utils.ssdp.time.sleep', MagicMock())
     def test_transport_sendto_retry(self):
         '''
         Test transport send_to.
 
         :return:
         '''
-        transport = MagicMock()
-        transport.sendto = MagicMock(side_effect=SSDPBaseTestCase.exception_attr_error)
-        log = MagicMock()
-        factory = ssdp.SSDPFactory()
-        with patch.object(factory, 'transport', transport), patch.object(factory, 'log', log):
-            data = {'some': 'data'}
-            addr = '10.10.10.10'
-            factory._sendto(data=data, addr=addr)
-            assert factory.transport.sendto.called
-            assert ssdp.time.sleep.called
-            assert ssdp.time.sleep.call_args[0][0] > 0 and ssdp.time.sleep.call_args[0][0] < 0.5
-            assert factory.log.debug.called
-            assert 'Permission error' in factory.log.debug.mock_calls[0][1][0]
+        with patch('salt.utils.ssdp.time.sleep', MagicMock()):
+            transport = MagicMock()
+            transport.sendto = MagicMock(side_effect=SSDPBaseTestCase.exception_attr_error)
+            log = MagicMock()
+            factory = self.get_ssdp_factory()
+            with patch.object(factory, 'transport', transport), patch.object(factory, 'log', log):
+                data = {'some': 'data'}
+                addr = '10.10.10.10'
+                factory._sendto(data=data, addr=addr)
+                assert factory.transport.sendto.called
+                assert ssdp.time.sleep.called
+                assert ssdp.time.sleep.call_args[0][0] > 0 and ssdp.time.sleep.call_args[0][0] < 0.5
+                assert factory.log.debug.called
+                assert 'Permission error' in factory.log.debug.mock_calls[0][1][0]
 
     def test_datagram_signature_bad(self):
         '''
@@ -188,7 +219,7 @@ class SSDPFactoryTestCase(TestCase):
 
         :return:
         '''
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         data = 'nonsense'
         addr = '10.10.10.10', 'foo.suse.de'
 
@@ -205,7 +236,7 @@ class SSDPFactoryTestCase(TestCase):
 
         :return:
         '''
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         data = '{}nonsense'.format(ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE])
         addr = '10.10.10.10', 'foo.suse.de'
         with patch.object(factory, 'log', MagicMock()), patch.object(factory, '_sendto', MagicMock()):
@@ -220,7 +251,7 @@ class SSDPFactoryTestCase(TestCase):
 
         :return:
         '''
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         factory.disable_hidden = True
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         data = '{}nonsense'.format(signature)
@@ -237,7 +268,7 @@ class SSDPFactoryTestCase(TestCase):
         Test if datagram processing reacts on outdated message (more than 20 seconds). Quiet mode.
         :return:
         '''
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         data = '{}{}'.format(signature, '1516623820')
         addr = '10.10.10.10', 'foo.suse.de'
@@ -261,7 +292,7 @@ class SSDPFactoryTestCase(TestCase):
         Test if datagram processing reacts on outdated message (more than 20 seconds). Reply mode.
         :return:
         '''
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         factory.disable_hidden = True
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         data = '{}{}'.format(signature, '1516623820')
@@ -287,7 +318,7 @@ class SSDPFactoryTestCase(TestCase):
         Test if datagram processing sends out correct reply within 20 seconds.
         :return:
         '''
-        factory = ssdp.SSDPFactory()
+        factory = self.get_ssdp_factory()
         factory.disable_hidden = True
         signature = ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.SIGNATURE]
         data = '{}{}'.format(signature, '1516623820')
@@ -311,7 +342,7 @@ class SSDPFactoryTestCase(TestCase):
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
-class SSDPServerTestCase(TestCase):
+class SSDPServerTestCase(TestCase, Mocks):
     '''
     Server-related test cases
     '''
@@ -328,51 +359,51 @@ class SSDPServerTestCase(TestCase):
             assert srv._config['answer']['master'] == new_ip
             assert config['answer']['master'] == old_ip
 
-    @patch('salt.utils.ssdp.SSDPFactory', MagicMock())
     def test_run(self):
         '''
         Test server runner.
         :return:
         '''
-        config = {'answer': {'master': '10.10.10.10'},
-                  ssdp.SSDPBase.LISTEN_IP: '10.10.10.10',
-                  ssdp.SSDPBase.PORT: 12345}
-        srv = ssdp.SSDPDiscoveryServer(**config)
-        srv.create_datagram_endpoint = MagicMock()
-        srv.log = MagicMock()
+        with patch('salt.utils.ssdp.SSDPFactory', MagicMock()):
+            config = {'answer': {'master': '10.10.10.10'},
+                      ssdp.SSDPBase.LISTEN_IP: '10.10.10.10',
+                      ssdp.SSDPBase.PORT: 12345}
+            srv = self.get_ssdp_discovery_server(**config)
+            srv.create_datagram_endpoint = MagicMock()
+            srv.log = MagicMock()
 
-        trnsp = MagicMock()
-        proto = MagicMock()
-        loop = MagicMock()
-        loop.run_until_complete = MagicMock(return_value=(trnsp, proto))
+            trnsp = MagicMock()
+            proto = MagicMock()
+            loop = MagicMock()
+            loop.run_until_complete = MagicMock(return_value=(trnsp, proto))
 
-        io = MagicMock()
-        io.ported = False
-        io.get_event_loop = MagicMock(return_value=loop)
+            io = MagicMock()
+            io.ported = False
+            io.get_event_loop = MagicMock(return_value=loop)
 
-        with patch('salt.utils.ssdp.asyncio', io):
-            srv.run()
-            cde_args = io.get_event_loop().create_datagram_endpoint.call_args[1]
-            cfg_ip_addr, cfg_port = cde_args['local_addr']
+            with patch('salt.utils.ssdp.asyncio', io):
+                srv.run()
+                cde_args = io.get_event_loop().create_datagram_endpoint.call_args[1]
+                cfg_ip_addr, cfg_port = cde_args['local_addr']
 
-            assert io.get_event_loop.called
-            assert io.get_event_loop().run_until_complete.called
-            assert io.get_event_loop().create_datagram_endpoint.called
-            assert io.get_event_loop().run_forever.called
-            assert trnsp.close.called
-            assert loop.close.called
-            assert srv.log.info.called
-            assert srv.log.info.call_args[0][0] == 'Stopping service discovery listener.'
-            assert 'allow_broadcast' in cde_args
-            assert cde_args['allow_broadcast']
-            assert 'local_addr' in cde_args
-            assert not cfg_ip_addr == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.LISTEN_IP] and cfg_ip_addr == '10.10.10.10'
-            assert not cfg_port == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.PORT] and cfg_port == 12345
+                assert io.get_event_loop.called
+                assert io.get_event_loop().run_until_complete.called
+                assert io.get_event_loop().create_datagram_endpoint.called
+                assert io.get_event_loop().run_forever.called
+                assert trnsp.close.called
+                assert loop.close.called
+                assert srv.log.info.called
+                assert srv.log.info.call_args[0][0] == 'Stopping service discovery listener.'
+                assert 'allow_broadcast' in cde_args
+                assert cde_args['allow_broadcast']
+                assert 'local_addr' in cde_args
+                assert not cfg_ip_addr == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.LISTEN_IP] and cfg_ip_addr == '10.10.10.10'
+                assert not cfg_port == ssdp.SSDPBase.DEFAULTS[ssdp.SSDPBase.PORT] and cfg_port == 12345
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
-class SSDPClientTestCase(TestCase):
+class SSDPClientTestCase(TestCase, Mocks):
     '''
     Client-related test cases
     '''
@@ -398,7 +429,7 @@ class SSDPClientTestCase(TestCase):
         '''
         config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server',
                   ssdp.SSDPBase.TIMEOUT: 5, ssdp.SSDPBase.PORT: 12345}
-        clnt = ssdp.SSDPDiscoveryClient(**config)
+        clnt = self.get_ssdp_discovery_client(**config)
         assert clnt._config[ssdp.SSDPBase.SIGNATURE] == config[ssdp.SSDPBase.SIGNATURE]
         assert clnt._config[ssdp.SSDPBase.PORT] == config[ssdp.SSDPBase.PORT]
         assert clnt._config[ssdp.SSDPBase.TIMEOUT] == config[ssdp.SSDPBase.TIMEOUT]
@@ -409,7 +440,7 @@ class SSDPClientTestCase(TestCase):
         :return:
         '''
         config = {ssdp.SSDPBase.SIGNATURE: 'SUSE Enterprise Server', }
-        clnt = ssdp.SSDPDiscoveryClient(**config)
+        clnt = self.get_ssdp_discovery_client(**config)
         clnt._config['foo'] = 'bar'
         assert 'foo' in clnt._config
         assert 'foo' not in config
@@ -476,7 +507,7 @@ class SSDPClientTestCase(TestCase):
         :return:
         '''
 
-        clnt = ssdp.SSDPDiscoveryClient()
+        clnt = self.get_ssdp_discovery_client()
         clnt._query = MagicMock()
         clnt._collect_masters_map = MagicMock()
         clnt.log = MagicMock()
