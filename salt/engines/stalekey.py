@@ -146,7 +146,3 @@ def start(interval=3600, expire=604800):
         error = _write_presence(presence_file, minions)
 
         time.sleep(interval)
-
-        if callable(_check_running_callable) and \
-                _check_running_callable() is False:
-            break
