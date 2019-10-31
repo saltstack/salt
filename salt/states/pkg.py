@@ -2110,7 +2110,7 @@ def downloaded(name,
 
     if not ret['changes'] and not ret['comment']:
         ret['result'] = True
-        ret['comment'] = 'Packages are already downloaded: ' \
+        ret['comment'] = 'Packages downloaded: ' \
                          '{0}'.format(', '.join(targets))
 
     return ret
