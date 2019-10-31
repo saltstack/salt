@@ -701,3 +701,111 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    ptype='logical',
                                                    target='/dev/base',
                                                    source={'devices': [{'path': '/dev/sda'}]}), ret)
+
+    def test_pool_deleted(self):
+        '''
+        Test the pool_deleted state
+        '''
+        # purge=False test case, stopped pool
+        with patch.dict(virt.__salt__, {
+                    'virt.pool_info': MagicMock(return_value={'test01': {'state': 'stopped', 'type': 'dir'}}),
+                    'virt.pool_undefine': MagicMock(return_value=True)
+                }):
+            expected = {
+                'name': 'test01',
+                'changes': {
+                    'stopped': False,
+                    'deleted_volumes': [],
+                    'deleted': False,
+                    'undefined': True,
+                },
+                'result': True,
+                'comment': '',
+            }
+
+            with patch.dict(virt.__opts__, {'test': False}):
+                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+
+            with patch.dict(virt.__opts__, {'test': True}):
+                expected['result'] = None
+                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+
+        # purge=False test case
+        with patch.dict(virt.__salt__, {
+                    'virt.pool_info': MagicMock(return_value={'test01': {'state': 'running', 'type': 'dir'}}),
+                    'virt.pool_undefine': MagicMock(return_value=True),
+                    'virt.pool_stop': MagicMock(return_value=True)
+                }):
+            expected = {
+                'name': 'test01',
+                'changes': {
+                    'stopped': True,
+                    'deleted_volumes': [],
+                    'deleted': False,
+                    'undefined': True,
+                },
+                'result': True,
+                'comment': '',
+            }
+
+            with patch.dict(virt.__opts__, {'test': False}):
+                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+
+            with patch.dict(virt.__opts__, {'test': True}):
+                expected['result'] = None
+                self.assertDictEqual(expected, virt.pool_deleted('test01'))
+
+        # purge=True test case
+
+        with patch.dict(virt.__salt__, {
+                    'virt.pool_info': MagicMock(return_value={'test01': {'state': 'running', 'type': 'dir'}}),
+                    'virt.pool_list_volumes': MagicMock(return_value=['vm01.qcow2', 'vm02.qcow2']),
+                    'virt.pool_refresh': MagicMock(return_value=True),
+                    'virt.volume_delete': MagicMock(return_value=True),
+                    'virt.pool_stop': MagicMock(return_value=True),
+                    'virt.pool_delete': MagicMock(return_value=True),
+                    'virt.pool_undefine': MagicMock(return_value=True)
+                }):
+            expected = {
+                'name': 'test01',
+                'changes': {
+                    'stopped': True,
+                    'deleted_volumes': ['vm01.qcow2', 'vm02.qcow2'],
+                    'deleted': True,
+                    'undefined': True,
+                },
+                'result': True,
+                'comment': '',
+            }
+
+            with patch.dict(virt.__opts__, {'test': False}):
+                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+
+            with patch.dict(virt.__opts__, {'test': True}):
+                expected['result'] = None
+                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+
+        # Case of backend not unsupporting delete operations
+        with patch.dict(virt.__salt__, {
+                    'virt.pool_info': MagicMock(return_value={'test01': {'state': 'running', 'type': 'iscsi'}}),
+                    'virt.pool_stop': MagicMock(return_value=True),
+                    'virt.pool_undefine': MagicMock(return_value=True)
+                }):
+            expected = {
+                'name': 'test01',
+                'changes': {
+                    'stopped': True,
+                    'deleted_volumes': [],
+                    'deleted': False,
+                    'undefined': True,
+                },
+                'result': True,
+                'comment': 'Unsupported actions for pool of type "iscsi": deleting volume, deleting pool',
+            }
+
+            with patch.dict(virt.__opts__, {'test': False}):
+                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))
+
+            with patch.dict(virt.__opts__, {'test': True}):
+                expected['result'] = None
+                self.assertDictEqual(expected, virt.pool_deleted('test01', purge=True))

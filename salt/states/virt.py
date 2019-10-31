@@ -802,3 +802,113 @@ def pool_running(name,
         ret['result'] = False
 
     return ret
+
+
+def pool_deleted(name,
+                 purge=False,
+                 connection=None,
+                 username=None,
+                 password=None):
+    '''
+    Deletes a virtual storage pool.
+
+    :param name: the name of the pool to delete.
+    :param purge:
+        if ``True``, the volumes contained in the pool will be deleted as well as the pool itself.
+        Note that these will be lost for ever. If ``False`` the pool will simply be undefined.
+        (Default: ``False``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    In order to be purged a storage pool needs to be running to get the list of volumes to delete.
+
+    Some libvirt storage drivers may not implement deleting, those actions are implemented on a
+    best effort idea. In any case check the result's comment property to see if any of the action
+    was unsupported.
+
+    .. code-block::yaml
+
+        pool_name:
+          uyuni_virt.pool_deleted:
+            - purge: True
+
+    .. versionadded:: Neon
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    try:
+        info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
+        if info:
+            ret['changes']['stopped'] = False
+            ret['changes']['deleted'] = False
+            ret['changes']['undefined'] = False
+            ret['changes']['deleted_volumes'] = []
+            unsupported = []
+
+            if info[name]['state'] == 'running':
+                if purge:
+                    unsupported_volume_delete = ['iscsi', 'iscsi-direct', 'mpath', 'scsi']
+                    if info[name]['type'] not in unsupported_volume_delete:
+                        __salt__['virt.pool_refresh'](name,
+                                                      connection=connection,
+                                                      username=username,
+                                                      password=password)
+                        volumes = __salt__['virt.pool_list_volumes'](name,
+                                                                     connection=connection,
+                                                                     username=username,
+                                                                     password=password)
+                        for volume in volumes:
+                            # Not supported for iSCSI and SCSI drivers
+                            deleted = __opts__['test']
+                            if not __opts__['test']:
+                                deleted = __salt__['virt.volume_delete'](name,
+                                                                         volume,
+                                                                         connection=connection,
+                                                                         username=username,
+                                                                         password=password)
+                            if deleted:
+                                ret['changes']['deleted_volumes'].append(volume)
+                    else:
+                        unsupported.append('deleting volume')
+
+                if not __opts__['test']:
+                    ret['changes']['stopped'] = __salt__['virt.pool_stop'](name,
+                                                                           connection=connection,
+                                                                           username=username,
+                                                                           password=password)
+                else:
+                    ret['changes']['stopped'] = True
+
+                if purge:
+                    supported_pool_delete = ['dir', 'fs', 'netfs', 'logical', 'vstorage', 'zfs']
+                    if info[name]['type'] in supported_pool_delete:
+                        if not __opts__['test']:
+                            ret['changes']['deleted'] = __salt__['virt.pool_delete'](name,
+                                                                                     connection=connection,
+                                                                                     username=username,
+                                                                                     password=password)
+                        else:
+                            ret['changes']['deleted'] = True
+                    else:
+                        unsupported.append('deleting pool')
+
+            if not __opts__['test']:
+                ret['changes']['undefined'] = __salt__['virt.pool_undefine'](name,
+                                                                             connection=connection,
+                                                                             username=username,
+                                                                             password=password)
+            else:
+                ret['changes']['undefined'] = True
+                ret['result'] = None
+
+            if unsupported:
+                ret['comment'] = 'Unsupported actions for pool of type "{0}": {1}'.format(info[name]['type'],
+                                                                                          ', '.join(unsupported))
+        else:
+            ret['comment'] = 'Storage pool could not be found: {0}'.format(name)
+    except libvirt.libvirtError as err:
+        ret['comment'] = 'Failed deleting pool: {0}'.format(err.get_error_message())
+        ret['result'] = False
+
+    return ret
