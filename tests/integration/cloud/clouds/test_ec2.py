@@ -125,13 +125,14 @@ class EC2Test(CloudTest):
         changed_name = self.instance_name + '-changed'
 
         self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
+        # Wait until the previous instance name disappears
         for _ in range(20):
-            if self.instance_exists():
+            if self._instance_exists():
                 time.sleep(1)
             else:
                 break
-        self.assertInstanceExists(instance_name=changed_name)
 
+        self.assertInstanceExists(instance_name=changed_name)
         self.assertDestroyInstance(changed_name)
 
     def test_instance(self):
@@ -167,10 +168,10 @@ class EC2Test(CloudTest):
         self.override_profile_config(
             'ec2-win2012r2-test',
             {
+                'use_winrm': True,
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
-                'use_winrm': True,
             }
 
         )
@@ -202,10 +203,10 @@ class EC2Test(CloudTest):
         self.override_profile_config(
             'ec2-win2016-test',
             {
+                'use_winrm': True,
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
-                'use_winrm': True,
             }
 
         )

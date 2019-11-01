@@ -1225,10 +1225,21 @@ def get_imageid(vm_):
               'Filter.0.Value.0': image}
     # Query AWS, sort by 'creationDate' and get the last imageId
     _t = lambda x: datetime.datetime.strptime(x['creationDate'], '%Y-%m-%dT%H:%M:%S.%fZ')
-    image_id = sorted(aws.query(params, location=get_location(),
-                                 provider=get_provider(), opts=__opts__, sigver='4'),
-                      key=cmp_to_key(lambda i, j: salt.utils.compat.cmp(_t(i), _t(j)))
-                      )[-1]['imageId']
+    location = get_location()
+    provider = get_provider()
+    q = aws.query(params, location=location, provider=provider, opts=__opts__, sigver='4')
+    if not q:
+        log.error('Image could not be located: location={}, provider={}'.format(location, provider))
+        return []
+
+    keys = sorted(q, key=cmp_to_key(lambda i, j: salt.utils.compat.cmp(_t(i), _t(j))))
+    if ['error'] in keys:
+        log.error('IMAGE_ID Error: {}'.format(q['error'].get('Errors', {}).get('Error')))
+    if 'imageID' not in keys[-1]:
+        log.error('No imageId found for vm')
+        return []
+
+    image_id = keys[-1]['imageId']
     get_imageid.images[image] = image_id
     return image_id
 
