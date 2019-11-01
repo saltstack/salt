@@ -451,7 +451,6 @@ def _merge_list_of_dict(first, second, prepend=True):
     appended = []
     for ele in first:
         if _lookup_element(second, list(ele.keys())[0]):
-                list(ele.keys())[0]):
             overlaps.append(ele)
         elif prepend:
             merged.append(ele)
