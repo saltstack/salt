@@ -18,6 +18,7 @@ from tests.support.unit import TestCase
 
 # Import Salt libs
 from salt.version import SaltStackVersion
+from salt.utils.timed_subprocess import TimedProc
 
 
 class VersionTestCase(TestCase):
@@ -64,6 +65,14 @@ class VersionTestCase(TestCase):
         for higher_version, lower_version in examples:
             self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
             self.assertTrue(SaltStackVersion.parse(lower_version) < higher_version)
+
+    def test_version_return(self):
+        '''Test that version.py return.
+        This partnering test is to ensure version.py invoked by python on
+        a windows machine returns.
+        '''
+        ret = TimedProc(["python", "salt/version.py"]).run()
+        self.assertEqual(ret, 0)
 
     def test_unparsable_version(self):
         with self.assertRaises(ValueError):
