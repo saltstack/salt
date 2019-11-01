@@ -399,8 +399,8 @@ def _lookup_element(lst, key):
     for ele in lst:
         if not ele or not isinstance(ele, dict):
             continue
-        if ele.keys()[0] == key:
-            return ele.values()[0]
+        if list(ele.keys())[0] == key:
+            return list(ele.values())[0]
     return {}
 
 
@@ -527,8 +527,8 @@ def _get_policy_object(platform,
     for filter_ in filters:
         if not filter_ or not isinstance(filter_, dict):
             continue  # go to the next filter
-        filter_name = filter_.keys()[0]
-        filter_config = filter_.values()[0]
+        filter_name = list(filter_.keys())[0]
+        filter_config = list(filter_.values())[0]
         header = capirca.lib.policy.Header()  # same header everywhere
         target_opts = [
             platform,
