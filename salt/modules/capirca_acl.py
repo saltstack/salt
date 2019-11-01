@@ -450,14 +450,15 @@ def _merge_list_of_dict(first, second, prepend=True):
     merged = []
     appended = []
     for ele in first:
-        if _lookup_element(second, ele.keys()[0]):
+        if _lookup_element(second, list(ele.keys())[0]):
+                list(ele.keys())[0]):
             overlaps.append(ele)
         elif prepend:
             merged.append(ele)
         elif not prepend:
             appended.append(ele)
     for ele in second:
-        ele_key = ele.keys()[0]
+        ele_key = list(ele.keys())[0]
         if _lookup_element(overlaps, ele_key):
             # If theres an overlap, get the value from the first
             # But inserted into the right position
@@ -544,8 +545,8 @@ def _get_policy_object(platform,
         filter_terms = []
         for term_ in filter_config.get('terms', []):
             if term_ and isinstance(term_, dict):
-                term_name = term_.keys()[0]
-                term_fields = term_.values()[0]
+                term_name = list(term_.keys())[0]
+                term_fields = list(term_.values())[0]
                 term = _get_term_object(filter_name,
                                         term_name,
                                         pillar_key=pillar_key,
