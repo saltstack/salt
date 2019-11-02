@@ -27,7 +27,7 @@ except:
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
+#@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.saltcheck module
@@ -382,3 +382,218 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                 instance.found_states = ['found']
                 returned = saltcheck.report_highstate_tests()
                 self.assertEqual(returned, expected_output)
+
+    def test_validation(self):
+        '''test validation of tests'''
+        sc_instance = saltcheck.SaltCheck()
+
+        # Fail on empty test
+        test_dict = {}
+        expected_return = False
+        val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+        self.assertEqual(val_ret, expected_return)
+
+        # Succeed on standard test
+        test_dict = {
+                    'module_and_function': 'test.echo',
+                    'args': [ "hello"],
+                    'kwargs': {},
+                    'assertion': 'assertEqual',
+                    'expected-return':  'hello'
+                    }
+        expected_return = True
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Do not require expected-return for some assertions
+        assertions = ["assertEmpty",
+                      "assertNotEmpty",
+                      "assertTrue",
+                      "assertFalse"]
+        for assertion in assertions:
+            test_dict = {
+                        'module_and_function': 'test.echo',
+                        'args': [ "hello"]
+                        }
+            test_dict['assertion'] = assertion
+            expected_return = True
+            with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                                'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                                }):
+                val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+                self.assertEqual(val_ret, expected_return)
+
+        # Fail on invalid module
+        test_dict = {
+                    'module_and_function': 'broken.echo',
+                    'args': [ "hello"],
+                    'kwargs': {},
+                    'assertion': 'assertEqual',
+                    'expected-return':  'hello'
+                    }
+        expected_return = False
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Fail on invalid function
+        test_dict = {
+                    'module_and_function': 'test.broken',
+                    'args': [ "hello"],
+                    'kwargs': {},
+                    'assertion': 'assertEqual',
+                    'expected-return':  'hello'
+                    }
+        expected_return = False
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Fail on missing expected-return
+        test_dict = {
+                    'module_and_function': 'test.echo',
+                    'args': [ "hello"],
+                    'kwargs': {},
+                    'assertion': 'assertEqual'
+                    }
+        expected_return = False
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Fail on empty expected-return
+        test_dict = {
+                    'module_and_function': 'test.echo',
+                    'args': [ "hello"],
+                    'kwargs': {},
+                    'assertion': 'assertEqual',
+                    'expected-return':  None
+                    }
+        expected_return = False
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Succeed on m_and_f saltcheck.state_apply with only args
+        test_dict = {
+                    'module_and_function': 'saltcheck.state_apply',
+                    'args': [ "common"]
+                    }
+        expected_return = True
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['saltcheck']),
+                                             'sys.list_functions': MagicMock(return_value=['saltcheck.state_apply'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+    def test_sls_path_generation(self):
+        '''test generation of sls paths'''
+        with patch.dict(saltcheck.__salt__, {'config.get': MagicMock(return_value='saltcheck-tests')}):
+            testLoader = saltcheck.StateTestLoader()
+
+            state_name = 'teststate'
+            expected_return = ['salt://teststate/saltcheck-tests',
+                               'salt:///saltcheck-tests']
+            ret = testLoader._generate_sls_path(state_name)
+            self.assertEqual(ret, expected_return)
+
+            state_name = 'teststate.long.path'
+            expected_return = ['salt://teststate/long/path/saltcheck-tests',
+                               'salt://teststate/long/saltcheck-tests',
+                               'salt://teststate/saltcheck-tests']
+            ret = testLoader._generate_sls_path(state_name)
+            self.assertEqual(ret, expected_return)
+
+            state_name = 'teststate.really.long.path'
+            expected_return = ['salt://teststate/really/long/path/saltcheck-tests',
+                               'salt://teststate/really/long/saltcheck-tests',
+                               'salt://teststate/saltcheck-tests']
+            ret = testLoader._generate_sls_path(state_name)
+            self.assertEqual(ret, expected_return)
+
+    def test_generate_output(self):
+        # passing states
+        sc_results = {'a_state':
+                        {'test_id1': {'status': 'Pass', 'duration': 1.987},
+                        'test_id2': {'status': 'Pass', 'duration': 1.123}}}
+        expected_output = [{'a_state':
+                            {'test_id1': {'status': 'Pass', 'duration': 1.987},
+                            'test_id2': {'status': 'Pass', 'duration': 1.123}}},
+                            {'TEST RESULTS':
+                                {'Execution Time': 3.11,
+                                'Passed': 2,
+                                'Failed': 0,
+                                'Skipped': 0,
+                                'Missing Tests': 0
+                            }
+                           }]
+        ret = saltcheck._generate_out_list(sc_results)
+        self.assertEqual(ret, expected_output)
+
+        # Skipped
+        sc_results = {'a_state':
+                        {'test_id1': {'status': 'Skip', 'duration': 1.987},
+                        'test_id2': {'status': 'Pass', 'duration': 1.123}}}
+        expected_output = [{'a_state':
+                            {'test_id1': {'status': 'Skip', 'duration': 1.987},
+                            'test_id2': {'status': 'Pass', 'duration': 1.123}}},
+                            {'TEST RESULTS':
+                                {'Execution Time': 3.11,
+                                'Passed': 1,
+                                'Failed': 0,
+                                'Skipped': 1,
+                                'Missing Tests': 0
+                            }
+                           }]
+        ret = saltcheck._generate_out_list(sc_results)
+        self.assertEqual(ret, expected_output)
+
+        # Failed (does not test setting __context__)
+        sc_results = {'a_state':
+                        {'test_id1': {'status': 'Failed', 'duration': 1.987},
+                        'test_id2': {'status': 'Pass', 'duration': 1.123}}}
+        expected_output = [{'a_state':
+                            {'test_id1': {'status': 'Failed', 'duration': 1.987},
+                            'test_id2': {'status': 'Pass', 'duration': 1.123}}},
+                            {'TEST RESULTS':
+                                {'Execution Time': 3.11,
+                                'Passed': 1,
+                                'Failed': 1,
+                                'Skipped': 0,
+                                'Missing Tests': 0
+                            }
+                           }]
+        ret = saltcheck._generate_out_list(sc_results)
+        self.assertEqual(ret, expected_output)
+
+        # missing states
+        sc_results = {'a_state':
+                        {'test_id1': {'status': 'Pass', 'duration': 1.987},
+                        'test_id2': {'status': 'Pass', 'duration': 1.123}},
+                      'b_state': {}
+                     }
+        expected_output = [{'a_state':
+                            {'test_id1': {'status': 'Pass', 'duration': 1.987},
+                            'test_id2': {'status': 'Pass', 'duration': 1.123}}},
+                            {'b_state': {}},
+                            {'TEST RESULTS':
+                                {'Execution Time': 3.11,
+                                'Passed': 2,
+                                'Failed': 0,
+                                'Skipped': 0,
+                                'Missing Tests': 1
+                            }
+                           }]
+        ret = saltcheck._generate_out_list(sc_results)
+        self.assertEqual(ret, expected_output)

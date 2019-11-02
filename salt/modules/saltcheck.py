@@ -400,7 +400,9 @@ def run_state_tests(state, saltenv=None, check_all=False):
         for key, value in stl.test_dict.items():
             result = scheck.run_test(value)
             results_dict[key] = result
-        results[state_name] = results_dict
+        if not results.get(state_name):
+            # If passed a duplicate state, don't overwrite with empty res
+            results[state_name] = results_dict
     return _generate_out_list(results)
 
 
@@ -523,10 +525,6 @@ class SaltCheck(object):
                                   assertGreaterEqual
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty'''.split()
-        conf_file = copy.deepcopy(__opts__['conf_file'])
-        local_opts = salt.config.minion_config(conf_file)
-        local_opts['file_client'] = 'local'
-        self.salt_lc = salt.client.Caller(mopts=local_opts)
 
     def __is_valid_test(self, test_dict):
         '''
@@ -603,20 +601,27 @@ class SaltCheck(object):
         '''
         Generic call of salt Caller command
         '''
+        conf_file = __opts__['conf_file']
+        local_opts = salt.config.minion_config(conf_file)
+        # Save orginal file_client to restore after salt.client.Caller run
+        orig_file_client = local_opts['file_client']
+        mlocal_opts = copy.deepcopy(local_opts)
+        mlocal_opts['file_client'] = 'local'
         value = False
         try:
             if args and kwargs:
-                value = self.salt_lc.cmd(fun, *args, **kwargs)
+                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args, **kwargs)
             elif args and not kwargs:
-                value = self.salt_lc.cmd(fun, *args)
+                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args)
             elif not args and kwargs:
-                value = self.salt_lc.cmd(fun, **kwargs)
+                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, **kwargs)
             else:
-                value = self.salt_lc.cmd(fun)
+                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun)
         except salt.exceptions.SaltException:
             raise
         except Exception:
             raise
+        __opts__['file_client'] = orig_file_client
         if isinstance(value, dict) and assertion_section:
             return_value = salt.utils.data.traverse_dict_and_list(value,
                                                                   assertion_section,
@@ -631,6 +636,8 @@ class SaltCheck(object):
         Run a single saltcheck test
         '''
         start = time.time()
+        global_output_details = __salt__['config.get']('saltcheck_output_details', False)
+        output_details = test_dict.get('output_details', global_output_details)
         if self.__is_valid_test(test_dict):
             skip = test_dict.get('skip', False)
             if skip:
@@ -656,8 +663,7 @@ class SaltCheck(object):
                 assertion = test_dict['assertion']
             expected_return = test_dict.get('expected-return', None)
             assert_print_result = test_dict.get('print_result', True)
-            global_output_details = __salt__['config.get']('saltcheck_output_details', False)
-            output_details = test_dict.get('output_details', global_output_details)
+
             actual_return = self._call_salt_command(mod_and_func,
                                                     args,
                                                     kwargs,
@@ -952,8 +958,73 @@ class StateTestLoader(object):
             self.test_dict[key] = value
         return
 
-    def copy_state_files(self, sls_name):
+    def _copy_state_files(self, sls_path, state_name, check_all):
+        '''
+        Copy tst files for a given path and return results of the copy.
+        If check_all is enabled, also add all tests found
+        '''
+        cache_ret = []
+        if state_name not in self.found_states:
+            log.debug('looking in %s to cache tests', sls_path)
+            cache_ret = __salt__['cp.cache_dir'](sls_path,
+                                                saltenv=self.saltenv,
+                                                include_pat='*.tst')
+            if cache_ret:
+                if check_all:
+                    log.debug("Adding all found test files: %s", cache_ret)
+                    self.test_files.update(cache_ret)
+                else:
+                    log.debug('Marking found_state: %s', state_name)
+                    self.found_states.append(state_name)
+        else:
+            log.debug('Not copying already found_state: %s', self.found_states)
 
+        return cache_ret
+
+    def _generate_sls_path(self, state_name):
+        '''
+        For a given state_name, return list of paths to search for .tst files
+
+        possible formula paths are then
+         path/to/formula.sls
+           with tests of
+             path/to/saltcheck-tests/formula.tst
+         path/to/formula/init.sls
+           with tests of
+              path/to/formula/saltcheck-tests/init.tst
+         or if a custom saltcheck_test_location is used
+         path/to/forumla.sls
+           with tests of
+              path/saltcheck_test_location/init.tst
+        '''
+
+        all_sls_paths = []
+
+        # process /patch/to/formula/saltcheck_test_location
+        test_path = 'salt://{0}/{1}'.format(state_name.replace('.', '/'), self.saltcheck_test_location)
+        all_sls_paths.append(test_path)
+
+        # process /path/to/saltcheck_test_location
+        sls_split = state_name.split('.')
+        sls_split.pop()
+        test_path = 'salt://{0}/{1}'.format('/'.join(sls_split), self.saltcheck_test_location)
+        all_sls_paths.append(test_path)
+
+        state_name_base = state_name.split('.')[0]
+        test_path = 'salt://{0}/{1}'.format(state_name_base, self.saltcheck_test_location)
+        all_sls_paths.append(test_path)
+
+        unique_paths = set(all_sls_paths)
+        # Try longer (more complicated) paths before shorter simpler ones. Ensures that
+        # thing/sub/saltcheck-tests/testname will be found before thing/saltcheck-tests/testname
+        return list(sorted(unique_paths, key=len, reverse=True))
+
+    @memoize
+    def _get_states(self):
+        '''
+        Returns (cached) list of states for the minion
+        '''
+        return __salt__['cp.list_states']()
 
     def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
@@ -967,7 +1038,7 @@ class StateTestLoader(object):
             with salt.utils.files.fopen(cp_output_file, 'r') as fp:
                 all_states = loads(salt.utils.stringutils.to_unicode(fp.read()))
         else:
-            all_states = __salt__['cp.list_states']()
+            all_states = self._get_states()
 
         ret = []
         cached_copied_files = []
@@ -999,7 +1070,6 @@ class StateTestLoader(object):
             ret = [{'__sls__': sls_name}]
 
         for low_data in ret:
-            copy_states = True
             if not isinstance(low_data, dict):
                 log.error('low data from show_low_sls is not formed as a dict: %s', low_data)
                 return
@@ -1007,71 +1077,13 @@ class StateTestLoader(object):
             if '__sls__' in low_data:
                 # this low data has an SLS path in it
 
-                # possible formula paths are then
-                # path/to/formula.sls
-                #   with tests of
-                #       path/to/saltcheck-tests/formula.tst
-                # path/to/formula/init.sls
-                #   with tests of
-                #       path/to/formula/saltcheck-tests/init.tst
-                # or if a custom saltcheck_test_location is used
-                # path/to/forumla.sls
-                #   with tests of
-                #       path/saltcheck_test_location/init.tst
-
                 state_name = low_data['__sls__']
-                if state_name in self.found_states:
-                    copy_states = False
-                else:
-                    self.found_states.append(state_name)
 
-                # process /patch/to/formula/saltcheck_test_location
-                sls_path = 'salt://{0}/{1}'.format(state_name.replace('.', '/'), self.saltcheck_test_location)
-                if copy_states:
-                    log.debug('looking in %s to cache tests', sls_path)
-                    this_cache_ret = __salt__['cp.cache_dir'](sls_path,
-                                                              saltenv=self.saltenv,
-                                                              include_pat='*.tst')
-
-                if this_cache_ret:
-                    cached_copied_files.extend(this_cache_ret)
-                else:
-                    # process /path/to/saltcheck_test_location
-                    sls_split = low_data['__sls__'].split('.')
-                    sls_split.pop()
-                    state_name = '.'.join(sls_split)
-                    if state_name in self.found_states:
-                        copy_states = False
-                    else:
-                        self.found_states.append(state_name)
-                    sls_path = 'salt://{0}/{1}'.format('/'.join(sls_split), self.saltcheck_test_location)
-                    if copy_states:
-                        log.debug('looking in %s to cache tests', sls_path)
-                        this_cache_ret = __salt__['cp.cache_dir'](sls_path,
-                                                                  saltenv=self.saltenv,
-                                                                  include_pat='*.tst')
+                for sls_path in self._generate_sls_path(state_name):
+                    this_cache_ret = self._copy_state_files(sls_path, state_name, check_all)
                     if this_cache_ret:
+                        log.debug('found tests: %s', this_cache_ret)
                         cached_copied_files.extend(this_cache_ret)
-                    else:
-                        # process /path/saltcheck_test_location
-                        state_name = low_data['__sls__'].split('.')[0]
-                        if state_name in self.found_states:
-                            copy_states = False
-                        else:
-                            self.found_states.append(state_name)
-                        sls_path = 'salt://{0}/{1}'.format(state_name, self.saltcheck_test_location)
-                        if copy_states:
-                            log.debug('looking in %s to cache tests', sls_path)
-                            this_cache_ret = __salt__['cp.cache_dir'](sls_path,
-                                                                    saltenv=self.saltenv,
-                                                                    include_pat='*.tst')
-                        if this_cache_ret:
-                            cached_copied_files.extend(this_cache_ret)
-
-                if this_cache_ret:
-                    if check_all:
-                        # check_all, load all tests cached
-                        self.test_files.update(this_cache_ret)
 
                 if salt_ssh:
                     if check_all:
@@ -1079,19 +1091,25 @@ class StateTestLoader(object):
                         tst_files = [file_string for file_string in cached_copied_files if file_string.endswith('.tst')]
                         self.test_files.update(tst_files)
 
-                split_sls = low_data['__sls__'].split('.')
-                sls_path_names = [
-                            os.path.join(os.sep.join(split_sls),
-                                         os.path.normpath(self.saltcheck_test_location),
-                                         'init.tst'),
-                            os.path.join(os.sep.join(split_sls[:len(split_sls) - 1]),
-                                         os.path.normpath(self.saltcheck_test_location),
-                                         '{0}.tst'.format(split_sls[-1]))
-                        ]
-                # for this state, find matching test files and load them
-                for this_cached_test_file in cached_copied_files:
-                    for sls_path_name in sls_path_names:
-                        if this_cached_test_file.endswith(sls_path_name):
+                if not check_all:
+                    # in check_all case, tests already added
+                    split_sls = low_data['__sls__'].split('.')
+                    sls_path_names = set([
+                        os.path.join(os.sep.join(split_sls),
+                                    os.path.normpath(self.saltcheck_test_location),
+                                    'init.tst'),
+                        os.path.join(os.sep.join(split_sls[:len(split_sls) - 1]),
+                                    os.path.normpath(self.saltcheck_test_location),
+                                    '{0}.tst'.format(split_sls[-1])),
+                        os.path.join(split_sls[0],
+                                    os.path.normpath(self.saltcheck_test_location),
+                                    os.sep.join(split_sls[1:-1]),
+                                    '{0}.tst'.format(split_sls[-1]))
+                    ])
+                    # for this state, find matching test files and load them
+                    cached_copied_files = set(cached_copied_files)
+                    for this_cached_test_file in list(cached_copied_files):
+                        if this_cached_test_file.endswith(tuple(sls_path_names)):
                             self.test_files.add(this_cached_test_file)
                             cached_copied_files.remove(this_cached_test_file)
                             log.debug('Adding .tst file: %s', this_cached_test_file)
