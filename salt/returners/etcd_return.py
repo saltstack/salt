@@ -239,7 +239,7 @@ def save_load(jid, load, minions=None):
 
     # Check if the specified jid is 'req', as only incorrect code will do this
     if jid == 'req':
-        log.debug('sdstack_etcd returner <save_load> was called using a request job id ({jid:s}) with {data:s}'.format(jid=jid, data=load))
+        log.debug('sdstack_etcd returner <save_load> was called using a request job id ({jid:s}) with {data}'.format(jid=jid, data=load))
 
     # Build the paths that we'll use for registration of our job
     loadp = '/'.join([path, Schema['job-cache'], jid, '.load.p'])
@@ -248,7 +248,7 @@ def save_load(jid, load, minions=None):
     ## Now we can just store the current load
     json = salt.utils.json.dumps(load)
 
-    log.debug('sdstack_etcd returner <save_load> storing load data for job {jid:s} to {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
+    log.debug('sdstack_etcd returner <save_load> storing load data for job {jid:s} to {path:s} with {data}'.format(jid=jid, path=loadp, data=load))
     try:
         res = client.write(loadp, json, prevExist=False)
 
@@ -258,7 +258,7 @@ def save_load(jid, load, minions=None):
         node = client.read(loadp)
         node.value = json
 
-        log.debug('sdstack_etcd returner <save_load> updating load data for job {jid:s} at {path:s} with {data:s}'.format(jid=jid, path=loadp, data=load))
+        log.debug('sdstack_etcd returner <save_load> updating load data for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=loadp, data=load))
         res = client.update(node)
 
     # If we failed here, it's okay because the lock won't get written so this
@@ -275,12 +275,12 @@ def save_load(jid, load, minions=None):
             d1, d2 = salt.utils.json.loads(res.value), salt.utils.json.loads(res._prev_node.value)
             j1, j2 = salt.utils.json.dumps(res.value, sort_keys=True), salt.utils.json.dumps(res._prev_node.value, sort_keys=True)
             if j1 != j2:
-                log.warning("sdstack_etcd returner <save_load> overwrote the load data for job {jid:s} at {path:s} with {data:s}. Old data was {old:s}".format(jid=jid, path=res.key, data=d1, old=d2))
+                log.warning("sdstack_etcd returner <save_load> overwrote the load data for job {jid:s} at {path:s} with {data}. Old data was {old}".format(jid=jid, path=res.key, data=d1, old=d2))
     except Exception as E:
         log.debug("sdstack_etcd returner <save_load> unable to compare load data for job {jid:s} at {path:s} due to exception ({exception}) being raised".format(jid=jid, path=loadp, exception=E))
         if not res.newKey:
-            log.trace("sdstack_etcd returner <save_load> -- old load data for job {jid:s}: {data:s}".format(jid=jid, data=res._prev_node.value))
-        log.trace("sdstack_etcd returner <save_load> -- new load data for job {jid:s}: {data:s}".format(jid=jid, data=res.value))
+            log.trace("sdstack_etcd returner <save_load> -- old load data for job {jid:s}: {data}".format(jid=jid, data=res._prev_node.value))
+        log.trace("sdstack_etcd returner <save_load> -- new load data for job {jid:s}: {data}".format(jid=jid, data=res.value))
 
     # Since this is when a job is being created, create a lock that we can
     # check to see if the job has expired. This allows a user to signal to
@@ -772,7 +772,7 @@ def get_jids():
 
         # If we can't decode the json, then we're screwed so log it in case the user cares
         except Exception as E:
-            log.error("sdstack_etcd returner <get_jids> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data:s}".format(jid=jid, path=loadp, exception=E, data=res.value))
+            log.error("sdstack_etcd returner <get_jids> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data}".format(jid=jid, path=loadp, exception=E, data=res.value))
             continue
 
         # Cool. Everything seems to be good...
@@ -989,7 +989,7 @@ def get_jids_filter(count, filter_find_job=True):
 
         # If we can't decode the json, then we're screwed so log it in case the user cares
         except Exception as E:
-            log.error("sdstack_etcd returner <get_jids_filter> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data:s}".format(jid=jid, path=loadp, exception=E, data=res.value))
+            log.error("sdstack_etcd returner <get_jids_filter> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data}".format(jid=jid, path=loadp, exception=E, data=res.value))
             continue
 
         if filter_find_job and data['fun'] == 'saltutil.find_job':
