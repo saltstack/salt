@@ -351,7 +351,7 @@ def report_highstate_tests(saltenv=None):
 
     sls_list = []
     sls_list = _get_top_states(saltenv)
-    stl = StateTestLoader()
+    stl = StateTestLoader(saltenv)
     missing_tests = 0
     states_missing_tests = []
     for state_name in sls_list:
@@ -370,10 +370,10 @@ def report_highstate_tests(saltenv=None):
 
 def run_state_tests(state, saltenv=None, check_all=False):
     '''
-    Execute all tests for a salt state and return results
+    Execute tests for a salt state and return results
     Nested states will also be tested
 
-    :param str state: the name of a user defined state
+    :param str state: state name for which to run associated .tst test files
     :param str saltenv: optional saltenv. Defaults to base
     :param bool check_all: boolean to run all tests in state/saltcheck-tests directory
 
@@ -388,9 +388,8 @@ def run_state_tests(state, saltenv=None, check_all=False):
             saltenv = __opts__['saltenv']
         else:
             saltenv = 'base'
-
     scheck = SaltCheck(saltenv)
-    stl = StateTestLoader()
+    stl = StateTestLoader(saltenv)
     results = OrderedDict()
     sls_list = salt.utils.args.split_input(state)
     for state_name in sls_list:
@@ -929,11 +928,11 @@ class StateTestLoader(object):
     e.g. state_dir/saltcheck-tests/[1.tst, 2.tst, 3.tst]
     '''
 
-    def __init__(self):
+    def __init__(self, saltenv='base'):
         self.path_type = None
         self.test_files = set([])  # list of file paths
         self.test_dict = OrderedDict()
-        self.saltenv = 'base'
+        self.saltenv = saltenv
         self.saltcheck_test_location = __salt__['config.get']('saltcheck_test_location', 'saltcheck-tests')
         self.found_states = []
 
@@ -1024,7 +1023,7 @@ class StateTestLoader(object):
         '''
         Returns (cached) list of states for the minion
         '''
-        return __salt__['cp.list_states']()
+        return __salt__['cp.list_states'](saltenv=self.saltenv)
 
     def add_test_files_for_sls(self, sls_name, check_all=False):
         '''
@@ -1064,7 +1063,7 @@ class StateTestLoader(object):
                 with salt.utils.files.fopen(state_low_file, 'r') as fp:
                     ret = loads(salt.utils.stringutils.to_unicode(fp.read()))
             else:
-                ret = __salt__['state.show_low_sls'](sls_name, test=True)
+                ret = __salt__['state.show_low_sls'](sls_name, saltenv=self.saltenv, test=True)
         else:
             # passed name isn't a state, so we'll assume it is a test definition
             ret = [{'__sls__': sls_name}]

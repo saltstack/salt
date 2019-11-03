@@ -27,7 +27,7 @@ except:
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-#@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.saltcheck module
@@ -396,7 +396,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         # Succeed on standard test
         test_dict = {
                     'module_and_function': 'test.echo',
-                    'args': [ "hello"],
+                    'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
                     'expected-return':  'hello'
@@ -416,7 +416,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         for assertion in assertions:
             test_dict = {
                         'module_and_function': 'test.echo',
-                        'args': [ "hello"]
+                        'args': ["hello"]
                         }
             test_dict['assertion'] = assertion
             expected_return = True
@@ -429,7 +429,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         # Fail on invalid module
         test_dict = {
                     'module_and_function': 'broken.echo',
-                    'args': [ "hello"],
+                    'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
                     'expected-return':  'hello'
@@ -444,7 +444,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         # Fail on invalid function
         test_dict = {
                     'module_and_function': 'test.broken',
-                    'args': [ "hello"],
+                    'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
                     'expected-return':  'hello'
@@ -459,7 +459,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         # Fail on missing expected-return
         test_dict = {
                     'module_and_function': 'test.echo',
-                    'args': [ "hello"],
+                    'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual'
                     }
@@ -473,7 +473,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         # Fail on empty expected-return
         test_dict = {
                     'module_and_function': 'test.echo',
-                    'args': [ "hello"],
+                    'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
                     'expected-return':  None
@@ -488,7 +488,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         # Succeed on m_and_f saltcheck.state_apply with only args
         test_dict = {
                     'module_and_function': 'saltcheck.state_apply',
-                    'args': [ "common"]
+                    'args': ["common"]
                     }
         expected_return = True
         with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['saltcheck']),
