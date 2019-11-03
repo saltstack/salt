@@ -538,8 +538,8 @@ class ZMQHandler(ExcInfoOnLogLevelFormatMixin, logging.Handler, NewStyleClassMix
     def prepare(self, record):
         msg = self.format(record)
         record = copy.copy(record)
-        record.message = msg
         record.msg = msg
+        # Reduce network bandwidth, we don't need these any more
         record.args = None
         record.exc_info = None
         record.exc_text = None
