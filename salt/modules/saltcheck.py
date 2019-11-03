@@ -89,7 +89,8 @@ Saltcheck Keywords
     (dict) Optional keyword arguments to be passed to the salt module
 **assertion:**
     (str) One of the supported assertions and required except for ``saltcheck.state_apply``
-**expected-return:**
+    Tests which fail the assertion and expected_return, cause saltcheck to exit which a non-zero exit code.
+**expected_return:**
     (str) Required except by ``assertEmpty``, ``assertNotEmpty``, ``assertTrue``,
     ``assertFalse``. The return of module_and_function is compared to this value in the assertion.
 **assertion_section:**
@@ -105,10 +106,10 @@ Saltcheck Keywords
 **output_details:**
     (bool) Optional keyword to display ``module_and_function``, ``args``, ``assertion_section``,
     and assertion results text in the output. If print_result is False, assertion results will be hidden.
-    This is a per test setting, but can be set for all tests by adding ``saltcheck_output_details: True``
+    This is a per test setting, but can be set globally for all tests by adding ``saltcheck_output_details: True``
     in the minion configuration file.
     Defaults to False
-**pillar-data:**
+**pillar_data:**
     (dict) Optional keyword for passing in pillar data. Intended for use in potential test
     setup or teardown with the ``saltcheck.state_apply`` function.
 **skip:**
@@ -128,7 +129,7 @@ Basic Example
         - "hello"
       kwargs:
       assertion: assertEqual
-      expected-return:  'hello'
+      expected_return:  'hello'
 
 Example with jinja
 ------------------
@@ -154,7 +155,7 @@ Example with setup state including pillar
       module_and_function: saltcheck.state_apply
       args:
         - common
-      pillar-data:
+      pillar_data:
         data: value
 
     verify_vim:
@@ -185,7 +186,7 @@ Example with assertion_section
       args:
         - root
       assertion: assertEqual
-      expected-return: /bin/bash
+      expected_return: /bin/bash
       assertion_section: shell
 
 Example with a nested assertion_section
@@ -200,7 +201,7 @@ Example with a nested assertion_section
       kwargs:
         return_full_policy_names: True
       assertion: assertEqual
-      expected-return: Enabled
+      expected_return: Enabled
       assertion_section: 'Computer Configuration|Microsoft network client: Digitally sign communications (always)'
       assertion_section_delimiter: '|'
 
@@ -214,7 +215,7 @@ Example suppressing print results
       args:
         - text
         - /oozie/common/env.properties
-      expected-return: nameNode = hdfs://nameservice2
+      expected_return: nameNode = hdfs://nameservice2
       assertion: assertNotIn
       print_result: False
 
@@ -289,7 +290,7 @@ def run_test(**kwargs):
         salt '*' saltcheck.run_test
             test='{"module_and_function": "test.echo",
                    "assertion": "assertEqual",
-                   "expected-return": "This works!",
+                   "expected_return": "This works!",
                    "args":["This works!"] }'
     '''
     # salt converts the string to a dictionary auto-magically
@@ -542,8 +543,9 @@ class SaltCheck(object):
         skip = test_dict.get('skip', False)
         m_and_f = test_dict.get('module_and_function', None)
         assertion = test_dict.get('assertion', None)
-        exp_ret_key = 'expected-return' in test_dict.keys()
-        exp_ret_val = test_dict.get('expected-return', None)
+        # support old expected-return and newer name normalized expected_return
+        exp_ret_key = any(key in test_dict.keys() for key in ['expected_return', 'expected-return'])
+        exp_ret_val = test_dict.get('expected_return', test_dict.get('expected-return', None))
         log.info("__is_valid_test has test: %s", test_dict)
         if skip:
             required_total = 0
@@ -583,7 +585,7 @@ class SaltCheck(object):
         if exp_ret_val is not None:
             tots += 1
         else:
-            test_errors.append('expected-return does not have a value')
+            test_errors.append('expected_return does not have a value')
 
         # log the test score for debug purposes
         log.info("__test score: %s and required: %s", tots, required_total)
@@ -646,7 +648,7 @@ class SaltCheck(object):
             assertion_section_delimiter = test_dict.get('assertion_section_delimiter', DEFAULT_TARGET_DELIM)
             args = test_dict.get('args', None)
             kwargs = test_dict.get('kwargs', None)
-            pillar_data = test_dict.get('pillar-data', None)
+            pillar_data = test_dict.get('pillar_data', test_dict.get('pillar-data', None))
             if pillar_data:
                 if not kwargs:
                     kwargs = {}
@@ -660,7 +662,7 @@ class SaltCheck(object):
                 assertion = "assertNotEmpty"
             else:
                 assertion = test_dict['assertion']
-            expected_return = test_dict.get('expected-return', None)
+            expected_return = test_dict.get('expected_return', test_dict.get('expected-return', None))
             assert_print_result = test_dict.get('print_result', True)
 
             actual_return = self._call_salt_command(mod_and_func,

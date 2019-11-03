@@ -4,4 +4,4 @@ check_all_validate:
     - "check"
   kwargs:
   assertion: assertEqual
-  expected-return:  'check'
+  expected_return:  'check'

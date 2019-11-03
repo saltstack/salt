@@ -4,4 +4,4 @@ echo_test_hello:
     - "hello"
   kwargs:
   assertion: assertEqual
-  expected-return:  'hello'
+  expected_return:  'hello'

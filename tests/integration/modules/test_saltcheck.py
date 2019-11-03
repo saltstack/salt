@@ -19,7 +19,7 @@ class SaltcheckModuleTest(ModuleCase):
         '''
         saltcheck_test = {"module_and_function": "test.echo",
                         "assertion": "assertEqual",
-                        "expected-return": "This works!",
+                        "expected_return": "This works!",
                         "args": ["This works!"]}
         ret = self.run_function('saltcheck.run_test', test=saltcheck_test)
         self.assertDictContainsSubset({'status': 'Pass'}, ret)

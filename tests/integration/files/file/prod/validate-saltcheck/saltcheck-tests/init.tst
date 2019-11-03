@@ -4,4 +4,4 @@ echo_test_prod_env:
     - "test-prod"
   kwargs:
   assertion: assertEqual
-  expected-return:  'test-prod'
+  expected_return:  'test-prod'

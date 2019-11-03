@@ -363,7 +363,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'cp.cache_master': MagicMock(return_value=[True])}):
             returned = saltcheck.run_test(test={"module_and_function": "test.echo",
                                                 "assertion": "assertEqual",
-                                                "expected-return": "This works!",
+                                                "expected_return": "This works!",
                                                 "args": ["This works!"]
                                                 })
             self.assertEqual(returned['status'], 'Pass')
@@ -399,6 +399,21 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                     'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
+                    'expected_return':  'hello'
+                    }
+        expected_return = True
+        with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
+                                             'sys.list_functions': MagicMock(return_value=['test.echo'])
+                                            }):
+            val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
+            self.assertEqual(val_ret, expected_return)
+
+        # Succeed on standard test with older expected-return syntax
+        test_dict = {
+                    'module_and_function': 'test.echo',
+                    'args': ["hello"],
+                    'kwargs': {},
+                    'assertion': 'assertEqual',
                     'expected-return':  'hello'
                     }
         expected_return = True
@@ -408,7 +423,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
             self.assertEqual(val_ret, expected_return)
 
-        # Do not require expected-return for some assertions
+        # Do not require expected_return for some assertions
         assertions = ["assertEmpty",
                       "assertNotEmpty",
                       "assertTrue",
@@ -432,7 +447,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                     'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
-                    'expected-return':  'hello'
+                    'expected_return':  'hello'
                     }
         expected_return = False
         with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
@@ -447,7 +462,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                     'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
-                    'expected-return':  'hello'
+                    'expected_return':  'hello'
                     }
         expected_return = False
         with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),
@@ -456,7 +471,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
             self.assertEqual(val_ret, expected_return)
 
-        # Fail on missing expected-return
+        # Fail on missing expected_return
         test_dict = {
                     'module_and_function': 'test.echo',
                     'args': ["hello"],
@@ -470,13 +485,13 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
             self.assertEqual(val_ret, expected_return)
 
-        # Fail on empty expected-return
+        # Fail on empty expected_return
         test_dict = {
                     'module_and_function': 'test.echo',
                     'args': ["hello"],
                     'kwargs': {},
                     'assertion': 'assertEqual',
-                    'expected-return':  None
+                    'expected_return':  None
                     }
         expected_return = False
         with patch.dict(saltcheck.__salt__, {'sys.list_modules': MagicMock(return_value=['test']),

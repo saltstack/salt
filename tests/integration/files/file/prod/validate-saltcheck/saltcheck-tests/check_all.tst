@@ -4,4 +4,4 @@ check_all_validate_prod:
     - "check-prod"
   kwargs:
   assertion: assertEqual
-  expected-return: 'check-prod'
+  expected_return: 'check-prod'
