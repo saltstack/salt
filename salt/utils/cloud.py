@@ -1991,8 +1991,6 @@ def fire_event(key, msg, tag, sock_dir, args=None, transport='zeromq'):
             else:
                 args = {key: msg}
             event.fire_event(args, tag)
-        finally:
-            event.destroy()
 
         # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
         # Assertion failed: get_load () == 0 (poller_base.cpp:32)
