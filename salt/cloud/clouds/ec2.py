@@ -1329,8 +1329,7 @@ def securitygroupid(vm_):
         sg_query = aws.query(params, location=get_location(), provider=get_provider(), opts=__opts__, sigver='4')
         error = sg_query.get('error', {}).get('Errors', {}).get('Error')
         if error:
-            print('*' * 100)
-            log.error(error)
+            log.error('SECURITYGROUPID: {}'.format(error))
             return []
         for sg in sg_query:
             if sg['groupName'] in securitygroupname_list:
