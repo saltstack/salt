@@ -28,7 +28,7 @@ class SaltVersionTestCase(TestCase):
 
     # get_release_number tests: 3
 
-    def test_get_release_number_no_version(self):
+    def test_get_release_number_no_codename(self):
         '''
         Test that None is returned when the codename isn't found.
         '''
@@ -48,85 +48,101 @@ class SaltVersionTestCase(TestCase):
         '''
         assert salt_version.get_release_number('Oxygen') == '2018.3'
 
-    # is_equal tests: 3
+    # equal tests: 3
 
     @patch('salt.version.SaltStackVersion.LNAMES', {'foo': (1900, 5)})
     @patch('salt.version.SaltStackVersion', MagicMock(return_value='1900.5.0'))
-    def test_is_equal_success(self):
+    def test_equal_success(self):
         '''
         Test that the current version is equal to the codename
         '''
-        assert salt_version.is_equal('foo') is True
+        assert salt_version.equal('foo') is True
 
-    @patch('salt.version.SaltStackVersion.LNAMES', {'Oxygen': (2018, 3),
-                                                    'Nitrogen': (2017, 7)})
+    @patch('salt.version.SaltStackVersion.LNAMES', {'oxygen': (2018, 3),
+                                                    'nitrogen': (2017, 7)})
     @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_equal_older_version(self):
+    def test_equal_older_codename(self):
         '''
         Test that when an older codename is passed in, the function returns False.
         '''
-        assert salt_version.is_equal('Nitrogen') is False
+        assert salt_version.equal('Nitrogen') is False
 
-    @patch('salt.version.SaltStackVersion.LNAMES', {'Fluorine': (salt.version.MAX_SIZE - 100, 0)})
+    @patch('salt.version.SaltStackVersion.LNAMES', {'fluorine': (salt.version.MAX_SIZE - 100, 0)})
     @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_equal_newer_version(self):
+    def test_equal_newer_codename(self):
         '''
         Test that when a newer codename is passed in, the function returns False
         '''
-        assert salt_version.is_equal('Fluorine') is False
+        assert salt_version.equal('Fluorine') is False
 
-    # is_newer tests: 3
-
-    @patch('salt.modules.salt_version.get_release_number', MagicMock(return_value='No version assigned.'))
-    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_newer_success(self):
-        '''
-        Test that the current version is newer than the codename
-        '''
-        assert salt_version.is_newer('Fluorine') is True
-
-    @patch('salt.version.SaltStackVersion.LNAMES', {'Oxygen': (2018, 3)})
-    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_newer_with_equal_version(self):
-        '''
-        Test that when an equal codename is passed in, the function returns False.
-        '''
-        assert salt_version.is_newer('Oxygen') is False
-
-    @patch('salt.version.SaltStackVersion.LNAMES', {'Oxygen': (2018, 3),
-                                                    'Nitrogen': (2017, 7)})
-    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_newer_with_older_version(self):
-        '''
-        Test that when an older codename is passed in, the function returns False.
-        '''
-        assert salt_version.is_newer('Nitrogen') is False
-
-    # is_older tests: 3
+    # greater_than tests: 4
 
     @patch('salt.modules.salt_version.get_release_number', MagicMock(return_value='2017.7'))
     @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_older_success(self):
+    def test_greater_than_success(self):
         '''
-        Test that the current version is older than the codename
+        Test that the current version is newer than the codename
         '''
-        assert salt_version.is_older('Nitrogen') is True
+        assert salt_version.greater_than('Nitrogen') is True
 
+    @patch('salt.version.SaltStackVersion.LNAMES', {'oxygen': (2018, 3)})
     @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    @patch('salt.version.SaltStackVersion.LNAMES', {'Oxygen': (2018, 3)})
-    def test_is_older_with_equal_version(self):
+    def test_greater_than_with_equal_codename(self):
         '''
         Test that when an equal codename is passed in, the function returns False.
         '''
-        assert salt_version.is_older('Oxygen') is False
+        assert salt_version.greater_than('Oxygen') is False
+
+    @patch('salt.version.SaltStackVersion.LNAMES', {'fluorine': (2019, 2),
+                                                    'oxygen': (2018, 3)})
+    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
+    def test_greater_than_with_newer_codename(self):
+        '''
+        Test that when a newer codename is passed in, the function returns False.
+        '''
+        assert salt_version.greater_than('Fluorine') is False
 
     @patch('salt.modules.salt_version.get_release_number', MagicMock(return_value='No version assigned.'))
     @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
-    def test_is_older_with_newer_version(self):
+    def test_greater_than_unassigned(self):
         '''
-        Test that when an newer codename is passed in, the function returns False.
+        Test that the unassigned codename is greater than the current version
         '''
-        assert salt_version.is_older('Fluorine') is False
+        assert salt_version.greater_than('Fluorine') is False
+
+    # less_than tests: 4
+
+    @patch('salt.modules.salt_version.get_release_number', MagicMock(return_value='2019.2'))
+    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
+    def test_less_than_success(self):
+        '''
+        Test that when a newer codename is passed in, the function returns True.
+        '''
+        assert salt_version.less_than('Fluorine') is True
+
+    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
+    @patch('salt.version.SaltStackVersion.LNAMES', {'oxygen': (2018, 3)})
+    def test_less_than_with_equal_codename(self):
+        '''
+        Test that when an equal codename is passed in, the function returns False.
+        '''
+        assert salt_version.less_than('Oxygen') is False
+
+    @patch('salt.modules.salt_version.get_release_number', MagicMock(return_value='2017.7'))
+    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
+    def test_less_than_with_older_codename(self):
+        '''
+        Test that the current version is less than the codename.
+        '''
+        assert salt_version.less_than('Nitrogen') is False
+
+    @patch('salt.modules.salt_version.get_release_number', MagicMock(return_value='No version assigned.'))
+    @patch('salt.version.SaltStackVersion', MagicMock(return_value='2018.3.2'))
+    def test_less_than_with_unassigned_codename(self):
+        '''
+        Test that when an unassigned codename greater than the current version.
+        '''
+        assert salt_version.less_than('Fluorine') is True
 
     # _check_release_cmp tests: 2
 
