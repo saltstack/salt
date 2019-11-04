@@ -41,13 +41,22 @@ wrappedNode('docs', global_timeout, '#jenkins-prod-pr') {
         '''
     }
 
-    stage('Build') {
+    stage('Build HTML Docs') {
         sh shell_header + '''
         eval "$(pyenv init -)"
         pyenv shell 3.6.8
-        nox -e docs
+        nox -e 'docs-html(compress=True)'
         '''
-        archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
+        archiveArtifacts artifacts: 'doc/html-archive.tar.gz'
+    }
+
+    stage('Build Man Pages') {
+        sh shell_header + '''
+        eval "$(pyenv init -)"
+        pyenv shell 3.6.8
+        nox -e 'docs-man(compress=True, update=False)'
+        '''
+        archiveArtifacts artifacts: 'doc/man-archive.tar.gz'
     }
 }
 
