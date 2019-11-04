@@ -15,6 +15,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
+import types
 import signal
 import getpass
 import logging
@@ -56,6 +57,17 @@ def _sorted(mixins_or_funcs):
     )
 
 
+class MixinFuncsContainer(list):
+
+    def append(self, func):
+        if isinstance(func, types.MethodType):
+            # We only care about unbound methods
+            func = func.__func__
+        if func not in self:
+            # And no duplicates please
+            list.append(self, func)
+
+
 class MixInMeta(type):
     # This attribute here won't actually do anything. But, if you need to
     # specify an order or a dependency within the mix-ins, please define the
@@ -79,13 +91,13 @@ class OptionParserMeta(MixInMeta):
                                                         bases,
                                                         attrs)
         if not hasattr(instance, '_mixin_setup_funcs'):
-            instance._mixin_setup_funcs = []
+            instance._mixin_setup_funcs = MixinFuncsContainer()
         if not hasattr(instance, '_mixin_process_funcs'):
-            instance._mixin_process_funcs = []
+            instance._mixin_process_funcs = MixinFuncsContainer()
         if not hasattr(instance, '_mixin_after_parsed_funcs'):
-            instance._mixin_after_parsed_funcs = []
+            instance._mixin_after_parsed_funcs = MixinFuncsContainer()
         if not hasattr(instance, '_mixin_before_exit_funcs'):
-            instance._mixin_before_exit_funcs = []
+            instance._mixin_before_exit_funcs = MixinFuncsContainer()
 
         for base in _sorted(bases + (instance,)):
             func = getattr(base, '_mixin_setup', None)
@@ -304,7 +316,7 @@ class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
         # the config options and if needed override them
         self._mixin_after_parsed_funcs.append(self.__merge_config_with_cli)
 
-    def __merge_config_with_cli(self, *args):  # pylint: disable=unused-argument
+    def __merge_config_with_cli(self):
         # Merge parser options
         for option in self.option_list:
             if option.dest is None:
@@ -687,7 +699,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                     # Remove it from config so it inherits from log_level_logfile
                     self.config.pop(self._logfile_loglevel_config_setting_name_)
 
-    def __setup_logfile_logger_config(self, *args):  # pylint: disable=unused-argument
+    def __setup_logfile_logger_config(self):
         if self._logfile_loglevel_config_setting_name_ in self.config and not \
                 self.config.get(self._logfile_loglevel_config_setting_name_):
             # Remove it from config so it inherits from log_level
@@ -852,7 +864,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
             log.set_logger_level(name, level)
 
-    def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
+    def __setup_extended_logging(self):
         if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
             # On Windows when using a logging listener, all extended logging
             # will go through the logging listener.
@@ -862,14 +874,14 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     def _get_mp_logging_listener_queue(self):
         return log.get_multiprocessing_logging_queue()
 
-    def _setup_mp_logging_listener(self, *args):  # pylint: disable=unused-argument
+    def _setup_mp_logging_listener(self):
         if self._setup_mp_logging_listener_:
             log.setup_multiprocessing_logging_listener(
                 self.config,
                 self._get_mp_logging_listener_queue()
             )
 
-    def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
+    def _setup_mp_logging_client(self):
         if self._setup_mp_logging_listener_:
             # Set multiprocessing logging level even in non-Windows
             # environments. In non-Windows environments, this setting will
@@ -895,7 +907,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 log.shutdown_console_logging()
                 log.shutdown_logfile_logging()
 
-    def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
+    def __setup_console_logger_config(self):
         # Since we're not going to be a daemon, setup the console logger
         logfmt = self.config.get(
             'log_fmt_console',
@@ -921,7 +933,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         self.config['log_fmt_console'] = logfmt
         self.config['log_datefmt_console'] = datefmt
 
-    def __setup_console_logger(self, *args):  # pylint: disable=unused-argument
+    def __setup_console_logger(self):
         # If daemon is set force console logger to quiet
         if getattr(self.options, 'daemon', False) is True:
             return
@@ -2580,7 +2592,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         # info or error.
         self.config['loglevel'] = 'info'
 
-    def __create_keys_dir(self, *args):  # pylint: disable=unused-argument
+    def __create_keys_dir(self):
         if not os.path.isdir(self.config['gen_keys_dir']):
             os.makedirs(self.config['gen_keys_dir'])
 
