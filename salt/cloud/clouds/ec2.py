@@ -1326,8 +1326,13 @@ def securitygroupid(vm_):
         if not isinstance(securitygroupname_list, list):
             securitygroupname_list = [securitygroupname_list]
         params = {'Action': 'DescribeSecurityGroups'}
-        for sg in aws.query(params, location=get_location(),
-                            provider=get_provider(), opts=__opts__, sigver='4'):
+        sg_query = aws.query(params, location=get_location(), provider=get_provider(), opts=__opts__, sigver='4')
+        error = sg_query.get('error', {}).get('Errors', {}).get('Error')
+        if error:
+            print('*' * 100)
+            log.error(error)
+            return []
+        for sg in sg_query:
             if sg['groupName'] in securitygroupname_list:
                 log.debug(
                     'AWS SecurityGroup ID of %s is %s',
