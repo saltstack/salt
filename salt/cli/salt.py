@@ -148,7 +148,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         if self.config['async']:
             jid = self.local_client.cmd_async(**kwargs)
-            salt.utils.stringutils.print_cli('Executed command with job ID: {0}'.format(jid))
+            six.print_('Executed command with job ID:', end=' ', file=sys.stderr, flush=True)
+            six.print_('{0}'.format(jid), end='\n', file=sys.stdout, flush=True)
             return
 
         # local will be None when there was an error
