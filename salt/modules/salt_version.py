@@ -7,8 +7,8 @@ Access Salt's elemental release code-names.
 Salt's feature release schedule is based on the Periodic Table, as described
 in the :ref:`Version Numbers <version-numbers>` documentation.
 
-When a feature was added (or removed) in some specific release, it can be
-difficult to build out future-proof functionality that is dependend on
+When a feature was added (or removed) in a specific release, it can be
+difficult to build out future-proof functionality that is dependent on
 a naming scheme that moves.
 
 For example, a state syntax needs to change to support an option that will be

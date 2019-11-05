@@ -16,6 +16,7 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
+from salt.ext import six
 import salt.modules.salt_version as salt_version
 import salt.version
 
@@ -25,6 +26,26 @@ class SaltVersionTestCase(TestCase):
     '''
     Test cases for salt.modules.salt_version
     '''
+
+    def test_mocked_objects(self):
+        '''
+        Test that the mocked objects actually have what we expect.
+
+        For example, earlier tests incorrectly mocked the
+        salt.version.SaltStackVersion.LNAMES dict using upper-case indexes
+        '''
+        assert isinstance(salt.version.SaltStackVersion.LNAMES, dict)
+        for k, v in salt.version.SaltStackVersion.LNAMES.items():
+            assert k == k.lower()
+            assert isinstance(v, tuple)
+            assert len(v) == 2
+
+        sv = salt.version.SaltStackVersion(*salt.version.__version_info__).__str__()
+        assert isinstance(sv, six.string_types)
+
+        with patch('salt.version.SaltStackVersion.LNAMES', {'neon': (2019, 8)}):
+            sv = salt.version.SaltStackVersion.from_name('Neon')
+            self.assertEqual(sv.string, '2019.8.0')
 
     # get_release_number tests: 3
 
