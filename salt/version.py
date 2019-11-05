@@ -24,7 +24,7 @@ if not sys.platform.startswith('win'):
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs
-from salt.ext import six
+import salt.ext.six as six
 from salt.ext.six.moves import map
 
 # Don't rely on external packages in this module since it's used at install time
