@@ -2283,7 +2283,7 @@ def mod_repo(repo, saltenv='base', **kwargs):
     else:
         kwargs['architectures'] = repo_architectures
 
-    if 'disabled' in kwargs:
+    if kwargs['disabled'] is True or kwargs['enabled'] is False:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
 
     kw_type = kwargs.get('type')
