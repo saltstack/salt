@@ -4568,7 +4568,7 @@ def pool_define(name,
                 'username': 'admin',
                 'secret': {
                     'type': 'uuid',
-                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                    'value': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
                 }
             }
 
@@ -4579,7 +4579,7 @@ def pool_define(name,
                 'username': 'myname',
                 'secret': {
                     'type': 'usage',
-                    'uuid': 'mycluster_myname'
+                    'value': 'mycluster_myname'
                 }
             }
 
