@@ -33,17 +33,6 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
-SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
-DEFAULT_CONFIG['root_dir'] = ROOT_DIR
-DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
-DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
-DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
-
-JOB_FUNCTION = 'test.ping'
 
 
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
@@ -53,11 +42,25 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
             functions = {'test.ping': ping}
-            self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
+            self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(self.DEFAULT_CONFIG), functions, returners={})
         self.schedule.opts['loop_interval'] = 1
         self.schedule.opts['run_schedule_jobs_in_background'] = False
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
+
+    @classmethod
+    def setUpClass(cls):
+        ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
+        SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
+
+        cls.DEFAULT_CONFIG = salt.config.minion_config(None)
+        cls.DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
+        cls.DEFAULT_CONFIG['root_dir'] = ROOT_DIR
+        cls.DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
+        cls.DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
+        cls.DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
+
+        cls.JOB_FUNCTION = 'test.ping'
 
     def tearDown(self):
         self.schedule.reset()
@@ -71,7 +74,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -100,7 +103,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': [
                 '11/29/2017 4:00pm',
                 '11/29/2017 5:00pm',
@@ -135,7 +138,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': 'tea time',
             }
           }
@@ -158,7 +161,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -186,7 +189,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': [
                 '11/29/2017 4:00pm',
                 '11/29/2017 5:00pm',
@@ -225,7 +228,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'once': '2017-12-13T13:00:00',
             }
           }
@@ -249,7 +252,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'once': '2017-12-13T13:00:00',
             }
           }
@@ -278,7 +281,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'cron': '0 16 29 11 *',
             }
           }
@@ -303,7 +306,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'cron': '0 16 29 11 *',
             }
           }
@@ -331,7 +334,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'hours': '1',
               'until': '11/29/2017 5:00pm',
             }
@@ -378,7 +381,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'hours': '1',
               'after': '11/29/2017 5:00pm',
             }
@@ -429,7 +432,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': True,
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -455,7 +458,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': True,
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -485,7 +488,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': False,
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
             }
           }
@@ -510,7 +513,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'enabled': False,
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
               'enabled': True,
             }
@@ -535,7 +538,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'hours': '1',
               'run_on_start': True,
             }
@@ -564,7 +567,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'seconds': '30',
               'splay': '10',
             }
@@ -594,7 +597,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'seconds': '30',
               'splay': {'start': 5, 'end': 10},
             }
@@ -625,7 +628,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
           'schedule': {
             'splay': {'start': 5, 'end': 10},
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'seconds': '30',
             }
           }
@@ -654,7 +657,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'seconds': '30',
             }
           }
@@ -712,7 +715,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'minutes': '30',
             }
           }
@@ -764,7 +767,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'hours': '2',
             }
           }
@@ -816,7 +819,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'days': '2',
               'dry_run': True
             }
@@ -885,7 +888,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': '11/29/2017 4:00pm',
               'splay': splay
             }
@@ -922,7 +925,7 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             job_name: {
-              'function': JOB_FUNCTION,
+              'function': self.JOB_FUNCTION,
               'when': ['11/29/2017 6:00am'],
               'splay': splay
             }

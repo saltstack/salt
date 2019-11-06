@@ -641,8 +641,6 @@ class Schedule(object):
                 current_jobs = salt.utils.minion.running(self.opts)
             for job in current_jobs:
                 if 'schedule' in job:
-                    log.info('=== data %s ===', data)
-                    log.info('=== job %s ===', job)
                     if data['name'] in job['schedule'] \
                             and salt.utils.process.os_is_running(job['pid']):
                         running = True
