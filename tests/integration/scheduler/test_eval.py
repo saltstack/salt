@@ -504,6 +504,9 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertNotIn('_last_run', ret)
         self.assertEqual(ret['_skip_reason'], 'disabled')
 
+        # Ensure job data still matches
+        self.assertEqual(ret, job['schedule'][job_name])
+
     def test_eval_global_disabled_job_enabled(self):
         '''
         verify that scheduled job does not run
@@ -529,6 +532,9 @@ class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertNotIn('_last_run', ret)
         self.assertEqual(ret['_skip_reason'], 'disabled')
+
+        # Ensure job is still enabled
+        self.assertEqual(ret['enabled'], True)
 
     def test_eval_run_on_start(self):
         '''

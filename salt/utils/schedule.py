@@ -215,7 +215,7 @@ class Schedule(object):
 
         # Check if we're able to run, default to False
         # in case the `run` value is not present.
-        if not data['run']:
+        if not data.get('run'):
             return data
         if 'jid_include' not in data or data['jid_include']:
             jobcount = 0
@@ -464,6 +464,9 @@ class Schedule(object):
 
         if 'name' not in data:
             data['name'] = name
+
+        # Assume run should be True until we check max_running
+
         if 'run' not in data:
             data['run'] = True
         log.info('Running Job: %s', name)
@@ -476,8 +479,8 @@ class Schedule(object):
                                            now)
 
         # Grab run, assume True
-        run = data.get('run', True)
-        if run:
+        if data.get('run'):
+            log.info('Running Job: %s', name)
             self._run_job(func, data)
             data['_last_run'] = now
 
@@ -1624,22 +1627,10 @@ class Schedule(object):
             if '_continue' in data and data['_continue']:
                 run = False
 
-            # If there is no job specific enabled available,
-            # grab the global which defaults to True.
-            if 'enabled' not in data:
-                data['enabled'] = self.enabled
-
-            # If globally disabled, disable the job
-            if not self.enabled:
-                data['enabled'] = self.enabled
-                data['_skip_reason'] = 'disabled'
-                data['_skipped_time'] = now
-                data['_skipped'] = True
-                run = False
-
-            # Job is disabled, set run to False
-            if 'enabled' in data and not data['enabled']:
-                data['_enabled'] = False
+            # If globally disabled or job
+            # is diabled skip the job
+            if not self.enabled or not data.get('enabled', True):
+                log.trace('Job: %s is disabled', job_name)
                 data['_skip_reason'] = 'disabled'
                 data['_skipped_time'] = now
                 data['_skipped'] = True
@@ -1652,14 +1643,6 @@ class Schedule(object):
 
             try:
                 if run:
-                    # Job is disabled, continue
-                    if 'enabled' in data and not data['enabled']:
-                        log.debug('Job: %s is disabled', job_name)
-                        data['_skip_reason'] = 'disabled'
-                        data['_skipped_time'] = now
-                        data['_skipped'] = True
-                        continue
-
                     if 'jid_include' not in data or data['jid_include']:
                         data['jid_include'] = True
                         log.debug('schedule: Job %s was scheduled with jid_include, '
@@ -1727,7 +1710,7 @@ class Schedule(object):
 
         try:
             if multiprocessing_enabled:
-                thread_cls = salt.utils.process.SignalHandlingMultiprocessingProcess
+                thread_cls = salt.utils.process.SignalHandlingProcess
             else:
                 thread_cls = threading.Thread
 
