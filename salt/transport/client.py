@@ -112,15 +112,12 @@ class AsyncReqChannel(AsyncChannel):
                 AsyncChannel._config_resolver()
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
-        elif ttype == 'raet':
-            import salt.transport.raet
-            return salt.transport.raet.RAETReqChannel(opts, **kwargs)
         elif ttype == 'local':
             import salt.transport.local
             return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
         else:
             raise Exception(
-                'Channels are only defined for tcp, zeromq, raet, and local'
+                'Channels are only defined for tcp, zeromq, and local'
             )
             # return NewKindOfChannel(opts, **kwargs)
 
@@ -166,15 +163,12 @@ class AsyncPubChannel(AsyncChannel):
                 AsyncChannel._config_resolver()
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
-        elif ttype == 'raet':  # TODO:
-            import salt.transport.raet
-            return salt.transport.raet.AsyncRAETPubChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
             import salt.transport.local
             return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
         else:
             raise Exception(
-                'Channels are only defined for tcp, zeromq, raet, and local'
+                'Channels are only defined for tcp, zeromq, and local'
             )
             # return NewKindOfChannel(opts, **kwargs)
 
