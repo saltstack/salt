@@ -2008,6 +2008,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                              'File {0} updated'.format(file_name))
             self.assertEqual(val['changes']['diff'], 'New file')
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_issue_30161_unless_and_onlyif_together(self):
         '''
         test cmd.run using multiple unless options where the first cmd in the
