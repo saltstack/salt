@@ -8,7 +8,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import pytest
-
 import salt.states.btrfs as btrfs
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
@@ -19,6 +18,7 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 
+@skipIf(salt.utils.platform.is_windows(), "Non-Windows feature")
 class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
     """
     Test cases for salt.states.btrfs
