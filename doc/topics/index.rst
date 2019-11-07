@@ -9,19 +9,19 @@ The 30 second summary
 
 Salt is:
 
-* a configuration management system, capable of maintaining remote nodes
-  in defined states (for example, ensuring that specific packages are installed and
-  specific services are running)
+* **A configuration management system.** Salt is capable of maintaining remote
+  nodes in defined states. For example, it can ensure that specific packages are
+  installed and that specific services are running.
 
-* a distributed remote execution system used to execute commands and
-  query data on remote nodes, either individually or by arbitrary
-  selection criteria
+* **A distributed remote execution system used to execute commands and
+  query data on remote nodes.** Salt can query and execute commands either on
+  individual nodes or by using an arbitrary selection criteria.
 
-It was developed in order to bring the best solutions found in the
-world of remote execution together and make them better, faster, and more
-malleable. Salt accomplishes this through its ability to handle large loads of
-information, and not just dozens but hundreds and even thousands of individual
-servers quickly through a simple and manageable interface.
+Salt brings together the best solutions from the world of remote execution and
+makes these solutions better, faster, and more scalable. Salt accomplishes
+this through its ability to handle large loads of information. It can quickly
+manage hundreds and even thousands of individual servers through a simple and
+manageable interface.
 
 Simplicity
 ==========
@@ -38,10 +38,10 @@ Parallel execution
 ==================
 The core functions of Salt:
 
-* enable commands to remote systems to be called in parallel rather than serially
-* use a secure and encrypted protocol
-* use the smallest and fastest network payloads possible
-* provide a simple programming interface
+* Enable commands to remote systems to be called in parallel rather than serially
+* Use a secure and encrypted protocol
+* Use the smallest and fastest network payloads possible
+* Provide a simple programming interface
 
 Salt also introduces more granular controls to the realm of remote
 execution, allowing systems to be targeted not just by hostname, but
@@ -51,11 +51,14 @@ Builds on proven technology
 ===========================
 Salt takes advantage of a number of technologies and techniques. The
 networking layer is built with the excellent `ZeroMQ`_ networking
-library, so the Salt daemon includes a viable and transparent AMQ
-broker. Salt uses public keys for authentication with the master
-daemon, then uses faster `AES`_ encryption for payload communication;
-authentication and encryption are integral to Salt.  Salt takes
-advantage of communication via `msgpack`_, enabling fast and light
+library, which means that the Salt daemon includes a viable and transparent AMQ
+broker.
+
+Salt uses public keys for authentication with the master daemon. It also uses
+faster `AES`_ encryption for payload communication. Authentication and
+encryption are integral to Salt.
+
+Salt takes advantage of communication via `msgpack`_, enabling fast and light
 network traffic.
 
 .. _`ZeroMQ`: http://zeromq.org/
@@ -64,23 +67,23 @@ network traffic.
 
 Python client interface
 =======================
-In order to allow for simple expansion, Salt execution routines can be written
+To allow for simple expansion, Salt execution routines can be written
 as plain Python modules. The data collected from Salt executions can be sent
-back to the master server, or to any arbitrary program. Salt can be called from
-a simple Python API, or from the command line, so that Salt can be used to
-execute one-off commands as well as operate as an integral part of a larger
-application.
+back to the master server or to any arbitrary program. Salt can be called from
+a simple Python API or from the command line. This set-up allows you to use
+Salt to execute one-off commands as well as operate as an integral part of a
+larger application.
 
 Fast, flexible, scalable
 ========================
 The result is a system that can execute commands at high speed on
 target server groups ranging from one to very many servers. Salt is
-very fast, easy to set up, amazingly malleable and provides a single
+very fast, easy to set up, and amazingly malleable. It provides a single
 remote execution architecture that can manage the diverse
 requirements of any number of servers.  The Salt infrastructure
-brings together the best of the remote execution world, amplifies its
-capabilities and expands its range, resulting in a system that is as
-versatile as it is practical, suitable for any network.
+brings together the best of the remote execution world and then amplifies its
+capabilities and expands its range. The end result is a system that is as
+versatile as it is practical--suitable for any network.
 
 Open
 ====
@@ -88,7 +91,7 @@ Open
 Salt is developed under the `Apache 2.0 license`_, and can be used for
 open and proprietary projects. Please submit your expansions back to
 the Salt project so that we can all benefit together as Salt grows.
-Please feel free to sprinkle Salt around your systems and let the
-deliciousness come forth.
+Feel free to sprinkle Salt around your systems and let the deliciousness come
+forth.
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
