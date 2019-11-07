@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-XML Mangler
+XML Manager
 ===========
 
 State managment of XML files
