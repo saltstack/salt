@@ -425,7 +425,6 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     ret = _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
         refresh_pillar()
     return ret
 
