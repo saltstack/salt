@@ -266,7 +266,7 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
 
 def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None, profile=None):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: Neon
 
     Return Elasticsearch cluster settings.
 
@@ -290,7 +290,7 @@ def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None
 
 def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=None):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: Neon
 
     Set Elasticsearch cluster settings.
 
@@ -1271,7 +1271,7 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
 
 def flush_synced(hosts=None, profile=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: Neon
 
     Perform a normal flush, then add a generated unique marker (sync_id) to all shards.
     http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-synced-flush.html
