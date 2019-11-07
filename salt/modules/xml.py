@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-XML file mangler
+XML file manager
 
 .. versionadded:: Neon
 '''
