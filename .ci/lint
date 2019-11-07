@@ -21,7 +21,7 @@ milestone(buildNumber)
 
 def lint_report_issues = []
 
-wrappedNode('lint', global_timeout, '#jenkins-prod-pr') {
+wrappedNode('temp', global_timeout, '#jenkins-prod-pr') {
     try {
         shell_header = ''
 

@@ -19,7 +19,7 @@ milestone(buildNumber)
 
 def shell_header
 
-wrappedNode('docs', global_timeout, '#jenkins-prod-pr') {
+wrappedNode('temp', global_timeout, '#jenkins-prod-pr') {
 
     shell_header = ''
     // Checkout the repo

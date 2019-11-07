@@ -1,4 +1,4 @@
-@Library('salt@master-1.2') _
+@Library('salt@master-1.3rc') _
 
 // Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
@@ -12,7 +12,7 @@ def golden_images_branch = '2019.2'
 def nox_passthrough_opts = '--proxy'
 def concurrent_builds = 1
 def use_spot_instances = true
-def jenkins_slave_label = 'kitchen-slave'
+def jenkins_slave_label = 'temp'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
