@@ -31,7 +31,6 @@ A more involved example involves pulling from a custom repository.
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: ppa:wolfnet/logstash
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -49,7 +48,6 @@ state module
 
     dotdeb.repo:
       pkgrepo.managed:
-        - humanname: Dotdeb
         - name: deb http://packages.dotdeb.org wheezy-php55 all
         - dist: wheezy-php55
         - file: /etc/apt/sources.list.d/dotbeb.list
