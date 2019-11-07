@@ -48,8 +48,8 @@ def __virtual__():
     '''
     Freezer is based on top of the pkg module.
 
-    Return True as pkg is going to be there, so we can avoid of
-    loading all modules.
+    Return True since the `pkg` module should always exist. This
+    avoids the overhead of loading all modules.
 
     '''
     return True
@@ -118,7 +118,8 @@ def list_():
 
     for state in os.listdir(states_path):
         if state.endswith(('-pkgs.yml', '-reps.yml')):
-            # Remove the suffix, as both share the same size
+            # Remove the suffix - both files start with the freezer
+            # name
             ret.append(state[:-9])
     return sorted(set(ret))
 
@@ -168,6 +169,74 @@ def freeze(name=None, force=False, **kwargs):
         with fopen(fname, 'w') as fp:
             json.dump(content, fp)
     return True
+
+
+def _add_missing_repositories(frozen_repos, ret, **kwargs):
+    '''Add missing repositories and update the ret dict'''
+    repos = __salt__['pkg.list_repos'](**kwargs)
+    missing_repos = set(frozen_repos) - set(repos)
+    for repo in missing_repos:
+        try:
+            # In Python 2 we cannot do advance destructuring, so we
+            # need to create a temporary dictionary that will merge
+            # all the parameters
+            _tmp_kwargs = frozen_repos[repo].copy()
+            _tmp_kwargs.update(kwargs)
+            __salt__['pkg.mod_repo'](repo, **_tmp_kwargs)
+            ret['repos']['add'].append(repo)
+            log.info('Added missing repository %s', repo)
+        except Exception as e:
+            msg = 'Error adding %s repository: %s'
+            log.error(msg, repo, e)
+            ret['comment'].append(msg % (repo, e))
+
+
+def _remove_extra_repositories(frozen_repos, ret, **kwargs):
+    '''Remove extra repositories and update the ret dict'''
+    repos = __salt__['pkg.list_repos'](**kwargs)
+    extra_repos = set(repos) - set(frozen_repos)
+    for repo in extra_repos:
+        try:
+            __salt__['pkg.del_repo'](repo, **kwargs)
+            ret['repos']['remove'].append(repo)
+            log.info('Removed extra repository %s', repo)
+        except Exception as e:
+            msg = 'Error removing %s repository: %s'
+            log.error(msg, repo, e)
+            ret['comment'].append(msg % (repo, e))
+
+
+def _add_missing_packages(frozen_pkgs, ret, **kwargs):
+    '''Add missing packages and update the ret dict'''
+    # NOTE: we can remove the `for` using `pkgs`. This will improve
+    # performance, but I want to have a more detalied report of what
+    # packages are installed or failed.
+    pkgs = __salt__['pkg.list_pkgs'](**kwargs)
+    missing_pkgs = set(frozen_pkgs) - set(pkgs)
+    for pkg in missing_pkgs:
+        try:
+            __salt__['pkg.install'](name=pkg, **kwargs)
+            ret['pkgs']['add'].append(pkg)
+            log.info('Added missing package %s', pkg)
+        except Exception as e:
+            msg = 'Error adding %s package: %s'
+            log.error(msg, pkg, e)
+            ret['comment'].append(msg % (pkg, e))
+
+
+def _remove_extra_packages(frozen_pkgs, ret, **kwargs):
+    '''Remove extra packages and update the ret dict'''
+    pkgs = __salt__['pkg.list_pkgs'](**kwargs)
+    extra_pkgs = set(pkgs) - set(frozen_pkgs)
+    for pkg in extra_pkgs:
+        try:
+            __salt__['pkg.remove'](name=pkg, **kwargs)
+            ret['pkgs']['remove'].append(pkg)
+            log.info('Removed extra package %s', pkg)
+        except Exception as e:
+            msg = 'Error removing %s package: %s'
+            log.error(msg, pkg, e)
+            ret['comment'].append(msg % (pkg, e))
 
 
 def restore(name=None, clean=False, **kwargs):
@@ -231,75 +300,20 @@ def restore(name=None, clean=False, **kwargs):
     # match with the mod_XXX counterpart. If this is not the case the
     # recovery will be partial.
 
-    res = {
+    ret = {
         'pkgs': {'add': [], 'remove': []},
         'repos': {'add': [], 'remove': []},
         'comment': [],
     }
 
-    # Add missing repositories
-    repos = __salt__['pkg.list_repos'](**safe_kwargs)
-    missing_repos = set(frozen_repos) - set(repos)
-    for repo in missing_repos:
-        try:
-            # In Python 2 we cannot do advance destructuring, so we
-            # need to create a temporary dictionary that will merge
-            # all the parameters
-            _tmp_kwargs = frozen_repos[repo].copy()
-            _tmp_kwargs.update(safe_kwargs)
-            __salt__['pkg.mod_repo'](repo, **_tmp_kwargs)
-            res['repos']['add'].append(repo)
-            log.info('Added missing repository %s', repo)
-        except Exception as e:
-            msg = 'Error adding %s repository: %s'
-            log.error(msg, repo, e)
-            res['comment'].append(msg % (repo, e))
-
-    # Add missing packages
-    # NOTE: we can remove the `for` using `pkgs`. This will improve
-    # performance, but I want to have a more detalied report of what
-    # packages are installed or failled.
-    pkgs = __salt__['pkg.list_pkgs'](**safe_kwargs)
-    missing_pkgs = set(frozen_pkgs) - set(pkgs)
-    for pkg in missing_pkgs:
-        try:
-            __salt__['pkg.install'](name=pkg, **safe_kwargs)
-            res['pkgs']['add'].append(pkg)
-            log.info('Added missing package %s', pkg)
-        except Exception as e:
-            msg = 'Error adding %s package: %s'
-            log.error(msg, pkg, e)
-            res['comment'].append(msg % (pkg, e))
-
-    # Remove extra packages
-    pkgs = __salt__['pkg.list_pkgs'](**safe_kwargs)
-    extra_pkgs = set(pkgs) - set(frozen_pkgs)
-    for pkg in extra_pkgs:
-        try:
-            __salt__['pkg.remove'](name=pkg, **safe_kwargs)
-            res['pkgs']['remove'].append(pkg)
-            log.info('Removed extra package %s', pkg)
-        except Exception as e:
-            msg = 'Error removing %s package: %s'
-            log.error(msg, pkg, e)
-            res['comment'].append(msg % (pkg, e))
-
-    # Remove extra repositories
-    repos = __salt__['pkg.list_repos'](**safe_kwargs)
-    extra_repos = set(repos) - set(frozen_repos)
-    for repo in extra_repos:
-        try:
-            __salt__['pkg.del_repo'](repo, **safe_kwargs)
-            res['repos']['remove'].append(repo)
-            log.info('Removed extra repository %s', repo)
-        except Exception as e:
-            msg = 'Error removing %s repository: %s'
-            log.error(msg, repo, e)
-            res['comment'].append(msg % (repo, e))
+    _add_missing_repositories(frozen_repos, ret, **safe_kwargs)
+    _add_missing_packages(frozen_pkgs, ret, **safe_kwargs)
+    _remove_extra_packages(frozen_pkgs, ret, **safe_kwargs)
+    _remove_extra_repositories(frozen_repos, ret, **safe_kwargs)
 
     # Clean the cached YAML files
-    if clean and not res['comment']:
+    if clean and not ret['comment']:
         for fname in _paths(name):
             os.remove(fname)
 
-    return res
+    return ret
