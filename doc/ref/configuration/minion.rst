@@ -769,6 +769,30 @@ Statically assigns grains to the minion.
       cabinet: 13
       cab_u: 14-15
 
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
@@ -892,6 +916,20 @@ minion. Since this grain is expensive, it is disabled by default.
 .. code-block:: yaml
 
     iscsi_grains: True
+
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
 
 .. conf_minion:: mine_enabled
 
@@ -1326,7 +1364,7 @@ creates a new connection for every return to the master.
 Default: ``ipc``
 
 Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
-process communications. Set ipc_mode to ``tcp`` on such systems.
+process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 
 .. code-block:: yaml
 
