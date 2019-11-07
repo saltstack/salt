@@ -52,7 +52,8 @@
             SEARCH_CX:   '{{ search_cx }}',
             COLLAPSE_INDEX: false,
             FILE_SUFFIX: '{{ '' if no_search_suffix else file_suffix }}',
-            HAS_SOURCE:  '{{ has_source|lower }}'
+            HAS_SOURCE:  '{{ has_source|lower }}',
+            REPO_PRIMARY_BRANCH_TAB_NAME: '{{ repo_primary_branch | capitalize }}'
         };
     </script>
     {%- for scriptfile in script_files %}
@@ -178,15 +179,18 @@
                     <div class="row">
                         <div class="col-sm-12 col-md-11 col-md-offset-1 col-lg-10 col-lg-offset-1">
                             <nav class="pull-left text-muted">
-                                <a href="https://github.com/saltstack/salt/edit/develop/doc/{{pagename}}.rst">Edit on GitHub</a>
+                                <a href="https://github.com/saltstack/salt/edit/{{ repo_primary_branch }}/doc/{{pagename}}.rst">Edit on GitHub</a>
                             </nav>
                             <nav id="localnav">
                                 <ul class="nav navbar-nav">
                                     {%- block relbar_small %}{{ relbar() }}{% endblock %}
 
-                                    {% if not (build_type == "develop" or build_type == "next") and on_saltstack %}
+                                    {% if not (build_type == repo_primary_branch or build_type == "next") and on_saltstack %}
                                     <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
                                     <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
+                                    {% elif build_type == repo_primary_branch and on_saltstack %}
+                                    <li><a class="icon-dl" href="/en/pdf/Salt-{{ repo_primary_branch }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
+                                    <li><a class="icon-dl" href="/en/epub/Salt-{{ repo_primary_branch }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
                                     {% endif %}
                                 </ul>
                             </nav>
@@ -202,9 +206,9 @@
 
                                 <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> These release notes are for an old release of Salt. This release might contain known security and other issues that are fixed in the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Release notes for the latest release" href="{{ release }}.html">latest release</a>.</div>
 
-                            {% elif build_type == "develop" and on_saltstack %}
+                            {% elif build_type == repo_primary_branch and on_saltstack %}
 
-                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from the develop branch, some of these features are not yet released.</div>
+                                <div class="alert alert-warning dev-notification-text" role="alert"><i class="glyphicon glyphicon-warning-sign"></i> You are viewing docs from the {{ repo_primary_branch }} branch, some of these features are not yet released.</div>
 
                             {% elif build_type == "inactive" and on_saltstack %}
 
@@ -244,16 +248,16 @@
                             <p><i>{{ today }}</i></p>
 
                                 {% if build_type == "latest" %}
-                                <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+                                <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
 
                                 {% elif build_type == "previous" %}
-                                <p>You are viewing docs for the previous stable release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+                                <p>You are viewing docs for the previous stable release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
 
                                 {% elif build_type == "inactive" %}
-                                <p>You are viewing docs for an inactive release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the develop branch" href="/en/develop/">develop</a> branch.</p>
+                                <p>You are viewing docs for an inactive release, {{ previous_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
 
-                                {% elif build_type == "develop" %}
-                                <p>You are viewing docs built from a recent snapshot of the develop branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
+                                {% elif build_type == repo_primary_branch %}
+                                <p>You are viewing docs built from a recent snapshot of the {{ repo_primary_branch }} branch. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
 
                                 {% elif build_type == "next" %}
                                 <p>You are viewing preview docs for the next major release, {{ next_release }}. Switch to docs for the latest stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the latest stable release" href="/en/latest/">{{ latest_release }}</a>.</p>
@@ -285,12 +289,12 @@
 <!--                <a class="ss-logo" href="http://saltstack.com"><img width="250" height="63" class="nolightbox sidebar-logo" src="{{ pathto('_static/images/saltstack_logo.svg', 1) }}"></a>
 
                 {% if on_saltstack %}
-
+                {#
                 {% if [True, False]|random %}
                 <a href="http://saltconf.com/register" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-saltconf.png', 1) }}"/></a>
                 {% else %}
                 <a href="http://saltstack.com/support" target="_blank"><img class="nolightbox sidebar-banner center" src="{{ pathto('_static/images/banner-support.png', 1) }}"/></a>
-                {% endif %}-->
+                {% endif %} #}-->
                 <a href="https://saltconf.com/menu-ad" target="_blank"><img class="nolightbox sidebar-banner center" src="https://get.saltstack.com/rs/304-PHQ-615/images/Salt-docs-menu-ad-250x63.jpg"/></a>
 
 
@@ -304,11 +308,11 @@
 
                 <div class="releaselinks versions {{ build_type }}">
 
-                <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{%- endif %}</a>
+                <a class="btn btn-secondary{% if build_type == "previous" or build_type == "inactive" %} active{% endif %}" id="previous"{% if build_type == "previous" or build_type == "inactive" %} title="View release notes"{% else %} title="Switch to docs for the previous stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ previous_release_dir }}/">{{ previous_release }}{% if build_type == "previous" or build_type == "inactive" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
                 <a  class="btn btn-secondary{% if build_type == "latest" %} active{% endif %}" id="latest"{% if build_type == "latest" %} title="View release notes"{% else %} title="Switch to docs for the latest stable release"{% endif %} data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/latest/">{{ latest_release }}{% if build_type == "latest" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
-                <a  class="btn btn-secondary{% if build_type == "develop" %} active{% endif %}" id="develop"{% if build_type == "develop" %} title="View all release notes"{% endif %} title="Switch to docs built recently from the develop branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/develop/">Develop{% if build_type == "develop" %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
+                <a  class="btn btn-secondary{% if build_type == repo_primary_branch %} active{% endif %}" id="{{ repo_primary_branch }}"{% if build_type == repo_primary_branch %} title="View all release notes"{% endif %} title="Switch to docs built recently from the {{ repo_primary_branch }} branch" data-container="body" data-toggle="tooltip" data-placement="bottom" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch | capitalize }}{% if build_type == repo_primary_branch %} <i class="glyphicon glyphicon-ok"></i>{% endif %}</a>
 
                 </div>
 
@@ -376,20 +380,6 @@
         <script type="text/javascript" language="javascript">llactid=23943</script>
         <script type="text/javascript" language="javascript" src="https://trackalyzer.com/trackalyze_secure.js"></script>
 
-        <script>
-        var _gaq = _gaq || [];
-        var pluginUrl = '//www.google-analytics.com/plugins/ga/inpage_linkid.js';
-        _gaq.push(['_require', 'inpage_linkid', pluginUrl]);
-        _gaq.push(['_setAccount', 'UA-26984928-1']);
-        _gaq.push(['_setDomainName', 'saltstack.com']);
-        _gaq.push(['_trackPageview']);
-
-        (function() {
-            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-        })();
-        </script>
         {% endif %}
     </body>
 </html>
