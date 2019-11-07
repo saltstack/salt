@@ -1341,10 +1341,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 },
             },
         }
-        self.assertEqual(ret, salt.config.apply_cloud_providers_config(
->>>>>>> de3fd871dc... add tencentcloud testing
-            overrides,
-            defaults=DEFAULT))
+        self.assertEqual(ret, salt.config.apply_cloud_providers_config(overrides, defaults=DEFAULT))
 
     def test_apply_cloud_providers_config_extends_bad_alias(self):
         '''
