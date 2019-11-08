@@ -110,6 +110,15 @@ The following settings are always required for PROXMOX:
 
 Optional Settings
 =================
+Optional Provider Settings
+
+ .. code-block:: yaml
+
+     # Proxmox Server Port (Default: 8006)
+     port: 8006
+
+ Optional Profile Settings
+
 Unlike other cloud providers in Salt Cloud, Proxmox does not utilize a
 ``size`` setting. This is because Proxmox allows the end-user to specify a
 more detailed configuration for their instances, than is allowed by many other
