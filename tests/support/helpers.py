@@ -1669,3 +1669,42 @@ def dedent(text, linesep=os.linesep):
     if not isinstance(text, six.text_type):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+class PatchedEnviron(object):
+
+    def __init__(self, **kwargs):
+        self.cleanup_keys = kwargs.pop('__cleanup__', ())
+        self.kwargs = kwargs
+        self.original_environ = None
+
+    def __enter__(self):
+        self.original_environ = os.environ.copy()
+        for key in self.cleanup_keys:
+            os.environ.pop(key, None)
+
+        # Make sure there are no unicode characters in the self.kwargs if we're
+        # on Python 2. These are being added to `os.environ` and causing
+        # problems
+        if not sys.version_info > (3, 0):
+            kwargs = self.kwargs.copy()
+            clean_kwargs = {}
+            for k in self.kwargs:
+                key = k
+                if isinstance(key, six.text_type):
+                    key = key.encode('utf-8')
+                if isinstance(self.kwargs[k], six.text_type):
+                    kwargs[k] = kwargs[k].encode('utf-8')
+                clean_kwargs[key] = kwargs[k]
+            self.kwargs = clean_kwargs
+
+        os.environ.update(**self.kwargs)
+
+        return self
+
+    def __exit__(self, *args):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
+
+
+patched_environ = PatchedEnviron

@@ -17,7 +17,7 @@ from salt.ext.six.moves.urllib.request import urlopen
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Testing libs
-from tests.support.helpers import requires_network
+from tests.support.helpers import requires_network, patched_environ
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.paths import FILES, TMP
 from tests.support.runtests import RUNTIME_VARS
@@ -120,12 +120,12 @@ class Base(TestCase, LoaderModuleMockMixin):
             'distribute',
         ])
 
-    @classmethod
-    def tearDownClass(cls):
-        if os.path.isdir(cls.rdir):
-            shutil.rmtree(cls.rdir)
-
     def setUp(self):
+        if salt.utils.platform.is_darwin and six.PY3:
+            self.patched_environ = patched_environ(__cleanup__=['__PYVENV_LAUNCHER__'])
+            self.patched_environ.__enter__()
+            self.addCleanup(self.patched_environ.__exit__)
+
         super(Base, self).setUp()
         self._remove_dir()
         shutil.copytree(ROOT, self.tdir)
