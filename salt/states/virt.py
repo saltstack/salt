@@ -264,7 +264,8 @@ def running(name,
             username=None,
             password=None,
             os_type=None,
-            arch=None):
+            arch=None,
+            boot=None):
     '''
     Starts an existing guest, or defines and starts a new VM with specified arguments.
 
@@ -349,6 +350,19 @@ def running(name,
 
         .. versionadded:: Neon
 
+    :param boot: Specifies kernel for the virtual machine, as well as boot
+                 parameters for the virtual machine. This is an optionl
+                 parameter, and all of the keys are optional within the
+                 dictionary.
+        .. code-block:: python
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+        .. versionadded:: neon
+
     .. rubric:: Example States
 
     Make sure an already-defined virtual machine called ``domain_name`` is running:
@@ -413,7 +427,8 @@ def running(name,
                                                      live=False,
                                                      connection=connection,
                                                      username=username,
-                                                     password=password)
+                                                     password=password,
+                                                     boot=boot)
                     if status['definition']:
                         action_msg = 'updated and started'
                 __salt__['virt.start'](name)
@@ -431,7 +446,8 @@ def running(name,
                                                      graphics=graphics,
                                                      connection=connection,
                                                      username=username,
-                                                     password=password)
+                                                     password=password,
+                                                     boot=boot)
                     ret['changes'][name] = status
                     if status.get('errors', None):
                         ret['comment'] = 'Domain {0} updated, but some live update(s) failed'.format(name)
@@ -466,7 +482,8 @@ def running(name,
                                   priv_key=priv_key,
                                   connection=connection,
                                   username=username,
-                                  password=password)
+                                  password=password,
+                                  boot=boot)
             ret['changes'][name] = 'Domain defined and started'
             ret['comment'] = 'Domain {0} defined and started'.format(name)
     except libvirt.libvirtError as err:

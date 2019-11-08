@@ -610,6 +610,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'xen',
                 'xen',
                 'x86_64',
+                boot=None
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'xen')
@@ -1123,6 +1124,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertFalse('<interface' in definition)
                 self.assertFalse('<disk' in definition)
 
+                # Ensure the init() function allows creating VM without NIC and
+                # disk but with boot parameters.
+
+                defineMock.reset_mock()
+                mock_run.reset_mock()
+                boot = {
+                    'kernel': '/root/f8-i386-vmlinuz',
+                    'initrd': '/root/f8-i386-initrd',
+                    'cmdline':
+                        'console=ttyS0 ks=http://example.com/f8-i386/os/'
+                }
+                retval = virt.init('test vm boot params',
+                                   2,
+                                   1234,
+                                   nic=None,
+                                   disk=None,
+                                   seed=False,
+                                   start=False,
+                                   boot=boot)
+                definition = defineMock.call_args_list[0][0][0]
+                self.assertEqual('<kernel' in definition, True)
+                self.assertEqual('<initrd' in definition, True)
+                self.assertEqual('<cmdline' in definition, True)
+                self.assertEqual(retval, True)
+
                 # Test case creating disks
                 defineMock.reset_mock()
                 mock_run.reset_mock()
@@ -1221,6 +1247,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find('vcpu').text, '2')
         self.assertEqual(setvcpus_mock.call_args[0][0], 2)
+
+        boot = {
+            'kernel': '/root/f8-i386-vmlinuz',
+            'initrd': '/root/f8-i386-initrd',
+            'cmdline':
+                'console=ttyS0 ks=http://example.com/f8-i386/os/'
+        }
+
+        # Update with boot parameter case
+        self.assertEqual({
+                'definition': True,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('my vm', boot=boot))
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
