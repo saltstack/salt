@@ -1357,7 +1357,7 @@ def deploy_windows(host,
         # Shell out to psexec to ensure salt-minion service started
         if use_winrm:
             winrm_cmd(winrm_session, 'sc', ['stop', 'salt-minion'])
-            time.sleep(5)
+            time.sleep(10)
             winrm_cmd(winrm_session, 'sc', ['start', 'salt-minion'])
         else:
             stdout, stderr, ret_code = run_psexec_command(
@@ -1366,7 +1366,13 @@ def deploy_windows(host,
             if ret_code != 0:
                 return False
 
-            time.sleep(5)
+            for retry in range(100):
+                stdout, stderr, ret_code = run_psexec_command(
+                    'cmd.exe', '/c sc query salt-minion', host, username, password
+                )
+                log.debug('Cloud winrm command #{}: {}'.format(retry, stdout))
+                if 'STOP_PENDING' not in six.text_type(stdout):
+                    break
 
             log.debug('Run psexec: sc start salt-minion')
             stdout, stderr, ret_code = run_psexec_command(
