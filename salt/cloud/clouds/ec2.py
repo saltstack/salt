@@ -2370,7 +2370,8 @@ def wait_for_instance(
 
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
-            while True:
+            # Timeout after 10 minutes
+            for _ in range(10):
                 password_data = get_password_data(
                     name=vm_['name'],
                     kwargs={
@@ -2393,6 +2394,8 @@ def wait_for_instance(
 
                     vm_['win_password'] = win_passwd
                     break
+            else:
+                raise SaltCloudSystemExit('Unable to retrieve auto-generated password')
 
         # SMB used whether psexec or winrm
         if not salt.utils.cloud.wait_for_port(ip_address,
