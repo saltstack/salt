@@ -19,7 +19,9 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 import salt.utils.platform
 
-IS_WINDOWS = salt.utils.platform.is_windows()
+TEST_COMMAND = 'ls'
+if salt.utils.platform.is_windows():
+    TEST_COMMAND = 'dir'
 
 
 class CMDTest(ModuleCase, SaltReturnAssertsMixin):
@@ -30,15 +32,14 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         cmd.run
         '''
-        cmd = 'dir' if IS_WINDOWS else 'ls'
-        ret = self.run_state('cmd.run', name=cmd, cwd=tempfile.gettempdir())
+        ret = self.run_state('cmd.run', name=TEST_COMMAND, cwd=tempfile.gettempdir())
         self.assertSaltTrueReturn(ret)
 
     def test_test_run_simple(self):
         '''
         cmd.run test interface
         '''
-        ret = self.run_state('cmd.run', name='ls',
+        ret = self.run_state('cmd.run', name=TEST_COMMAND,
                              cwd=tempfile.gettempdir(), test=True)
         self.assertSaltNoneReturn(ret)
 
@@ -48,7 +49,7 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             u'cmd.run',
-            name=u'ls',
+            name=TEST_COMMAND,
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
