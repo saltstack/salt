@@ -17,6 +17,9 @@ import logging
 import numbers
 import sys
 import warnings
+import datetime
+import inspect
+import contextlib
 # pylint: disable=blacklisted-module,no-name-in-module
 from distutils.version import StrictVersion as _StrictVersion
 from distutils.version import LooseVersion as _LooseVersion
@@ -75,6 +78,28 @@ class LooseVersion(_LooseVersion):
                 return 1
 
 
+def _format_warning(message, category, filename, lineno, line=None):
+    '''
+    Replacement for warnings.formatwarning that disables the echoing of
+    the 'line' parameter.
+    '''
+    return '{}:{}: {}: {}\n'.format(
+        filename, lineno, category.__name__, message
+    )
+
+
+@contextlib.contextmanager
+def _patched_format_warning():
+    if six.PY2:
+        saved = warnings.formatwarning
+        warnings.formatwarning = _format_warning
+        yield
+        warnings.formatwarning = saved
+    else:
+        # Under Py3 we no longer have to patch warnings.formatwarning
+        yield
+
+
 def warn_until(version,
                message,
                category=DeprecationWarning,
@@ -125,7 +150,6 @@ def warn_until(version,
     _version_ = salt.version.SaltStackVersion(*_version_info_)
 
     if _version_ >= version:
-        import inspect
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(
             'The warning triggered on filename \'{filename}\', line number '
@@ -140,26 +164,86 @@ def warn_until(version,
         )
 
     if _dont_call_warnings is False:
-        def _formatwarning(message,
-                           category,
-                           filename,
-                           lineno,
-                           line=None):  # pylint: disable=W0613
-            '''
-            Replacement for warnings.formatwarning that disables the echoing of
-            the 'line' parameter.
-            '''
-            return '{0}:{1}: {2}: {3}\n'.format(
-                filename, lineno, category.__name__, message
+        with _patched_format_warning():
+            warnings.warn(
+                message.format(version=version.formatted_version),
+                category,
+                stacklevel=stacklevel
             )
-        saved = warnings.formatwarning
-        warnings.formatwarning = _formatwarning
-        warnings.warn(
-            message.format(version=version.formatted_version),
-            category,
-            stacklevel=stacklevel
+
+
+def warn_until_date(date,
+                    message,
+                    category=DeprecationWarning,
+                    stacklevel=None,
+                    _current_date=None,
+                    _dont_call_warnings=False):
+    '''
+    Helper function to raise a warning, by default, a ``DeprecationWarning``,
+    until the provided ``date``, after which, a ``RuntimeError`` will
+    be raised to remind the developers to remove the warning because the
+    target date has been reached.
+
+    :param date: A ``datetime.date`` or ``datetime.datetime`` instance.
+    :param message: The warning message to be displayed.
+    :param category: The warning class to be thrown, by default
+                     ``DeprecationWarning``
+    :param stacklevel: There should be no need to set the value of
+                       ``stacklevel``. Salt should be able to do the right thing.
+    :param _dont_call_warnings: This parameter is used just to get the
+                                functionality until the actual error is to be
+                                issued. When we're only after the date
+                                checks to raise a ``RuntimeError``.
+    '''
+    _strptime_fmt = '%Y%m%d'
+    if not isinstance(date, (six.string_types, datetime.date, datetime.datetime)):
+        raise RuntimeError(
+            'The \'date\' argument should be passed as a \'datetime.date()\' or '
+            '\'datetime.datetime()\' objects or as string parserable by '
+            '\'datetime.datetime.strptime()\' with the following format \'{}\'.'.format(
+                _strptime_fmt
+            )
         )
-        warnings.formatwarning = saved
+    elif isinstance(date, six.text_type):
+        date = datetime.datetime.strptime(date, _strptime_fmt)
+
+    # We're really not interested in the time
+    if isinstance(date, datetime.datetime):
+        date = date.date()
+
+    if stacklevel is None:
+        # Attribute the warning to the calling function, not to warn_until_date()
+        stacklevel = 2
+
+    today = _current_date or datetime.datetime.utcnow().date()
+    if today >= date:
+        caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
+        raise RuntimeError(
+            '{message} This warning(now exception) triggered on '
+            'filename \'{filename}\', line number {lineno}, is '
+            'supposed to be shown until {date}. Today is {today}. '
+            'Please remove the warning.'.format(
+                message=message.format(
+                    date=date.isoformat(),
+                    today=today.isoformat()
+                ),
+                filename=caller.filename,
+                lineno=caller.lineno,
+                date=date.isoformat(),
+                today=today.isoformat(),
+            ),
+        )
+
+    if _dont_call_warnings is False:
+        with _patched_format_warning():
+            warnings.warn(
+                message.format(
+                    date=date.isoformat(),
+                    today=today.isoformat()
+                ),
+                category,
+                stacklevel=stacklevel
+            )
 
 
 def kwargs_warn_until(kwargs,
