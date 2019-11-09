@@ -14,13 +14,13 @@ import errno
 import types
 import signal
 import logging
+import functools
 import threading
 import contextlib
 import subprocess
 import multiprocessing
 import multiprocessing.util
 import socket
-
 
 # Import salt libs
 import salt.defaults.exitcodes
@@ -29,6 +29,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.log.setup
 import salt.defaults.exitcodes
+import salt.utils.versions
 from salt.log.mixins import NewStyleClassMixIn
 
 # Import 3rd-party libs
@@ -404,9 +405,9 @@ class ProcessManager(object):
         if salt.utils.platform.is_windows():
             # Need to ensure that 'log_queue' and 'log_queue_level' is
             # correctly transferred to processes that inherit from
-            # 'MultiprocessingProcess'.
-            if type(MultiprocessingProcess) is type(tgt) and (
-                    issubclass(tgt, MultiprocessingProcess)):
+            # 'Process'.
+            if type(Process) is type(tgt) and (
+                    issubclass(tgt, Process)):
                 need_log_queue = True
             else:
                 need_log_queue = False
@@ -446,7 +447,7 @@ class ProcessManager(object):
         else:
             process = multiprocessing.Process(target=tgt, args=args, kwargs=kwargs, name=name)
 
-        if isinstance(process, SignalHandlingMultiprocessingProcess):
+        if isinstance(process, SignalHandlingProcess):
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process.start()
         else:
@@ -683,12 +684,12 @@ class ProcessManager(object):
                 )
 
 
-class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
+class Process(multiprocessing.Process, NewStyleClassMixIn):
 
     def __init__(self, *args, **kwargs):
         log_queue = kwargs.pop('log_queue', None)
         log_queue_level = kwargs.pop('log_queue_level', None)
-        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
+        super(Process, self).__init__(*args, **kwargs)
         if salt.utils.platform.is_windows():
             # On Windows, subclasses should call super if they define
             # __setstate__ and/or __getstate__
@@ -709,11 +710,20 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
             salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
 
         self._after_fork_methods = [
-            (MultiprocessingProcess._setup_process_logging, [self], {}),
+            (Process._setup_process_logging, [self], {}),
         ]
         self._finalize_methods = [
             (salt.log.setup.shutdown_multiprocessing_logging, [], {})
         ]
+
+        # Because we need to enforce our after fork and finalize routines,
+        # we must wrap this class run method to allow for these extra steps
+        # to be executed pre and post calling the actual run method,
+        # having subclasses call super would just not work.
+        #
+        # We use setattr here to fool pylint not to complain that we're
+        # overriding run from the subclass here
+        setattr(self, 'run', self.__decorate_run(self.run))
 
     # __setstate__ and __getstate__ are only used on Windows.
     def __setstate__(self, state):
@@ -740,33 +750,56 @@ class MultiprocessingProcess(multiprocessing.Process, NewStyleClassMixIn):
     def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
 
-    def run(self):
-        for method, args, kwargs in self._after_fork_methods:
-            method(*args, **kwargs)
-        try:
-            return super(MultiprocessingProcess, self).run()
-        except SystemExit:
-            # These are handled by multiprocessing.Process._bootstrap()
-            raise
-        except Exception as exc:
-            log.error(
-                'An un-handled exception from the multiprocessing process '
-                '\'%s\' was caught:\n', self.name, exc_info=True)
-            # Re-raise the exception. multiprocessing.Process will write it to
-            # sys.stderr and set the proper exitcode and we have already logged
-            # it above.
-            raise
-        finally:
-            for method, args, kwargs in self._finalize_methods:
+    def __decorate_run(self, run_func):
+
+        @functools.wraps(run_func)
+        def wrapped_run_func():
+            for method, args, kwargs in self._after_fork_methods:
                 method(*args, **kwargs)
+            try:
+                return run_func()
+            except SystemExit:
+                # These are handled by multiprocessing.Process._bootstrap()
+                six.reraise(*sys.exc_info())
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    'An un-handled exception from the multiprocessing process '
+                    '\'%s\' was caught:\n', self.name, exc_info=True)
+                # Re-raise the exception. multiprocessing.Process will write it to
+                # sys.stderr and set the proper exitcode and we have already logged
+                # it above.
+                six.reraise(*sys.exc_info())
+            finally:
+                for method, args, kwargs in self._finalize_methods:
+                    method(*args, **kwargs)
+
+        return wrapped_run_func
 
 
-class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
+class MultiprocessingProcess(Process):
+    '''
+    This class exists for backwards compatibility and to properly deprecate it.
+    '''
+
     def __init__(self, *args, **kwargs):
-        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
+        salt.utils.versions.warn_until_date(
+            '20220101',
+            'Please stop using \'{name}.MultiprocessingProcess\' and instead use '
+            '\'{name}.Process\'. \'{name}.MultiprocessingProcess\' will go away '
+            'after {{date}}.'.format(
+                name=__name__
+            ),
+            stacklevel=3
+        )
+        super(MultiprocessingProcess, self).__init__(*args, **kwargs)
+
+
+class SignalHandlingProcess(Process):
+    def __init__(self, *args, **kwargs):
+        super(SignalHandlingProcess, self).__init__(*args, **kwargs)
         self._signal_handled = multiprocessing.Event()
         self._after_fork_methods.append(
-            (SignalHandlingMultiprocessingProcess._setup_signals, [self], {})
+            (SignalHandlingProcess._setup_signals, [self], {})
         )
 
     def signal_handled(self):
@@ -811,7 +844,25 @@ class SignalHandlingMultiprocessingProcess(MultiprocessingProcess):
 
     def start(self):
         with default_signals(signal.SIGINT, signal.SIGTERM):
-            super(SignalHandlingMultiprocessingProcess, self).start()
+            super(SignalHandlingProcess, self).start()
+
+
+class SignalHandlingMultiprocessingProcess(SignalHandlingProcess):
+    '''
+    This class exists for backwards compatibility and to properly deprecate it.
+    '''
+
+    def __init__(self, *args, **kwargs):
+        salt.utils.versions.warn_until_date(
+            '20220101',
+            'Please stop using \'{name}.SignalHandlingMultiprocessingProcess\' and instead use '
+            '\'{name}.SignalHandlingProcess\'. \'{name}.SignalHandlingMultiprocessingProcess\' '
+            'will go away after {{date}}.'.format(
+                name=__name__
+            ),
+            stacklevel=3
+        )
+        super(SignalHandlingMultiprocessingProcess, self).__init__(*args, **kwargs)
 
 
 @contextlib.contextmanager
