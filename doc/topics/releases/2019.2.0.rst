@@ -929,11 +929,12 @@ you can now configure which type numbers indicate a login and logout.
 See the :py:mod:`wtmp beacon documentation <salt.beacons.wtmp>` for more
 information.
 
-Deprecations
-============
 
-API Deprecations
-----------------
+Deprecated and Removed Options
+==============================
+
+API Removed Arguments
+---------------------
 
 Support for :ref:`LocalClient <local-client>`'s ``expr_form`` argument has
 been removed. Please use ``tgt_type`` instead. This change was made due to
@@ -952,14 +953,14 @@ their code to use ``tgt_type``.
     >>> local.cmd('*', 'cmd.run', ['whoami'], tgt_type='glob')
     {'jerry': 'root'}
 
-Minion Configuration Deprecations
----------------------------------
+Minion Configuration Deprecated Option
+--------------------------------------
 
 The :conf_minion:`master_shuffle` configuration option is deprecated as of the
 ``2019.2.0`` release. Please use the :conf_minion:`random_master` option instead.
 
-Module Deprecations
--------------------
+Module Removed Options
+----------------------
 
 - The :py:mod:`napalm_network <salt.modules.napalm_network>` module has been
   changed as follows:
@@ -1011,8 +1012,8 @@ Module Deprecations
       functions have been removed. Please use :py:func:`win_wua.list
       <salt.modules.win_wua.list_>` instead.
 
-Pillar Deprecations
--------------------
+Pillar Removed Option
+---------------------
 
 - The :py:mod:`vault <salt.pillar.vault>` external pillar has been changed as
   follows:
@@ -1020,8 +1021,8 @@ Pillar Deprecations
     - Support for the ``profile`` argument was removed. Any options passed up
       until and following the first ``path=`` are discarded.
 
-Roster Deprecations
--------------------
+Roster Removed Option
+---------------------
 
 - The :py:mod:`cache <salt.roster.cache>` roster has been changed as follows:
 
@@ -1032,8 +1033,8 @@ Roster Deprecations
       ``private``, ``public``, ``global`` or ``local`` settings. The syntax for
       these settings has changed to ``ipv4-*`` or ``ipv6-*``, respectively.
 
-State Deprecations
-------------------
+State Removed Modules and Options
+---------------------------------
 
 - The ``docker`` state module has been removed
 
@@ -1126,8 +1127,8 @@ State Deprecations
 - Support for virtual packages has been removed from the
   py:mod:`pkg state <salt.states.pkg>`.
 
-Utils Deprecations
-------------------
+Utils Removed Options
+---------------------
 
 The ``cloud`` utils module had the following changes:
 
@@ -1151,7 +1152,7 @@ been deprecated in favor of ``pypsexec``.
 Salt-Cloud has deprecated the use ``impacket`` in favor of ``smbprotocol``.
 This changes was made because ``impacket`` is not compatible with Python 3.
 
-SaltSSH major updates
+SaltSSH Major Updates
 =====================
 
 SaltSSH now works across different major Python versions. Python 2.7 ~ Python 3.x
