@@ -15,6 +15,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
+import types
 import signal
 import getpass
 import logging
@@ -33,7 +34,6 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.jid
-import salt.utils.kinds as kinds
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
@@ -55,6 +55,17 @@ def _sorted(mixins_or_funcs):
     return sorted(
         mixins_or_funcs, key=lambda mf: getattr(mf, '_mixin_prio_', 1000)
     )
+
+
+class MixinFuncsContainer(list):
+
+    def append(self, func):
+        if isinstance(func, types.MethodType):
+            # We only care about unbound methods
+            func = func.__func__
+        if func not in self:
+            # And no duplicates please
+            list.append(self, func)
 
 
 class MixInMeta(type):
@@ -80,13 +91,13 @@ class OptionParserMeta(MixInMeta):
                                                         bases,
                                                         attrs)
         if not hasattr(instance, '_mixin_setup_funcs'):
-            instance._mixin_setup_funcs = []
+            instance._mixin_setup_funcs = MixinFuncsContainer()
         if not hasattr(instance, '_mixin_process_funcs'):
-            instance._mixin_process_funcs = []
+            instance._mixin_process_funcs = MixinFuncsContainer()
         if not hasattr(instance, '_mixin_after_parsed_funcs'):
-            instance._mixin_after_parsed_funcs = []
+            instance._mixin_after_parsed_funcs = MixinFuncsContainer()
         if not hasattr(instance, '_mixin_before_exit_funcs'):
-            instance._mixin_before_exit_funcs = []
+            instance._mixin_before_exit_funcs = MixinFuncsContainer()
 
         for base in _sorted(bases + (instance,)):
             func = getattr(base, '_mixin_setup', None)
@@ -305,7 +316,7 @@ class MergeConfigMixIn(six.with_metaclass(MixInMeta, object)):
         # the config options and if needed override them
         self._mixin_after_parsed_funcs.append(self.__merge_config_with_cli)
 
-    def __merge_config_with_cli(self, *args):  # pylint: disable=unused-argument
+    def __merge_config_with_cli(self):
         # Merge parser options
         for option in self.option_list:
             if option.dest is None:
@@ -688,7 +699,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                     # Remove it from config so it inherits from log_level_logfile
                     self.config.pop(self._logfile_loglevel_config_setting_name_)
 
-    def __setup_logfile_logger_config(self, *args):  # pylint: disable=unused-argument
+    def __setup_logfile_logger_config(self):
         if self._logfile_loglevel_config_setting_name_ in self.config and not \
                 self.config.get(self._logfile_loglevel_config_setting_name_):
             # Remove it from config so it inherits from log_level
@@ -853,7 +864,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         for name, level in six.iteritems(self.config.get('log_granular_levels', {})):
             log.set_logger_level(name, level)
 
-    def __setup_extended_logging(self, *args):  # pylint: disable=unused-argument
+    def __setup_extended_logging(self):
         if salt.utils.platform.is_windows() and self._setup_mp_logging_listener_:
             # On Windows when using a logging listener, all extended logging
             # will go through the logging listener.
@@ -863,14 +874,14 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
     def _get_mp_logging_listener_queue(self):
         return log.get_multiprocessing_logging_queue()
 
-    def _setup_mp_logging_listener(self, *args):  # pylint: disable=unused-argument
+    def _setup_mp_logging_listener(self):
         if self._setup_mp_logging_listener_:
             log.setup_multiprocessing_logging_listener(
                 self.config,
                 self._get_mp_logging_listener_queue()
             )
 
-    def _setup_mp_logging_client(self, *args):  # pylint: disable=unused-argument
+    def _setup_mp_logging_client(self):
         if self._setup_mp_logging_listener_:
             # Set multiprocessing logging level even in non-Windows
             # environments. In non-Windows environments, this setting will
@@ -896,7 +907,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
                 log.shutdown_console_logging()
                 log.shutdown_logfile_logging()
 
-    def __setup_console_logger_config(self, *args):  # pylint: disable=unused-argument
+    def __setup_console_logger_config(self):
         # Since we're not going to be a daemon, setup the console logger
         logfmt = self.config.get(
             'log_fmt_console',
@@ -922,7 +933,7 @@ class LogLevelMixIn(six.with_metaclass(MixInMeta, object)):
         self.config['log_fmt_console'] = logfmt
         self.config['log_datefmt_console'] = datefmt
 
-    def __setup_console_logger(self, *args):  # pylint: disable=unused-argument
+    def __setup_console_logger(self):
         # If daemon is set force console logger to quiet
         if getattr(self.options, 'daemon', False) is True:
             return
@@ -1664,7 +1675,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help=('Display a list of locations available in configured cloud '
                   'providers. Pass the cloud provider that available '
-                  'locations are desired on, aka "linode", or pass "all" to '
+                  'locations are desired on, such as "linode", or pass "all" to '
                   'list locations for all configured cloud providers.')
         )
         group.add_option(
@@ -1672,7 +1683,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help=('Display a list of images available in configured cloud '
                   'providers. Pass the cloud provider that available images '
-                  'are desired on, aka "linode", or pass "all" to list images '
+                  'are desired on, such as "linode", or pass "all" to list images '
                   'for all configured cloud providers.')
         )
         group.add_option(
@@ -1680,7 +1691,7 @@ class CloudProvidersListsMixIn(six.with_metaclass(MixInMeta, object)):
             default=None,
             help=('Display a list of sizes available in configured cloud '
                   'providers. Pass the cloud provider that available sizes '
-                  'are desired on, aka "AWS", or pass "all" to list sizes '
+                  'are desired on, such as "AWS", or pass "all" to list sizes '
                   'for all configured cloud providers.')
         )
         self.add_option_group(group)
@@ -2581,7 +2592,7 @@ class SaltKeyOptionParser(six.with_metaclass(OptionParserMeta,
         # info or error.
         self.config['loglevel'] = 'info'
 
-    def __create_keys_dir(self, *args):  # pylint: disable=unused-argument
+    def __create_keys_dir(self):
         if not os.path.isdir(self.config['gen_keys_dir']):
             os.makedirs(self.config['gen_keys_dir'])
 
@@ -2757,47 +2768,7 @@ class SaltCallOptionParser(six.with_metaclass(OptionParserMeta,
         else:
             opts = config.minion_config(self.get_config_file_path(),
                                         cache_minion_id=True)
-
-        if opts.get('transport') == 'raet':
-            if not self._find_raet_minion(opts):  # must create caller minion
-                opts['__role'] = kinds.APPL_KIND_NAMES[kinds.applKinds.caller]
         return opts
-
-    def _find_raet_minion(self, opts):
-        '''
-        Returns true if local RAET Minion is available
-        '''
-        yardname = 'manor'
-        dirpath = opts['sock_dir']
-
-        role = opts.get('id')
-        if not role:
-            emsg = "Missing role required to setup RAET SaltCaller."
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        kind = opts.get('__role')  # application kind 'master', 'minion', etc
-        if kind not in kinds.APPL_KINDS:
-            emsg = "Invalid application kind = '{0}' for RAET SaltCaller.".format(six.text_type(kind))
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        if kind in [kinds.APPL_KIND_NAMES[kinds.applKinds.minion], kinds.APPL_KIND_NAMES[kinds.applKinds.caller]]:
-            lanename = "{0}_{1}".format(role, kind)
-        else:
-            emsg = "Unsupported application kind '{0}' for RAET SaltCaller.".format(six.text_type(kind))
-            logger.error(emsg)
-            raise ValueError(emsg)
-
-        if kind == kinds.APPL_KIND_NAMES[kinds.applKinds.minion]:  # minion check
-            try:
-                from raet.lane.yarding import Yard  # pylint: disable=3rd-party-module-not-gated
-                ha, dirpath = Yard.computeHa(dirpath, lanename, yardname)  # pylint: disable=invalid-name
-                if os.path.exists(ha) and not os.path.isfile(ha) and not os.path.isdir(ha):  # minion manor yard
-                    return True
-            except ImportError as ex:
-                logger.error("Error while importing Yard: %s", ex)
-        return False
 
     def process_module_dirs(self):
         for module_dir in self.options.module_dirs:
