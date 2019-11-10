@@ -268,22 +268,31 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'latest'  # latest, previous, develop, next
-release = latest_release
+build_type = 'latest'  # latest, previous, master, next
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
 
-if release == latest_release:
+if build_type == 'master':
+    release = latest_release
+    search_cx = '011515552685726825874:v1had6i279q' # master
+    #search_cx = '011515552685726825874:x17j5zl74g8' # develop
+elif build_type == 'next':
+    release = next_release
     search_cx = '011515552685726825874:ht0p8miksrm' # latest
-elif release.startswith('2018.3'):
-    search_cx = '011515552685726825874:vadptdpvyyu' # 2018.3
-elif release.startswith('2017.7'):
-    search_cx = '011515552685726825874:w-hxmnbcpou' # 2017.7
-elif release.startswith('2016.11'):
-    search_cx = '011515552685726825874:dlsj745pvhq' # 2016.11
-else:
-    search_cx = '011515552685726825874:x17j5zl74g8'  # develop
+elif build_type == 'previous':
+    release = previous_release
+    if release.startswith('2018.3'):
+        search_cx = '011515552685726825874:vadptdpvyyu' # 2018.3
+    elif release.startswith('2017.7'):
+        search_cx = '011515552685726825874:w-hxmnbcpou' # 2017.7
+    elif release.startswith('2016.11'):
+        search_cx = '011515552685726825874:dlsj745pvhq' # 2016.11
+    else:
+        search_cx = '011515552685726825874:ht0p8miksrm' # latest
+else: # latest or something else
+    release = latest_release
+    search_cx = '011515552685726825874:ht0p8miksrm' # latest
 
 needs_sphinx = '1.3'
 
@@ -364,7 +373,7 @@ rst_prolog = """\
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
-    'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'develop', None),
+    'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'master', None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue #'),
     'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR #'),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
