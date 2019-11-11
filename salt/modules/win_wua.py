@@ -484,7 +484,7 @@ def download(names):
     .. versionadded:: 2017.7.0
 
     Downloads updates that match the list of passed identifiers. It's easier to
-    use this function by using list_updates and setting install=True.
+    use this function by using win_wua.list and setting install=True.
 
     Args:
 
@@ -535,8 +535,8 @@ def install(names):
     '''
     .. versionadded:: 2017.7.0
 
-    Installs updates that match the list of identifiers. It may be easier to use
-    the list_updates function and set install=True.
+    Installs updates that match the list of identifiers. It may be easier to
+    use the win_wua.list function and set install=True.
 
     Args:
 
