@@ -97,7 +97,6 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
                 result = saltutil_state.sync_all(state_id, refresh=True)
                 self.assertEqual(result, state_result)
 
-
     def test_saltutil_sync_all_change(self):
         sync_output = {
             'clouds': [],
