@@ -12,12 +12,9 @@ try:
 except ImportError:
     from collections import Iterable, Sequence, Mapping
 
-from collections import namedtuple
-
 import logging
 
 # Import Salt Libs
-from salt.utils.odict import OrderedDict
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -53,11 +50,6 @@ def extract_masters(opts, masters='master', port=None, raise_if_empty=True):
     Parses opts and generates a list of master (host,port) addresses.
     By default looks for list of masters in opts['master'] and uses
     opts['master_port'] as the default port when otherwise not provided.
-
-    To use this function to generate the cluster master list then
-    call with masters='cluster_masters' and port='raet_port' on a master
-    and
-    call with masters='cluster_masters' on a minion
 
     Use the opts key given by masters for the masters list, default is 'master'
     If parameter port is not None then uses the default port given by port
