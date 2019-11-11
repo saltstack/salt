@@ -1045,6 +1045,7 @@ def freeze(bin_env=None,
            cwd=None,
            use_vt=False,
            env_vars=None,
+           local=False,
            **kwargs):
     '''
     Return a list of installed packages either globally or in the specified
@@ -1092,6 +1093,8 @@ def freeze(bin_env=None,
     if kwargs:
         cmd_kwargs.update(**kwargs)
     if bin_env and os.path.isdir(bin_env):
+        if local:
+            cmd.append('-l')
         cmd_kwargs['env'] = {'VIRTUAL_ENV': bin_env}
     if env_vars:
         cmd_kwargs.setdefault('env', {}).update(_format_env_vars(env_vars))
@@ -1108,6 +1111,7 @@ def list_(prefix=None,
           user=None,
           cwd=None,
           env_vars=None,
+          local=False,
           **kwargs):
     '''
     Filter list of installed apps from ``freeze`` and check to see if
@@ -1136,6 +1140,7 @@ def list_(prefix=None,
                        user=user,
                        cwd=cwd,
                        env_vars=env_vars,
+                       local=local,
                        **kwargs):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory

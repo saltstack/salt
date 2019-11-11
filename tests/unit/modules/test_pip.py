@@ -943,6 +943,57 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 timeout='a'
             )
 
+    def test_freeze_command_local(self):
+
+        with patch('os.path') as mock_path:
+
+            def join(*args):
+                return os.path.normpath(os.sep.join(args))
+
+            mock_path.is_file.return_value = True
+            mock_path.isdir.return_value = True
+            mock_path.join = join
+            eggs = [
+                'M2Crypto==0.21.1',
+                '-e git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8#egg=SaltTesting-dev',
+                'bbfreeze==1.1.0',
+                'bbfreeze-loader==1.1.0',
+                'pycrypto==2.6'
+            ]
+
+            if salt.utils.platform.is_windows():
+                venv_path = 'C:\\test_env'
+                bin_path = os.path.join(venv_path, 'python.exe')
+            else:
+                venv_path = '/test_env'
+                bin_path = os.path.join(venv_path, 'python')
+
+            pip_bin = MagicMock(return_value=[bin_path, '-m', 'pip'])
+            expected = [bin_path, '-m', 'pip', 'freeze', '-l']
+            mock = MagicMock(
+                return_value={
+                    'retcode': 0,
+                    'stdout': '\n'.join(eggs)
+                }
+            )
+            with patch.dict(pip.__salt__, {'cmd.run_all': mock}), \
+                patch.object(pip, '_get_pip_bin', pip_bin), \
+                patch(
+                     'salt.modules.pip.version',
+                     MagicMock(return_value='6.1.1')
+                ) \
+            :
+                ret = pip.freeze(bin_env=venv_path, local=True)
+                mock.assert_called_with(
+                    expected,
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                    env={'VIRTUAL_ENV': venv_path}
+                )
+                self.assertEqual(ret, eggs)
+
     def test_freeze_command(self):
         expected = [sys.executable, '-m', 'pip', 'freeze']
         eggs = [

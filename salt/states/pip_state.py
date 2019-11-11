@@ -979,7 +979,12 @@ def removed(name,
     ret = {'name': name, 'result': None, 'comment': '', 'changes': {}}
 
     try:
-        pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
+        pip_list = __salt__['pip.list'](
+            bin_env=bin_env,
+            user=user,
+            cwd=cwd,
+            local=True
+        )
     except (CommandExecutionError, CommandNotFoundError) as err:
         ret['result'] = False
         ret['comment'] = 'Error uninstalling \'{0}\': {1}'.format(name, err)
