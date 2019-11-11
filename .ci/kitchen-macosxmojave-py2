@@ -1,0 +1,146 @@
+@Library('salt@master-1.3') _
+
+// Define the maximum time, in hours, that a test run should run for
+def testrun_timeout = 6
+// Now define a global pipeline timeout. This is the test run timeout with one(1) additional
+// hour to allow for artifacts to be downloaded, if possible.
+def global_timeout = testrun_timeout + 1;
+
+def distro_name = 'macosx'
+def distro_version = 'mojave'
+def python_version = 'py2'
+def nox_env_name = 'runtests-zeromq'
+def golden_images_branch = 'master'
+def nox_passthrough_opts = ''
+def concurrent_builds = 1
+def jenkins_slave_label = 'kitchen-slave-mac'
+
+properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
+    parameters([
+        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
+    ])
+])
+
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > concurrent_builds) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - concurrent_builds)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
+
+wrappedNode(jenkins_slave_label, global_timeout, '#jenkins-prod-pr') {
+    withEnv([
+        'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/platforms.yml',
+        'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/verifier.yml',
+        'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
+        "NOX_ENV_NAME=${nox_env_name}",
+        'NOX_ENABLE_FROM_FILENAMES=true',
+        "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts}",
+        "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
+        "PATH=/Users/parallels/.rbenv/shims:/Users/parallels/.rbenv/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/salt/bin:/usr/local/sbin",
+        'RBENV_VERSION=2.6.3',
+        "TEST_SUITE=${python_version}",
+        "TEST_PLATFORM=${distro_name}-${distro_version}",
+        "FORCE_FULL=${params.runFull}",
+    ]) {
+        stage('VM Cleanup') {
+            sh '''
+            for i in `prlctl list -aij|jq -r '.[]|select((.Uptime|tonumber > 86400) and (.State == "running"))|.ID'`
+            do
+                prlctl stop $i --kill
+            done
+            # don't delete vm's that haven't started yet ((.State == "stopped") and (.Uptime == "0"))
+            for i in `prlctl list -aij|jq -r '.[]|select((.Uptime|tonumber > 0) and (.State != "running"))|.ID'`
+            do
+                prlctl delete $i
+            done
+            '''
+        }
+        // Checkout the repo
+        stage('Clone') {
+            cleanWs notFailBuild: true
+            checkout scm
+        }
+
+        // Setup the kitchen required bundle
+        stage('Setup') {
+            sh 'bundle install --with vagrant macos --without ec2 windows opennebula docker'
+        }
+
+        stage('Create VM') {
+            sh '''
+            bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+            '''
+            sh """
+            if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-create.log"
+            fi
+            if [ -s ".kitchen/logs/kitchen.log" ]; then
+                mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-create.log"
+            fi
+            """
+        }
+
+        try {
+            timeout(time: testrun_timeout, unit: 'HOURS') {
+                stage('Converge VM') {
+                    sh '''
+                    ssh-agent /bin/bash -c 'ssh-add ~/.vagrant.d/insecure_private_key; bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?"'
+                    '''
+                    sh """
+                    if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-converge.log"
+                    fi
+                    if [ -s ".kitchen/logs/kitchen.log" ]; then
+                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-converge.log"
+                    fi
+                    """
+                }
+                stage('Run Tests') {
+                    sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
+                }
+            }
+        } finally {
+            try {
+                sh """
+                if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
+                    mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-verify.log"
+                fi
+                if [ -s ".kitchen/logs/kitchen.log" ]; then
+                    mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-verify.log"
+                fi
+                """
+                archiveArtifacts(
+                    artifacts: "artifacts/*,artifacts/**/*,.kitchen/logs/*-create.log,.kitchen/logs/*-converge.log,.kitchen/logs/*-verify.log,.kitchen/logs/*-download.log,artifacts/xml-unittests-output/*.xml",
+                    allowEmptyArchive: true
+                )
+                junit 'artifacts/xml-unittests-output/*.xml'
+            } finally {
+                stage('Cleanup') {
+                    sh '''
+                    bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
+                    '''
+                }
+                stage('Upload Coverage') {
+                    def distro_strings = [
+                        distro_name,
+                        distro_version
+                    ]
+                    def report_strings = (
+                        [python_version] + nox_env_name.split('-')
+                    ).flatten()
+                    uploadCodeCoverage(
+                        report_path: 'artifacts/coverage/coverage.xml',
+                        report_name: "${distro_strings.join('-')}-${report_strings.join('-')}",
+                        report_flags: ([distro_strings.join('')] + report_strings).flatten()
+                    )
+                }
+            }
+        }
+    }
+}
+
+// vim: ft=groovy

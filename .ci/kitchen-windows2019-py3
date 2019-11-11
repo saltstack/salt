@@ -1,0 +1,45 @@
+@Library('salt@master-1.3') _
+
+// Define the maximum time, in hours, that a test run should run for
+def testrun_timeout = 8
+
+def distro_name = 'windows'
+def distro_version = '2019'
+def python_version = 'py3'
+def nox_env_name = 'runtests-zeromq'
+def golden_images_branch = 'master'
+def nox_passthrough_opts = '--unit'
+def concurrent_builds = 1
+def use_spot_instances = false
+def jenkins_slave_label = 'kitchen-slave'
+
+properties([
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
+    parameters([
+        booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
+    ])
+])
+
+// Be sure to cancel any previously running builds
+def buildNumber = env.BUILD_NUMBER as int
+if (buildNumber > concurrent_builds) {
+    // This will cancel the previous build which also defined a matching milestone
+    milestone(buildNumber - concurrent_builds)
+}
+// Define a milestone for this build so that, if another build starts, this one will be aborted
+milestone(buildNumber)
+
+runTests(
+    env: env,
+    distro_name: distro_name,
+    distro_version: distro_version,
+    python_version: python_version,
+    golden_images_branch: golden_images_branch,
+    nox_env_name: nox_env_name,
+    nox_passthrough_opts: nox_passthrough_opts,
+    testrun_timeout: testrun_timeout,
+    run_full: params.runFull,
+    use_spot_instances: use_spot_instances,
+    jenkins_slave_label: jenkins_slave_label)
+
+// vim: ft=groovy

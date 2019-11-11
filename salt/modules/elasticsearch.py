@@ -264,6 +264,59 @@ def cluster_stats(nodes=None, hosts=None, profile=None):
         raise CommandExecutionError("Cannot retrieve cluster stats, server returned code {0} with message {1}".format(e.status_code, e.error))
 
 
+def cluster_get_settings(flat_settings=False, include_defaults=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: Neon
+
+    Return Elasticsearch cluster settings.
+
+    flat_settings
+        Return settings in flat format.
+
+    include_defaults
+        Whether to return all default clusters setting.
+
+    CLI example::
+
+        salt myminion elasticsearch.cluster_get_settings
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.cluster.get_settings(flat_settings=flat_settings, include_defaults=include_defaults)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot retrieve cluster settings, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
+def cluster_put_settings(body=None, flat_settings=False, hosts=None, profile=None):
+    '''
+    .. versionadded:: Neon
+
+    Set Elasticsearch cluster settings.
+
+    body
+        The settings to be updated. Can be either 'transient' or 'persistent' (survives cluster restart)
+        http://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-update-settings.html
+
+    flat_settings
+        Return settings in flat format.
+
+    CLI example::
+
+        salt myminion elasticsearch.cluster_put_settings '{"persistent": {"indices.recovery.max_bytes_per_sec": "50mb"}}'
+        salt myminion elasticsearch.cluster_put_settings '{"transient": {"indices.recovery.max_bytes_per_sec": "50mb"}}'
+    '''
+    if not body:
+        message = 'You must provide a body with settings'
+        raise SaltInvocationError(message)
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.cluster.put_settings(body=body, flat_settings=flat_settings)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot update cluster settings, server returned code {0} with message {1}".format(e.status_code, e.error))
+
+
 def alias_create(indices, alias, hosts=None, body=None, profile=None, source=None):
     '''
     Create an alias for a specific index/indices
@@ -1214,3 +1267,44 @@ def snapshot_delete(repository, snapshot, hosts=None, profile=None):
         return True
     except elasticsearch.TransportError as e:
         raise CommandExecutionError("Cannot delete snapshot {0} from repository {1}, server returned code {2} with message {3}".format(snapshot, repository, e.status_code, e.error))
+
+
+def flush_synced(hosts=None, profile=None, **kwargs):
+    '''
+    .. versionadded:: Neon
+
+    Perform a normal flush, then add a generated unique marker (sync_id) to all shards.
+    http://www.elastic.co/guide/en/elasticsearch/reference/current/indices-synced-flush.html
+
+    index
+        (Optional, string) A comma-separated list of index names; use _all or empty string for all indices. Defaults to '_all'.
+
+    ignore_unavailable
+        (Optional, boolean) If true, missing or closed indices are not included in the response. Defaults to false.
+
+    allow_no_indices
+        (Optional, boolean) If true, the request does not return an error if a wildcard expression or _all value retrieves only missing or closed indices.
+        This parameter also applies to index aliases that point to a missing or closed index.
+
+    expand_wildcards
+        (Optional, string) Controls what kind of indices that wildcard expressions can expand to.
+
+        Valid values are::
+
+            all - Expand to open and closed indices.
+            open - Expand only to open indices.
+            closed - Expand only to closed indices.
+            none - Wildcard expressions are not accepted.
+
+    The defaults settings for the above parameters depend on the API being used.
+
+    CLI example::
+
+        salt myminion elasticsearch.flush_synced index='index1,index2' ignore_unavailable=True allow_no_indices=True expand_wildcards='all'
+    '''
+    es = _get_instance(hosts, profile)
+
+    try:
+        return es.indices.flush_synced(kwargs)
+    except elasticsearch.TransportError as e:
+        raise CommandExecutionError("Cannot flush synced, server returned code {} with message {}".format(e.status_code, e.error))

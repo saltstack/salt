@@ -48,7 +48,7 @@ import salt.utils.thin
 import salt.utils.url
 import salt.utils.verify
 from salt.utils.platform import is_windows
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import Process
 import salt.roster
 from salt.template import compile_template
 
@@ -586,7 +586,7 @@ class SSH(object):
                         self.targets[host],
                         mine,
                         )
-                routine = MultiprocessingProcess(
+                routine = Process(
                                 target=self.handle_routine,
                                 args=args)
                 routine.start()
