@@ -873,7 +873,7 @@ class SaltEvent(object):
         self.subscriber.callbacks.add(event_handler)
         if not self.subscriber.reading:
             # This will handle reconnects
-            self.subscriber.read_async()
+            return self.subscriber.read_async()
 
     # pylint: disable=W1701
     def __del__(self):
