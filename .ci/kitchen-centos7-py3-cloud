@@ -6,9 +6,9 @@ def testrun_timeout = 6
 def distro_name = 'centos'
 def distro_version = '7'
 def python_version = 'py3'
-def nox_env_name = 'runtests-cloud'
+def nox_env_name = 'pytest-cloud'
 def golden_images_branch = 'master'
-def nox_passthrough_opts = ''
+def nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
 def use_spot_instances = true
 def jenkins_slave_label = 'kitchen-slave'
 def kitchen_platforms_file = '/var/jenkins/workspace/nox-cloud-platforms.yml'

@@ -6,9 +6,9 @@ def testrun_timeout = 6
 def distro_name = 'opensuse'
 def distro_version = '15'
 def python_version = 'py3'
-def nox_env_name = 'runtests-zeromq'
+def nox_env_name = 'pytest-zeromq'
 def golden_images_branch = 'master'
-def nox_passthrough_opts = '--ssh-tests'
+def nox_passthrough_opts = '--ssh-tests --log-cli-level=warning --ignore=tests/utils'
 def concurrent_builds = 1
 def use_spot_instances = true
 def jenkins_slave_label = 'kitchen-slave'
