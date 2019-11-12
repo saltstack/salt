@@ -7,7 +7,7 @@ def testrun_timeout = 6
 def global_timeout = testrun_timeout + 1;
 
 def distro_name = 'macosx'
-def distro_version = 'mojave'
+def distro_version = 'highsierra'
 def python_version = 'py2'
 def nox_env_name = 'runtests-zeromq'
 def golden_images_branch = 'master'
