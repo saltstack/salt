@@ -23,11 +23,6 @@ import salt.syspaths
 import salt.utils.parsers
 import salt.utils.platform
 
-try:
-    import pytest
-except ImportError:
-    pytest = None
-
 
 class ErrorMock(object):  # pylint: disable=too-few-public-methods
     '''
@@ -1084,7 +1079,6 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
             os.unlink(self.api_logfile)
 
 
-@skipIf(not pytest, False)
 class DaemonMixInTestCase(TestCase):
     '''
     Tests the PIDfile deletion in the DaemonMixIn.
