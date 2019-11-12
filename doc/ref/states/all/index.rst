@@ -311,6 +311,7 @@ state modules
     win_snmp
     win_system
     win_wua
+    win_wusa
     winrepo
     x509
     xmpp
