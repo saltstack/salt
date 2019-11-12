@@ -131,5 +131,5 @@ six==1.12.0               # via cryptography, impacket, isodate, pathlib2, profi
 smbprotocol==0.1.1        # via pypsexec
 typing==3.6.6             # via msrest
 urllib3==1.24.2           # via requests
-werkzeug==0.15.2          # via flask
+werkzeug==0.15.6          # via flask
 xmltodict==0.12.0         # via pywinrm
