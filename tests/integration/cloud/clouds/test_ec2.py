@@ -154,7 +154,6 @@ class EC2Test(CloudTest):
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
-                'win_installer': self.copy_file(self.installer),
             },
         )
         self._test_instance('ec2-win2012r2-test', debug=True)
@@ -170,7 +169,6 @@ class EC2Test(CloudTest):
             {
                 'use_winrm': True,
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
-                'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
             }
 
