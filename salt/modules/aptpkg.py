@@ -1156,7 +1156,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             salt '*' pkg.unhold <package name>
 
     pkgs
-        A list of packages to hold. Must be passed as a python list.
+        A list of packages to unhold. Must be passed as a python list.
 
         CLI Example:
 
