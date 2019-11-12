@@ -2370,8 +2370,8 @@ def wait_for_instance(
 
         if win_passwd and win_passwd == 'auto':
             log.debug('Waiting for auto-generated Windows EC2 password')
-            # Timeout after 10 minutes
-            for _ in range(10):
+            # Timeout after 15 minutes
+            for _ in range(30):
                 password_data = get_password_data(
                     name=vm_['name'],
                     kwargs={
@@ -2384,7 +2384,7 @@ def wait_for_instance(
                     log.debug(password_data)
                     # This wait is so high, because the password is unlikely to
                     # be generated for at least 4 minutes
-                    time.sleep(60)
+                    time.sleep(30)
                 else:
                     logging_data = password_data
 
