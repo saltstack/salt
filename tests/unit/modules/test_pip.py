@@ -981,8 +981,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 patch(
                      'salt.modules.pip.version',
                      MagicMock(return_value='6.1.1')
-                ) \
-            :
+                ):
                 ret = pip.freeze(bin_env=venv_path, local=True)
                 mock.assert_called_with(
                     expected,
