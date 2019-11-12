@@ -57,6 +57,12 @@ To use the EC2 cloud module, set up the cloud configuration at
       # Optional
       ssh_gateway_command: "-W %h:%p"
 
+      # Default to 'nc -z -w5 -q0 {0} {1}'
+      # Optional
+      # `{0}` will be substituted by host name,
+      # `{1}` will be substituted by a port number.
+      ssh_gateway_test_command: 'nc -z -w5 -q0 {0} {1}'
+
       # One authentication method is required. If both
       # are specified, Private key wins.
 
@@ -1092,6 +1098,12 @@ def get_ssh_gateway_config(vm_):
     # ssh_gateway_command
     ssh_gateway_config['ssh_gateway_command'] = config.get_cloud_config_value(
         'ssh_gateway_command', vm_, __opts__, default=None,
+        search_global=False
+    )
+
+    # ssh_gateway_test_command
+    ssh_gateway_config['ssh_gateway_test_command'] = config.get_cloud_config_value(
+        'ssh_gateway_test_command', vm_, __opts__, default=None,
         search_global=False
     )
 

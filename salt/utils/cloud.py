@@ -161,16 +161,16 @@ def __ssh_gateway_arguments(kwargs):
     '''
     extended_arguments = ""
 
-    ssh_gateway = kwargs.get('ssh_gateway', '')
+    ssh_gateway = kwargs.get('ssh_gateway', None) or ''
     ssh_gateway_port = 22
     if ':' in ssh_gateway:
         ssh_gateway, ssh_gateway_port = ssh_gateway.split(':')
-    ssh_gateway_command = kwargs.get('ssh_gateway_command', 'nc -q0 %h %p')
+    ssh_gateway_command = kwargs.get('ssh_gateway_command', None) or 'nc -q0 %h %p'
 
     if ssh_gateway:
         ssh_gateway_port = kwargs.get('ssh_gateway_port', ssh_gateway_port)
         ssh_gateway_key = '-i {0}'.format(kwargs['ssh_gateway_key']) if 'ssh_gateway_key' in kwargs else ''
-        ssh_gateway_user = kwargs.get('ssh_gateway_user', 'root')
+        ssh_gateway_user = kwargs.get('ssh_gateway_user', None) or 'root'
 
         # Setup ProxyCommand
         extended_arguments = '-oProxyCommand="ssh {0} {1} {2} {3} {4}@{5} -p {6} {7}"'.format(
@@ -740,10 +740,12 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             ssh_gateway_port = gateway['ssh_gateway_port']
         test_ssh_host = ssh_gateway
         test_ssh_port = ssh_gateway_port
+        ssh_gateway_test_command = gateway.get('ssh_gateway_test_command', None) or 'nc -z -w5 -q0 {0} {1}'
         log.debug(
             'Attempting connection to host %s on port %s '
-            'via gateway %s on port %s',
-            host, port, ssh_gateway, ssh_gateway_port
+            'via gateway %s on port %s, using test command %s',
+            host, port, ssh_gateway, ssh_gateway_port,
+            ssh_gateway_test_command,
         )
     else:
         log.debug('Attempting connection to host %s on port %s', host, port)
@@ -807,7 +809,7 @@ def wait_for_port(host, port=22, timeout=900, gateway=None):
             '-i {0}'.format(gateway['ssh_gateway_key'])
         ])
     # Netcat command testing remote port
-    command = 'nc -z -w5 -q0 {0} {1}'.format(host, port)
+    command = ssh_gateway_test_command.format(host, port)
     # SSH command
     pcmd = 'ssh {0} {1}@{2} -p {3} {4}'.format(
         ' '.join(ssh_args), gateway['ssh_gateway_user'], ssh_gateway,
