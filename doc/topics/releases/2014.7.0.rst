@@ -54,8 +54,6 @@ release.
 Simply stated, users running Salt with RAET should expect some hiccups as we
 hammer out the update. This is a BETA release of Salt RAET.
 
-For information about how to use Salt with RAET please see the
-:ref:`tutorial <raet>`.
 
 Salt SSH Enhancements
 =====================
