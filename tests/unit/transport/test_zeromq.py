@@ -59,6 +59,7 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUpClass(cls):
         if not hasattr(cls, '_handle_payload'):
             return
+        cls.mock = MagicMock()  # hook called in _handle_payload
         ret_port = get_unused_localhost_port()
         publish_port = get_unused_localhost_port()
         tcp_master_pub_port = get_unused_localhost_port()
@@ -141,6 +142,7 @@ class ClearReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         '''
         TODO: something besides echo
         '''
+        cls.mock._handle_payload_hook()
         raise tornado.gen.Return((payload, {'fun': 'send_clear'}))
 
     def test_master_uri_override(self):
@@ -170,6 +172,7 @@ class AESReqTestCases(BaseZMQReqCase, ReqChannelMixin):
         '''
         TODO: something besides echo
         '''
+        cls.mock._handle_payload_hook()
         raise tornado.gen.Return((payload, {'fun': 'send'}))
 
     # TODO: make failed returns have a specific framing so we can raise the same exception

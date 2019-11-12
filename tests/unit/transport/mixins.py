@@ -10,6 +10,9 @@ import salt.transport.client
 from salt.ext import six
 import tornado.gen
 
+# Import test support libs
+from tests.support.mock import patch
+
 
 def run_loop_in_thread(loop, evt):
     '''
@@ -68,6 +71,18 @@ class ReqChannelMixin(object):
         for msg in msgs:
             ret = self.channel.send(msg, timeout=2, tries=1)
             self.assertEqual(ret, 'payload and load must be a dict')
+
+    def test_payload_handling_exception(self):
+        with patch.object(self.mock, "_handle_payload_hook") as _mock:
+            _mock.side_effect = Exception()
+            ret = self.channel.send({}, timeout=2, tries=1)
+        self.assertEqual(ret, 'Some exception handling minion payload')
+
+    def test_serverside_exception(self):
+        with patch.object(self.mock, "_handle_payload_hook") as _mock:
+            _mock.side_effect = tornado.gen.Return(({}, {'fun': 'madeup-fun'}))
+            ret = self.channel.send({}, timeout=2, tries=1)
+        self.assertEqual(ret, 'Server-side exception handling payload')
 
 
 class PubChannelMixin(object):
