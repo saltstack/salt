@@ -1083,7 +1083,6 @@ class SaltAPIParserTestCase(ParserBase, TestCase):
             os.unlink(self.api_logfile)
 
 
-@skipIf(not pytest, False)
 class DaemonMixInTestCase(TestCase):
     '''
     Tests the PIDfile deletion in the DaemonMixIn.
