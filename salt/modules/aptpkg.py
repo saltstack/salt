@@ -597,7 +597,7 @@ def install(name=None,
             cmd_prefix.extend(['-o', 'DPkg::Options::=--force-confnew'])
         else:
             cmd_prefix.extend(['-o', 'DPkg::Options::=--force-confold'])
-        cmd_prefix += ['-o', 'DPkg::Options::=--force-confdef']
+            cmd_prefix += ['-o', 'DPkg::Options::=--force-confdef']
         if 'install_recommends' in kwargs:
             if not kwargs['install_recommends']:
                 cmd_prefix.append('--no-install-recommends')
