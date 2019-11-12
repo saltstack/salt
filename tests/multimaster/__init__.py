@@ -191,7 +191,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -235,7 +235,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -272,7 +272,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -309,7 +309,7 @@ class MultimasterTestDaemon(TestDaemon):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
