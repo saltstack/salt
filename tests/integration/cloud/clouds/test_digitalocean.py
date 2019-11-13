@@ -7,7 +7,14 @@ Integration tests for DigitalOcean APIv2
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import hashlib
-from Crypto.PublicKey import RSA
+
+try:
+    from Crypto.PublicKey import RSA
+    HAS_REQUIRED_CRYPTO = True
+except ImportError:
+    HAS_REQUIRED_CRYPTO = False
+
+import pytest
 
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
@@ -17,6 +24,7 @@ from salt.ext.six.moves import range
 import salt.utils.stringutils
 
 
+@pytest.mark.skipif(HAS_REQUIRED_CRYPTO is False, reason='Required crypto library not installed')
 class DigitalOceanTest(CloudTest):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
