@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-# Import Python libs
-from __future__ import absolute_import
-# Import Salt Libs
+from __future__ import absolute_import, unicode_literals, print_function
+
+from tests.support.unit import TestCase, skipIf
+from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
 import salt.utils.pkg
-import salt.utils.pkg.rpm
-# Import Salt Testing Libs
-from tests.support.unit import TestCase
+from salt.utils.pkg import rpm
 
 
 class PkgUtilsTestCase(TestCase):
@@ -47,15 +46,60 @@ class PkgUtilsTestCase(TestCase):
             self.assertEqual(test_parameter[1], oper)
             self.assertEqual(test_parameter[2], verstr)
 
-    def test_rpm_arches(self):
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class PkgRPMTestCase(TestCase):
+    '''
+    Test case for pkg.rpm utils
+    '''
+
+    @patch('salt.utils.path.which', MagicMock(return_value=True))
+    def test_get_osarch_by_rpm(self):
         '''
-        Test salt.utils.pkg.rpm supported arch
+        Get os_arch if RPM package is installed.
+        :return:
         '''
-        self.assertSequenceEqual(['x86_64', 'athlon', 'amd64', 'ia32e', 'ia64', 'geode'], salt.utils.pkg.rpm.ARCHES_64)
-        self.assertSequenceEqual(['i386', 'i486', 'i586', 'i686'], salt.utils.pkg.rpm.ARCHES_32)
-        self.assertSequenceEqual(['ppc', 'ppc64', 'ppc64le', 'ppc64iseries', 'ppc64pseries'], salt.utils.pkg.rpm.ARCHES_PPC)
-        self.assertSequenceEqual(['s390', 's390x'], salt.utils.pkg.rpm.ARCHES_S390)
-        self.assertSequenceEqual(['sparc', 'sparcv8', 'sparcv9', 'sparcv9v', 'sparc64', 'sparc64v'], salt.utils.pkg.rpm.ARCHES_SPARC)
-        self.assertSequenceEqual(['alpha', 'alphaev4', 'alphaev45', 'alphaev5', 'alphaev56', 'alphapca56', 'alphaev6', 'alphaev67', 'alphaev68', 'alphaev7'], salt.utils.pkg.rpm.ARCHES_ALPHA)
-        self.assertSequenceEqual(['armv5tel', 'armv5tejl', 'armv6l', 'armv7l'], salt.utils.pkg.rpm.ARCHES_ARM)
-        self.assertSequenceEqual(['sh3', 'sh4', 'sh4a'], salt.utils.pkg.rpm.ARCHES_SH)
+        subprocess_mock = MagicMock()
+        subprocess_mock.Popen = MagicMock()
+        subprocess_mock.Popen().communicate = MagicMock(return_value=['Z80'])
+        with patch('salt.utils.pkg.rpm.subprocess', subprocess_mock):
+            assert rpm.get_osarch() == 'Z80'
+        assert subprocess_mock.Popen.call_count == 2  # One within the mock
+        assert subprocess_mock.Popen.call_args[1]['close_fds']
+        assert subprocess_mock.Popen.call_args[1]['shell']
+        assert len(subprocess_mock.Popen.call_args_list) == 2
+        assert subprocess_mock.Popen.call_args[0][0] == 'rpm --eval "%{_host_cpu}"'
+
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.subprocess', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.platform.uname', MagicMock(
+        return_value=('Sinclair BASIC', 'motophone', '1982 Sinclair Research Ltd', '1.0', 'ZX81', 'Z80')))
+    def test_get_osarch_by_platform(self):
+        '''
+        Get os_arch if RPM package is not installed (inird image, for example).
+        :return:
+        '''
+        assert rpm.get_osarch() == 'Z80'
+
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.subprocess', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.platform.uname', MagicMock(
+        return_value=('Sinclair BASIC', 'motophone', '1982 Sinclair Research Ltd', '1.0', 'ZX81', '')))
+    def test_get_osarch_by_platform_no_cpu_arch(self):
+        '''
+        Get os_arch if RPM package is not installed (inird image, for example) but cpu arch cannot be determined.
+        :return:
+        '''
+        assert rpm.get_osarch() == 'ZX81'
+
+    @patch('salt.utils.path.which', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.subprocess', MagicMock(return_value=False))
+    @patch('salt.utils.pkg.rpm.platform.uname', MagicMock(
+        return_value=('Sinclair BASIC', 'motophone', '1982 Sinclair Research Ltd', '1.0', '', '')))
+    def test_get_osarch_by_platform_no_cpu_arch_no_machine(self):
+        '''
+        Get os_arch if RPM package is not installed (inird image, for example)
+        where both cpu arch and machine cannot be determined.
+        :return:
+        '''
+        assert rpm.get_osarch() == 'unknown'
