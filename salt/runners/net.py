@@ -224,8 +224,16 @@ def _find_interfaces_mac(ip):  # pylint: disable=invalid-name
         if not device_ipaddrs.get('result', False):
             continue
         for interface, interface_ipaddrs in six.iteritems(device_ipaddrs.get('out', {})):
-            ip_addresses = interface_ipaddrs.get('ipv4', {}).keys()
-            ip_addresses.extend(interface_ipaddrs.get('ipv6', {}).keys())
+            ip_addresses = set()
+            ip_addresses.add(list(interface_ipaddrs.get('ipv4', {}).keys())[0])
+            try:
+                ip_addresses.add(list(interface_ipaddrs.get('ipv4', {}).keys())[1])
+            except IndexError:
+                pass
+            try:
+                ip_addresses.add(list(interface_ipaddrs.get('ipv6', {}).keys())[0])
+            except (AttributeError, IndexError):
+                pass
             for ipaddr in ip_addresses:
                 if ip != ipaddr:
                     continue
@@ -352,6 +360,7 @@ def interfaces(device=None,
 
     best_row = {}
     best_net_match = None
+    compare = []
     for device, net_interfaces_out in six.iteritems(all_interfaces):  # pylint: disable=too-many-nested-blocks
         if not net_interfaces_out:
             continue
@@ -405,7 +414,6 @@ def interfaces(device=None,
                         if inet_ips:  # if any
                             if best:
                                 # determine the global best match
-                                compare = [best_net_match]
                                 compare.extend(list(map(_get_network_obj, inet_ips)))
                                 new_best_net_match = max(compare)
                                 if new_best_net_match != best_net_match:
