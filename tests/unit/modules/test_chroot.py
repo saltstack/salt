@@ -237,3 +237,47 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
                  '--out', 'json', '-l', 'quiet',
                  '--', 'module.function', 'key=value'])
             utils_mock['files.rm_rf'].assert_called_once()
+
+    @patch('salt.modules.chroot._create_and_execute_salt_state')
+    @patch('salt.client.ssh.state.SSHHighState')
+    @patch('salt.fileclient.get_file_client')
+    @patch('salt.utils.state.get_sls_opts')
+    def test_sls(self, get_sls_opts, get_file_client, SSHHighState,
+                 _create_and_execute_salt_state):
+        '''
+        Test execution of Salt states in chroot.
+        '''
+        SSHHighState.return_value = SSHHighState
+        SSHHighState.render_highstate.return_value = (None, [])
+        SSHHighState.state.reconcile_extend.return_value = (None, [])
+        SSHHighState.state.requisite_in.return_value = (None, [])
+        SSHHighState.state.verify_high.return_value = []
+
+        _create_and_execute_salt_state.return_value = 'result'
+        opts_mock = {
+            'hash_type': 'md5',
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(chroot.__opts__, opts_mock):
+            self.assertEqual(chroot.sls('/chroot', 'module'), 'result')
+            _create_and_execute_salt_state.assert_called_once()
+
+    @patch('salt.modules.chroot._create_and_execute_salt_state')
+    @patch('salt.client.ssh.state.SSHHighState')
+    @patch('salt.fileclient.get_file_client')
+    @patch('salt.utils.state.get_sls_opts')
+    def test_highstate(self, get_sls_opts, get_file_client, SSHHighState,
+                       _create_and_execute_salt_state):
+        '''
+        Test execution of Salt states in chroot.
+        '''
+        SSHHighState.return_value = SSHHighState
+
+        _create_and_execute_salt_state.return_value = 'result'
+        opts_mock = {
+            'hash_type': 'md5',
+        }
+        get_sls_opts.return_value = opts_mock
+        with patch.dict(chroot.__opts__, opts_mock):
+            self.assertEqual(chroot.highstate('/chroot'), 'result')
+            _create_and_execute_salt_state.assert_called_once()
