@@ -199,7 +199,7 @@ def _get_serv(ret=None):
 
 
 def _get_ttl():
-    return __opts__.get('keep_jobs', 24) * 3600
+    return int(__opts__.get('keep_jobs', 24.0) * 3600)
 
 
 def returner(ret):

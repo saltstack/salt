@@ -303,14 +303,14 @@ Verify and set permissions on configuration directories at startup.
 ``keep_jobs``
 -------------
 
-Default: ``24``
+Default: ``24.0``
 
 Set the number of hours to keep old job information. Note that setting this option
 to ``0`` disables the cache cleaner.
 
 .. code-block:: yaml
 
-    keep_jobs: 24
+    keep_jobs: 24.0
 
 .. conf_master:: gather_job_timeout
 

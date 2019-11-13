@@ -153,7 +153,7 @@ def clean_pub_auth(opts):
                     if not os.path.isfile(auth_file_path):
                         continue
                     if (time.time() - os.path.getmtime(auth_file_path) >
-                            (opts['keep_jobs'] * 3600)):
+                            (opts['keep_jobs'] * 3600.0)):
                         os.remove(auth_file_path)
     except (IOError, OSError):
         log.error('Unable to delete pub auth file')

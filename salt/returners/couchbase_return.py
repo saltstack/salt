@@ -154,7 +154,7 @@ def _get_ttl():
     '''
     Return the TTL that we should store our objects with
     '''
-    return __opts__.get('couchbase.ttl', 24) * 60 * 60  # keep_jobs is in hours
+    return int(__opts__.get('couchbase.ttl', 24.0) * 60 * 60)  # keep_jobs is in hours
 
 
 #TODO: add to returner docs-- this is a new one

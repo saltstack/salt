@@ -397,7 +397,7 @@ def get_jids():
           '''FROM jids'''
     if __opts__['keep_jobs'] != 0:
         sql = sql + " WHERE started > NOW() - INTERVAL '" \
-                + six.text_type(__opts__['keep_jobs']) + "' HOUR"
+                + six.text_type(__opts__['keep_jobs']) + " HOUR'"
 
     cur.execute(sql)
     ret = {}

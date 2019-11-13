@@ -72,7 +72,7 @@
 #verify_env: True
 
 # Set the number of hours to keep old job information in the job cache:
-#keep_jobs: 24
+#keep_jobs: 24.0
 
 # The number of seconds to wait when the client is requesting information
 # about running jobs.

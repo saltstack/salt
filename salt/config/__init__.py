@@ -626,7 +626,7 @@ VALID_OPTS = immutabletypes.freeze({
     'ret_port': int,
 
     # The number of hours to keep jobs around in the job cache on the master
-    'keep_jobs': int,
+    'keep_jobs': float,
 
     # If the returner supports `clean_old_jobs`, then at cleanup time,
     # archive the job data before deleting it.
@@ -1537,7 +1537,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'sock_pool_size': 1,
     'ret_port': 4506,
     'timeout': 5,
-    'keep_jobs': 24,
+    'keep_jobs': 24.0,
     'archive_jobs': False,
     'root_dir': salt.syspaths.ROOT_DIR,
     'pki_dir': os.path.join(salt.syspaths.CONFIG_DIR, 'pki', 'master'),
