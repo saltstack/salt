@@ -4,23 +4,20 @@ Tests for the salt-run command
 '''
 # Import Python libs
 from __future__ import absolute_import
-from __future__ import print_function
 import functools
 import random
 import string
 
+
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from salt.ext.six.moves import range
-from salt.utils.files import fopen
+from salt.ext.six import text_type
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization
-import pytest
 import tempfile
-from os import path
-from os import environ
 
 
 def _random_name(prefix=''):
@@ -43,8 +40,6 @@ def with_random_name(func):
     return wrapper
 
 
-# @destructiveTest
-# @expensiveTest
 class VenafiTest(ShellCase):
     '''
     Test the venafi runner
@@ -52,20 +47,20 @@ class VenafiTest(ShellCase):
 
     @with_random_name
     def test_request(self, name):
-        print("Testing Venafi request cert")
-        print("Using venafi config:", self.master_opts['venafi'])
         cn = '{0}.example.com'.format(name)
+
+        # Provide python27 compatibility
+        if not isinstance(cn, text_type):
+            cn = cn.decode()
+
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 dns_name=cn,
                                 key_password='secretPassword',
-                                zone=environ.get('CLOUDZONE'))
-        print("Ret is:\n", ret)
+                                zone='fake')
         cert_output = ret['return'][0]
-        if not cert_output:
-            pytest.fail('venafi_certificate not found in output_value')
+        assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
-        print("Testing certificate:\n", cert_output)
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
@@ -75,9 +70,7 @@ class VenafiTest(ShellCase):
         ]
 
         pkey_output = ret['return'][1]
-        print("Testing pkey:\n", pkey_output)
-        if not pkey_output:
-            pytest.fail('venafi_private key not found in output_value')
+        assert pkey_output is not None, 'venafi_private key not found in output_value'
 
         pkey = serialization.load_pem_private_key(pkey_output.encode(), password=b'secretPassword',
                                                   backend=default_backend())
@@ -94,7 +87,6 @@ class VenafiTest(ShellCase):
 
     @with_random_name
     def test_sign(self, name):
-        print("Testing Venafi sign CSR")
 
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----
 MIIFbDCCA1QCAQAwgbQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
@@ -129,28 +121,27 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
 -----END CERTIFICATE REQUEST-----
         """
 
-        tmp_dir = tempfile.gettempdir()
-        with fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), 'w+') as f:
-            print("Saving test CSR to temp file", f.name)
+        with tempfile.NamedTemporaryFile('w+') as f:
             f.write(csr_pem)
+            f.flush()
             csr_path = f.name
+            cn = "test-csr-32313131.venafi.example.com"
 
-        print("Using venafi config:", self.master_opts['venafi'])
-        cn = "test-csr-32313131.venafi.example.com"
-        ret = self.run_run_plus(fun='venafi.request',
-                                minion_id=cn,
-                                csr_path=csr_path,
-                                zone=environ.get('CLOUDZONE'))
-        print("Ret is:\n", ret)
-        cert_output = ret['return'][0]
-        if not cert_output:
-            pytest.fail('venafi_certificate not found in output_value')
+            # Provide python27 compatibility
+            if not isinstance(cn, text_type):
+                cn = cn.decode()
 
-        print("Testing certificate:\n", cert_output)
-        cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
-        assert isinstance(cert, x509.Certificate)
-        assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
-            x509.NameAttribute(
-                NameOID.COMMON_NAME, cn
-            )
-        ]
+            ret = self.run_run_plus(fun='venafi.request',
+                                    minion_id=cn,
+                                    csr_path=csr_path,
+                                    zone='fake')
+            cert_output = ret['return'][0]
+            assert cert_output is not None, 'venafi_certificate not found in `output_value`'
+
+            cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
+            assert isinstance(cert, x509.Certificate)
+            assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
+                x509.NameAttribute(
+                    NameOID.COMMON_NAME, cn
+                )
+            ]
