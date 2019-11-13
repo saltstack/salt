@@ -4,6 +4,7 @@ Tests for the salt-run command
 '''
 # Import Python libs
 from __future__ import absolute_import
+from __future__ import print_function
 import functools
 import random
 import string
