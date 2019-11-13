@@ -55,7 +55,8 @@ def _search(prefix="latest/"):
     if 'body' not in linedata:
         return ret
     body = salt.utils.stringutils.to_unicode(linedata['body'])
-    if linedata['headers'].get('Content-Type', 'text/plain') == 'application/octet-stream':
+    if linedata['headers'].get('Content-Type', 'text/plain') == 'application/octet-stream' or 'latest/user-data' in prefix:
+        # https://github.com/saltstack/salt/issues/55298
         return body
     for line in body.split('\n'):
         if line.endswith('/'):
