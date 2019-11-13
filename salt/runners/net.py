@@ -78,12 +78,12 @@ from salt.ext.six.moves import map
 
 # Import third party libs
 try:
-    from netaddr import IPNetwork  # netaddr is already required by napalm-base
+    from netaddr import IPNetwork  # netaddr is already required by napalm
     from netaddr.core import AddrFormatError
-    from napalm_base import helpers as napalm_helpers
-    HAS_NAPALM_BASE = True
+    from napalm.base import helpers as napalm_helpers
+    HAS_NAPALM = True
 except ImportError:
-    HAS_NAPALM_BASE = False
+    HAS_NAPALM = False
 
 # -----------------------------------------------------------------------------
 # module properties
@@ -113,9 +113,9 @@ __virtualname__ = 'net'
 
 
 def __virtual__():
-    if HAS_NAPALM_BASE:
+    if HAS_NAPALM:
         return __virtualname__
-    return (False, 'The napalm-base module could not be imported')
+    return (False, 'The napalm module could not be imported')
 
 
 def _get_net_runner_opts():
