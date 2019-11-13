@@ -22,14 +22,17 @@ properties([
     ])
 ])
 
-// Be sure to cancel any previously running builds
-def buildNumber = env.BUILD_NUMBER as int
-if (buildNumber > concurrent_builds) {
-    // This will cancel the previous build which also defined a matching milestone
-    milestone(buildNumber - concurrent_builds)
+// Only set milestones on PR builds
+if (env.CHANGE_ID) {
+    // Be sure to cancel any previously running builds
+    def buildNumber = env.BUILD_NUMBER as int
+    if (buildNumber > concurrent_builds) {
+        // This will cancel the previous build which also defined a matching milestone
+        milestone(buildNumber - concurrent_builds)
+    }
+    // Define a milestone for this build so that, if another build starts, this one will be aborted
+    milestone(buildNumber)
 }
-// Define a milestone for this build so that, if another build starts, this one will be aborted
-milestone(buildNumber)
 
 wrappedNode(jenkins_slave_label, global_timeout, '#jenkins-prod-pr') {
     withEnv([
