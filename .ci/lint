@@ -30,7 +30,6 @@ wrappedNode('lint', global_timeout, '#jenkins-prod-pr') {
             stage('checkout-scm') {
                 cleanWs notFailBuild: true
                 checkout scm
-                sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
             }
 
             // Setup the kitchen required bundle
