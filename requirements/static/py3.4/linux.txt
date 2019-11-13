@@ -118,3 +118,19 @@ werkzeug==0.15.6          # via moto
 wrapt==1.11.1             # via aws-xray-sdk
 xmltodict==0.12.0         # via moto
 zc.lockfile==1.4          # via cherrypy
+
+# venafi
+asn1crypto==1.2.0         # via certvalidator, oscrypto
+certifi==2019.9.11        # via requests
+certvalidator==0.11.1     # via vcert
+cffi==1.13.2              # via cryptography
+chardet==3.0.4            # via requests
+cryptography==2.8         # via vcert
+idna==2.8                 # via requests
+oscrypto==1.1.0           # via certvalidator
+pycparser==2.19           # via cffi
+python-dateutil==2.8.1    # via vcert
+requests==2.22.0          # via vcert
+six==1.13.0               # via cryptography, python-dateutil, vcert
+urllib3==1.25.7           # via requests
+vcert==0.6.8
