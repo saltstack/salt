@@ -292,7 +292,7 @@ def _install_requirements(session, transport, *extra_requirements):
         requirements_files = [
             os.path.join('pkg', 'osx', 'req.txt'),
             os.path.join('pkg', 'osx', 'req_ext.txt'),
-            os.path.join('requirements', 'static', 'osx.in')
+            os.path.join('requirements', 'static', 'darwin.in')
         ]
 
     while True:
