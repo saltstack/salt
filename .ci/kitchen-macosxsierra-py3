@@ -1,4 +1,4 @@
-@Library('salt@master-1.2') _
+@Library('salt@master-1.3') _
 
 // Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
@@ -10,7 +10,6 @@ def distro_name = 'macosx'
 def distro_version = 'sierra'
 def python_version = 'py3'
 def nox_env_name = 'runtests-zeromq'
-def salt_target_branch = 'master'
 def golden_images_branch = 'master'
 def nox_passthrough_opts = ''
 def concurrent_builds = 1
@@ -23,14 +22,17 @@ properties([
     ])
 ])
 
-// Be sure to cancel any previously running builds
-def buildNumber = env.BUILD_NUMBER as int
-if (buildNumber > concurrent_builds) {
-    // This will cancel the previous build which also defined a matching milestone
-    milestone(buildNumber - concurrent_builds)
+// Only set milestones on PR builds
+if (env.CHANGE_ID) {
+    // Be sure to cancel any previously running builds
+    def buildNumber = env.BUILD_NUMBER as int
+    if (buildNumber > concurrent_builds) {
+        // This will cancel the previous build which also defined a matching milestone
+        milestone(buildNumber - concurrent_builds)
+    }
+    // Define a milestone for this build so that, if another build starts, this one will be aborted
+    milestone(buildNumber)
 }
-// Define a milestone for this build so that, if another build starts, this one will be aborted
-milestone(buildNumber)
 
 wrappedNode(jenkins_slave_label, global_timeout, '#jenkins-prod-pr') {
     withEnv([
@@ -40,7 +42,6 @@ wrappedNode(jenkins_slave_label, global_timeout, '#jenkins-prod-pr') {
         "NOX_ENV_NAME=${nox_env_name}",
         'NOX_ENABLE_FROM_FILENAMES=true',
         "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts}",
-        "SALT_TARGET_BRANCH=${salt_target_branch}",
         "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
         "PATH=/Users/parallels/.rbenv/shims:/Users/parallels/.rbenv/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/salt/bin:/usr/local/sbin",
         'RBENV_VERSION=2.6.3',
@@ -65,7 +66,6 @@ wrappedNode(jenkins_slave_label, global_timeout, '#jenkins-prod-pr') {
         stage('Clone') {
             cleanWs notFailBuild: true
             checkout scm
-            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
         }
 
         // Setup the kitchen required bundle
