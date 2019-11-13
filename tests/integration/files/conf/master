@@ -129,7 +129,4 @@ peer_run:
 sdbvault:
   driver: vault
 venafi:
-  #For Venafi Cloud
-  #api_key: "sdb://osenv/CLOUDAPIKEY"
-  #base_url: "sdb://osenv/CLOUDURL"
   fake: "true"

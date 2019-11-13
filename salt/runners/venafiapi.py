@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for Venafi
 
 :depends: - vcert Python module
@@ -23,7 +23,7 @@ Support for Venafi
       tpp_password: "sdb://osenv/TPP_PASSWORD"
       trust_bundle: "/opt/venafi/bundle.pem"
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
@@ -58,7 +58,6 @@ def _init_connection():
     base_url = __opts__.get('venafi', {}).get('base_url', '')
     log.info("Using base_url: %s", base_url)
     tpp_user = __opts__.get('venafi', {}).get('tpp_user', '')
-    log.info("Using tpp_user: %s", tpp_user)
     tpp_password = __opts__.get('venafi', {}).get('tpp_password', '')
     trust_bundle = __opts__.get('venafi', {}).get('trust_bundle', '')
     fake = __opts__.get('venafi', {}).get('fake', '')
@@ -74,12 +73,12 @@ def _init_connection():
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if vcert module is installed
-    '''
-    if not HAS_VCERT:
-        return False
-    return __virtualname__
+    """
+    if HAS_VCERT:
+        return __virtualname__
+    return False
 
 
 def request(
@@ -93,8 +92,9 @@ def request(
     org_unit=None,
     key_password=None,
     csr_path=None,
+    pkey_path=None,
 ):
-    '''
+    """
     Request a new certificate
 
     CLI Example:
@@ -102,8 +102,9 @@ def request(
     .. code-block:: bash
 
         salt-run venafi.request <minion_id> <dns_name>
-    '''
+    """
 
+    log.info("Requesting Venafi certificate")
     if zone is None:
         log.error(msg=str("Missing zone parameter"))
         sys.exit(1)
@@ -113,7 +114,13 @@ def request(
             key_password = __salt__['sdb.get'](key_password)
     conn = _init_connection()
 
-    if csr_path is not None:
+    if csr_path is None:
+        request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
+                                     organization=org, organizational_unit=org_unit, key_password=key_password)
+        zone_config = conn.read_zone_conf(zone)
+        log.info("Updating request from zone %s", zone_config)
+        request.update_from_zone_config(zone_config)
+    else:
         log.info("Will use generated CSR from %s", csr_path)
         log.info("Using CN %s", dns_name)
         try:
@@ -121,23 +128,33 @@ def request(
                 csr = csr_file.read()
             request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
-            log.error(msg=str(e))
-            sys.exit(1)
-    else:
-        request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                     organization=org, organizational_unit=org_unit, key_password=key_password)
-        zone_config = conn.read_zone_conf(zone)
-        request.update_from_zone_config(zone_config)
+            raise Exception(
+                'Unable to open file {file}: {excp}'.format(file=csr_path, excp=e)
+            )
     conn.request_cert(request, zone)
+
+    # TODO: add timeout parameter here
+    timeout_seconds = 300
+    timeout = time.time() + timeout_seconds
+    cert = None
+    while cert is None and time.time() < timeout:
+        cert = conn.retrieve_cert(request)
+        if cert is None:
+            time.sleep(5)
+
     if csr_path is None:
         private_key = request.private_key_pem
     else:
-        private_key = None
-    while True:
-        time.sleep(5)
-        cert = conn.retrieve_cert(request)
-        if cert:
-            break
+        if pkey_path:
+            try:
+                with salt.utils.files.fopen(pkey_path) as pkey_file:
+                    private_key = pkey_file.read()
+            except Exception as e:
+                raise Exception(
+                    'Unable to open file {file}: {excp}'.format(file=pkey_path, excp=e)
+                )
+        else:
+            private_key = None
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     data = {
@@ -155,9 +172,9 @@ renew = request
 
 
 def _id_map(minion_id, dns_name):
-    '''
+    """
     Maintain a relationship between a minion and a DNS name
-    '''
+    """
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     dns_names = cache.fetch(CACHE_BANK_NAME, minion_id)
@@ -169,7 +186,7 @@ def _id_map(minion_id, dns_name):
 
 
 def show_cert(dns_name):
-    '''
+    """
     Show issued certificate for domain
 
     CLI Example:
@@ -177,7 +194,7 @@ def show_cert(dns_name):
     .. code-block:: bash
 
         salt-run venafi.show_cert example.com
-    '''
+    """
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     domain_data = cache.fetch(CACHE_BANK_NAME, dns_name) or {}
@@ -186,7 +203,7 @@ def show_cert(dns_name):
 
 
 def list_domain_cache():
-    '''
+    """
     List domains that have been cached
 
     CLI Example:
@@ -194,13 +211,13 @@ def list_domain_cache():
     .. code-block:: bash
 
         salt-run venafi.list_domain_cache
-    '''
+    """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     return cache.list('venafi/domains')
 
 
 def del_cached_domain(domains):
-    '''
+    """
     Delete cached domains from the master
 
     CLI Example:
@@ -208,7 +225,7 @@ def del_cached_domain(domains):
     .. code-block:: bash
 
         salt-run venafi.del_cached_domain domain1.example.com,domain2.example.com
-    '''
+    """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     if isinstance(domains, six.string_types):
         domains = domains.split(',')
