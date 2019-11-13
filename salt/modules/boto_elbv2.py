@@ -255,6 +255,11 @@ def describe_target_health(name,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
+        if not name.startswith('arn:aws:elasticloadbalancing'):
+            tg_info = conn.describe_target_groups(Names=[name])
+            if len(tg_info['TargetGroups']) != 1:
+                return False
+            name = tg_info['TargetGroups'][0]['TargetGroupArn']
         if targets:
             targetsdict = []
             for target in targets:
@@ -303,6 +308,11 @@ def register_targets(name,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
+        if not name.startswith('arn:aws:elasticloadbalancing'):
+            tg_info = conn.describe_target_groups(Names=[name])
+            if len(tg_info['TargetGroups']) != 1:
+                return False
+            name = tg_info['TargetGroups'][0]['TargetGroupArn']
         registered_targets = conn.register_targets(TargetGroupArn=name, Targets=targetsdict)
         if registered_targets:
             return True
@@ -343,6 +353,11 @@ def deregister_targets(name,
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
 
     try:
+        if not name.startswith('arn:aws:elasticloadbalancing'):
+            tg_info = conn.describe_target_groups(Names=[name])
+            if len(tg_info['TargetGroups']) != 1:
+                return False
+            name = tg_info['TargetGroups'][0]['TargetGroupArn']
         registered_targets = conn.deregister_targets(TargetGroupArn=name, Targets=targetsdict)
         if registered_targets:
             return True
