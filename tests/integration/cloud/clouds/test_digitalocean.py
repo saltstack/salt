@@ -8,23 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import hashlib
 
-try:
-    from Crypto.PublicKey import RSA
-    HAS_REQUIRED_CRYPTO = True
-except ImportError:
-    HAS_REQUIRED_CRYPTO = False
-
-import pytest
-
 # Import Salt Testing Libs
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest, TIMEOUT
 
 # Import Salt Libs
+import salt.ext.six as six
 from salt.ext.six.moves import range
+import salt.crypt
 import salt.utils.stringutils
 
 
-@pytest.mark.skipif(HAS_REQUIRED_CRYPTO is False, reason='Required crypto library not installed')
 class DigitalOceanTest(CloudTest):
     '''
     Integration tests for the DigitalOcean cloud provider in Salt-Cloud
@@ -69,8 +62,17 @@ class DigitalOceanTest(CloudTest):
         do_key_name = self.instance_name + '-key'
 
         # generate key and fingerprint
-        ssh_key = RSA.generate(4096)
-        pub = salt.utils.stringutils.to_str(ssh_key.publickey().exportKey("OpenSSH"))
+        if salt.crypt.HAS_M2:
+            rsa_key = salt.crypt.RSA.gen_key(4096, 65537, lambda: None)
+            pub = six.b('ssh-rsa {}'.format(
+                base64.b64encode(
+                    six.b('\x00\x00\x00\x07ssh-rsa{}{}'.format(*rsa_key.pub()))
+                )
+            ))
+        else:
+            ssh_key = salt.crypt.RSA.generate(4096)
+            pub = ssh_key.publickey().exportKey("OpenSSH")
+        pub = salt.utils.stringutils.to_str(pub)
         key_hex = hashlib.md5(base64.b64decode(pub.strip().split()[1].encode())).hexdigest()
         finger_print = ':'.join([key_hex[x:x+2] for x in range(0, len(key_hex), 2)])
 
