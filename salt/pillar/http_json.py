@@ -13,9 +13,8 @@ Set the following Salt config to setup http json result as external pillar sourc
   ext_pillar:
     - http_json:
         url: http://example.com/api/minion_id
-        ::TODO::
-        username: username
-        password: password
+        headers:
+            X-AUTH-TOKEN: 123456
 
 If the with_grains parameter is set, grain keys wrapped in can be provided (wrapped
 in <> brackets) in the url in order to populate pillar data based on the grain value.
@@ -66,12 +65,14 @@ def __virtual__():
 def ext_pillar(minion_id,
                pillar,  # pylint: disable=W0613
                url,
-               with_grains=False):
+               with_grains=False,
+               headers=None):
     '''
     Read pillar data from HTTP response.
 
     :param str url: Url to request.
     :param bool with_grains: Whether to substitute strings in the url with their grain values.
+    :param dict headers: Dict of headers.
 
     :return: A dictionary of the pillar data to add.
     :rtype: dict
@@ -96,7 +97,7 @@ def ext_pillar(minion_id,
             url = re.sub('<{0}>'.format(grain_name), grain_value, url)
 
     log.debug('Getting url: %s', url)
-    data = __salt__['http.query'](url=url, decode=True, decode_type='json')
+    data = __salt__['http.query'](url=url, decode=True, decode_type='json', header_dict=headers)
 
     if 'dict' in data:
         return data['dict']
