@@ -180,8 +180,8 @@ def start_daemon(daemon_name=None,
         else:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
             continue
-    else:   # pylint: disable=useless-else-on-loop
-            # Wrong, we have a return, its not useless
+    else:  # pylint: disable=useless-else-on-loop
+           # Wrong, we have a return, its not useless
         if process is not None:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
         raise fail_method(
