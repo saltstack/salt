@@ -22,8 +22,5 @@ class LinodeTest(CloudTest):
         '''
         Test creating an instance on Linode
         '''
-        # check if instance with salt installed returned
-        ret_str = self.run_cloud('-p linode-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_str)
-
+        self.assertCreateInstance(timeout=TIMEOUT)
         self.assertDestroyInstance()

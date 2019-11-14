@@ -35,15 +35,12 @@ except ImportError:
     HAS_SHADE = False
 
 
-@skipIf(
-    not HAS_KEYSTONE,
-    'Please install keystoneclient and a keystone server before running'
-    'openstack integration tests.'
-)
+@skipIf(not HAS_KEYSTONE, 'Please install keystoneclient and a keystone server before running openstack integration tests.')
 class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''
+    PROVIDER = 'openstack'
     endpoint = 'http://localhost:35357/v2.0'
     token = 'administrator'
 
@@ -175,14 +172,48 @@ class RackspaceTest(CloudTest):
     Integration tests for the Rackspace cloud provider using the Openstack driver
     '''
     PROVIDER = 'openstack'
-    REQUIRED_PROVIDER_CONFIG_ITEMS = ('auth', 'cloud', 'region_name')
+    PROVIDER_CONFIG = 'rackspace.conf'
+    PROFILE = 'rackspace-test'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('region_name',)
+    _profile_str = 'rackspace-config'
+
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        if not any((self.provider_config.get('auth'), self.provider_config.get('cloud'))):
+            self.skipTest('auth or cloud missing from {} config'.format(self.PROVIDER))
+
+        super(RackspaceTest, self).setUp()
 
     def test_instance(self):
         '''
         Test creating an instance on rackspace with the openstack driver
         '''
-        # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p rackspace-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_val)
+        self.assertCreateInstance(timeout=TIMEOUT)
+        self.assertDestroyInstance()
 
+
+@skipIf(not HAS_SHADE, 'openstack driver requires `shade`')
+class OpenstackCloudTest(CloudTest):
+    '''
+    Integration tests for the Openstack cloud provider using the Openstack driver
+    '''
+    PROVIDER = 'openstack'
+    REQUIRED_PROVIDER_CONFIG_ITEMS = ('region_name',)
+
+    def setUp(self):
+        '''
+        Sets up the test requirements
+        '''
+        if not any((self.provider_config.get('auth'), self.provider_config.get('cloud'))):
+            self.skipTest('auth or cloud missing from {} config'.format(self.PROVIDER))
+
+        super(OpenstackCloudTest, self).setUp()
+
+    def test_instance(self):
+        '''
+        Test creating an instance on openstack with the openstack driver
+        '''
+        self.assertCreateInstance(timeout=TIMEOUT)
         self.assertDestroyInstance()

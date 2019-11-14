@@ -21,7 +21,7 @@ from salt.config import cloud_config, cloud_providers_config
 from salt.ext.six.moves import range
 from salt.utils.yaml import safe_load
 
-TIMEOUT = 500
+TIMEOUT = 600
 
 log = logging.getLogger(__name__)
 
@@ -64,18 +64,38 @@ class CloudTest(ShellCase):
             return instance_name in query
         return any(instance_name == q.strip(': ') for q in query)
 
-    def assertInstanceExists(self, creation_ret=None, instance_name=None):
+    def assertCreateInstance(self, profile=None, instance_name=None, timeout=None, args=None):
+        if profile is None:
+            profile = self.profile
+        if args is None:
+            args = []
+        if timeout is None:
+            timeout = TIMEOUT
+        if not instance_name:
+            instance_name = self.instance_name
+
+        stdout, stderr = self.run_cloud('-p {0} {1} {2}'.format(profile, instance_name, ' '.join(args)),
+                                        timeout=timeout, catch_stderr=True)
+        self.assertInstanceExists(creation_ret=stdout, instance_name=instance_name, stderr=stderr)
+
+    def assertInstanceExists(self, creation_ret=None, instance_name=None, stderr=None):
         '''
         :param instance_name: Override the checked instance name, otherwise the class default will be used.
         :param creation_ret: The return value from the run_cloud() function that created the instance
+        :param stderr: When run_cloud is run with "catch_stderr=True" this is the stderr output
         '''
         if not instance_name:
             instance_name = self.instance_name
 
+        if stderr:
+            for line in stderr:
+                if line.lstrip().startswith('[ERROR   ]'):
+                    self.fail('\n'.join(stderr))
+
         # If it exists but doesn't show up in the creation_ret, there was probably an error during creation
         if creation_ret:
             self.assertIn(instance_name, [i.strip(': ') for i in creation_ret],
-                          'An error occured during instance creation:  |\n\t{}\n\t|'.format(
+                          'An error occurred during instance creation:  |\n\t{}\n\t|'.format(
                               '\n\t'.join(creation_ret)
                           ))
         else:
@@ -97,15 +117,14 @@ class CloudTest(ShellCase):
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
-    def assertDestroyInstance(self, instance_name=None, timeout=None):
-        if timeout is None:
-            timeout = TIMEOUT
+    def assertDestroyInstance(self, instance_name=None, deletion_ret=None, timeout=TIMEOUT):
         if not instance_name:
             instance_name = self.instance_name
-        log.debug('Deleting instance "{}"'.format(instance_name))
-        delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=timeout)
-        if delete_str:
-            delete = safe_load('\n'.join(delete_str))
+        if not deletion_ret:
+            log.debug('Deleting instance "{}"'.format(instance_name))
+            deletion_ret = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=timeout)
+        if deletion_ret:
+            delete = safe_load('\n'.join(deletion_ret))
             self.assertIn(self.profile_str, delete)
             self.assertIn(self.PROVIDER, delete[self.profile_str])
             self.assertIn(instance_name, delete[self.profile_str][self.PROVIDER])
@@ -132,51 +151,75 @@ class CloudTest(ShellCase):
                 log.debug('Instance "{}" still found in query after {} tries: {}'
                           .format(instance_name, tries, query))
                 query = self.query_instances()
+            else:
+                break
         # The last query should have been successful
-        self.assertNotIn(instance_name, self.query_instances())
+        self.assertNotIn(instance_name, query, 'Instance still exists after delete command. '
+                                               'Is the timeout ({}s) long enough?'.format(timeout))
+
+    @property
+    def profile(self):
+        if not hasattr(self, 'PROFILE'):
+            self.PROFILE = self.PROVIDER + '-test'
+        return self.PROFILE
 
     @property
     def instance_name(self):
         if not hasattr(self, '_instance_name'):
             # Create the cloud instance name to be used throughout the tests
             subclass = self.__class__.__name__.strip('Test')
-            # Use the first three letters of the subclass, fill with '-' if too short
-            self._instance_name = generate_random_name('cloud-test-{:-<3}-'.format(subclass[:3])).lower()
+            # Use the first three letters of the subclass, fill with '-' if too short, limit to 20 characters
+            self._instance_name = generate_random_name('cloud-test-{:-<3}-'.format(subclass[:3])).lower()[:20]
         return self._instance_name
 
     @property
     def providers(self):
         if not hasattr(self, '_providers'):
-            self._providers = self.run_cloud('--list-providers')
+            self._providers = [p.strip(':- ') for p in self.run_cloud('--list-providers') if p.strip(':- ')]
+            log.debug('Available Providers: {}'.format(self._providers))
         return self._providers
+
+    @property
+    def provider_config_file(self):
+        if not hasattr(self, 'PROVIDER_CONFIG'):
+            self.PROVIDER_CONFIG = self.PROVIDER + '.conf'
+        return self.PROVIDER_CONFIG
+
+    @property
+    def provider_config_path(self):
+        return os.path.join(self.config_dir, 'cloud.providers.d', self.provider_config_file)
 
     @property
     def provider_config(self):
         if not hasattr(self, '_provider_config'):
-            self._provider_config = cloud_providers_config(
-                os.path.join(
-                    self.config_dir,
-                    'cloud.providers.d',
-                    self.PROVIDER + '.conf'
-                )
-            )
+            self._provider_config = cloud_providers_config(self.provider_config_path)
         return self._provider_config[self.profile_str][self.PROVIDER]
+
+    @property
+    def config_path(self):
+        return os.path.join(self.config_dir, 'cloud.profiles.d', self.PROVIDER + '.conf')
 
     @property
     def config(self):
         if not hasattr(self, '_config'):
-            self._config = cloud_config(
-                os.path.join(
-                    self.config_dir,
-                    'cloud.profiles.d',
-                    self.PROVIDER + '.conf'
-                )
-            )
+            self._config = cloud_config(self.config_path)
         return self._config
 
     @property
     def profile_str(self):
-        return self.PROVIDER + '-config'
+        if not hasattr(self, '_profile_str'):
+            self._profile_str = self.PROVIDER + '-config'
+            try:
+                # There should be a single provider in the temporary directory,
+                # Otherwise the setUpClass needs to be fixed
+                self.assertEqual(self.providers[0], self._profile_str)
+            except IndexError:
+                self.skipTest(
+                    'Configuration file \'{0}\' was not found. Check {1}.conf files '
+                    'in tests/integration/files/conf/cloud.*.d/ to run these tests.'.format(self.profile_str,
+                                                                                            self.PROVIDER)
+                )
+        return self._profile_str
 
     @expensiveTest
     def setUp(self):
@@ -189,11 +232,12 @@ class CloudTest(ShellCase):
             self.fail('A PROVIDER must be defined for this test')
 
         # check if appropriate cloud provider and profile files are present
-        if self.profile_str + ':' not in self.providers:
+        if self.profile_str not in self.providers:
             self.skipTest(
-                'Configuration file for {0} was not found. Check {0}.conf files '
-                'in tests/integration/files/conf/cloud.*.d/ to run these tests.'
-                    .format(self.PROVIDER)
+                'Configuration file \'{0}\' was not found in providers. Check {1}.conf files '
+                'in tests/integration/files/conf/cloud.*.d/ to run these tests.  {2}'.format(self.profile_str,
+                                                                                             self.PROVIDER,
+                                                                                             self.providers)
             )
 
         missing_conf_item = []
@@ -231,7 +275,7 @@ class CloudTest(ShellCase):
         if self._instance_exists(instance_name):
             for tries in range(3):
                 try:
-                    self.assertDestroyInstance(instance_name)
+                    self.assertDestroyInstance(instance_name, timeout=TIMEOUT)
                     return False, 'The instance "{}" was deleted during the tearDown, not the test.'.format(
                         instance_name)
                 except AssertionError as e:
@@ -273,10 +317,12 @@ class CloudTest(ShellCase):
 
     @classmethod
     def setUpClass(cls):
+        if not cls.PROVIDER:
+            raise ValueError('No provider was defined in child class')
+
         # clean up before setup
         cls.clean_cloud_dir(cls.TMP_PROVIDER_DIR)
 
         # add the provider config for only the cloud we are testing
-        provider_file = cls.PROVIDER + '.conf'
-        shutil.copyfile(os.path.join(os.path.join(FILES, 'conf', 'cloud.providers.d'), provider_file),
-                        os.path.join(os.path.join(cls.TMP_PROVIDER_DIR, provider_file)))
+        shutil.copyfile(os.path.join(FILES, 'conf', 'cloud.providers.d', cls.PROVIDER + '.conf'),
+                        os.path.join(cls.TMP_PROVIDER_DIR, cls.PROVIDER + '.conf'))

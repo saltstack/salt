@@ -6,9 +6,11 @@
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import time
 import yaml
 
 # Import Salt Libs
+from salt.ext.six.moves import range
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.yaml
@@ -59,17 +61,12 @@ class EC2Test(CloudTest):
             self._installer = self.__fetch_installer()
         return self._installer
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements
         '''
-        group_or_subnet = self.provider_config.get('securitygroup')
-        if not group_or_subnet:
-            group_or_subnet = self.provider_config.get('subnetid')
-
-        if not group_or_subnet:
-            self.skipTest('securitygroup or subnetid missing for {} config'.format(self.PROVIDER))
+        if not any((self.provider_config.get('securitygroup'), self.provider_config.get('subnetid'))):
+            self.skipTest('securitygroup or subnetid missing from {} config'.format(self.PROVIDER))
 
         super(EC2Test, self).setUp()
 
@@ -98,42 +95,32 @@ class EC2Test(CloudTest):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
-
-        # create the instance
-        cmd = ['-p', profile]
-        if debug:
-            cmd.extend(['-l', 'debug'])
-        cmd.append(self.instance_name)
-        ret_val = self.run_cloud(' '.join(cmd), timeout=TIMEOUT)
-
-        # check if instance returned with salt installed
-        self.assertInstanceExists(ret_val)
-
+        self.assertCreateInstance(profile, args=['-l', 'debug'] if debug else [], timeout=TIMEOUT)
         self.assertDestroyInstance()
 
     def test_instance_rename(self):
         '''
         Tests creating and renaming an instance on EC2 (classic)
         '''
-        # create the instance
-        ret_val = self.run_cloud('-p ec2-test {0} --no-deploy'.format(self.instance_name), timeout=TIMEOUT)
-        # check if instance returned
-        self.assertInstanceExists(ret_val)
-
+        self.assertCreateInstance(args=['--no-deploy'], timeout=TIMEOUT)
         changed_name = self.instance_name + '-changed'
 
-        rename_result = self.run_cloud(
-            '-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
-        self.assertFalse(self._instance_exists(), 'Instance wasn\'t renamed: |\n{}'.format(rename_result))
-        self.assertInstanceExists(instance_name=changed_name)
+        self.run_cloud('-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
+        # Wait until the previous instance name disappears
+        for _ in range(20):
+            if self._instance_exists():
+                time.sleep(1)
+            else:
+                break
 
+        self.assertInstanceExists(instance_name=changed_name)
         self.assertDestroyInstance(changed_name)
 
     def test_instance(self):
         '''
         Tests creating and deleting an instance on EC2 (classic)
         '''
-        self._test_instance('ec2-test', debug=False)
+        self._test_instance(self.profile, debug=False)
 
     def test_win2012r2_psexec(self):
         '''
@@ -142,16 +129,16 @@ class EC2Test(CloudTest):
         '''
         # TODO: psexec calls hang and the test fails by timing out. The same
         # same calls succeed when run outside of the test environment.
-        # FIXME? Does this override need to be undone at the end of the test?
+        profile = 'ec2-win2012r2-test'
         self.override_profile_config(
-            'ec2-win2012r2-test',
+            profile,
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
                 'win_installer': self.copy_file(self.installer),
             },
         )
-        self._test_instance('ec2-win2012r2-test', debug=True)
+        self._test_instance(profile, debug=True)
 
     @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2012r2_winrm(self):
@@ -159,17 +146,18 @@ class EC2Test(CloudTest):
         Tests creating and deleting a Windows 2012r2 instance on EC2 using
         winrm (classic)
         '''
+        profile = 'ec2-win2012r2-test'
         self.override_profile_config(
-            'ec2-win2012r2-test',
+            profile,
             {
+                'use_winrm': True,
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
-                'use_winrm': True,
             }
 
         )
-        self._test_instance('ec2-win2012r2-test', debug=True)
+        self._test_instance(profile, debug=True)
 
     def test_win2016_psexec(self):
         '''
@@ -178,15 +166,16 @@ class EC2Test(CloudTest):
         '''
         # TODO: winexe calls hang and the test fails by timing out. The
         # same calls succeed when run outside of the test environment.
+        profile = 'ec2-win2016-test'
         self.override_profile_config(
-            'ec2-win2016-test',
+            profile,
             {
                 'use_winrm': False,
                 'userdata_file': self.copy_file('windows-firewall-winexe.ps1'),
                 'win_installer': self.copy_file(self.installer),
             },
         )
-        self._test_instance('ec2-win2016-test', debug=True)
+        self._test_instance(profile, debug=True)
 
     @skipIf(not HAS_WINRM, 'Skip when winrm dependencies are missing')
     def test_win2016_winrm(self):
@@ -194,14 +183,15 @@ class EC2Test(CloudTest):
         Tests creating and deleting a Windows 2016 instance on EC2 using winrm
         (classic)
         '''
+        profile = 'ec2-win2016-test'
         self.override_profile_config(
-            'ec2-win2016-test',
+        profile,
             {
+                'use_winrm': True,
                 'userdata_file': self.copy_file('windows-firewall.ps1'),
                 'win_installer': self.copy_file(self.installer),
                 'winrm_ssl_verify': False,
-                'use_winrm': True,
             }
 
         )
-        self._test_instance('ec2-win2016-test', debug=True)
+        self._test_instance(profile, debug=True)

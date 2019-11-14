@@ -51,8 +51,5 @@ class DimensionDataTest(CloudTest):
         '''
         Test creating an instance on Dimension Data's cloud
         '''
-        # check if instance with salt installed returned
-        ret_val = self.run_cloud('-p dimensiondata-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_val)
-
+        self.assertCreateInstance(timeout=TIMEOUT)
         self.assertDestroyInstance()

@@ -89,13 +89,13 @@ class ProfitBricksTest(CloudTest):
         '''
         list_nodes = self.run_cloud('-f list_nodes {0}'.format(self.PROVIDER))
         self.assertIn(
-            'state:',
-            [i.strip() for i in list_nodes]
+            'state',
+            [i.strip(': ') for i in list_nodes]
         )
 
         self.assertIn(
-            'name:',
-            [i.strip() for i in list_nodes]
+            'name',
+            [i.strip(': ') for i in list_nodes]
         )
 
     def test_list_nodes_full(self):
@@ -106,13 +106,13 @@ class ProfitBricksTest(CloudTest):
         cmd = '-f list_nodes_full {0}'.format(self.PROVIDER)
         list_nodes = self.run_cloud(cmd)
         self.assertIn(
-            'state:',
-            [i.strip() for i in list_nodes]
+            'state',
+            [i.strip(': ') for i in list_nodes]
         )
 
         self.assertIn(
-            'name:',
-            [i.strip() for i in list_nodes]
+            'name',
+            [i.strip(': ') for i in list_nodes]
         )
 
     def test_list_location(self):
@@ -147,8 +147,5 @@ class ProfitBricksTest(CloudTest):
         '''
         Test creating an instance on ProfitBricks
         '''
-        # check if instance with salt installed returned
-        ret_str = self.run_cloud('-p profitbricks-test {0}'.format(self.instance_name), timeout=TIMEOUT)
-        self.assertInstanceExists(ret_str)
-
+        self.assertCreateInstance(timeout=TIMEOUT)
         self.assertDestroyInstance()
