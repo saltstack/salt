@@ -264,10 +264,10 @@ class VirtualboxProviderHeavyTests(CloudTest):
         state = machine.get('state')
         self.assertEqual(state, expected_state)
 
-        self.assertDestroyMachine(IMEOUT)
+        self.assertDestroyMachine()
 
     def test_restart_action(self):
-        self.assertDestroyMachine(IMEOUT)
+        self.assertDestroyMachine()
 
     def test_network_addresses(self):
         # Machine is off
