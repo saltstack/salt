@@ -3,15 +3,14 @@ codecov:
     - drone.saltstack.com
     - jenkinsci.saltstack.com
 
-  branch: 2019.2
+  branch: master
 
   notify:
-    require_ci_to_pass: no
+    require_ci_to_pass: yes      # Less spammy. Only notify on passing builds.
 
 ignore:
-  - ^*.py$
-  - doc/.*
-  - tests/.*
+  - ^*.py$                       # python files at the repo root, ie, setup.py
+  - doc/.*                       # ignore any code under doc/
 
 coverage:
   round: up
@@ -20,30 +19,61 @@ coverage:
 
   status:
       project:                   # measuring the overall project coverage
-        default:
+        default: false           # disable the default status that measures entire project
+        salt:                    # declare a new status context "salt"
           enabled: yes           # must be yes|true to enable this status
-          if_no_uploads: error   # will post commit status of "error" if no coverage reports we uploaded
+          paths: "!tests/"       # remove all files in "tests/"
+          target: auto           # will use the coverage from the base commit (pull request base or parent commit) coverage to compare against.
+          base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
+          if_no_uploads: error   # will post commit status of "error" if no coverage reports were uploaded
                                  # options: success, error, failure
           if_not_found: success  # if parent is not found report status as success, error, or failure
-          if_ci_failed: success  # if ci fails report status as success, error, or failure
+          if_ci_failed: error    # if ci fails report status as success, error, or failure
+        tests:                   # declare a new status context "tests"
+          enabled: yes           # must be yes|true to enable this status
+          #target: 100%          # we always want 100% coverage here
+          target: auto           # auto while we get this going
+          base: auto             # will use the pull request base if the commit is on a pull request. If not, the parent commit will be used.
+          paths: "!salt/"        # only include coverage in "tests/" folder
+          if_no_uploads: error   # will post commit status of "error" if no coverage reports were uploaded
+                                 # options: success, error, failure
+          if_not_found: success  # if parent is not found report status as success, error, or failure
+          if_ci_failed: error    # if ci fails report status as success, error, or failure
 
       patch:                     # pull requests only: this commit status will measure the
                                  # entire pull requests Coverage Diff. Checking if the lines
                                  # adjusted are covered at least X%.
         default:
-          enabled: no              # must be yes|true to enable this status
-          target: 80%              # specify the target "X%" coverage to hit
-          if_no_uploads: error     # will post commit status of "error" if no coverage reports we uploaded
-                                   # options: success, error, failure
+          enabled: yes           # must be yes|true to enable this status
+          target: 100%           # Newly added lines must have 100% coverage
+          if_no_uploads: error   # will post commit status of "error" if no coverage reports were uploaded
+                                 # options: success, error, failure
           if_not_found: success
-          if_ci_failed: success
+          if_ci_failed: error
 
       changes:                   # if there are any unexpected changes in coverage
         default:
-          enabled: no            # must be yes|true to enable this status
-          if_no_uploads: success
+          enabled: yes           # must be yes|true to enable this status
+          if_no_uploads: error
           if_not_found: success
-          if_ci_failed: success
+          if_ci_failed: error
 
-# No commends because we're not yet running the full test suite on PRs
-comment: off
+flags:
+  salt:
+    paths:
+      - salt/
+  tests:
+    paths:
+      - tests/
+
+comment:
+  layout: "reach, diff, flags, files"
+  after_n_builds: 46             # Only comment on PRs after N builds
+                                 # This value is the output of:
+                                 #    sh -c 'echo "$(ls .ci/ | grep kitchen | wc -l)"'
+
+  behavior: new                  # Comment posting behaviour
+                                 #   default: update, if exists. Otherwise post new.
+                                 #   once: update, if exists. Otherwise post new. Skip if deleted.
+                                 #   new: delete old and post new.
+                                 #   spammy: post new (do not delete old comments).
