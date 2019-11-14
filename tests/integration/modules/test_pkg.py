@@ -282,8 +282,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test running a system upgrade when there are packages that need upgrading
         '''
-        func = 'pkg.upgrade'
+
         os_family = self.run_function('grains.item', ['os_family'])['os_family']
+        if os_family == 'Arch':
+            self.skipTest('Arch moved to Python 3.8 and we\'re not ready for it yet')
+
+        func = 'pkg.upgrade'
 
         # First make sure that an up-to-date copy of the package db is available
         self.run_function('pkg.refresh_db')
