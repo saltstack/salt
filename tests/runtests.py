@@ -261,9 +261,9 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
         self.add_option(
             '--transport',
             default='zeromq',
-            choices=('zeromq', 'raet', 'tcp'),
+            choices=('zeromq', 'tcp'),
             help=('Select which transport to run the integration tests with, '
-                  'zeromq, raet, or tcp. Default: %default')
+                  'zeromq or tcp. Default: %default')
         )
         self.add_option(
             '--interactive',
@@ -907,11 +907,11 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
 
         try:
             print_header(
-                ' * Setting up Salt daemons to execute tests',
+                ' * Setting up multimaster Salt daemons to execute tests',
                 top=False, width=getattr(self.options, 'output_columns', PNUM)
             )
         except TypeError:
-            print_header(' * Setting up Salt daemons to execute tests', top=False)
+            print_header(' * Setting up multimaster Salt daemons to execute tests', top=False)
 
         status = []
 
