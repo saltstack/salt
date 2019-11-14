@@ -36,12 +36,13 @@ except ImportError:
 
 
 @skipIf(not HAS_KEYSTONE, 'Please install keystoneclient and a keystone server before running openstack integration tests.')
-class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
+class KeystoneTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the keystone state
     '''
-    PROVIDER = 'openstack'
     endpoint = 'http://localhost:35357/v2.0'
+    auth_url = 'http://localhost:5000'
+    internal_url = '{}/v2.0'.format(auth_url)
     token = 'administrator'
 
     @destructiveTest
@@ -57,9 +58,9 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('keystone.endpoint_present',
                              name='keystone',
                              region='RegionOne',
-                             publicurl='http://localhost:5000/v2.0',
-                             internalurl='http://localhost:5000/v2.0',
-                             adminurl='http://localhost:35357/v2.0',
+                             publicurl=self.internal_url,
+                             internalurl=self.internal_url,
+                             adminurl=self.endpoint,
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
         self.assertTrue(ret['keystone_|-keystone_|-keystone_|-endpoint_present']['result'])
@@ -156,7 +157,7 @@ class OpenstackTest(ModuleCase, SaltReturnAssertsMixin):
 
     @destructiveTest
     def test_libcloud_auth_v3(self):
-        driver = OpenStackIdentity_3_0_Connection(auth_url='http://localhost:5000',
+        driver = OpenStackIdentity_3_0_Connection(auth_url=self.auth_url,
                                                   user_id='admin',
                                                   key='adminpass',
                                                   token_scope=OpenStackIdentityTokenScope.PROJECT,
@@ -173,6 +174,7 @@ class RackspaceTest(CloudTest):
     '''
     PROVIDER = 'openstack'
     PROVIDER_CONFIG = 'rackspace.conf'
+    PROFILE_CONFIG = 'rackspace.conf'
     PROFILE = 'rackspace-test'
     REQUIRED_PROVIDER_CONFIG_ITEMS = ('region_name',)
     _profile_str = 'rackspace-config'
@@ -200,6 +202,8 @@ class OpenstackCloudTest(CloudTest):
     Integration tests for the Openstack cloud provider using the Openstack driver
     '''
     PROVIDER = 'openstack'
+    PROFILE_CONFIG = 'rackspace.conf'
+    PROFILE = 'rackspace-test'
     REQUIRED_PROVIDER_CONFIG_ITEMS = ('region_name',)
 
     def setUp(self):

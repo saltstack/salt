@@ -196,8 +196,14 @@ class CloudTest(ShellCase):
         return self._provider_config[self.profile_str][self.PROVIDER]
 
     @property
+    def profile_config_file(self):
+        if not hasattr(self, 'PROFILE_CONFIG'):
+            self.PROFILE_CONFIG = self.PROVIDER + '.conf'
+        return self.PROFILE_CONFIG
+
+    @property
     def config_path(self):
-        return os.path.join(self.config_dir, 'cloud.profiles.d', self.PROVIDER + '.conf')
+        return os.path.join(self.config_dir, 'cloud.profiles.d', self.PROFILE_CONFIG)
 
     @property
     def config(self):
