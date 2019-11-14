@@ -131,7 +131,7 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                                 'changes': {},
                                 'result': None
                                }
-                call_mocked_present.return_value=mock_present
+                call_mocked_present.return_value = mock_present
                 with patch.dict(ssh_auth.__opts__, {'test': True}):
                     # test: expected keys found. No chanages
                     self.assertDictEqual(ssh_auth.manage('sshid', ['somekey'], user), ret)
@@ -146,7 +146,7 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                                 'changes': {},
                                 'result': True
                                }
-                call_mocked_present.return_value=mock_present
+                call_mocked_present.return_value = mock_present
                 with patch.dict(ssh_auth.__opts__, {'test': False}):
                     # expected keys found. No changes
                     ret = {'name': '',
@@ -157,7 +157,7 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
 
                     with patch('salt.states.ssh_auth.absent') as call_mocked_absent:
                         mock_absent = {'comment': 'Key removed'}
-                        call_mocked_absent.return_value=mock_absent
+                        call_mocked_absent.return_value = mock_absent
                         ret.update({'comment': '', 'result': True,
                                     'changes': {'somekey': 'Key removed'}})
                         # unexpected sshkey found. Was removed.
@@ -169,7 +169,7 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                                 'changes': {'newkey': 'New'},
                                 'result': True
                                }
-                call_mocked_present.return_value=mock_present
+                call_mocked_present.return_value = mock_present
                 with patch.dict(ssh_auth.__opts__, {'test': False}):
                     # added key newkey
                     ret = {'name': '',
