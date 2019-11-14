@@ -88,9 +88,9 @@ def pytest_addoption(parser):
     parser.addoption(
         '--transport',
         default='zeromq',
-        choices=('zeromq', 'raet', 'tcp'),
+        choices=('zeromq', 'tcp'),
         help=('Select which transport to run the integration tests with, '
-              'zeromq, raet, or tcp. Default: %default')
+              'zeromq or tcp. Default: %default')
     )
     test_selection_group = parser.getgroup('Tests Selection')
     test_selection_group.addoption(
@@ -244,24 +244,24 @@ def pytest_runtest_setup(item):
     '''
     Fixtures injection based on markers or test skips based on CLI arguments
     '''
-    destructive_tests_marker = item.get_marker('destructive_test')
+    destructive_tests_marker = item.get_closest_marker('destructive_test')
     if destructive_tests_marker is not None:
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
     os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
 
-    expensive_tests_marker = item.get_marker('expensive_test')
+    expensive_tests_marker = item.get_closest_marker('expensive_test')
     if expensive_tests_marker is not None:
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
     os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
 
-    skip_if_not_root_marker = item.get_marker('skip_if_not_root')
+    skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
     if skip_if_not_root_marker is not None:
         if os.getuid() != 0:
             pytest.skip('You must be logged in as root to run this test')
 
-    skip_if_binaries_missing_marker = item.get_marker('skip_if_binaries_missing')
+    skip_if_binaries_missing_marker = item.get_closest_marker('skip_if_binaries_missing')
     if skip_if_binaries_missing_marker is not None:
         binaries = skip_if_binaries_missing_marker.args
         if len(binaries) == 1:
@@ -286,7 +286,7 @@ def pytest_runtest_setup(item):
                 )
             )
 
-    requires_network_marker = item.get_marker('requires_network')
+    requires_network_marker = item.get_closest_marker('requires_network')
     if requires_network_marker is not None:
         only_local_network = requires_network_marker.kwargs.get('only_local_network', False)
         has_local_network = False
