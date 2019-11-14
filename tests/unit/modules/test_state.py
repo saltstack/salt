@@ -632,6 +632,19 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(state.show_low_sls("foo"), "A")
             self.assertListEqual(state.show_states("foo"), ['abc'])
 
+    def test_show_states_missing_sls(self):
+        '''
+        Test state.show_states when a sls file defined
+        in a top.sls file is missing
+        '''
+        msg = ["No matching sls found for 'cloud' in evn 'base'"]
+        chunks_mock = MagicMock(side_effect=[msg])
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock),\
+            patch('salt.state.HighState.compile_low_chunks', chunks_mock):
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), [msg[0]])
+
     def test_sls_id(self):
         '''
             Test to call a single ID from the

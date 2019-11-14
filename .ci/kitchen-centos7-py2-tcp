@@ -1,155 +1,48 @@
-@Library('salt@1.1') _
+@Library('salt@master-1.3') _
 
 // Define the maximum time, in hours, that a test run should run for
 def testrun_timeout = 6
-// Now define a global pipeline timeout. This is the test run timeout with one(1) additional
-// hour to allow for artifacts to be downloaded, if possible.
-def global_timeout = testrun_timeout + 1;
 
 def distro_name = 'centos'
 def distro_version = '7'
 def python_version = 'py2'
-def test_transport = 'TCP'
-def salt_target_branch = '2019.2.1'
-def golden_images_branch = '2019.2'
+def nox_env_name = 'runtests-tcp'
+def golden_images_branch = 'master'
 def nox_passthrough_opts = '--ssh-tests'
+def concurrent_builds = 1
+def use_spot_instances = true
+def jenkins_slave_label = 'kitchen-slave'
 
 properties([
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
+    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
     parameters([
         booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
 ])
 
-// Be sure to cancel any previously running builds
-def buildNumber = env.BUILD_NUMBER as int
-if (buildNumber > 1) {
-    // This will cancel the previous build which also defined a matching milestone
-    milestone(buildNumber - 1)
-}
-// Define a milestone for this build so that, if another build starts, this one will be aborted
-milestone(buildNumber)
-
-
-wrappedNode('kitchen-slave', global_timeout, '#jenkins-prod-pr') {
-    withEnv([
-        'SALT_KITCHEN_PLATFORMS=/var/jenkins/workspace/nox-platforms.yml',
-        'SALT_KITCHEN_VERIFIER=/var/jenkins/workspace/nox-verifier.yml',
-        'SALT_KITCHEN_DRIVER=/var/jenkins/workspace/driver.yml',
-        "NOX_ENV_NAME=runtests-${test_transport.toLowerCase()}",
-        'NOX_ENABLE_FROM_FILENAMES=true',
-        "NOX_PASSTHROUGH_OPTS=${nox_passthrough_opts}",
-        "SALT_TARGET_BRANCH=${salt_target_branch}",
-        "GOLDEN_IMAGES_CI_BRANCH=${golden_images_branch}",
-        "CODECOV_FLAGS=${distro_name}${distro_version},${python_version},${test_transport.toLowerCase()}",
-        'PATH=~/.rbenv/shims:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin',
-        'RBENV_VERSION=2.4.2',
-        "TEST_SUITE=${python_version}",
-        "TEST_PLATFORM=${distro_name}-${distro_version}",
-        "TEST_TRANSPORT=${test_transport}",
-        "FORCE_FULL=${params.runFull}",
-    ]) {
-        // Checkout the repo
-        stage('Clone') {
-            cleanWs notFailBuild: true
-            checkout scm
-            sh 'git fetch --no-tags https://github.com/saltstack/salt.git +refs/heads/${SALT_TARGET_BRANCH}:refs/remotes/origin/${SALT_TARGET_BRANCH}'
-        }
-
-        // Setup the kitchen required bundle
-        stage('Setup') {
-            sh 'bundle install --with ec2 windows --without docker macos opennebula vagrant'
-        }
-
-        stage('Create VM') {
-            retry(3) {
-                sh '''
-                t=$(shuf -i 30-120 -n 1); echo "Sleeping $t seconds"; sleep $t
-                bundle exec kitchen create $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
-                '''
-                sh """
-                if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                    mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-create.log"
-                fi
-                if [ -s ".kitchen/logs/kitchen.log" ]; then
-                    mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-create.log"
-                fi
-                """
-            }
-        }
-
-        sshagent(credentials: ['jenkins-testing-ssh-key']) {
-            sh 'ssh-add ~/.ssh/kitchen.pem'
-            try {
-                timeout(time: testrun_timeout, unit: 'HOURS') {
-                    stage('Converge VM') {
-                        sh 'bundle exec kitchen converge $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
-                        sh """
-                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-converge.log"
-                        fi
-                        if [ -s ".kitchen/logs/kitchen.log" ]; then
-                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-converge.log"
-                        fi
-                        """
-                    }
-                    stage('Run Tests') {
-                        withEnv(["DONT_DOWNLOAD_ARTEFACTS=1"]) {
-                            sh 'bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";'
-                        }
-                    }
-                }
-            } finally {
-                try {
-                    sh """
-                    if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                        mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-verify.log"
-                    fi
-                    if [ -s ".kitchen/logs/kitchen.log" ]; then
-                        mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-verify.log"
-                    fi
-                    """
-                    stage('Download Artefacts') {
-                        withEnv(["ONLY_DOWNLOAD_ARTEFACTS=1"]){
-                            sh '''
-                            bundle exec kitchen verify $TEST_SUITE-$TEST_PLATFORM || exit 0
-                            '''
-                        }
-                        sh """
-                        if [ -s ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ]; then
-                            mv ".kitchen/logs/${python_version}-${distro_name}-${distro_version}.log" ".kitchen/logs/${python_version}-${distro_name}-${distro_version}-download.log"
-                        fi
-                        if [ -s ".kitchen/logs/kitchen.log" ]; then
-                            mv ".kitchen/logs/kitchen.log" ".kitchen/logs/kitchen-download.log"
-                        fi
-                        """
-                    }
-                    archiveArtifacts(
-                        artifacts: "artifacts/*,artifacts/**/*,.kitchen/logs/*-create.log,.kitchen/logs/*-converge.log,.kitchen/logs/*-verify.log,.kitchen/logs/*-download.log,artifacts/xml-unittests-output/*.xml",
-                        allowEmptyArchive: true
-                    )
-                    junit 'artifacts/xml-unittests-output/*.xml'
-                } finally {
-                    stage('Cleanup') {
-                        sh '''
-                        bundle exec kitchen destroy $TEST_SUITE-$TEST_PLATFORM; echo "ExitCode: $?";
-                        '''
-                    }
-                    stage('Upload Coverage') {
-                        script {
-                            withCredentials([[$class: 'StringBinding', credentialsId: 'codecov-upload-token-salt', variable: 'CODECOV_TOKEN']]) {
-                              sh '''
-                              if [ -n "${FORCE_FULL}" -a "${FORCE_FULL}" = "true" -a -f artifacts/coverage/coverage.xml ]; then
-                                  curl -L https://codecov.io/bash | /bin/sh -s -- -R $(pwd) -s artifacts/coverage/ -F "${CODECOV_FLAGS}" || true
-                              fi
-                              '''
-                            }
-                        }
-                    }
-                }
-            }
-        }
+// Only set milestones on PR builds
+if (env.CHANGE_ID) {
+    // Be sure to cancel any previously running builds
+    def buildNumber = env.BUILD_NUMBER as int
+    if (buildNumber > concurrent_builds) {
+        // This will cancel the previous build which also defined a matching milestone
+        milestone(buildNumber - concurrent_builds)
     }
+    // Define a milestone for this build so that, if another build starts, this one will be aborted
+    milestone(buildNumber)
 }
+
+runTests(
+    env: env,
+    distro_name: distro_name,
+    distro_version: distro_version,
+    python_version: python_version,
+    golden_images_branch: golden_images_branch,
+    nox_env_name: nox_env_name,
+    nox_passthrough_opts: nox_passthrough_opts,
+    testrun_timeout: testrun_timeout,
+    run_full: params.runFull,
+    use_spot_instances: use_spot_instances,
+    jenkins_slave_label: jenkins_slave_label)
 
 // vim: ft=groovy
