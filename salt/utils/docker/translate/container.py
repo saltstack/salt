@@ -5,6 +5,7 @@ Functions to translate input for container creation
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+from re import match
 
 # Import Salt libs
 from salt.exceptions import SaltInvocationError
@@ -384,8 +385,20 @@ def port_bindings(val, **kwargs):
             return six.text_type(port_num) + '/udp' if proto.lower() == 'udp' else port_num
 
         bindings = {}
-        for binding in val:
+        for binding_raw in val:
+            # detect IPv6-address binding in brackets, e.g. [2001:db8::1]:80:80
+            if match('^(\[.*\])(:\d*){1,2}$', binding_raw):
+                # IPv6 treatment - get IPv6 address and squeeze it through the helpers.split() action
+                # by temporarily converting it to something ':'-less
+                binding_split = binding_raw.split(']')
+                address = binding_split[0].replace(':', '#')
+                binding = ']'.join((address, binding_split[1]))
+            else:
+                binding = binding_raw
             bind_parts = helpers.split(binding, ':')
+            # clean address in brackets from temporarily non-':'
+            if '#' in bind_parts[0]:
+                bind_parts[0] = bind_parts[0].replace('#', ':').strip('[').strip(']')
             num_bind_parts = len(bind_parts)
             if num_bind_parts == 1:
                 # Single port or port range being passed through (no
@@ -410,12 +423,12 @@ def port_bindings(val, **kwargs):
                 if bind_parts[0] == '':
                     raise SaltInvocationError(
                         'Empty host port in port binding definition '
-                        '\'{0}\''.format(binding)
+                        '\'{0}\''.format(binding_raw)
                     )
                 if bind_parts[1] == '':
                     raise SaltInvocationError(
                         'Empty container port in port binding definition '
-                        '\'{0}\''.format(binding)
+                        '\'{0}\''.format(binding_raw)
                     )
                 container_port, _, proto = bind_parts[1].partition('/')
                 try:
@@ -482,7 +495,7 @@ def port_bindings(val, **kwargs):
                 raise SaltInvocationError(
                     '\'{0}\' is an invalid port binding definition (at most '
                     '3 components are allowed, found {1})'.format(
-                        binding, num_bind_parts
+                        binding_raw, num_bind_parts
                     )
                 )
 
