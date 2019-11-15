@@ -171,7 +171,6 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
     http
     ifttt
