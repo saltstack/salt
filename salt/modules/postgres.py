@@ -622,6 +622,7 @@ def db_alter(name, user=None, host=None, port=None, maintenance_db=None,
 
     return True
 
+
 def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
               password=None, runas=None):
     '''
@@ -643,7 +644,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
                                 runas=runas,
                                 maintenance_db=maintenance_db,
                                 password=password)
-        if  ret['retcode'] != 0:
+        if ret['retcode'] != 0:
             raise Exception('Failed: ret={}'.format(ret))
     return True
 
