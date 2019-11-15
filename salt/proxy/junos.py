@@ -94,7 +94,8 @@ def init(opts):
                      'auto_probe',
                      'ssh_private_key_file',
                      'ssh_config',
-                     'normalize'
+                     'normalize',
+                     'huge_tree'
                      ]
 
     if 'username' in opts['proxy'].keys():
