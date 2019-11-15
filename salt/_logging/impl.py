@@ -290,7 +290,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixinMeta, LOGGING_LOGGER_CLASS
         else:
             LOGGING_LOGGER_CLASS._log(
                 self, level, msg, args, exc_info=exc_info, extra=extra,
-                stack_info=stack_info, stack_level=stack_level
+                stack_info=stack_info, stacklevel=stack_level
             )
 
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
