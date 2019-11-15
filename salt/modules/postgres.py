@@ -648,6 +648,7 @@ def db_remove(name, user=None, host=None, port=None, maintenance_db=None,
             raise Exception('Failed: ret={}'.format(ret))
     return True
 
+
 # Tablespace related actions
 
 def tablespace_list(user=None, host=None, port=None, maintenance_db=None,
