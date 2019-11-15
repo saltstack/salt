@@ -10,10 +10,13 @@ import os
 import time
 import pprint
 
+# Import Salt libs
+from salt.ext.six.moves import range
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.helpers import flaky
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
