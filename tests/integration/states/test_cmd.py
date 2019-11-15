@@ -53,8 +53,8 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret[u'changes'][u'stdout'], u'')
-        self.assertEqual(ret[u'changes'][u'stderr'], u'')
+        self.assertEqual(ret['changes']['stdout'], '')
+        self.assertEqual(ret['changes']['stderr'], '')
 
 
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
