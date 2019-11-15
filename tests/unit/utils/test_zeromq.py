@@ -6,6 +6,7 @@ Test salt.utils.zeromq
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import zmq
+from salt._compat import ipaddress
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -24,8 +25,13 @@ class UtilsTestCase(TestCase):
     def test_ip_bracket(self):
         test_ipv4 = '127.0.0.1'
         test_ipv6 = '::1'
+        test_ipv6_uri = '[::1]'
         self.assertEqual(test_ipv4, salt.utils.zeromq.ip_bracket(test_ipv4))
         self.assertEqual('[{0}]'.format(test_ipv6), salt.utils.zeromq.ip_bracket(test_ipv6))
+        self.assertEqual('[{0}]'.format(test_ipv6), salt.utils.zeromq.ip_bracket(test_ipv6_uri))
+
+        ip_addr_obj = ipaddress.ip_address(test_ipv4)
+        self.assertEqual(test_ipv4, salt.utils.zeromq.ip_bracket(ip_addr_obj))
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     @skipIf(not hasattr(zmq, 'IPC_PATH_MAX_LEN'), "ZMQ does not have max length support.")

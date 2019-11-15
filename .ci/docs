@@ -2,20 +2,22 @@
 
 // Define the maximum time, in hours, that a test run should run for
 def global_timeout = 2
-def salt_target_branch = '2019.2.1'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
 ])
 
-// Be sure to cancel any previously running builds
-def buildNumber = env.BUILD_NUMBER as int
-if (buildNumber > 1) {
-    // This will cancel the previous build which also defined a matching milestone
-    milestone(buildNumber - 1)
+// Only set milestones on PR builds
+if (env.CHANGE_ID) {
+    // Be sure to cancel any previously running builds
+    def buildNumber = env.BUILD_NUMBER as int
+    if (buildNumber > 1) {
+        // This will cancel the previous build which also defined a matching milestone
+        milestone(buildNumber - 1)
+    }
+    // Define a milestone for this build so that, if another build starts, this one will be aborted
+    milestone(buildNumber)
 }
-// Define a milestone for this build so that, if another build starts, this one will be aborted
-milestone(buildNumber)
 
 def shell_header
 
@@ -41,13 +43,22 @@ wrappedNode('docs', global_timeout, '#jenkins-prod-pr') {
         '''
     }
 
-    stage('Build') {
+    stage('Build HTML Docs') {
         sh shell_header + '''
         eval "$(pyenv init -)"
         pyenv shell 3.6.8
-        nox -e docs
+        nox -e 'docs-html(compress=True)'
         '''
-        archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
+        archiveArtifacts artifacts: 'doc/html-archive.tar.gz'
+    }
+
+    stage('Build Man Pages') {
+        sh shell_header + '''
+        eval "$(pyenv init -)"
+        pyenv shell 3.6.8
+        nox -e 'docs-man(compress=True, update=False)'
+        '''
+        archiveArtifacts artifacts: 'doc/man-archive.tar.gz'
     }
 }
 
