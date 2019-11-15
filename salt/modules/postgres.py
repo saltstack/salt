@@ -723,6 +723,7 @@ def db_remove(
             raise Exception('Failed: ret={}'.format(ret))
     return True
 
+
 # Tablespace related actions
 
 
