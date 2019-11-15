@@ -83,7 +83,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test install function when KB already installed
         '''
-        retcode=2359302
+        retcode = 2359302
         mock_retcode = MagicMock(return_value=retcode)
         path = 'C:\\KB123456.msu'
         name = 'KB123456.msu'
@@ -99,7 +99,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test install function when KB need a reboot
         '''
-        retcode=3010
+        retcode = 3010
         mock_retcode = MagicMock(return_value=retcode)
         path = 'C:\\KB123456.msu'
         name = 'KB123456.msu'
@@ -115,7 +115,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test install function when error 87 returned
         '''
-        retcode=87
+        retcode = 87
         mock_retcode = MagicMock(return_value=retcode)
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
@@ -182,7 +182,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test uninstall function when KB already uninstalled
         '''
-        retcode=2359303
+        retcode = 2359303
         mock_retcode = MagicMock(return_value=retcode)
         kb = 'KB123456'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
