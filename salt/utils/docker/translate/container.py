@@ -387,7 +387,7 @@ def port_bindings(val, **kwargs):
         bindings = {}
         for binding_raw in val:
             # detect IPv6-address binding in brackets, e.g. [2001:db8::1]:80:80
-            if match(r'^(\[.*\])(:\d*){1,2}$', binding_raw):
+            if match(r'^(\[.*\]).*$', binding_raw):
                 # IPv6 treatment - get IPv6 address and squeeze it through the helpers.split() action
                 # by temporarily converting it to something ':'-less
                 binding_split = binding_raw.split(']')
