@@ -15,6 +15,8 @@ from tests.support.unit import TestCase
 log = logging.getLogger(__name__)
 
 
+# At the moment of writing this test the `functional` suite is not yet complete
+# TODO move to the `functional` suite since this test doesn't require running instance of Salt Master/Minion
 class DatagramLogstashHandlerTest(TestCase):
     def setUp(self):
         self.test_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -44,6 +46,8 @@ class DatagramLogstashHandlerTest(TestCase):
                       "Check either pickling failed (and message was not send) or some other error occurred")
 
 
+# At the moment of writing this test the `functional` suite is not yet complete
+# TODO move to the `functional` suite since this test doesn't require running instance of Salt Master/Minion
 class ZMQLogstashHanderTest(TestCase):
     def setUp(self):
         self.context = zmq.Context()
