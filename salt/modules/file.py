@@ -2777,7 +2777,37 @@ def blockreplace(path,
                         match_idx += 1
                 block_found = True
 
-    if not block_found:
+    if block_found:
+        diff = __utils__['stringutils.get_diff'](orig_file, new_file)
+        has_changes = diff is not ''
+        if has_changes and not dry_run:
+            # changes detected
+            # backup file attrs
+            perms = {}
+            perms['user'] = get_user(path)
+            perms['group'] = get_group(path)
+            perms['mode'] = salt.utils.files.normalize_mode(get_mode(path))
+
+            # backup old content
+            if backup is not False:
+                backup_path = '{0}{1}'.format(path, backup)
+                shutil.copy2(path, backup_path)
+                # copy2 does not preserve ownership
+                if salt.utils.platform.is_windows():
+                    # This function resides in win_file.py and will be available
+                    # on Windows. The local function will be overridden
+                    # pylint: disable=E1120,E1123
+                    check_perms(path=backup_path,
+                                ret=None,
+                                owner=perms['user'])
+                    # pylint: enable=E1120,E1123
+                else:
+                    check_perms(name=backup_path,
+                                ret=None,
+                                user=perms['user'],
+                                group=perms['group'],
+                                mode=perms['mode'])
+    else:
         raise CommandExecutionError(
             'Cannot edit marked block. Markers were not found in file.'
         )
@@ -2797,11 +2827,20 @@ def blockreplace(path,
             backup_path = '{0}{1}'.format(path, backup)
             shutil.copy2(path, backup_path)
             # copy2 does not preserve ownership
-            check_perms(backup_path,
-                    None,
-                    perms['user'],
-                    perms['group'],
-                    perms['mode'])
+            if salt.utils.platform.is_windows():
+                # This function resides in win_file.py and will be available
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1120,E1123
+                check_perms(path=backup_path,
+                            ret=None,
+                            owner=perms['user'])
+                # pylint: enable=E1120,E1123
+            else:
+                check_perms(backup_path,
+                            ret=None,
+                            user=perms['user'],
+                            group=perms['group'],
+                            mode=perms['mode'])
 
         # write new content in the file while avoiding partial reads
         try:
@@ -2812,11 +2851,20 @@ def blockreplace(path,
             fh_.close()
 
         # this may have overwritten file attrs
-        check_perms(path,
-                None,
-                perms['user'],
-                perms['group'],
-                perms['mode'])
+        if salt.utils.platform.is_windows():
+            # This function resides in win_file.py and will be available
+            # on Windows. The local function will be overridden
+            # pylint: disable=E1120,E1123
+            check_perms(path=path,
+                        ret=None,
+                        owner=perms['user'])
+            # pylint: enable=E1120,E1123
+        else:
+            check_perms(path,
+                        ret=None,
+                        user=perms['user'],
+                        group=perms['group'],
+                        mode=perms['mode'])
 
     if show_changes:
         return diff

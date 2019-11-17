@@ -705,7 +705,7 @@ def _check_directory(name,
                      user=None,
                      group=None,
                      recurse=False,
-                     mode=None,
+                     dir_mode=None,
                      file_mode=None,
                      clean=False,
                      require=False,
@@ -727,7 +727,7 @@ def _check_directory(name,
             walk_d[i[0]] = (i[1], i[2])
 
     # Preserve rootdir_mode before going into recurse
-    rootdir_mode = mode
+    rootdir_mode = dir_mode
     if recurse:
         try:
             recurse_set = _get_recurse_set(recurse)
@@ -738,14 +738,15 @@ def _check_directory(name,
         if 'group' not in recurse_set:
             group = None
         if 'mode' not in recurse_set:
-            mode = None
+            dir_mode = None
+            file_mode = None
+
         check_files = 'ignore_files' not in recurse_set
         check_dirs = 'ignore_dirs' not in recurse_set
         for root, dirs, files in walk_l:
             if check_files:
                 for fname in files:
                     fchange = {}
-                    mode = file_mode if mode is not None else None
                     path = os.path.join(root, fname)
                     stats = __salt__['file.stats'](
                         path, None, follow_symlinks
@@ -754,14 +755,14 @@ def _check_directory(name,
                         fchange['user'] = user
                     if group is not None and group != stats.get('group'):
                         fchange['group'] = group
-                    if mode is not None and mode != stats.get('mode'):
-                        fchange['mode'] = mode
+                    if file_mode is not None and salt.utils.files.normalize_mode(file_mode) != salt.utils.files.normalize_mode(stats.get('mode')):
+                        fchange['mode'] = file_mode
                     if fchange:
                         changes[path] = fchange
             if check_dirs:
                 for name_ in dirs:
                     path = os.path.join(root, name_)
-                    fchange = _check_dir_meta(path, user, group, mode, follow_symlinks)
+                    fchange = _check_dir_meta(path, user, group, dir_mode, follow_symlinks)
                     if fchange:
                         changes[path] = fchange
 
@@ -6851,7 +6852,14 @@ def copy_(name,
         # the filesystem we're copying to is squashed or doesn't support chown
         # then we shouldn't be checking anything.
         if not preserve:
-            __salt__['file.check_perms'](name, ret, user, group, mode)
+            if salt.utils.platform.is_windows():
+                # TODO: Add the other win_* parameters to this function
+                ret = __salt__['file.check_perms'](
+                    path=name,
+                    ret=ret,
+                    owner=user)
+            else:
+                __salt__['file.check_perms'](name, ret, user, group, mode)
     except (IOError, OSError):
         return _error(
             ret, 'Failed to copy "{0}" to "{1}"'.format(source, name))

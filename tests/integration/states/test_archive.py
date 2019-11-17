@@ -16,6 +16,7 @@ from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
+from tests.support.unit import skipIf, WAR_ROOM_SKIP  # WAR ROOM temp import
 import salt.utils.platform
 
 # Setup logging
@@ -32,6 +33,7 @@ ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
 ARCHIVE_TAR_HASH_UPPER = 'md5=7643861AC07C30FE7D2310E9F25CA514'
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the archive state

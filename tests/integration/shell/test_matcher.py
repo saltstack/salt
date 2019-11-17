@@ -11,7 +11,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import salt libs
 import salt.utils.files
@@ -22,6 +22,7 @@ def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt matchers

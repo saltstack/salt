@@ -743,7 +743,7 @@ class TestDaemon(object):
         try:
             real_prefix = sys.real_prefix
             # The above attribute exists, this is a virtualenv
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
             else:
                 # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
@@ -816,6 +816,14 @@ class TestDaemon(object):
             sub_minion_opts['transport'] = 'tcp'
             syndic_master_opts['transport'] = 'tcp'
             proxy_opts['transport'] = 'tcp'
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # Set up config options that require internal data
         master_opts['pillar_roots'] = syndic_master_opts['pillar_roots'] = {

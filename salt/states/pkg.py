@@ -1563,6 +1563,75 @@ def installed(
         see the :ref:`Reloading Modules <reloading-modules>` documentation for more
         information.
 
+    .. seealso:: unless and onlyif
+
+        You can use the :ref:`unless <unless-requisite>` or
+        :ref:`onlyif <onlyif-requisite>` syntax to skip a full package run.
+        This can be helpful in large environments with multiple states that
+        include requisites for packages to be installed.
+
+        .. code-block:: yaml
+
+            # Using file.file_exists for a single-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless:
+                  - fun: file.file_exists
+                    args:
+                      - /etc/nginx/nginx.conf
+
+        .. code-block:: yaml
+
+            # Using file.search for a two-factor check
+            install_nginx:
+              pkg.installed:
+                - name: nginx
+                - unless:
+                  - fun: file.search
+                    args:
+                      - /etc/nginx/nginx.conf
+                      - 'user www-data;'
+
+        The above examples use two different methods to reasonably ensure
+        that a package has already been installed. First, with checking for a
+        file that would be created with the package. Second, by checking for
+        specific text within a file that would be created or managed by salt.
+        With these requisists satisfied, unless will return ``True`` and the
+        ``pkg.installed`` state will be skipped.
+
+        .. code-block:: bash
+
+            # Example of state run without unless used
+            salt 'saltdev' state.apply nginx
+            saltdev:
+            ----------
+                      ID: install_nginx
+                      Function: pkg.installed
+                      Name: nginx
+                      Result: True
+                      Comment: All specified packages are already installed
+                      Started: 20:11:56.388331
+                      Duration: 4290.0 ms
+                      Changes:
+
+            # Example of state run using unless requisite
+            salt 'saltdev' state.apply nginx
+            saltdev:
+            ----------
+                      ID: install_nginx
+                      Function: pkg.installed
+                      Name: nginx
+                      Result: True
+                      Comment: unless condition is true
+                      Started: 20:10:50.659215
+                      Duration: 1530.0 ms
+                      Changes:
+
+        The result is a reduction of almost 3 seconds. In larger environments,
+        small reductions in waiting time can add up.
+
+        :ref:`Unless Requisite <unless-requisite>`
     '''
     if not pkgs and isinstance(pkgs, list):
         return {'name': name,

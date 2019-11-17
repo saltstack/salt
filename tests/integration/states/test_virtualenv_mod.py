@@ -14,7 +14,7 @@ import shutil
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import destructiveTest, skip_if_not_root
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -28,6 +28,7 @@ from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 @skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
 class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     @destructiveTest
     @skip_if_not_root
@@ -59,6 +60,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir)
             self.assertSaltTrueReturn(self.run_state('user.absent', name=user, purge=True))
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_issue_2594_non_invalidated_cache(self):
         # Testing virtualenv directory
         venv_path = os.path.join(RUNTIME_VARS.TMP, 'issue-2594-ve')

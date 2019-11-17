@@ -12,6 +12,7 @@ import logging
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt Libs
 from salt.ext import six
@@ -93,6 +94,7 @@ class SSHStateTest(SSHCase):
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
         self.assertFalse(check_file)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_state_show_top(self):
         '''
         test state.show_top with salt-ssh

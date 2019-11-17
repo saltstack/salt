@@ -536,6 +536,7 @@ class AsyncClientMixin(object):
 
         proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
                 target=self._proc_function,
+                name='ProcessFunc',
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in

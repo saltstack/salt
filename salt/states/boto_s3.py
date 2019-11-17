@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Manage S3 Resources
-=================
+===================
 
 .. versionadded:: 2018.3.0
 

@@ -15,7 +15,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.smb
 
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.case import TestCase
 
 log = logging.getLogger(__name__)
@@ -67,6 +67,7 @@ def which_smbd():
     return smbd
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 @skipIf(not which_smbd(), 'Skip when no smbd binary found')
 class TestSmb(TestCase):
 

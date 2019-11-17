@@ -9,7 +9,7 @@ from textwrap import dedent
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.mock import (
     MagicMock,
     NO_MOCK,
@@ -168,6 +168,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn(empty_line, file_txt)
             self.assertIn(comment_line, file_txt)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not salt.utils.path.which('ssh-keyscan'), 'ssh-keyscan not installed')
     def test_recv_known_hosts_hashed_shoud_be_findable_by_ssh_keygen(self):
         hostname = 'example.com'
@@ -193,6 +194,7 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
                     '[{hostname}]:{port}'.format(hostname=hostname, port=port),
                 ])
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_recv_known_hosts_hashed_should_return_hashed_hostnames(self):
         hostname = 'example.com'
         port = 12345

@@ -128,6 +128,6 @@ requests==2.21.0          # via adal, azure-cosmosdb-table, azure-datalake-store
 scandir==1.10.0           # via pathlib2
 six==1.12.0               # via cryptography, impacket, isodate, pathlib2, profitbricks, pyopenssl, python-dateutil, pywinrm
 typing==3.6.6             # via msrest
-urllib3==1.24.2           # via requests
+urllib3==1.24.3           # via requests
 werkzeug==0.15.2          # via flask
 xmltodict==0.12.0         # via pywinrm

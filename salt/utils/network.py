@@ -19,11 +19,6 @@ from string import ascii_letters, digits
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-# Attempt to import win_network
-try:
-    import salt.utils.win_network
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils.args
@@ -1005,6 +1000,7 @@ def win_interfaces():
     '''
     Obtain interface information for Windows systems
     '''
+    import salt.utils.win_network
     return salt.utils.win_network.get_interface_info()
 
 

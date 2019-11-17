@@ -26,7 +26,7 @@ except ImportError as import_error:
     pytest = None
 
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     patch,
     MagicMock,
@@ -380,6 +380,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                               CN='Redacted Root CA')
         self.assertIn(b'BEGIN CERTIFICATE REQUEST', ret)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_csr_ext_mapping(self):
         '''

@@ -32,24 +32,24 @@ import ipaddress
 import platform
 
 # Import Salt libs
+import salt.utils.platform
 from salt.utils.versions import StrictVersion
 
 # Import 3rd party libs
-# I don't understand why I need this import, but the linter fails without it
 from salt.ext.six.moves import range
-
-IS_WINDOWS = platform.system() == 'Windows'
-USE_WMI = StrictVersion(platform.version()) < StrictVersion('6.2')
 
 __virtualname__ = 'win_network'
 
-if IS_WINDOWS:
+if salt.utils.platform.is_windows():
+    USE_WMI = StrictVersion(platform.version()) < StrictVersion('6.2')
     if USE_WMI:
         import wmi
         import salt.utils.winapi
     else:
         import clr
         from System.Net import NetworkInformation
+else:
+    USE_WMI = False
 
 enum_adapter_types = {
     1: 'Unknown',
@@ -106,7 +106,7 @@ def __virtual__():
     '''
     Only load if windows
     '''
-    if not IS_WINDOWS:
+    if not salt.utils.platform.is_windows():
         return False, 'This utility will only run on Windows'
 
     return __virtualname__

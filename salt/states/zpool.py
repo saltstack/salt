@@ -88,10 +88,9 @@ def __virtual__():
     '''
     Provides zpool state
     '''
-    if __grains__['zfs_support']:
-        return __virtualname__
-    else:
+    if not __grains__.get('zfs_support'):
         return False, 'The zpool state cannot be loaded: zfs not supported'
+    return __virtualname__
 
 
 def _layout_to_vdev(layout, device_dir=None):
@@ -294,12 +293,13 @@ def present(name, properties=None, filesystem_properties=None, layout=None, conf
 
     # don't do anything because this is a test
     if __opts__['test']:
-        ret['result'] = True
         if __salt__['zpool.exists'](name):
-            ret['changes'][name] = 'uptodate'
+            ret['result'] = True
+            ret['comment'] = 'storage pool {0} is {1}'.format(name, "uptodate")
         else:
+            ret['result'] = None
             ret['changes'][name] = 'imported' if config['import'] else 'created'
-        ret['comment'] = 'storage pool {0} was {1}'.format(name, ret['changes'][name])
+            ret['comment'] = 'storage pool {0} would have been {1}'.format(name, ret['changes'][name])
 
     # update pool
     elif __salt__['zpool.exists'](name):

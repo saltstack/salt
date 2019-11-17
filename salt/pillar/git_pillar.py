@@ -350,6 +350,28 @@ When ``__env__`` is specified as the branch name, ``all_saltenvs`` per-remote co
         - __env__ https://mydomain.tld/pillar-appdata.git:
           - mountpoint: web/server/
 
+.. _git-pillar-fallback:
+
+fallback
+~~~~~~~~
+
+.. versionadded:: neon
+
+Setting ``fallback`` per-remote or global configuration parameter will map non-existing environments to a default branch. Example:
+
+.. code-block:: yaml
+
+    ext_pillar:
+      - git:
+        - __env__ https://mydomain.tld/top.git
+          - all_saltenvs: master
+        - __env__ https://mydomain.tld/pillar-nginx.git:
+          - mountpoint: web/server/
+          - fallback: master
+        - __env__ https://mydomain.tld/pillar-appdata.git:
+          - mountpoint: web/server/
+          - fallback: master
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -368,7 +390,7 @@ from salt.pillar import Pillar
 # Import third party libs
 from salt.ext import six
 
-PER_REMOTE_OVERRIDES = ('base', 'env', 'root', 'ssl_verify', 'refspecs')
+PER_REMOTE_OVERRIDES = ('base', 'env', 'root', 'ssl_verify', 'refspecs', 'fallback')
 PER_REMOTE_ONLY = ('name', 'mountpoint', 'all_saltenvs')
 GLOBAL_ONLY = ('branch',)
 

@@ -109,6 +109,11 @@ def destructiveTest(caller):
             def test_create_user(self):
                 pass
     '''
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, '__destructive_test__', True)
+
     if inspect.isclass(caller):
         # We're decorating a class
         old_setup = getattr(caller, 'setUp', None)
@@ -143,6 +148,11 @@ def expensiveTest(caller):
             def test_create_user(self):
                 pass
     '''
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, '__expensive_test__', True)
+
     if inspect.isclass(caller):
         # We're decorating a class
         old_setup = getattr(caller, 'setUp', None)
@@ -206,12 +216,25 @@ def flaky(caller=None, condition=True, attempts=4):
     def wrap(cls):
         for attempt in range(0, attempts):
             try:
+                if attempt > 0:
+                    # Run through setUp again
+                    # We only run it after the first iteration(>0) because the regular
+                    # test runner will have already ran setUp the first time
+                    setup = getattr(cls, 'setUp', None)
+                    if callable(setup):
+                        setup()
                 return caller(cls)
             except Exception as exc:
                 if not isinstance(exc, (AssertionError, SkipTest)) and log.isEnabledFor(logging.DEBUG):
                     log.exception(exc, exc_info=True)
                 if attempt >= attempts -1:
+                    # We won't try to run tearDown once the attempts are exhausted
+                    # because the regular test runner will do that for us
                     six.reraise(*sys.exc_info())
+                # Run through tearDown again
+                teardown = getattr(cls, 'tearDown', None)
+                if callable(teardown):
+                    teardown()
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',
@@ -319,7 +342,7 @@ class RedirectStdStreams(object):
                 pass
 
 
-class TestsLoggingHandler(object):
+class TstSuiteLoggingHandler(object):
     '''
     Simple logging handler which can be used to test if certain logging
     messages get emitted or not:
@@ -1125,6 +1148,11 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(func, '__skip_if_not_root__', True)
+
     if not sys.platform.startswith('win'):
         if os.getuid() != 0:
             func.__unittest_skip__ = True
@@ -1173,6 +1201,8 @@ def _terminate_process_list(process_list, kill=False, slow_stop=False):
                 cmdline = process.cmdline()
             except psutil.AccessDenied:
                 # OSX is more restrictive about the above information
+                cmdline = None
+            except OSError:
                 cmdline = None
             if not cmdline:
                 try:
@@ -1602,6 +1632,22 @@ class PatchedEnviron(object):
         self.original_environ = os.environ.copy()
         for key in self.cleanup_keys:
             os.environ.pop(key, None)
+
+        # Make sure there are no unicode characters in the self.kwargs if we're
+        # on Python 2. These are being added to `os.environ` and causing
+        # problems
+        if not sys.version_info > (3, 0):
+            kwargs = self.kwargs.copy()
+            clean_kwargs = {}
+            for k in self.kwargs:
+                key = k
+                if isinstance(key, six.text_type):
+                    key = key.encode('utf-8')
+                if isinstance(self.kwargs[k], six.text_type):
+                    kwargs[k] = kwargs[k].encode('utf-8')
+                clean_kwargs[key] = kwargs[k]
+            self.kwargs = clean_kwargs
+
         os.environ.update(**self.kwargs)
         return self
 

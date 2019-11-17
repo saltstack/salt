@@ -154,15 +154,22 @@
 
 # Store all returns in the given returner.
 # Setting this option requires that any returner-specific configuration also
-# be set. See https://docs.saltstack.com/en/latest/ref/returners/all/ for
-# details on required configuration values. See also, event_return_queue below.
-#event_return: ''
+# be set. See various returners in salt/returners for details on required
+# configuration values. (See also, event_return_queue, and event_return_queue_max_seconds below.)
+#
+#event_return: mysql
 
 # On busy systems, enabling event_returns can cause a considerable load on
 # the storage system for returners. Events can be queued on the master and
 # stored in a batched fashion using a single transaction for multiple events.
 # By default, events are not queued.
 #event_return_queue: 0
+
+# In some cases enabling event return queueing can be very helpful, but the bus
+# may not busy enough to flush the queue consistently.  Setting this to a reasonable
+# value (1-30 seconds) will cause the queue to be flushed when the oldest event is older
+# than `event_return_queue_max_seconds` regardless of how many events are in the queue.
+#event_return_queue_max_seconds: 0
 
 # Only return events matching tags in a whitelist, supports glob matches.
 #event_return_whitelist:
@@ -291,13 +298,11 @@
 # of 8 will be used. If no batch_safe_limit is specified, then no automatic
 # batching will occur.
 #batch_safe_limit: 100
-#
 #batch_safe_size: 8
 
 # Master stats enables stats events to be fired from the master at close
 # to the defined interval
 #master_stats: False
-
 #master_stats_event_iter: 60
 
 
@@ -344,17 +349,17 @@
 # expressions as well as globing lines are supported. The file must be readonly
 # except for the owner. Use permissive_pki_access to allow the group write access.
 #autosign_file: /etc/salt/autosign.conf
-#
+
 # Works like autosign_file, but instead allows you to specify minion IDs for
 # which keys will automatically be rejected. Will override both membership in
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
-#
+
 # If the autosign_grains_dir is specified, incoming keys from minons with grain
 # values matching those defined in files in this directory will be accepted
 # automatically. This is insecure. Minions need to be configured to send the grains.
 #autosign_grains_dir: /etc/salt/autosign_grains
-#
+
 # Enable permissive access to the salt keys. This allows you to run the
 # master or minion as root, but have a non-root group be given access to
 # your pki_dir. To make the access explicit, root must belong to the group
@@ -377,6 +382,11 @@
 # This example would blacklist all non sudo users, including root from
 # running any commands. It would also blacklist any use of the "cmd"
 # module. This is completely disabled by default.
+#
+#
+# Check the list of configured users in client ACL against users on the
+# system and throw errors if they do not exist.
+#client_acl_verify: True
 #
 #publisher_acl_blacklist:
 #  users:
@@ -472,7 +482,6 @@
 #    certfile: <path_to_certfile>
 #    ssl_version: PROTOCOL_TLSv1_2
 
-
 #####     Salt-SSH Configuration     #####
 ##########################################
 # Define the default salt-ssh roster module to use
@@ -489,9 +498,9 @@
 # custom rosters through the Salt API.
 #
 #rosters:
-#  - /etc/salt/roster.d
-#  - /opt/salt/some/more/rosters
-#
+# - /etc/salt/roster.d
+# - /opt/salt/some/more/rosters
+
 # The ssh password to log in with.
 #ssh_passwd: ''
 
@@ -521,7 +530,7 @@
 # overridden on a per-minion basis in the roster (`minion_opts`)
 #ssh_minion_opts:
 #  gpg_keydir: /root/gpg
-#
+
 # Set this to True to default to using ~/.ssh/id_rsa for salt-ssh
 # authentication with minions
 #ssh_use_home_key: False
@@ -541,7 +550,6 @@
 # salt-ssh has the ability to update the flat roster file if a minion is not
 # found in the roster.  Set this to True to enable it.
 #ssh_update_roster: False
-
 
 #####    Master Module Management    #####
 ##########################################
@@ -592,7 +600,7 @@
 #  lstrip_blocks: False
 #  newline_sequence: '\n'
 #  keep_trailing_newline: False
-#
+
 # Jinja environment options for sls templates
 #jinja_sls_env:
 #  block_start_string: '{%'
@@ -607,7 +615,7 @@
 #  lstrip_blocks: False
 #  newline_sequence: '\n'
 #  keep_trailing_newline: False
-#
+
 # The failhard option tells the minions to stop immediately after the first
 # failure detected in the state execution, defaults to False
 #failhard: False
@@ -644,7 +652,6 @@
 # by setting to 'True'. Progress events are in the format
 # 'salt/job/<JID>/prog/<MID>/<RUN NUM>'.
 #state_events: False
-
 
 #####      File Server settings      #####
 ##########################################
@@ -685,7 +692,7 @@
 # in the env_order option. Given a conflict, the last matching value will
 # win.
 #env_order: ['base', 'dev', 'prod']
-#
+
 # If top_file_merging_strategy is set to 'same' and an environment does not
 # contain a top file, the top file in the environment specified by default_top
 # will be used instead.
@@ -714,7 +721,7 @@
 #file_ignore_regex:
 #  - '/\.svn($|/)'
 #  - '/\.git($|/)'
-#
+
 # A file glob (or list of file globs) that will be matched against the file
 # path before syncing the modules and states to the minions. This is similar
 # to file_ignore_regex above, but works on globs instead of regex. By default
@@ -723,7 +730,7 @@
 #  - '*.pyc'
 #  - '*/somefolder/*.bak'
 #  - '*.swp'
-#
+
 # File Server Backend
 #
 # Salt supports a modular fileserver backend system, this system allows
@@ -740,7 +747,8 @@
 #  - git
 #  - roots
 #
-# Uncomment the line below if you do not want the file_server to follow
+# Uncomment the line below and change the value to `False`
+# if you do not want the file_server to follow
 # symlinks when walking the filesystem tree. This is set to True
 # by default. Currently this only applies to the default roots
 # fileserver_backend.
@@ -772,7 +780,6 @@
 # provider that is used.
 #
 #gitfs_provider: pygit2
-#
 
 # Along with gitfs_password, is used to authenticate to HTTPS remotes.
 #gitfs_user: ''
@@ -1145,6 +1152,7 @@
 # location. Remote logging works best when configured to use rsyslogd(8) (e.g.:
 # ``file:///dev/log``), with rsyslogd(8) configured for network logging. The URI
 # format is: <file|udp|tcp>://<host|socketpath>:<port-if-required>/<log-facility>
+#log_file: /var/log/salt/master
 #log_file: file:///dev/log
 #log_file: udp://loghost:10514
 #log_file: /var/log/salt/master
@@ -1212,7 +1220,6 @@
 #    - 'G@foo:bar'
 #    - 'or'
 #    - 'G@foo:baz'
-#
 
 
 #####     Range Cluster settings     #####
@@ -1273,7 +1280,6 @@
 # The value of the parameters can be either one module or a comma separated list of them.
 #thin_extra_mods: foo,bar
 #min_extra_mods: foo,bar,baz
-#
 
 
 ######      Keepalive settings        ######
@@ -1307,4 +1313,3 @@
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
-

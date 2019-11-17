@@ -15,7 +15,7 @@ import logging
 # Import Salt testing libs
 from tests.support.case import ShellTestCase
 from tests.support.mixins import SaltMinionEventAssertsMixin
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import flaky
 
 # Import Salt libs
@@ -29,6 +29,7 @@ class TimeoutException(Exception):
     pass
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ReactorTest(SaltMinionEventAssertsMixin, ShellTestCase):
     '''
     Test Salt's reactor system
