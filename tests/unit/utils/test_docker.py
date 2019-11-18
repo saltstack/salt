@@ -1332,7 +1332,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             '10.1.2.3:8888:81/udp,10.4.5.6:3334:3334/udp,'
             '[fd00:1::2:3]:8080:80,[fd00:1::2:3]:8888:80,[fd00:4::5:6]:3335:3335,'
             '[fd00:7::8:9]:14507-14508:4507-4508,[fd00:1::2:3]:8080:81/udp,'
-            '[fd00:1::2:3]:8888:81/udp,[fd00:4::5:6]:3336:3336/udp,'
+            '[fd00:1::2:3]:8888:81/udp,[fd00:4::5:6]:3336:3336/udp'
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
@@ -1370,7 +1370,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         bindings = (
             '10.1.2.3::80,10.1.2.3::80,10.4.5.6::3333,10.7.8.9::4505-4506,'
             '10.1.2.3::81/udp,10.1.2.3::81/udp,10.4.5.6::3334/udp,'
-            '10.7.8.9::5505-5506/udp',
+            '10.7.8.9::5505-5506/udp,'
             '[fd00:1::2:3]::80,[fd00:1::2:3]::80,[fd00:4::5:6]::3335,[fd00:7::8:9]::4507-4508,'
             '[fd00:1::2:3]::81/udp,[fd00:1::2:3]::81/udp,[fd00:4::5:6]::3336/udp,'
             '[fd00:7::8:9]::5507-5508/udp'
@@ -1458,7 +1458,8 @@ class TranslateContainerInputTestCase(TranslateBase):
         bindings = (
             '10.1.2.3:8080:80,10.4.5.6::3333,14505-14506:4505-4506,'
             '9999-10001,10.1.2.3:8080:81/udp,10.4.5.6::3334/udp,'
-            '15505-15506:5505-5506/udp,19999-20001/udp'
+            '15505-15506:5505-5506/udp,19999-20001/udp,'
+            '[fd00:1::2:3]:8080:80,[fd00:4::5:6]::3333'
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
@@ -1468,8 +1469,8 @@ class TranslateContainerInputTestCase(TranslateBase):
                         port_bindings=val,
                     )
                 ),
-                {'port_bindings': {80: ('10.1.2.3', 8080),
-                                   3333: ('10.4.5.6',),
+                {'port_bindings': {80: [('10.1.2.3', 8080), ('fd00:1::2:3', 8080)],
+                                   3333: [('10.4.5.6',), ('fd00:4::5:6',)],
                                    4505: 14505,
                                    4506: 14506,
                                    9999: None,
@@ -1502,9 +1503,13 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in ('10.1.2.3:5555-5554:1111-1112',
                     '10.1.2.3:1111-1112:5555-5554',
                     '10.1.2.3::5555-5554',
+                    '[fd00:1::2:3]:5555-5554:1111-1112',
+                    '[fd00:1::2:3]:1111-1112:5555-5554',
+                    '[fd00:1::2:3]::5555-5554',
                     '5555-5554:1111-1112',
                     '1111-1112:5555-5554',
-                    '5555-5554'):
+                    '5555-5554'
+                    ):
             with self.assertRaisesRegex(
                     CommandExecutionError,
                     r"Start of port range \(5555\) cannot be greater than end "
@@ -1518,6 +1523,9 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in ('10.1.2.3:foo:1111-1112',
                     '10.1.2.3:1111-1112:foo',
                     '10.1.2.3::foo',
+                    '[fd00:1::2:3]:foo:1111-1112',
+                    '[fd00:1::2:3]:1111-1112:foo',
+                    '[fd00:1::2:3]::foo',
                     'foo:1111-1112',
                     '1111-1112:foo',
                     'foo'):
@@ -1529,8 +1537,10 @@ class TranslateContainerInputTestCase(TranslateBase):
                     port_bindings=val,
                 )
 
-        # Error case: misatched port range
-        for val in ('10.1.2.3:1111-1113:1111-1112', '1111-1113:1111-1112'):
+        # Error case: mismatched port range
+        for val in ('10.1.2.3:1111-1113:1111-1112',
+                    '[fd00:1::2:3]:1111-1113:1111-1112',
+                    '1111-1113:1111-1112'):
             with self.assertRaisesRegex(
                     CommandExecutionError,
                     r'Host port range \(1111-1113\) does not have the same '
@@ -1540,7 +1550,9 @@ class TranslateContainerInputTestCase(TranslateBase):
                     port_bindings=val
                 )
 
-        for val in ('10.1.2.3:1111-1112:1111-1113', '1111-1112:1111-1113'):
+        for val in ('10.1.2.3:1111-1112:1111-1113',
+                    '[fd00:1::2:3]:1111-1112:1111-1113',
+                    '1111-1112:1111-1113'):
             with self.assertRaisesRegex(
                     CommandExecutionError,
                     r'Host port range \(1111-1112\) does not have the same '
