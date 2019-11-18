@@ -914,7 +914,7 @@ def run(cmd,
 
         .. warning::
 
-            For versions 2018.3.3 and above on linux and macosx while using 
+            For versions 2018.3.3 and above on linux and macosx while using
             runas, to pass special characters to the command you need to escape
             the characters on the shell.
 
