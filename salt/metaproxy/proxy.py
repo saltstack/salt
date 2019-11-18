@@ -340,6 +340,11 @@ def thread_return(cls, minion_instance, opts, data):
     sdata = {'pid': os.getpid()}
     sdata.update(data)
     log.info('Starting a new job with PID %s', sdata['pid'])
+
+    # send ack
+    acktag = tagify([data['jid'], 'ack', opts['id']], 'job')
+    minion_instance._fire_master(tag=acktag)
+
     with salt.utils.files.fopen(fn_, 'w+b') as fp_:
         fp_.write(minion_instance.serial.dumps(sdata))
     ret = {'success': False}
@@ -554,6 +559,11 @@ def thread_multi_return(cls, minion_instance, opts, data):
     sdata = {'pid': os.getpid()}
     sdata.update(data)
     log.info('Starting a new job with PID %s', sdata['pid'])
+
+    # send ack
+    acktag = tagify([data['jid'], 'ack', opts['id']], 'job')
+    minion_instance._fire_master(tag=acktag)
+
     with salt.utils.files.fopen(fn_, 'w+b') as fp_:
         fp_.write(minion_instance.serial.dumps(sdata))
 

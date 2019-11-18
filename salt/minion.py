@@ -1619,6 +1619,11 @@ class Minion(MinionBase):
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job %s with PID %s', data['jid'], sdata['pid'])
+
+        # send ack
+        acktag = tagify([data['jid'], 'ack', opts['id']], 'job')
+        minion_instance._fire_master(tag=acktag)
+
         with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
         ret = {'success': False}
@@ -1834,6 +1839,11 @@ class Minion(MinionBase):
         sdata = {'pid': os.getpid()}
         sdata.update(data)
         log.info('Starting a new job with PID %s', sdata['pid'])
+
+        # send ack
+        acktag = tagify([data['jid'], 'ack', opts['id']], 'job')
+        minion_instance._fire_master(tag=acktag)
+
         with salt.utils.files.fopen(fn_, 'w+b') as fp_:
             fp_.write(minion_instance.serial.dumps(sdata))
 
