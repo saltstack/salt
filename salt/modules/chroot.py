@@ -107,7 +107,14 @@ def call(root, function, *args, **kwargs):
         extra_mods=__salt__['config.option']('thin_extra_mods', ''),
         so_mods=__salt__['config.option']('thin_so_mods', '')
     )
-    stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
+    # Some bug in Salt is preventing us to use `archive.tar` here. A
+    # AsyncZeroMQReqChannel is not closed at the end os the salt-call,
+    # and makes the client never exit.
+    #
+    # stdout = __salt__['archive.tar']('xzf', thin_path, dest=thin_dest_path)
+    #
+    stdout = __salt__['cmd.run'](['tar', 'xzf', thin_path,
+                                  '-C', thin_dest_path])
     if stdout:
         __utils__['files.rm_rf'](thin_dest_path)
         return {'result': False, 'comment': stdout}
