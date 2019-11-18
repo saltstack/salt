@@ -1464,7 +1464,8 @@ class TranslateContainerInputTestCase(TranslateBase):
             '10.1.2.3:8080:80,10.4.5.6::3333,14505-14506:4505-4506,'
             '9999-10001,10.1.2.3:8080:81/udp,10.4.5.6::3334/udp,'
             '15505-15506:5505-5506/udp,19999-20001/udp,'
-            '[fd00:1::2:3]:8080:80,[fd00:4::5:6]::3333'
+            '[fd00:1::2:3]:8080:80,[fd00:4::5:6]::3333,'
+            '[fd00:4::5:6]::3334/udp'
         )
         for val in (bindings, bindings.split(',')):
             self.assertEqual(
@@ -1482,7 +1483,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                                    10000: None,
                                    10001: None,
                                    '81/udp': ('10.1.2.3', 8080),
-                                   '3334/udp': ('10.4.5.6',),
+                                   '3334/udp': [('10.4.5.6',), ('fd00:4::5:6',)],
                                    '5505/udp': 15505,
                                    '5506/udp': 15506,
                                    '19999/udp': None,
