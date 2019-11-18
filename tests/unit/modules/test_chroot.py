@@ -94,7 +94,8 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         # Basic input validation
         exist.return_value = False
         self.assertRaises(CommandExecutionError, chroot.call, '/chroot', '')
-        self.assertRaises(CommandExecutionError, chroot.call, '/chroot', 'test.ping')
+        self.assertRaises(CommandExecutionError, chroot.call, '/chroot',
+                          'test.ping')
 
     @patch('salt.modules.chroot.exist')
     @patch('tempfile.mkdtemp')
@@ -136,6 +137,7 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         utils_mock = {
             'thin.gen_thin': MagicMock(return_value='/salt-thin.tgz'),
             'files.rm_rf': MagicMock(),
+            'json.find_json': MagicMock(return_value={'return': {}})
         }
         salt_mock = {
             'cmd.run': MagicMock(return_value=''),
@@ -147,8 +149,10 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(chroot.__utils__, utils_mock), \
                 patch.dict(chroot.__salt__, salt_mock):
-            self.assertRaises(CommandExecutionError, chroot.call, '/chroot',
-                              'test.ping')
+            self.assertEqual(chroot.call('/chroot', 'test.ping'), {
+                'result': False,
+                'comment': "Can't parse container command output"
+            })
             utils_mock['thin.gen_thin'].assert_called_once()
             salt_mock['config.option'].assert_called()
             salt_mock['cmd.run'].assert_called_once()

@@ -136,8 +136,6 @@ def call(root, function, *args, **kwargs):
             function
         ] + list(args) + ['{}={}'.format(k, v) for (k, v) in safe_kwargs.items()]
         ret = __salt__['cmd.run_chroot'](root, [str(x) for x in salt_argv])
-        if ret['retcode'] != EX_OK:
-            raise CommandExecutionError(ret['stderr'])
 
         # Process "real" result in stdout
         try:
@@ -146,7 +144,7 @@ def call(root, function, *args, **kwargs):
             if isinstance(local, dict) and 'retcode' in local:
                 __context__['retcode'] = local['retcode']
             return local.get('return', data)
-        except ValueError:
+        except (KeyError, ValueError):
             return {
                 'result': False,
                 'comment': "Can't parse container command output"
