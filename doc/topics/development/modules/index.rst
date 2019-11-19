@@ -83,7 +83,7 @@ Sync Via the saltutil Module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The saltutil module has a number of functions that can be used to sync all
-or specific dynamic modules. The ``saltutil.sync_*`` 
+or specific dynamic modules. The ``saltutil.sync_*``
 :py:mod:`execution functions <salt.modules.saltutil>` and
 :py:mod:`runner functions <salt.runners.saltutil>` can be used to sync modules
 to minions and the master, respectively.
@@ -120,7 +120,7 @@ This is done via setuptools entry points:
     )
 
 Note that these are not synced from the Salt Master to the Minions. They must be
-installed indepdendently on each Minion.
+installed independently on each Minion.
 
 Module Types
 ============
@@ -139,7 +139,7 @@ Cache        ``salt.cache`` (:ref:`index <all-salt.cache>`)                   ``
 Cloud        ``salt.cloud.clouds`` (:ref:`index <all-salt.clouds>`)           ``clouds``                ``cloud_dirs``
 Engine       ``salt.engines`` (:ref:`index <engines>`)                        ``engines``               ``engines_dirs``
 Execution    ``salt.modules`` (:ref:`index <all-salt.modules>`)               ``modules``               ``module_dirs``
-Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors`` [#no-fs]_   ``executor_dirs``
+Executor     ``salt.executors`` (:ref:`index <all-salt.executors>`)           ``executors``             ``executor_dirs``
 File Server  ``salt.fileserver`` (:ref:`index <file-server>`)                 ``fileserver``            ``fileserver_dirs``
 Grain        ``salt.grains`` (:ref:`index <all-salt.grains>`)                 ``grains``                ``grains_dirs``
 Log Handler  ``salt.log.handlers`` (:ref:`index <external-logging-handlers>`) ``log_handlers``          ``log_handlers_dirs``

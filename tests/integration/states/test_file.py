@@ -2696,6 +2696,26 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             except OSError:
                 pass
 
+    def test_binary_contents_twice(self):
+        '''
+        This test ensures that after a binary file is created, salt can confirm
+        that the file is in the correct state.
+        '''
+        # Create a binary file
+        name = os.path.join(TMP, '1px.gif')
+
+        # First run state ensures file is created
+        ret = self.run_state('file.managed', name=name, contents=BINARY_FILE)
+        self.assertSaltTrueReturn(ret)
+
+        # Second run of state ensures file is in correct state
+        ret = self.run_state('file.managed', name=name, contents=BINARY_FILE)
+        self.assertSaltTrueReturn(ret)
+        try:
+            os.remove(name)
+        except OSError:
+            pass
+
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
     @skipIf(not HAS_GRP, "grp not available. Skipping test")
