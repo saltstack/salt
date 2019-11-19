@@ -1,4 +1,4 @@
-@Library('salt@master-1.6') _
+@Library('salt@master-1.7') _
 
 runTestSuite(
     concurrent_builds: 1,
@@ -10,7 +10,8 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '',
     python_version: 'py2',
-    testrun_timeout: 8,
-    use_spot_instances: false)
+    splits: ['unit', 'integration'],
+    testrun_timeout: 6,
+    use_spot_instances: true)
 
 // vim: ft=groovy

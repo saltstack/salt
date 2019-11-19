@@ -1,4 +1,4 @@
-@Library('salt@master-1.6') _
+@Library('salt@master-1.7') _
 
 runTestSuite(
     concurrent_builds: 1,
@@ -10,6 +10,7 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py3',
+    splits: ['unit', 'integration', 'multimaster'],
     testrun_timeout: 6,
     use_spot_instances: true)
 
