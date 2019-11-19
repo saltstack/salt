@@ -138,3 +138,5 @@ yamlordereddictloader==0.4.0
 zc.lockfile==1.4          # via cherrypy
 # Passthrough dependencies from pkg/osx/req.txt
 pyobjc==5.1.2
+# Passthrough dependencies from pkg/osx/req.txt
+pyobjc==5.1.2
