@@ -11,6 +11,7 @@ def golden_images_branch = 'master'
 def nox_passthrough_opts = ''
 def use_spot_instances = true
 def jenkins_slave_label = 'kitchen-slave'
+def kitchen_platforms_file = '/var/jenkins/workspace/nox-cloud-platforms.yml'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
@@ -30,6 +31,7 @@ runTests(
     testrun_timeout: testrun_timeout,
     run_full: params.runFull,
     use_spot_instances: use_spot_instances,
-    jenkins_slave_label: jenkins_slave_label)
+    jenkins_slave_label: jenkins_slave_label,
+    kitchen_platforms_file: kitchen_platforms_file)
 
 // vim: ft=groovy
