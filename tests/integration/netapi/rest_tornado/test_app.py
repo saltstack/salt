@@ -40,7 +40,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
 
     def setUp(self):
         super(TestSaltAPIHandler, self).setUp()
-        os.environ['ASYNC_TEST_TIMEOUT'] = str(300)
+        os.environ['ASYNC_TEST_TIMEOUT'] = '300'
 
     def get_app(self):
         urls = [('/', saltnado.SaltAPIHandler)]
