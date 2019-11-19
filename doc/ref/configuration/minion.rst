@@ -1326,7 +1326,7 @@ creates a new connection for every return to the master.
 Default: ``ipc``
 
 Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
-process communications. Set ipc_mode to ``tcp`` on such systems.
+process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 
 .. code-block:: yaml
 
@@ -1367,9 +1367,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
