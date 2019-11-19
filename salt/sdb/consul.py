@@ -29,6 +29,7 @@ For option details see: https://python-consul.readthedocs.io/en/latest/#consul
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
+from salt.ext import six
 from salt.exceptions import CommandExecutionError
 
 try:
@@ -60,7 +61,7 @@ def get(key, profile=None):
 
     _, result = conn.kv.get(key)
 
-    return result['Value'] if result else None
+    return six.ensure_str(result['Value']) if result else None
 
 
 def get_conn(profile):
