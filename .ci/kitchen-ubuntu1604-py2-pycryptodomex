@@ -12,6 +12,7 @@ def nox_passthrough_opts = '--ssh-tests'
 def concurrent_builds = 1
 def use_spot_instances = true
 def jenkins_slave_label = 'kitchen-slave'
+def splits = ['unit', 'multimaster', 'integration']
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
@@ -32,6 +33,7 @@ runTests(
     concurrent_builds: concurrent_builds,
     run_full: params.runFull,
     use_spot_instances: use_spot_instances,
-    jenkins_slave_label: jenkins_slave_label)
+    jenkins_slave_label: jenkins_slave_label,
+    splits: splits)
 
 // vim: ft=groovy

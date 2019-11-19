@@ -14,6 +14,7 @@ def golden_images_branch = 'master'
 def nox_passthrough_opts = '--log-cli-level=warning --ignore=tests/utils'
 def concurrent_builds = 1
 def jenkins_slave_label = 'kitchen-slave-mac'
+def splits = ['unit', 'multimaster', 'integration']
 def kitchen_driver_file = '/var/jenkins/workspace/driver.yml'
 def kitchen_verifier_file = '/var/jenkins/workspace/nox-verifier.yml'
 def kitchen_platforms_file = '/var/jenkins/workspace/pre-golden-nox-platforms.yml'
@@ -37,6 +38,7 @@ runTests(
     concurrent_builds: concurrent_builds,
     run_full: params.runFull,
     jenkins_slave_label: jenkins_slave_label,
+    splits: splits,
     kitchen_driver_file: kitchen_driver_file,
     kitchen_verifier_file: kitchen_verifier_file,
     kitchen_platforms_file: kitchen_platforms_file)
