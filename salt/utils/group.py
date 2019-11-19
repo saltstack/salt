@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-Functions for querying and modifying a user account and the groups to which it
-belongs.
+Functions for querying and modifying a group account.
 '''
 
 from __future__ import absolute_import, print_function, unicode_literals
@@ -52,7 +51,7 @@ def group_to_gid(group):
     '''
     Convert the group name to the group id on this system.
     :param group: [String] group name to convert to a group id.
-    :return: '' if the group name is not find, else the group name.
+    :return: group if the group name is not find, else the group name.
     '''
     ret = group
     if HAS_GRP:

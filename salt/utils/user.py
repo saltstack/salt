@@ -51,6 +51,50 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def uid_to_user(uid):
+    '''
+    Convert the user id to the user name on this system.
+    :param uid: [Integer] user id to convert to a user name.
+    :return: uid if the user name is not find, else the user name.
+    '''
+    ret = uid
+    if HAS_PWD:
+        if isinstance(uid, str):
+            log.info("{} is not an integer, maybe it's already the user name ?".format(uid))
+            uid = user_to_uid(uid)
+
+        try:
+            ret = pwd.getpwuid(uid).pw_name
+        except (KeyError, NameError):
+            log.info("User name is not present, fall back to the uid {}.".format(uid))
+            ret = uid
+    else:
+        log.error('Required external library (pwd) not installed')
+    return ret
+
+
+def user_to_uid(user):
+    '''
+    Convert the user name to the user id on this system.
+    :param user: [String] user name to convert to a user id.
+    :return: user if the user name is not find, else the user name.
+    '''
+    ret = user
+    if HAS_PWD:
+        if isinstance(user, int):
+            log.info("{} is not an string, maybe it's already the user id ?".format(user))
+            user = uid_to_user(user)
+
+        try:
+            ret = pwd.getpwnam(user).pw_uid
+        except (KeyError, NameError):
+            log.info("User id is not present, fall back to the user {}.".format(user))
+            ret = user
+    else:
+        log.error('Required external library (pwd) not installed')
+    return ret
+
+
 def get_user():
     '''
     Get the current user
@@ -358,6 +402,8 @@ def get_gid_list(user, include_default=True):
 
 def get_gid(group=None):
     '''
+    [DEPRECATED] use : salt.utils.group.get_gid()
+
     Get the gid for a given group name. If no group given, the current egid
     will be returned. If the group does not exist, None will be returned. On
     systems which do not support grp or os.getegid it will return None.

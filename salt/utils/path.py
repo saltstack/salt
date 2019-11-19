@@ -13,11 +13,13 @@ import os
 import pathlib
 import posixpath
 import re
+import stat
 import string
 import struct
 
 # Import Salt libs
 import salt.utils.args
+import salt.utils.group
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.pycrypto
@@ -74,6 +76,19 @@ def islink(path):
         return True
 
 
+def get_absolute(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    if is_absolute(path):
+        ret = path
+    else:
+        ret = os.path.realpath(os.path.expanduser(path))
+    return ret
+
+
 def is_absolute(path):
     '''
     Test if the path absolute.
@@ -110,6 +125,60 @@ def is_file(path):
     return True if exist(path) and pathlib.Path(path).is_file() else False
 
 
+def is_mount(path):
+    '''
+    Test if the path is a mount.
+    :param path: Absolute path.
+    :return: True if the path is a mount, else False.
+    '''
+    return True if exist(path) and pathlib.Path(path).is_mount() else False
+
+
+def is_symlink(path):
+    '''
+    Test if the path is a symlink.
+    :param path: Absolute path.
+    :return: True if the path is a symlink, else False.
+    '''
+    return True if exist(path) and pathlib.Path(path).is_symlink() else False
+
+
+def is_socket(path):
+    '''
+    Test if the path is a socket.
+    :param path: Absolute path.
+    :return: True if the path is a socket, else False.
+    '''
+    return True if exist(path) and pathlib.Path(path).is_socket() else False
+
+
+def is_fifo(path):
+    '''
+    Test if the path is a FiFo.
+    :param path: Absolute path.
+    :return: True if the path is a FiFo, else False.
+    '''
+    return True if exist(path) and pathlib.Path(path).is_fifo() else False
+
+
+def is_block_device(path):
+    '''
+    Test if the path is a block device.
+    :param path: Absolute path.
+    :return: True if the path is a block device, else False.
+    '''
+    return True if exist(path) and pathlib.Path(path).is_block_device() else False
+
+
+def is_char_device(path):
+    '''
+    Test if the path is a char device.
+    :param path: Absolute path.
+    :return: True if the path is a char device, else False.
+    '''
+    return True if exist(path) and pathlib.Path(path).is_char_device() else False
+
+
 def dir_is_present(path, parents=True):
     '''
     Make the directory if it's not present.
@@ -117,6 +186,7 @@ def dir_is_present(path, parents=True):
     :param parents: Make the parents directories.
     :return: True if the directory is present, else False.
     '''
+    path = get_absolute(path)
     if not exist(path):
         pathlib.Path(path).mkdir(parents=parents, exist_ok=True)
     return is_dir(path)
@@ -128,6 +198,7 @@ def file_is_present(path):
     :param path: Absolute path to the file to create.
     :return: True if the file is present, else False.
     '''
+    path = get_absolute(path)
     if not exist(path):
         pathlib.Path(path).touch()
     return is_file(path)
@@ -144,6 +215,54 @@ def random_tmp_file(tmp_dir='/tmp'):
         tmp_file = join(tmp_dir, salt.utils.pycrypto.secure_password())
         if file_is_present(tmp_file):
             ret = tmp_file
+    return ret
+
+
+def stats(path, hash_type='sha256', follow_symlinks=True):
+    '''
+    Return a dict containing the stats for a given path.
+    :param path:
+    :param hash_type:
+    :param follow_symlinks:
+    :return:
+    '''
+    path = get_absolute(path)
+    ret = {}
+    if exist(path):
+        if is_symlink(path) and not follow_symlinks:
+            path_stat = pathlib.Path(path).lstat()
+        else:
+            path_stat = pathlib.Path(path).stat()
+
+        ret['target'] = path
+        ret['inode'] = path_stat.st_ino
+        ret['uid'] = path_stat.st_uid
+        ret['user'] = salt.utils.user.uid_to_user(path_stat.st_uid)
+        ret['gid'] = path_stat.st_gid
+        ret['group'] = salt.utils.group.gid_to_group(path_stat.st_gid)
+        ret['atime'] = path_stat.st_atime
+        ret['mtime'] = path_stat.st_mtime
+        ret['ctime'] = path_stat.st_ctime
+        ret['size'] = path_stat.st_size
+        ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(path_stat.st_mode)))
+        ret['sum'] = salt.utils.hashutils.get_hash(path, hash_type)
+
+        # Determine the type of the path.
+        if is_dir(path):
+            ret['type'] = 'dir'
+        elif is_char_device(path):
+            ret['type'] = 'char'
+        elif is_block_device(path):
+            ret['type'] = 'block'
+        elif is_file(path):
+            ret['type'] = 'file'
+        elif is_symlink(path):
+            ret['type'] = 'link'
+        elif is_fifo(path):
+            ret['type'] = 'pipe'
+        elif is_socket(path):
+            ret['type'] = 'socket'
+
     return ret
 
 
