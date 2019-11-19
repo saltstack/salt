@@ -27,7 +27,6 @@ from salt.ext import six
 
 
 class PathJoinTestCase(TestCase):
-
     PLATFORM_FUNC = platform.system
     BUILTIN_MODULES = sys.builtin_module_names
 
@@ -267,7 +266,7 @@ class TestWhich(TestCase):
             # Let's patch os.environ to provide a custom PATH variable
             with patch.dict(os.environ, {'PATH': os.sep + 'bin',
                                          'PATHEXT': '.COM;.EXE;.BAT;.CMD;.VBS;'
-                                         '.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY'}):
+                                                    '.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.PY'}):
                 # Let's also patch is_windows to return True
                 with patch('salt.utils.platform.is_windows', lambda: True):
                     with patch('os.path.isfile', lambda x: True):
@@ -275,3 +274,72 @@ class TestWhich(TestCase):
                             salt.utils.path.which('this-binary-exists-under-windows'),
                             os.path.join(os.sep + 'bin', 'this-binary-exists-under-windows.CMD')
                         )
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestPath(TestCase):
+    def setUp(self):
+        self.dir_exist = os.path.join(os.path.dirname(__file__), 'dir_exist')
+        if not os.path.exists(self.dir_exist):
+            os.mkdir(self.dir_exist)
+        self.dir_absent = os.path.join(os.path.dirname(__file__), 'dir_absent')
+        self.file_exist = os.path.join(self.dir_exist, 'file_exist.txt')
+        with open(self.file_exist, 'a'):
+            os.utime(self.file_exist, None)
+        self.file_absent = os.path.join(self.dir_exist, 'file_absent.txt')
+
+    def tearDown(self):
+        if os.path.exists(self.file_exist):
+            os.remove(self.file_exist)
+        if os.path.exists(self.file_absent):
+            os.remove(self.file_absent)
+        if os.path.exists(self.dir_exist):
+            os.rmdir(self.dir_exist)
+        if os.path.exists(self.dir_absent):
+            os.rmdir(self.dir_absent)
+
+        del self.dir_exist
+        del self.dir_absent
+        del self.file_exist
+        del self.file_absent
+
+    def test_path_is_absolute(self):
+        self.assertTrue(salt.utils.path.is_absolute(self.dir_exist))
+
+    def test_path_is_not_absolute(self):
+        self.assertFalse(salt.utils.path.is_absolute('test'))
+
+    def test_path_exist(self):
+        self.assertTrue(salt.utils.path.exist(self.dir_exist))
+
+    def test_path_not_exist(self):
+        self.assertFalse(salt.utils.path.exist(self.dir_absent))
+
+    def test_path_is_dir(self):
+        self.assertTrue(salt.utils.path.is_dir(self.dir_exist))
+
+    def test_path_is_not_dir(self):
+        self.assertFalse(salt.utils.path.is_dir(self.dir_absent))
+        self.assertFalse(salt.utils.path.is_dir(self.file_exist))
+
+    def test_path_is_file(self):
+        self.assertTrue(salt.utils.path.is_file(self.file_exist))
+
+    def test_path_is_not_file(self):
+        self.assertFalse(salt.utils.path.is_file(self.dir_exist))
+        self.assertFalse(salt.utils.path.is_file(self.file_absent))
+
+    def test_path_dir_is_present(self):
+        self.assertTrue(salt.utils.path.dir_is_present(self.dir_exist))
+        self.assertTrue(salt.utils.path.dir_is_present(self.dir_absent))
+        self.assertTrue(os.path.exists(self.dir_absent))
+
+    def test_path_file_is_present(self):
+        self.assertTrue(salt.utils.path.file_is_present(self.file_exist))
+        self.assertTrue(salt.utils.path.file_is_present(self.file_absent))
+        self.assertTrue(os.path.exists(self.file_absent))
+
+    def test_path_random_tmp_file(self):
+        tmp_file = salt.utils.path.random_tmp_file(self.dir_exist)
+        self.assertTrue(os.path.exists(tmp_file))
+        os.remove(tmp_file)
