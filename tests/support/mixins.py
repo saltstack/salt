@@ -753,7 +753,7 @@ class SaltMinionEventAssertsMixin(object):
     def __new__(cls, *args, **kwargs):
         # We have to cross-call to re-gen a config
         cls.q = multiprocessing.Queue()
-        cls.fetch_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
             target=_fetch_events, args=(cls.q,)
         )
         cls.fetch_proc.start()
