@@ -578,7 +578,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         test file.managed with contents by using the default content_newline
         flag.
         '''
-        contents = r'test_managed_contents_with_newline_one'
+        contents = 'test_managed_contents_with_newline_one'
         name = os.path.join(TMP, 'foo')
 
         # Create a file named foo with contents as above but with a \n at EOF
@@ -594,6 +594,38 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         flag.
         '''
         contents = 'test_managed_contents_with_newline_one'
+        name = os.path.join(TMP, 'bar')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=False)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual(contents, last_line)
+
+    def test_managed_multiline_contents_with_contents_newline(self):
+        '''
+        test file.managed with contents by using the non default content_newline
+        flag.
+        '''
+        contents = ('this is a cookie{}this is another cookie'.
+                    format(os.linesep))
+        name = os.path.join(TMP, 'bar')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=True)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual((contents + os.linesep), last_line)
+
+    def test_managed_multiline_contents_with_contents_newline_false(self):
+        '''
+        test file.managed with contents by using the non default content_newline
+        flag.
+        '''
+        contents = ('this is a cookie{}this is another cookie'.
+                    format(os.linesep))
         name = os.path.join(TMP, 'bar')
 
         # Create a file named foo with contents as above but with a \n at EOF
