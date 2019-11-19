@@ -1,6 +1,6 @@
-@Library('salt@master-1.5') _
+@Library('salt@master-1.6-split-pytest') _
 
-runTestSuite(
+runSplitTestSuite(
     concurrent_builds: 1,
     distro_name: 'windows',
     distro_version: '2019',
@@ -10,7 +10,8 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--log-cli-level=warning --ignore=tests/utils',
     python_version: 'py2',
-    testrun_timeout: 8,
-    use_spot_instances: false)
+    splits: ['unit', 'integration', 'multimaster'],
+    testrun_timeout: 6,
+    use_spot_instances: true)
 
 // vim: ft=groovy
