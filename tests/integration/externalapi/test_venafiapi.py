@@ -13,14 +13,12 @@ import logging
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from salt.ext.six.moves import range
-from salt.utils.files import fopen
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization
 import pytest
 import tempfile
-from os import path
 from os import environ
 
 log = logging.getLogger(__name__)
@@ -129,24 +127,28 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
 -----END CERTIFICATE REQUEST-----
         """
 
-        tmp_dir = tempfile.gettempdir()
-        with fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), 'w+') as f:
+        # tmp_dir = tempfile.gettempdir()
+        # with fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), 'w+') as f:
+        #     f.write(csr_pem)
+        #     csr_path = f.name
+
+        with tempfile.NamedTemporaryFile('w+') as f:
             f.write(csr_pem)
+            f.flush()
             csr_path = f.name
+            cn = "test-csr-32313131.venafi.example.com"
+            ret = self.run_run_plus(fun='venafi.request',
+                                    minion_id=cn,
+                                    csr_path=csr_path,
+                                    zone=environ.get('CLOUDZONE'))
+            cert_output = ret['return'][0]
+            if not cert_output:
+                pytest.fail('venafi_certificate not found in output_value')
 
-        cn = "test-csr-32313131.venafi.example.com"
-        ret = self.run_run_plus(fun='venafi.request',
-                                minion_id=cn,
-                                csr_path=csr_path,
-                                zone=environ.get('CLOUDZONE'))
-        cert_output = ret['return'][0]
-        if not cert_output:
-            pytest.fail('venafi_certificate not found in output_value')
-
-        cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
-        assert isinstance(cert, x509.Certificate)
-        assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
-            x509.NameAttribute(
-                NameOID.COMMON_NAME, cn
-            )
-        ]
+            cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
+            assert isinstance(cert, x509.Certificate)
+            assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
+                x509.NameAttribute(
+                    NameOID.COMMON_NAME, cn
+                )
+            ]

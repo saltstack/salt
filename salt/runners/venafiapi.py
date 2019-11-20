@@ -78,7 +78,7 @@ def __virtual__():
     Only load the module if vcert module is installed
     '''
     if HAS_VCERT:
-        return __virtualname___
+        return __virtualname__
     return False
 
 
