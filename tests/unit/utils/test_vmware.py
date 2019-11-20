@@ -3644,7 +3644,7 @@ class GetAssignedLicensesTestCase(TestCase):
 
     def test_entity_name(self):
         mock_trace = MagicMock()
-        with patch('salt.log.setup.SaltLoggingClass.trace', mock_trace):
+        with patch('salt._logging.impl.SaltLoggingClass.trace', mock_trace):
             salt.utils.vmware.get_assigned_licenses(self.mock_si,
                                                     self.mock_entity_ref,
                                                     'fake_entity_name')
@@ -3820,7 +3820,7 @@ class AssignLicenseTestCase(TestCase):
 
     def test_entity_name(self):
         mock_trace = MagicMock()
-        with patch('salt.log.setup.SaltLoggingClass.trace', mock_trace):
+        with patch('salt._logging.impl.SaltLoggingClass.trace', mock_trace):
             salt.utils.vmware.assign_license(self.mock_si,
                                              self.mock_lic_key,
                                              'fake_license_name',
