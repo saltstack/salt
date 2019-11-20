@@ -8,6 +8,7 @@ from __future__ import print_function
 import functools
 import random
 import string
+import logging
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -22,6 +23,7 @@ import tempfile
 from os import path
 from os import environ
 
+log = logging.getLogger(__name__)
 
 def _random_name(prefix=''):
     ret = prefix
@@ -50,20 +52,20 @@ class VenafiTest(ShellCase):
 
     @with_random_name
     def test_request(self, name):
-        print("Testing Venafi request cert")
-        print("Using venafi config:", self.master_opts['venafi'])
+        log.info("Testing Venafi request cert")
+        log.info("Using venafi config:", self.master_opts['venafi'])
         cn = '{0}.example.com'.format(name)
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 dns_name=cn,
                                 key_password='secretPassword',
                                 zone=environ.get('CLOUDZONE'))
-        print("Ret is:\n", ret)
+        log.info("Ret is:\n", ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
 
-        print("Testing certificate:\n", cert_output)
+        log.info("Testing certificate:\n", cert_output)
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
@@ -73,7 +75,7 @@ class VenafiTest(ShellCase):
         ]
 
         pkey_output = ret['return'][1]
-        print("Testing pkey:\n", pkey_output)
+        log.info("Testing pkey:\n", pkey_output)
         if not pkey_output:
             pytest.fail('venafi_private key not found in output_value')
 
@@ -92,7 +94,7 @@ class VenafiTest(ShellCase):
 
     @with_random_name
     def test_sign(self, name):
-        print("Testing Venafi sign CSR")
+        log.info("Testing Venafi sign CSR")
 
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----
 MIIFbDCCA1QCAQAwgbQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
@@ -129,22 +131,18 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
 
         tmp_dir = tempfile.gettempdir()
         with fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), 'w+') as f:
-            print("Saving test CSR to temp file", f.name)
             f.write(csr_pem)
             csr_path = f.name
 
-        print("Using venafi config:", self.master_opts['venafi'])
         cn = "test-csr-32313131.venafi.example.com"
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 csr_path=csr_path,
                                 zone=environ.get('CLOUDZONE'))
-        print("Ret is:\n", ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
 
-        print("Testing certificate:\n", cert_output)
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [

@@ -77,9 +77,9 @@ def __virtual__():
     '''
     Only load the module if vcert module is installed
     '''
-    if not HAS_VCERT:
-        return False
-    return __virtualname__
+    if HAS_VCERT:
+        return __virtualname___
+    return False
 
 
 def request(
@@ -113,9 +113,16 @@ def request(
             key_password = __salt__['sdb.get'](key_password)
     conn = _init_connection()
 
-    if csr_path is not None:
+    if csr_path is None:
+        request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
+                                     organization=org, organizational_unit=org_unit, key_password=key_password)
+        zone_config = conn.read_zone_conf(zone)
+        request.update_from_zone_config(zone_config)
+        private_key = request.private_key_pem
+    else:
         log.info("Will use generated CSR from %s", csr_path)
         log.info("Using CN %s", dns_name)
+        private_key = None
         try:
             with salt.utils.files.fopen(csr_path) as csr_file:
                 csr = csr_file.read()
@@ -123,21 +130,17 @@ def request(
         except Exception as e:
             log.error(msg=str(e))
             sys.exit(1)
-    else:
-        request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
-                                     organization=org, organizational_unit=org_unit, key_password=key_password)
-        zone_config = conn.read_zone_conf(zone)
-        request.update_from_zone_config(zone_config)
     conn.request_cert(request, zone)
-    if csr_path is None:
-        private_key = request.private_key_pem
-    else:
-        private_key = None
-    while True:
-        time.sleep(5)
+
+
+    #TODO: add timeout parameter here
+    t = time.time() + 300
+    while time.time() < t:
         cert = conn.retrieve_cert(request)
         if cert:
             break
+        else:
+            time.sleep(5)
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     data = {
