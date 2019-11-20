@@ -23,6 +23,8 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 
+- [#54917](https://github.com/saltstack/salt/pull/54917) - Added get_settings, put_settings and flush_synced methods for Elasticsearch module. - [@Oloremo](https://github.com/Oloremo)
+
 ---
 
 ## [2019.2.2]
