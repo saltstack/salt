@@ -115,7 +115,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -256,6 +255,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
