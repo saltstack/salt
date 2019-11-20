@@ -360,9 +360,15 @@ def assemble(name,
         return __salt__['cmd.run'](cmd, python_shell=False)
 
 
-def examine(device):
+def examine(device, quiet=False):
     '''
     Show detail for a specified RAID component device
+
+    device
+        Device to examine, that is part of the RAID
+
+    quiet
+        If the device is not part of the RAID, do not show any error
 
     CLI Example:
 
@@ -370,7 +376,9 @@ def examine(device):
 
         salt '*' raid.examine '/dev/sda1'
     '''
-    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device), output_loglevel='trace', python_shell=False)
+    res = __salt__['cmd.run_stdout']('mdadm -Y -E {0}'.format(device),
+                                     python_shell=False,
+                                     ignore_retcode=quiet)
     ret = {}
 
     for line in res.splitlines():
