@@ -44,7 +44,7 @@ Grains data can be listed by using the 'grains.items' module:
 Using grains in a state
 =======================
 
-To use a grain in a state you can access it via `{{ grains['key'] }}`.
+To use a grain in a state you can access it via ``{{ grains['key'] }}``.
 
 Grains in the Minion Config
 ===========================
