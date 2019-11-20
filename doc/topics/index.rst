@@ -9,13 +9,13 @@ The 30 second summary
 
 Salt is:
 
-* a configuration management system, capable of maintaining remote nodes
-  in defined states (for example, ensuring that specific packages are installed and
-  specific services are running)
+* **A configuration management system.** Salt is capable of maintaining remote
+  nodes in defined states. For example, it can ensure that specific packages are
+  installed and that specific services are running.
 
-* a distributed remote execution system used to execute commands and
-  query data on remote nodes, either individually or by arbitrary
-  selection criteria
+* **A distributed remote execution system used to execute commands and
+  query data on remote nodes.** Salt can query and execute commands either on
+  individual nodes or by using an arbitrary selection criteria.
 
 It was developed in order to bring the best solutions found in the
 world of remote execution together and make them better, faster, and more
@@ -188,4 +188,3 @@ documentation efforts, please review the :ref:`contributing documentation
 <contributing>`!
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
-
