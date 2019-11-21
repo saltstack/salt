@@ -129,7 +129,11 @@ peer_run:
 sdbvault:
   driver: vault
 venafi:
-  #For Venafi Cloud
-  #api_key: "sdb://osenv/CLOUDAPIKEY"
-  #base_url: "sdb://osenv/CLOUDURL"
-  fake: "true"
+  #For TPP
+  #base_url: "sdb://osenv/TPPURL"
+  #tpp_user: "sdb://osenv/TPPUSER"
+  #tpp_password: "sdb://osenv/TPPPASSWORD"
+  base_url: "https://ha-tpp1.sqlha.com:5008/vedsdk"
+  tpp_user: "admin"
+  tpp_password: "newPassw0rd!"
+  trust_bundle: "/opt/venafi/bundle.pem"

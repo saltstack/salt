@@ -133,4 +133,4 @@ python-dateutil==2.8.1    # via vcert
 requests==2.22.0          # via vcert
 six==1.13.0               # via cryptography, python-dateutil, vcert
 urllib3==1.25.7           # via requests
-vcert==0.6.8
+vcert==0.7.0

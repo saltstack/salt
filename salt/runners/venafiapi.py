@@ -118,11 +118,9 @@ def request(
                                      organization=org, organizational_unit=org_unit, key_password=key_password)
         zone_config = conn.read_zone_conf(zone)
         request.update_from_zone_config(zone_config)
-        private_key = request.private_key_pem
     else:
         log.info("Will use generated CSR from %s", csr_path)
         log.info("Using CN %s", dns_name)
-        private_key = None
         try:
             with salt.utils.files.fopen(csr_path) as csr_file:
                 csr = csr_file.read()
@@ -142,6 +140,7 @@ def request(
         else:
             time.sleep(5)
 
+    private_key = request.private_key_pem
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     data = {
         'minion_id': minion_id,

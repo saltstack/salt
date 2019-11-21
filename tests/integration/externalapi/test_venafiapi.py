@@ -21,6 +21,7 @@ import pytest
 import tempfile
 from os import environ
 
+import logging
 log = logging.getLogger(__name__)
 
 def _random_name(prefix=''):
@@ -51,7 +52,7 @@ class VenafiTest(ShellCase):
     @with_random_name
     def test_request(self, name):
         log.info("Testing Venafi request cert")
-        log.info("Using venafi config:", self.master_opts['venafi'])
+        log.info("Using venafi config: %s", self.master_opts['venafi'])
         cn = '{0}.example.com'.format(name)
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
@@ -59,11 +60,13 @@ class VenafiTest(ShellCase):
                                 key_password='secretPassword',
                                 zone=environ.get('CLOUDZONE'))
         log.info("Ret is:\n", ret)
+        print("Ret is:\n", ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
 
-        log.info("Testing certificate:\n", cert_output)
+        log.info("Testing certificate:\n %s", cert_output)
+        print("Testing certificate:\n %s", cert_output)
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
@@ -73,7 +76,7 @@ class VenafiTest(ShellCase):
         ]
 
         pkey_output = ret['return'][1]
-        log.info("Testing pkey:\n", pkey_output)
+        log.info("Testing pkey:\n  %s", pkey_output)
         if not pkey_output:
             pytest.fail('venafi_private key not found in output_value')
 
