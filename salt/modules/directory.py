@@ -688,7 +688,7 @@ def get_hash(path, form='sha256', chunk_size=65536):
 
         salt '*' file.get_hash /etc/shadow
     '''
-    return salt.utils.hashutils.get_hash(os.path.expanduser(path), form, chunk_size)
+    return salt.utils.hashutils.get_hash(path, form)
 
 
 def get_source_sum(file_name='',
@@ -3294,24 +3294,6 @@ def link(src, path):
     return False
 
 
-def is_symlink(path):
-    '''
-    Check if the path is a symbolic link
-
-    CLI Example:
-
-    .. code-block:: bash
-
-       salt '*' file.is_link /path/to/link
-    '''
-    # This function exists because os.path.islink does not support Windows,
-    # therefore a custom function will need to be called. This function
-    # therefore helps API consistency by providing a single function to call for
-    # both operating systems.
-
-    return salt.utils.path.is_symlink(path)
-
-
 def symlink(src, path):
     '''
     Create a symbolic link (symlink, soft link) to a file
@@ -3595,11 +3577,48 @@ def statvfs(path):
     return False
 
 
-def get_absolute(path):
-    return salt.utils.path.get_absolute(path)
+def get_absolute(path, resolve=True):
+    return salt.utils.path.get_absolute(path, resolve)
 
 
-def stats(path, hash_type=None, follow_symlinks=True):
+def set_link(src, path, hard=False, resolve=True):
+    return salt.utils.path.set_link(src, path, hard, resolve)
+
+
+def get_link(path, resolve=True):
+    return salt.utils.path.get_link(path, resolve)
+
+
+def dir_to_list(path, recursive=False, follow_symlinks=False):
+    return salt.utils.path.dir_to_list(path, recursive, follow_symlinks)
+
+
+def dir_to_dict(path, recursive=False, follow_symlinks=False):
+    return salt.utils.path.dir_to_dict(path, recursive, follow_symlinks)
+
+
+def dir_is_absent(path):
+    return salt.utils.path.dir_is_absent(path)
+
+
+def file_is_absent(path):
+    return salt.utils.path.file_is_absent(path)
+
+
+def remove(path, recursive=False, follow_symlinks=False):
+    return salt.utils.path.remove(path, recursive, follow_symlinks)
+
+
+
+def dir_is_empty(path):
+    return salt.utils.path.dir_is_empty(path)
+
+
+def is_symlink(path):
+    return salt.utils.path.is_symlink(path)
+
+
+def stats(path, hash_type="sha256", follow_symlinks=True):
     '''
     Return a dict containing the stats for a given file
 
@@ -3609,7 +3628,9 @@ def stats(path, hash_type=None, follow_symlinks=True):
 
         salt '*' directory.stats /etc/passwd
     '''
-    return salt.utils.path.stats(path, hash_type, follow_symlinks)
+    ret = salt.utils.path.stats(path, hash_type, follow_symlinks)
+
+    return ret
 
 
 def rmdir(path):
@@ -4067,7 +4088,7 @@ def get_managed(
             parsed_scheme = 'file'
 
         if parsed_scheme == 'salt':
-            source_sum = __salt__['cp.hash_file'](source, saltenv)
+            source_sum =    __salt__['cp.hash_file'](source, saltenv)
             if not source_sum:
                 return '', {}, 'Source file {0} not found in saltenv \'{1}\''.format(source, saltenv)
         elif not source_hash and unix_local_source:

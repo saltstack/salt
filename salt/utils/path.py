@@ -16,10 +16,13 @@ import re
 import stat
 import string
 import struct
+import sys
 
 # Import Salt libs
 import salt.utils.args
+import salt.utils.files
 import salt.utils.group
+import salt.utils.hashutils
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.pycrypto
@@ -41,52 +44,90 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-def islink(path):
+def set_link(src, path, hard=False, resolve=True):
     '''
-    Equivalent to os.path.islink()
-    '''
-    if six.PY3 or not salt.utils.platform.is_windows():
-        return os.path.islink(path)
-
-    if not HAS_WIN32FILE:
-        log.error('Cannot check if %s is a link, missing required modules', path)
-
-    if not _is_reparse_point(path):
-        return False
-
-    # check that it is a symlink reparse point (in case it is something else,
-    # like a mount point)
-    reparse_data = _get_reparse_data(path)
-
-    # sanity check - this should not happen
-    if not reparse_data:
-        # not a reparse point
-        return False
-
-    # REPARSE_DATA_BUFFER structure - see
-    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
-
-    # parse the structure header to work out which type of reparse point this is
-    header_parser = struct.Struct('L')
-    ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
-    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
-    if not ReparseTag & 0xA000FFFF == 0xA000000C:
-        return False
-    else:
-        return True
-
-
-def get_absolute(path):
-    '''
-
+    Create soft link or hard link.
+    :param src: The file or
     :param path:
+    :param hard:
+    :param resolve:
     :return:
     '''
-    if is_absolute(path):
-        ret = path
+    ret = False
+    abs_src = get_link(src, resolve=resolve)
+    abs_path = get_link(path, resolve=False)
+
+    if is_symlink(abs_path):
+        log.error("The path {} is already a link.".format(abs_path))
+    elif exist(abs_path):
+        log.error("The path {} already exist.".format(abs_path))
+    elif hard:
+        pathlib.Path(abs_path).link_to(abs_src)
+        ret = True
     else:
-        ret = os.path.realpath(os.path.expanduser(path))
+        pathlib.Path(abs_path).symlink_to(abs_src)
+        ret = True
+
     return ret
+
+
+def get_link(path, resolve=True, canonicalize=False):
+    '''
+    Return the path pointing by a symlink.
+    :param path: The symlink to managed.
+    :param resolve: True to return the pointing path.
+    :param canonicalize: True to return the real end pointing path (In case of multiple symlink).
+    :return: The pointing path.
+    '''
+    ret = ''
+    if canonicalize:
+        ret = os.path.realpath(path)
+    else:
+        ret = str(get_absolute(path, resolve))
+    return ret
+
+
+def get_absolute(path, resolve=True):
+    '''
+    Return the absolute path in parameter.
+    The path does not necessary exist on the file system.
+    If the input path is 'foo', return '/tmp/foo' if the execution is from '/tmp' directory.
+    If the input path is './foo', return '/tmp/foo' if the execution is from '/tmp' directory.
+    If the input path is '../foo', return '/foo' if the execution is from '/tmp' directory.
+    If the input path is '~/foo', return '/root/foo' if the execution is by the user 'root' with the home '/root'.
+    If the input path is '/bar/fo*', return '/bar/foo'.
+    :param path: The path to managed.
+    :param resolve: 'True' to resolve '/bar/../foo' to '/foo', else 'False' to resolve '/bar/../foo' to '/bar/../foo'.
+    :return: The absolute path.
+    '''
+    ret = ''
+    if resolve:
+        ret = pathlib.Path(path).resolve()
+    else:
+        ret = pathlib.Path(path).absolute()
+    return str(ret)
+
+
+def get_basename(path, resolve=True):
+    '''
+    Return the final component to the path.
+    :param path: Absolute path to managed.
+    :param resolve: See the get_absolute definition.
+    :return: The basename.
+    '''
+    abs_path = get_absolute(path, resolve)
+    return str(pathlib.PurePath(abs_path).name)
+
+
+def get_parent(path, resolve=True):
+    '''
+    Return the parent of the path.
+    :param path: Absolute path to managed.
+    :param resolve: See the get_absolute definition.
+    :return: The parent path.
+    '''
+    abs_path = get_absolute(path, resolve)
+    return str(pathlib.PurePath(abs_path).parent)
 
 
 def is_absolute(path):
@@ -96,15 +137,6 @@ def is_absolute(path):
     :return: True if the path is absolute, else False.
     '''
     return pathlib.PurePath(path).is_absolute()
-
-
-def exist(path):
-    '''
-    Test if the path exist.
-    :param path: Absolute path.
-    :return: True if the path exist, else False.
-    '''
-    return pathlib.Path(path).exists()
 
 
 def is_dir(path):
@@ -140,7 +172,7 @@ def is_symlink(path):
     :param path: Absolute path.
     :return: True if the path is a symlink, else False.
     '''
-    return True if exist(path) and pathlib.Path(path).is_symlink() else False
+    return True if pathlib.Path(path).is_symlink() else False
 
 
 def is_socket(path):
@@ -179,9 +211,91 @@ def is_char_device(path):
     return True if exist(path) and pathlib.Path(path).is_char_device() else False
 
 
+def get_type(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    ret = ''
+    abs_path = get_absolute(path, False)
+    if is_char_device(abs_path):
+        ret = 'char'
+    elif is_block_device(abs_path):
+        ret = 'block'
+    elif is_symlink(abs_path):
+        ret = 'link'
+    elif is_fifo(abs_path):
+        ret = 'pipe'
+    elif is_socket(abs_path):
+        ret = 'socket'
+    elif is_file(abs_path):
+        ret = 'file'
+    elif is_dir(abs_path):
+        ret = 'dir'
+    return ret
+
+
+def dir_to_list(path, recursive=False, follow_symlinks=False):
+    '''
+    List the content of a directory.
+    :param path: Absolute path to the directory to managed.
+    :param recursive:
+    :param follow_symlinks:
+    :return: List of directory contents.
+    '''
+    ret = []
+    tmp_ret = []
+    abs_path = get_absolute(path)
+
+    if is_dir(abs_path):
+        for element in pathlib.Path(abs_path).iterdir():
+            element = str(element)
+            if (follow_symlinks and is_symlink(element)) or (recursive and is_dir(element)):
+                tmp_ret.append(element)
+                tmp_ret.extend(dir_to_list(element))
+            else:
+                tmp_ret.append(element)
+    else:
+        tmp_ret.append(abs_path)
+
+    # To clean duplicates.
+    for ele in tmp_ret:
+        if ele not in ret:
+            ret.append(ele)
+    return sorted(ret)
+
+
+def dir_to_dict(path, recursive=False, follow_symlinks=False):
+    '''
+
+    :param path:
+    :param recursive:
+    :param follow_symlinks:
+    :return:
+    '''
+    ret = {}
+    for ele in dir_to_list(path, recursive, follow_symlinks):
+        ele_type = get_type(ele)
+        if ele_type not in ret.keys():
+            ret.update({ele_type: [ele]})
+        else:
+            ret[ele_type].append(ele)
+    return ret
+
+
+def dir_is_empty(path):
+    '''
+    Check if the directory empty on the host file system.
+    :param path: Absolute path to the directory to managed.
+    :return: 'True' if the path is empty, else 'False'.
+    '''
+    return len(dir_to_list(path)) == 0
+
+
 def dir_is_present(path, parents=True):
     '''
-    Make the directory if it's not present.
+    Make the directory if it's not present. 'mkdir' like.
     :param path: Absolute path to the directory to create.
     :param parents: Make the parents directories.
     :return: True if the directory is present, else False.
@@ -192,9 +306,21 @@ def dir_is_present(path, parents=True):
     return is_dir(path)
 
 
+def dir_is_absent(path):
+    '''
+    Remove the directory if it's empty. 'rm' like.
+    :param path:
+    :return:
+    '''
+    if exist(path):
+        if is_dir(path) and dir_is_empty(path):
+            pathlib.Path(get_absolute(path)).rmdir()
+    return exist(path)
+
+
 def file_is_present(path):
     '''
-    Touch the file if it's not present.
+    Touch the file if it's not present. 'touch' like.
     :param path: Absolute path to the file to create.
     :return: True if the file is present, else False.
     '''
@@ -202,6 +328,37 @@ def file_is_present(path):
     if not exist(path):
         pathlib.Path(path).touch()
     return is_file(path)
+
+
+def file_is_absent(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    # Requiered to check if it's a link, in case of broken link.
+    if exist(path) or is_symlink(path):
+        if is_file(path) or is_symlink(path):
+            pathlib.Path(path).unlink()
+    return exist(path)
+
+
+def remove(path, recursive=False, follow_symlinks=False):
+    '''
+    TO TEST
+    :param path:
+    :param recursive:
+    :param follow_symlinks:
+    :return:
+    '''
+    if is_dir(path):
+        for ele in dir_to_list(path, recursive, follow_symlinks):
+            remove(ele, recursive, follow_symlinks)
+        dir_is_absent(path)
+    else:
+        file_is_absent(path)
+
+    return exist(path)
 
 
 def random_tmp_file(tmp_dir='/tmp'):
@@ -218,7 +375,7 @@ def random_tmp_file(tmp_dir='/tmp'):
     return ret
 
 
-def stats(path, hash_type='sha256', follow_symlinks=True):
+def stats(path, hash_type="sha256", follow_symlinks=True):
     '''
     Return a dict containing the stats for a given path.
     :param path:
@@ -226,8 +383,8 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
     :param follow_symlinks:
     :return:
     '''
-    path = get_absolute(path)
     ret = {}
+    path = get_absolute(path)
     if exist(path):
         if is_symlink(path) and not follow_symlinks:
             path_stat = pathlib.Path(path).lstat()
@@ -245,25 +402,85 @@ def stats(path, hash_type='sha256', follow_symlinks=True):
         ret['ctime'] = path_stat.st_ctime
         ret['size'] = path_stat.st_size
         ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(path_stat.st_mode)))
-        ret['sum'] = salt.utils.hashutils.get_hash(path, hash_type)
+        ret['type'] = get_type(path)
 
-        # Determine the type of the path.
-        if is_dir(path):
-            ret['type'] = 'dir'
-        elif is_char_device(path):
-            ret['type'] = 'char'
-        elif is_block_device(path):
-            ret['type'] = 'block'
-        elif is_file(path):
-            ret['type'] = 'file'
-        elif is_symlink(path):
-            ret['type'] = 'link'
-        elif is_fifo(path):
-            ret['type'] = 'pipe'
-        elif is_socket(path):
-            ret['type'] = 'socket'
+        if is_file(path):
+            ret['sum'] = salt.utils.hashutils.get_hash(path, hash_type)
 
     return ret
+
+
+def exist(path):
+    '''
+    Test if the path exist.
+    :param path: Absolute path.
+    :return: True if the path exist, else False.
+    '''
+    return pathlib.Path(path).exists()
+
+
+def rename(src, path, safe=False):
+    '''
+
+    :param src:
+    :param path:
+    :param safe:
+    :return:
+    '''
+    ret = False
+    abs_src = get_absolute(src)
+    abs_path = get_absolute(path)
+
+    if exist(abs_path):
+        if safe:
+            log.error("The destination {} already exist.".format(abs_path))
+        elif get_type(abs_src) == get_type(abs_path):
+            pathlib.Path(abs_src).replace(abs_path)
+            ret = True
+        else:
+            log.error(
+                "The source path_type '{}' is different to the destination path_type '{}'.".format(abs_src, abs_path))
+    else:
+        pathlib.Path(abs_src).replace(abs_path)
+        ret = True
+
+    return ret
+
+
+def islink(path):
+    '''
+    [DEPRECATED] use 'is_symlink()'
+    Equivalent to os.path.islink()
+    '''
+    if six.PY3 or not salt.utils.platform.is_windows():
+        return os.path.islink(path)
+
+    if not HAS_WIN32FILE:
+        log.error('Cannot check if %s is a link, missing required modules', path)
+
+    if not _is_reparse_point(path):
+        return False
+
+    # check that it is a symlink reparse point (in case it is something else,
+    # like a mount point)
+    reparse_data = _get_reparse_data(path)
+
+    # sanity check - this should not happen
+    if not reparse_data:
+        # not a reparse point
+        return False
+
+    # REPARSE_DATA_BUFFER structure - see
+    # http://msdn.microsoft.com/en-us/library/ff552012.aspx
+
+    # parse the structure header to work out which type of reparse point this is
+    header_parser = struct.Struct('L')
+    ReparseTag, = header_parser.unpack(reparse_data[:header_parser.size])
+    # http://msdn.microsoft.com/en-us/library/windows/desktop/aa365511.aspx
+    if not ReparseTag & 0xA000FFFF == 0xA000000C:
+        return False
+    else:
+        return True
 
 
 def readlink(path):

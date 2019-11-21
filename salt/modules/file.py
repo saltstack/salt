@@ -3333,11 +3333,23 @@ def truncate(path, length):
         seek_fh.truncate(int(length))
 
 
-def link(src, path):
+def link(src, path, resolve=True):
     '''
     .. versionadded:: 2014.1.0
 
-    Create a hard link to a file
+    Create a hard link to a file.
+
+    src:
+        Path to the point file. Have to be an absolute path.
+
+    path:
+        Path to the link to create. Have to be an absolute path.
+
+    resolve:
+        True to get the final src path.
+        If src is a link, like : '/tmp/foo' link to '/tmp/bar'
+            And resolve=True, else point to '/tmp/bar'.
+            And resolve=False, else point to '/tmp/foo'.
 
     CLI Example:
 
@@ -3345,40 +3357,24 @@ def link(src, path):
 
         salt '*' file.link /path/to/file /path/to/link
     '''
-    src = os.path.expanduser(src)
-
-    if not os.path.isabs(src):
-        raise SaltInvocationError('File path must be absolute.')
-
-    try:
-        os.link(src, path)
-        return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
-    return False
+    return salt.utils.path.set_link(src, path, True, resolve)
 
 
-def is_link(path):
+def symlink(src, path, resolve=True):
     '''
-    Check if the path is a symbolic link
+    Create a symbolic link (symlink, soft link) to a file.
 
-    CLI Example:
+    src:
+        Path to the point file. Have to be an absolute path.
 
-    .. code-block:: bash
+    path:
+        Path to the link to create. Have to be an absolute path.
 
-       salt '*' file.is_link /path/to/link
-    '''
-    # This function exists because os.path.islink does not support Windows,
-    # therefore a custom function will need to be called. This function
-    # therefore helps API consistency by providing a single function to call for
-    # both operating systems.
-
-    return os.path.islink(os.path.expanduser(path))
-
-
-def symlink(src, path):
-    '''
-    Create a symbolic link (symlink, soft link) to a file
+    resolve:
+        True to get the final src path.
+        If src is a link, like : '/tmp/foo' link to '/tmp/bar'
+            And resolve=True, else point to '/tmp/bar'.
+            And resolve=False, else point to '/tmp/foo'.
 
     CLI Example:
 
@@ -3386,29 +3382,55 @@ def symlink(src, path):
 
         salt '*' file.symlink /path/to/file /path/to/link
     '''
-    path = os.path.expanduser(path)
+    return salt.utils.path.set_link(src, path, False, resolve)
 
-    try:
-        if os.path.normpath(os.readlink(path)) == os.path.normpath(src):
-            log.debug('link already in correct state: %s -> %s', path, src)
-            return True
-    except OSError:
-        pass
 
-    if not os.path.isabs(path):
-        raise SaltInvocationError('File path must be absolute.')
+def is_link(path):
+    '''
+    Check if the path is a symbolic link.
 
-    try:
-        os.symlink(src, path)
-        return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
-    return False
+    path:
+        Path to the link file.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_link /path/to/link
+    '''
+    return salt.utils.path.is_symlink(path)
+
+
+def readlink(path, canonicalize=False):
+    '''
+    .. versionadded:: 2014.1.0
+
+    Return the path that a symlink points to.
+
+    path:
+        The symlink path.
+
+    canonicalize:
+        If 'True', then it return the final target.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' file.readlink /path/to/link
+    '''
+    return salt.utils.path.get_link(path, canonicalize=canonicalize)
 
 
 def rename(src, dst):
     '''
-    Rename a file or directory
+    Rename a file or directory.
+
+    src:
+        Path to the file or directory to rename.
+
+    dst:
+        Path to the destination file or directory. If the path already exist, it will be remove.
 
     CLI Example:
 
@@ -3416,20 +3438,7 @@ def rename(src, dst):
 
         salt '*' file.rename /path/to/src /path/to/dst
     '''
-    src = os.path.expanduser(src)
-    dst = os.path.expanduser(dst)
-
-    if not os.path.isabs(src):
-        raise SaltInvocationError('File path must be absolute.')
-
-    try:
-        os.rename(src, dst)
-        return True
-    except OSError:
-        raise CommandExecutionError(
-            'Could not rename \'{0}\' to \'{1}\''.format(src, dst)
-        )
-    return False
+    return salt.utils.path.rename(src, dst)
 
 
 def copy(src, dst, recurse=False, remove_existing=False):
@@ -3578,33 +3587,6 @@ def read(path, binary=False):
         access_mode += 'b'
     with salt.utils.files.fopen(path, access_mode) as file_obj:
         return salt.utils.stringutils.to_unicode(file_obj.read())
-
-
-def readlink(path, canonicalize=False):
-    '''
-    .. versionadded:: 2014.1.0
-
-    Return the path that a symlink points to
-    If canonicalize is set to True, then it return the final target
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' file.readlink /path/to/link
-    '''
-    path = os.path.expanduser(path)
-
-    if not os.path.isabs(path):
-        raise SaltInvocationError('Path to link must be absolute.')
-
-    if not os.path.islink(path):
-        raise SaltInvocationError('A valid link was not specified.')
-
-    if canonicalize:
-        return os.path.realpath(path)
-    else:
-        return os.readlink(path)
 
 
 def readdir(path):
@@ -3779,7 +3761,10 @@ def remove(path):
 
 def directory_exists(path):
     '''
-    Tests to see if path is a valid directory.  Returns True/False.
+    Test if the path is a directory.
+
+    path:
+        The directory path to managed.
 
     CLI Example:
 
@@ -3788,12 +3773,16 @@ def directory_exists(path):
         salt '*' file.directory_exists /etc
 
     '''
-    return os.path.isdir(os.path.expanduser(path))
+    abs_path = salt.utils.path.get_absolute(path)
+    return salt.utils.path.is_dir(abs_path)
 
 
 def file_exists(path):
     '''
-    Tests to see if path is a valid file.  Returns True/False.
+    Test if the path is a file.
+
+    path:
+        The file path to managed.
 
     CLI Example:
 
@@ -3802,7 +3791,8 @@ def file_exists(path):
         salt '*' file.file_exists /etc/passwd
 
     '''
-    return os.path.isfile(os.path.expanduser(path))
+    abs_path = salt.utils.path.get_absolute(path)
+    return salt.utils.path.is_file(abs_path)
 
 
 def path_exists_glob(path):
@@ -5765,18 +5755,8 @@ def is_chrdev(name):
 
        salt '*' file.is_chrdev /dev/chr
     '''
-    name = os.path.expanduser(name)
-
-    stat_structure = None
-    try:
-        stat_structure = os.stat(name)
-    except OSError as exc:
-        if exc.errno == errno.ENOENT:
-            # If the character device does not exist in the first place
-            return False
-        else:
-            raise
-    return stat.S_ISCHR(stat_structure.st_mode)
+    abs_path = salt.utils.path.get_absolute(path)
+    return salt.utils.path.is_char_device(abs_path)
 
 
 def mknod_chrdev(name,
@@ -5830,7 +5810,7 @@ def mknod_chrdev(name,
     return ret
 
 
-def is_blkdev(name):
+def is_blkdev(path):
     '''
     Check if a file exists and is a block device.
 
@@ -5840,18 +5820,8 @@ def is_blkdev(name):
 
        salt '*' file.is_blkdev /dev/blk
     '''
-    name = os.path.expanduser(name)
-
-    stat_structure = None
-    try:
-        stat_structure = os.stat(name)
-    except OSError as exc:
-        if exc.errno == errno.ENOENT:
-            # If the block device does not exist in the first place
-            return False
-        else:
-            raise
-    return stat.S_ISBLK(stat_structure.st_mode)
+    abs_path = salt.utils.path.get_absolute(path)
+    return salt.utils.path.is_block_device(abs_path)
 
 
 def mknod_blkdev(name,
@@ -5905,9 +5875,12 @@ def mknod_blkdev(name,
     return ret
 
 
-def is_fifo(name):
+def is_fifo(path):
     '''
     Check if a file exists and is a FIFO.
+
+    path:
+        The path to the file to managed.
 
     CLI Example:
 
@@ -5915,18 +5888,8 @@ def is_fifo(name):
 
        salt '*' file.is_fifo /dev/fifo
     '''
-    name = os.path.expanduser(name)
-
-    stat_structure = None
-    try:
-        stat_structure = os.stat(name)
-    except OSError as exc:
-        if exc.errno == errno.ENOENT:
-            # If the fifo does not exist in the first place
-            return False
-        else:
-            raise
-    return stat.S_ISFIFO(stat_structure.st_mode)
+    abs_path = salt.utils.path.get_absolute(path)
+    return salt.utils.path.is_fifo(abs_path)
 
 
 def mknod_fifo(name,
@@ -6455,7 +6418,7 @@ def normpath(path):
 
         salt '*' file.normpath 'a/b/c/..'
     '''
-    return os.path.normpath(path)
+    return salt.utils.path.get_absolute(path)
 
 
 def basename(path):
@@ -6476,7 +6439,7 @@ def basename(path):
 
         salt '*' file.basename 'test/test.config'
     '''
-    return os.path.basename(path)
+    return salt.utils.path.get_basename(path)
 
 
 def dirname(path):
@@ -6497,7 +6460,7 @@ def dirname(path):
 
         salt '*' file.dirname 'test/path/filename.config'
     '''
-    return os.path.dirname(path)
+    return salt.utils.path.get_parent(path)
 
 
 def join(*args):
