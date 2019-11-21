@@ -457,7 +457,7 @@ class MinionBase(object):
 #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
-        self.executors = salt.loader.executors(self.opts, self.functions)
+        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
