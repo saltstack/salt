@@ -999,12 +999,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             min_wait_time = tornado.gen.sleep(self.application.opts['syndic_wait'])
 
         # To ensure job_not_running and all_return are terminated by each other, communicate using a future
-<<<<<<< HEAD
-        is_finished = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
-=======
         is_timed_out = tornado.gen.sleep(self.application.opts['gather_job_timeout'])
         is_finished = Future()
->>>>>>> f803928c56... saltnado: fix timeout handling
 
         # ping until the job is not running, while doing so, if we see new minions returning
         # that they are running the job, add them to the list
