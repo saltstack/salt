@@ -7,11 +7,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Python libs
 import codecs
+import io
 import logging
 import os
 import sys
 import tempfile
 import traceback
+from argparse import Namespace
 
 # Import 3rd-party libs
 import jinja2
@@ -560,35 +562,53 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
         {'result': bool,
          'data': <Error data or rendered file path>}
     """
-    if not os.path.isfile(sfn):
-        return {}
 
-    base_fname = os.path.basename(sfn)
-    name = base_fname.split(".")[0]
+    mod_is_file = not isinstance(sfn, io.StringIO)
 
-    if USE_IMPORTLIB:
-        # pylint: disable=no-member
-        loader = importlib.machinery.SourceFileLoader(name, sfn)
-        spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
-        if spec is None:
-            raise ImportError()
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        # pylint: enable=no-member
-        sys.modules[name] = mod
+    # the sfn is a path to a file,
+    # so we create a SourceFileLoader from the file
+    if mod_is_file:
+        if not os.path.isfile(sfn):
+            return {}
+
+        base_fname = os.path.basename(sfn)
+        name = base_fname.split('.')[0]
+
+        if USE_IMPORTLIB:
+            # pylint: disable=no-member
+            loader = importlib.machinery.SourceFileLoader(name, sfn)
+            spec = importlib.util.spec_from_file_location(name, sfn, loader=loader)
+            if spec is None:
+                raise ImportError()
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            # pylint: enable=no-member
+            sys.modules[name] = mod
+        else:
+            mod = imp.load_source(name, sfn)
+
+        mod_namespace = mod
     else:
-        mod = imp.load_source(name, sfn)
+        mod_namespace = Namespace()
 
     # File templates need these set as __var__
     if "__env__" not in kwargs and "saltenv" in kwargs:
-        setattr(mod, "__env__", kwargs["saltenv"])
+        setattr(mod_namespace, "__env__", kwargs["saltenv"])
         builtins = ["salt", "grains", "pillar", "opts"]
         for builtin in builtins:
             arg = "__{0}__".format(builtin)
-            setattr(mod, arg, kwargs[builtin])
+            setattr(mod_namespace, arg, kwargs[builtin])
 
     for kwarg in kwargs:
-        setattr(mod, kwarg, kwargs[kwarg])
+        setattr(mod_namespace, kwarg, kwargs[kwarg])
+
+    # if sfn is not a file, but python code (e.g. from a jinja template)
+    # we must prepare the global variables before we execute the code
+    if not mod_is_file:
+        mod_globals = vars(mod_namespace)
+        source_code = sfn.read()
+        exec(source_code, mod_globals)
+        mod = mod_namespace
 
     try:
         data = mod.run()
