@@ -41,9 +41,11 @@ from tests.support.mock import (
 )
 
 from salt.exceptions import CommandExecutionError
+import salt.utils.platform
 import salt.modules.chroot as chroot
 
 
+@skipIf(salt.utils.platform.is_windows(), 'This test cannot work on Windows')
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class ChrootTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -218,8 +220,8 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(chroot.__utils__, utils_mock), \
                 patch.dict(chroot.__salt__, salt_mock):
-            self.assertEqual(chroot.call('/chroot', 'ssh.set_auth_key',
-                                         user='user', key='key'), 'result')
+            self.assertEqual(chroot.call('/chroot', 'module.function',
+                                         key='value'), 'result')
             utils_mock['thin.gen_thin'].assert_called_once()
             salt_mock['config.option'].assert_called()
             salt_mock['archive.tar'].assert_called_once()
@@ -229,5 +231,5 @@ class ChrootTestCase(TestCase, LoaderModuleMockMixin):
                  '--metadata', '--local',
                  '--log-file', '/tmp01/log', '--cachedir', '/tmp01/cache',
                  '--out', 'json', '-l', 'quiet',
-                 '--', 'ssh.set_auth_key', 'user=user', 'key=key'])
+                 '--', 'module.function', 'key=value'])
             utils_mock['files.rm_rf'].assert_called_once()
