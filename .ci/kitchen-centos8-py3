@@ -4,14 +4,14 @@
 def testrun_timeout = 6
 
 def distro_name = 'centos'
-def distro_version = '7'
+def distro_version = '8'
 def python_version = 'py3'
-def nox_env_name = 'runtests-cloud'
+def nox_env_name = 'runtests-zeromq'
 def golden_images_branch = 'master'
-def nox_passthrough_opts = ''
+def nox_passthrough_opts = '--ssh-tests'
+def concurrent_builds = 1
 def use_spot_instances = true
 def jenkins_slave_label = 'kitchen-slave'
-def kitchen_platforms_file = '/var/jenkins/workspace/nox-cloud-platforms.yml'
 
 properties([
     buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '30')),
@@ -19,6 +19,18 @@ properties([
         booleanParam(defaultValue: true, description: 'Run full test suite', name: 'runFull')
     ])
 ])
+
+// Only set milestones on PR builds
+if (env.CHANGE_ID) {
+    // Be sure to cancel any previously running builds
+    def buildNumber = env.BUILD_NUMBER as int
+    if (buildNumber > concurrent_builds) {
+        // This will cancel the previous build which also defined a matching milestone
+        milestone(buildNumber - concurrent_builds)
+    }
+    // Define a milestone for this build so that, if another build starts, this one will be aborted
+    milestone(buildNumber)
+}
 
 runTests(
     env: env,
@@ -31,7 +43,6 @@ runTests(
     testrun_timeout: testrun_timeout,
     run_full: params.runFull,
     use_spot_instances: use_spot_instances,
-    jenkins_slave_label: jenkins_slave_label,
-    kitchen_platforms_file: kitchen_platforms_file)
+    jenkins_slave_label: jenkins_slave_label)
 
 // vim: ft=groovy
