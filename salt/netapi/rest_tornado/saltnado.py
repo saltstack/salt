@@ -1092,14 +1092,10 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                     raise tornado.gen.Return(True)
                 event = f.result()
             except TimeoutException:
-<<<<<<< HEAD
-                if not minion_running:
-=======
                 if not event.done():
                     event.set_result(None)
 
                 if not minion_running or is_finished.done():
->>>>>>> f803928c56... saltnado: fix timeout handling
                     raise tornado.gen.Return(True)
                 else:
                     ping_pub_data = yield self.saltclients['local'](tgt,
