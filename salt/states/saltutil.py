@@ -143,6 +143,20 @@ def sync_grains(name, **kwargs):
     return _sync_single(name, "grains", **kwargs)
 
 
+def sync_executors(name, **kwargs):
+    '''
+    Performs the same task as saltutil.sync_executors module
+    See :mod:`saltutil module for full list of options <salt.modules.saltutil>`
+
+    .. code-block:: yaml
+
+        sync_everything:
+          saltutil.sync_executors:
+            - refresh: True
+    '''
+    return _sync_single(name, "executors", **kwargs)
+
+
 def sync_log_handlers(name, **kwargs):
     '''
     Performs the same task as saltutil.sync_log_handlers module

@@ -901,6 +901,7 @@ def installed(name,
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        disable_version_check=True,
         **kwargs
     )
 

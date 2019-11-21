@@ -1524,7 +1524,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'lexists', mock_lex):
                 comt = ('The target file "{0}" exists and will not be '
                         'overwritten'.format(name))
-                ret.update({'comment': comt, 'result': False})
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
         mock_lex = MagicMock(side_effect=[True, True, True])
