@@ -280,6 +280,12 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
     default value or you can optionally pass the 'admin_source' option
     providing your own adminfile to the minions.
 
+    Additionally, when using the admin_source option, admin_source_hash, admin_source_hash_name, and
+    admin_source_skip_verify can be suppplied to provide hash verification information
+    for the admin_source file.  These correspond to the 'source_hash', 'source_hash_name', and
+    'skip_verify' parameters of the file.cached state.  If none of these parameters are supplied
+    no hash verification will be performed on the source file (i.e. skip_verify = True).
+
     Note: You can find all of the possible options to provide to the adminfile
     by reading the admin man page:
 
@@ -331,7 +337,12 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         ``sources`` parameter.
 
     If the package has an interactive script that requires a response file, supply the
-        response file with the 'response_source' parameter
+    response file with the 'response_source' parameter.  Like the admin_source option, 
+    this option makes use of the response_source_hash, response_source_hash_name, and
+    response_source_skip_verify can be suppplied to provide hash verification information
+    for the response_source file.  These correspond to the 'source_hash', 'source_hash_name', and
+    'skip_verify' parameters of the file.cached state.  If none of these parameters are supplied
+    no hash verification will be performed on the source file (i.e. skip_verify = True).
 
     CLI Example:
 
@@ -371,8 +382,30 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         return {}
 
     try:
-        if "admin_source" in kwargs:
-            adminfile = __salt__["cp.cache_file"](kwargs["admin_source"], saltenv)
+        # instatiate a state loader so we can use the file.cached state
+        states = salt.loader.states(
+            __opts__,
+            __salt__,
+            __utils__,
+            salt.loader.serializers(__opts__))
+        if 'admin_source' in kwargs:
+            try:
+                cache_result = states['file.cached'](kwargs['admin_source'],
+                                                     source_hash=kwargs.get('admin_source_hash', ''),
+                                                     source_hash_name=kwargs.get('admin_source_hash_name', None),
+                                                     skip_verify=kwargs.get('admin_source_skip_verify', True),
+                                                     saltenv=saltenv)
+            except Exception as exc:
+                raise CommandExecutionError('Failed to cache {0}: {1}'.format(
+                        salt.utils.url.redact_http_basic_auth(kwargs['admin_source']),
+                        exc.__str__()))
+            if cache_result['result']:
+                adminfile = __salt__['cp.is_cached'](kwargs['admin_source'], saltenv)
+            else:
+                raise CommandExecutionError(
+                        'Failed to download %s',
+                        salt.utils.url.redact_http_basic_auth(kwargs['admin_source'])
+                )
         else:
             adminfile = _write_adminfile(kwargs)
 
@@ -380,9 +413,24 @@ def install(name=None, sources=None, saltenv="base", **kwargs):
         cmd_prefix = ["/usr/sbin/pkgadd", "-n", "-a", adminfile]
 
         if 'response_source' in kwargs:
-            responsefile = __salt__['cp.cache_file'](kwargs['response_source'], saltenv)
-            cmd_prefix = cmd_prefix + ['-r', responsefile]
-
+            try:
+                cache_result = states['file.cached'](kwargs['response_source'],
+                                                     source_hash=kwargs.get('response_source_hash', ''),
+                                                     source_hash_name=kwargs.get('response_source_hash_name', None),
+                                                     skip_verify=kwargs.get('response_source_skip_verify', True),
+                                                     saltenv=saltenv)
+            except Exception as exc:
+                raise CommandExecutionError('Failed to cache {0}: {1}'.format(
+                        salt.utils.url.redact_http_basic_auth(kwargs['response_source']),
+                        exc.__str__()))
+            if cache_result['result']:
+                responsefile = __salt__['cp.is_cached'](kwargs['response_source'], saltenv)
+                cmd_prefix = cmd_prefix + ['-r', responsefile]
+            else:
+                raise CommandExecutionError(
+                        'Failed to download %s',
+                        salt.utils.url.redact_http_basic_auth(kwargs['response_source'])
+                )
 
         # Only makes sense in a global zone but works fine in non-globals.
         if kwargs.get("current_zone_only") in (True, "True"):
