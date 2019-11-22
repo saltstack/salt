@@ -19,8 +19,8 @@ from tests.support.case import TestCase
 from tests.support.helpers import TestsLoggingHandler
 
 # Import Salt libs
-from salt.log import setup as saltlog
-from salt.log.handlers import StreamHandler
+from salt._logging.impl import SaltLoggingClass
+from salt._logging.handlers import StreamHandler
 
 
 class TestLog(TestCase):
@@ -31,7 +31,7 @@ class TestLog(TestCase):
     def test_issue_2853_regex_TypeError(self):
         # Now, python's logging logger class is ours.
         # Let's make sure we have at least one instance
-        log = saltlog.SaltLoggingClass(__name__)
+        log = SaltLoggingClass(__name__)
 
         # Test for a format which includes digits in name formatting.
         log_format = '[%(name)-15s] %(message)s'
@@ -43,7 +43,7 @@ class TestLog(TestCase):
             # Let's create another log instance to trigger salt's logging class
             # calculations.
             try:
-                saltlog.SaltLoggingClass('{0}.with_digits'.format(__name__))
+                SaltLoggingClass('{0}.with_digits'.format(__name__))
             except Exception as err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
@@ -62,7 +62,7 @@ class TestLog(TestCase):
             # Let's create another log instance to trigger salt's logging class
             # calculations.
             try:
-                saltlog.SaltLoggingClass('{0}.without_digits'.format(__name__))
+                SaltLoggingClass('{0}.without_digits'.format(__name__))
             except Exception as err:
                 raise AssertionError(
                     'No exception should have been raised: {0}'.format(err)
@@ -75,7 +75,7 @@ class TestLog(TestCase):
         def raise_exception_on_purpose():
             1/0  # pylint: disable=pointless-statement
 
-        log = saltlog.SaltLoggingClass(__name__)
+        log = SaltLoggingClass(__name__)
 
         # Only stream2 should contain the traceback
         stream1 = StringIO()
