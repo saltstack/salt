@@ -127,11 +127,6 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
 -----END CERTIFICATE REQUEST-----
         """
 
-        # tmp_dir = tempfile.gettempdir()
-        # with fopen(path.join(tmp_dir, 'venafi-temp-test-csr.pem'), 'w+') as f:
-        #     f.write(csr_pem)
-        #     csr_path = f.name
-
         with tempfile.NamedTemporaryFile('w+') as f:
             f.write(csr_pem)
             f.flush()
