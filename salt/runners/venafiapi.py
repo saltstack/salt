@@ -130,7 +130,6 @@ def request(
             sys.exit(1)
     conn.request_cert(request, zone)
 
-
     #TODO: add timeout parameter here
     t = time.time() + 300
     while time.time() < t:

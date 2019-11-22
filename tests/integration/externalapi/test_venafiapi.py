@@ -23,6 +23,7 @@ from os import environ
 import logging
 log = logging.getLogger(__name__)
 
+
 def _random_name(prefix=''):
     ret = prefix
     for _ in range(8):
@@ -58,7 +59,7 @@ class VenafiTest(ShellCase):
                                 dns_name=cn,
                                 key_password='secretPassword',
                                 zone=environ.get('CLOUDZONE'))
-        log.debug("Ret is:\n", ret)
+        log.debug("Ret is:\n %s", ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
@@ -136,7 +137,7 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
                                     minion_id=cn,
                                     csr_path=csr_path,
                                     zone=environ.get('CLOUDZONE'))
-            log.debug("Ret is:\n", ret)
+            log.debug("Ret is:\n %s", ret)
             cert_output = ret['return'][0]
             if not cert_output:
                 pytest.fail('venafi_certificate not found in output_value')
