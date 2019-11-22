@@ -15,6 +15,7 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.helpers import destructiveTest
 
 # Import Salt libs
 import salt.utils.compat
@@ -277,12 +278,16 @@ class TestWhich(TestCase):
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
+@destructiveTest
 class TestPath(TestCase):
     def setUp(self):
-        self.dir_exist = os.path.join(os.path.dirname(__file__), 'dir_exist')
+        self.working_dir = tempfile.TemporaryDirectory().name
+        if not os.path.exists(self.working_dir):
+            os.mkdir(self.working_dir)
+        self.dir_exist = os.path.join(self.working_dir, 'dir_exist')
         if not os.path.exists(self.dir_exist):
             os.mkdir(self.dir_exist)
-        self.dir_absent = os.path.join(os.path.dirname(__file__), 'dir_absent')
+        self.dir_absent = os.path.join(self.working_dir, 'dir_absent')
         self.file_exist = os.path.join(self.dir_exist, 'file_exist.txt')
         with open(self.file_exist, 'a'):
             os.utime(self.file_exist, None)
@@ -297,11 +302,14 @@ class TestPath(TestCase):
             os.rmdir(self.dir_exist)
         if os.path.exists(self.dir_absent):
             os.rmdir(self.dir_absent)
+        if os.path.exists(self.working_dir):
+            os.rmdir(self.working_dir)
 
         del self.dir_exist
         del self.dir_absent
         del self.file_exist
         del self.file_absent
+        del self.working_dir
 
     def test_path_is_absolute(self):
         self.assertTrue(salt.utils.path.is_absolute(self.dir_exist))
@@ -343,3 +351,438 @@ class TestPath(TestCase):
         tmp_file = salt.utils.path.random_tmp_file(self.dir_exist)
         self.assertTrue(os.path.exists(tmp_file))
         os.remove(tmp_file)
+
+
+# @skipIf(NO_MOCK, NO_MOCK_REASON)
+# @destructiveTest
+class path_remove_TestCase(TestCase):
+
+    def setUp(self):
+        self.working_dir = tempfile.TemporaryDirectory().name
+        self.file_present = os.path.join(self.working_dir, 'file_present')
+        self.dir_one_present = os.path.join(self.working_dir, 'dir_one_present')
+        self.file_one_present = os.path.join(self.dir_one_present, 'file_one_present')
+        self.link_file_one_present = os.path.join(self.working_dir, 'link_file_one_present')
+        self.dir_two_present = os.path.join(self.working_dir, 'dir_two_present')
+        self.link_dir_two_present = os.path.join(self.working_dir, 'link_dir_two_present')
+        self.file_two_present = os.path.join(self.dir_two_present, 'file_two_present')
+        self.dir_tree_present = os.path.join(self.working_dir, 'dir_tree_present')
+        self.file_tree_absent = os.path.join(self.dir_tree_present, 'file_tree_absent')
+        self.link_file_tree_absent = os.path.join(self.working_dir, 'link_file_tree_absent')
+        self.dir_four_absent = os.path.join(self.working_dir, 'dir_four_absent')
+        self.link_dir_four_absent = os.path.join(self.working_dir, 'link_dir_four_absent')
+
+        self.other_dir = tempfile.TemporaryDirectory().name
+        self.link_other_dir_present = os.path.join(self.working_dir, 'link_other_dir_present')
+        self.other_file_present = os.path.join(self.other_dir, 'other_file_present')
+        self.link_other_file_present = os.path.join(self.working_dir, 'link_other_file_present')
+
+        salt.utils.path.dir_is_present(self.working_dir)
+        salt.utils.path.file_is_present(self.file_present)
+        salt.utils.path.dir_is_present(self.dir_one_present)
+        salt.utils.path.file_is_present(self.file_one_present)
+        salt.utils.path.set_link(self.file_one_present, self.link_file_one_present)
+        salt.utils.path.dir_is_present(self.dir_two_present)
+        salt.utils.path.set_link(self.dir_two_present, self.link_dir_two_present)
+        salt.utils.path.file_is_present(self.file_two_present)
+        salt.utils.path.dir_is_present(self.dir_tree_present)
+        salt.utils.path.set_link(self.file_tree_absent, self.link_file_tree_absent)
+        salt.utils.path.set_link(self.dir_four_absent, self.link_dir_four_absent)
+
+        salt.utils.path.dir_is_present(self.other_dir)
+        salt.utils.path.set_link(self.other_dir, self.link_other_dir_present)
+        salt.utils.path.file_is_present(self.other_file_present)
+        salt.utils.path.set_link(self.other_file_present, self.link_other_file_present)
+
+    def tearDown(self):
+        salt.utils.path.file_is_absent(self.link_other_file_present)
+        salt.utils.path.file_is_absent(self.other_file_present)
+        salt.utils.path.file_is_absent(self.link_other_dir_present)
+        salt.utils.path.dir_is_absent(self.other_dir)
+
+        salt.utils.path.file_is_absent(self.link_dir_four_absent)
+        salt.utils.path.file_is_absent(self.link_file_tree_absent)
+        salt.utils.path.dir_is_absent(self.dir_tree_present)
+        salt.utils.path.file_is_absent(self.file_two_present)
+        salt.utils.path.file_is_absent(self.link_dir_two_present)
+        salt.utils.path.dir_is_absent(self.dir_two_present)
+        salt.utils.path.file_is_absent(self.link_file_one_present)
+        salt.utils.path.file_is_absent(self.file_one_present)
+        salt.utils.path.dir_is_absent(self.dir_one_present)
+        salt.utils.path.file_is_absent(self.file_present)
+        salt.utils.path.dir_is_absent(self.working_dir)
+
+        del self.link_other_file_present
+        del self.other_file_present
+        del self.link_other_dir_present
+        del self.other_dir
+
+        del self.link_dir_four_absent
+        del self.dir_four_absent
+        del self.link_file_tree_absent
+        del self.file_tree_absent
+        del self.dir_tree_present
+        del self.file_two_present
+        del self.link_dir_two_present
+        del self.dir_two_present
+        del self.link_file_one_present
+        del self.file_one_present
+        del self.dir_one_present
+        del self.file_present
+        del self.working_dir
+
+    #  FUNC: remove
+    ##################################################
+    def test_dir_remove_file_absent(self):
+        self.assertEqual([self.file_tree_absent], salt.utils.path.remove(self.file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_tree_absent))
+
+    def test_dir_remove_file_present(self):
+        self.assertEqual([self.file_present], salt.utils.path.remove(self.file_present))
+        self.assertFalse(salt.utils.path.exist(self.file_present))
+
+    def test_dir_remove_dir_absent(self):
+        self.assertEqual([self.dir_four_absent], salt.utils.path.remove(self.dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_dir_remove_dir_present(self):
+        self.assertEqual([self.dir_tree_present], salt.utils.path.remove(self.dir_tree_present))
+        self.assertFalse(salt.utils.path.exist(self.dir_tree_present))
+
+    def test_dir_remove_symlink_file_absent(self):
+        self.assertEqual([self.link_file_tree_absent], salt.utils.path.remove(self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_file_tree_absent))
+
+    def test_dir_remove_symlink_file_present(self):
+        self.assertEqual([self.link_file_one_present], salt.utils.path.remove(self.link_file_one_present))
+        self.assertFalse(salt.utils.path.exist(self.link_file_one_present))
+        self.assertTrue(salt.utils.path.exist(self.file_one_present))
+
+    def test_dir_remove_symlink_dir_absent(self):
+        self.assertEqual([self.link_dir_four_absent], salt.utils.path.remove(self.link_dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_dir_four_absent))
+
+    def test_dir_remove_symlink_dir_present(self):
+        self.assertEqual([self.link_dir_two_present], salt.utils.path.remove(self.link_dir_two_present))
+        self.assertFalse(salt.utils.path.exist(self.link_dir_two_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_two_present))
+
+    def test_dir_remove_dir_not_empty(self):
+        self.assertEqual([], salt.utils.path.remove(self.dir_one_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_one_present))
+        self.assertTrue(salt.utils.path.exist(self.file_one_present))
+
+    def test_dir_remove_dir_not_empty_recursive_True(self):
+        wanted_ret = sorted([self.working_dir,
+                             self.file_present,
+                             self.dir_one_present,
+                             self.file_one_present,
+                             self.dir_two_present,
+                             self.file_two_present,
+                             self.dir_tree_present,
+                             self.link_dir_four_absent,
+                             self.link_dir_two_present,
+                             self.link_file_one_present,
+                             self.link_file_tree_absent,
+                             self.link_other_dir_present,
+                             self.link_other_file_present])
+        self.assertEqual(wanted_ret, salt.utils.path.remove(self.working_dir, recursive=True))
+
+    def test_dir_remove_dir_not_empty_follow_symlinks_True(self):
+        self.assertEqual([], salt.utils.path.remove(self.working_dir, follow_symlinks=True))
+
+    def test_dir_remove_dir_not_empty_recursive_True_follow_symlinks_True(self):
+        wanted_ret = sorted([self.working_dir,
+                             self.file_present,
+                             self.dir_one_present,
+                             self.file_one_present,
+                             self.dir_two_present,
+                             self.file_two_present,
+                             self.dir_tree_present,
+                             self.dir_four_absent,
+                             self.file_tree_absent,
+                             self.other_dir,
+                             self.other_file_present,
+                             self.link_dir_four_absent,
+                             self.link_dir_two_present,
+                             self.link_file_one_present,
+                             self.link_file_tree_absent,
+                             self.link_other_dir_present,
+                             self.link_other_file_present])
+        actual_ret = salt.utils.path.remove(self.working_dir, recursive=True, follow_symlinks=True)
+
+        self.assertFalse(salt.utils.path.exist(self.other_dir))
+        self.assertFalse(salt.utils.path.exist(self.working_dir))
+        self.assertEqual(wanted_ret, actual_ret)
+
+    #  FUNC: dir_is_absent
+    ##################################################
+    def test_dir_is_absent_empty(self):
+        self.assertTrue(salt.utils.path.dir_is_absent(self.dir_tree_present))
+        self.assertFalse(salt.utils.path.exist(self.dir_tree_present))
+
+    def test_dir_is_absent_not_empty(self):
+        self.assertFalse(salt.utils.path.dir_is_absent(self.dir_two_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_two_present))
+
+    def test_dir_is_absent_dir_absent(self):
+        self.assertTrue(salt.utils.path.dir_is_absent(self.dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_dir_is_absent_file(self):
+        self.assertFalse(salt.utils.path.dir_is_absent(self.file_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_two_present))
+
+    def test_dir_is_absent_symlink_to_file(self):
+        self.assertFalse(salt.utils.path.dir_is_absent(self.link_file_one_present))
+        self.assertTrue(salt.utils.path.exist(self.link_file_one_present))
+        self.assertTrue(salt.utils.path.exist(self.file_one_present))
+
+    def test_dir_is_absent_symlink_to_dir(self):
+        self.assertFalse(salt.utils.path.dir_is_absent(self.link_dir_two_present))
+        self.assertTrue(salt.utils.path.exist(self.link_dir_two_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_two_present))
+
+    def test_dir_is_absent_symlink_broken(self):
+        self.assertTrue(salt.utils.path.dir_is_absent(self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_tree_absent))
+
+    #  FUNC: file_is_absent
+    ##################################################
+    def test_file_is_absent_dir(self):
+        self.assertFalse(salt.utils.path.file_is_absent(self.dir_tree_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_tree_present))
+
+    def test_file_is_absent_file(self):
+        self.assertTrue(salt.utils.path.file_is_absent(self.file_present))
+        self.assertFalse(salt.utils.path.exist(self.file_present))
+
+    def test_file_is_absent_file_absent(self):
+        self.assertTrue(salt.utils.path.file_is_absent(self.file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_tree_absent))
+
+    def test_file_is_absent_symlink_to_file(self):
+        self.assertTrue(salt.utils.path.file_is_absent(self.link_file_one_present))
+        self.assertFalse(salt.utils.path.exist(self.link_file_one_present))
+        self.assertTrue(salt.utils.path.exist(self.file_one_present))
+
+    def test_file_is_absent_symlink_to_dir(self):
+        self.assertTrue(salt.utils.path.file_is_absent(self.link_dir_two_present))
+        self.assertFalse(salt.utils.path.exist(self.link_dir_two_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_two_present))
+
+    def test_file_is_absent_symlink_broken(self):
+        self.assertTrue(salt.utils.path.file_is_absent(self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_tree_absent))
+
+    #  FUNC: dir_to_list
+    ##################################################
+    def test_dir_to_list_not_empty(self):
+        self.assertEqual([self.file_one_present], salt.utils.path.dir_to_list(self.dir_one_present))
+
+    def test_dir_to_list_link_to_file_follow_symlinks_True(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.link_file_one_present, follow_symlinks=True))
+
+    def test_dir_to_list_link_to_dir_follow_symlinks_True(self):
+        self.assertEqual([self.file_two_present], salt.utils.path.dir_to_list(self.link_dir_two_present, follow_symlinks=True))
+
+    def test_dir_to_list_file_and_dir_and_symlink(self):
+        wanted_ret = sorted([self.file_present,
+                             self.dir_one_present,
+                             self.dir_two_present,
+                             self.dir_tree_present,
+                             self.link_file_one_present,
+                             self.link_dir_two_present,
+                             self.link_file_tree_absent,
+                             self.link_dir_four_absent,
+                             self.link_other_dir_present,
+                             self.link_other_file_present])
+        self.assertEqual(wanted_ret, salt.utils.path.dir_to_list(self.working_dir))
+
+    def test_dir_to_list_file_and_dir_and_symlink_recurse_True(self):
+        wanted_ret = sorted([self.file_present,
+                             self.dir_one_present,
+                             self.file_one_present,
+                             self.dir_two_present,
+                             self.file_two_present,
+                             self.dir_tree_present,
+                             self.link_file_one_present,
+                             self.link_dir_two_present,
+                             self.link_file_tree_absent,
+                             self.link_dir_four_absent,
+                             self.link_other_dir_present,
+                             self.link_other_file_present])
+        self.assertEqual(wanted_ret, salt.utils.path.dir_to_list(self.working_dir, recursive=True))
+
+    def test_dir_to_list_file_and_dir_and_symlink_follow_symlinks_True(self):
+        wanted_ret = sorted([self.file_present,
+                             self.dir_one_present,
+                             self.file_one_present,
+                             self.dir_two_present,
+                             self.file_two_present,
+                             self.dir_tree_present,
+                             self.file_tree_absent,
+                             self.dir_four_absent,
+                             self.other_dir,
+                             self.other_file_present,
+                             self.link_file_one_present,
+                             self.link_dir_two_present,
+                             self.link_file_tree_absent,
+                             self.link_dir_four_absent,
+                             self.link_other_dir_present,
+                             self.link_other_file_present])
+        self.assertEqual(wanted_ret, salt.utils.path.dir_to_list(self.working_dir, follow_symlinks=True))
+
+    def test_dir_to_list_empty(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.dir_tree_present))
+
+    def test_dir_to_list_file(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.file_present))
+
+    def test_dir_to_list_symlink_to_file(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.link_file_one_present))
+
+    def test_dir_to_list_symlink_to_file_follow_symlinks_True(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.link_file_one_present, follow_symlinks=True))
+
+    def test_dir_to_list_symlink_to_dir(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.link_dir_two_present))
+
+    def test_dir_to_list_symlink_to_dir_follow_symlinks_True(self):
+        self.assertEqual([self.file_two_present], salt.utils.path.dir_to_list(self.link_dir_two_present, follow_symlinks=True))
+
+    def test_dir_to_list_symlink_broken(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.link_file_tree_absent))
+
+    def test_dir_to_list_symlink_broken_follow_symlinks_True(self):
+        self.assertEqual([], salt.utils.path.dir_to_list(self.link_file_tree_absent, follow_symlinks=True))
+
+    #  FUNC: is_dir
+    ##################################################
+    def test_is_dir_not_empty(self):
+        self.assertTrue(salt.utils.path.is_dir(self.dir_two_present))
+
+    def test_is_dir_empty(self):
+        self.assertTrue(salt.utils.path.is_dir(self.dir_tree_present))
+
+    def test_is_dir_file(self):
+        self.assertFalse(salt.utils.path.is_dir(self.file_present))
+
+    def test_is_dir_symlink_to_file(self):
+        self.assertFalse(salt.utils.path.is_dir(self.link_file_one_present))
+
+    def test_is_dir_symlink_to_dir(self):
+        self.assertTrue(salt.utils.path.is_dir(self.link_dir_two_present))
+
+    def test_is_dir_symlink_broken(self):
+        self.assertFalse(salt.utils.path.is_dir(self.link_file_tree_absent))
+
+    #  FUNC: is_file
+    ##################################################
+    def test_is_file(self):
+        self.assertTrue(salt.utils.path.is_file(self.file_present))
+
+    def test_is_file_dir(self):
+        self.assertFalse(salt.utils.path.is_file(self.dir_one_present))
+
+    def test_is_file_symlink_to_file(self):
+        self.assertTrue(salt.utils.path.is_file(self.link_file_one_present))
+
+    def test_is_file_symlink_to_dir(self):
+        self.assertFalse(salt.utils.path.is_file(self.link_dir_two_present))
+
+    def test_is_file_symlink_broken(self):
+        self.assertFalse(salt.utils.path.is_file(self.link_file_tree_absent))
+
+    #  FUNC: is_symlink
+    ##################################################
+    def test_is_symlink_file(self):
+        self.assertFalse(salt.utils.path.is_symlink(self.file_present))
+
+    def test_is_symlink_dir(self):
+        self.assertFalse(salt.utils.path.is_symlink(self.dir_one_present))
+
+    def test_is_symlink_symlink_to_file(self):
+        self.assertTrue(salt.utils.path.is_symlink(self.link_file_one_present))
+
+    def test_is_symlink_symlink_to_dir(self):
+        self.assertTrue(salt.utils.path.is_symlink(self.link_dir_two_present))
+
+    def test_is_symlink_symlink_broken(self):
+        self.assertTrue(salt.utils.path.is_symlink(self.link_file_tree_absent))
+
+    #  FUNC: get_absolute
+    ##################################################
+    def test_get_absolute_file_not_exist(self):
+        self.assertEqual('',
+                         salt.utils.path.get_absolute('none'))
+
+    def test_get_absolute_file(self):
+        self.assertEqual(self.file_present,
+                         salt.utils.path.get_absolute(self.file_present))
+
+    def test_get_absolute_file_with_relative(self):
+        self.assertEqual(self.file_one_present + '/../file_one_present',
+                         salt.utils.path.get_absolute(self.file_one_present + '/../file_one_present'))
+
+    def test_get_absolute_file_with_relative_resolve_True(self):
+        self.assertEqual(self.file_one_present,
+                         salt.utils.path.get_absolute(self.file_one_present + '/../file_one_present', resolve=True))
+
+    def test_get_absolute_file_with_relative_follow_symlinks_True(self):
+        self.assertEqual(self.file_one_present + '/../file_one_present',
+                         salt.utils.path.get_absolute(self.file_one_present + '/../file_one_present', follow_symlinks=True))
+
+    def test_get_absolute_dir(self):
+        self.assertEqual(self.dir_one_present, salt.utils.path.get_absolute(self.dir_one_present))
+
+    def test_get_absolute_dir_with_relative(self):
+        self.assertEqual(self.dir_one_present + '/../dir_one_present',
+                         salt.utils.path.get_absolute(self.dir_one_present + '/../dir_one_present'))
+
+    def test_get_absolute_dir_with_relative_resolve_True(self):
+        self.assertEqual(self.dir_one_present,
+                         salt.utils.path.get_absolute(self.dir_one_present + '/../dir_one_present', resolve=True))
+
+    def test_get_absolute_dir_with_relative_follow_symlinks_True(self):
+        self.assertEqual(self.dir_one_present + '/../dir_one_present',
+                         salt.utils.path.get_absolute(self.dir_one_present + '/../dir_one_present', follow_symlinks=True))
+
+    def test_get_absolute_symlink_to_file(self):
+        self.assertEqual(self.link_file_one_present, salt.utils.path.get_absolute(self.link_file_one_present))
+
+    def test_get_absolute_symlink_to_file_resolve_True(self):
+        self.assertEqual(self.link_file_one_present,
+                         salt.utils.path.get_absolute(self.link_file_one_present, resolve=True))
+
+    def test_get_absolute_symlink_to_file_follow_symlinks_True(self):
+        self.assertEqual(self.file_one_present,
+                         salt.utils.path.get_absolute(self.link_file_one_present, follow_symlinks=True))
+
+    def test_get_absolute_symlink_to_dir(self):
+        self.assertEqual(self.link_dir_two_present, salt.utils.path.get_absolute(self.link_dir_two_present))
+
+    def test_get_absolute_symlink_to_dir_resolve_True(self):
+        self.assertEqual(self.link_dir_two_present,
+                         salt.utils.path.get_absolute(self.link_dir_two_present, resolve=True))
+
+    def test_get_absolute_symlink_to_dir_follow_symlinks_True(self):
+        self.assertEqual(self.dir_two_present,
+                         salt.utils.path.get_absolute(self.link_dir_two_present, follow_symlinks=True))
+
+    def test_get_absolute_symlink_to_dir_resolve_True_follow_symlinks_True(self):
+        self.assertEqual(self.dir_two_present,
+                         salt.utils.path.get_absolute(self.link_dir_two_present, resolve=True, follow_symlinks=True))
+
+    def test_get_absolute_symlink_broken(self):
+        self.assertEqual(self.link_file_tree_absent, salt.utils.path.get_absolute(self.link_file_tree_absent))
+
+    def test_get_absolute_symlink_broken_resolve_True(self):
+        self.assertEqual(self.link_file_tree_absent,
+                         salt.utils.path.get_absolute(self.link_file_tree_absent, resolve=True))
+
+    def test_get_absolute_symlink_broken_follow_symlinks_True(self):
+        self.assertEqual(self.file_tree_absent,
+                         salt.utils.path.get_absolute(self.link_file_tree_absent, follow_symlinks=True))

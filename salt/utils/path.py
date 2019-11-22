@@ -44,6 +44,14 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
+def __list_clean_sorted(list_to_treat):
+    ret = []
+    for ele in list_to_treat:
+        if ele not in ret:
+            ret.append(ele)
+    return sorted(ret)
+
+
 def set_link(src, path, hard=False, resolve=True):
     '''
     Create soft link or hard link.
@@ -87,7 +95,7 @@ def get_link(path, resolve=True, canonicalize=False):
     return ret
 
 
-def get_absolute(path, resolve=True):
+def get_absolute(path, resolve=False, follow_symlinks=False):
     '''
     Return the absolute path in parameter.
     The path does not necessary exist on the file system.
@@ -98,13 +106,26 @@ def get_absolute(path, resolve=True):
     If the input path is '/bar/fo*', return '/bar/foo'.
     :param path: The path to managed.
     :param resolve: 'True' to resolve '/bar/../foo' to '/foo', else 'False' to resolve '/bar/../foo' to '/bar/../foo'.
+    :param follow_symlinks:
     :return: The absolute path.
     '''
     ret = ''
-    if resolve:
-        ret = pathlib.Path(path).resolve()
-    else:
+    # if resolve and is_symlink(path):
+    #     ret = pathlib.Path(path).absolute()
+    # elif resolve or (follow_symlinks and is_symlink(path)):
+    #     ret = pathlib.Path(path).resolve()
+    # elif is_absolute(path):
+    #     ret = path
+
+    if follow_symlinks and is_symlink(path):
+        path = str(pathlib.Path(path).resolve())
+
+    if resolve and is_symlink(path):
         ret = pathlib.Path(path).absolute()
+    elif resolve or (follow_symlinks and is_symlink(path)):
+        ret = pathlib.Path(path).resolve()
+    elif is_absolute(path):
+        ret = path
     return str(ret)
 
 
@@ -236,7 +257,7 @@ def get_type(path):
     return ret
 
 
-def dir_to_list(path, recursive=False, follow_symlinks=False):
+def dir_to_list(path, recursive=False, follow_symlinks=False, __first_inc=True):
     '''
     List the content of a directory.
     :param path: Absolute path to the directory to managed.
@@ -245,25 +266,17 @@ def dir_to_list(path, recursive=False, follow_symlinks=False):
     :return: List of directory contents.
     '''
     ret = []
-    tmp_ret = []
-    abs_path = get_absolute(path)
-
-    if is_dir(abs_path):
+    abs_path = get_absolute(path, follow_symlinks=follow_symlinks)
+    if is_dir(abs_path) and not is_symlink(abs_path):
         for element in pathlib.Path(abs_path).iterdir():
             element = str(element)
-            if (follow_symlinks and is_symlink(element)) or (recursive and is_dir(element)):
-                tmp_ret.append(element)
-                tmp_ret.extend(dir_to_list(element))
-            else:
-                tmp_ret.append(element)
-    else:
-        tmp_ret.append(abs_path)
+            ret.append(element)
+            if (recursive and is_dir(element)) or (follow_symlinks and is_symlink(element)):
+                ret.extend(dir_to_list(element, recursive, follow_symlinks, __first_inc=False))
+    if not __first_inc:
+        ret.append(abs_path)
 
-    # To clean duplicates.
-    for ele in tmp_ret:
-        if ele not in ret:
-            ret.append(ele)
-    return sorted(ret)
+    return __list_clean_sorted(ret)
 
 
 def dir_to_dict(path, recursive=False, follow_symlinks=False):
@@ -312,10 +325,9 @@ def dir_is_absent(path):
     :param path:
     :return:
     '''
-    if exist(path):
-        if is_dir(path) and dir_is_empty(path):
-            pathlib.Path(get_absolute(path)).rmdir()
-    return exist(path)
+    if is_dir(path) and dir_is_empty(path) and not is_symlink(path):
+        pathlib.Path(get_absolute(path)).rmdir()
+    return not exist(path)
 
 
 def file_is_present(path):
@@ -337,28 +349,27 @@ def file_is_absent(path):
     :return:
     '''
     # Requiered to check if it's a link, in case of broken link.
-    if exist(path) or is_symlink(path):
-        if is_file(path) or is_symlink(path):
-            pathlib.Path(path).unlink()
-    return exist(path)
+    if is_symlink(path) or is_file(path):
+        pathlib.Path(path).unlink()
+    return not exist(path)
 
 
 def remove(path, recursive=False, follow_symlinks=False):
     '''
-    TO TEST
     :param path:
     :param recursive:
     :param follow_symlinks:
     :return:
     '''
-    if is_dir(path):
-        for ele in dir_to_list(path, recursive, follow_symlinks):
-            remove(ele, recursive, follow_symlinks)
-        dir_is_absent(path)
-    else:
-        file_is_absent(path)
+    ret = []
 
-    return exist(path)
+    if recursive and is_dir(path) and not is_symlink(path):
+        for ele in dir_to_list(path, recursive, follow_symlinks):
+            ret.extend(remove(ele, recursive, follow_symlinks))
+    if file_is_absent(path) or dir_is_absent(path):
+        ret.append(path)
+
+    return __list_clean_sorted(ret)
 
 
 def random_tmp_file(tmp_dir='/tmp'):
