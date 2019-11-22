@@ -290,17 +290,22 @@ def rm(name, recurse=False, profile=None, **kwargs):
         'changes': {}
     }
 
-    if not __salt__['etcd.get'](name, profile=profile, **kwargs):
+    current = __salt__['etcd.exists'](name, profile=profile, recurse=True, **kwargs)
+    if not current:
         rtn['comment'] = 'Key does not exist'
         return rtn
 
-    if __salt__['etcd.rm'](name, recurse=recurse, profile=profile, **kwargs):
-        rtn['comment'] = 'Key removed'
-        rtn['changes'] = {
-            name: 'Deleted'
-        }
-    else:
-        rtn['comment'] = 'Unable to remove key'
+    try:
+        if __salt__['etcd.rm'](name, recurse=recurse, profile=profile, **kwargs):
+            rtn['comment'] = 'Key removed'
+            rtn['changes'] = {
+                name: 'Deleted'
+            }
+        else:
+            rtn['comment'] = 'Unable to remove key'
+    except Exception as e:
+        rtn['comment'] = 'etcd: uncaught exception: %s' % e
+        raise
 
     return rtn
 

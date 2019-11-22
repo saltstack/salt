@@ -176,6 +176,22 @@ class EtcdClient(object):
         ret['mIndex'] = getattr(result, 'modifiedIndex')
         return ret
 
+    def exists(self, key, recurse=False):
+        try:
+            result = self.read(key, recursive=recurse)
+        except etcd.EtcdKeyNotFound:
+            # etcd already logged that the key wasn't found, no need to do
+            # anything here but return
+            return False
+        except etcd.EtcdConnectionFailed:
+            log.error("etcd: failed to perform 'get' operation on key %s due to connection error", key)
+            return None
+        except ValueError:
+            return None
+
+        return True
+
+
     def get(self, key, recurse=False):
         try:
             result = self.read(key, recursive=recurse)

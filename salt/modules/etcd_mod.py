@@ -94,6 +94,24 @@ def get_(key, recurse=False, profile=None, **kwargs):
     else:
         return client.get(key, recurse=recurse)
 
+def exists(key, recurse=False, profile=None, **kwargs):
+    '''
+    .. versionadded:: TBA
+
+    Check is key exists, Returns None on failure.
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt myminion etcd.exists /path/to/key
+        salt myminion etcd.exists /path/to/key profile=my_etcd_config
+        salt myminion etcd.exists /path/to/key recurse=True profile=my_etcd_config
+        salt myminion etcd.exists /path/to/key host=127.0.0.1 port=2379
+    '''
+    client = __utils__['etcd_util.get_conn'](__opts__, profile, **kwargs)
+    return client.exists(key, recurse=recurse)
+
 
 def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
     '''
