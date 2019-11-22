@@ -59,7 +59,6 @@ class VenafiTest(ShellCase):
                                 key_password='secretPassword',
                                 zone=environ.get('CLOUDZONE'))
         log.debug("Ret is:\n", ret)
-        print("Ret is:\n", ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
