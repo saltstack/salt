@@ -281,6 +281,60 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
         self.assertEqual(cdata, {'args': ['fun_return'], 'kwargs': {'key': 'val'}})
 
+    def test_format_slots_dict_arg(self):
+        '''
+        Test the format slots is calling a slot specified in dict arg.
+        '''
+        cdata = {
+                'args': [
+                    {'subarg': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)'},
+                ],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': [{'subarg': 'fun_return'}], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_listdict_arg(self):
+        '''
+        Test the format slots is calling a slot specified in list containing a dict.
+        '''
+        cdata = {
+                'args': [[
+                    {'subarg': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)'},
+                ]],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': [[{'subarg': 'fun_return'}]], 'kwargs': {'key': 'val'}})
+
+    def test_format_slots_liststr_arg(self):
+        '''
+        Test the format slots is calling a slot specified in list containing a dict.
+        '''
+        cdata = {
+                'args': [[
+                    '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val)',
+                ]],
+                'kwargs': {
+                    'key': 'val',
+                }
+        }
+        mock = MagicMock(return_value='fun_return')
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': [['fun_return']], 'kwargs': {'key': 'val'}})
+
     def test_format_slots_kwarg(self):
         '''
         Test the format slots is calling a slot specified in kwargs with corresponding arguments.
@@ -360,3 +414,41 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.state_obj.format_slots(cdata)
         mock.assert_not_called()
         self.assertEqual(cdata, sls_data)
+
+    def test_slot_traverse_dict(self):
+        '''
+        Test the slot parsing of dict response.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1',
+            }
+        }
+        return_data = {'key1': 'value1'}
+        mock = MagicMock(return_value=return_data)
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1'}})
+
+    def test_slot_append(self):
+        '''
+        Test the slot parsing of dict response.
+        '''
+        cdata = {
+            'args': [
+                'arg',
+            ],
+            'kwargs': {
+                'key': '__slot__:salt:mod.fun(fun_arg, fun_key=fun_val).key1 ~ thing~',
+            }
+        }
+        return_data = {'key1': 'value1'}
+        mock = MagicMock(return_value=return_data)
+        with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
+            self.state_obj.format_slots(cdata)
+        mock.assert_called_once_with('fun_arg', fun_key='fun_val')
+        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1thing~'}})
