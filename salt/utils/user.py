@@ -57,7 +57,7 @@ def uid_to_user(uid):
     :param uid: [Integer] user id to convert to a user name.
     :return: uid if the user name is not find, else the user name.
     '''
-    ret = uid
+    ret = ''
     if HAS_PWD:
         if isinstance(uid, str):
             log.info("{} is not an integer, maybe it's already the user name ?".format(uid))
@@ -67,7 +67,6 @@ def uid_to_user(uid):
             ret = pwd.getpwuid(uid).pw_name
         except (KeyError, NameError):
             log.info("User name is not present, fall back to the uid {}.".format(uid))
-            ret = uid
     else:
         log.error('Required external library (pwd) not installed')
     return ret
@@ -89,7 +88,7 @@ def user_to_uid(user):
             ret = pwd.getpwnam(user).pw_uid
         except (KeyError, NameError):
             log.info("User id is not present, fall back to the user {}.".format(user))
-            ret = user
+            ret = -1
     else:
         log.error('Required external library (pwd) not installed')
     return ret

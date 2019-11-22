@@ -52,6 +52,7 @@ import salt.utils.filebuffer
 import salt.utils.files
 import salt.utils.find
 import salt.utils.functools
+import salt.utils.group
 import salt.utils.hashutils
 import salt.utils.itertools
 import salt.utils.path
@@ -60,7 +61,6 @@ import salt.utils.stringutils
 import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
-import salt.utils.data
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
@@ -221,21 +221,7 @@ def gid_to_group(gid):
 
         salt '*' file.gid_to_group 0
     '''
-    try:
-        gid = int(gid)
-    except ValueError:
-        # This is not an integer, maybe it's already the group name?
-        gid = group_to_gid(gid)
-
-    if gid == '':
-        # Don't even bother to feed it to grp
-        return ''
-
-    try:
-        return grp.getgrgid(gid).gr_name
-    except (KeyError, NameError):
-        # If group is not present, fall back to the gid.
-        return gid
+    return salt.utils.group.gid_to_group(gid)
 
 
 def group_to_gid(group):
@@ -251,14 +237,7 @@ def group_to_gid(group):
 
         salt '*' file.group_to_gid root
     '''
-    if group is None:
-        return ''
-    try:
-        if isinstance(group, int):
-            return group
-        return grp.getgrnam(group).gr_gid
-    except KeyError:
-        return ''
+    return salt.utils.group.group_to_gid(group)
 
 
 def get_gid(path, follow_symlinks=True):

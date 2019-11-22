@@ -355,6 +355,169 @@ class TestPath(TestCase):
 
 # @skipIf(NO_MOCK, NO_MOCK_REASON)
 # @destructiveTest
+class path_stats_TestCase(TestCase):
+
+    def setUp(self):
+        self.init_group = {'id': os.getegid()}
+        self.init_user = {'id': os.geteuid()}
+        self.group = {'name': 'group1', 'id': 1331}
+        self.user = {'name': 'user1', 'id': 1221}
+
+        # Configure the system.
+        os.system('groupadd -g {} {}'.format(self.group['id'], self.group['name']))
+        os.system('useradd -g {} -G {} -u {} {}'.format(self.group['id'], self.group['name'], self.user['id'], self.user['name']))
+
+        # Set the current Execution group to the test group.
+        os.setegid(self.group['id'])
+        os.seteuid(self.user['id'])
+
+        self.working_dir = tempfile.TemporaryDirectory().name
+        self.file_present = os.path.join(self.working_dir, 'file_present')
+        self.dir_one_present = os.path.join(self.working_dir, 'dir_one_present')
+        self.file_one_present = os.path.join(self.dir_one_present, 'file_one_present')
+        self.link_file_one_present = os.path.join(self.working_dir, 'link_file_one_present')
+        self.dir_two_present = os.path.join(self.working_dir, 'dir_two_present')
+        self.link_dir_two_present = os.path.join(self.working_dir, 'link_dir_two_present')
+        self.file_two_present = os.path.join(self.dir_two_present, 'file_two_present')
+        self.dir_tree_present = os.path.join(self.working_dir, 'dir_tree_present')
+        self.file_tree_absent = os.path.join(self.dir_tree_present, 'file_tree_absent')
+        self.link_file_tree_absent = os.path.join(self.working_dir, 'link_file_tree_absent')
+        self.dir_four_absent = os.path.join(self.working_dir, 'dir_four_absent')
+        self.link_dir_four_absent = os.path.join(self.working_dir, 'link_dir_four_absent')
+
+        self.other_dir = tempfile.TemporaryDirectory().name
+        self.link_other_dir_present = os.path.join(self.working_dir, 'link_other_dir_present')
+        self.other_file_present = os.path.join(self.other_dir, 'other_file_present')
+        self.link_other_file_present = os.path.join(self.working_dir, 'link_other_file_present')
+
+        salt.utils.path.dir_is_present(self.working_dir)
+        salt.utils.path.file_is_present(self.file_present)
+        salt.utils.path.dir_is_present(self.dir_one_present)
+        salt.utils.path.file_is_present(self.file_one_present)
+        salt.utils.path.set_link(self.file_one_present, self.link_file_one_present)
+        salt.utils.path.dir_is_present(self.dir_two_present)
+        salt.utils.path.set_link(self.dir_two_present, self.link_dir_two_present)
+        salt.utils.path.file_is_present(self.file_two_present)
+        salt.utils.path.dir_is_present(self.dir_tree_present)
+        salt.utils.path.set_link(self.file_tree_absent, self.link_file_tree_absent)
+        salt.utils.path.set_link(self.dir_four_absent, self.link_dir_four_absent)
+
+        salt.utils.path.dir_is_present(self.other_dir)
+        salt.utils.path.set_link(self.other_dir, self.link_other_dir_present)
+        salt.utils.path.file_is_present(self.other_file_present)
+        salt.utils.path.set_link(self.other_file_present, self.link_other_file_present)
+
+    def tearDown(self):
+        # Set the current Execution group to the initial group.
+        os.seteuid(self.init_user['id'])
+        os.setegid(self.init_group['id'])
+
+        # Remove users and groups used to test
+        os.system('userdel -fr {}'.format(self.user['name']))
+        os.system('groupdel {}'.format(self.group['name']))
+
+        del self.group
+        del self.user
+        del self.init_user
+        del self.init_group
+
+        salt.utils.path.file_is_absent(self.link_other_file_present)
+        salt.utils.path.file_is_absent(self.other_file_present)
+        salt.utils.path.file_is_absent(self.link_other_dir_present)
+        salt.utils.path.dir_is_absent(self.other_dir)
+
+        salt.utils.path.file_is_absent(self.link_dir_four_absent)
+        salt.utils.path.file_is_absent(self.link_file_tree_absent)
+        salt.utils.path.dir_is_absent(self.dir_tree_present)
+        salt.utils.path.file_is_absent(self.file_two_present)
+        salt.utils.path.file_is_absent(self.link_dir_two_present)
+        salt.utils.path.dir_is_absent(self.dir_two_present)
+        salt.utils.path.file_is_absent(self.link_file_one_present)
+        salt.utils.path.file_is_absent(self.file_one_present)
+        salt.utils.path.dir_is_absent(self.dir_one_present)
+        salt.utils.path.file_is_absent(self.file_present)
+        salt.utils.path.dir_is_absent(self.working_dir)
+
+        del self.link_other_file_present
+        del self.other_file_present
+        del self.link_other_dir_present
+        del self.other_dir
+
+        del self.link_dir_four_absent
+        del self.dir_four_absent
+        del self.link_file_tree_absent
+        del self.file_tree_absent
+        del self.dir_tree_present
+        del self.file_two_present
+        del self.link_dir_two_present
+        del self.dir_two_present
+        del self.link_file_one_present
+        del self.file_one_present
+        del self.dir_one_present
+        del self.file_present
+        del self.working_dir
+
+    #  FUNC: get_user
+    ##################################################
+    def test_get_user_file(self):
+        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.file_present))
+
+    def test_get_user_dir(self):
+        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.dir_tree_present))
+
+    def test_get_user_symlink(self):
+        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.link_other_file_present))
+
+    #  FUNC: get_uid
+    ##################################################
+    def test_get_uid_file(self):
+        self.assertEqual(self.user['id'], salt.utils.path.get_uid(self.file_present))
+
+    def test_get_uid_dir(self):
+        self.assertEqual(self.user['id'], salt.utils.path.get_uid(self.dir_tree_present))
+
+    def test_get_uid_symlink(self):
+        self.assertEqual(self.user['id'], salt.utils.path.get_uid(self.link_other_file_present))
+
+    #  FUNC: get_group
+    ##################################################
+    def test_get_group_file(self):
+        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.file_present))
+
+    def test_get_group_dir(self):
+        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.dir_tree_present))
+
+    def test_get_group_symlink(self):
+        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.link_other_file_present))
+
+    #  FUNC: get_gid
+    ##################################################
+    def test_get_gid_file(self):
+        self.assertEqual(self.group['id'], salt.utils.path.get_gid(self.file_present))
+
+    def test_get_gid_dir(self):
+        self.assertEqual(self.group['id'], salt.utils.path.get_gid(self.dir_tree_present))
+
+    def test_get_gid_symlink(self):
+        self.assertEqual(self.group['id'], salt.utils.path.get_gid(self.link_other_file_present))
+
+    #  FUNC: get_type
+    ##################################################
+    def test_get_type_file(self):
+        self.assertEqual('file', salt.utils.path.get_type(self.file_present))
+
+    def test_get_type_dir(self):
+        self.assertEqual('dir', salt.utils.path.get_type(self.dir_tree_present))
+
+    def test_get_type_symlink_to_file(self):
+        self.assertEqual('link', salt.utils.path.get_type(self.link_other_file_present))
+
+    def test_get_type_symlink_to_dir(self):
+        self.assertEqual('link', salt.utils.path.get_type(self.link_other_dir_present))
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+@destructiveTest
 class path_remove_TestCase(TestCase):
 
     def setUp(self):

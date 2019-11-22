@@ -95,6 +95,15 @@ def get_link(path, resolve=True, canonicalize=False):
     return ret
 
 
+def is_symlink(path):
+    '''
+    Test if the path is a symlink.
+    :param path: Absolute path.
+    :return: True if the path is a symlink, else False.
+    '''
+    return True if pathlib.Path(path).is_symlink() else False
+
+
 def get_absolute(path, resolve=False, follow_symlinks=False):
     '''
     Return the absolute path in parameter.
@@ -110,12 +119,6 @@ def get_absolute(path, resolve=False, follow_symlinks=False):
     :return: The absolute path.
     '''
     ret = ''
-    # if resolve and is_symlink(path):
-    #     ret = pathlib.Path(path).absolute()
-    # elif resolve or (follow_symlinks and is_symlink(path)):
-    #     ret = pathlib.Path(path).resolve()
-    # elif is_absolute(path):
-    #     ret = path
 
     if follow_symlinks and is_symlink(path):
         path = str(pathlib.Path(path).resolve())
@@ -127,6 +130,15 @@ def get_absolute(path, resolve=False, follow_symlinks=False):
     elif is_absolute(path):
         ret = path
     return str(ret)
+
+
+def is_absolute(path):
+    '''
+    Test if the path absolute.
+    :param path: Absolute path.
+    :return: True if the path is absolute, else False.
+    '''
+    return pathlib.PurePath(path).is_absolute()
 
 
 def get_basename(path, resolve=True):
@@ -149,15 +161,6 @@ def get_parent(path, resolve=True):
     '''
     abs_path = get_absolute(path, resolve)
     return str(pathlib.PurePath(abs_path).parent)
-
-
-def is_absolute(path):
-    '''
-    Test if the path absolute.
-    :param path: Absolute path.
-    :return: True if the path is absolute, else False.
-    '''
-    return pathlib.PurePath(path).is_absolute()
 
 
 def is_dir(path):
@@ -185,15 +188,6 @@ def is_mount(path):
     :return: True if the path is a mount, else False.
     '''
     return True if exist(path) and pathlib.Path(path).is_mount() else False
-
-
-def is_symlink(path):
-    '''
-    Test if the path is a symlink.
-    :param path: Absolute path.
-    :return: True if the path is a symlink, else False.
-    '''
-    return True if pathlib.Path(path).is_symlink() else False
 
 
 def is_socket(path):
@@ -232,6 +226,86 @@ def is_char_device(path):
     return True if exist(path) and pathlib.Path(path).is_char_device() else False
 
 
+def get_user(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    ret = ''
+    try:
+        ret = pathlib.Path(path).owner()
+    except KeyError as exc:
+        log.info("Can't get user name for {}. Error: {}".format(path, exc))
+    return ret
+
+
+def set_user(path, user):
+    '''
+
+    :param path:
+    :param user:
+    :return:
+    '''
+    ret = False
+    if (is_file(path) or is_dir(path)) and not is_symlink(path):
+        try:
+            os.chown(path, salt.utils.user.user_to_uid(user), -1)
+            ret = True
+        except PermissionError as exc:
+            log.info(exc)
+    return ret
+
+
+def get_uid(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    return salt.utils.user.user_to_uid(get_user(path))
+
+
+def get_group(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    ret = ''
+    try:
+        ret = pathlib.Path(path).group()
+    except KeyError as exc:
+        log.info("Can't get group name for {}. Error: {}".format(path, exc))
+    return ret
+
+
+def set_group(path, group):
+    '''
+
+    :param path:
+    :param group:
+    :return:
+    '''
+    ret = False
+    if (is_file(path) or is_dir(path)) and not is_symlink(path):
+        try:
+            os.chown(path, -1, salt.utils.group.group_to_gid(group))
+            ret = True
+        except PermissionError as exc:
+            log.info(exc)
+    return ret
+
+
+def get_gid(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    return salt.utils.group.group_to_gid(get_group(path))
+
+
 def get_type(path):
     '''
 
@@ -239,13 +313,13 @@ def get_type(path):
     :return:
     '''
     ret = ''
-    abs_path = get_absolute(path, False)
-    if is_char_device(abs_path):
+    abs_path = get_absolute(path)
+    if is_symlink(abs_path):
+        ret = 'link'
+    elif is_char_device(abs_path):
         ret = 'char'
     elif is_block_device(abs_path):
         ret = 'block'
-    elif is_symlink(abs_path):
-        ret = 'link'
     elif is_fifo(abs_path):
         ret = 'pipe'
     elif is_socket(abs_path):
@@ -255,6 +329,24 @@ def get_type(path):
     elif is_dir(abs_path):
         ret = 'dir'
     return ret
+
+
+def get_size(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    return stats(path).get('size')
+
+
+def get_mode(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    return stats(path).get('mode')
 
 
 def dir_to_list(path, recursive=False, follow_symlinks=False, __first_inc=True):
@@ -395,19 +487,16 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
     :return:
     '''
     ret = {}
-    path = get_absolute(path)
+    path = get_absolute(path, follow_symlinks=follow_symlinks)
     if exist(path):
-        if is_symlink(path) and not follow_symlinks:
-            path_stat = pathlib.Path(path).lstat()
-        else:
-            path_stat = pathlib.Path(path).stat()
+        path_stat = pathlib.Path(path).stat()
 
         ret['target'] = path
         ret['inode'] = path_stat.st_ino
-        ret['uid'] = path_stat.st_uid
-        ret['user'] = salt.utils.user.uid_to_user(path_stat.st_uid)
-        ret['gid'] = path_stat.st_gid
-        ret['group'] = salt.utils.group.gid_to_group(path_stat.st_gid)
+        ret['uid'] = get_uid(path)
+        ret['user'] = get_user(path)
+        ret['gid'] = get_gid(path)
+        ret['group'] = get_group(path)
         ret['atime'] = path_stat.st_atime
         ret['mtime'] = path_stat.st_mtime
         ret['ctime'] = path_stat.st_ctime
@@ -456,6 +545,99 @@ def rename(src, path, safe=False):
         ret = True
 
     return ret
+
+
+def copy(src, path, recursive=False, remove_existing=False, safe=True):
+    '''
+
+    :param src:
+    :param path:
+    :param recursive:
+    :param remove_existing:
+    :param safe:
+    :return:
+    '''
+    ret = {'added': [], 'removed': [], 'unchanged': [], 'changed': []}
+    abs_src = get_absolute(src, resolve=True)
+    abs_path = get_absolute(path, resolve=True)
+
+    # clean destination
+    if exist(abs_path):
+        if safe:
+            log.error("The destination {} already exist.".format(abs_path))
+        elif remove_existing and (get_type(abs_src) == get_type(abs_path)):
+            ret['removed'].extend(remove(abs_path, recursive=recursive))
+        else:
+            log.error(
+                "The source path_type '{}' is different to the destination path_type '{}'.".format(abs_src, abs_path))
+
+    abs_src_user = get_user(abs_src)
+    abs_src_uid = get_uid(abs_src)
+    abs_src_group = get_group(abs_src)
+    abs_src_gid = get_gid(abs_src)
+    abs_src_mode = get_mode(abs_src)
+
+    return ret
+
+
+def copy(src, dst, recurse=False, remove_existing=False):
+    src = os.path.expanduser(src)
+    dst = os.path.expanduser(dst)
+
+    if not os.path.isabs(src):
+        raise SaltInvocationError('File path must be absolute.')
+
+    if not os.path.exists(src):
+        raise CommandExecutionError('No such file or directory \'{0}\''.format(src))
+
+    if not salt.utils.platform.is_windows():
+        pre_user = get_user(src)
+        pre_group = get_group(src)
+        pre_mode = salt.utils.files.normalize_mode(get_mode(src))
+
+    try:
+        if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
+            if not recurse:
+                raise SaltInvocationError(
+                    "Cannot copy overwriting a directory without recurse flag set to true!")
+            if remove_existing:
+                if os.path.exists(dst):
+                    shutil.rmtree(dst)
+                shutil.copytree(src, dst)
+            else:
+                salt.utils.files.recursive_copy(src, dst)
+        else:
+            shutil.copyfile(src, dst)
+    except OSError:
+        raise CommandExecutionError(
+            'Could not copy \'{0}\' to \'{1}\''.format(src, dst)
+        )
+
+    if not salt.utils.platform.is_windows():
+        check_perms(dst, None, pre_user, pre_group, pre_mode)
+    return True
+
+
+def recursive_copy(source, dest):
+    '''
+    Recursively copy the source directory to the destination,
+    leaving files with the source does not explicitly overwrite.
+
+    (identical to cp -r on a unix machine)
+    '''
+    for root, _, files in salt.utils.path.os_walk(source):
+        path_from_source = root.replace(source, '').lstrip(os.sep)
+        target_directory = os.path.join(dest, path_from_source)
+        if not os.path.exists(target_directory):
+            os.makedirs(target_directory)
+        for name in files:
+            file_path_from_source = os.path.join(source, path_from_source, name)
+            target_path = os.path.join(target_directory, name)
+            shutil.copyfile(file_path_from_source, target_path)
+
+
+def move():
+    pass
 
 
 def islink(path):

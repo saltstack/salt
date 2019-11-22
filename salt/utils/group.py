@@ -31,7 +31,7 @@ def gid_to_group(gid):
     :param gid: [Integer] group id to convert to a group name.
     :return: gid if the group name is not find, else the group name.
     '''
-    ret = gid
+    ret = ''
     if HAS_GRP:
         if isinstance(gid, str):
             log.info("{} is not an integer, maybe it's already the group name ?".format(gid))
@@ -41,7 +41,6 @@ def gid_to_group(gid):
             ret = grp.getgrgid(gid).gr_name
         except (KeyError, NameError):
             log.info("Group name is not present, fall back to the gid {}.".format(gid))
-            ret = gid
     else:
         log.error('Required external library (grp) not installed')
     return ret
@@ -63,7 +62,7 @@ def group_to_gid(group):
             ret = grp.getgrnam(group).gr_gid
         except (KeyError, NameError):
             log.info("Group id is not present, fall back to the group {}.".format(group))
-            ret = group
+            ret = -1
     else:
         log.error('Required external library (grp) not installed')
     return ret
