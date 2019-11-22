@@ -58,7 +58,6 @@ def _init_connection():
     base_url = __opts__.get('venafi', {}).get('base_url', '')
     log.info("Using base_url: %s", base_url)
     tpp_user = __opts__.get('venafi', {}).get('tpp_user', '')
-    log.info("Using tpp_user: %s", tpp_user)
     tpp_password = __opts__.get('venafi', {}).get('tpp_password', '')
     trust_bundle = __opts__.get('venafi', {}).get('trust_bundle', '')
     fake = __opts__.get('venafi', {}).get('fake', '')
@@ -93,6 +92,7 @@ def request(
     org_unit=None,
     key_password=None,
     csr_path=None,
+    pkey_path=None,
 ):
     '''
     Request a new certificate
@@ -140,7 +140,19 @@ def request(
         else:
             time.sleep(5)
 
-    private_key = request.private_key_pem
+    if csr_path is None:
+        private_key = request.private_key_pem
+    else:
+        if pkey_path:
+            try:
+                with salt.utils.files.fopen(pkey_path) as pkey_file:
+                    private_key = pkey_file.read()
+            except Exception as e:
+                log.error(msg=str(e))
+                sys.exit(1)
+        else:
+            private_key = None
+
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     data = {
         'minion_id': minion_id,
