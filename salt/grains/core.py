@@ -35,11 +35,34 @@ except ImportError:
 __proxyenabled__ = ['*']
 __FQDN__ = None
 
-# Extend the default list of supported distros. This will be used for the
+# Default list of supported distros. This will be used for the
 # /etc/DISTRO-release checking that is part of linux_distribution()
-from platform import _supported_dists
-_supported_dists += ('arch', 'mageia', 'meego', 'vmware', 'bluewhite64',
-                     'slamd64', 'ovs', 'system', 'mint', 'oracle', 'void')
+_supported_dists = (
+    'SuSE',
+    'UnitedLinux',
+    'arch',
+    'bluewhite64',
+    'centos',
+    'debian',
+    'fedora',
+    'gentoo',
+    'mageia',
+    'mandrake',
+    'mandriva',
+    'meego',
+    'mint',
+    'oracle',
+    'ovs',
+    'redhat',
+    'rocks',
+    'slackware',
+    'slamd64',
+    'system',
+    'turbolinux',
+    'vmware',
+    'void',
+    'yellowdog',
+)
 
 # linux_distribution deprecated in py3.7
 try:
