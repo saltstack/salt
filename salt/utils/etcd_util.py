@@ -322,6 +322,12 @@ class EtcdClient(object):
         except MaxRetryError as err:
             log.error('etcd: Could not connect to etcd server: %s', err)
             return None
+        except etcd.EtcdException as err:
+            if 'argument of type \'NoneType\' is not iterable' in ('%s' % err):
+                log.warning('etcd: Ignoring NoneType error after delete')
+                return True
+            log.error('etcd: uncaught exception %s', err)
+            raise
         except Exception as err:
             log.error('etcd: uncaught exception %s', err)
             raise
