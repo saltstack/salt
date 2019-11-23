@@ -548,7 +548,7 @@ def _ip_route_linux():
                 'flags': 'UG',
                 'interface': ip_interface})
 
-        elif comps[0] == "local":
+        elif comps[0] in ("anycast", "local"):
             ip_interface = ''
             if comps[2] == "dev":
                 ip_interface = comps[3]
