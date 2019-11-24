@@ -104,11 +104,11 @@ try:
     from netaddr import IPNetwork
     from netaddr import IPAddress
     # pylint: disable=unused-import
-    from napalm_base import helpers as napalm_helpers
+    from napalm.base import helpers as napalm_helpers
     # pylint: enable=unused-import
-    HAS_NAPALM_BASE = True
+    HAS_NAPALM = True
 except ImportError:
-    HAS_NAPALM_BASE = False
+    HAS_NAPALM = False
 
 # Import salt lib
 import salt.output
@@ -155,9 +155,9 @@ _DEFAULT_LABELS_MAPPING = {
 
 
 def __virtual__():
-    if HAS_NAPALM_BASE:
+    if HAS_NAPALM:
         return __virtualname__
-    return (False, 'The napalm-base module could not be imported')
+    return (False, 'The napalm module could not be imported')
 
 # -----------------------------------------------------------------------------
 # helper functions -- will not be exported
