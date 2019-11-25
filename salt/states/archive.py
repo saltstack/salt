@@ -524,8 +524,10 @@ def extracted(name,
         .. versionadded:: 2016.11.1
 
     clean_parent : False
-        Set this to ``True`` to remove a parent archive directory before the extration.
-        ``clean`` and ``clean_parent`` args are mutually exclusive.
+        If ``True``, and the archive is extracted, delete the parent
+        directory (i.e. the directory into which the archive is extracted), and
+        then re-create that directory before extracting. Note that ``clean``
+        and ``clean_parent`` are mutually exclusive.
 
         .. versionadded:: Sodium
 
@@ -1084,7 +1086,7 @@ def extracted(name,
         return ret
 
     if clean and clean_parent:
-        ret['comment'] = "You can't set both 'clean' and 'clean_parent' to True."
+        ret['comment'] = "Only one of 'clean' and 'clean_parent' can be set to True"
         ret['result'] = False
         return ret
 

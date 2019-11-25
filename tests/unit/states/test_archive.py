@@ -232,7 +232,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         gnutar = MagicMock(return_value='tar (GNU tar)')
         source = '/tmp/foo.tar.gz'
-        ret_comment = "You can't set both 'clean' and 'clean_parent' to True."
+        ret_comment = "Only one of 'clean' and 'clean_parent' can be set to True"
         mock_false = MagicMock(return_value=False)
         mock_true = MagicMock(return_value=True)
         state_single_mock = MagicMock(return_value={'local': {'result': True}})
