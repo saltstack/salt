@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+from six import PY3
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest, generate_random_name
@@ -463,3 +464,13 @@ class WinFunctionsTestCase(TestCase):
             )
         finally:
             win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    def test__to_unicode_int(self):
+        '''
+        Test the ``_to_unicode`` function when it receives an integer value.
+        Should return a unicode value, which is unicode in PY2 and str in PY3.
+        '''
+        if PY3:
+            self.assertTrue(isinstance(win_reg._to_unicode(1), str))
+        else:
+            self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))

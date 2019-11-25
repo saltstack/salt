@@ -133,7 +133,7 @@ def _compare_policies(new_policy, current_policy):
     otherwise ``False``
     '''
     # Compared dicts, lists, and strings
-    if isinstance(new_policy, six.string_types):
+    if isinstance(new_policy, (six.string_types, six.integer_types)):
         return new_policy == current_policy
     elif isinstance(new_policy, list):
         if isinstance(current_policy, list):

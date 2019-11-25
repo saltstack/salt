@@ -89,6 +89,8 @@ def _to_unicode(vdata):
     # None does not convert to Unicode
     if vdata is None:
         return None
+    if isinstance(vdata, int):
+        vdata = str(vdata)
     return salt.utils.stringutils.to_unicode(vdata, 'utf-8')
 
 
