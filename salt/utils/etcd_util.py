@@ -191,7 +191,6 @@ class EtcdClient(object):
 
         return True
 
-
     def get(self, key, recurse=False):
         try:
             result = self.read(key, recursive=recurse)
@@ -339,7 +338,7 @@ class EtcdClient(object):
             log.error('etcd: Could not connect to etcd server: %s', err)
             return None
         except etcd.EtcdException as err:
-            if 'argument of type \'NoneType\' is not iterable' in ('%s' % err):
+            if 'argument of type \'NoneType\' is not iterable' in '{}'.format(err):
                 log.warning('etcd: Ignoring NoneType error after delete')
                 return True
             log.error('etcd: uncaught exception %s', err)

@@ -94,6 +94,7 @@ def get_(key, recurse=False, profile=None, **kwargs):
     else:
         return client.get(key, recurse=recurse)
 
+
 def exists(key, recurse=False, profile=None, **kwargs):
     '''
     .. versionadded:: TBA

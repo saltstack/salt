@@ -304,7 +304,7 @@ def rm(name, recurse=False, profile=None, **kwargs):
         else:
             rtn['comment'] = 'Unable to remove key'
     except Exception as e:
-        rtn['comment'] = 'etcd: uncaught exception: %s' % e
+        rtn['comment'] = 'etcd: uncaught exception: {}'.format(e)
         raise
 
     return rtn
