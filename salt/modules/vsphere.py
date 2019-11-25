@@ -9094,6 +9094,37 @@ def _delete_device(device):
     return device_spec
 
 
+def _get_client(server, username, password):
+    '''
+    Establish client through proxy or with user provided credentials.
+
+    :param basestring server:
+        Target DNS or IP of vCenter center.
+    :param basestring username:
+        Username associated with the vCenter center.
+    :param basestring password:
+        Password associated with the vCenter center.
+    :returns:
+        vSphere Client instance.
+    :rtype:
+        vSphere.Client
+    '''
+    # Get salted vSphere Client
+    if not (server and username and password):
+        # User didn't provide CLI args so use proxy information
+        details = __salt__['vcenter.get_details']()
+        server = details['vcenter']
+        username = details['username']
+        password = details['password']
+
+    # Establish connection with client
+    client = salt.utils.vmware.get_vsphere_client(server=server,
+                                                  username=username,
+                                                  password=password)
+    # Will return None if utility function causes Unauthenticated error
+    return client
+
+
 @depends(HAS_PYVMOMI, HAS_VSPHERE_SDK)
 @supports_proxies('vcenter')
 @gets_service_instance_via_proxy
@@ -9119,19 +9150,9 @@ def list_tag_categories(server=None, username=None, password=None,
     :rtype:
         list of str
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide CLI args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     categories = None
+    client = _get_client(server, username, password)
+
     if client:
         categories = client.tagging.Category.list()
     return {'Categories': categories}
@@ -9162,19 +9183,9 @@ def list_tags(server=None, username=None, password=None,
     :rtype:
         list of str
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     tags = None
+    client = _get_client(server, username, password)
+
     if client:
         tags = client.tagging.Tag.list()
     return {'Tags': tags}
@@ -9228,19 +9239,9 @@ def attach_tag(object_id, tag_id,
     :raise: Unauthenticated
         if the user can not be authenticated.
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     tag_attached = None
+    client = _get_client(server, username, password)
+
     if client:
         # Create dynamic id object associated with a type and an id.
         # Note, here the default is ClusterComputeResource, which
@@ -9297,19 +9298,9 @@ def list_attached_tags(object_id,
     :raise: Unauthenticated
         if the user can not be authenticated.
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     attached_tags = None
+    client = _get_client(server, username, password)
+
     if client:
         # Create dynamic id object associated with a type and an id.
         # Note, here the default is ClusterComputeResource, which
@@ -9367,19 +9358,9 @@ def create_tag_category(name, description, cardinality,
     :raise: Unauthorized
         if you do not have the privilege to create a category.
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     category_created = None
+    client = _get_client(server, username, password)
+
     if client:
         if cardinality == 'SINGLE':
             cardinality = CategoryModel.Cardinality.SINGLE
@@ -9435,19 +9416,9 @@ def delete_tag_category(category_id,
     :raise: Unauthenticated
         if the user can not be authenticated.
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     category_deleted = None
+    client = _get_client(server, username, password)
+
     if client:
         try:
             category_deleted = client.tagging.Category.delete(category_id)
@@ -9499,19 +9470,9 @@ def create_tag(name, description, category_id,
     :raise: Unauthorized
         if you do not have the privilege to create tag.
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     tag_created = None
+    client = _get_client(server, username, password)
+
     if client:
         create_spec = client.tagging.Tag.CreateSpec()
         create_spec.name = name
@@ -9558,19 +9519,9 @@ def delete_tag(tag_id,
     :raise: Unauthorized
         if you do not have the privilege to create a category.
     '''
-    # Get salted vSphere Client
-    if not (server and username and password):
-        # User didn't provide cli args so use proxy information
-        details = __salt__['vcenter.get_details']()
-        server = details['vcenter']
-        username = details['username']
-        password = details['password']
-
-    # Establish connection with client
-    client = salt.utils.vmware.get_vsphere_client(server=server,
-                                                  username=username,
-                                                  password=password)
     tag_deleted = None
+    client = _get_client(server, username, password)
+
     if client:
         try:
             tag_deleted = client.tagging.Tag.delete(tag_id)
