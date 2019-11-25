@@ -2663,3 +2663,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName.return_value = mock_pool
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes('default'))
+
+    @patch('salt.modules.virt._is_kvm_hyper', return_value=True)
+    @patch('salt.modules.virt._is_xen_hyper', return_value=False)
+    def test_get_hypervisor(self, isxen_mock, iskvm_mock):
+        '''
+        test the virt.get_hypervisor() function
+        '''
+        self.assertEqual('kvm', virt.get_hypervisor())
+
+        iskvm_mock.return_value = False
+        self.assertIsNone(virt.get_hypervisor())
+
+        isxen_mock.return_value = True
+        self.assertEqual('xen', virt.get_hypervisor())
