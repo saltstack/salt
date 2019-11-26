@@ -6417,7 +6417,6 @@ def rename(name, source, force=False, makedirs=False):
         if not force:
             ret['comment'] = ('The target file "{0}" exists and will not be '
                               'overwritten'.format(name))
-            ret['result'] = False
             return ret
         elif not __opts__['test']:
             # Remove the destination to prevent problems later
