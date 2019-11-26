@@ -115,7 +115,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -255,6 +254,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
@@ -311,6 +311,7 @@ state modules
     win_snmp
     win_system
     win_wua
+    win_wusa
     winrepo
     x509
     xmpp
