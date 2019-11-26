@@ -13,7 +13,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import with_tempdir, flaky
+from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
 from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
