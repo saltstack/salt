@@ -10,7 +10,6 @@ runTestSuite(
     nox_env_name: 'runtests-zeromq-m2crypto',
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py2',
-    run_full: params.runFull,
     testrun_timeout: 6,
     use_spot_instances: true)
 
