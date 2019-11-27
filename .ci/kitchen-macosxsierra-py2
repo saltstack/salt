@@ -13,7 +13,6 @@ runTestSuite(
     nox_env_name: 'runtests-zeromq',
     nox_passthrough_opts: '',
     python_version: 'py2',
-    run_full: params.runFull,
     testrun_timeout: 6,
     use_spot_instances: false)
 
