@@ -63,15 +63,9 @@ class GrainsPrecedenceTest(ModuleCase):
     With the additional caveat that non-core grains modules that are included in the salt/grains
     folder within this repo be considered core grains.
     '''
-    def setUp(self):
-        self.files_created = []
 
-    def tearDown(self):
-        for filepath in self.files_created:
-            try:
-                os.remove(filepath)
-            except OSError:
-                pass
+    def setUp(self):
+        self.run_function('saltutil.sync_all')
 
     def test_core_localhost_grain(self):
         '''
@@ -133,23 +127,21 @@ class GrainsPrecedenceTest(ModuleCase):
         with open(custom_grain_abs_path, 'w') as file_:
             file_.write("def overwrite_localhost():{0}".format(os.linesep))
             file_.write("    return {{'localhost': 'overwrite-localhost'}}{0}".format(os.linesep))
-        self.files_created.append(custom_grain_abs_path)
 
         self.run_function('saltutil.sync_grains')
-
         module = os.path.join(TMP, 'rootdir', 'cache', 'files',
                               'base', '_grains', filename)
-        tries = 0
-        while not os.path.exists(module):
-            tries += 1
-            if tries > 60:
-                break
-            time.sleep(1)
+
+        if not os.path.exists(module):
+            os.remove(custom_grain_abs_path)
+            raise AssertionError("{0} not found".format(module))
 
         grains = self.run_function('grains.items')
-        self.assertEqual(grains.get('localhost'), 'overwrite-localhost')
+        try:
+            self.assertEqual(grains.get('localhost'), 'overwrite-localhost')
+        finally:
+            os.remove(custom_grain_abs_path)
 
-        os.remove(custom_grain_abs_path)
         self.run_function('saltutil.sync_grains')
 
     def test_overwrite_zfs_support_custom_grains_module(self):
@@ -161,21 +153,25 @@ class GrainsPrecedenceTest(ModuleCase):
         with open(custom_grain_abs_path, 'w') as file_:
             file_.write("def overwrite_zfs_support():{0}".format(os.linesep))
             file_.write("    return {{'zfs_support': 'dinosaur'}}{0}".format(os.linesep))
-        self.files_created.append(custom_grain_abs_path)
 
         self.run_function('saltutil.sync_grains')
         # avoid race condition
         module = os.path.join(TMP, 'rootdir', 'cache', 'files',
                               'base', '_grains', filename)
-        tries = 0
-        while not os.path.exists(module):
-            tries += 1
-            if tries > 60:
-                break
-            time.sleep(1)
+
+        if not os.path.exists(module):
+            os.remove(custom_grain_abs_path)
+            raise AssertionError("{0} not found".format(module))
 
         grains = self.run_function('grains.items')
-        self.assertEqual(grains.get('zfs_support'), 'dinosaur')
+        try:
+            self.assertEqual(grains.get('zfs_support'), 'dinosaur')
+        finally:
+            os.remove(custom_grain_abs_path)
 
-        os.remove(custom_grain_abs_path)
         self.run_function('saltutil.sync_grains')
+
+    def test_dummy(self):
+        grains = self.run_function('grains.items')
+        self.assertTrue('custom_grain_test' in grains)
+
