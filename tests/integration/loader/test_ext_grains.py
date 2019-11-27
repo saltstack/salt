@@ -8,48 +8,24 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 import os
+import socket
 import time
+
+# Third party
+import yaml
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP
+from tests.support.paths import TMP, CONF_DIR, TMP_CONF_DIR, BASE_FILES
 from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.config
 import salt.loader
 
-
-class LoaderGrainsTest(ModuleCase):
-    '''
-    Test the loader standard behavior with external grains
-    '''
-
-    #def setUp(self):
-    #    self.opts = minion_config(None)
-    #    self.opts['disable_modules'] = ['pillar']
-    #    self.opts['grains'] = grains(self.opts)
-
-    def test_grains_overwrite(self):
-        # Force a grains sync
-        self.run_function('saltutil.sync_grains')
-        # To avoid a race condition on Windows, we need to make sure the
-        # `test_custom_grain2.py` file is present in the _grains directory
-        # before trying to get the grains. This test may execute before the
-        # minion has finished syncing down the files it needs.
-        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
-                              'base', '_grains', 'test_custom_grain2.py')
-        tries = 0
-        while not os.path.exists(module):
-            tries += 1
-            if tries > 60:
-                break
-            time.sleep(1)
-        grains = self.run_function('grains.items')
-
-        # Check that custom grains are overwritten
-        self.assertEqual({'k2': 'v2'}, grains['a_custom'])
+log = logging.getLogger(__name__)
 
 
 @skipIf(True, "needs a way to reload minion after config change")
@@ -73,3 +49,133 @@ class LoaderGrainsMergeTest(ModuleCase):
         self.assertIn('a_custom', __grain__)
         # Check that the grains are merged
         self.assertEqual({'k1': 'v1', 'k2': 'v2'}, __grain__['a_custom'])
+
+
+class GrainsPrecedenceTest(ModuleCase):
+    '''
+    Test grains evaluation order is as follows,
+    per [docs](https://docs.saltstack.com/en/latest/topics/grains/#precedence):
+        1. Core grains
+        2. Custom grains in /etc/salt/grains
+        3. Custom grains in /etc/salt/minion
+        4. Custom grain modules in _grains directory, synced to minions
+
+    With the additional caveat that non-core grains modules that are included in the salt/grains
+    folder within this repo be considered core grains.
+    '''
+    def setUp(self):
+        self.files_created = []
+
+    def tearDown(self):
+        for filepath in self.files_created:
+            try:
+                os.remove(filepath)
+            except OSError:
+                pass
+
+    def test_core_localhost_grain(self):
+        '''
+        Sanity check that localhost grain is correct
+        '''
+        grains = self.run_function('grains.items')
+        self.assertEqual(grains.get('localhost'), socket.gethostname())
+
+    def test_etc_salt_grains(self):
+        '''
+        Test that /etc/salt/grains overrides core
+        '''
+        etc_salt_grains_file = os.path.join(TMP_CONF_DIR, 'grains')
+        with open(etc_salt_grains_file, 'w') as etc_:
+            etc_.write('localhost: cosmos')
+
+        self.run_function('saltutil.refresh_grains')
+        grains = self.run_function('grains.items')
+        self.assertEqual(grains.get('localhost'), 'cosmos')
+
+        os.remove(etc_salt_grains_file)
+        self.run_function('saltutil.refresh_grains')
+
+    def test_setval_override(self):
+        '''
+        Test that /etc/salt/grains overrides core via grains.setval function
+        '''
+        self.run_function('grains.setval', arg=('localhost', 'alien'))
+        grains = self.run_function('grains.items')
+        self.assertEqual(grains.get('localhost'), 'alien')
+        self.run_function('grains.delkey', arg=('localhost'))
+
+    def test_minion_config_override(self):
+        minion_config_filename = os.path.join(TMP_CONF_DIR, 'minion')
+        # read original contents
+        opts = salt.config.minion_config(minion_config_filename)
+        opts['grains']['localhost'] = 'not-local'
+        with open(minion_config_filename, 'w') as cfg_:
+            yaml.safe_dump(opts, cfg_, default_flow_style=False)
+
+        self.run_function('saltutil.refresh_grains')
+
+        grains = self.run_function('grains.items')
+        self.assertEqual(grains.get('localhost'), 'not-local')
+
+        # restore original contents
+        del opts['grains']['localhost']
+        with open(minion_config_filename, 'w') as cfg_:
+            yaml.safe_dump(opts, cfg_, default_flow_style=False)
+
+        self.run_function('saltutil.refresh_grains')
+
+    def test_overwrite_localhost_custom_grains_module(self):
+        '''
+        Test that custom grain module overwrites core 'localhost' grain
+        '''
+        filename = 'overwrite_localhost_{0}.py'.format(int(time.time()))
+        custom_grain_abs_path = os.path.join(BASE_FILES, '_grains', filename)
+        with open(custom_grain_abs_path, 'w') as file_:
+            file_.write("def overwrite_localhost():{0}".format(os.linesep))
+            file_.write("    return {{'localhost': 'overwrite-localhost'}}{0}".format(os.linesep))
+        self.files_created.append(custom_grain_abs_path)
+
+        self.run_function('saltutil.sync_grains')
+
+        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
+                              'base', '_grains', filename)
+        tries = 0
+        while not os.path.exists(module):
+            tries += 1
+            if tries > 60:
+                break
+            time.sleep(1)
+
+        grains = self.run_function('grains.items')
+        self.assertEqual(grains.get('localhost'), 'overwrite-localhost')
+
+        os.remove(custom_grain_abs_path)
+        self.run_function('saltutil.sync_grains')
+
+    def test_overwrite_zfs_support_custom_grains_module(self):
+        '''
+        Test that 'core' grains modules not included in 'core' namespace can be overwritten
+        '''
+        filename = 'overwrite_zfs_support_{0}.py'.format(int(time.time()))
+        custom_grain_abs_path = os.path.join(BASE_FILES, '_grains', filename)
+        with open(custom_grain_abs_path, 'w') as file_:
+            file_.write("def overwrite_zfs_support():{0}".format(os.linesep))
+            file_.write("    return {{'zfs_support': 'dinosaur'}}{0}".format(os.linesep))
+        self.files_created.append(custom_grain_abs_path)
+
+        self.run_function('saltutil.sync_grains')
+        # avoid race condition
+        module = os.path.join(TMP, 'rootdir', 'cache', 'files',
+                              'base', '_grains', filename)
+        tries = 0
+        while not os.path.exists(module):
+            tries += 1
+            if tries > 60:
+                break
+            time.sleep(1)
+
+        grains = self.run_function('grains.items')
+        self.assertEqual(grains.get('zfs_support'), 'dinosaur')
+
+        os.remove(custom_grain_abs_path)
+        self.run_function('saltutil.sync_grains')
