@@ -23,6 +23,11 @@ import salt.utils.odict as odict
 # Set up logging
 log = logging.getLogger(__name__)
 
+# Define the module's function aliases
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 # Define the module's virtual name
 __virtualname__ = 'service'
 
