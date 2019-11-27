@@ -308,7 +308,7 @@ def compile_config(path,
         cmd.append(script_parameters)
     cmd.extend([';', config_name])
     if config_data:
-        cmd.append(config_data)
+        cmd.extend(['-ConfigurationData', config_data])
     cmd.append('| Select-Object -Property FullName, Extension, Exists, '
                '@{Name="LastWriteTime";Expression={Get-Date ($_.LastWriteTime) '
                '-Format g}}')
