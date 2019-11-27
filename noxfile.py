@@ -54,6 +54,9 @@ RUNTESTS_LOGFILE = os.path.join(
     'runtests-{}.log'.format(datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f'))
 )
 
+# Prevent Python from writing bytecode
+os.environ[str('PYTHONDONTWRITEBYTECODE')] = str('1')
+
 
 def _create_ci_directories():
     for dirname in ('logs', 'coverage', 'xml-unittests-output'):
