@@ -356,6 +356,8 @@ State Changes
 - Added new `onfail_all` requisite form to allow for AND logic when adding
   onfail states.
 
+- The :py:func:`pkgrepo <salt.states.pkgrepo>` state now supports VMware Photon.
+
 Module Changes
 ==============
 

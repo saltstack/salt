@@ -41,7 +41,7 @@ def store_job(opts, load, event=None, mminion=None):
         try:
             load['jid'] = mminion.returners[prep_fstr](nocache=load.get('nocache', False))
         except KeyError:
-            emsg = "Returner '{0}' does not support function prep_jid".format(job_cache)
+            emsg = "Returner function not found: {0}".format(prep_fstr)
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:
@@ -55,7 +55,7 @@ def store_job(opts, load, event=None, mminion=None):
         try:
             mminion.returners[saveload_fstr](load['jid'], load)
         except KeyError:
-            emsg = "Returner '{0}' does not support function save_load".format(job_cache)
+            emsg = "Returner function not found: {0}".format(saveload_fstr)
             log.error(emsg)
             raise KeyError(emsg)
         except Exception:

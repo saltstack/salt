@@ -7,14 +7,18 @@ Manage Kerberos KDC
     that can authenticate without requiring a password.
 
     For MIT Kerberos:
+
 .. code-block:: bash
 
     # ktadd -k /root/secure.keytab kadmin/admin kadmin/changepw
 
+
 For Heimdal Kerberos:
+
 .. code-block:: bash
 
     # ext_keytab -k /root/secure.keytab kadmin/admin
+
 
 On the KDC minion you will need to add the following to the minion
 configuration file so Salt knows what keytab to use and what principal to

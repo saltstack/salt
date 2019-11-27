@@ -37,7 +37,7 @@ def __virtual__():
     Only work on FreeBSD
     '''
     # Disable on these platforms, specific service modules exist:
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (False, 'The freebsdservice execution module cannot be loaded: only available on FreeBSD systems.')
 

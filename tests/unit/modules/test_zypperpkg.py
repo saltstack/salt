@@ -570,6 +570,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
             pkgs = zypper.list_pkgs(versions_as_list=True)
             self.assertFalse(pkgs.get('gpg-pubkey', False))
+            self.assertTrue('pkg.list_pkgs_None_[]' in zypper.__context__)
             for pkg_name, pkg_version in {
                 'jakarta-commons-discovery': ['0.4-129.686'],
                 'yast2-ftp-server': ['3.1.8-8.1'],
@@ -611,6 +612,7 @@ Repository 'DUMMY' not found by its alias, number, or URI.
              patch.dict(zypper.__salt__, {'pkg_resource.stringify': MagicMock()}):
             pkgs = zypper.list_pkgs(attr=['epoch', 'release', 'arch', 'install_date_time_t'])
             self.assertFalse(pkgs.get('gpg-pubkey', False))
+            self.assertTrue('pkg.list_pkgs_None_[]' in zypper.__context__)
             for pkg_name, pkg_attr in {
                 'jakarta-commons-discovery': [{
                     'version': '0.4',
@@ -1355,3 +1357,22 @@ pattern() = package-c'''),
                 'summary': 'description b',
             },
         }
+
+    def test__clean_cache_empty(self):
+        '''Test that an empty cached can be cleaned'''
+        context = {}
+        with patch.dict(zypper.__context__, context):
+            zypper._clean_cache()
+            assert context == {}
+
+    def test__clean_cache_filled(self):
+        '''Test that a filled cached can be cleaned'''
+        context = {
+            'pkg.list_pkgs_/mnt_[]': None,
+            'pkg.list_pkgs_/mnt_[patterns]': None,
+            'pkg.list_provides': None,
+            'pkg.other_data': None,
+        }
+        with patch.dict(zypper.__context__, context):
+            zypper._clean_cache()
+            self.assertEqual(zypper.__context__, {'pkg.other_data': None})

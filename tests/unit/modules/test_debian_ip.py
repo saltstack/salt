@@ -784,6 +784,37 @@ test_interfaces = [
                 '    address 2001:db8:dead:c0::3/64\n',
                 '    gateway 2001:db8:dead:c0::1\n',
                 '\n']},
+
+        # IPv6-only; static with autoconf and accept_ra forced
+        {'iface_name': 'eth20', 'iface_type': 'eth', 'enabled': True,
+            'build_interface': {
+                'ipv6proto': 'static',
+                'ipv6ipaddr': '2001:db8:dead:beef::3/64',
+                'ipv6gateway': '2001:db8:dead:beef::1',
+                'enable_ipv6': True,
+                'autoconf': 1,
+                'accept_ra': 2,
+                'noifupdown': True,
+                },
+            'get_interface': odict([('eth20', odict([('enabled', True), ('data', odict([
+                ('inet6', odict([
+                    ('addrfam', 'inet6'),
+                    ('proto', 'static'),
+                    ('filename', None),
+                    ('autoconf', 1),
+                    ('address', '2001:db8:dead:beef::3/64'),
+                    ('gateway', '2001:db8:dead:beef::1'),
+                    ('accept_ra', 2),
+                    ])),
+                ]))]))]),
+            'return': [
+                'auto eth20\n',
+                'iface eth20 inet6 static\n',
+                '    autoconf 1\n',
+                '    address 2001:db8:dead:beef::3/64\n',
+                '    gateway 2001:db8:dead:beef::1\n',
+                '    accept_ra 2\n',
+                '\n']},
         ]
 
 

@@ -91,19 +91,11 @@ def _supports_parsing():
     return tuple([int(i) for i in _get_version()]) > (0, 6)
 
 
-@decorators.memoize
-def _get_provider():
-    '''
-    Check if we are the default provider for this platform
-    '''
-    return __grains__['os'] in ['NetBSD', 'DragonFly', 'Minix', 'Darwin', 'SmartOS'] or 'pkgin'
-
-
 def __virtual__():
     '''
     Set the virtual pkg module if the os is supported by pkgin
     '''
-    return (_check_pkgin() and _get_provider() or False,
+    return (__grains__.get('os_family') == 'Solaris' and _check_pkgin(),
             'The pkgin execution module cannot be loaded: pkgin was '
             'not detected on this platform.')
 
