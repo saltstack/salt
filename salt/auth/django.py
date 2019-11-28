@@ -28,9 +28,9 @@ The relevant entry in the ``models.py`` file would look like this:
 .. code-block:: python
 
     class SaltExternalAuthModel(models.Model):
-        user_fk = models.ForeignKey(auth.User)
-        minion_matcher = models.CharField()
-        minion_fn = models.CharField()
+        user_fk = models.ForeignKey(User, on_delete=models.CASCADE)
+        minion_or_fn_matcher = models.CharField(max_length=255)
+        minion_fn = models.CharField(max_length=255)
 
 The :conf_master:`external_auth` clause in the master config would then look
 like this:

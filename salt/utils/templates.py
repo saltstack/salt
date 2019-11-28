@@ -133,6 +133,7 @@ def wrap_tmpl_func(render_str):
                     'tplfile': template,
                     'tpldir': '.' if tpldir == '' else tpldir,
                     'tpldot': tpldir.replace('/', '.'),
+                    'tplroot': tpldir.split('/')[0],
                 }
                 context.update(tpldata)
             context['slsdotpath'] = slspath.replace('/', '.')
@@ -161,7 +162,7 @@ def wrap_tmpl_func(render_str):
                         tmplsrc, exc,
                         exc_info_on_loglevel=logging.DEBUG
                     )
-                    raise exc
+                    six.reraise(*sys.exc_info())
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()

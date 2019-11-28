@@ -111,7 +111,7 @@ the following command:
 
 .. code-block:: bash
 
-    # salt vh_instance1 test.ping
+    # salt vh_instance1 test.version
 
 You can now continue to provision new instances and they will all automatically
 be set up as minions of the master you've defined in the configuration file.

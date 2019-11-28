@@ -244,7 +244,7 @@ def update(name,
             changing the password. False allows the user to change the password.
 
     Returns:
-        bool: True if successful. False is unsuccessful.
+        bool: True if successful. False if unsuccessful.
 
     CLI Example:
 

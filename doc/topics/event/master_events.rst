@@ -69,7 +69,7 @@ Job events
         ``G@os_family:RedHat``, etc.
     :var tgt_type: The type of targeting used: ``glob``, ``grain``,
         ``compound``, etc.
-    :var fun: The function to run on minions: ``test.ping``,
+    :var fun: The function to run on minions: ``test.version``,
         ``network.interfaces``, etc.
     :var arg: A list of arguments to pass to the function that will be
         called.
@@ -85,7 +85,7 @@ Job events
     :var id: The minion ID.
     :var jid: The job ID.
     :var retcode: The return code for the job.
-    :var fun: The function the minion ran. E.g., ``test.ping``.
+    :var fun: The function the minion ran. E.g., ``test.version``.
     :var return: The data returned from the execution module.
 
 .. salt:event:: salt/job/<JID>/prog/<MID>/<RUN NUM>

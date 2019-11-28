@@ -11,7 +11,7 @@ routing table for a single best matching route.
 This module will create a route to send traffic destined to the Internet
 through your gateway instance.
 
-:codeauthor: :email:`Pratik Bandarkar <pratik.bandarkar@gmail.com>`
+:codeauthor: `Pratik Bandarkar <pratik.bandarkar@gmail.com>`
 :maturity:   new
 :depends:    google-api-python-client
 :platform:   Linux

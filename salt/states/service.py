@@ -86,7 +86,7 @@ def __virtual__():
     else:
         return (False, 'No service execution module loaded: '
                 'check support for service management on {0} '
-                ''.format(__grains__.get('osfinger', __grains__['os']))
+                ''.format(__grains__.get('osfinger', __grains__.get('os', 'NO OS')))
                )
 
 

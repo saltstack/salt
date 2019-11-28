@@ -89,7 +89,7 @@ def present(name, database, duration="7d",
             return ret
 
     else:
-        current_policy = __salt__['influxdb.get_retention_policy'](database=database, name=name)
+        current_policy = __salt__['influxdb.get_retention_policy'](database=database, name=name, **client_args)
         update_policy = False
         if current_policy['duration'] != convert_duration(duration):
             update_policy = True

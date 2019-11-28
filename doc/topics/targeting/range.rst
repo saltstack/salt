@@ -72,11 +72,11 @@ One might target host1 through host100 in the test.com domain with Salt as follo
 
 .. code-block:: bash
 
-    salt --range %test:CLUSTER test.ping
+    salt --range %test:CLUSTER test.version
 
 
 The following salt command would target three hosts: ``frontend``, ``backend``, and ``mysql``:
 
 .. code-block:: bash
 
-    salt --range %test:APPS test.ping
+    salt --range %test:APPS test.version

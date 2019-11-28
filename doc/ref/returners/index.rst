@@ -31,7 +31,7 @@ Specifying what returners to use is done when the command is invoked:
 
 .. code-block:: bash
 
-    salt '*' test.ping --return redis_return
+    salt '*' test.version --return redis_return
 
 This command will ensure that the redis_return returner is used.
 
@@ -39,10 +39,10 @@ It is also possible to specify multiple returners:
 
 .. code-block:: bash
 
-    salt '*' test.ping --return mongo_return,redis_return,cassandra_return
+    salt '*' test.version --return mongo_return,redis_return,cassandra_return
 
 In this scenario all three returners will be called and the data from the
-test.ping command will be sent out to the three named returners.
+test.version command will be sent out to the three named returners.
 
 Writing a Returner
 ==================
@@ -61,13 +61,13 @@ Other optional functions can be included to add support for
 ``returner``
     The ``returner`` function must accept a single argument. The argument
     contains return data from the called minion function. If the minion
-    function ``test.ping`` is called, the value of the argument will be a
+    function ``test.version`` is called, the value of the argument will be a
     dictionary. Run the following command from a Salt master to get a sample
     of the dictionary:
 
 .. code-block:: bash
 
-    salt-call --local --metadata test.ping --out=pprint
+    salt-call --local --metadata test.version --out=pprint
 
 .. code-block:: python
 
@@ -246,12 +246,12 @@ Sample:
            "master_minion": {
                "fun_args": [],
                "jid": "20150330121011408195",
-               "return": true,
+               "return": "2018.3.4",
                "retcode": 0,
                "success": true,
                "cmd": "_return",
                "_stamp": "2015-03-30T12:10:12.708663",
-               "fun": "test.ping",
+               "fun": "test.version",
                "id": "master_minion"
            }
        }
@@ -267,9 +267,9 @@ Sample:
 
    {
        "local": {
-           "minion1": "test.ping",
-           "minion3": "test.ping",
-           "minion2": "test.ping"
+           "minion1": "test.version",
+           "minion3": "test.version",
+           "minion2": "test.version"
        }
    }
 
@@ -344,7 +344,7 @@ Testing the Returner
 The ``returner``, ``prep_jid``, ``save_load``, ``get_load``, and
 ``event_return`` functions can be tested by configuring the
 :conf_master:`master_job_cache` and `Event Returners`_ in the master config
-file and submitting a job to ``test.ping`` each minion from the master.
+file and submitting a job to ``test.version`` each minion from the master.
 
 Once you have successfully exercised the Master Job Cache functions, test the
 External Job Cache functions using the ``ret`` execution module.
@@ -352,7 +352,7 @@ External Job Cache functions using the ``ret`` execution module.
 .. code-block:: bash
 
     salt-call ret.get_jids cassandra_cql --output=json
-    salt-call ret.get_fun cassandra_cql test.ping --output=json
+    salt-call ret.get_fun cassandra_cql test.version --output=json
     salt-call ret.get_minions cassandra_cql --output=json
     salt-call ret.get_jid cassandra_cql 20150330121011408195 --output=json
 

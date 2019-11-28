@@ -113,14 +113,13 @@ def fire(data, tag, timeout=None):
     else:
         timeout = timeout * 1000
     try:
-        event = salt.utils.event.get_event(__opts__.get('__role', 'minion'),
-                                           sock_dir=__opts__['sock_dir'],
-                                           transport=__opts__['transport'],
-                                           opts=__opts__,
-                                           keep_loop=True,
-                                           listen=False)
-
-        return event.fire_event(data, tag, timeout=timeout)
+        with salt.utils.event.get_event(__opts__.get('__role', 'minion'),
+                                        sock_dir=__opts__['sock_dir'],
+                                        transport=__opts__['transport'],
+                                        opts=__opts__,
+                                        keep_loop=True,
+                                        listen=False) as event:
+            return event.fire_event(data, tag, timeout=timeout)
     except Exception:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)

@@ -9,11 +9,11 @@ supported.
 
 .. code-block:: bash
 
-    salt '*' -b 10 test.ping
+    salt '*' -b 10 test.version
 
     salt -G 'os:RedHat' --batch-size 25% apache.signal restart
 
-This will only run test.ping on 10 of the targeted minions at a time and then
+This will only run test.version on 10 of the targeted minions at a time and then
 restart apache on 25% of the minions matching ``os:RedHat`` at a time and work
 through them all until the task is complete. This makes jobs like rolling web
 server restarts behind a load balancer or doing maintenance on BSD firewalls

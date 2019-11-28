@@ -290,11 +290,11 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win_system, 'get_computer_name',
                           MagicMock(return_value='salt')):
             reg_mock = MagicMock(return_value={'vdata': 'salt'})
-            with patch.dict(win_system.__salt__, {'reg.read_value': reg_mock}):
+            with patch.dict(win_system.__utils__, {'reg.read_value': reg_mock}):
                 self.assertFalse(win_system.get_pending_computer_name())
 
             reg_mock = MagicMock(return_value={'vdata': 'salt_pending'})
-            with patch.dict(win_system.__salt__, {'reg.read_value': reg_mock}):
+            with patch.dict(win_system.__utils__, {'reg.read_value': reg_mock}):
                 self.assertEqual(win_system.get_pending_computer_name(),
                                  'salt_pending')
 

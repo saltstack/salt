@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
 Packet Cloud Module Using Packet's Python API Client
-===========================================
+====================================================
 
 The Packet cloud module is used to control access to the Packet VPS system.
 
@@ -13,17 +13,18 @@ The Packet profile requires ``size``, ``image``, ``location``,  ``project_id``
 
 Optional profile parameters:
 
- - ``storage_size`` -  min value is 10, defines Gigabytes of storage that will be attached to device.
- - ``storage_tier`` - storage_1 - Standard Plan, storage_2 - Performance Plan
- - ``snapshot_count`` - int
- - ``snapshot_frequency`` - string - possible values:
-    - 1min
-    - 15min
-    - 1hour
-    - 1day
-    - 1week
-    - 1month
-    - 1year
+- ``storage_size`` -  min value is 10, defines Gigabytes of storage that will be attached to device.
+- ``storage_tier`` - storage_1 - Standard Plan, storage_2 - Performance Plan
+- ``snapshot_count`` - int
+- ``snapshot_frequency`` - string - possible values:
+
+  - 1min
+  - 15min
+  - 1hour
+  - 1day
+  - 1week
+  - 1month
+  - 1year
 
 This driver requires Packet's client library: https://pypi.python.org/pypi/packet-python
 
@@ -516,7 +517,9 @@ def list_nodes(call=None):
     '''
     Returns a list of devices, keeping only a brief listing.
     CLI Example:
+
     .. code-block:: bash
+
         salt-cloud -Q
         salt-cloud --query
         salt-cloud -f list_nodes packet-provider

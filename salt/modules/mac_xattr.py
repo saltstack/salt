@@ -28,7 +28,7 @@ def __virtual__():
     '''
     Only work on Mac OS
     '''
-    if __grains__['os'] in ['MacOS', 'Darwin']:
+    if __grains__.get('os') in ['MacOS', 'Darwin']:
         return __virtualname__
     return False
 

@@ -11,7 +11,7 @@ The keyword ``<all>`` includes all keys.
 Complete example in etc/salt/master
 =====================================
 
-.. code-block:: yaml
+.. code-block:: none
 
     ext_pillar:
       - extra_minion_data_in_pillar:

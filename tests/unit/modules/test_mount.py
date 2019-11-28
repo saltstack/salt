@@ -216,6 +216,21 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
                        mock_open(read_data=MOCK_SHELL_FILE)):
                 self.assertEqual(mount.set_fstab('A', 'B', 'C'), 'new')
 
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=MOCK_SHELL_FILE)):
+                self.assertEqual(mount.set_fstab('B', 'A', 'C', 'D', 'F', 'G'),
+                                 'present')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=MOCK_SHELL_FILE)):
+                self.assertEqual(mount.set_fstab('B', 'A', 'C',
+                                                 not_change=True),
+                                 'present')
+
     def test_rm_automaster(self):
         '''
         Remove the mount point from the auto_master
@@ -238,6 +253,34 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
             self.assertRaises(CommandExecutionError,
                               mount.set_automaster,
                               'A', 'B', 'C')
+
+        mock = MagicMock(return_value=True)
+        mock_read = MagicMock(side_effect=OSError)
+        with patch.object(os.path, 'isfile', mock):
+            with patch.object(salt.utils.files, 'fopen', mock_read):
+                self.assertRaises(CommandExecutionError,
+                                  mount.set_automaster, 'A', 'B', 'C')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data=MOCK_SHELL_FILE)):
+                self.assertEqual(mount.set_automaster('A', 'B', 'C'), 'new')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data='/..A -fstype=C,D C:B')):
+                self.assertEqual(mount.set_automaster('A', 'B', 'C', 'D'),
+                                 'present')
+
+        mock = MagicMock(return_value=True)
+        with patch.object(os.path, 'isfile', mock):
+            with patch('salt.utils.files.fopen',
+                       mock_open(read_data='/..A -fstype=XX C:B')):
+                self.assertEqual(mount.set_automaster('A', 'B', 'C', 'D',
+                                                      not_change=True),
+                                 'present')
 
     def test_automaster(self):
         '''
@@ -284,7 +327,7 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mount.__grains__, {'os': 'AIX', 'kernel': 'AIX'}):
             with patch.object(os.path, 'isfile', mock):
                 self.assertRaises(CommandExecutionError,
-                              mount.set_filesystems, 'A', 'B', 'C')
+                                  mount.set_filesystems, 'A', 'B', 'C')
 
             mock_read = MagicMock(side_effect=OSError)
             with patch.object(os.path, 'isfile', mock):

@@ -852,8 +852,8 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
 .. versionchanged:: Neon
     The ``unless`` requisite can take a module as a dictionary field in unless.
     The dictionary must contain an argument ``fun`` which is the module that is
-    being run, and everything else passed in will be kwargs passed to the module
-    function.
+    being run, and everything else must be passed in under the args key or will
+    be passed as individual kwargs to the module function.
 
     .. code-block:: yaml
 
@@ -864,6 +864,18 @@ In the above case, ``some_check`` will be run prior to _each_ name -- once for
             - unless:
               - fun: file.file_exists
                 path: /usr/local/bin/whatever
+
+    .. code-block:: yaml
+
+      set mysql root password:
+        debconf.set:
+          - name: mysql-server-5.7
+          - data:
+              'mysql-server/root_password': {'type': 'password', 'value': {{pillar['mysql.pass']}} }
+          - unless:
+            - fun: pkg.version
+              args:
+                - mysql-server-5.7
 
 .. _onlyif-requisite:
 
@@ -908,8 +920,8 @@ if the gluster commands return a 0 ret value.
 .. versionchanged:: Neon
     The ``onlyif`` requisite can take a module as a dictionary field in onlyif.
     The dictionary must contain an argument ``fun`` which is the module that is
-    being run, and everything else passed in will be kwargs passed to the module
-    function.
+    being run, and everything else must be passed in under the args key or will
+    be passed as individual kwargs to the module function.
 
     .. code-block:: yaml
 
@@ -926,6 +938,17 @@ if the gluster commands return a 0 ret value.
             - onlyif:
               - fun: match.grain
                 tgt: 'os_family: Debian'
+
+    .. code-block:: yaml
+
+      arbitrary file example:
+        file.touch:
+          - name: /path/to/file
+          - onlyif:
+            - fun: file.search
+              args:
+                - /etc/crontab
+                - 'entry1'
 
 runas
 ~~~~~

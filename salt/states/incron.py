@@ -44,6 +44,9 @@ then a new cron job will be added to the user's crontab.
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 
+import logging
+log = logging.getLogger(__name__)
+
 
 def _check_cron(user,
                 path,
@@ -56,6 +59,8 @@ def _check_cron(user,
     arg_mask.sort()
 
     lst = __salt__['incron.list_tab'](user)
+    if cmd.endswith('\n'):
+        cmd = cmd[:-1]
     for cron in lst['crons']:
         if path == cron['path'] and cron['cmd'] == cmd:
             cron_mask = cron['mask'].split(',')

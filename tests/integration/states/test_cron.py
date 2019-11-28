@@ -29,6 +29,9 @@ class CronTest(ModuleCase):
         '''
         self.run_state('user.present', name='test_cron_user')
 
+        self.user_primary_group = self.run_function('user.primary_group',
+                                                    name='test_cron_user')
+
     def tearDown(self):
         '''
         Teardown
@@ -40,16 +43,40 @@ class CronTest(ModuleCase):
         # Delete user
         self.run_state('user.absent', name='test_cron_user')
 
-    def test_managed(self):
-        '''
-        file.managed
-        '''
+    def test_46881(self):
+        user_id = 'test_cron_user'
+        _expected = {
+            'changes': {
+                'diff': '--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n',
+                'group': self.user_primary_group,
+                'user': user_id,
+            },
+        }
         ret = self.run_state(
             'cron.file',
             name='salt://issue-46881/cron',
-            user='test_cron_user'
+            user=user_id,
         )
-        _expected = '--- \n+++ \n@@ -1 +1,2 @@\n-\n+# Lines below here are managed by Salt, do not edit\n+@hourly touch /tmp/test-file\n'
-        self.assertIn('changes', ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file'])
-        self.assertIn('diff', ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']['changes'])
-        self.assertEqual(_expected, ret['cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file']['changes']['diff'])
+        # There are several keys that do not really matter to this test.
+        # We could just delete them, but then we lose their contents to
+        # aid in debugging (see https://github.com/saltstack/salt/issues/52079)
+        ignored_keys = (
+            '__id__',
+            '__sls__',
+            '__run_num__',
+            'comment',
+            'duration',
+            'name',
+            'start_time',
+            'result',
+        )
+        id_ = 'cron_|-salt://issue-46881/cron_|-salt://issue-46881/cron_|-file'
+        for key in ignored_keys:
+            _expected[key] = ret[id_].get(key)
+        retchanges = ret[id_].get('changes', {}).get('attrs', None)
+        if retchanges is not None:
+            _expected['changes']['attrs'] = retchanges
+        self.assertDictEqual(
+            _expected,
+            ret[id_],
+        )

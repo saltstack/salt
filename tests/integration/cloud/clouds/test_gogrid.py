@@ -16,6 +16,7 @@ from tests.support.unit import skipIf
 # Import Salt Libs
 from salt.config import cloud_providers_config
 
+
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = generate_random_name('CLOUD-TEST-')
 PROVIDER_NAME = 'gogrid'

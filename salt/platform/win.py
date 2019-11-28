@@ -1146,7 +1146,7 @@ def dup_token(th):
 
 def elevate_token(th):
     '''
-    Set all token priviledges to enabled
+    Set all token privileges to enabled
     '''
     # Get list of privileges this token contains
     privileges = win32security.GetTokenInformation(

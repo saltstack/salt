@@ -22,7 +22,7 @@ def __virtual__():
     '''
     Only runs on FreeBSD systems
     '''
-    if __grains__['os'] == 'FreeBSD':
+    if __grains__.get('os') == 'FreeBSD':
         return __virtualname__
     return (False, 'The freebsdjail execution module cannot be loaded: '
             'only available on FreeBSD systems.')

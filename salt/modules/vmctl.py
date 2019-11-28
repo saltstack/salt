@@ -30,7 +30,7 @@ def __virtual__():
     '''
     Only works on OpenBSD with vmctl(8) present.
     '''
-    if __grains__['os'] == 'OpenBSD' and salt.utils.path.which('vmctl'):
+    if __grains__.get('os') == 'OpenBSD' and salt.utils.path.which('vmctl'):
         return True
 
     return (False, 'The vmm execution module cannot be loaded: either the system is not OpenBSD or the vmctl binary was not found')

@@ -6923,45 +6923,47 @@ def add_host_to_dvs(host, username, password, vmknic_name, vmnic_name,
     to sniff the SOAP stream from Powershell to our vSphere server and got
     this snippet out:
 
-    <UpdateNetworkConfig xmlns="urn:vim25">
-      <_this type="HostNetworkSystem">networkSystem-187</_this>
-      <config>
-        <vswitch>
-          <changeOperation>edit</changeOperation>
-          <name>vSwitch0</name>
-          <spec>
-            <numPorts>7812</numPorts>
-          </spec>
-        </vswitch>
-        <proxySwitch>
-            <changeOperation>edit</changeOperation>
-            <uuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</uuid>
-            <spec>
-            <backing xsi:type="DistributedVirtualSwitchHostMemberPnicBacking">
-                <pnicSpec><pnicDevice>vmnic0</pnicDevice></pnicSpec>
-            </backing>
-            </spec>
-        </proxySwitch>
-        <portgroup>
-          <changeOperation>remove</changeOperation>
-          <spec>
-            <name>Management Network</name><vlanId>-1</vlanId><vswitchName /><policy />
-          </spec>
-        </portgroup>
-        <vnic>
-          <changeOperation>edit</changeOperation>
-          <device>vmk0</device>
-          <portgroup />
-          <spec>
-            <distributedVirtualPort>
-              <switchUuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</switchUuid>
-              <portgroupKey>dvportgroup-191</portgroupKey>
-            </distributedVirtualPort>
-          </spec>
-        </vnic>
-      </config>
-      <changeMode>modify</changeMode>
-    </UpdateNetworkConfig>
+    .. code-block:: xml
+
+        <UpdateNetworkConfig xmlns="urn:vim25">
+          <_this type="HostNetworkSystem">networkSystem-187</_this>
+          <config>
+            <vswitch>
+              <changeOperation>edit</changeOperation>
+              <name>vSwitch0</name>
+              <spec>
+                <numPorts>7812</numPorts>
+              </spec>
+            </vswitch>
+            <proxySwitch>
+                <changeOperation>edit</changeOperation>
+                <uuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</uuid>
+                <spec>
+                <backing xsi:type="DistributedVirtualSwitchHostMemberPnicBacking">
+                    <pnicSpec><pnicDevice>vmnic0</pnicDevice></pnicSpec>
+                </backing>
+                </spec>
+            </proxySwitch>
+            <portgroup>
+              <changeOperation>remove</changeOperation>
+              <spec>
+                <name>Management Network</name><vlanId>-1</vlanId><vswitchName /><policy />
+              </spec>
+            </portgroup>
+            <vnic>
+              <changeOperation>edit</changeOperation>
+              <device>vmk0</device>
+              <portgroup />
+              <spec>
+                <distributedVirtualPort>
+                  <switchUuid>73 a4 05 50 b0 d2 7e b9-38 80 5d 24 65 8f da 70</switchUuid>
+                  <portgroupKey>dvportgroup-191</portgroupKey>
+                </distributedVirtualPort>
+              </spec>
+            </vnic>
+          </config>
+          <changeMode>modify</changeMode>
+        </UpdateNetworkConfig>
 
     The SOAP API maps closely to PyVmomi, so from there it was (relatively)
     easy to figure out what Python to write.

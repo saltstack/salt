@@ -3,7 +3,7 @@
 Manage VMware distributed virtual switches (DVSs) and their distributed virtual
 portgroups (DVportgroups).
 
-:codeauthor: :email:`Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
+:codeauthor: `Alexandru Bleotu <alexandru.bleotu@morganstaley.com>`
 
 Examples
 ========
@@ -121,6 +121,7 @@ Portgroup
 ---------
 
 .. code-block:: python
+
     'security_policy': {
         'allow_promiscuous': true,
         'mac_changes': false,
@@ -165,7 +166,6 @@ Note: The mandatory attributes are: ``name``, ``type``.
 
 Dependencies
 ============
-
 
 - pyVmomi Python Module
 

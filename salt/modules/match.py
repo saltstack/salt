@@ -347,7 +347,7 @@ def filter_by(lookup,
         roles: {{ roles | yaml() }}
     '''
     expr_funcs = dict(inspect.getmembers(sys.modules[__name__],
-        predicate=inspect.isfunction))
+                                         predicate=inspect.isfunction))
 
     for key in lookup:
         params = (key, minion_id) if minion_id else (key, )

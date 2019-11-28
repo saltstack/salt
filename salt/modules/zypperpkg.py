@@ -448,8 +448,14 @@ def _clean_cache():
     '''
     Clean cached results
     '''
+    keys = []
     for cache_name in ['pkg.list_pkgs', 'pkg.list_provides']:
-        __context__.pop(cache_name, None)
+        for contextkey in __context__:
+            if contextkey.startswith(cache_name):
+                keys.append(contextkey)
+
+    for key in keys:
+        __context__.pop(key, None)
 
 
 def list_upgrades(refresh=True, root=None, **kwargs):
@@ -784,9 +790,10 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
 
     includes = includes if includes else []
 
-    contextkey = 'pkg.list_pkgs'
+    # Results can be different if a different root or a different
+    # inclusion types are passed
+    contextkey = 'pkg.list_pkgs_{}_{}'.format(root, includes)
 
-    # TODO(aplanas): this cached value depends on the parameters
     if contextkey not in __context__:
         ret = {}
         cmd = ['rpm']
@@ -2222,7 +2229,9 @@ def _get_installed_patterns(root=None):
     if root:
         cmd.extend(['--root', root])
     cmd.extend(['-q', '--provides', '--whatprovides', 'pattern()'])
-    output = __salt__['cmd.run'](cmd)
+    # If no `pattern()`s are found, RPM returns `1`, but for us is not
+    # a real error.
+    output = __salt__['cmd.run'](cmd, ignore_retcode=True)
 
     installed_patterns = [_pattern_name(line) for line in output.splitlines()
                           if line.startswith('pattern() = ')]

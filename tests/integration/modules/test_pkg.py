@@ -3,6 +3,7 @@
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import pprint
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -88,7 +89,19 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
                 self.assertNotEqual(ret, {})
                 ret = self.run_function('pkg.get_repo', [repo])
-                self.assertEqual(ret['uri'], uri)
+
+                if not isinstance(ret, dict):
+                    self.fail(
+                        'The \'pkg.get_repo\' command did not return the excepted dictionary. Output:\n{}'.format(ret)
+                    )
+
+                self.assertEqual(
+                    ret['uri'],
+                    uri,
+                    msg='The URI did not match. Full return:\n{}'.format(
+                        pprint.pformat(ret)
+                    )
+                )
             elif os_grain == 'CentOS':
                 major_release = int(
                     self.run_function(

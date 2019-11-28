@@ -46,7 +46,7 @@ def __virtual__():
     if __grains__.get('os') in disable:
         return (False, 'Your OS is on the disabled list')
     # Disable on all non-Linux OSes as well
-    if __grains__['kernel'] != 'Linux':
+    if __grains__.get('kernel') != 'Linux':
         return (False, 'Non Linux OSes are not supported')
     init_grain = __grains__.get('init')
     if init_grain not in (None, 'sysvinit', 'unknown'):

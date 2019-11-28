@@ -4,9 +4,11 @@ Manage LXD images.
 
 .. versionadded:: 2019.2.0
 
+.. link: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
+
 .. note:
 
-    - `pylxd`_ version 2 is required to let this work,
+    - :role:`pylxd <link>` version 2 is required to let this work,
       currently only available via pip.
 
         To install on Ubuntu:
@@ -20,7 +22,6 @@ Manage LXD images.
     - for the config_get() and config_get() methods
       you need to have lxd-client installed.
 
-.. _: https://github.com/lxc/pylxd/blob/master/doc/source/installation.rst
 
 :maintainer: René Jochum <rene@jochums.at>
 :maturity: new
