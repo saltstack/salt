@@ -1012,7 +1012,6 @@ class FileModuleTestCase(TestCase, LoaderModuleMockMixin):
                 tfile.flush()
                 hsum = filemod.extract_hash(tfile.name, '', 'Salt-Minion-2019.2.0-Py3-AMD64-Setup.exe')
 
-
     def test_user_to_uid_int(self):
         '''
         Tests if user is passed as an integer
