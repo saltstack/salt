@@ -15,6 +15,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
+import fnmatch
 import functools
 import inspect
 import logging
@@ -44,7 +45,7 @@ except ImportError:
     from tests.integration import get_unused_localhost_port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.paths import FILES, TMP
 
@@ -1058,21 +1059,10 @@ def requires_system_grains(func):
     @functools.wraps(func)
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, '__grains__'):
-            import salt.config
-            root_dir = tempfile.mkdtemp(dir=TMP)
-            defaults = salt.config.DEFAULT_MINION_OPTS.copy()
-            defaults.pop('conf_file')
-            defaults.update({
-                'root_dir': root_dir,
-                'cachedir': 'cachedir',
-                'sock_dir': 'sock',
-                'pki_dir': 'pki',
-                'log_file': 'logs/minion',
-                'pidfile': 'pids/minion.pid'
-            })
-            opts = salt.config.minion_config(None, defaults=defaults)
+            # Late import
+            from tests.support.sminion import build_minion_opts
+            opts = build_minion_opts(minion_id='runtests-internal-sminion')
             requires_system_grains.__grains__ = salt.loader.grains(opts)
-            shutil.rmtree(root_dir, ignore_errors=True)
         kwargs['grains'] = requires_system_grains.__grains__
         return func(*args, **kwargs)
     return decorator
@@ -1084,6 +1074,38 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     '''
+
+    def _check_required_salt_modules(*required_salt_modules):
+        # Late import
+        from tests.support.sminion import create_sminion
+        required_salt_modules = set(required_salt_modules)
+        sminion = create_sminion(minion_id='runtests-internal-sminion')
+        available_modules = list(sminion.functions)
+        not_available_modules = set()
+        try:
+            cached_not_available_modules = sminion.__not_availiable_modules__
+        except AttributeError:
+            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
+
+        if cached_not_available_modules:
+            for not_available_module in cached_not_available_modules:
+                if not_available_module in required_salt_modules:
+                    not_available_modules.add(not_available_module)
+                    required_salt_modules.remove(not_available_module)
+
+        for required_module_name in required_salt_modules:
+            search_name = required_module_name
+            if '.' not in search_name:
+                search_name += '.*'
+            if not fnmatch.filter(available_modules, search_name):
+                not_available_modules.add(required_module_name)
+                cached_not_available_modules.add(required_module_name)
+
+        if not_available_modules:
+            if len(not_available_modules) == 1:
+                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
+            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+
     def decorator(caller):
 
         if inspect.isclass(caller):
@@ -1091,67 +1113,19 @@ def requires_salt_modules(*names):
             old_setup = getattr(caller, 'setUp', None)
 
             def setUp(self, *args, **kwargs):
+                _check_required_salt_modules(*names)
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
-                if not hasattr(self, 'run_function'):
-                    raise RuntimeError(
-                        '{0} does not have the \'run_function\' method which '
-                        'is necessary to collect the loaded modules'.format(
-                            self.__class__.__name__
-                        )
-                    )
-
-                if not hasattr(requires_salt_modules, '__available_modules__'):
-                    requires_salt_modules.__available_modules__ = set()
-
-                _names = []
-                for name in names:
-                    if name not in requires_salt_modules.__available_modules__:
-                        _names.append(name)
-
-                if _names:
-                    not_found_modules = self.run_function('runtests_helpers.modules_available', _names)
-                    for name in _names:
-                        if name not in not_found_modules:
-                            requires_salt_modules.__available_modules__.add(name)
-                    if not_found_modules:
-                        if len(not_found_modules) == 1:
-                            self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                        self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
             return caller
 
         # We're simply decorating functions
         @functools.wraps(caller)
         def wrapper(cls):
-
-            if not hasattr(cls, 'run_function'):
-                raise RuntimeError(
-                    '{0} does not have the \'run_function\' method which is '
-                    'necessary to collect the loaded modules'.format(
-                        cls.__class__.__name__
-                    )
-                )
-
-            if not hasattr(requires_salt_modules, '__available_modules__'):
-                requires_salt_modules.__available_modules__ = set()
-
-            _names = []
-            for name in names:
-                if name not in requires_salt_modules.__available_modules__:
-                    _names.append(name)
-
-            if _names:
-                not_found_modules = cls.run_function('runtests_helpers.modules_available', _names)
-                for name in _names:
-                    if name not in not_found_modules:
-                        requires_salt_modules.__available_modules__.add(name)
-                if not_found_modules:
-                    if len(not_found_modules) == 1:
-                        cls.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                    cls.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
+            _check_required_salt_modules(*names)
             return caller(cls)
+
         return wrapper
     return decorator
 
