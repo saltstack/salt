@@ -277,8 +277,8 @@ class TestWhich(TestCase):
                         )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@destructiveTest
+# @skipIf(NO_MOCK, NO_MOCK_REASON)
+# @destructiveTest
 class TestPath(TestCase):
     def setUp(self):
         self.working_dir = tempfile.TemporaryDirectory().name
@@ -358,18 +358,14 @@ class TestPath(TestCase):
 class path_stats_TestCase(TestCase):
 
     def setUp(self):
-        self.init_group = {'id': os.getegid()}
-        self.init_user = {'id': os.geteuid()}
+        self.init_group = {'name': salt.utils.group.gid_to_group(os.getegid()), 'id': os.getegid()}
+        self.init_user = {'name': salt.utils.user.uid_to_user(os.geteuid()), 'id': os.geteuid()}
         self.group = {'name': 'group1', 'id': 1331}
         self.user = {'name': 'user1', 'id': 1221}
 
         # Configure the system.
         os.system('groupadd -g {} {}'.format(self.group['id'], self.group['name']))
         os.system('useradd -g {} -G {} -u {} {}'.format(self.group['id'], self.group['name'], self.user['id'], self.user['name']))
-
-        # Set the current Execution group to the test group.
-        os.setegid(self.group['id'])
-        os.seteuid(self.user['id'])
 
         self.working_dir = tempfile.TemporaryDirectory().name
         self.file_present = os.path.join(self.working_dir, 'file_present')
@@ -460,46 +456,72 @@ class path_stats_TestCase(TestCase):
     #  FUNC: get_user
     ##################################################
     def test_get_user_file(self):
-        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.file_present))
+        self.assertEqual(self.init_user['name'], salt.utils.path.get_user(self.file_present))
 
     def test_get_user_dir(self):
-        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.dir_tree_present))
+        self.assertEqual(self.init_user['name'], salt.utils.path.get_user(self.dir_tree_present))
 
     def test_get_user_symlink(self):
-        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.link_other_file_present))
+        self.assertEqual(self.init_user['name'], salt.utils.path.get_user(self.link_other_file_present))
 
     #  FUNC: get_uid
     ##################################################
     def test_get_uid_file(self):
-        self.assertEqual(self.user['id'], salt.utils.path.get_uid(self.file_present))
+        self.assertEqual(self.init_user['id'], salt.utils.path.get_uid(self.file_present))
 
     def test_get_uid_dir(self):
-        self.assertEqual(self.user['id'], salt.utils.path.get_uid(self.dir_tree_present))
+        self.assertEqual(self.init_user['id'], salt.utils.path.get_uid(self.dir_tree_present))
 
     def test_get_uid_symlink(self):
-        self.assertEqual(self.user['id'], salt.utils.path.get_uid(self.link_other_file_present))
+        self.assertEqual(self.init_user['id'], salt.utils.path.get_uid(self.link_other_file_present))
+
+    #  FUNC: set_user
+    ##################################################
+    def test_set_user_file(self):
+        self.assertTrue(salt.utils.path.set_user(self.file_present, self.user['name']))
+        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.file_present))
+
+    def test_set_user_dir(self):
+        self.assertTrue(salt.utils.path.set_user(self.dir_tree_present, self.user['name']))
+        self.assertEqual(self.user['name'], salt.utils.path.get_user(self.dir_tree_present))
+
+    def test_set_user_symlink(self):
+        self.assertFalse(salt.utils.path.set_user(self.link_other_file_present, self.user['name']))
 
     #  FUNC: get_group
     ##################################################
     def test_get_group_file(self):
-        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.file_present))
+        self.assertEqual(self.init_group['name'], salt.utils.path.get_group(self.file_present))
 
     def test_get_group_dir(self):
-        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.dir_tree_present))
+        self.assertEqual(self.init_group['name'], salt.utils.path.get_group(self.dir_tree_present))
 
     def test_get_group_symlink(self):
-        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.link_other_file_present))
+        self.assertEqual(self.init_group['name'], salt.utils.path.get_group(self.link_other_file_present))
 
     #  FUNC: get_gid
     ##################################################
     def test_get_gid_file(self):
-        self.assertEqual(self.group['id'], salt.utils.path.get_gid(self.file_present))
+        self.assertEqual(self.init_group['id'], salt.utils.path.get_gid(self.file_present))
 
     def test_get_gid_dir(self):
-        self.assertEqual(self.group['id'], salt.utils.path.get_gid(self.dir_tree_present))
+        self.assertEqual(self.init_group['id'], salt.utils.path.get_gid(self.dir_tree_present))
 
     def test_get_gid_symlink(self):
-        self.assertEqual(self.group['id'], salt.utils.path.get_gid(self.link_other_file_present))
+        self.assertEqual(self.init_group['id'], salt.utils.path.get_gid(self.link_other_file_present))
+
+    #  FUNC: set_group
+    ##################################################
+    def test_set_group_file(self):
+        self.assertTrue(salt.utils.path.set_group(self.file_present, self.group['name']))
+        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.file_present))
+
+    def test_set_group_dir(self):
+        self.assertTrue(salt.utils.path.set_group(self.dir_tree_present, self.group['name']))
+        self.assertEqual(self.group['name'], salt.utils.path.get_group(self.dir_tree_present))
+
+    def test_set_group_symlink(self):
+        self.assertFalse(salt.utils.path.set_group(self.link_other_file_present, self.group['name']))
 
     #  FUNC: get_type
     ##################################################
@@ -516,8 +538,8 @@ class path_stats_TestCase(TestCase):
         self.assertEqual('link', salt.utils.path.get_type(self.link_other_dir_present))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@destructiveTest
+# @skipIf(NO_MOCK, NO_MOCK_REASON)
+# @destructiveTest
 class path_remove_TestCase(TestCase):
 
     def setUp(self):

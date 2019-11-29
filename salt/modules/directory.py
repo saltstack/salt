@@ -71,3 +71,22 @@ def __virtual__():
         )
     return True
 
+
+def mode_normalized(mode):
+    return salt.utils.path.mode_normalized(mode)
+
+
+def get_mode(path):
+    return salt.utils.path.get_mode(path)
+
+
+def set_mode(path, mode):
+    return salt.utils.path.set_mode(path, str(mode))
+
+
+def remove(path, recursive=False, follow_symlinks=False):
+    return salt.utils.path.remove(path, recursive, follow_symlinks)
+
+
+def copy(src, path, recursive=False, remove_existing=False, safe=True):
+    return salt.utils.path.copy(src, path, recursive, remove_existing, safe)

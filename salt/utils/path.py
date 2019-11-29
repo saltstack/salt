@@ -13,6 +13,7 @@ import os
 import pathlib
 import posixpath
 import re
+import shutil
 import stat
 import string
 import struct
@@ -87,11 +88,11 @@ def get_link(path, resolve=True, canonicalize=False):
     :param canonicalize: True to return the real end pointing path (In case of multiple symlink).
     :return: The pointing path.
     '''
-    ret = ''
+    ret = get_absolute(path, resolve)
     if canonicalize:
         ret = os.path.realpath(path)
-    else:
-        ret = str(get_absolute(path, resolve))
+    elif not resolve and is_symlink(path):
+        ret = os.readlink(path)
     return ret
 
 
@@ -226,20 +227,6 @@ def is_char_device(path):
     return True if exist(path) and pathlib.Path(path).is_char_device() else False
 
 
-def get_user(path):
-    '''
-
-    :param path:
-    :return:
-    '''
-    ret = ''
-    try:
-        ret = pathlib.Path(path).owner()
-    except KeyError as exc:
-        log.info("Can't get user name for {}. Error: {}".format(path, exc))
-    return ret
-
-
 def set_user(path, user):
     '''
 
@@ -257,16 +244,7 @@ def set_user(path, user):
     return ret
 
 
-def get_uid(path):
-    '''
-
-    :param path:
-    :return:
-    '''
-    return salt.utils.user.user_to_uid(get_user(path))
-
-
-def get_group(path):
+def get_user(path):
     '''
 
     :param path:
@@ -274,10 +252,19 @@ def get_group(path):
     '''
     ret = ''
     try:
-        ret = pathlib.Path(path).group()
+        ret = pathlib.Path(path).owner()
     except KeyError as exc:
-        log.info("Can't get group name for {}. Error: {}".format(path, exc))
+        log.info("Can't get user name for {}. Error: {}".format(path, exc))
     return ret
+
+
+def get_uid(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    return salt.utils.user.user_to_uid(get_user(path))
 
 
 def set_group(path, group):
@@ -294,6 +281,20 @@ def set_group(path, group):
             ret = True
         except PermissionError as exc:
             log.info(exc)
+    return ret
+
+
+def get_group(path):
+    '''
+
+    :param path:
+    :return:
+    '''
+    ret = ''
+    try:
+        ret = pathlib.Path(path).group()
+    except KeyError as exc:
+        log.info("Can't get group name for {}. Error: {}".format(path, exc))
     return ret
 
 
@@ -340,13 +341,66 @@ def get_size(path):
     return stats(path).get('size')
 
 
+def mode_int_to_str(mode):
+    '''
+    Convert the st_mode value from a stat(2) call (as returned from os.stat())
+    to an octal mode.
+    '''
+    ret = oct(00000)
+    if isinstance(mode, six.string_types):
+        mode = mode_str_to_int(mode)
+    if isinstance(mode, int):
+        ret = oct(mode)
+    return str(ret).lstrip('0Oo').zfill(4)
+
+
+def mode_str_to_int(mode):
+    '''
+
+    :param mode:
+    :return:
+    '''
+    ret = '0'
+    if isinstance(mode, int):
+        ret = mode_int_to_str(mode)
+    if isinstance(mode, six.string_types):
+        ret = mode.zfill(4)
+    return int(ret, 8)
+
+
+def mode_normalized(mode):
+    return mode_int_to_str(mode)[-4:].zfill(4)
+
+
+def set_mode(path, mode):
+    '''
+
+    :param path:
+    :param mode:
+    :return:
+    '''
+    ret = False
+    abs_path = get_absolute(path)
+
+    if is_symlink(abs_path):
+        log.error("{} : Can't set mode for symlink".format(abs_path))
+    elif exist(abs_path):
+        try:
+            pathlib.Path(abs_path).chmod(mode_str_to_int(mode))
+            ret = True
+        except ValueError as exc:
+            log.error(exc)
+
+    return ret
+
+
 def get_mode(path):
     '''
 
     :param path:
     :return:
     '''
-    return stats(path).get('mode')
+    return stats(path).get('mode', None)
 
 
 def dir_to_list(path, recursive=False, follow_symlinks=False, __first_inc=True):
@@ -418,7 +472,10 @@ def dir_is_absent(path):
     :return:
     '''
     if is_dir(path) and dir_is_empty(path) and not is_symlink(path):
-        pathlib.Path(get_absolute(path)).rmdir()
+        try:
+            pathlib.Path(get_absolute(path)).rmdir()
+        except OSError as exc:
+            log.error(exc)
     return not exist(path)
 
 
@@ -501,7 +558,7 @@ def stats(path, hash_type="sha256", follow_symlinks=True):
         ret['mtime'] = path_stat.st_mtime
         ret['ctime'] = path_stat.st_ctime
         ret['size'] = path_stat.st_size
-        ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(path_stat.st_mode)))
+        ret['mode'] = mode_normalized(path_stat.st_mode)
         ret['type'] = get_type(path)
 
         if is_file(path):
@@ -543,39 +600,6 @@ def rename(src, path, safe=False):
     else:
         pathlib.Path(abs_src).replace(abs_path)
         ret = True
-
-    return ret
-
-
-def copy(src, path, recursive=False, remove_existing=False, safe=True):
-    '''
-
-    :param src:
-    :param path:
-    :param recursive:
-    :param remove_existing:
-    :param safe:
-    :return:
-    '''
-    ret = {'added': [], 'removed': [], 'unchanged': [], 'changed': []}
-    abs_src = get_absolute(src, resolve=True)
-    abs_path = get_absolute(path, resolve=True)
-
-    # clean destination
-    if exist(abs_path):
-        if safe:
-            log.error("The destination {} already exist.".format(abs_path))
-        elif remove_existing and (get_type(abs_src) == get_type(abs_path)):
-            ret['removed'].extend(remove(abs_path, recursive=recursive))
-        else:
-            log.error(
-                "The source path_type '{}' is different to the destination path_type '{}'.".format(abs_src, abs_path))
-
-    abs_src_user = get_user(abs_src)
-    abs_src_uid = get_uid(abs_src)
-    abs_src_group = get_group(abs_src)
-    abs_src_gid = get_gid(abs_src)
-    abs_src_mode = get_mode(abs_src)
 
     return ret
 
@@ -634,6 +658,64 @@ def recursive_copy(source, dest):
             file_path_from_source = os.path.join(source, path_from_source, name)
             target_path = os.path.join(target_directory, name)
             shutil.copyfile(file_path_from_source, target_path)
+
+
+def copy(src, path, recursive=False, remove_existing=False, safe=True):
+    '''
+
+    :param src:
+    :param path:
+    :param recursive:
+    :param remove_existing:
+    :param safe:
+    :return:
+    '''
+    ret = {'added': [], 'removed': []}
+    abs_src = get_absolute(src, resolve=True)
+    abs_path = get_absolute(path, resolve=True)
+    stop_process = False
+
+    # clean destination
+    if exist(abs_path):
+        if safe:
+            log.Error("The destination {} already exist.".format(abs_path))
+            stop_process = True
+        elif remove_existing and (get_type(abs_src) == get_type(abs_path)):
+            ret['removed'].extend(remove(abs_path, recursive=recursive))
+        elif (get_type(abs_src) == get_type(abs_path)) or (get_type(abs_src) == get_type(join(abs_path, get_basename(abs_src)))):
+            ret['removed'].extend(remove(abs_path, recursive=False))
+
+    if not stop_process:
+        # In case of symlink copy.
+        if is_symlink(abs_src) and not is_symlink(abs_path):
+            if set_link(get_link(abs_src, resolve=False), abs_path):
+                ret['added'].append(abs_path)
+
+        # In case of file copy to directory.
+        elif is_file(abs_src) and is_dir(abs_path) and not is_file(abs_path) and not is_file(join(abs_path, get_basename(abs_src))):
+            shutil.copy2(abs_src, abs_path)
+            ret['added'].append(join(abs_path, get_basename(abs_src)))
+
+        # In case of file copy to file.
+        elif is_file(abs_src) and not is_file(abs_path) and not is_file(join(abs_path, get_basename(abs_src))):
+            shutil.copy2(abs_src, abs_path)
+            ret['added'].append(abs_path)
+
+        # In case of directory copy.
+        elif is_dir(abs_src) and dir_is_present(abs_path):
+            dir_dict = dir_to_dict(abs_src)
+            for ele in dir_dict.get('file', []):
+                ret_copy = copy(ele, abs_path, recursive, remove_existing, safe)
+                ret['added'].extend(ret_copy.get('added', []))
+            for ele in dir_dict.get('link', []):
+                ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing, safe)
+                ret['added'].extend(ret_copy.get('added', []))
+            if recursive:
+                for ele in dir_dict.get('dir', []):
+                    ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing, safe)
+                    ret['added'].extend(ret_copy.get('added', []))
+
+    return ret
 
 
 def move():
