@@ -239,18 +239,14 @@ except ImportError:
     HAS_PYVMOMI = False
 
 # vSphere SDK Automation
+# pylint: disable=unused-import
 try:
-    # pylint: disable=unused-import
     from com.vmware.cis.tagging_client import Category, CategoryModel
-    # pylint: disable=unused-import
     from com.vmware.cis.tagging_client import Tag, TagModel, TagAssociation
-    # pylint: disable=unused-import
     from com.vmware.vcenter_client import Cluster
-    # pylint: disable=unused-import
     from com.vmware.vapi.std_client import DynamicID
 
     # Error Handling
-    # pylint: disable=unused-import
     from com.vmware.vapi.std.errors_client import (
         AlreadyExists, InvalidArgument,
         NotFound, Unauthenticated, Unauthorized
@@ -260,6 +256,7 @@ try:
     HAS_VSPHERE_SDK = True
 except ImportError:
     HAS_VSPHERE_SDK = False
+# pylint: enable=unused-import
 
 # ESXI
 esx_cli = salt.utils.path.which('esxcli')
