@@ -1062,7 +1062,7 @@ def docs_html(session, compress):
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     if compress:
-        session.run('tar', '-czvf', 'html-archive.tar.gz', '_build/html', external=True)
+        session.run('tar', '-cJvf', 'html-archive.tar.xz', '_build/html', external=True)
     os.chdir('..')
 
 
@@ -1095,5 +1095,5 @@ def docs_man(session, compress, update):
         session.run('rm', '-rf', 'man/', external=True)
         session.run('cp', '-Rp', '_build/man', 'man/', external=True)
     if compress:
-        session.run('tar', '-czvf', 'man-archive.tar.gz', '_build/man', external=True)
+        session.run('tar', '-cJvf', 'man-archive.tar.xz', '_build/man', external=True)
     os.chdir('..')
