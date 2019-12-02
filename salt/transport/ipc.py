@@ -5,6 +5,7 @@ IPC transport classes
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import sys
 import errno
 import logging
 import socket
@@ -358,7 +359,12 @@ class IPCClient(object):
         log.debug('Closing %s instance', self.__class__.__name__)
 
         if self.stream is not None and not self.stream.closed():
-            self.stream.close()
+            try:
+                self.stream.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # If its not a bad file descriptor error, raise
+                    six.reraise(*sys.exc_info())
 
 
 class IPCMessageClient(IPCClient):
@@ -710,7 +716,7 @@ class IPCMessageSubscriber(IPCClient):
         This class is a singleton so close have to be called only once during
         garbage collection when nobody uses this instance.
         '''
-<<<<<<< HEAD
+        
         if self._closing:
             return
         super(IPCMessageSubscriber, self).close()
@@ -721,7 +727,7 @@ class IPCMessageSubscriber(IPCClient):
             exc = self._read_stream_future.exception()
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
-=======
+                
         if not self._closing:
             IPCClient._close(self)
             # This will prevent this message from showing up:
@@ -731,7 +737,7 @@ class IPCMessageSubscriber(IPCClient):
                 self._read_sync_future.exception()
             if self._read_stream_future is not None and self._read_stream_future.done():
                 self._read_stream_future.exception()
->>>>>>> 8fb42cc38a... Do not close singleton instances.
+
 
     def __del__(self):
         if IPCMessageSubscriber in globals():
