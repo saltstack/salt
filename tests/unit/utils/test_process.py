@@ -24,6 +24,7 @@ from tests.support.mock import (
 # Import salt libs
 import salt.utils.platform
 import salt.utils.process
+from salt.utils.versions import warn_until_date
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -42,7 +43,9 @@ def die(func):
 
         def _die():
             salt.utils.process.appendproctitle('test_{0}'.format(name))
-        setattr(self, 'die_' + name, _die)
+        attrname = 'die_' + name
+        setattr(self, attrname, _die)
+        self.addCleanup(delattr, self, attrname)
 
     return wrapper
 
@@ -60,7 +63,9 @@ def incr(func):
             salt.utils.process.appendproctitle('test_{0}'.format(name))
             for _ in range(0, num):
                 counter.value += 1
-        setattr(self, 'incr_' + name, _incr)
+        attrname = 'incr_' + name
+        setattr(self, attrname, _incr)
+        self.addCleanup(delattr, self, attrname)
 
     return wrapper
 
@@ -78,7 +83,9 @@ def spin(func):
             salt.utils.process.appendproctitle('test_{0}'.format(name))
             while True:
                 time.sleep(1)
-        setattr(self, 'spin_' + name, _spin)
+        attrname = 'spin_' + name
+        setattr(self, attrname, _spin)
+        self.addCleanup(delattr, self, attrname)
 
     return wrapper
 
@@ -240,6 +247,48 @@ class TestProcess(TestCase):
         # pylint: enable=assignment-from-none
 
 
+class TestProcessCallbacks(TestCase):
+
+    @staticmethod
+    def process_target(evt):
+        evt.set()
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_callbacks(self):
+        'Validate Process call after fork and finalize methods'
+        teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
+        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+            evt = multiprocessing.Event()
+            proc = salt.utils.process.Process(target=self.process_target, args=(evt,))
+            proc.run()
+            assert evt.is_set()
+        mb.assert_called()
+        ma.assert_called()
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_callbacks_called_when_run_overriden(self):
+        'Validate Process sub classes call after fork and finalize methods when run is overridden'
+
+        class MyProcess(salt.utils.process.Process):
+
+            def __init__(self):
+                super(MyProcess, self).__init__()
+                self.evt = multiprocessing.Event()
+
+            def run(self):
+                self.evt.set()
+
+        teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
+        with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+            proc = MyProcess()
+            proc.run()
+            assert proc.evt.is_set()
+        ma.assert_called()
+        mb.assert_called()
+
+
 class TestSignalHandlingProcess(TestCase):
 
     @classmethod
@@ -322,33 +371,6 @@ class TestSignalHandlingProcess(TestCase):
     def no_op_target():
         pass
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_signal_processing_test_after_fork_called(self):
-        'Validate Process and sub classes call after fork methods'
-        evt = multiprocessing.Event()
-        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
-        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
-        with patch(sig_to_mock) as ma, patch(log_to_mock) as mb:
-            self.sh_proc = salt.utils.process.SignalHandlingProcess(target=self.no_op_target)
-            self.sh_proc.run()
-        ma.assert_called()
-        mb.assert_called()
-
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
-    def test_signal_processing_test_final_methods_called(self):
-        'Validate Process and sub classes call finalize methods'
-        evt = multiprocessing.Event()
-        teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
-        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
-        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
-        # Mock _setup_signals so we do not register one for this process.
-        with patch(sig_to_mock):
-            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
-                self.sh_proc = salt.utils.process.SignalHandlingProcess(target=self.no_op_target)
-                self.sh_proc.run()
-        ma.assert_called()
-        mb.assert_called()
-
     @staticmethod
     def pid_setting_target(sub_target, val, evt):
         val.value = os.getpid()
@@ -403,6 +425,58 @@ class TestSignalHandlingProcess(TestCase):
             evt.set()
             proc2.join(30)
             proc.join(30)
+
+
+class TestSignalHandlingProcessCallbacks(TestCase):
+
+    @staticmethod
+    def process_target(evt):
+        evt.set()
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_callbacks(self):
+        'Validate SignalHandlingProcess call after fork and finalize methods'
+
+        teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
+        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
+        # Mock _setup_signals so we do not register one for this process.
+        evt = multiprocessing.Event()
+        with patch(sig_to_mock):
+            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+                sh_proc = salt.utils.process.SignalHandlingProcess(
+                    target=self.process_target,
+                    args=(evt,)
+                )
+                sh_proc.run()
+                assert evt.is_set()
+        ma.assert_called()
+        mb.assert_called()
+
+    @skipIf(NO_MOCK, NO_MOCK_REASON)
+    def test_callbacks_called_when_run_overriden(self):
+        'Validate SignalHandlingProcess sub classes call after fork and finalize methods when run is overridden'
+
+        class MyProcess(salt.utils.process.SignalHandlingProcess):
+
+            def __init__(self):
+                super(MyProcess, self).__init__()
+                self.evt = multiprocessing.Event()
+
+            def run(self):
+                self.evt.set()
+
+        teardown_to_mock = 'salt.log.setup.shutdown_multiprocessing_logging'
+        log_to_mock = 'salt.utils.process.Process._setup_process_logging'
+        sig_to_mock = 'salt.utils.process.SignalHandlingProcess._setup_signals'
+        # Mock _setup_signals so we do not register one for this process.
+        with patch(sig_to_mock):
+            with patch(teardown_to_mock) as ma, patch(log_to_mock) as mb:
+                sh_proc = MyProcess()
+                sh_proc.run()
+                assert sh_proc.evt.is_set()
+        ma.assert_called()
+        mb.assert_called()
 
 
 class TestDup2(TestCase):
@@ -481,8 +555,28 @@ class TestProcessList(TestCase):
 
 class TestDeprecatedClassNames(TestCase):
 
-    def process_target(self):
-        time.sleep(1)
+    @staticmethod
+    def process_target():
+        pass
+
+    @staticmethod
+    def patched_warn_until_date(current_date):
+        def _patched_warn_until_date(date,
+                                     message,
+                                     category=DeprecationWarning,
+                                     stacklevel=None,
+                                     _current_date=current_date,
+                                     _dont_call_warnings=False):
+            # Because we add another function in between, the stacklevel
+            # set in salt.utils.process, 3, needs to now be 4
+            stacklevel = 4
+            return warn_until_date(date,
+                                   message,
+                                   category=category,
+                                   stacklevel=stacklevel,
+                                   _current_date=_current_date,
+                                   _dont_call_warnings=_dont_call_warnings)
+        return _patched_warn_until_date
 
     def test_multiprocessing_process_warning(self):
         # We *always* want *all* warnings thrown on this module
@@ -493,7 +587,7 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 # Test warning
                 with warnings.catch_warnings(record=True) as recorded_warnings:
                     proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
@@ -514,15 +608,15 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 with self.assertRaisesRegex(
                         RuntimeError,
-                        r'Please stop using \'salt.utils.process.MultiprocessingProcess\' '
-                        r'and instead use \'salt.utils.process.Process\'. '
-                        r'\'salt.utils.process.MultiprocessingProcess\' will go away '
+                        r"Please stop using 'salt.utils.process.MultiprocessingProcess' "
+                        r"and instead use 'salt.utils.process.Process'. "
+                        r"'salt.utils.process.MultiprocessingProcess' will go away "
                         r'after 2022-01-01. '
                         r'This warning\(now exception\) triggered on '
-                        r'filename \'(.*)test_process.py\', line number ([\d]+), is '
+                        r"filename '(.*)test_process.py', line number ([\d]+), is "
                         r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
                         r'Please remove the warning.'):
                     proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
@@ -539,7 +633,7 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 # Test warning
                 with warnings.catch_warnings(record=True) as recorded_warnings:
                     proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)
@@ -560,15 +654,15 @@ class TestDeprecatedClassNames(TestCase):
         proc = None
 
         try:
-            with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+            with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
                 with self.assertRaisesRegex(
                         RuntimeError,
-                        r'Please stop using \'salt.utils.process.SignalHandlingMultiprocessingProcess\' '
-                        r'and instead use \'salt.utils.process.SignalHandlingProcess\'. '
-                        r'\'salt.utils.process.SignalHandlingMultiprocessingProcess\' will go away '
+                        r"Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
+                        r"and instead use 'salt.utils.process.SignalHandlingProcess'. "
+                        r"'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
                         r'after 2022-01-01. '
                         r'This warning\(now exception\) triggered on '
-                        r'filename \'(.*)test_process.py\', line number ([\d]+), is '
+                        r"filename '(.*)test_process.py', line number ([\d]+), is "
                         r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
                         r'Please remove the warning.'):
                     proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)

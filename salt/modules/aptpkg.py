@@ -1016,8 +1016,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
-    download_only
-        Only download the packages, don't unpack or install them
+    download_only (or downloadonly)
+        Only download the packages, don't unpack or install them. Use
+        downloadonly to be in line with yum and zypper module.
 
         .. versionadded:: 2018.3.0
 
@@ -1048,7 +1049,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
-    if kwargs.get('download_only', False):
+    if kwargs.get('download_only', False) or kwargs.get('downloadonly', False):
         cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
@@ -1156,7 +1157,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             salt '*' pkg.unhold <package name>
 
     pkgs
-        A list of packages to hold. Must be passed as a python list.
+        A list of packages to unhold. Must be passed as a python list.
 
         CLI Example:
 
