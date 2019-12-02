@@ -608,7 +608,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
     extra_args
         pip keyword and positional arguments not yet implemented in salt
-        
+
         .. code-block:: yaml
 
             salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
@@ -623,7 +623,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     .. code-block:: bash
 
         pip install pandas --latest-pip-kwarg param --latest-pip-arg
-
 
     disable_version_check
         Pip may periodically check PyPI to determine whether a new version of

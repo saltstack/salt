@@ -668,7 +668,7 @@ def installed(name,
 
     extra_args
         pip keyword and positional arguments not yet implemented in salt
-        
+
         .. code-block:: yaml
 
             pandas:

@@ -802,7 +802,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
-                
+
     def test_install_extra_args_arguments_in_resulting_command(self):
         pkg = 'pep8'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
@@ -837,8 +837,6 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 pkg, extra_args=[
                     {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
                 ]))
-
-
 
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
@@ -1317,8 +1315,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
-        # Lower than 1.4 versions don't end-up with `--pre` in the resulting
-        # output
+        # Lower than 1.4 versions don't end up with `--pre` in the resulting output
         mock = MagicMock(side_effect=[
             {'retcode': 0, 'stdout': 'pip 1.2.0 /path/to/site-packages/pip'},
             {'retcode': 0, 'stdout': ''}
