@@ -875,6 +875,16 @@ def _virtual(osdata):
                 grains['virtual'] = 'kvm'
             elif 'joyent smartdc hvm' in model:
                 grains['virtual'] = 'kvm'
+            else:
+                # Check if it's a "regular" zone
+                zonename = salt.utils.path.which('zonename')
+                if zonename:
+                    zone = __salt__['cmd.run']('{0}'.format(zonename))
+                    if zone != 'global':
+                        grains['virtual'] = 'zone'
+                # Check if it's a branded zone
+                elif isdir('/.SUNWnative'):
+                    grains['virtual'] = 'zone'
             break
         elif command == 'virtinfo':
             if output == 'logical-domain':
