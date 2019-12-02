@@ -9,6 +9,7 @@ import time
 
 # Salt libs
 import salt.utils.files
+import salt.utils.platform
 from salt.beacons import watchdog
 from salt.ext.six.moves import range
 
@@ -40,6 +41,7 @@ def create(path, content=None):
 
 
 @skipIf(not watchdog.HAS_WATCHDOG, 'watchdog is not available')
+@skipIf(salt.utils.platform.is_darwin(), 'Tests were being skipped pre macos under nox. Keep it like that for now.')
 class IWatchdogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.watchdog
