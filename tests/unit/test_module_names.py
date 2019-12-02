@@ -15,7 +15,7 @@ import salt.utils.stringutils
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.paths import CODE_DIR, test_mods
+from tests.support.paths import CODE_DIR, list_test_mods
 
 EXCLUDED_DIRS = [
     os.path.join('tests', 'pkg'),
@@ -72,7 +72,7 @@ class BadTestModuleNamesTestCase(TestCase):
         excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
         tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
-        for root, dirs, files in salt.utils.path.os_walk(tests_dir):
+        for root, _, files in salt.utils.path.os_walk(tests_dir):
             reldir = os.path.relpath(root, CODE_DIR)
             if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
                     or reldir.endswith('__pycache__'):
@@ -89,7 +89,7 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg = '\n\nPlease rename the following files:\n'
         for path in bad_names:
             directory, filename = path.rsplit(os.sep, 1)
-            filename, ext = os.path.splitext(filename)
+            filename, _ = os.path.splitext(filename)
             error_msg += '  {} -> {}/test_{}.py\n'.format(path, directory, filename.split('_test')[0])
 
         error_msg += '\nIf you believe one of the entries above should be ignored, please add it to either\n'
@@ -135,6 +135,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.master.test_event_return',
             'integration.minion.test_blackout',
             'integration.minion.test_pillar',
+            'integration.minion.test_executor',
             'integration.minion.test_timeout',
             'integration.modules.test_decorators',
             'integration.modules.test_pkg',
@@ -205,7 +206,7 @@ class BadTestModuleNamesTestCase(TestCase):
             msg += ''.join(errors)
             return msg
 
-        for mod_name in test_mods():
+        for mod_name in list_test_mods():
             if mod_name in ignore:
                 # Test module is being ignored, skip it
                 continue
