@@ -31,6 +31,7 @@ __func_alias__ = {
     'reload_': 'reload'
 }
 
+
 def __virtual__():
     '''
     Only work on systems which default to OpenRC
