@@ -55,6 +55,7 @@ SYS_TMP_DIR = os.path.abspath(os.path.realpath(
     os.environ.get('TMPDIR', tempfile.gettempdir()) if not sys.platform.startswith('darwin') else '/tmp'
 ))
 TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
+TMP_ROOT_DIR = os.path.join(TMP, 'rootdir')
 FILES = os.path.join(INTEGRATION_TEST_DIR, 'files')
 BASE_FILES = os.path.join(INTEGRATION_TEST_DIR, 'files', 'file', 'base')
 PROD_FILES = os.path.join(INTEGRATION_TEST_DIR, 'files', 'file', 'prod')
@@ -125,7 +126,7 @@ SCRIPT_TEMPLATES = {
 }
 
 
-def test_mods():
+def list_test_mods():
     '''
     A generator which returns all of the test files
     '''
