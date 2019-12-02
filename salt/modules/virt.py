@@ -3309,7 +3309,7 @@ def get_hypervisor():
     # To add a new 'foo' hypervisor, add the _is_foo_hyper function,
     # add 'foo' to the list below and add it to the docstring with a .. versionadded::
     hypervisors = ['kvm', 'xen']
-    result = [hyper for hyper in hypervisors if getattr(sys.modules[__name__], '_is_{}_hyper').format(hyper)()]
+    result = [hyper for hyper in hypervisors if getattr(sys.modules[__name__], '_is_{}_hyper'.format(hyper))()]
     return result[0] if result else None
 
 
