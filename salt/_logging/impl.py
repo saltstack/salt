@@ -121,9 +121,9 @@ LOGGING_STORE_HANDLER = __StoreLoggingHandler()
 class SaltLogRecord(logging.LogRecord):
     def __init__(self, *args, **kwargs):
         logging.LogRecord.__init__(self, *args, **kwargs)
-        self.bracketname = '[{:<17}]'.format(self.name)
-        self.bracketlevel = '[{:<8}]'.format(self.levelname)
-        self.bracketprocess = '[{:>5}]'.format(self.process)
+        self.bracketname = '[{:<17}]'.format(str(self.name))
+        self.bracketlevel = '[{:<8}]'.format(str(self.levelname))
+        self.bracketprocess = '[{:>5}]'.format(str(self.process))
 
 
 class SaltColorLogRecord(SaltLogRecord):
@@ -241,7 +241,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixinMeta, LOGGING_LOGGER_CLASS
     def _log(self, level, msg, args, exc_info=None,
              extra=None,  # pylint: disable=arguments-differ
              stack_info=False,
-             stack_level=1,
+             stacklevel=1,
              exc_info_on_loglevel=None):
         if extra is None:
             extra = {}
@@ -290,7 +290,7 @@ class SaltLoggingClass(six.with_metaclass(LoggingMixinMeta, LOGGING_LOGGER_CLASS
         else:
             LOGGING_LOGGER_CLASS._log(
                 self, level, msg, args, exc_info=exc_info, extra=extra,
-                stack_info=stack_info, stack_level=stack_level
+                stack_info=stack_info, stacklevel=stacklevel
             )
 
     def makeRecord(self, name, level, fn, lno, msg, args, exc_info,
