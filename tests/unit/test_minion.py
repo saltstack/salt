@@ -116,7 +116,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         return None BEFORE any of the processes are spun up because we should be avoiding firing duplicate
         jobs.
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
@@ -137,7 +137,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
             mock_jid = 11111
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             mock_data = {'fun': 'foo.bar',
                          'jid': mock_jid}
             mock_jid_queue = [123, 456]
@@ -165,7 +165,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
                 patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
                 patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             mock_opts['minion_jid_queue_hwm'] = 2
             mock_data = {'fun': 'foo.bar',
                          'jid': 789}
@@ -196,7 +196,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 patch('salt.utils.minion.running', MagicMock(return_value=[])), \
                 patch('tornado.gen.sleep', MagicMock(return_value=tornado.concurrent.Future())):
             process_count_max = 10
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts['__role'] = 'minion'
             mock_opts['minion_jid_queue_hwm'] = 100
             mock_opts["process_count_max"] = process_count_max
 

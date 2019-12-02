@@ -24,19 +24,19 @@ from multiprocessing import Process
 
 # Import Salt Testing libs
 from tests.support.unit import expectedFailure, skipIf, TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.config
 import salt.utils.event
 import salt.utils.stringutils
-import tests.integration as integration
 from salt.utils.process import clean_proc
 
 # Import 3rd-+arty libs
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 from tests.support.processes import terminate_process
 
-SOCK_DIR = os.path.join(integration.TMP, 'test-socks')
+SOCK_DIR = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
 
 NO_LONG_IPC = False
 if getattr(zmq, 'IPC_PATH_MAX_LEN', 103) <= 103:
