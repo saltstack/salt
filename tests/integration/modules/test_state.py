@@ -13,7 +13,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import with_tempdir, flaky
+from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
 from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
@@ -1764,7 +1764,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test a state with the retry option that should return True immedietly (i.e. no retries)
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file_option_success')
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success'
@@ -1773,29 +1773,35 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         retry_state = 'file_|-file_test_|-{0}_|-exists'.format(testfile)
         self.assertNotIn('Attempt', state_run[retry_state]['comment'])
 
-    def run_create(self):
+    def run_create(self, testfile):
         '''
         helper function to wait 30 seconds and then create the temp retry file
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        # Wait for the requisite stae 'file_test_a' to complete before creating
+        # test_file
+        while True:
+            if os.path.exists(testfile + '_a'):
+                break
+            time.sleep(1)
         time.sleep(30)
         with salt.utils.files.fopen(testfile, 'a'):
             pass
 
-    @flaky
     def test_retry_option_eventual_success(self):
         '''
         test a state with the retry option that should return True after at least 4 retry attmempt
         but never run 15 attempts
         '''
-        testfile = os.path.join(TMP, 'retry_file')
-        create_thread = threading.Thread(target=self.run_create)
+        testfile = os.path.join(TMP, 'retry_file_eventual_success')
+        assert not os.path.exists(testfile + '_a')
+        assert not os.path.exists(testfile)
+        create_thread = threading.Thread(target=self.run_create, args=(testfile,))
         create_thread.start()
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success2'
         )
-        retry_state = 'file_|-file_test_|-{0}_|-exists'.format(testfile)
+        retry_state = 'file_|-file_test_b_|-{0}_|-exists'.format(testfile)
         self.assertIn('Attempt 1:', state_run[retry_state]['comment'])
         self.assertIn('Attempt 2:', state_run[retry_state]['comment'])
         self.assertIn('Attempt 3:', state_run[retry_state]['comment'])
