@@ -16,9 +16,9 @@ import datetime
 import warnings
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.paths import CODE_DIR
 
 # Import Salt libs
 import salt.modules.cmdmod
@@ -106,12 +106,10 @@ class VersionTestCase(TestCase):
         check the spelling of the version name for the release
         names in the salt.utils.versions.warn_until call
         '''
-        salt_dir = integration.CODE_DIR
         query = 'salt.utils.versions.warn_until('
         names = salt.version.SaltStackVersion.NAMES
 
-        salt_dir += '/salt/'
-        cmd = 'grep -lr {0} -A 1 '.format(query) + salt_dir
+        cmd = 'grep -lr {} -A 1 {}'.format(query, os.path.join(CODE_DIR, 'salt'))
 
         grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
 
