@@ -32,7 +32,7 @@ class NetapiClientTest(TestCase):
         del self.netapi
 
     def test_local(self):
-        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
+        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)

@@ -50,7 +50,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 import glob
 import os
 import re
-import itertools
 import fnmatch
 
 # Import salt libs
@@ -58,6 +57,7 @@ import salt.modules.cmdmod
 import salt.utils.files
 import salt.utils.path
 import salt.utils.systemd
+from salt.ext.six.moves import filter  # pylint: disable=import-error,redefined-builtin
 
 __func_alias__ = {
     'reload_': 'reload'
@@ -190,7 +190,7 @@ def _upstart_is_disabled(name):
     in /etc/init/[name].conf.
     '''
     files = ['/etc/init/{0}.conf'.format(name), '/etc/init/{0}.override'.format(name)]
-    for file_name in itertools.ifilter(os.path.isfile, files):
+    for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name) as fp_:
             if re.search(r'^\s*manual',
                          salt.utils.stringutils.to_unicode(fp_.read()),
@@ -516,7 +516,7 @@ def _upstart_enable(name):
         return _upstart_is_enabled(name)
     override = '/etc/init/{0}.override'.format(name)
     files = ['/etc/init/{0}.conf'.format(name), override]
-    for file_name in itertools.ifilter(os.path.isfile, files):
+    for file_name in filter(os.path.isfile, files):
         with salt.utils.files.fopen(file_name, 'r+') as fp_:
             new_text = re.sub(r'^\s*manual\n?',
                               '',
