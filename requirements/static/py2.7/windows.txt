@@ -24,9 +24,9 @@ chardet==3.0.4            # via requests
 cheroot==6.5.5            # via cherrypy
 cherrypy==17.4.1
 colorama==0.4.1           # via pytest
-contextlib2==0.5.5        # via cherrypy
+configparser==4.0.2       # via importlib-metadata
+contextlib2==0.5.5        # via cherrypy, importlib-metadata
 cookies==2.2.1            # via responses
-coverage==4.5.3           # via pytest-cov
 cryptography==2.6.1
 dmidecode==0.9.0
 dnspython==1.16.0
@@ -44,6 +44,7 @@ gitdb==0.6.4
 gitpython==2.1.10
 google-auth==1.6.3        # via kubernetes
 idna==2.8
+importlib-metadata==0.23  # via pluggy, pytest
 ioloop==0.1a0
 ipaddress==1.0.22
 jaraco.functools==2.0     # via tempora
@@ -64,10 +65,11 @@ more-itertools==5.0.0
 moto==1.3.7
 msgpack-python==0.5.6
 msgpack==0.5.6
+packaging==19.2           # via pytest
 patch==1.16
-pathlib2==2.3.3           # via pytest
+pathlib2==2.3.3           # via importlib-metadata, pytest
 pathtools==0.1.2          # via watchdog
-pluggy==0.9.0             # via pytest
+pluggy==0.13.0            # via pytest
 portend==2.4              # via cherrypy
 psutil==5.6.1
 py==1.8.0                 # via pytest
@@ -81,13 +83,12 @@ pycurl==7.43.0.2
 pygit2==0.28.2
 pymysql==0.9.3
 pyopenssl==19.0.0
-pytest-cov==2.6.1
+pyparsing==2.4.5          # via packaging
 pytest-helpers-namespace==2019.1.8
-pytest-salt-runtests-bridge==2019.1.30
-pytest-salt==2018.12.8
-pytest-tempdir==2018.8.11
-pytest-timeout==1.3.3
-pytest==4.4.1
+pytest-salt-runtests-bridge==2019.7.10
+pytest-salt==2019.11.27
+pytest-tempdir==2019.10.12
+pytest==4.6.6
 python-dateutil==2.8.0
 python-etcd==0.4.5
 python-gnupg==0.4.4
@@ -108,7 +109,7 @@ scandir==1.10.0           # via pathlib2
 sed==0.3.1
 setproctitle==1.1.10
 singledispatch==3.4.0.3
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 smmap==0.9.0
 strict-rfc3339==0.7
@@ -119,6 +120,7 @@ tornado==4.5.3 ; python_version < "3"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
 watchdog==0.9.0
+wcwidth==0.1.7            # via pytest
 websocket-client==0.40.0  # via docker, kubernetes
 werkzeug==0.15.6          # via moto
 wheel==0.33.4
@@ -126,3 +128,4 @@ wmi==1.4.9
 wrapt==1.11.1             # via aws-xray-sdk
 xmltodict==0.12.0         # via moto
 zc.lockfile==1.4          # via cherrypy
+zipp==0.6.0               # via importlib-metadata
