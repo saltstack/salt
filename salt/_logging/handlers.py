@@ -244,7 +244,7 @@ if sys.version_info < (3, 2):
 elif sys.version_info < (3, 7):
     # On python versions lower than 3.7, we sill subclass and overwrite prepare to include the fix for:
     #  https://bugs.python.org/issue35726
-    class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler):  # pylint: disable=no-member
+    class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler):  # pylint: disable=no-member,inconsistent-mro
 
         def __init__(self, queue):
             super(QueueHandler, self).__init__(queue)
@@ -297,7 +297,7 @@ elif sys.version_info < (3, 7):
             record.exc_text = None
             return record
 else:
-    class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler):  # pylint: disable=no-member
+    class QueueHandler(ExcInfoOnLogLevelFormatMixin, logging.handlers.QueueHandler):  # pylint: disable=no-member,inconsistent-mro
 
         def __init__(self, queue):
             super(QueueHandler, self).__init__(queue)

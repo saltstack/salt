@@ -265,3 +265,27 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=linux
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: lint-salt
+        name: Lint Salt
+        files: ^((setup|noxfile)|salt/.*)\.py$
+        args:
+          - -e
+          - lint-salt
+          - --
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: lint-tests
+        name: Lint Tests
+        files: ^tests/.*\.py$
+        args:
+          - -e
+          - lint-tests
+          - --
