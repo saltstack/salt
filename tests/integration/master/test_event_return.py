@@ -20,9 +20,10 @@ from tests.support.case import TestCase
 from tests.support.paths import ScriptPathMixin
 from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
+from tests.support.processes import terminate_process
 
 # Import 3rd-party libs
-from tests.support.processes import terminate_process
+import pytest
 
 # Import Salt libs
 import salt.ext.six as six
@@ -49,6 +50,8 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
         temp_config = AdaptedConfigurationTestCaseMixin.get_temp_config('master', **overrides)
         cls.root_dir = temp_config['root_dir']
         cls.config_dir = os.path.dirname(temp_config['conf_file'])
+        if temp_config['transport'] == 'tcp':
+            pytest.skip('Test only applicable to the ZMQ transport')
 
     @classmethod
     def tearDownClass(cls):
