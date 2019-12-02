@@ -1167,7 +1167,7 @@ def extracted(name,
                     ret['comment'] += (
                         ' Since the \'clean_parent\' option is enabled, the '
                         'destination parent directory would be removed first '
-                        'and than re-created and the archive would be '
+                        'and then re-created and the archive would be '
                         'extracted'
                     )
                     return ret
