@@ -537,10 +537,163 @@ class path_stats_TestCase(TestCase):
     def test_get_type_symlink_to_dir(self):
         self.assertEqual('link', salt.utils.path.get_type(self.link_other_dir_present))
 
+    #  FUNC: set_perms
+    ##################################################
+    ### For files.
+    def test_set_perms_file_no_changes(self):
+        wanted_ret = {
+            self.file_present: {
+                'user': salt.utils.path.get_user(self.file_present),
+                'group': salt.utils.path.get_group(self.file_present),
+                'mode': salt.utils.path.get_mode(self.file_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.file_present))
+
+    def test_set_perms_file_change_user(self):
+        wanted_ret = {
+            self.file_present: {
+                'user': self.user['name'],
+                'group': salt.utils.path.get_group(self.file_present),
+                'mode': salt.utils.path.get_mode(self.file_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.file_present,
+                                                               user=self.user['name']))
+
+    def test_set_perms_file_change_group(self):
+        wanted_ret = {
+            self.file_present: {
+                'user': salt.utils.path.get_user(self.file_present),
+                'group': self.group['name'],
+                'mode': salt.utils.path.get_mode(self.file_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.file_present,
+                                                               group=self.group['name']))
+
+    def test_set_perms_file_change_mode(self):
+        wanted_ret = {
+            self.file_present: {
+                'user': salt.utils.path.get_user(self.file_present),
+                'group': salt.utils.path.get_group(self.file_present),
+                'mode': '0123'
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.file_present,
+                                                               mode='0123'))
+
+    ### For symlink.
+    def test_set_perms_symlink_no_changes(self):
+        wanted_ret = {
+            self.link_file_one_present: {
+                'user': salt.utils.path.get_user(self.link_file_one_present),
+                'group': salt.utils.path.get_group(self.link_file_one_present),
+                'mode': salt.utils.path.get_mode(self.link_file_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.link_file_one_present))
+
+    def test_set_perms_symlink_change_user(self):
+        wanted_ret = {
+            self.link_file_one_present: {
+                'user': salt.utils.path.get_user(self.link_file_one_present),
+                'group': salt.utils.path.get_group(self.link_file_one_present),
+                'mode': salt.utils.path.get_mode(self.link_file_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.link_file_one_present,
+                                                               user=self.user['name']))
+
+    def test_set_perms_symlink_change_group(self):
+        wanted_ret = {
+            self.link_file_one_present: {
+                'user': salt.utils.path.get_user(self.link_file_one_present),
+                'group': salt.utils.path.get_group(self.link_file_one_present),
+                'mode': salt.utils.path.get_mode(self.link_file_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.link_file_one_present,
+                                                               group=self.group['name']))
+
+    def test_set_perms_symlink_change_mode(self):
+        wanted_ret = {
+            self.link_file_one_present: {
+                'user': salt.utils.path.get_user(self.link_file_one_present),
+                'group': salt.utils.path.get_group(self.link_file_one_present),
+                'mode': salt.utils.path.get_mode(self.link_file_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.link_file_one_present,
+                                                               mode='0123'))
+
+    ### For directories.
+    def test_set_perms_dir_no_changes_recursive_False(self):
+        wanted_ret = {
+            self.dir_one_present: {
+                'user': salt.utils.path.get_user(self.dir_one_present),
+                'group': salt.utils.path.get_group(self.dir_one_present),
+                'mode': salt.utils.path.get_mode(self.dir_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.dir_one_present,
+                                                               recursive=False))
+
+    def test_set_perms_dir_change_user_recursive_False(self):
+        wanted_ret = {
+            self.dir_one_present: {
+                'user': self.user['name'],
+                'group': salt.utils.path.get_group(self.dir_one_present),
+                'mode': salt.utils.path.get_mode(self.dir_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.dir_one_present, user=self.user['name'],
+                                                               recursive=False))
+
+    def test_set_perms_dir_change_group_recursive_False(self):
+        wanted_ret = {
+            self.dir_one_present: {
+                'user': salt.utils.path.get_user(self.dir_one_present),
+                'group': self.group['name'],
+                'mode': salt.utils.path.get_mode(self.dir_one_present)
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.dir_one_present, group=self.group['name'],
+                                                               recursive=False))
+
+    def test_set_perms_dir_change_mode_recursive_False(self):
+        wanted_ret = {
+            self.dir_one_present: {
+                'user': salt.utils.path.get_user(self.dir_one_present),
+                'group': salt.utils.path.get_group(self.dir_one_present),
+                'mode': '0123'
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.dir_one_present, mode='0123',
+                                                               recursive=False))
+
+    ### For directories recursive.
+    def test_set_perms_dir_change_all_recursive_True_mode(self):
+        wanted_ret = {
+            self.dir_one_present: {
+                'user': self.user['name'],
+                'group': self.group['name'],
+                'mode': '0123'
+            },
+            self.file_one_present: {
+                'user': self.user['name'],
+                'group': self.group['name'],
+                'mode': '0123'
+            }
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.set_perms(self.dir_one_present,
+                                                               user=self.user['name'],
+                                                               group=self.group['name'],
+                                                               mode='0123'))
 
 # @skipIf(NO_MOCK, NO_MOCK_REASON)
 # @destructiveTest
-class path_remove_TestCase(TestCase):
+class path_remove_copy_move_TestCase(TestCase):
 
     def setUp(self):
         self.working_dir = tempfile.TemporaryDirectory().name
@@ -556,6 +709,7 @@ class path_remove_TestCase(TestCase):
         self.link_file_tree_absent = os.path.join(self.working_dir, 'link_file_tree_absent')
         self.dir_four_absent = os.path.join(self.working_dir, 'dir_four_absent')
         self.link_dir_four_absent = os.path.join(self.working_dir, 'link_dir_four_absent')
+        self.dir_five_present = os.path.join(self.working_dir, 'dir_five_present')
 
         self.other_dir = tempfile.TemporaryDirectory().name
         self.link_other_dir_present = os.path.join(self.working_dir, 'link_other_dir_present')
@@ -573,6 +727,7 @@ class path_remove_TestCase(TestCase):
         salt.utils.path.dir_is_present(self.dir_tree_present)
         salt.utils.path.set_link(self.file_tree_absent, self.link_file_tree_absent)
         salt.utils.path.set_link(self.dir_four_absent, self.link_dir_four_absent)
+        salt.utils.path.dir_is_present(self.dir_five_present)
 
         salt.utils.path.dir_is_present(self.other_dir)
         salt.utils.path.set_link(self.other_dir, self.link_other_dir_present)
@@ -585,6 +740,9 @@ class path_remove_TestCase(TestCase):
         salt.utils.path.file_is_absent(self.link_other_dir_present)
         salt.utils.path.dir_is_absent(self.other_dir)
 
+        salt.utils.path.dir_is_absent(self.dir_four_absent)
+        salt.utils.path.dir_is_absent(self.dir_five_present)
+        salt.utils.path.file_is_absent(self.file_tree_absent)
         salt.utils.path.file_is_absent(self.link_dir_four_absent)
         salt.utils.path.file_is_absent(self.link_file_tree_absent)
         salt.utils.path.dir_is_absent(self.dir_tree_present)
@@ -665,6 +823,7 @@ class path_remove_TestCase(TestCase):
                              self.dir_two_present,
                              self.file_two_present,
                              self.dir_tree_present,
+                             self.dir_five_present,
                              self.link_dir_four_absent,
                              self.link_dir_two_present,
                              self.link_file_one_present,
@@ -685,6 +844,7 @@ class path_remove_TestCase(TestCase):
                              self.file_two_present,
                              self.dir_tree_present,
                              self.dir_four_absent,
+                             self.dir_five_present,
                              self.file_tree_absent,
                              self.other_dir,
                              self.other_file_present,
@@ -699,6 +859,119 @@ class path_remove_TestCase(TestCase):
         self.assertFalse(salt.utils.path.exist(self.other_dir))
         self.assertFalse(salt.utils.path.exist(self.working_dir))
         self.assertEqual(wanted_ret, actual_ret)
+
+    #  FUNC: move
+    ##################################################
+    def test_move_file_absent(self):
+        wanted_ret = {'added': [], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.file_tree_absent, self.file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_tree_absent))
+
+    def test_move_file_present(self):
+        wanted_ret = {'added': [self.file_tree_absent], 'removed': [self.file_present]}
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.file_present, self.file_tree_absent))
+        self.assertTrue(salt.utils.path.exist(self.file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_present))
+
+    def test_move_dir_absent(self):
+        wanted_ret = {'added': [], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.dir_four_absent, self.dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_move_dir_present(self):
+        wanted_ret = {'added': [self.dir_four_absent], 'removed': [self.dir_five_present]}
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.dir_five_present, self.dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.dir_five_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_move_symlink_file_absent(self):
+        wanted_ret = {'added': [], 'removed': [self.link_file_tree_absent]}
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.link_file_tree_absent, self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_file_tree_absent))
+
+    def test_move_symlink_file_present(self):
+        wanted_ret = {'added': [self.link_file_tree_absent], 'removed': [self.link_file_one_present]}
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.link_file_one_present, self.link_file_tree_absent))
+        self.assertTrue(salt.utils.path.exist(self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_file_one_present))
+
+    def test_move_dir_not_empty(self):
+        wanted_ret = {
+            'added': [
+                self.dir_four_absent,
+                salt.utils.path.join(self.dir_four_absent, salt.utils.path.get_basename(self.file_one_present))
+            ],
+            'removed': [
+                self.dir_one_present,
+                self.file_one_present
+            ]
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.move(self.dir_one_present, self.dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.dir_one_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_four_absent))
+
+    #  FUNC: copy
+    ##################################################
+    def test_copy_file_absent(self):
+        wanted_ret = {'added': [], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.file_tree_absent, self.file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.file_tree_absent))
+
+    def test_copy_file_present(self):
+        wanted_ret = {'added': [self.file_tree_absent], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.file_present, self.file_tree_absent))
+        self.assertTrue(salt.utils.path.exist(self.file_tree_absent))
+        self.assertTrue(salt.utils.path.exist(self.file_present))
+
+    def test_copy_dir_absent(self):
+        wanted_ret = {'added': [], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.dir_four_absent, self.dir_four_absent))
+        self.assertFalse(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_copy_dir_present(self):
+        wanted_ret = {'added': [self.dir_four_absent], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.dir_five_present, self.dir_four_absent))
+        self.assertTrue(salt.utils.path.exist(self.dir_five_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_copy_symlink_file_absent(self):
+        wanted_ret = {'added': [], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.link_file_tree_absent, self.link_file_tree_absent))
+        self.assertFalse(salt.utils.path.exist(self.link_file_tree_absent))
+
+    def test_copy_symlink_file_present(self):
+        wanted_ret = {'added': [self.link_file_tree_absent], 'removed': []}
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.link_file_one_present, self.link_file_tree_absent))
+        self.assertTrue(salt.utils.path.exist(self.link_file_tree_absent))
+        self.assertTrue(salt.utils.path.exist(self.link_file_one_present))
+
+    def test_copy_dir_not_empty(self):
+        wanted_ret = {
+            'added': [
+                self.dir_four_absent,
+                salt.utils.path.join(self.dir_four_absent, salt.utils.path.get_basename(self.file_one_present))
+            ],
+            'removed': [
+
+            ]
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.dir_one_present, self.dir_four_absent))
+        self.assertTrue(salt.utils.path.exist(self.dir_one_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_four_absent))
+
+    def test_copy_dir_not_empty_recursive_True(self):
+        wanted_ret = {
+            'added': [
+                self.dir_four_absent,
+                salt.utils.path.join(self.dir_four_absent, salt.utils.path.get_basename(self.file_one_present))
+            ],
+            'removed': [
+
+            ]
+        }
+        self.assertEqual(wanted_ret, salt.utils.path.copy(self.dir_one_present, self.dir_four_absent, recursive=True))
+        self.assertTrue(salt.utils.path.exist(self.dir_one_present))
+        self.assertTrue(salt.utils.path.exist(self.dir_four_absent))
 
     #  FUNC: dir_is_absent
     ##################################################
@@ -778,6 +1051,7 @@ class path_remove_TestCase(TestCase):
                              self.dir_one_present,
                              self.dir_two_present,
                              self.dir_tree_present,
+                             self.dir_five_present,
                              self.link_file_one_present,
                              self.link_dir_two_present,
                              self.link_file_tree_absent,
@@ -793,6 +1067,7 @@ class path_remove_TestCase(TestCase):
                              self.dir_two_present,
                              self.file_two_present,
                              self.dir_tree_present,
+                             self.dir_five_present,
                              self.link_file_one_present,
                              self.link_dir_two_present,
                              self.link_file_tree_absent,
@@ -810,6 +1085,7 @@ class path_remove_TestCase(TestCase):
                              self.dir_tree_present,
                              self.file_tree_absent,
                              self.dir_four_absent,
+                             self.dir_five_present,
                              self.other_dir,
                              self.other_file_present,
                              self.link_file_one_present,

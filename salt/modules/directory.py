@@ -88,5 +88,9 @@ def remove(path, recursive=False, follow_symlinks=False):
     return salt.utils.path.remove(path, recursive, follow_symlinks)
 
 
-def copy(src, path, recursive=False, remove_existing=False, safe=True):
-    return salt.utils.path.copy(src, path, recursive, remove_existing, safe)
+def copy(src, path, recursive=False, remove_existing=False):
+    return salt.utils.path.copy(src, path, recursive, remove_existing)
+
+
+def move(src, path, remove_existing=False):
+    return salt.utils.path.move(src, path, remove_existing)

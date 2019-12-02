@@ -403,6 +403,44 @@ def get_mode(path):
     return stats(path).get('mode', None)
 
 
+def set_perms(path, user=None, group=None, mode=None, recursive=True):
+    '''
+    Set user, group and mode for a file or a directory.
+    :param path: Absolute path to treat: file or directory.
+    :param user: The user to apply to the path. If None, no changes.
+    :param group: The group to apply to the path. If None, no changes.
+    :param mode: The mode to apply to the path. If None, no changes.
+    :param recursive: True to recursively set permission on child, else False.
+    :return: Dict, for each path, return current user, group and mode.
+    '''
+    abs_path = get_absolute(path)
+    cur_user = get_user(abs_path)
+    cur_group = get_group(abs_path)
+    cur_mode = get_mode(abs_path)
+    ret = {abs_path: {'user': cur_user, 'group': cur_group, 'mode': cur_mode}}
+
+    if user is not None and (user != cur_user) and set_user(abs_path, user):
+        ret[abs_path]['user'] = user
+    else:
+        log.error("{}: Can't set user {}.".format(abs_path, user))
+
+    if group is not None and (group != cur_group) and set_group(abs_path, group):
+        ret[abs_path]['group'] = group
+    else:
+        log.error("{}: Can't set group {}.".format(abs_path, group))
+
+    if mode is not None and (mode != cur_mode) and set_mode(abs_path, mode):
+        ret[abs_path]['mode'] = mode
+    else:
+        log.error("{}: Can't set mode {}.".format(abs_path, mode))
+
+    if recursive:
+        for ele in dir_to_list(abs_path):
+            ret.update(set_perms(ele, user, group, mode, recursive))
+
+    return ret
+
+
 def dir_to_list(path, recursive=False, follow_symlinks=False, __first_inc=True):
     '''
     List the content of a directory.
@@ -604,63 +642,7 @@ def rename(src, path, safe=False):
     return ret
 
 
-def copy(src, dst, recurse=False, remove_existing=False):
-    src = os.path.expanduser(src)
-    dst = os.path.expanduser(dst)
-
-    if not os.path.isabs(src):
-        raise SaltInvocationError('File path must be absolute.')
-
-    if not os.path.exists(src):
-        raise CommandExecutionError('No such file or directory \'{0}\''.format(src))
-
-    if not salt.utils.platform.is_windows():
-        pre_user = get_user(src)
-        pre_group = get_group(src)
-        pre_mode = salt.utils.files.normalize_mode(get_mode(src))
-
-    try:
-        if (os.path.exists(dst) and os.path.isdir(dst)) or os.path.isdir(src):
-            if not recurse:
-                raise SaltInvocationError(
-                    "Cannot copy overwriting a directory without recurse flag set to true!")
-            if remove_existing:
-                if os.path.exists(dst):
-                    shutil.rmtree(dst)
-                shutil.copytree(src, dst)
-            else:
-                salt.utils.files.recursive_copy(src, dst)
-        else:
-            shutil.copyfile(src, dst)
-    except OSError:
-        raise CommandExecutionError(
-            'Could not copy \'{0}\' to \'{1}\''.format(src, dst)
-        )
-
-    if not salt.utils.platform.is_windows():
-        check_perms(dst, None, pre_user, pre_group, pre_mode)
-    return True
-
-
-def recursive_copy(source, dest):
-    '''
-    Recursively copy the source directory to the destination,
-    leaving files with the source does not explicitly overwrite.
-
-    (identical to cp -r on a unix machine)
-    '''
-    for root, _, files in salt.utils.path.os_walk(source):
-        path_from_source = root.replace(source, '').lstrip(os.sep)
-        target_directory = os.path.join(dest, path_from_source)
-        if not os.path.exists(target_directory):
-            os.makedirs(target_directory)
-        for name in files:
-            file_path_from_source = os.path.join(source, path_from_source, name)
-            target_path = os.path.join(target_directory, name)
-            shutil.copyfile(file_path_from_source, target_path)
-
-
-def copy(src, path, recursive=False, remove_existing=False, safe=True):
+def copy(src, path, recursive=False, remove_existing=False):
     '''
 
     :param src:
@@ -675,14 +657,19 @@ def copy(src, path, recursive=False, remove_existing=False, safe=True):
     abs_path = get_absolute(path, resolve=True)
     stop_process = False
 
+    # Verify the source exist.
+    if not exist(abs_src) and not is_symlink(abs_src):
+        log.error("The source {} have to exist.".format(abs_src))
+        stop_process = True
+
     # clean destination
-    if exist(abs_path):
-        if safe:
-            log.Error("The destination {} already exist.".format(abs_path))
+    if not stop_process and exist(abs_path):
+        if not remove_existing:
+            log.error("The destination {} already exist.".format(abs_path))
             stop_process = True
-        elif remove_existing and (get_type(abs_src) == get_type(abs_path)):
+        elif get_type(abs_src) == get_type(abs_path):
             ret['removed'].extend(remove(abs_path, recursive=recursive))
-        elif (get_type(abs_src) == get_type(abs_path)) or (get_type(abs_src) == get_type(join(abs_path, get_basename(abs_src)))):
+        elif get_type(abs_src) == get_type(join(abs_path, get_basename(abs_src))):
             ret['removed'].extend(remove(abs_path, recursive=False))
 
     if not stop_process:
@@ -703,23 +690,51 @@ def copy(src, path, recursive=False, remove_existing=False, safe=True):
 
         # In case of directory copy.
         elif is_dir(abs_src) and dir_is_present(abs_path):
+            ret['added'].append(abs_path)
             dir_dict = dir_to_dict(abs_src)
             for ele in dir_dict.get('file', []):
-                ret_copy = copy(ele, abs_path, recursive, remove_existing, safe)
-                ret['added'].extend(ret_copy.get('added', []))
+                ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing)
+                for key in ret.keys():
+                    ret[key].extend(ret_copy.get(key, []))
             for ele in dir_dict.get('link', []):
-                ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing, safe)
-                ret['added'].extend(ret_copy.get('added', []))
+                ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing)
+                for key in ret.keys():
+                    ret[key].extend(ret_copy.get(key, []))
             if recursive:
                 for ele in dir_dict.get('dir', []):
-                    ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing, safe)
-                    ret['added'].extend(ret_copy.get('added', []))
+                    ret_copy = copy(ele, join(abs_path, get_basename(ele)), recursive, remove_existing)
+                    for key in ret.keys():
+                        ret[key].extend(ret_copy.get(key, []))
 
     return ret
 
 
-def move():
-    pass
+def move(src, path, remove_existing=False):
+    '''
+
+    :param src:
+    :param path:
+    :param remove_existing:
+    :param safe:
+    :return:
+    '''
+    ret = {'added': [], 'removed': []}
+    abs_src = get_absolute(src)
+    abs_path = get_absolute(path)
+    stop_process = False
+
+    if not exist(abs_src) and not is_symlink(abs_src):
+        log.error("The source {} have to exist.".format(abs_src))
+        stop_process = True
+    elif not remove_existing and exist(abs_path):
+        log.error("path.move: The destination {} already exist.".format(abs_path))
+        stop_process = True
+
+    if not stop_process:
+        ret = copy(abs_src, abs_path, recursive=True, remove_existing=remove_existing)
+        ret['removed'].extend(remove(abs_src, recursive=True))
+
+    return ret
 
 
 def islink(path):
