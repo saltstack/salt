@@ -287,5 +287,5 @@ repos:
         files: ^tests/\.*\.py$
         args:
           - -e
-          - lint-salt
+          - lint-tests
           - --
