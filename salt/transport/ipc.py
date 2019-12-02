@@ -5,6 +5,7 @@ IPC transport classes
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import sys
 import errno
 import logging
 import socket
@@ -341,10 +342,6 @@ class IPCClient(object):
     def __del__(self):
         try:
             self.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
         except TypeError:
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
@@ -364,7 +361,12 @@ class IPCClient(object):
         log.debug('Closing %s instance', self.__class__.__name__)
 
         if self.stream is not None and not self.stream.closed():
-            self.stream.close()
+            try:
+                self.stream.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # If its not a bad file descriptor error, raise
+                    six.reraise(*sys.exc_info())
 
 
 class IPCMessageClient(IPCClient):

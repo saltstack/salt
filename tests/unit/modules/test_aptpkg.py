@@ -348,6 +348,39 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
 
+    def test_upgrade_downloadonly(self):
+        '''
+        Tests the download-only options for upgrade.
+        '''
+        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
+            with patch('salt.modules.aptpkg.list_pkgs',
+                       MagicMock(return_value=UNINSTALL)):
+                mock_cmd = MagicMock(return_value={
+                    'retcode': 0,
+                    'stdout': UPGRADE
+                })
+                patch_kwargs = {
+                    '__salt__': {
+                        'config.get': MagicMock(return_value=True),
+                        'cmd.run_all': mock_cmd
+                    },
+                }
+                with patch.multiple(aptpkg, **patch_kwargs):
+                    aptpkg.upgrade()
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # Here we shouldn't see the parameter and args_matching should be empty.
+                    self.assertFalse(any(args_matching))
+
+                    aptpkg.upgrade(downloadonly=True)
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # --download-only should be in the args list and we should have at least on True in the list.
+                    self.assertTrue(any(args_matching))
+
+                    aptpkg.upgrade(download_only=True)
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # --download-only should be in the args list and we should have at least on True in the list.
+                    self.assertTrue(any(args_matching))
+
     def test_show(self):
         '''
         Test that the pkg.show function properly parses apt-cache show output.
