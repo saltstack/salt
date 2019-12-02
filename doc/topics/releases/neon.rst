@@ -4,6 +4,7 @@
 Salt Release Notes - Codename Neon
 ==================================
 
+<<<<<<<<< Temporary merge branch 1
 
 Unless and onlyif Enhancements
 ==============================
