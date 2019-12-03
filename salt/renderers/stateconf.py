@@ -79,7 +79,7 @@ def __init__(opts):
 MOD_BASENAME = os.path.basename(__file__)
 INVALID_USAGE_ERROR = SaltRenderError(
     'Invalid use of {0} renderer!\n'
-    '''Usage: #!{1} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
+    '''Usage: #!{0} [-GoSp] [<data_renderer> [options] . <template_renderer> [options]]
 
 where an example <data_renderer> would be yaml and a <template_renderer> might
 be jinja. Each renderer can be passed its renderer specific options.
@@ -99,7 +99,7 @@ Options(for this renderer):
        in the sls will have no effect, but other features of the renderer still
        apply.
 
-  '''.format(MOD_BASENAME, MOD_BASENAME)
+  '''.format(MOD_BASENAME)
 )
 
 

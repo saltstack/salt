@@ -440,9 +440,8 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
         salt '*' tls.get_ca test_ca as_text=False cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+    certp = '{0}/{1}/{1}_ca_cert.crt'.format(
             cert_base_path(),
-            ca_name,
             ca_name)
     if not os.path.exists(certp):
         raise ValueError('Certificate does not exist for {0}'.format(ca_name))
@@ -821,8 +820,8 @@ def create_ca(ca_name,
 
     ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
         cert_base_path(), ca_name, ca_filename)
-    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
-        ca_name, cert_base_path(), ca_name, ca_filename)
+    ret += ('Created CA "{0}": "{1}/{0}/{2}.crt."').format(
+        ca_name, cert_base_path(), ca_filename)
 
     return ret
 
@@ -1581,9 +1580,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
         return 'Certificate "{0}" already exists'.format(CN)
 
     try:
-        with salt.utils.files.fopen('{0}/{1}/{2}_ca_cert.crt'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        with salt.utils.files.fopen('{0}/{1}/{1}_ca_cert.crt'.format(cert_base_path(),
+                                                                     ca_name)) as fhr:
             ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 fhr.read()
@@ -1625,11 +1623,10 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
         )
 
     return ('Created PKCS#12 Certificate for "{0}": '
-            '"{1}/{2}/certs/{3}.p12"').format(
+            '"{1}/{2}/certs/{0}.p12"').format(
         CN,
         cert_base_path(),
         ca_name,
-        CN
     )
 
 
