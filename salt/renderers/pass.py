@@ -114,10 +114,7 @@ def render(pass_info, saltenv='base', sls='', argline='', **kwargs):
     '''
     Fetch secret from pass based on pass_path
     '''
-    try:
-        _get_pass_exec()
-    except SaltRenderError:
-        raise
+    _get_pass_exec()
 
     # Make sure environment variable HOME is set, since Pass looks for the
     # password-store under ~/.password-store.
