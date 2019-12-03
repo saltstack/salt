@@ -459,7 +459,7 @@ class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(zpool.__salt__, {'zpool.exists': mock_exists}), \
              patch.dict(zpool.__salt__, {'zpool.get': mock_get}), \
-             patch.dict(zpool.__utils__, utils_patch), \
+             patch.dict(zpool.__utils__, self.utils_patch), \
              patch.dict(zpool.__opts__, {"test": True}):
             self.assertEqual(
                 zpool.present(
