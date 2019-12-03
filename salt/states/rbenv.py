@@ -20,9 +20,11 @@ their environment.
 
 To pass additional environment based compile time options to rbenv_build, you
 can setup a build_env dictionary in the pillar/grains/master configuration. The
-following example would pass `CONFIGURE_OPTS="--no-tcmalloc" CFLAGS="-fno-tree-dce"``
+following example would pass ``CONFIGURE_OPTS="--no-tcmalloc" CFLAGS="-fno-tree-dce"```
 to the rbenv_build process.
+
 .. code-block:: yaml
+
         rbenv:
           build_env:
             CONFIGURE_OPTS: "--no-tcmalloc"
