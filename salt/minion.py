@@ -2281,7 +2281,8 @@ class Minion(MinionBase):
         elif func == 'disable_beacon':
             self.beacons.disable_beacon(name)
         elif func == 'list':
-            self.beacons.list_beacons(include_opts, include_pillar)
+            self.beacons.list_beacons(include_opts=include_opts,
+                                      include_pillar=include_pillar)
         elif func == 'list_available':
             self.beacons.list_available_beacons()
         elif func == 'validate_beacon':

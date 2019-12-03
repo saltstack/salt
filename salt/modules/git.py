@@ -1637,8 +1637,8 @@ def config_unset(key,
     elif retcode == 1:
         raise CommandExecutionError('Section or key is invalid')
     elif retcode == 5:
-        if config_get(cwd,
-                      key,
+        if config_get(key,
+                      cwd=cwd,
                       user=user,
                       password=password,
                       ignore_retcode=ignore_retcode,
