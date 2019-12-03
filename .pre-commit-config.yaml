@@ -7,7 +7,7 @@ repos:
         alias: compile-linux-py2.7-zmq-requirements
         name: Linux Py2.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
-        exclude: ^requirements/static/(lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
           - --py-version=2.7
@@ -17,9 +17,9 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
-        alias: compile-osx-py2.7-zmq-requirements
-        name: OSX Py2.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
+        alias: compile-darwin-py2.7-zmq-requirements
+        name: Darwin Py2.7 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=2.7
@@ -68,7 +68,7 @@ repos:
         alias: compile-linux-py3.4-zmq-requirements
         name: Linux Py3.4 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
           - --py-version=3.4
@@ -90,7 +90,7 @@ repos:
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
           - --py-version=3.5
@@ -100,9 +100,9 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
-        alias: compile-osx-py3.5-zmq-requirements
-        name: OSX Py3.5 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
+        alias: compile-darwin-py3.5-zmq-requirements
+        name: Darwin Py3.5 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.5
@@ -150,7 +150,7 @@ repos:
         alias: compile-linux-py3.6-zmq-requirements
         name: Linux Py3.6 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
           - --py-version=3.6
@@ -160,9 +160,9 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
-        alias: compile-osx-py3.6-zmq-requirements
-        name: OSX Py3.6 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
+        alias: compile-darwin-py3.6-zmq-requirements
+        name: Darwin Py3.6 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.6
@@ -210,7 +210,7 @@ repos:
         alias: compile-linux-py3.7-zmq-requirements
         name: Linux Py3.7 ZeroMQ Requirements
         files: ^requirements/((base|zeromq|pytest)\.txt|static/linux\.in)$
-        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|osx|windows)\.in$
+        exclude: ^requirements/static/(centos-6|amzn-2018\.03|lint|cloud|docs|darwin|windows)\.in$
         args:
           - -v
           - --py-version=3.7
@@ -220,9 +220,9 @@ repos:
           - --include=requirements/pytest.txt
           - --remove-line=^pycrypto==(.*)$
       - id: pip-tools-compile
-        alias: compile-osx-py3.7-zmq-requirements
-        name: OSX Py3.7 ZeroMQ Requirements
-        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/osx\.in))$
+        alias: compile-darwin-py3.7-zmq-requirements
+        name: Darwin Py3.7 ZeroMQ Requirements
+        files: ^(pkg/osx/(req|req_ext)\.txt|requirements/((base|zeromq|pytest)\.txt|static/darwin\.in))$
         args:
           - -v
           - --py-version=3.7
@@ -265,3 +265,27 @@ repos:
           - -v
           - --py-version=3.7
           - --platform=linux
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: lint-salt
+        name: Lint Salt
+        files: ^((setup|noxfile)|salt/.*)\.py$
+        args:
+          - -e
+          - lint-salt
+          - --
+
+  - repo: https://github.com/saltstack/salt-nox-pre-commit
+    rev: master
+    hooks:
+      - id: nox-py2
+        alias: lint-tests
+        name: Lint Tests
+        files: ^tests/.*\.py$
+        args:
+          - -e
+          - lint-tests
+          - --
