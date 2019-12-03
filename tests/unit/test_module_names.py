@@ -15,7 +15,7 @@ import salt.utils.stringutils
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.paths import CODE_DIR, test_mods
+from tests.support.paths import CODE_DIR, list_test_mods
 
 EXCLUDED_DIRS = [
     os.path.join('tests', 'pkg'),
@@ -72,7 +72,7 @@ class BadTestModuleNamesTestCase(TestCase):
         excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
         tests_dir = os.path.join(CODE_DIR, 'tests')
         bad_names = []
-        for root, dirs, files in salt.utils.path.os_walk(tests_dir):
+        for root, _, files in salt.utils.path.os_walk(tests_dir):
             reldir = os.path.relpath(root, CODE_DIR)
             if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
                     or reldir.endswith('__pycache__'):
@@ -89,7 +89,7 @@ class BadTestModuleNamesTestCase(TestCase):
         error_msg = '\n\nPlease rename the following files:\n'
         for path in bad_names:
             directory, filename = path.rsplit(os.sep, 1)
-            filename, ext = os.path.splitext(filename)
+            filename, _ = os.path.splitext(filename)
             error_msg += '  {} -> {}/test_{}.py\n'.format(path, directory, filename.split('_test')[0])
 
         error_msg += '\nIf you believe one of the entries above should be ignored, please add it to either\n'
@@ -132,8 +132,10 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.loader.test_ext_grains',
             'integration.loader.test_ext_modules',
             'integration.logging.test_jid_logging',
+            'integration.master.test_event_return',
             'integration.minion.test_blackout',
             'integration.minion.test_pillar',
+            'integration.minion.test_executor',
             'integration.minion.test_timeout',
             'integration.modules.test_decorators',
             'integration.modules.test_pkg',
@@ -147,6 +149,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.proxy.test_shell',
             'integration.proxy.test_simple',
             'integration.reactor.test_reactor',
+            'integration.returners.test_noop_return',
             'integration.runners.test_runner_returns',
             'integration.scheduler.test_error',
             'integration.scheduler.test_eval',
@@ -154,6 +157,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.scheduler.test_skip',
             'integration.scheduler.test_maxrunning',
             'integration.scheduler.test_helpers',
+            'integration.scheduler.test_run_job',
             'integration.shell.test_spm',
             'integration.shell.test_cp',
             'integration.shell.test_syndic',
@@ -202,7 +206,7 @@ class BadTestModuleNamesTestCase(TestCase):
             msg += ''.join(errors)
             return msg
 
-        for mod_name in test_mods():
+        for mod_name in list_test_mods():
             if mod_name in ignore:
                 # Test module is being ignored, skip it
                 continue
