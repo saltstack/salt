@@ -415,7 +415,7 @@ def _runtests(session, coverage, cmd_args):
                 # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
                 env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
             session.run(*cmd_args, env=env)
-    except CommandFailed:
+    except CommandFailed:  # pylint: disable=try-except-raise
         # Disabling re-running failed tests for the time being
         raise
 
@@ -957,7 +957,7 @@ def lint_salt(session):
     Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
     '''
     flags = [
-        '--disable=I,W1307,C0411,C0413,W8410,str-format-in-logging'
+        '--disable=I'
     ]
     if session.posargs:
         paths = session.posargs
@@ -972,7 +972,7 @@ def lint_tests(session):
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
     '''
     flags = [
-        '--disable=I,W0232,E1002,W1307,C0411,C0413,W8410,str-format-in-logging'
+        '--disable=I'
     ]
     if session.posargs:
         paths = session.posargs
