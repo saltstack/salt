@@ -2776,7 +2776,7 @@ def info(name, path=None):
                     config.append(tuple(comps))
 
         ifaces = []
-        current = None
+        current = {}
 
         for key, val in config:
             if key == 'lxc.network.type':
