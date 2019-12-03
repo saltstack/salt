@@ -344,7 +344,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['state', 'args', 'systemd', 'path', 'platform']
         )
         utils.keys()

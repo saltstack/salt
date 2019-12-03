@@ -172,17 +172,11 @@ def warn_until(version,
             )
 
 
-def _get_utcnow_date():
-    '''
-    This function exists because we can't easily patch builtin objects when mocking
-    '''
-    return datetime.datetime.utcnow().date()
-
-
 def warn_until_date(date,
                     message,
                     category=DeprecationWarning,
                     stacklevel=None,
+                    _current_date=None,
                     _dont_call_warnings=False):
     '''
     Helper function to raise a warning, by default, a ``DeprecationWarning``,
@@ -221,7 +215,7 @@ def warn_until_date(date,
         # Attribute the warning to the calling function, not to warn_until_date()
         stacklevel = 2
 
-    today = _get_utcnow_date()
+    today = _current_date or datetime.datetime.utcnow().date()
     if today >= date:
         caller = inspect.getframeinfo(sys._getframe(stacklevel - 1))
         raise RuntimeError(

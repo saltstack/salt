@@ -16,9 +16,9 @@ import datetime
 import warnings
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.paths import CODE_DIR
 
 # Import Salt libs
 import salt.modules.cmdmod
@@ -106,12 +106,10 @@ class VersionTestCase(TestCase):
         check the spelling of the version name for the release
         names in the salt.utils.versions.warn_until call
         '''
-        salt_dir = integration.CODE_DIR
         query = 'salt.utils.versions.warn_until('
         names = salt.version.SaltStackVersion.NAMES
 
-        salt_dir += '/salt/'
-        cmd = 'grep -lr {0} -A 1 '.format(query) + salt_dir
+        cmd = 'grep -lr {} -A 1 {}'.format(query, os.path.join(CODE_DIR, 'salt'))
 
         grep_call = salt.modules.cmdmod.run_stdout(cmd=cmd).split(os.linesep)
 
@@ -297,55 +295,75 @@ class VersionFuncsTestCase(TestCase):
         # We *always* want *all* warnings thrown on this module
         warnings.filterwarnings('always', '', DeprecationWarning, __name__)
 
-        fake_utcnow = datetime.date(2000, 1, 1)
+        _current_date = datetime.date(2000, 1, 1)
 
-        with patch('salt.utils.versions._get_utcnow_date', return_value=fake_utcnow):
+        # Test warning with datetime.date instance
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            salt.utils.versions.warn_until_date(
+                datetime.date(2000, 1, 2),
+                'Deprecation Message!',
+                _current_date=_current_date
+            )
+            self.assertEqual(
+                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
+            )
 
-            # Test warning with datetime.date instance
-            with warnings.catch_warnings(record=True) as recorded_warnings:
-                salt.utils.versions.warn_until_date(datetime.date(2000, 1, 2), 'Deprecation Message!')
-                self.assertEqual(
-                    'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-                )
+        # Test warning with datetime.datetime instance
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            salt.utils.versions.warn_until_date(
+                datetime.datetime(2000, 1, 2),
+                'Deprecation Message!',
+                _current_date=_current_date
+            )
+            self.assertEqual(
+                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
+            )
 
-            # Test warning with datetime.datetime instance
-            with warnings.catch_warnings(record=True) as recorded_warnings:
-                salt.utils.versions.warn_until_date(datetime.datetime(2000, 1, 2), 'Deprecation Message!')
-                self.assertEqual(
-                    'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-                )
+        # Test warning with date as a string
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            salt.utils.versions.warn_until_date(
+                '20000102',
+                'Deprecation Message!',
+                _current_date=_current_date
+            )
+            self.assertEqual(
+                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
+            )
 
-            # Test warning with date as a string
-            with warnings.catch_warnings(record=True) as recorded_warnings:
-                salt.utils.versions.warn_until_date('20000102', 'Deprecation Message!')
-                self.assertEqual(
-                    'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-                )
+        # the deprecation warning is not issued because we passed
+        # _dont_call_warning
+        with warnings.catch_warnings(record=True) as recorded_warnings:
+            salt.utils.versions.warn_until_date(
+                '20000102',
+                'Deprecation Message!',
+                _dont_call_warnings=True,
+                _current_date=_current_date
+            )
+            self.assertEqual(0, len(recorded_warnings))
 
-            # the deprecation warning is not issued because we passed
-            # _dont_call_warning
-            with warnings.catch_warnings(record=True) as recorded_warnings:
-                salt.utils.versions.warn_until_date('20000102', 'Deprecation Message!', _dont_call_warnings=True)
-                self.assertEqual(0, len(recorded_warnings))
+        # Let's test for RuntimeError raise
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'Deprecation Message! This warning\(now exception\) triggered on '
+                r'filename \'(.*)test_versions.py\', line number ([\d]+), is '
+                r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
+                r'Please remove the warning.'):
+            salt.utils.versions.warn_until_date('20000101', 'Deprecation Message!')
 
-            # Let's test for RuntimeError raise
-            with self.assertRaisesRegex(
-                    RuntimeError,
-                    r'Deprecation Message! This warning\(now exception\) triggered on '
-                    r'filename \'(.*)test_versions.py\', line number ([\d]+), is '
-                    r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
-                    r'Please remove the warning.'):
-                salt.utils.versions.warn_until_date('20000101', 'Deprecation Message!')
-
-            # Even though we're calling warn_until_date, we pass _dont_call_warnings
-            # because we're only after the RuntimeError
-            with self.assertRaisesRegex(
-                    RuntimeError,
-                    r'Deprecation Message! This warning\(now exception\) triggered on '
-                    r'filename \'(.*)test_versions.py\', line number ([\d]+), is '
-                    r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
-                    r'Please remove the warning.'):
-                salt.utils.versions.warn_until_date('20000101', 'Deprecation Message!', _dont_call_warnings=True)
+        # Even though we're calling warn_until_date, we pass _dont_call_warnings
+        # because we're only after the RuntimeError
+        with self.assertRaisesRegex(
+                RuntimeError,
+                r'Deprecation Message! This warning\(now exception\) triggered on '
+                r'filename \'(.*)test_versions.py\', line number ([\d]+), is '
+                r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
+                r'Please remove the warning.'):
+            salt.utils.versions.warn_until_date(
+                '20000101',
+                'Deprecation Message!',
+                _dont_call_warnings=True,
+                _current_date=_current_date
+            )
 
     def test_warn_until_date_bad_strptime_format(self):
         # We *always* want *all* warnings thrown on this module
