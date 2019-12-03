@@ -45,7 +45,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['args', 'docker', 'json', 'state', 'thin',
                        'systemd', 'path', 'platform']
         )
