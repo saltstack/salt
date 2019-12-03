@@ -423,6 +423,8 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
         log.error('Unable to fetch file %s from saltenv %s.',
                   salt.utils.url.redact_http_basic_auth(path),
                   saltenv)
+    if result:
+        return salt.utils.stringutils.to_unicode(result)
     return result
 
 
@@ -443,7 +445,7 @@ def get_file_str(path, saltenv='base'):
     if isinstance(fn_, six.string_types):
         try:
             with salt.utils.files.fopen(fn_, 'r') as fp_:
-                return fp_.read()
+                return salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             return False
     return fn_

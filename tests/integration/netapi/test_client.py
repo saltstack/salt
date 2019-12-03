@@ -44,7 +44,7 @@ class NetapiClientTest(TestCase):
         self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
     def test_local_batch(self):
-        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
+        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
