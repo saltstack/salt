@@ -1232,8 +1232,6 @@ class LowDataAdapter(object):
             HTTP/1.1 200 OK
             Content-Type: application/json
         '''
-        import inspect
-
         return {
             'return': "Welcome",
             'clients': salt.netapi.CLIENTS,

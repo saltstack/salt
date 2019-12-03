@@ -68,7 +68,7 @@ __virtualname__ = 'reclass'
 
 def __virtual__(retry=False):
     try:
-        import reclass
+        import reclass  # pylint: disable=unused-import
         return __virtualname__
     except ImportError:
         if retry:
