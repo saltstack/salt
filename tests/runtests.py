@@ -59,7 +59,7 @@ except ImportError as exc:
     pprint.pprint(sys.path)
     six.reraise(*sys.exc_info())
 
-from tests.integration import TestDaemon, TestDaemonStartFailed  # pylint: disable=W0403
+from tests.integration import TestDaemon, TestDaemonStartFailed
 from tests.multimaster import MultimasterTestDaemon
 import salt.utils.platform
 
