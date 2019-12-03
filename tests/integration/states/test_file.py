@@ -4127,7 +4127,7 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             if exc.errno != errno.ENOENT:
                 six.reraise(*sys.exc_info())
 
-    def run_state(self, *args, **kwargs):
+    def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret

@@ -140,7 +140,7 @@ class GitModuleTest(ModuleCase):
         # Go back to original cwd
         os.chdir(self.orig_cwd)
 
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         '''
         Ensure that results are decoded
 

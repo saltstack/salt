@@ -615,7 +615,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Handler for login requests
     '''
-    def get(self):
+    def get(self):  # pylint: disable=arguments-differ
         '''
         All logins are done over post, this is a parked endpoint
 
@@ -655,7 +655,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
     # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
-    def post(self):
+    def post(self):  # pylint: disable=arguments-differ
         '''
         :ref:`Authenticate <rest_tornado-auth>` against Salt's eauth system
 
@@ -788,7 +788,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Main API handler for base "/"
     '''
-    def get(self):
+    def get(self):  # pylint: disable=arguments-differ
         '''
         An endpoint to determine salt-api capabilities
 
@@ -827,7 +827,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
     @tornado.web.asynchronous
-    def post(self):
+    def post(self):  # pylint: disable=arguments-differ
         '''
         Send one or more Salt commands (lowstates) in the request body
 

@@ -1477,7 +1477,7 @@ class TestDotNotationLookup(ModuleCase):
     '''
     Tests to call Salt functions via Jinja with various lookup syntaxes
     '''
-    def setUp(self, *args, **kwargs):
+    def setUp(self):
         functions = {
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',

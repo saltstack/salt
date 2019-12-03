@@ -876,7 +876,7 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         self.opts = opts
         super(TCPClientKeepAlive, self).__init__(resolver=resolver)
 
-    def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument
+    def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument,arguments-differ
         '''
         Override _create_stream() in TCPClient.
 

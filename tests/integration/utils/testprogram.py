@@ -665,7 +665,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram, Scrip
                 cfg[key] = val
         return salt.utils.yaml.safe_dump(cfg, default_flow_style=False)
 
-    def run(self, **kwargs):
+    def run(self, **kwargs):  # pylint: disable=arguments-differ
         if not kwargs.get('verbatim_args'):
             args = kwargs.setdefault('args', [])
             if '-c' not in args and '--config-dir' not in args:

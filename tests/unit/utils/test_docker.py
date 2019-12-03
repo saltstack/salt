@@ -164,7 +164,7 @@ class assert_bool(Assert):
     '''
     Test a boolean value
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -220,7 +220,7 @@ class assert_int(Assert):
     '''
     Test an integer value
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -269,7 +269,7 @@ class assert_string(Assert):
     '''
     Test that item is a string or is converted to one
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -324,7 +324,7 @@ class assert_int_or_string(Assert):
     '''
     Test an integer or string value
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -371,7 +371,7 @@ class assert_stringlist(Assert):
     '''
     Test a comma-separated or Python list of strings
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         self.test_stringlist(testcase, name)
@@ -383,7 +383,7 @@ class assert_dict(Assert):
     Dictionaries should be untouched, dictlists should be repacked and end up
     as a single dictionary.
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -442,7 +442,7 @@ class assert_cmd(Assert):
     different from a stringlist in that we do not do any splitting. This
     decorator is used both by the "command" and "entrypoint" arguments.
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -504,7 +504,7 @@ class assert_key_colon_value(Assert):
     '''
     Test a key/value pair with parameters passed as key:value pairs
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         self.test_key_value(testcase, name, ':')
@@ -515,7 +515,7 @@ class assert_key_equals_value(Assert):
     '''
     Test a key/value pair with parameters passed as key=value pairs
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         self.test_key_value(testcase, name, '=')
@@ -525,7 +525,7 @@ class assert_key_equals_value(Assert):
 
 
 class assert_labels(Assert):
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -560,7 +560,7 @@ class assert_device_rates(Assert):
     value expressed in bytes/kb/mb/gb, while the iops values have a "Rate"
     expressed as a simple integer.
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -697,7 +697,7 @@ class assert_subnet(Assert):
     '''
     Test an IPv4 or IPv6 subnet
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
