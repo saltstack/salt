@@ -889,7 +889,7 @@ def cmd_unzip(zip_file,
 
     options
         Optional when using ``zip`` archives, ignored when usign other archives
-        files. This is mostly used to overwrite exsiting files with ``o``.
+        files. This is mostly used to overwrite existing files with ``o``.
         This options are only used when ``unzip`` binary is used.
 
         .. versionadded:: 2016.3.1

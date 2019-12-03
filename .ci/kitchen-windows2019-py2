@@ -1,0 +1,16 @@
+@Library('salt@master-1.5') _
+
+runTestSuite(
+    concurrent_builds: 1,
+    distro_name: 'windows',
+    distro_version: '2019',
+    env: env,
+    golden_images_branch: 'master',
+    jenkins_slave_label: 'kitchen-slave',
+    nox_env_name: 'runtests-zeromq',
+    nox_passthrough_opts: '--unit',
+    python_version: 'py2',
+    testrun_timeout: 8,
+    use_spot_instances: false)
+
+// vim: ft=groovy
