@@ -838,7 +838,7 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
     Determine whether or not the installed packages match what was requested in
     the SLS file.
     '''
-    ok = []
+    _ok = []
     failed = []
     if not new_caps:
         new_caps = dict()
@@ -865,19 +865,19 @@ def _verify_install(desired, new_pkgs, ignore_epoch=False, new_caps=None):
             failed.append(pkgname)
             continue
         elif pkgver == 'latest':
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         elif not __salt__['pkg_resource.version_clean'](pkgver):
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         elif pkgver.endswith("*") and cver[0].startswith(pkgver[:-1]):
-            ok.append(pkgname)
+            _ok.append(pkgname)
             continue
         if _fulfills_version_string(cver, pkgver, ignore_epoch=ignore_epoch):
-            ok.append(pkgname)
+            _ok.append(pkgname)
         else:
             failed.append(pkgname)
-    return ok, failed
+    return _ok, failed
 
 
 def _get_desired_pkg(name, desired):
@@ -1848,11 +1848,11 @@ def installed(
             new_caps = __salt__['pkg.list_provides'](**kwargs)
         else:
             new_caps = {}
-        ok, failed = _verify_install(desired, new_pkgs,
+        _ok, failed = _verify_install(desired, new_pkgs,
                                      ignore_epoch=ignore_epoch,
                                      new_caps=new_caps)
-        modified = [x for x in ok if x in targets]
-        not_modified = [x for x in ok
+        modified = [x for x in _ok if x in targets]
+        not_modified = [x for x in _ok
                         if x not in targets
                         and x not in to_reinstall]
         failed = [x for x in failed if x in targets]
@@ -2163,7 +2163,7 @@ def downloaded(name,
         return ret
 
     new_pkgs = __salt__['pkg.list_downloaded']()
-    ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
+    _ok, failed = _verify_install(targets, new_pkgs, ignore_epoch=ignore_epoch)
 
     if failed:
         summary = ', '.join([_get_desired_pkg(x, targets)
@@ -2726,15 +2726,15 @@ def _uninstall(
     changes = __salt__['pkg.{0}'.format(action)](name, pkgs=pkgs, version=version, **kwargs)
     new = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     failed = []
-    for x in pkg_params:
+    for param in pkg_params:
         if __grains__['os_family'] in ['Suse', 'RedHat']:
             # Check if the package version set to be removed is actually removed:
-            if x in new and not pkg_params[x]:
-                failed.append(x)
-            elif x in new and pkg_params[x] in new[x]:
-                failed.append(x + "-" + pkg_params[x])
-        elif x in new:
-            failed.append(x)
+            if param in new and not pkg_params[param]:
+                failed.append(param)
+            elif param in new and pkg_params[param] in new[param]:
+                failed.append(param + "-" + pkg_params[param])
+        elif param in new:
+            failed.append(param)
 
     if action == 'purge':
         new_removed = __salt__['pkg.list_pkgs'](versions_as_list=True,

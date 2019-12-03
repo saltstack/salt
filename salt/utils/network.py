@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 '''
 Define some generic socket functions for network modules
 '''
@@ -51,8 +52,6 @@ try:
     RES_INIT = LIBC.__res_init
 except (ImportError, OSError, AttributeError, TypeError):
     pass
-
-# pylint: disable=C0103
 
 
 def sanitize_host(host):
@@ -230,8 +229,6 @@ def ip_to_host(ip):
         log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
-
-# pylint: enable=C0103
 
 
 def is_reachable_host(entity_name):
@@ -623,7 +620,7 @@ def cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
-def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
+def _number_of_set_bits_to_ipv4_netmask(set_bits):
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
 
@@ -632,7 +629,6 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     return cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
 
-# pylint: disable=C0103
 def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
@@ -644,8 +640,6 @@ def _number_of_set_bits(x):
     x += x >> 8
     x += x >> 16
     return x & 0x0000003f
-
-# pylint: enable=C0103
 
 
 def _interfaces_ip(out):
@@ -663,9 +657,9 @@ def _interfaces_ip(out):
         brd = None
         scope = None
         if '/' in value:  # we have a CIDR in this address
-            ip, cidr = value.split('/')  # pylint: disable=C0103
+            ip, cidr = value.split('/')
         else:
-            ip = value  # pylint: disable=C0103
+            ip = value
             cidr = 32
 
         if type_ == 'inet':
