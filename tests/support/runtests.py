@@ -51,9 +51,6 @@ from __future__ import absolute_import, print_function
 import os
 import shutil
 import logging
-import multiprocessing
-
-import salt.utils.json
 
 # Import tests support libs
 import tests.support.paths as paths
@@ -61,49 +58,6 @@ import tests.support.helpers
 
 # Import 3rd-party libs
 from salt.ext import six
-try:
-    import coverage  # pylint: disable=import-error
-    HAS_COVERAGE = True
-except ImportError:
-    HAS_COVERAGE = False
-
-try:
-    import multiprocessing.util
-    # Force forked multiprocessing processes to be measured as well
-
-    def multiprocessing_stop(coverage_object):
-        '''
-        Save the multiprocessing process coverage object
-        '''
-        coverage_object.stop()
-        coverage_object.save()
-
-    def multiprocessing_start(obj):
-        coverage_options = salt.utils.json.loads(os.environ.get('SALT_RUNTESTS_COVERAGE_OPTIONS', '{}'))
-        if not coverage_options:
-            return
-
-        if coverage_options.get('data_suffix', False) is False:
-            return
-
-        coverage_object = coverage.coverage(**coverage_options)
-        coverage_object.start()
-
-        multiprocessing.util.Finalize(
-            None,
-            multiprocessing_stop,
-            args=(coverage_object,),
-            exitpriority=1000
-        )
-
-    if HAS_COVERAGE:
-        multiprocessing.util.register_after_fork(
-            multiprocessing_start,
-            multiprocessing_start
-        )
-except ImportError:
-    pass
-
 
 RUNNING_TESTS_USER = tests.support.helpers.this_user()
 
@@ -132,20 +86,20 @@ def recursive_copytree(source, destination, overwrite=False):
             src_path = os.path.join(root, item)
             dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
             if not os.path.exists(dst_path):
-                log.debug('Creating directory: {0}'.format(dst_path))
+                log.debug('Creating directory: %s', dst_path)
                 os.makedirs(dst_path)
         for item in files:
             src_path = os.path.join(root, item)
             dst_path = os.path.join(destination, src_path.replace(source, '').lstrip(os.sep))
             if os.path.exists(dst_path) and not overwrite:
                 if os.stat(src_path).st_mtime > os.stat(dst_path).st_mtime:
-                    log.debug('Copying {0} to {1}'.format(src_path, dst_path))
+                    log.debug('Copying %s to %s', src_path, dst_path)
                     shutil.copy2(src_path, dst_path)
             else:
                 if not os.path.isdir(os.path.dirname(dst_path)):
-                    log.debug('Creating directory: {0}'.format(os.path.dirname(dst_path)))
+                    log.debug('Creating directory: %s', os.path.dirname(dst_path))
                     os.makedirs(os.path.dirname(dst_path))
-                log.debug('Copying {0} to {1}'.format(src_path, dst_path))
+                log.debug('Copying %s to %s', src_path, dst_path)
                 shutil.copy2(src_path, dst_path)
 
 
@@ -204,6 +158,7 @@ RUNTIME_VARS = RuntimeVars(
     PILLAR_DIR=paths.PILLAR_DIR,
     ENGINES_DIR=paths.ENGINES_DIR,
     LOG_HANDLERS_DIR=paths.LOG_HANDLERS_DIR,
+    TMP_ROOT_DIR=paths.TMP_ROOT_DIR,
     TMP_CONF_DIR=paths.TMP_CONF_DIR,
     TMP_CONF_MASTER_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'master.d'),
     TMP_CONF_MINION_INCLUDES=os.path.join(paths.TMP_CONF_DIR, 'minion.d'),

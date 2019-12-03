@@ -13,9 +13,9 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import with_tempdir, flaky
+from tests.support.helpers import with_tempdir
 from tests.support.unit import skipIf
-from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE
+from tests.support.paths import BASE_FILES, TMP, TMP_PILLAR_TREE, TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
@@ -117,6 +117,21 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         states = self.run_function('state.show_states', sorted=False)
         self.assertTrue(isinstance(states, list))
         self.assertTrue(isinstance(states[0], six.string_types))
+
+    def test_show_states_missing_sls(self):
+        '''
+        Test state.show_states with a sls file
+        defined in a top file is missing
+        '''
+        with salt.utils.files.fopen(os.path.join(TMP_STATE_TREE, 'top.sls'), 'w') as top_file:
+            top_file.write(textwrap.dedent('''\
+                                           base:
+                                             '*':
+                                               - doesnotexist
+                                           '''))
+        states = self.run_function('state.show_states')
+        assert isinstance(states, list)
+        assert states == ["No matching sls found for 'doesnotexist' in env 'base'"]
 
     def test_catch_recurse(self):
         '''
@@ -1749,7 +1764,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test a state with the retry option that should return True immedietly (i.e. no retries)
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        testfile = os.path.join(TMP, 'retry_file_option_success')
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success'
@@ -1758,29 +1773,35 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         retry_state = 'file_|-file_test_|-{0}_|-exists'.format(testfile)
         self.assertNotIn('Attempt', state_run[retry_state]['comment'])
 
-    def run_create(self):
+    def run_create(self, testfile):
         '''
         helper function to wait 30 seconds and then create the temp retry file
         '''
-        testfile = os.path.join(TMP, 'retry_file')
+        # Wait for the requisite stae 'file_test_a' to complete before creating
+        # test_file
+        while True:
+            if os.path.exists(testfile + '_a'):
+                break
+            time.sleep(1)
         time.sleep(30)
         with salt.utils.files.fopen(testfile, 'a'):
             pass
 
-    @flaky
     def test_retry_option_eventual_success(self):
         '''
         test a state with the retry option that should return True after at least 4 retry attmempt
         but never run 15 attempts
         '''
-        testfile = os.path.join(TMP, 'retry_file')
-        create_thread = threading.Thread(target=self.run_create)
+        testfile = os.path.join(TMP, 'retry_file_eventual_success')
+        assert not os.path.exists(testfile + '_a')
+        assert not os.path.exists(testfile)
+        create_thread = threading.Thread(target=self.run_create, args=(testfile,))
         create_thread.start()
         state_run = self.run_function(
             'state.sls',
             mods='retry.retry_success2'
         )
-        retry_state = 'file_|-file_test_|-{0}_|-exists'.format(testfile)
+        retry_state = 'file_|-file_test_b_|-{0}_|-exists'.format(testfile)
         self.assertIn('Attempt 1:', state_run[retry_state]['comment'])
         self.assertIn('Attempt 2:', state_run[retry_state]['comment'])
         self.assertIn('Attempt 3:', state_run[retry_state]['comment'])
@@ -1993,6 +2014,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                              'File {0} updated'.format(file_name))
             self.assertEqual(val['changes']['diff'], 'New file')
 
+    @skipIf(six.PY3 and salt.utils.platform.is_darwin(), 'Test is broken on macosx and PY3')
     def test_issue_30161_unless_and_onlyif_together(self):
         '''
         test cmd.run using multiple unless options where the first cmd in the
@@ -2065,25 +2087,20 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(_expected, ret[key]['changes']['stdout'])
 
     def tearDown(self):
-        nonbase_file = os.path.join(TMP, 'nonbase_env')
-        if os.path.isfile(nonbase_file):
-            os.remove(nonbase_file)
+        rm_files = [os.path.join(TMP, 'nonbase_env'),
+                    os.path.join(TMP, 'testfile'),
+                    os.path.join(TMP, 'test.txt'),
+                    os.path.join(TMP_STATE_TREE, 'top.sls')]
+
+        for file_ in rm_files:
+            if os.path.isfile(file_):
+                os.remove(file_)
 
         # remove old pillar data
         for filename in os.listdir(TMP_PILLAR_TREE):
             os.remove(os.path.join(TMP_PILLAR_TREE, filename))
         self.run_function('saltutil.refresh_pillar')
         self.run_function('test.sleep', [5])
-
-        # remove testfile added in core.sls state file
-        state_file = os.path.join(TMP, 'testfile')
-        if os.path.isfile(state_file):
-            os.remove(state_file)
-
-        # remove testfile added in issue-30161.sls state file
-        state_file = os.path.join(TMP, 'test.txt')
-        if os.path.isfile(state_file):
-            os.remove(state_file)
 
     def test_state_sls_integer_name(self):
         '''

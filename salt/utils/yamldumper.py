@@ -20,13 +20,6 @@ import collections
 import salt.utils.context
 from salt.utils.odict import OrderedDict
 
-try:
-    from ioflo.aid.odicting import odict  # pylint: disable=E0611
-    HAS_IOFLO = True
-except ImportError:
-    odict = None
-    HAS_IOFLO = False
-
 __all__ = ['OrderedDumper', 'SafeOrderedDumper', 'IndentedSafeOrderedDumper',
            'get_dumper', 'dump', 'safe_dump']
 
@@ -66,8 +59,13 @@ def represent_ordereddict(dumper, data):
     return dumper.represent_dict(list(data.items()))
 
 
+def represent_undefined(dumper, data):
+    return dumper.represent_scalar(u'tag:yaml.org,2002:null', u'NULL')
+
+
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
+SafeOrderedDumper.add_representer(None, represent_undefined)
 
 OrderedDumper.add_representer(
     collections.defaultdict,
@@ -92,10 +90,6 @@ OrderedDumper.add_representer(
 SafeOrderedDumper.add_representer(
     'tag:yaml.org,2002:timestamp',
     SafeOrderedDumper.represent_scalar)
-
-if HAS_IOFLO:
-    OrderedDumper.add_representer(odict, represent_ordereddict)
-    SafeOrderedDumper.add_representer(odict, represent_ordereddict)
 
 
 def get_dumper(dumper_name):

@@ -453,7 +453,7 @@ def extracted(name,
 
         If this argument is not used, then the minion will attempt to use
         Python's native tarfile_/zipfile_ support to extract it. For zip
-        archives, this argument is mostly used to overwrite exsiting files with
+        archives, this argument is mostly used to overwrite existing files with
         ``o``.
 
         Using this argument means that the ``tar`` or ``unzip`` command will be
