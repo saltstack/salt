@@ -1,0 +1,17 @@
+@Library('salt@master-1.5') _
+
+runTestSuite(
+    concurrent_builds: 1,
+    distro_name: 'centos',
+    distro_version: '7',
+    env: env,
+    extra_codecov_flags: ["proxy"],
+    golden_images_branch: 'master',
+    jenkins_slave_label: 'kitchen-slave',
+    nox_env_name: 'runtests-zeromq',
+    nox_passthrough_opts: '--proxy',
+    python_version: 'py2',
+    testrun_timeout: 6,
+    use_spot_instances: true)
+
+// vim: ft=groovy
