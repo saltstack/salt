@@ -9,8 +9,8 @@ States for managing zpools
 
 .. versionadded:: 2016.3.0
 .. versionchanged:: 2018.3.1
-  Big refactor to remove duplicate code, better type converions and improved
-  consistancy in output.
+  Big refactor to remove duplicate code, better type conversions and improved
+  consistency in output.
 
 .. code-block:: yaml
 
@@ -387,7 +387,7 @@ def absent(name, export=False, force=False):
     name : string
         name of storage pool
     export : boolean
-        export instread of destroy the zpool if present
+        export instead of destroy the zpool if present
     force : boolean
         force destroy or export
 
