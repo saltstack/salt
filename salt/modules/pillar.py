@@ -614,7 +614,7 @@ def filter_by(lookup_dict,
         on that particular OS.
 
         The dictionary key can be a globbing pattern. The function will return
-        the corresponding ``lookup_dict`` value where the pilalr value matches
+        the corresponding ``lookup_dict`` value where the pillar value matches
         the  pattern. For example:
 
         .. code-block:: bash

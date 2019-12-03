@@ -116,7 +116,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         return None BEFORE any of the processes are spun up because we should be avoiding firing duplicate
         jobs.
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
@@ -134,10 +134,10 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         jid isn't already present in the jid_queue.
         '''
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+                patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
             mock_jid = 11111
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             mock_data = {'fun': 'foo.bar',
                          'jid': mock_jid}
             mock_jid_queue = [123, 456]
@@ -163,9 +163,9 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         minion's jid_queue high water mark (minion_jid_queue_hwm) is hit.
         '''
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+                patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
             mock_opts['minion_jid_queue_hwm'] = 2
             mock_data = {'fun': 'foo.bar',
                          'jid': 789}
@@ -191,12 +191,13 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         as per process_count_max.
         '''
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)), \
                 patch('salt.utils.minion.running', MagicMock(return_value=[])), \
                 patch('tornado.gen.sleep', MagicMock(return_value=tornado.concurrent.Future())):
             process_count_max = 10
-            mock_opts = salt.config.DEFAULT_MINION_OPTS
+            mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
+            mock_opts['__role'] = 'minion'
             mock_opts['minion_jid_queue_hwm'] = 100
             mock_opts["process_count_max"] = process_count_max
 
@@ -215,7 +216,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     mock_data = {'fun': 'foo.bar',
                                  'jid': i}
                     io_loop.run_sync(lambda data=mock_data: minion._handle_decoded_payload(data))
-                    self.assertEqual(salt.utils.process.SignalHandlingMultiprocessingProcess.start.call_count, i + 1)
+                    self.assertEqual(salt.utils.process.SignalHandlingProcess.start.call_count, i + 1)
                     self.assertEqual(len(minion.jid_queue), i + 1)
                     salt.utils.minion.running.return_value += [i]
 
@@ -225,7 +226,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
                 self.assertRaises(SleepCalledException,
                                   lambda: io_loop.run_sync(lambda: minion._handle_decoded_payload(mock_data)))
-                self.assertEqual(salt.utils.process.SignalHandlingMultiprocessingProcess.start.call_count,
+                self.assertEqual(salt.utils.process.SignalHandlingProcess.start.call_count,
                                  process_count_max)
                 self.assertEqual(len(minion.jid_queue), process_count_max + 1)
             finally:
@@ -237,8 +238,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
                 patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+                patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['beacons_before_connect'] = True
             io_loop = tornado.ioloop.IOLoop()
@@ -263,8 +264,8 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
                 patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.start', MagicMock(return_value=True)), \
-                patch('salt.utils.process.SignalHandlingMultiprocessingProcess.join', MagicMock(return_value=True)):
+                patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
             mock_opts = self.get_config('minion', from_scratch=True)
             mock_opts['scheduler_before_connect'] = True
             io_loop = tornado.ioloop.IOLoop()
@@ -279,6 +280,29 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 # Make sure the scheduler is initialized but the beacons are not
                 self.assertTrue('schedule' in minion.periodic_callbacks)
                 self.assertTrue('beacons' not in minion.periodic_callbacks)
+            finally:
+                minion.destroy()
+
+    def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodic_callbacks(self):
+        with patch('salt.minion.Minion.ctx', MagicMock(return_value={})), \
+                patch('salt.minion.Minion.sync_connect_master', MagicMock(side_effect=RuntimeError('stop execution'))), \
+                patch('salt.utils.process.SignalHandlingProcess.start', MagicMock(return_value=True)), \
+                patch('salt.utils.process.SignalHandlingProcess.join', MagicMock(return_value=True)):
+            mock_opts = self.get_config('minion', from_scratch=True)
+            mock_opts['ping_interval'] = 10
+            io_loop = tornado.ioloop.IOLoop()
+            io_loop.make_current()
+            minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+            try:
+                try:
+                    minion.connected = MagicMock(side_effect=(False, True))
+                    minion._fire_master_minion_start = MagicMock()
+                    minion.tune_in(start=False)
+                except RuntimeError:
+                    pass
+
+                # Make sure the scheduler is initialized but the beacons are not
+                self.assertTrue('ping' in minion.periodic_callbacks)
             finally:
                 minion.destroy()
 
