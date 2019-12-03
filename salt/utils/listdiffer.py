@@ -237,7 +237,7 @@ class ListDictDiffer(object):
                         changed.append('.'.join([self._key, key_val, change]))
             return changed
         elif selection == 'intersect':
-                # We want the unset values as well
+            # We want the unset values as well
             for recursive_item in self._get_recursive_difference(type='intersect'):
                 recursive_item.ignore_unset_values = False
                 key_val = six.text_type(recursive_item.past_dict[self._key]) \
