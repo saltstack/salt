@@ -569,7 +569,7 @@ class MasterOptionParserTestCase(ParserBase, TestCase):
         Setting up
         '''
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -600,7 +600,7 @@ class MinionOptionParserTestCase(ParserBase, TestCase):
         Setting up
         '''
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -665,7 +665,7 @@ class SyndicOptionParserTestCase(ParserBase, TestCase):
         self.logfile_config_setting_name = 'syndic_log_file'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -701,7 +701,7 @@ class SaltCMDOptionParserTestCase(ParserBase, TestCase):
         self.args = ['foo', 'bar.baz']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -734,7 +734,7 @@ class SaltCPOptionParserTestCase(ParserBase, TestCase):
         self.args = ['foo', 'bar', 'baz']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -769,7 +769,7 @@ class SaltKeyOptionParserTestCase(ParserBase, TestCase):
         self.logfile_config_setting_name = 'key_logfile'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -890,7 +890,7 @@ class SaltCallOptionParserTestCase(ParserBase, TestCase):
         self.args = ['foo.bar']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -923,7 +923,7 @@ class SaltRunOptionParserTestCase(ParserBase, TestCase):
         self.args = ['foo.bar']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -959,7 +959,7 @@ class SaltSSHOptionParserTestCase(ParserBase, TestCase):
         self.logfile_config_setting_name = 'ssh_log_file'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
