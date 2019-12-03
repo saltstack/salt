@@ -125,7 +125,8 @@ disable=R,
   pep8-reserved-keywords,
   str-format-in-logging,
   import-outside-toplevel,
-  deprecated-method
+  deprecated-method,
+  keyword-arg-before-vararg
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
