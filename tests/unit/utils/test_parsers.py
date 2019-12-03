@@ -6,10 +6,11 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
-
+import shutil
+import tempfile
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.helpers import destructiveTest, skip_if_not_root
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     MagicMock,
     patch,
@@ -109,9 +110,7 @@ class ObjectView(object):  # pylint: disable=too-few-public-methods
         self.__dict__ = d
 
 
-@destructiveTest
-@skip_if_not_root
-class LogSettingsParserTests(TestCase):
+class ParserBase(object):
     '''
     Unit Tests for Log Level Mixin with Salt parsers
     '''
@@ -126,10 +125,25 @@ class LogSettingsParserTests(TestCase):
     logfile_config_setting_name = 'log_file'
     logfile_loglevel_config_setting_name = 'log_level_logfile'  # pylint: disable=invalid-name
 
+    @classmethod
+    def setUpClass(cls):
+        cls.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.root_dir, ignore_errors=True)
+
     def setup_log(self):
         '''
         Mock logger functions
         '''
+        testing_config = self.default_config.copy()
+        testing_config['root_dir'] = self.root_dir
+        for name in ('pki_dir', 'cachedir'):
+            testing_config[name] = name
+        testing_config[self.logfile_config_setting_name] = getattr(self, self.logfile_config_setting_name, self.log_file)
+        self.testing_config = testing_config
+        self.addCleanup(setattr, self, 'testing_config', None)
         self.log_setup = LogSetupMock()
         patcher = patch.multiple(
             log,
@@ -151,14 +165,14 @@ class LogSettingsParserTests(TestCase):
         Tests that log level match command-line specified value
         '''
         # Set defaults
-        default_log_level = self.default_config[self.loglevel_config_setting_name]
+        default_log_level = self.testing_config[self.loglevel_config_setting_name]
 
         # Set log level in CLI
         log_level = 'critical'
         args = ['--log-level', log_level] + self.args
 
         parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=self.default_config)):
+        with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
@@ -183,7 +197,7 @@ class LogSettingsParserTests(TestCase):
 
         # Set log level in config
         log_level = 'info'
-        opts = self.default_config.copy()
+        opts = self.testing_config.copy()
         opts.update({self.loglevel_config_setting_name: log_level})
 
         parser = self.parser()
@@ -209,12 +223,12 @@ class LogSettingsParserTests(TestCase):
         Tests that log level match the default value
         '''
         # Set defaults
-        log_level = default_log_level = self.default_config[self.loglevel_config_setting_name]
+        log_level = default_log_level = self.testing_config[self.loglevel_config_setting_name]
 
         args = self.args
 
         parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=self.default_config)):
+        with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
@@ -242,14 +256,14 @@ class LogSettingsParserTests(TestCase):
         Tests that log file match command-line specified value
         '''
         # Set defaults
-        log_level = self.default_config[self.loglevel_config_setting_name]
+        log_level = self.testing_config[self.loglevel_config_setting_name]
 
         # Set log file in CLI
         log_file = '{0}_cli.log'.format(self.log_file)
         args = ['--log-file', log_file] + self.args
 
         parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=self.default_config)):
+        with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
@@ -276,13 +290,13 @@ class LogSettingsParserTests(TestCase):
         Tests that log file match the configured value
         '''
         # Set defaults
-        log_level = self.default_config[self.loglevel_config_setting_name]
+        log_level = self.testing_config[self.loglevel_config_setting_name]
 
         args = self.args
 
         # Set log file in config
         log_file = '{0}_config.log'.format(self.log_file)
-        opts = self.default_config.copy()
+        opts = self.testing_config.copy()
         opts.update({self.logfile_config_setting_name: log_file})
 
         parser = self.parser()
@@ -313,13 +327,14 @@ class LogSettingsParserTests(TestCase):
         Tests that log file match the default value
         '''
         # Set defaults
-        log_level = self.default_config[self.loglevel_config_setting_name]
-        log_file = default_log_file = self.default_config[self.logfile_config_setting_name]
+        log_level = self.testing_config[self.loglevel_config_setting_name]
+        log_file = self.testing_config[self.logfile_config_setting_name]
+        default_log_file = self.default_config[self.logfile_config_setting_name]
 
         args = self.args
 
         parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=self.default_config)):
+        with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
@@ -351,14 +366,14 @@ class LogSettingsParserTests(TestCase):
         Tests that file log level match command-line specified value
         '''
         # Set defaults
-        default_log_level = self.default_config[self.loglevel_config_setting_name]
+        default_log_level = self.testing_config[self.loglevel_config_setting_name]
 
         # Set log file level in CLI
         log_level_logfile = 'error'
         args = ['--log-file-level', log_level_logfile] + self.args
 
         parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=self.default_config)):
+        with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
@@ -386,13 +401,13 @@ class LogSettingsParserTests(TestCase):
         Tests that log file level match the configured value
         '''
         # Set defaults
-        log_level = self.default_config[self.loglevel_config_setting_name]
+        log_level = self.testing_config[self.loglevel_config_setting_name]
 
         args = self.args
 
         # Set log file level in config
         log_level_logfile = 'info'
-        opts = self.default_config.copy()
+        opts = self.testing_config.copy()
         opts.update({self.logfile_loglevel_config_setting_name: log_level_logfile})
 
         parser = self.parser()
@@ -424,7 +439,7 @@ class LogSettingsParserTests(TestCase):
         Tests that log file level match the default value
         '''
         # Set defaults
-        default_log_level = self.default_config[self.loglevel_config_setting_name]
+        default_log_level = self.testing_config[self.loglevel_config_setting_name]
 
         log_level = default_log_level
         log_level_logfile = default_log_level
@@ -432,7 +447,7 @@ class LogSettingsParserTests(TestCase):
         args = self.args
 
         parser = self.parser()
-        with patch(self.config_func, MagicMock(return_value=self.default_config)):
+        with patch(self.config_func, MagicMock(return_value=self.testing_config)):
             parser.parse_args(args)
         with patch('salt.utils.parsers.is_writeable', MagicMock(return_value=True)):
             parser.setup_logfile_logger()
@@ -467,7 +482,7 @@ class LogSettingsParserTests(TestCase):
 
         args = ['--log-file-level', log_level_logfile] + self.args
 
-        opts = self.default_config.copy()
+        opts = self.testing_config.copy()
         opts.update({self.loglevel_config_setting_name: log_level})
 
         parser = self.parser()
@@ -502,7 +517,7 @@ class LogSettingsParserTests(TestCase):
         args = self.args
         log_file = self.log_file
         log_file_name = self.logfile_config_setting_name
-        opts = self.default_config.copy()
+        opts = self.testing_config.copy()
         opts.update({'log_file': log_file})
         if log_file_name != 'log_file':
             opts.update({log_file_name: getattr(self, log_file_name)})
@@ -519,10 +534,33 @@ class LogSettingsParserTests(TestCase):
         else:
             self.assertEqual(os.path.getsize(getattr(self, log_file_name)), 0)
 
+    def test_callbacks_uniqueness(self):
+        '''
+        Test that the callbacks are only added once, no matter
+        how many instances of the parser we create
+        '''
+        mixin_container_names = ('_mixin_setup_funcs',
+                                 '_mixin_process_funcs',
+                                 '_mixin_after_parsed_funcs',
+                                 '_mixin_before_exit_funcs')
+        parser = self.parser()
+        nums_1 = {}
+        for cb_container in mixin_container_names:
+            obj = getattr(parser, cb_container)
+            nums_1[cb_container] = len(obj)
+
+        # The next time we instantiate the parser, the counts should be equal
+        parser = self.parser()
+        nums_2 = {}
+        for cb_container in mixin_container_names:
+            obj = getattr(parser, cb_container)
+            nums_2[cb_container] = len(obj)
+        self.assertDictEqual(nums_1, nums_2)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
-class MasterOptionParserTestCase(LogSettingsParserTests):
+class MasterOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
     '''
@@ -531,7 +569,7 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
         Setting up
         '''
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -546,10 +584,14 @@ class MasterOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.MasterOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
-class MinionOptionParserTestCase(LogSettingsParserTests):
+class MinionOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Minion options
     '''
@@ -558,7 +600,7 @@ class MinionOptionParserTestCase(LogSettingsParserTests):
         Setting up
         '''
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -573,9 +615,13 @@ class MinionOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.MinionOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
+class ProxyMinionOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Proxy Minion options
     '''
@@ -600,10 +646,14 @@ class ProxyMinionOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.ProxyMinionOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Windows uses a logging listener')
-class SyndicOptionParserTestCase(LogSettingsParserTests):
+class SyndicOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Syndic options
     '''
@@ -615,7 +665,7 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
         self.logfile_config_setting_name = 'syndic_log_file'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -631,9 +681,15 @@ class SyndicOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SyndicOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+        if os.path.exists(self.syndic_log_file):
+            os.unlink(self.syndic_log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCMDOptionParserTestCase(LogSettingsParserTests):
+class SaltCMDOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt CLI options
     '''
@@ -645,7 +701,7 @@ class SaltCMDOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo', 'bar.baz']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -660,9 +716,13 @@ class SaltCMDOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltCMDOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCPOptionParserTestCase(LogSettingsParserTests):
+class SaltCPOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing salt-cp options
     '''
@@ -674,7 +734,7 @@ class SaltCPOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo', 'bar', 'baz']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -689,9 +749,13 @@ class SaltCPOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltCPOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltKeyOptionParserTestCase(LogSettingsParserTests):
+class SaltKeyOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing salt-key options
     '''
@@ -705,7 +769,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         self.logfile_config_setting_name = 'key_logfile'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -785,7 +849,7 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         Tests that log level default value is ignored
         '''
         # Set defaults
-        default_log_level = self.default_config[self.loglevel_config_setting_name]
+        default_log_level = self.testing_config[self.loglevel_config_setting_name]
 
         log_level = None
         args = self.args
@@ -806,9 +870,15 @@ class SaltKeyOptionParserTestCase(LogSettingsParserTests):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, default_log_level)
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+        if os.path.exists(self.key_logfile):
+            os.unlink(self.key_logfile)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCallOptionParserTestCase(LogSettingsParserTests):
+class SaltCallOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Minion options
     '''
@@ -820,7 +890,7 @@ class SaltCallOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo.bar']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MINION_OPTS
+        self.default_config = salt.config.DEFAULT_MINION_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -835,9 +905,13 @@ class SaltCallOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltCallOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltRunOptionParserTestCase(LogSettingsParserTests):
+class SaltRunOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
     '''
@@ -849,7 +923,7 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
         self.args = ['foo.bar']
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -864,9 +938,13 @@ class SaltRunOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltRunOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltSSHOptionParserTestCase(LogSettingsParserTests):
+class SaltSSHOptionParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Master options
     '''
@@ -881,7 +959,7 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
         self.logfile_config_setting_name = 'ssh_log_file'
 
         # Set defaults
-        self.default_config = salt.config.DEFAULT_MASTER_OPTS
+        self.default_config = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.addCleanup(delattr, self, 'default_config')
 
         # Log file
@@ -897,9 +975,15 @@ class SaltSSHOptionParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltSSHOptionParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+        if os.path.exists(self.ssh_log_file):
+            os.unlink(self.ssh_log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltCloudParserTestCase(LogSettingsParserTests):
+class SaltCloudParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
     '''
@@ -930,9 +1014,13 @@ class SaltCloudParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SaltCloudParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SPMParserTestCase(LogSettingsParserTests):
+class SPMParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
     '''
@@ -964,9 +1052,15 @@ class SPMParserTestCase(LogSettingsParserTests):
         self.parser = salt.utils.parsers.SPMParser
         self.addCleanup(delattr, self, 'parser')
 
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+        if os.path.exists(self.spm_logfile):
+            os.unlink(self.spm_logfile)
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
-class SaltAPIParserTestCase(LogSettingsParserTests):
+class SaltAPIParserTestCase(ParserBase, TestCase):
     '''
     Tests parsing Salt Cloud options
     '''
@@ -997,6 +1091,12 @@ class SaltAPIParserTestCase(LogSettingsParserTests):
         # Assign parser
         self.parser = salt.utils.parsers.SaltAPIParser
         self.addCleanup(delattr, self, 'parser')
+
+    def tearDown(self):
+        if os.path.exists(self.log_file):
+            os.unlink(self.log_file)
+        if os.path.exists(self.api_logfile):
+            os.unlink(self.api_logfile)
 
 
 @skipIf(not pytest, False)
@@ -1074,7 +1174,3 @@ class DaemonMixInTestCase(TestCase):
             assert salt.utils.parsers.os.unlink.call_count == 1
             salt.utils.parsers.logger.info.assert_not_called()
             salt.utils.parsers.logger.debug.assert_not_called()
-
-
-# Hide the class from unittest framework when it searches for TestCase classes in the module
-del LogSettingsParserTests
