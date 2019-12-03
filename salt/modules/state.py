@@ -683,9 +683,13 @@ def apply_(mods=None, **kwargs):
 
         # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         salt '*' state.apply stuff
+
         # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         # and salt://pkgs.sls (or salt://pkgs/init.sls).
         salt '*' state.apply stuff,pkgs
+
+        # Run the states configured in a more deeply nested directory such as salt://my/organized/stuff.sls (or salt://my/organized/stuff/init.sls)
+        salt '*' state.apply my.organized.stuff
 
     The following additional arguments are also accepted when applying
     individual SLS files:
@@ -1176,14 +1180,13 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
         used, all Pillar environments will be merged together.
 
     localconfig
-
         Optionally, instead of using the minion config, load minion opts from
         the file specified by this argument, and then merge them with the
         options from the minion config. This functionality allows for specific
         states to be run with their own custom minion configuration, including
         different pillars, file_roots, etc.
 
-    mock:
+    mock
         The mock option allows for the state run to execute without actually
         calling any states. This then returns a mocked return which will show
         the requisite ordering as well as fully validate the state run.
@@ -1205,9 +1208,17 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.sls core,edit.vim dev
-        salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+        # Run the states configured in salt://example.sls (or salt://example/init.sls)
+        salt '*' state.apply example
 
+        # Run the states configured in salt://core.sls (or salt://core/init.sls)
+        # and salt://edit/vim.sls (or salt://edit/vim/init.sls)
+        salt '*' state.sls core,edit.vim
+
+        # Run the states configured in a more deeply nested directory such as salt://my/nested/state.sls (or salt://my/nested/state/init.sls)
+        salt '*' state.sls my.nested.state
+
+        salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
         salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     concurrent = kwargs.get('concurrent', False)
@@ -1634,6 +1645,9 @@ def show_states(queue=False, **kwargs):
             raise Exception(result)
 
         for s in result:
+            if not isinstance(s, dict):
+                _set_retcode(result)
+                return result
             states[s['__sls__']] = True
     finally:
         st_.pop_active()

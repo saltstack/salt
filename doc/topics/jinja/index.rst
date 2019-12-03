@@ -770,7 +770,7 @@ Returns:
 
 .. versionadded:: 2017.7.0
 
-Return is a substring is found in a list of string values.
+Return True if a substring is found in a list of string values.
 
 Example:
 
