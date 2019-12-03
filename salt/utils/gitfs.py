@@ -1665,7 +1665,7 @@ class Pygit2(GitProvider):
                 blobs.append(
                     salt.utils.path.join(prefix, entry.name, use_posixpath=True)
                 )
-                if len(blob):
+                if blob:
                     _traverse(
                         blob, blobs, salt.utils.path.join(
                             prefix, entry.name, use_posixpath=True)
@@ -1687,7 +1687,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = []
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
@@ -1817,7 +1817,7 @@ class Pygit2(GitProvider):
         else:
             relpath = lambda path: path
         blobs = {}
-        if len(tree):
+        if tree:
             _traverse(tree, blobs, self.root(tgt_env))
         add_mountpoint = lambda path: salt.utils.path.join(
             self.mountpoint(tgt_env), path, use_posixpath=True)
