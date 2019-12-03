@@ -232,23 +232,29 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests error raised when not useing vt and OSError is provided
         '''
+        expected_error = "expect error"
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError)):
-                            self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
+                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError(expected_error))):
+                            with self.assertRaises(CommandExecutionError) as error:
+                                cmdmod.run('foo')
+                            assert error.exception.args[0].endswith(expected_error), repr(error.exception.args[0])
 
     def test_run_no_vt_io_error(self):
         '''
         Tests error raised when not useing vt and IOError is provided
         '''
+        expected_error = "expect error"
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError)):
-                            self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
+                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError(expected_error))):
+                            with self.assertRaises(CommandExecutionError) as error:
+                                cmdmod.run('foo')
+                            assert error.exception.args[0].endswith(expected_error), repr(error.exception.args[0])
 
     @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     @skipIf(True, 'Test breaks unittests runs')
