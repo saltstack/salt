@@ -238,7 +238,7 @@ def get_pkg_id(pkg):
             # Find our identifiers
             for f in files:
                 i = _get_pkg_id_from_pkginfo(os.path.join(temp_dir, f))
-                if len(i):
+                if i:
                     package_ids.extend(i)
         else:
             package_ids = _get_pkg_id_dir(pkg)
