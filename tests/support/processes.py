@@ -182,12 +182,11 @@ def start_daemon(daemon_name=None,
                 log.info('[%s] pytest %s(%s) stopped', daemon_log_prefix, daemon_name, daemon_id)
 
             # request.addfinalizer(stop_daemon)
-            return process
+            break
         else:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
             continue
-    else:   # pylint: disable=useless-else-on-loop
-            # Wrong, we have a return, its not useless
+    else:
         if process is not None:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
         raise fail_method(
@@ -197,3 +196,4 @@ def start_daemon(daemon_name=None,
                 attempts-1
             )
         )
+    return process

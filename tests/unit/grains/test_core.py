@@ -1241,3 +1241,25 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 is_proxy.assert_called_once_with()
                 is_windows.assert_not_called()
                 self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+
+    def test_cwd_exists(self):
+        cwd_grain = core.cwd()
+
+        self.assertIsInstance(cwd_grain, dict)
+        self.assertTrue('cwd' in cwd_grain)
+        self.assertEqual(cwd_grain['cwd'], os.getcwd())
+
+    def test_cwd_is_cwd(self):
+        cwd = os.getcwd()
+
+        try:
+            # change directory
+            new_dir = os.path.split(cwd)[0]
+            os.chdir(new_dir)
+
+            cwd_grain = core.cwd()
+
+            self.assertEqual(cwd_grain['cwd'], new_dir)
+        finally:
+            # change back to original directory
+            os.chdir(cwd)
