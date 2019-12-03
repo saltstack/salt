@@ -68,7 +68,7 @@ class CacheContextTestCase(TestCase):
         if os.path.exists(os.path.join(tempfile.gettempdir(), 'context')):
             self.skipTest('Context dir already exists')
         else:
-            opts = salt.config.DEFAULT_MINION_OPTS
+            opts = salt.config.DEFAULT_MINION_OPTS.copy()
             opts['cachedir'] = tempfile.gettempdir()
             context_cache = cache.ContextCache(opts, 'cache_test')
 
@@ -84,7 +84,7 @@ class CacheContextTestCase(TestCase):
         with a context cache can store and retrieve its contextual
         data
         '''
-        opts = salt.config.DEFAULT_MINION_OPTS
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
         opts['cachedir'] = tempfile.gettempdir()
 
         ll_ = salt.loader.LazyLoader(
