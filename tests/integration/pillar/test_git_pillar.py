@@ -539,7 +539,6 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     '''
     Test git_pillar with GitPython using unauthenticated HTTP
     '''
-    pass
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
