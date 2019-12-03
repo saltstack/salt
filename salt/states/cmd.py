@@ -34,7 +34,7 @@ touch /tmp/foo if it does not exist:
         - creates: /tmp/foo
 
 ``creates`` also accepts a list of files, in which case this state will
-run if **any** of the files does not exist:
+run if **any** of the files do not exist:
 
 .. code-block:: yaml
 
@@ -197,7 +197,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
+``cmd.wait`` itself do not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
 The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
@@ -493,7 +493,7 @@ def wait(name,
     creates
         Only run if the file specified by ``creates`` do not exist. If you
         specify a list of files then this state will only run if **any** of
-        the files does not exist.
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -806,7 +806,7 @@ def run(name,
     creates
         Only run if the file specified by ``creates`` do not exist. If you
         specify a list of files then this state will only run if **any** of
-        the files does not exist.
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1060,7 +1060,7 @@ def script(name,
     creates
         Only run if the file specified by ``creates`` do not exist. If you
         specify a list of files then this state will only run if **any** of
-        the files does not exist.
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
