@@ -59,8 +59,13 @@ def represent_ordereddict(dumper, data):
     return dumper.represent_dict(list(data.items()))
 
 
+def represent_undefined(dumper, data):
+    return dumper.represent_scalar(u'tag:yaml.org,2002:null', u'NULL')
+
+
 OrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 SafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
+SafeOrderedDumper.add_representer(None, represent_undefined)
 
 OrderedDumper.add_representer(
     collections.defaultdict,
