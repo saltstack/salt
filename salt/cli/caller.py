@@ -305,7 +305,7 @@ class ZeroMQCaller(BaseCaller):
     '''
     Object to wrap the calling of local salt modules for the salt-call command
     '''
-    def __init__(self, opts):
+    def __init__(self, opts):  # pylint: disable=useless-super-delegation
         '''
         Pass in the command line options
         '''

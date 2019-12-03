@@ -342,7 +342,7 @@ LPDWORD = ctypes.POINTER(wintypes.DWORD)
 
 class ContiguousUnicode(ctypes.Structure):
     # _string_names_: sequence matched to underscore-prefixed fields
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):  # pylint: disable=useless-super-delegation
         super(ContiguousUnicode, self).__init__(*args, **kwargs)
 
     def _get_unicode_string(self, name):
