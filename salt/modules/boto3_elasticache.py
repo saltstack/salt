@@ -157,7 +157,7 @@ def _delete_resource(name, name_param, desc, res_type, wait=0, status_param=None
         orig_wait = wait
         while wait > 0:
             r = s(name=name, conn=conn)
-            if not r or not len(r) or r[0].get(status_param) == status_gone:
+            if not r or (r and r[0].get(status_param) == status_gone):
                 log.info('%s %s deleted.', desc.title(), name)
                 return True
             sleep = wait if wait % 60 == wait else 60

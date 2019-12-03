@@ -331,7 +331,7 @@ class _Zypper(object):
                 was_blocked = True
 
         if was_blocked:
-            __salt__['event.fire_master']({'success': not len(self.error_msg),
+            __salt__['event.fire_master']({'success': not self.error_msg,
                                            'info': self.error_msg or 'Zypper has been released'},
                                           self.TAG_RELEASED)
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
@@ -626,7 +626,7 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
 
     # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
+    if len(names) == 1 and ret:
         return ret[names[0]]
 
     return ret
