@@ -21,6 +21,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.fsutils
+import salt.utils.platform
 import salt.modules.btrfs as btrfs
 from salt.exceptions import CommandExecutionError
 
@@ -401,6 +402,7 @@ class BtrfsTestCase(TestCase, LoaderModuleMockMixin):
         subvolume_exists.return_value = True
         assert not btrfs.subvolume_create('var', dest='/mnt')
 
+    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     @patch('salt.modules.btrfs.subvolume_exists')
     def test_subvolume_create(self, subvolume_exists):
         '''
