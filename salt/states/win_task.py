@@ -89,7 +89,7 @@ def __virtual__():
 
 
 def _get_state_data(name):
-    r'''
+    '''
     will return a new blank state dict.
 
     :param str name: name of task.
@@ -104,7 +104,7 @@ def _get_state_data(name):
 
 
 def _valid_location(location):
-    r'''
+    '''
     will test to see if task location is valid.
 
     :param str location: location of task.
@@ -121,7 +121,7 @@ def _valid_location(location):
 
 def _get_task_state_data(name,
                          location):
-    r'''
+    '''
     will get the state of a task.
 
     :param str name: name of task
@@ -179,7 +179,7 @@ def _get_arguments(arguments_given,
 
 
 def _task_state_prediction_bandage(state):
-    r'''
+    '''
     A bandage to format and add arguments to a task state.
     This is so task states can be compared.
 
@@ -229,8 +229,8 @@ def _task_state_prediction_bandage(state):
 
 def _get_task_state_prediction(state,
                               new_task):
-    r'''
-        predicts what a the new task will look like
+    '''
+    predicts what a the new task will look like
 
     :param dict state:
     :param dict new_task:
