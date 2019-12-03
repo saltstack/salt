@@ -1099,15 +1099,16 @@ def build_routes(iface, **settings):
             template = 'route_eth.jinja'
     except ValueError:
         pass
-    log.debug('Template name: ' + template)
+    log.debug('Template name: %s', template)
 
     opts = _parse_routes(iface, settings)
-    log.debug("Opts: \n {0}".format(opts))
+    log.debug("Opts: \n %s", opts)
     try:
         template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
         log.error(
-            'Could not load template {0}'.format(template)
+            'Could not load template %s',
+            template
         )
         return ''
     opts6 = []
