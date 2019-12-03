@@ -18,6 +18,16 @@ directories to the users PATH. If you are installing as root and want other
 users to be able to access rbenv then you will need to add RBENV_ROOT to
 their environment.
 
+To pass additional environment based compile time options to rbenv_build, you
+can setup a build_env dictionary in the pillar/grains/master configuration. The
+following example would pass `CONFIGURE_OPTS="--no-tcmalloc" CFLAGS="-fno-tree-dce"``
+to the rbenv_build process.
+.. code-block:: yaml
+        rbenv:
+          build_env:
+            CONFIGURE_OPTS: "--no-tcmalloc"
+            CFLAGS: "-fno-tree-dce"
+
 The following state configuration demonstrates how to install Ruby 1.9.x
 and 2.x using rbenv on Ubuntu/Debian:
 

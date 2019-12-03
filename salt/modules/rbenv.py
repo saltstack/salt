@@ -217,12 +217,14 @@ def install_ruby(ruby, runas=None):
         run as the user under which Salt is running.
 
     Additional environment variables can be configured in pillar /
-    grains / master:
+    grains / master as a dictionary:
 
     .. code-block:: yaml
 
         rbenv:
-          build_env: 'CONFIGURE_OPTS="--no-tcmalloc" CFLAGS="-fno-tree-dce"'
+          build_env:
+            CONFIGURE_OPTS: "--no-tcmalloc"
+            CFLAGS: "-fno-tree-dce"
 
     CLI Example:
 
@@ -232,19 +234,21 @@ def install_ruby(ruby, runas=None):
     '''
     ruby = re.sub(r'^ruby-', '', ruby)
 
-    env = None
-    env_list = []
+    env = {}
+    build_env = None
 
     if __grains__['os'] in ('FreeBSD', 'NetBSD', 'OpenBSD'):
-        env_list.append('MAKE=gmake')
+        env['MAKE'] = 'gmake'
 
     if __salt__['config.get']('rbenv:build_env'):
-        env_list.append(__salt__['config.get']('rbenv:build_env'))
+        build_env = __salt__['config.get']('rbenv:build_env')
     elif __salt__['config.option']('rbenv.build_env'):
-        env_list.append(__salt__['config.option']('rbenv.build_env'))
+        build_env = __salt__['config.option']('rbenv.build_env')
 
-    if env_list:
-        env = ' '.join(env_list)
+    if isinstance(build_env, dict):
+        env.update(build_env)
+    elif isinstance(build_env, str):
+        env.update(dict(build_arg.split('=', 1) for build_arg in salt.utils.args.shlex_split(six.text_type(build_env))))
 
     ret = {}
     ret = _rbenv_exec(['install', ruby], env=env, runas=runas, ret=ret)
