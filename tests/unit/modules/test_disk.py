@@ -161,7 +161,8 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(disk.__salt__, {'cmd.retcode': mock}),\
                patch('salt.utils.path.which', MagicMock(return_value=True)):
             self.assertEqual(disk.format_(device, fs_type='fat', fat=12), True)
-            assert expected == mock.call_args_list[0].args[0]
+            args, kwargs = mock.call_args_list[0]
+            assert expected == args[0]
 
     @skipIf(not salt.utils.path.which('lsblk') and not salt.utils.path.which('df'),
             'lsblk or df not found')
