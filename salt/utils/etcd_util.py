@@ -75,7 +75,6 @@ class EtcdUtilWatchTimeout(Exception):
     """
     A watch timed out without returning a result
     """
-    pass
 
 
 class EtcdClient(object):

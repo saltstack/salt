@@ -154,13 +154,11 @@ class SaltSwift(object):
         '''
         Update container metadata
         '''
-        pass
 
     def head_container(self, cont):
         '''
         Get container metadata
         '''
-        pass
 
     def get_object(self, cont, obj, local_file=None, return_bin=False):
         '''
@@ -229,10 +227,8 @@ class SaltSwift(object):
         '''
         Get object metadata
         '''
-        pass
 
     def post_object(self, cont, obj, metadata):
         '''
         Update object metadata
         '''
-        pass

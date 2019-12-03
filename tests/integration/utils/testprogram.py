@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 if 'TimeoutError' not in __builtins__:
     class TimeoutError(OSError):
         '''Compatibility exception with python3'''
-        pass
+
     __builtins__['TimeoutError'] = TimeoutError
 
 
@@ -846,7 +846,6 @@ class TestSaltDaemon(six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSal
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-    pass
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):
@@ -879,7 +878,6 @@ class TestDaemonSaltApi(TestSaltDaemon):
     '''
     Manager for salt-api daemon.
     '''
-    pass
 
 
 class TestDaemonSaltSyndic(TestSaltDaemon):

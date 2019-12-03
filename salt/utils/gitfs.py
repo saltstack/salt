@@ -1079,7 +1079,6 @@ class GitProvider(object):
         '''
         Only needed in pygit2, included in the base class for simplicty of use
         '''
-        pass
 
     def verify_auth(self):
         '''
