@@ -231,7 +231,7 @@ def _parse(cli_output):
     tokens = __tokenize(cli_output)
     result = __process_tokens(tokens)
 
-    log.debug("=== RESULT: "+pprint.pformat(result))
+    log.debug("=== RESULT: %s", pprint.pformat(result))
     return result
 
 

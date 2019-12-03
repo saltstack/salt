@@ -298,7 +298,7 @@ class _Zypper(object):
             if self.__systemd_scope:
                 cmd.extend(['systemd-run', '--scope'])
             cmd.extend(self.__cmd)
-            log.debug("Calling Zypper: " + ' '.join(cmd))
+            log.debug("Calling Zypper: %s", ' '.join(cmd))
             self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
