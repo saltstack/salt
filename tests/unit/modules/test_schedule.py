@@ -150,14 +150,14 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it run a scheduled job on the minion immediately.
         '''
-        with patch.dict(schedule.__opts__, {'schedule': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': JOB1}, 'sock_dir': SOCK_DIR}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
-                _ret_value = {'complete': True, 'schedule': {}}
+                _ret_value = {'complete': True, 'schedule': {'job1': JOB1}}
                 with patch.object(SaltEvent, 'get_event', return_value=_ret_value):
                     self.assertDictEqual(schedule.run_job('job1'),
-                                         {'comment': 'Job job1 does not exist.',
-                                          'result': False})
+                                         {'comment': 'Scheduling Job job1 on minion.',
+                                          'result': True})
 
     # 'enable_job' function tests: 1
 
