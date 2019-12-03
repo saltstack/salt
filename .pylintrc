@@ -6,15 +6,12 @@
 # pygtk.require().
 #init-hook=
 
-# Profiled execution.
-profile=no
-
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
 ignore=CVS,ext
 
 # Pickle collected data for later comparisons.
-persistent=yes
+persistent=no
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
@@ -32,6 +29,25 @@ load-plugins=saltpylint.pep8,
 # Use multiple processes to speed up Pylint.
 # Don't bump this values on PyLint 1.4.0 - Know bug that ignores the passed --rcfile
 jobs=1
+
+# List of blacklisted functions and suggested replacements
+#
+# NOTE: This pylint check will infer the full name of the function by walking
+# back up from the function name to the parent, to the parent's parent, etc.,
+# and this means that functions which come from platform-specific modules need
+# to be referenced using name of the module from which the function was
+# imported. This happens a lot in the os and os.path modules. Functions from
+# os.path should be defined using posixpath.funcname and ntpath.funcname, while
+# functions from os should be defined using posix.funcname and nt.funcname.
+#
+# When defining a blacklisted function, the format is:
+#
+#   <func_name>=<suggested_replacement>
+#
+# The replacement text will be included in the alert message.
+#
+blacklisted-functions=posix.umask=salt.utils.files.set_umask or get_umask,
+  nt.umask=salt.utils.files.set_umask or get_umask
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -80,36 +96,64 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=W0142,
-  C0330,
-  I0011,
-  I0012,
-  W1202,
-  E1320,
-  E8402,
-  E8731
-#  E8121,
-#  E8122,
-#  E8123,
-#  E8124,
-#  E8125,
-#  E8126,
-#  E8127,
-#  E8128
+disable=R,
+  locally-disabled,
+  file-ignored,
+  unexpected-special-method-signature,
+  import-error,
+  no-member,
+  unsubscriptable-object,
+  un-indexed-curly-braces-error,
+  indentation-is-not-a-multiple-of-four-comment,
+  blacklisted-name,
+  invalid-name,
+  missing-docstring,
+  empty-docstring,
+  misplaced-comparison-constant,
+  unidiomatic-typecheck,
+  wrong-import-order,
+  ungrouped-imports,
+  wrong-import-position,
+  bad-mcs-method-argument,
+  bad-mcs-classmethod-argument,
+  line-too-long,
+  too-many-lines,
+  bad-continuation,
+  exec-used,
+  attribute-defined-outside-init,
+  protected-access,
+  reimported,
+  fixme,
+  global-statement,
+  unused-variable,
+  unused-argument,
+  redefined-outer-name,
+  redefined-builtin,
+  undefined-loop-variable,
+  logging-format-interpolation,
+  invalid-format-index,
+  line-too-long,
+  unexpected-indentation-comment,
+  continuation-line-indentation-is-not-a-multiple-of-four,
+  continuation-line-missing-indentation-or-outdented,
+  closing-bracket-does-not-match-indentation-of-opening-brackets-line,
+  closing-bracket-does-not-match-visual-indentation,
+  continuation-line-does-not-distinguish-itself-from-next-logical-line,
+  continuation-line-over-indented-for-hanging-indent,
+  continuation-line-over-indented-for-visual-indent,
+  continuation-line-under-indented-for-visual-indent,
+  visually-indented-line-with-same-indent-as-next-logical-line,
+  unaligned-for-hanging-indent,
+  block-comment-should-start-with-cardinal-space,
+  too-many-leading-hastag-for-block-comment,
+  module-level-import-not-at-top-of-file,
+  do-not-assign-a-lambda-expression-use-a-def,
+  3rd-party-local-module-not-gated,
+  pep8-reserved-keywords,
+  str-format-in-logging
 
-# Disabled Checks
-#
-# W0142 (star-args)
-# W1202 (logging-format-interpolation) Use % formatting in logging functions but pass the % parameters as arguments
-# E812* All PEP8 E12*
-# E8402 module level import not at top of file
-# E8501 PEP8 line too long
-# E8731 do not assign a lambda expression, use a def
-# C0330 (bad-continuation)
-# I0011 (locally-disabling)
-# I0012 (locally-enabling)
-# W1202 (logging-format-interpolation)
-
+# Disabled:
+# R* [refactoring suggestions & reports]
 
 [REPORTS]
 # Set the output format. Available formats are text, parseable, colorized, msvs
@@ -123,7 +167,8 @@ output-format=text
 files-output=no
 
 # Tells whether to display a full report or only the messages
-reports=yes
+# This will be removed in pylint 1.6
+reports=no
 
 # Python expression which should return a note less than 10 (10 is the highest
 # note). You have access to the variables errors warning, statement which
@@ -132,13 +177,10 @@ reports=yes
 # (RP0004).
 evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
 
-# Add a comment according to your evaluation note. This is used by the global
-# evaluation report (RP0004).
-comment=no
-
 # Template used to display messages. This is a python new-style format string
 # used to format the message information. See doc for all details
 #msg-template=
+msg-template='{path}:{line}: [{msg_id}({symbol}), {obj}] {msg}'
 
 
 [VARIABLES]
@@ -157,6 +199,7 @@ additional-builtins=__opts__,
   __pillar__,
   __grains__,
   __context__,
+  __runner__,
   __ret__,
   __env__,
   __low__,
@@ -173,6 +216,7 @@ additional-builtins=__opts__,
   __reg__,
   __executors__,
   __events__
+
 
 # List of strings which can identify a callback function by name. A callback
 # name must start or end with one of those strings.
@@ -230,10 +274,6 @@ ignored-modules=
 # (useful for classes with attributes dynamically set).
 ignored-classes=SQLObject
 
-# When zope mode is activated, add a predefined set of Zope acquired attributes
-# to generated-members.
-zope=no
-
 # List of members which are set dynamically and missed by pylint inference
 # system, and so shouldn't trigger E0201 when accessed. Python regular
 # expressions are accepted.
@@ -260,9 +300,6 @@ ignore-imports=no
 
 
 [BASIC]
-# Required attributes for module, separated by a comma (will be removed in Pylint 2.0)
-#required-attributes=
-
 # List of builtins function names that should not be used, separated by a comma
 bad-functions=map,filter,apply,input
 
@@ -365,11 +402,6 @@ spelling-store-unknown-words=no
 
 
 [CLASSES]
-# List of interface methods to ignore, separated by a comma. This is used for
-# instance to not check methods defines in Zope's Interface base class.
-# Will be removed in Pylint 2.0
-#ignore-iface-methods=isImplementedBy,deferred,extends,names,namesAndDescriptions,queryDescriptionFor,getBases,getDescriptionFor,getDoc,getName,getTaggedValue,getTaggedValueTags,isEqualOrExtendedBy,setTaggedValue,isImplementedByInstancesOf,adaptWith,is_implemented_by
-
 # List of method names used to declare (i.e. assign) instance attributes.
 defining-attr-methods=__init__,__new__,setUp
 
@@ -422,16 +454,16 @@ max-branches=48
 # Maximum number of statements in function / method body
 max-statements=100
 
-# Maximum number of parents for a class (see R0901).
+# Maximum number of parents for a class (see R0901, too-many-ancestors).
 max-parents=7
 
-# Maximum number of attributes for a class (see R0902).
+# Maximum number of attributes for a class (see R0902, too-many-instance-attributes).
 max-attributes=7
 
-# Minimum number of public methods for a class (see R0903).
+# Minimum number of public methods for a class (see R0903, too-few-public-methods).
 min-public-methods=2
 
-# Maximum number of public methods for a class (see R0904).
+# Maximum number of public methods for a class (see R0904, too-many-public-methods).
 max-public-methods=20
 
 
@@ -439,4 +471,4 @@ max-public-methods=20
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "Exception"
-overgeneral-exceptions=Exception
+overgeneral-exceptions=BaseException
