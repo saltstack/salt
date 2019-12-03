@@ -538,7 +538,7 @@ class DeleteOption(TypeOption):
     def __init__(self, key, value):
         if 'a' in value:
             value = 'bcdpfls'
-        super(self.__class__, self).__init__(key, value)
+        super(DeleteOption, self).__init__(key, value)
 
     def execute(self, fullpath, fstat, test=False):
         if test:
