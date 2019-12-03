@@ -26,6 +26,11 @@ log = logging.getLogger(__name__)
 # Define the module's virtual name
 __virtualname__ = 'service'
 
+# Define the module's function aliases
+__func_alias__ = {
+    'reload_': 'reload'
+}
+
 
 def __virtual__():
     '''

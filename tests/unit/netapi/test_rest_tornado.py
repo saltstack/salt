@@ -7,7 +7,7 @@ import copy
 import hashlib
 
 # Import Salt Testing Libs
-from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
