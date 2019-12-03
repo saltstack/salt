@@ -8,11 +8,11 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.loader
 import salt.config
-import tests.integration as integration
 from salt.exceptions import SaltRenderError
 from salt.ext.six.moves import StringIO
 
@@ -26,7 +26,7 @@ REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
 class StateConfigRendererTestCase(TestCase):
 
     def setUp(self):
-        self.root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        self.root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
         self.cache_dir = os.path.join(self.root_dir, 'cachedir')
         if not os.path.isdir(self.root_dir):

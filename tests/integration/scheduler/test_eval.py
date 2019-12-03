@@ -15,11 +15,9 @@ import datetime
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import skipIf
-import tests.integration as integration
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.schedule
@@ -34,7 +32,7 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
+ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
 
 DEFAULT_CONFIG = salt.config.minion_config(None)
