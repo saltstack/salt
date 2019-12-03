@@ -3674,8 +3674,6 @@ def _run(name,
                                              python_shell=python_shell,
                                              output_loglevel=output_loglevel,
                                              ignore_retcode=ignore_retcode)
-    except Exception:
-        raise
     finally:
         # Make sure we honor preserve_state, even if there was an exception
         new_state = state(name, path=path)
