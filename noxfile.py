@@ -895,6 +895,24 @@ def _pytest(session, coverage, cmd_args):
         # pylint: enable=unreachable
 
 
+class Tee:
+    '''
+    Python class to mimic linux tee behaviour
+    '''
+    def __init__(self, first, second):
+        self._first = first
+        self._second = second
+
+    def write(self, b):
+        wrote = self._first.write(b)
+        self._first.flush()
+        self._second.write(b)
+        self._second.flush()
+
+    def fileno(self):
+        return self._first.fileno()
+
+
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
     requirements_file = 'requirements/static/lint.in'
@@ -920,7 +938,9 @@ def _lint(session, rcfile, flags, paths):
     stdout = tempfile.TemporaryFile(mode='w+b')
     lint_failed = False
     try:
-        session.run(*cmd_args, stdout=stdout)
+        session.run(*cmd_args,
+                    stdout=Tee(stdout, sys.__stdout__),
+                    env={'PYTHONUNBUFFERED': '1'})
     except CommandFailed:
         lint_failed = True
         raise
