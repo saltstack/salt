@@ -698,7 +698,7 @@ def make_repo(repodir,
     with salt.utils.files.fopen(repoconfopts, 'w') as fow:
         fow.write(salt.utils.stringutils.to_str(repocfg_opts))
 
-    cmd = 'chown {0}:{1} -R {2}'.format(runas, runas, repoconf)
+    cmd = 'chown {0}:{0} -R {1}'.format(runas, repoconf)
     retrc = __salt__['cmd.retcode'](cmd, runas='root')
     if retrc != 0:
         raise SaltInvocationError(
