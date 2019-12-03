@@ -942,7 +942,7 @@ def _lint(session, rcfile, flags, paths):
         stdout.close()
 
 
-@nox.session(python='2.7')
+@nox.session(python='3')
 def lint(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -951,7 +951,7 @@ def lint(session):
     session.notify('lint-tests-{}'.format(session.python))
 
 
-@nox.session(python='2.7', name='lint-salt')
+@nox.session(python='3', name='lint-salt')
 def lint_salt(session):
     '''
     Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
@@ -963,10 +963,10 @@ def lint_salt(session):
         paths = session.posargs
     else:
         paths = ['setup.py', 'noxfile.py', 'salt/']
-    _lint(session, '.testing.pylintrc', flags, paths)
+    _lint(session, '.pylintrc', flags, paths)
 
 
-@nox.session(python='2.7', name='lint-tests')
+@nox.session(python='3', name='lint-tests')
 def lint_tests(session):
     '''
     Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
@@ -978,7 +978,7 @@ def lint_tests(session):
         paths = session.posargs
     else:
         paths = ['tests/']
-    _lint(session, '.testing.pylintrc', flags, paths)
+    _lint(session, '.pylintrc', flags, paths)
 
 
 @nox.session(python='3')
