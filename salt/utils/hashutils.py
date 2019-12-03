@@ -51,29 +51,24 @@ def base64_b64decode(instr):
 
 def base64_encodestring(instr):
     '''
-    Encode a string as base64 using the "legacy" Python interface.
+    Encode a byte-like object as base64 using the "modern" Python interface.
 
-    Among other possible differences, the "legacy" encoder includes
+    Among other possible differences, the "modern" encoder includes
     a newline ('\\n') character after every 76 characters and always
     at the end of the encoded string.
     '''
     return salt.utils.stringutils.to_unicode(
-        base64.encodestring(salt.utils.stringutils.to_bytes(instr)),
+        base64.encodebytes(salt.utils.stringutils.to_bytes(instr)),
         encoding='utf8' if salt.utils.platform.is_windows() else None
     )
 
 
 def base64_decodestring(instr):
     '''
-    Decode a base64-encoded string using the "legacy" Python interface.
+    Decode a base64-encoded byte-like object using the "modern" Python interface.
     '''
-    b = salt.utils.stringutils.to_bytes(instr)
-    try:
-        # PY3
-        decoded = base64.decodebytes(b)
-    except AttributeError:
-        # PY2
-        decoded = base64.decodestring(b)
+    bvalue = salt.utils.stringutils.to_bytes(instr)
+    decoded = base64.decodebytes(bvalue)
     try:
         return salt.utils.stringutils.to_unicode(
             decoded,
@@ -93,6 +88,7 @@ def md5_digest(instr):
     )
 
 
+@jinja_filter('sha1')
 def sha1_digest(instr):
     '''
     Generate an sha1 hash of a given string.
@@ -137,7 +133,17 @@ def hmac_signature(string, shared_secret, challenge_hmac):
     return valid_hmac == challenge
 
 
-@jinja_filter('rand_str')  # Remove this for Neon
+@jinja_filter('hmac_compute')
+def hmac_compute(string, shared_secret):
+    '''
+    Create an hmac digest.
+    '''
+    msg = salt.utils.stringutils.to_bytes(string)
+    key = salt.utils.stringutils.to_bytes(shared_secret)
+    hmac_hash = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    return hmac_hash
+
+
 @jinja_filter('random_hash')
 def random_hash(size=9999999999, hash_type=None):
     '''
