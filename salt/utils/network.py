@@ -969,7 +969,7 @@ def _interfaces_ipconfig(out):
         if line.startswith('Ethernet'):
             iface = ifaces[adapter_iface_regex.search(line).group(1)]
             iface['up'] = True
-            addr = None
+            addr = {}
             continue
         if iface:
             key, val = line.split(',', 1)
