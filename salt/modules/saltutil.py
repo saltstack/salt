@@ -383,9 +383,11 @@ def refresh_grains(**kwargs):
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
-    refresh_modules()
     if _refresh_pillar:
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
+    else:
+        refresh_modules()
     return True
 
 
@@ -425,7 +427,7 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     ret = _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 
@@ -913,7 +915,7 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         )
     ret = _sync('pillar', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 
@@ -1026,7 +1028,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 

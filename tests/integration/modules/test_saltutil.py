@@ -65,6 +65,12 @@ class SaltUtilModuleTest(ModuleCase):
         self.assertIn('priv', ret['return'])
 
 
+class SyncGrainsTest(ModuleCase):
+    def test_sync_grains(self):
+        ret = self.run_function('saltutil.sync_grains')
+        self.assertEqual(ret, [])
+
+
 class SaltUtilSyncModuleTest(ModuleCase):
     '''
     Testcase for the saltutil sync execution module
