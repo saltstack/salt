@@ -883,7 +883,7 @@ def _virtual(osdata):
                     if zone != 'global':
                         grains['virtual'] = 'zone'
                 # Check if it's a branded zone
-                elif isdir('/.SUNWnative'):
+                elif os.path.isdir('/.SUNWnative'):
                     grains['virtual'] = 'zone'
             break
         elif command == 'virtinfo':
