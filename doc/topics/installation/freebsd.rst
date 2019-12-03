@@ -12,16 +12,22 @@ Salt is available in the FreeBSD ports tree at `sysutils/py-salt
 FreeBSD binary repo
 ===================
 
+Install Salt via the official package repository. Salt is packaged both as a Python 2.7 or 3.6 version.
+
 .. code-block:: bash
 
     pkg install py27-salt
 
+.. code-block:: bash
+
+    pkg install py36-salt
+
 FreeBSD ports
 =============
 
-By default salt is packaged using python 2.7, but if you build your own packages from FreeBSD ports either by hand or with poudriere you can instead package it with your choice of python. Add a line to /etc/make.conf to choose your python flavour:
+You can also build your own packages from FreeBSD ports either by hand or with poudriere you can instead package it with your choice of python. Add a line to /etc/make.conf to choose your python flavour:
 
-.. code-block:: text
+.. code-block:: bash
 
     echo "DEFAULT_VERSIONS+= python=3.6" >> /etc/make.conf
 
