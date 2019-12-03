@@ -284,12 +284,14 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertEqual(oct(desired_mode), oct(resulting_mode))
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(IS_WINDOWS, 'Windows does not report any file modes. Skipping.')
     def test_managed_file_mode_keep(self):
         '''
         Test using "mode: keep" in a file.managed state
         '''
         _test_managed_file_mode_keep_helper(self, local=False)
 
+    @skipIf(IS_WINDOWS, 'Windows does not report any file modes. Skipping.')
     def test_managed_file_mode_keep_local_source(self):
         '''
         Test using "mode: keep" in a file.managed state, with a local file path
@@ -2607,6 +2609,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         os.remove(dest)
 
     @destructiveTest
+    @skipIf(IS_WINDOWS, 'Windows does not report any file modes. Skipping.')
     @with_tempfile()
     def test_file_copy_make_dirs(self, source):
         '''
@@ -2695,6 +2698,26 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
                 os.remove(name)
             except OSError:
                 pass
+
+    def test_binary_contents_twice(self):
+        '''
+        This test ensures that after a binary file is created, salt can confirm
+        that the file is in the correct state.
+        '''
+        # Create a binary file
+        name = os.path.join(TMP, '1px.gif')
+
+        # First run state ensures file is created
+        ret = self.run_state('file.managed', name=name, contents=BINARY_FILE)
+        self.assertSaltTrueReturn(ret)
+
+        # Second run of state ensures file is in correct state
+        ret = self.run_state('file.managed', name=name, contents=BINARY_FILE)
+        self.assertSaltTrueReturn(ret)
+        try:
+            os.remove(name)
+        except OSError:
+            pass
 
     @skip_if_not_root
     @skipIf(not HAS_PWD, "pwd not available. Skipping test")
