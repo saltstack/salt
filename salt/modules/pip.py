@@ -433,6 +433,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             no_cache_dir=False,
             cache_dir=None,
             no_binary=None,
+            disable_version_check=False,
             **kwargs):
     '''
     Install packages with pip
@@ -604,6 +605,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     no_cache_dir
         Disable the cache.
 
+    disable_version_check
+        Pip may periodically check PyPI to determine whether a new version of
+        pip is available to download. Passing True for this option disables
+        that check.
+
     CLI Example:
 
     .. code-block:: bash
@@ -755,6 +761,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                     '\'{0}\' is not a valid URL'.format(mirror)
                 )
             cmd.extend(['--mirrors', mirror])
+
+    if disable_version_check:
+        cmd.extend(['--disable-pip-version-check'])
 
     if build:
         cmd.extend(['--build', build])
