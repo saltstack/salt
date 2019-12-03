@@ -5,6 +5,7 @@ noxfile
 
 Nox configuration script
 '''
+# pylint: disable=resource-leakage
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -15,6 +16,7 @@ import json
 import pprint
 import shutil
 import tempfile
+import datetime
 
 if __name__ == '__main__':
     sys.stderr.write('Do not execute this file directly. Use nox instead, it will know how to handle this file\n')
@@ -34,8 +36,8 @@ PIP_INSTALL_SILENT = (os.environ.get('JENKINS_URL') or os.environ.get('CI') or o
 # Global Path Definitions
 REPO_ROOT = os.path.abspath(os.path.dirname(__file__))
 SITECUSTOMIZE_DIR = os.path.join(REPO_ROOT, 'tests', 'support', 'coverage')
+IS_DARWIN = sys.platform.lower().startswith('darwin')
 IS_WINDOWS = sys.platform.lower().startswith('win')
-
 # Python versions to run against
 _PYTHON_VERSIONS = ('2', '2.7', '3', '3.4', '3.5', '3.6', '3.7')
 
@@ -45,10 +47,21 @@ nox.options.reuse_existing_virtualenvs = True
 #  Don't fail on missing interpreters
 nox.options.error_on_missing_interpreters = False
 
+# Change current directory to REPO_ROOT
+os.chdir(REPO_ROOT)
+
+RUNTESTS_LOGFILE = os.path.join(
+    'artifacts', 'logs',
+    'runtests-{}.log'.format(datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f'))
+)
+
+# Prevent Python from writing bytecode
+os.environ[str('PYTHONDONTWRITEBYTECODE')] = str('1')
+
 
 def _create_ci_directories():
     for dirname in ('logs', 'coverage', 'xml-unittests-output'):
-        path = os.path.join(REPO_ROOT, 'artifacts', dirname)
+        path = os.path.join('artifacts', dirname)
         if not os.path.exists(path):
             os.makedirs(path)
 
@@ -186,18 +199,41 @@ def _get_distro_pip_constraints(session, transport):
     pydir = _get_pydir(session)
 
     if IS_WINDOWS:
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            '{}-windows.txt'.format(transport))
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
-        _distro_constraints = os.path.join(REPO_ROOT,
-                                           'requirements',
+        _distro_constraints = os.path.join('requirements',
                                            'static',
                                            pydir,
                                            'windows.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           'windows-crypto.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+    elif IS_DARWIN:
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           '{}-darwin.txt'.format(transport))
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin.txt')
+        if os.path.exists(_distro_constraints):
+            distro_constraints.append(_distro_constraints)
+        _distro_constraints = os.path.join('requirements',
+                                           'static',
+                                           pydir,
+                                           'darwin-crypto.txt')
         if os.path.exists(_distro_constraints):
             distro_constraints.append(_distro_constraints)
     else:
@@ -210,18 +246,29 @@ def _get_distro_pip_constraints(session, transport):
             '{id}-{version_parts[major]}'.format(**distro)
         ]
         for distro_key in distro_keys:
-            _distro_constraints = os.path.join(REPO_ROOT,
-                                               'requirements',
+            _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}.txt'.format(distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
-            _distro_constraints = os.path.join(REPO_ROOT,
-                                               'requirements',
+            _distro_constraints = os.path.join('requirements',
+                                               'static',
+                                               pydir,
+                                               '{}-crypto.txt'.format(distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join('requirements',
                                                'static',
                                                pydir,
                                                '{}-{}.txt'.format(transport, distro_key))
+            if os.path.exists(_distro_constraints):
+                distro_constraints.append(_distro_constraints)
+                distro_constraints.append(_distro_constraints)
+            _distro_constraints = os.path.join('requirements',
+                                               'static',
+                                               pydir,
+                                               '{}-{}-crypto.txt'.format(transport, distro_key))
             if os.path.exists(_distro_constraints):
                 distro_constraints.append(_distro_constraints)
     return distro_constraints
@@ -232,24 +279,24 @@ def _install_requirements(session, transport, *extra_requirements):
     distro_constraints = _get_distro_pip_constraints(session, transport)
 
     _requirements_files = [
-        os.path.join(REPO_ROOT, 'requirements', 'base.txt'),
-        os.path.join(REPO_ROOT, 'requirements', 'zeromq.txt'),
-        os.path.join(REPO_ROOT, 'requirements', 'pytest.txt')
+        os.path.join('requirements', 'base.txt'),
+        os.path.join('requirements', 'zeromq.txt'),
+        os.path.join('requirements', 'pytest.txt')
     ]
     if sys.platform.startswith('linux'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'linux.in')
+            os.path.join('requirements', 'static', 'linux.in')
         ]
     elif sys.platform.startswith('win'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'windows', 'req.txt'),
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'windows.in')
+            os.path.join('pkg', 'windows', 'req.txt'),
+            os.path.join('requirements', 'static', 'windows.in')
         ]
     elif sys.platform.startswith('darwin'):
         requirements_files = [
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req.txt'),
-            os.path.join(REPO_ROOT, 'pkg', 'osx', 'req_ext.txt'),
-            os.path.join(REPO_ROOT, 'requirements', 'static', 'osx.in')
+            os.path.join('pkg', 'osx', 'req.txt'),
+            os.path.join('pkg', 'osx', 'req_ext.txt'),
+            os.path.join('requirements', 'static', 'darwin.in')
         ]
 
     while True:
@@ -307,19 +354,23 @@ def _run_with_coverage(session, *test_cmd):
             python_path_entries.remove(SITECUSTOMIZE_DIR)
         python_path_entries.insert(0, SITECUSTOMIZE_DIR)
         python_path_env_var = os.pathsep.join(python_path_entries)
+
+    env = {
+        # The updated python path so that sitecustomize is importable
+        'PYTHONPATH': python_path_env_var,
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
+        # Instruct sub processes to also run under coverage
+        'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
+    }
+    if IS_DARWIN:
+        # Don't nuke our multiprocessing efforts objc!
+        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+        env['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
+
     try:
-        session.run(
-            *test_cmd,
-            env={
-                # The updated python path so that sitecustomize is importable
-                'PYTHONPATH': python_path_env_var,
-                # The full path to the .coverage data file. Makes sure we always write
-                # them to the same directory
-                'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
-                # Instruct sub processes to also run under coverage
-                'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
-            }
-        )
+        session.run(*test_cmd, env=env)
     finally:
         # Always combine and generate the XML coverage report
         try:
@@ -328,7 +379,20 @@ def _run_with_coverage(session, *test_cmd):
             # Sometimes some of the coverage files are corrupt which would trigger a CommandFailed
             # exception
             pass
-        session.run('coverage', 'xml', '-o', os.path.join(REPO_ROOT, 'artifacts', 'coverage', 'coverage.xml'))
+        # Generate report for salt code coverage
+        session.run(
+            'coverage', 'xml',
+            '-o', os.path.join('artifacts', 'coverage', 'salt.xml'),
+            '--omit=tests/*',
+            '--include=salt/*'
+        )
+        # Generate report for tests code coverage
+        session.run(
+            'coverage', 'xml',
+            '-o', os.path.join('artifacts', 'coverage', 'tests.xml'),
+            '--omit=salt/*',
+            '--include=tests/*'
+        )
 
 
 def _runtests(session, coverage, cmd_args):
@@ -338,7 +402,13 @@ def _runtests(session, coverage, cmd_args):
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', os.path.join('tests', 'runtests.py'), *cmd_args)
         else:
-            session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
+            cmd_args = ['python', os.path.join('tests', 'runtests.py')] + list(cmd_args)
+            env = None
+            if IS_DARWIN:
+                # Don't nuke our multiprocessing efforts objc!
+                # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+                env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
+            session.run(*cmd_args, env=env)
     except CommandFailed:
         # Disabling re-running failed tests for the time being
         raise
@@ -418,9 +488,7 @@ def runtests_parametrized(session, coverage, transport, crypto):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--tests-logfile={}'.format(RUNTESTS_LOGFILE),
         '--transport={}'.format(transport)
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
@@ -559,14 +627,12 @@ def runtests_cloud(session, coverage):
     _install_requirements(session, 'zeromq', 'unittest-xml-reporting==2.2.1')
 
     pydir = _get_pydir(session)
-    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
 
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--tests-logfile={}'.format(RUNTESTS_LOGFILE),
         '--cloud-provider-tests'
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
@@ -581,9 +647,7 @@ def runtests_tornado(session, coverage):
     session.install('--progress-bar=off', 'pyzmq==17.0.0', silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
-        '--tests-logfile={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--tests-logfile={}'.format(RUNTESTS_LOGFILE)
     ] + session.posargs
     _runtests(session, coverage, cmd_args)
 
@@ -614,9 +678,8 @@ def pytest_parametrized(session, coverage, transport, crypto):
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--log-file={}'.format(RUNTESTS_LOGFILE),
+        '--log-file-level=debug',
         '--no-print-logs',
         '-ra',
         '-s',
@@ -757,19 +820,18 @@ def pytest_cloud(session, coverage):
     # Install requirements
     _install_requirements(session, 'zeromq')
     pydir = _get_pydir(session)
-    cloud_requirements = os.path.join(REPO_ROOT, 'requirements', 'static', pydir, 'cloud.txt')
+    cloud_requirements = os.path.join('requirements', 'static', pydir, 'cloud.txt')
 
     session.install('--progress-bar=off', '-r', cloud_requirements, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--log-file={}'.format(RUNTESTS_LOGFILE),
+        '--log-file-level=debug',
         '--no-print-logs',
         '-ra',
         '-s',
-        os.path.join(REPO_ROOT, 'tests', 'integration', 'cloud', 'providers')
+        os.path.join('tests', 'integration', 'cloud', 'providers')
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
@@ -784,9 +846,8 @@ def pytest_tornado(session, coverage):
 
     cmd_args = [
         '--rootdir', REPO_ROOT,
-        '--log-file={}'.format(
-            os.path.join(REPO_ROOT, 'artifacts', 'logs', 'runtests.log')
-        ),
+        '--log-file={}'.format(RUNTESTS_LOGFILE),
+        '--log-file-level=debug',
         '--no-print-logs',
         '-ra',
         '-s',
@@ -798,11 +859,17 @@ def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
 
+    env = None
+    if IS_DARWIN:
+        # Don't nuke our multiprocessing efforts objc!
+        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+        env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
+
     try:
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
-            session.run('py.test', *cmd_args)
+            session.run('py.test', *cmd_args, env=env)
     except CommandFailed:
         # Re-run failed tests
         session.log('Re-running failed tests')
@@ -810,12 +877,23 @@ def _pytest(session, coverage, cmd_args):
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
-            session.run('py.test', *cmd_args)
+            session.run('py.test', *cmd_args, env=env)
 
 
 def _lint(session, rcfile, flags, paths):
     _install_requirements(session, 'zeromq')
-    session.install('--progress-bar=off', '-r', 'requirements/static/{}/lint.txt'.format(_get_pydir(session)), silent=PIP_INSTALL_SILENT)
+    requirements_file = 'requirements/static/lint.in'
+    distro_constraints = [
+        'requirements/static/{}/lint.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
     session.run('pylint', '--version')
     pylint_report_path = os.environ.get('PYLINT_REPORT')
 
@@ -869,7 +947,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ['setup.py', 'salt/']
+        paths = ['setup.py', 'noxfile.py', 'salt/']
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
@@ -889,19 +967,73 @@ def lint_tests(session):
 
 
 @nox.session(python='3')
-def docs(session):
+@nox.parametrize('update', [False, True])
+@nox.parametrize('compress', [False, True])
+def docs(session, compress, update):
     '''
     Build Salt's Documentation
+    '''
+    session.notify('docs-html(compress={})'.format(compress))
+    session.notify('docs-man(compress={}, update={})'.format(compress, update))
+
+
+@nox.session(name='docs-html', python='3')
+@nox.parametrize('compress', [False, True])
+def docs_html(session, compress):
+    '''
+    Build Salt's HTML Documentation
     '''
     pydir = _get_pydir(session)
     if pydir == 'py3.4':
         session.error('Sphinx only runs on Python >= 3.5')
-    session.install(
-        '--progress-bar=off',
-        '-r', 'requirements/static/{}/docs.txt'.format(pydir),
-        silent=PIP_INSTALL_SILENT)
+    requirements_file = 'requirements/static/docs.in'
+    distro_constraints = [
+        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir('doc/')
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
-    session.run('tar', '-czvf', 'doc-archive.tar.gz', '_build/html')
+    if compress:
+        session.run('tar', '-cJvf', 'html-archive.tar.xz', '_build/html', external=True)
+    os.chdir('..')
+
+
+@nox.session(name='docs-man', python='3')
+@nox.parametrize('update', [False, True])
+@nox.parametrize('compress', [False, True])
+def docs_man(session, compress, update):
+    '''
+    Build Salt's Manpages Documentation
+    '''
+    pydir = _get_pydir(session)
+    if pydir == 'py3.4':
+        session.error('Sphinx only runs on Python >= 3.5')
+    requirements_file = 'requirements/static/docs.in'
+    distro_constraints = [
+        'requirements/static/{}/docs.txt'.format(_get_pydir(session))
+    ]
+    install_command = [
+        '--progress-bar=off', '-r', requirements_file
+    ]
+    for distro_constraint in distro_constraints:
+        install_command.extend([
+            '--constraint', distro_constraint
+        ])
+    session.install(*install_command, silent=PIP_INSTALL_SILENT)
+    os.chdir('doc/')
+    session.run('make', 'clean', external=True)
+    session.run('make', 'man', 'SPHINXOPTS=-W', external=True)
+    if update:
+        session.run('rm', '-rf', 'man/', external=True)
+        session.run('cp', '-Rp', '_build/man', 'man/', external=True)
+    if compress:
+        session.run('tar', '-cJvf', 'man-archive.tar.xz', '_build/man', external=True)
     os.chdir('..')
