@@ -275,7 +275,7 @@ def get_tops(extra_mods='', so_mods=''):
             try:
                 locals()[mod] = __import__(mod)
                 moddir, modname = os.path.split(locals()[mod].__file__)
-                base, ext = os.path.splitext(modname)
+                base, _ = os.path.splitext(modname)
                 if base == '__init__':
                     tops.append(moddir)
                 else:
