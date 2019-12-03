@@ -274,7 +274,7 @@ def get_function_argspec(func, is_class_method=None):
             aspec = _getargspec(func)
             del aspec.args[0]  # self
         elif inspect.isfunction(func):
-            aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
+            aspec = _getargspec(func)
         elif inspect.ismethod(func):
             aspec = _getargspec(func)
             del aspec.args[0]  # self

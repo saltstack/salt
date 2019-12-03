@@ -156,7 +156,7 @@ def get(key,
                     'skipped.', default, ret, type(ret).__name__
                 )
         elif isinstance(default, list):
-            ret = salt.utils.data.traverse_dict_and_list(  # pylint: disable=redefined-variable-type
+            ret = salt.utils.data.traverse_dict_and_list(
                 pillar_dict,
                 key,
                 [],

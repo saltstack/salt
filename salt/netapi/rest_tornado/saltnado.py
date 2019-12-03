@@ -258,7 +258,7 @@ class Any(Future):
     '''
     Future that wraps other futures to "block" until one is done
     '''
-    def __init__(self, futures):  # pylint: disable=E1002
+    def __init__(self, futures):
         super(Any, self).__init__()
         for future in futures:
             future.add_done_callback(self.done_callback)
