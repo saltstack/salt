@@ -575,7 +575,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                 yield self.message_client.connect()  # wait for the client to be connected
                 self.connected = True
         # TODO: better exception handling...
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # pylint: disable=try-except-raise
             raise
         except Exception as exc:
             if '-|RETRY|-' not in six.text_type(exc):

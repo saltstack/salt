@@ -64,10 +64,7 @@ class BrewModuleTest(ModuleCase):
             # Now remove the installed package
             self.run_function('pkg.remove', [DEL_PKG])
             del_list = self.run_function('pkg.list_pkgs')
-            try:
-                self.assertNotIn(DEL_PKG, del_list)
-            except AssertionError:
-                raise
+            self.assertNotIn(DEL_PKG, del_list)
         except CommandExecutionError:
             self.run_function('pkg.remove', [DEL_PKG])
             raise

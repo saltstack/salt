@@ -121,7 +121,7 @@ class PlainTextSocketAppender(object):
 
             try:
                 time.sleep(wait_for)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # pylint: disable=try-except-raise
                 raise
 
     def close_connection(self):

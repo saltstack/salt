@@ -876,7 +876,7 @@ def _pytest(session, coverage, cmd_args):
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
             session.run('py.test', *cmd_args, env=env)
-    except CommandFailed:
+    except CommandFailed:  # pylint: disable=try-except-raise
         # Not rerunning failed tests for now
         raise
 
