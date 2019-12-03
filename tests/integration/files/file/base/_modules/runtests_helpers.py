@@ -9,11 +9,11 @@
 
 # Import python libs
 from __future__ import absolute_import
-import fnmatch
 import os
 import re
 import sys
 import fnmatch
+import tempfile
 
 # Import salt libs
 import salt.utils.platform
@@ -22,7 +22,22 @@ import salt.utils.platform
 from salt.ext import six
 
 # Import tests libs
-from tests.support.runtests import RUNTIME_VARS
+try:
+    from tests.support.runtests import RUNTIME_VARS
+except ImportError:
+    # Salt SSH Tests
+    SYS_TMP_DIR = os.path.realpath(
+        # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
+        # for unix sockets: ``error: AF_UNIX path too long``
+        # Gentoo Portage prefers ebuild tests are rooted in ${TMPDIR}
+        os.environ.get('TMPDIR', tempfile.gettempdir()) if not salt.utils.platform.is_darwin() else '/tmp'
+    )
+    # This tempdir path is defined on tests.integration.__init__
+    TMP = os.path.join(SYS_TMP_DIR, 'salt-tests-tmpdir')
+
+    class RUNTIME_VARS(object):
+        TMP = TMP
+        SYS_TMP_DIR = SYS_TMP_DIR
 
 
 def get_salt_temp_dir():
