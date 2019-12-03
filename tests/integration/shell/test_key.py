@@ -11,6 +11,7 @@ import textwrap
 from tests.support.case import ShellCase
 from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.helpers import skip_if_not_root, destructiveTest
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -187,6 +188,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = ['Accepted Keys:', 'minion', 'sub_minion']
         self.assertEqual(data, expect)
 
+    @skip_if_not_root
+    @destructiveTest
     def test_list_acc_eauth(self):
         '''
         test salt-key -l with eauth
@@ -197,6 +200,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
         self._remove_user()
 
+    @skip_if_not_root
+    @destructiveTest
     def test_list_acc_eauth_bad_creds(self):
         '''
         test salt-key -l with eauth and bad creds
