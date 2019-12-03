@@ -2792,6 +2792,8 @@ def info_installed(*names, **kwargs):
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
+        if pkg_nfo.get('status', 'ii')[1] != 'i':
+            continue    # return only packages that are really installed
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
             if key == 'package':
@@ -2804,6 +2806,8 @@ def info_installed(*names, **kwargs):
                 t_nfo['packager'] = value
             elif key == 'homepage':
                 t_nfo['url'] = value
+            elif key == 'status':
+                continue    # only installed pkgs are returned, no need for status
             else:
                 t_nfo[key] = value
 
