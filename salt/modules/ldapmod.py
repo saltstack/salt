@@ -53,7 +53,7 @@ from salt.exceptions import CommandExecutionError
 # Import third party libs
 try:
     import ldap
-    import ldap.modlist
+    import ldap.modlist  # pylint: disable=no-name-in-module
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False

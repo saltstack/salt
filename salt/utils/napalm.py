@@ -33,10 +33,10 @@ import salt.utils.args
 try:
     # will try to import NAPALM
     # https://github.com/napalm-automation/napalm
-    # pylint: disable=W0611
+    # pylint: disable=unused-import,no-name-in-module
     import napalm
     import napalm.base as napalm_base
-    # pylint: enable=W0611
+    # pylint: enable=unused-import,no-name-in-module
     HAS_NAPALM = True
     HAS_NAPALM_BASE = False  # doesn't matter anymore, but needed for the logic below
     try:

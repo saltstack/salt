@@ -191,7 +191,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
                 log.debug('Adding %s = %s to Django environment', key, value.rstrip('\n'))
 
     try:
-        from django.db.models.loading import get_model
+        from django.db.models.loading import get_model  # pylint: disable=no-name-in-module
 
         django_pillar = {}
 

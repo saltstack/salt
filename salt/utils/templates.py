@@ -452,8 +452,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
 
 # pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
-    import mako.exceptions
-    from mako.template import Template
+    import mako.exceptions  # pylint: disable=no-name-in-module
+    from mako.template import Template  # pylint: disable=no-name-in-module
     from salt.utils.mako import SaltMakoTemplateLookup
 
     saltenv = context['saltenv']
@@ -461,7 +461,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     if not saltenv:
         if tmplpath:
             # i.e., the template is from a file outside the state tree
-            from mako.lookup import TemplateLookup
+            from mako.lookup import TemplateLookup  # pylint: disable=no-name-in-module
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
         lookup = SaltMakoTemplateLookup(
@@ -503,13 +503,13 @@ def render_genshi_tmpl(tmplstr, context, tmplpath=None):
     '''
     method = context.get('method', 'xml')
     if method == 'text' or method == 'newtext':
-        from genshi.template import NewTextTemplate
+        from genshi.template import NewTextTemplate  # pylint: disable=no-name-in-module
         tmpl = NewTextTemplate(tmplstr)
     elif method == 'oldtext':
-        from genshi.template import OldTextTemplate
+        from genshi.template import OldTextTemplate  # pylint: disable=no-name-in-module
         tmpl = OldTextTemplate(tmplstr)
     else:
-        from genshi.template import MarkupTemplate
+        from genshi.template import MarkupTemplate  # pylint: disable=no-name-in-module
         tmpl = MarkupTemplate(tmplstr)
 
     return tmpl.generate(**context).render(method)

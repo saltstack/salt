@@ -93,6 +93,7 @@ import salt.utils.stringutils
 # Import Third Party Libs
 from salt.ext import six
 from salt.ext.six.moves.http_client import BadStatusLine  # pylint: disable=E0611
+# pylint: disable=no-name-in-module
 try:
     from pyVim.connect import GetSi, SmartConnect, Disconnect, GetStub, \
             SoapStubAdapter
@@ -108,7 +109,7 @@ try:
 
 except ImportError:
     HAS_VSPHERE_SDK = False
-
+# pylint: enable=no-name-in-module
 try:
     import gssapi
     import base64

@@ -55,7 +55,6 @@ try:
 except ImportError:
     markupsafe = None
 
-# pylint: enable=import-error,no-name-in-module
 
 try:
     # Older python where the backport from pypi is installed
@@ -66,6 +65,7 @@ except ImportError:
         from salt.ext import ssl_match_hostname
     except ImportError:
         ssl_match_hostname = None
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt

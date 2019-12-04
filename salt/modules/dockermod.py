@@ -247,7 +247,7 @@ except ImportError:
 
 try:
     if six.PY2:
-        import backports.lzma as lzma
+        import backports.lzma as lzma  # pylint: disable=no-name-in-module
     else:
         import lzma
     HAS_LZMA = True

@@ -24,6 +24,7 @@ try:
     from ssl import match_hostname  # pylint: disable=E0611
     HAS_MATCHHOSTNAME = True
 except ImportError:
+    # pylint: disable=no-name-in-module
     try:
         from backports.ssl_match_hostname import CertificateError
         from backports.ssl_match_hostname import match_hostname
@@ -35,6 +36,7 @@ except ImportError:
             HAS_MATCHHOSTNAME = True
         except ImportError:
             HAS_MATCHHOSTNAME = False
+    # pylint: enable=no-name-in-module
 
 # Import salt libs
 import salt.config

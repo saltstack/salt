@@ -163,7 +163,7 @@ def notify_systemd():
     Notify systemd that this process has started
     '''
     try:
-        import systemd.daemon
+        import systemd.daemon  # pylint: disable=no-name-in-module
     except ImportError:
         if salt.utils.path.which('systemd-notify') \
                 and systemd_notify_call('--booted'):

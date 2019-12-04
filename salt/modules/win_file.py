@@ -79,7 +79,7 @@ except ImportError:
 
 # This is to fix the pylint error: E0602: Undefined variable "WindowsError"
 try:
-    from exceptions import WindowsError
+    from exceptions import WindowsError  # pylint: disable=no-name-in-module
 except ImportError:
     class WindowsError(OSError):
         pass

@@ -67,7 +67,7 @@ from salt.exceptions import SaltClientError
 from salt.ext import six
 
 try:
-    import salt.ext.six.moves.socketserver as socketserver
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
 except ImportError:
     import socketserver
 

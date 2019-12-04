@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 # Import pyrax (SDK for Rackspace cloud) third party libs
 # pylint: disable=3rd-party-module-not-gated
 import pyrax
-import pyrax.exceptions
+import pyrax.exceptions  # pylint: disable=no-name-in-module
 # pylint: enable=3rd-party-module-not-gated
 
 # Import salt classes
