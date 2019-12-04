@@ -2943,14 +2943,21 @@ class GitFS(GitBase):
         if cache_match is not None:
             return cache_match
         if refresh_cache:
+            log.trace('Start rebuilding gitfs file_list cache')
             ret = {'files': set(), 'symlinks': {}, 'dirs': set()}
             if salt.utils.stringutils.is_hex(load['saltenv']) \
                     or load['saltenv'] in self.envs():
                 for repo in self.remotes:
+                    start = time.time()
                     repo_files, repo_symlinks = repo.file_list(load['saltenv'])
                     ret['files'].update(repo_files)
                     ret['symlinks'].update(repo_symlinks)
                     ret['dirs'].update(repo.dir_list(load['saltenv']))
+                    log.profile(
+                      'gitfs file_name cache rebuild repo=%s duration=%s seconds',
+                      repo.id,
+                      time.time() - start
+                    )
             ret['files'] = sorted(ret['files'])
             ret['dirs'] = sorted(ret['dirs'])
 
@@ -2961,6 +2968,7 @@ class GitFS(GitBase):
             # NOTE: symlinks are organized in a dict instead of a list, however
             # the 'symlinks' key will be defined above so it will never get to
             # the default value in the call to ret.get() below.
+            log.trace('Finished rebuilding gitfs file_list cache')
             return ret.get(form, [])
         # Shouldn't get here, but if we do, this prevents a TypeError
         return {} if form == 'symlinks' else []
