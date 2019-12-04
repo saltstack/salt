@@ -475,10 +475,24 @@ class ForceImportErrorOn(object):
 
     def __fake_import__(self,
                         name,
-                        globals_={} if six.PY2 else None,
-                        locals_={} if six.PY2 else None,
-                        fromlist=[] if six.PY2 else (),
-                        level=-1 if six.PY2 else 0):
+                        globals_=None,
+                        locals_=None,
+                        fromlist=None,
+                        level=None):
+        if six.PY2:
+            if globals_ is None:
+                globals_ = {}
+            if locals_ is None:
+                locals_ = {}
+
+        if level is None:
+            if six.PY2:
+                level = -1
+            else:
+                level = 0
+        if fromlist is None:
+            fromlist = []
+
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
