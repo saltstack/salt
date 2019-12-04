@@ -262,7 +262,7 @@ def _find_download_targets(name=None,
     '''
     cur_pkgs = __salt__['pkg.list_downloaded']()
     if pkgs:
-        to_download = _repack_pkgs(pkgs, normalize=normalize)
+        to_download = _repack_pkgs(pkgs, normalize=normalize)  # pylint: disable=not-callable
 
         if not to_download:
             # Badly-formatted SLS
@@ -425,7 +425,7 @@ def _find_remove_targets(name=None,
         kwargs['with_origin'] = True
     cur_pkgs = __salt__['pkg.list_pkgs'](versions_as_list=True, **kwargs)
     if pkgs:
-        to_remove = _repack_pkgs(pkgs, normalize=normalize)
+        to_remove = _repack_pkgs(pkgs, normalize=normalize)  # pylint: disable=not-callable
 
         if not to_remove:
             # Badly-formatted SLS
@@ -566,7 +566,7 @@ def _find_install_targets(name=None,
 
     if any((pkgs, sources)):
         if pkgs:
-            desired = _repack_pkgs(pkgs, normalize=normalize)
+            desired = _repack_pkgs(pkgs, normalize=normalize)  # pylint: disable=not-callable
         elif sources:
             desired = __salt__['pkg_resource.pack_sources'](
                 sources,
@@ -585,7 +585,7 @@ def _find_install_targets(name=None,
         to_unpurge = _find_unpurge_targets(desired)
     else:
         if salt.utils.platform.is_windows():
-            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])
+            pkginfo = _get_package_info(name, saltenv=kwargs['saltenv'])  # pylint: disable=not-callable
             if not pkginfo:
                 return {'name': name,
                         'changes': {},
@@ -593,7 +593,7 @@ def _find_install_targets(name=None,
                         'comment': 'Package {0} not found in the '
                                    'repository.'.format(name)}
             if version is None:
-                version = _get_latest_pkg_version(pkginfo)
+                version = _get_latest_pkg_version(pkginfo)  # pylint: disable=not-callable
 
         if normalize:
             _normalize_name = \
@@ -2445,7 +2445,7 @@ def latest(
                 'result': False,
                 'comment': 'The "sources" parameter is not supported.'}
     elif pkgs:
-        desired_pkgs = list(_repack_pkgs(pkgs).keys())
+        desired_pkgs = list(_repack_pkgs(pkgs).keys())  # pylint: disable=not-callable
         if not desired_pkgs:
             # Badly-formatted SLS
             return {'name': name,

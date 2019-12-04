@@ -452,7 +452,7 @@ def destroy(name, conn=None, call=None):
     if not conn:
         conn = get_conn()   # pylint: disable=E0602
 
-    node = get_node(conn, name)
+    node = get_node(conn, name)  # pylint: disable=not-callable
     if node is None:
         log.error('Unable to find the VM %s', name)
     volumes = conn.list_volumes(node)

@@ -724,9 +724,9 @@ class CkMinions(object):
                              'pillar_exact',
                              'compound',
                              'compound_pillar_exact'):
-                _res = check_func(expr, delimiter, greedy)
+                _res = check_func(expr, delimiter, greedy)  # pylint: disable=not-callable
             else:
-                _res = check_func(expr, greedy)
+                _res = check_func(expr, greedy)  # pylint: disable=not-callable
             _res['ssh_minions'] = False
             if self.opts.get('enable_ssh_minions', False) is True and isinstance('tgt', six.string_types):
                 roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
