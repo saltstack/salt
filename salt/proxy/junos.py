@@ -200,7 +200,7 @@ def _rpc_file_list(dev):
         except (RpcError, ConnectError, TimeoutExpiredError):
             return False
     except AttributeError as ex:
-        if "'NoneType' object has no attribute 'timeout'" in ex:
+        if "'NoneType' object has no attribute 'timeout'" in str(ex):
             return False
 
 
