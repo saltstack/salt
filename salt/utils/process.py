@@ -541,7 +541,7 @@ class ProcessManager(object):
             # OSError is raised if a signal handler is called (SIGTERM) during os.wait
             except OSError:
                 break
-            except IOError as exc:
+            except IOError as exc:  # pylint: disable=duplicate-except
                 # IOError with errno of EINTR (4) may be raised
                 # when using time.sleep() on Windows.
                 if exc.errno != errno.EINTR:
