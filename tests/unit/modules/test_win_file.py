@@ -10,8 +10,8 @@ import sys
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.modules.temp as temp
@@ -85,7 +85,7 @@ class WinFileTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Make sure that directories including symlinks or symlinks can be removed
         '''
-        base = temp.dir(prefix='base-', parent=TMP)
+        base = temp.dir(prefix='base-', parent=RUNTIME_VARS.TMP)
         target = os.path.join(base, 'child 1', 'target\\')
         symlink = os.path.join(base, 'child 2', 'link')
         try:
@@ -127,7 +127,7 @@ class WinFileCheckPermsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        self.temp_file = temp.file(parent=TMP)
+        self.temp_file = temp.file(parent=RUNTIME_VARS.TMP)
         win_dacl.set_owner(obj_name=self.temp_file,
                                       principal=self.current_user)
         win_dacl.set_inheritance(obj_name=self.temp_file,
