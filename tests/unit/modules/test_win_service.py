@@ -187,6 +187,20 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_service, '_status_wait', mock_info):
             self.assertTrue(win_service.stop('spongebob'))
 
+    @skipIf(not WINAPI, 'pywintypes not available')
+    def test_stop_refused(self):
+        '''
+        Test stopping a service, but Windows refuses to stop it
+        '''
+        mock_error = MagicMock(
+            side_effect=pywintypes.error(1061,
+                                         'StopService',
+                                         'The service cannot accept control messages at this time'))
+        mock_info = MagicMock(side_effect=[{'Status': 'Running'}])
+        with patch.object(win32serviceutil, 'StopService', mock_error), \
+                patch.object(win_service, '_status_wait', mock_info):
+            self.assertFalse(win_service.stop('spongebob'))
+
     def test_restart(self):
         '''
             Test to restart the named service
