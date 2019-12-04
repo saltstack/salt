@@ -96,7 +96,7 @@ class VTTestCase(TestCase):
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')
             except Exception as exc:
-                if 'out of pty devices' in exc:
+                if 'out of pty devices' in str(exc):
                     # We're not cleaning up
                     raise
                 # We're pushing the system resources, let's keep going
@@ -116,7 +116,7 @@ class VTTestCase(TestCase):
                 except (ValueError, OSError, IOError):
                     self.fail('Unable to find out how many PTY\'s are open')
             except Exception as exc:
-                if 'out of pty devices' in exc:
+                if 'out of pty devices' in str(exc):
                     # We're not cleaning up
                     raise
                 # We're pushing the system resources, let's keep going
