@@ -72,6 +72,7 @@ try:
     import kubernetes.client
     from kubernetes.client.rest import ApiException
     from urllib3.exceptions import HTTPError
+    # pylint: disable=no-name-in-module
     try:
         # There is an API change in Kubernetes >= 2.0.0.
         from kubernetes.client import V1beta1Deployment as AppsV1beta1Deployment
@@ -79,6 +80,7 @@ try:
     except ImportError:
         from kubernetes.client import AppsV1beta1Deployment
         from kubernetes.client import AppsV1beta1DeploymentSpec
+    # pylint: enable=no-name-in-module
 
     HAS_LIBS = True
 except ImportError:

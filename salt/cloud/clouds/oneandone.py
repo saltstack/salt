@@ -115,9 +115,7 @@ import salt.utils.stringutils
 from salt.ext import six
 
 try:
-    from oneandone.client import (
-        OneAndOneService, Server, Hdd, BlockStorage, SshKey
-    )
+    from oneandone.client import OneAndOneService, Server, Hdd, BlockStorage, SshKey  # pylint: disable=no-name-in-module
     HAS_ONEANDONE = True
 except ImportError:
     HAS_ONEANDONE = False

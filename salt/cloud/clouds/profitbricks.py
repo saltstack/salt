@@ -117,6 +117,7 @@ from salt.exceptions import (
 # Import 3rd-party libs
 from salt.ext import six
 try:
+    # pylint: disable=no-name-in-module
     import profitbricks
     from profitbricks.client import (
         ProfitBricksService, Server,
@@ -124,6 +125,7 @@ try:
         Datacenter, LoadBalancer, LAN,
         PBNotFoundError, PBError
     )
+    # pylint: enable=no-name-in-module
     HAS_PROFITBRICKS = True
 except ImportError:
     HAS_PROFITBRICKS = False

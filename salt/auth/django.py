@@ -59,7 +59,7 @@ from salt.ext import six
 # pylint: disable=import-error
 try:
     import django
-    from django.db import connection
+    from django.db import connection  # pylint: disable=no-name-in-module
     HAS_DJANGO = True
 except Exception as exc:
     # If Django is installed and is not detected, uncomment
@@ -130,7 +130,7 @@ def auth(username, password):
     if not is_connection_usable():
         connection.close()
 
-    import django.contrib.auth  # pylint: disable=import-error,3rd-party-module-not-gated
+    import django.contrib.auth  # pylint: disable=import-error,3rd-party-module-not-gated,no-name-in-module
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:
