@@ -1938,7 +1938,7 @@ class FunctionWrapper(dict):
             Run a remote call
             '''
             args = list(args)
-            for _key, _val in kwargs:
+            for _key, _val in kwargs.items():
                 args.append('{0}={1}'.format(_key, _val))
             return self.local.cmd(self.minion, key, args)
         return func
