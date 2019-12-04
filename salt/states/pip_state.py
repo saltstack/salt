@@ -839,8 +839,6 @@ def installed(name,
         for prefix, state_pkg_name, version_spec in pkgs_details:
 
             if prefix:
-                state_pkg_name = state_pkg_name
-                version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env, env_vars,
