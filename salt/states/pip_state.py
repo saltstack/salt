@@ -422,6 +422,7 @@ def installed(name,
               no_cache_dir=False,
               cache_dir=None,
               no_binary=None,
+              extra_args=None,
               **kwargs):
     '''
     Make sure the package is installed
@@ -683,6 +684,23 @@ def installed(name,
                 - reload_modules: True
                 - exists_action: i
 
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            pandas:
+              pip.installed:
+                - name: pandas
+                - extra_args:
+                  - --latest-pip-kwarg: param
+                  - --latest-pip-arg
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
@@ -919,6 +937,7 @@ def installed(name,
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        extra_args=extra_args,
         disable_version_check=True,
         **kwargs
     )
