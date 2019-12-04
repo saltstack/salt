@@ -707,7 +707,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def run_spm(self, cmd, config, arg=None):
         client = self._spm_client(config)
-        spm_cmd = client.run([cmd, arg])
+        client.run([cmd, arg])
         client._close()
         return self.ui._status
 
