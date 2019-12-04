@@ -188,6 +188,7 @@ profiling graphs could use `gprof2dot`_, `graphviz`_ and this batch file:
 .. _`graphviz`: https://graphviz.gitlab.io
 
 .. code-block:: bash
+
     ::
     :: Converts callgrind* profiler output to *.pdf, via *.dot
     ::
