@@ -1496,7 +1496,9 @@ def hardlink(
         ret['changes'] = pchanges
         return ret
 
-    for direction, item in zip(['to', 'from'], [name, target]):
+    # We use zip_longest here because there's a number of issues in pylint's
+    # tracker that complains about not linking the zip builtin.
+    for direction, item in zip_longest(['to', 'from'], [name, target]):
         if os.path.isdir(item):
             msg = 'Unable to hard link {0} directory {1}'.format(direction, item)
             return _error(ret, msg)
