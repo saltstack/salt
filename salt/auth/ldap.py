@@ -20,10 +20,12 @@ log = logging.getLogger(__name__)
 # Import third party libs
 from jinja2 import Environment
 try:
+    # pylint: disable=no-name-in-module
     import ldap
     import ldap.modlist
     import ldap.filter
     HAS_LDAP = True
+    # pylint: enable=no-name-in-module
 except ImportError:
     HAS_LDAP = False
 

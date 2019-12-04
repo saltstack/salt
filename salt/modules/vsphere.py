@@ -225,7 +225,7 @@ except ImportError:
     HAS_JSONSCHEMA = False
 
 try:
-    from pyVmomi import vim, vmodl, pbm, VmomiSupport
+    from pyVmomi import vim, vmodl, pbm, VmomiSupport  # pylint: disable=no-name-in-module
 
     # We check the supported vim versions to infer the pyVmomi version
     if 'vim25/6.0' in VmomiSupport.versionMap and \
