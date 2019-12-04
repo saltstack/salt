@@ -254,3 +254,30 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                                          ret[3])
 
         self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
+
+    def test_service_systemctl_reloaded_import_failed(self):
+        ret = {'name': 'state_id',
+               'changes': {},
+               'result': False,
+               'comment': "'systemctl daemon_reload' modules not available on this minion."}
+        self.assertEqual(service.systemctl_reloaded('state_id'), ret)
+
+    def test_service_systemctl_reloaded_is_testing(self):
+        mock_http_modules = {'service.systemctl_reload': MagicMock(return_value=True)}
+        with patch.dict(service.__salt__, mock_http_modules):
+            mock__opts__ = {'test': MagicMock(return_value=True)}
+            with patch.dict(service.__opts__, mock__opts__):
+                ret = {'name': 'state_id',
+                       'result': None,
+                       'comment': 'Systemd would have been reloaded',
+                       'changes': {}}
+                self.assertEqual(service.systemctl_reloaded('state_id'), ret)
+
+    def test_service_systemctl_reloaded_Success(self):
+        mock_http_modules = {'service.systemctl_reload': MagicMock(return_value=True)}
+        with patch.dict(service.__salt__, mock_http_modules):
+            ret = {'name': 'state_id',
+                   'result': True,
+                   'comment': 'Systemd is reloaded',
+                   'changes': {'systemd reloaded': True}}
+            self.assertEqual(service.systemctl_reloaded('state_id'), ret)

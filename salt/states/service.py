@@ -946,3 +946,33 @@ def mod_watch(name,
     ret['comment'] = 'Service {0}'.format(past_participle) if result else \
                      'Failed to {0} the service'.format(verb)
     return ret
+
+
+def systemctl_reloaded(name):
+    '''
+    Ensure that the systemctl daemon is reloaded.
+    .. note::
+        This state is only available on minions which use systemd.
+
+    name
+        Not used, the state_ID.
+    '''
+    ret = {'name': name,
+           'changes': {},
+           'result': True,
+           'comment': 'Systemd is reloaded'}
+
+    if 'service.systemctl_reload' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = "'systemctl daemon_reload' modules not available on this minion."
+    elif __opts__.get('test', False):
+        ret['result'] = None
+        ret['comment'] = 'Systemd would have been reloaded'
+    else:
+        try:
+            __salt__['service.systemctl_reload']()
+            ret['changes'] = {'systemd reloaded': True}
+        except CommandExecutionError as exc:
+            ret['result'] = False
+            ret['comment'] = exc.strerror
+    return ret
