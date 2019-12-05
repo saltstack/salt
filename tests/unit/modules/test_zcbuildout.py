@@ -28,6 +28,7 @@ import salt.utils.path
 import salt.utils.platform
 import salt.modules.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
+from salt.ext import six
 
 KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv',
@@ -35,6 +36,13 @@ KNOWN_VIRTUALENV_BINARY_NAMES = (
     'virtualenv-2.6',
     'virtualenv-2.7'
 )
+
+# temp workaround since virtualenv pip wheel package does not include
+# backports.ssl_match_hostname on windows python2.7
+if salt.utils.platform.is_windows() and six.PY2:
+    KNOWN_VIRTUALENV_BINARY_NAMES = (
+        'c:\\Python27\\Scripts\\virtualenv.EXE',
+    )
 
 BOOT_INIT = {
     1: [
