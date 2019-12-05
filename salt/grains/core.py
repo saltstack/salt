@@ -148,7 +148,7 @@ def _linux_cpudata():
                 val = comps[1].strip()
                 if key == 'processor':
                     grains['num_cpus'] = int(val) + 1
-                # head -2 /proc/cpuinfo 
+                # head -2 /proc/cpuinfo
                 # vendor_id       : IBM/S390
                 # # processors    : 2
                 elif key == '# processors':
