@@ -162,14 +162,17 @@ class NxapiClient(object):
         if isinstance(commands, (list, set, tuple)):
             commands = ' ; '.join(commands)
         payload = {}
-        payload['ins_api'] = {
-            'version': self.NXAPI_VERSION,
-            'type': type,
-            'chunk': '0',
-            'sid': '1',
-            'input': commands,
-            'output_format': 'json',
-        }
+        # Some versions of NX-OS fail to process the payload properly if
+        # 'input' gets serialized before 'type' and the payload of 'input'
+        # contains the string 'type'.  Use an ordered dict to enforce ordering.
+        payload['ins_api'] = collections.OrderedDict()
+        payload['ins_api']['version'] = self.NXAPI_VERSION
+        payload['ins_api']['type'] = type
+        payload['ins_api']['chunk'] = '0'
+        payload['ins_api']['sid'] = '1'
+        payload['ins_api']['input'] = commands
+        payload['ins_api']['output_format'] = 'json'
+
         request['headers'] = headers
         request['payload'] = json.dumps(payload)
         request['opts'] = {

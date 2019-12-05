@@ -98,7 +98,8 @@ from salt.utils.pycrypto import gen_hash, secure_password
 import salt.utils.platform
 import salt.utils.nxos
 from salt.ext import six
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, NxosError
+from socket import error as socket_error
 
 __virtualname__ = 'nxos'
 
@@ -106,6 +107,15 @@ log = logging.getLogger(__name__)
 
 DEVICE_DETAILS = {'grains_cache': {}}
 COPY_RS = 'copy running-config startup-config'
+
+CONNECTION_ERROR_MSG = '''
+    Unable to send command to the NX-OS device.
+    Please verify the following and re-try:
+    - 'feature ssh' must be enabled for SSH proxy minions.
+    - 'feature nxapi' must be enabled for NX-API proxy minions.
+    - Settings in the proxy minion configuration file must match device settings.
+    - NX-OS device is reachable from the Salt Master.
+'''
 
 
 def __virtual__():
@@ -328,10 +338,15 @@ def sendline(command, method='cli_show_ascii', **kwargs):
         """.format(smethods, method)
         return msg
 
-    if salt.utils.platform.is_proxy():
-        return __proxy__['nxos.sendline'](command, method, **kwargs)
-    else:
-        return _nxapi_request(command, method, **kwargs)
+    try:
+        if salt.utils.platform.is_proxy():
+            return __proxy__['nxos.sendline'](command, method, **kwargs)
+        else:
+            return _nxapi_request(command, method, **kwargs)
+    except socket_error as e:
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
+    except NxosError as e:
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
 
 
 def show(commands, raw_text=True, **kwargs):
@@ -421,7 +436,7 @@ def system_info(**kwargs):
 
 
 # -----------------------------------------------------------------------------
-# Device Get Functions
+# Device Set Functions
 # -----------------------------------------------------------------------------
 def add_config(lines, **kwargs):
     '''
@@ -525,6 +540,8 @@ def config(commands=None,
             commands = [commands]
         file_str = '\n'.join(commands)
         # unify all the commands in a single file, to render them in a go
+    else:
+        raise CommandExecutionError('Either arg <config_file> or <commands> must be specified')
     if template_engine:
         file_str = __salt__['file.apply_template_on_contents'](file_str,
                                                                template_engine,
@@ -533,7 +550,14 @@ def config(commands=None,
                                                                saltenv)
     # whatever the source of the commands would be, split them line by line
     commands = [line for line in file_str.splitlines() if line.strip()]
-    config_result = _parse_config_result(_configure_device(commands, **kwargs))
+    try:
+        config_result = _configure_device(commands, **kwargs)
+    except socket_error as e:
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
+    except NxosError as e:
+        return e.strerror + "\n" + CONNECTION_ERROR_MSG
+
+    config_result = _parse_config_result(config_result)
     current_config = show('show running-config', **kwargs)
     if isinstance(current_config, list):
         current_config = current_config[0]

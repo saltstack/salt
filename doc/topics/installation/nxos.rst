@@ -34,7 +34,7 @@ The following platforms and software versions have been certified to work with t
      ========  ===========
      Platform  Description
      ========  ===========
-     N3k       Support includes N30xx, N31xx and N35xx models
+     N3k       Support includes N30xx, N31xx, N32xx and N35xx models
      N6k       Support includes all N6xxx models
      N7k       Support includes all N7xxx models
      N9k       Support includes all N9xxx models
