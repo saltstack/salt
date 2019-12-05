@@ -149,6 +149,24 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     create_namespaced_deployment().to_dict.called)
                 # pylint: enable=E1120
 
+    def test_create_service_empty_success(self):
+        '''
+        Tests empty service creation.
+        :return:
+        '''
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
+                mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
+                    **{"create_namespaced_service.return_value.to_dict.return_value": {}}
+                )
+                self.assertEqual(kubernetes.create_service("test", "default", {}, {},
+                                                           None, None, None), {})
+                # pylint: disable=E1120
+                self.assertTrue(
+                    kubernetes.kubernetes.client.CoreV1Api().
+                    create_namespaced_service().to_dict.called)
+                # pylint: enable=E1120
+
     @staticmethod
     def settings(name, value=None):
         '''
