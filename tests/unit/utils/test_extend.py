@@ -16,7 +16,7 @@ from datetime import date
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
-from tests.support.paths import CODE_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.extend
@@ -26,7 +26,7 @@ import salt.utils.files
 class ExtendTestCase(TestCase):
     def setUp(self):
         self.starting_dir = os.getcwd()
-        os.chdir(CODE_DIR)
+        os.chdir(RUNTIME_VARS.CODE_DIR)
         self.out = None
 
     def tearDown(self):
@@ -35,11 +35,11 @@ class ExtendTestCase(TestCase):
                 shutil.rmtree(self.out, True)
         os.chdir(self.starting_dir)
 
-    @skipIf(not os.path.exists(os.path.join(CODE_DIR, 'templates')),
+    @skipIf(not os.path.exists(os.path.join(RUNTIME_VARS.CODE_DIR, 'templates')),
             "Test template directory 'templates/' missing.")
     def test_run(self):
         with patch('sys.exit', MagicMock):
-            out = salt.utils.extend.run('test', 'test', 'this description', CODE_DIR, False)
+            out = salt.utils.extend.run('test', 'test', 'this description', RUNTIME_VARS.CODE_DIR, False)
             self.out = out
             year = date.today().strftime('%Y')
             self.assertTrue(os.path.exists(out))

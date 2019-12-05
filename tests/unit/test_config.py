@@ -12,8 +12,8 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.helpers import with_tempdir, with_tempfile, destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -336,8 +336,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'root_dir: {0}\n'
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
-        with patch('salt.syspaths.ROOT_DIR', TMP):
-            config = sconfig.master_config(fpath)
+        with patch('salt.syspaths.ROOT_DIR', RUNTIME_VARS.TMP):
+            config = salt.config.master_config(fpath)
         self.assertEqual(config['log_file'], fpath)
 
     @skipIf(
