@@ -1,6 +1,6 @@
-@Library('salt@master-1.6-split-pytest') _
+@Library('salt@master-1.5') _
 
-runSplitTestSuite(
+runTestSuite(
     concurrent_builds: 1,
     distro_name: 'centos',
     distro_version: '7',
@@ -11,7 +11,6 @@ runSplitTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--log-cli-level=warning --ignore=tests/utils -k proxy',
     python_version: 'py3',
-    splits: ['unit', 'integration'],
     testrun_timeout: 6,
     use_spot_instances: true)
 

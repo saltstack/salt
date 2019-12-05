@@ -1,4 +1,4 @@
-@Library('salt@master-1.6-split-pytest') _
+@Library('salt@master-1.5') _
 
 runDocs(
     env: env)

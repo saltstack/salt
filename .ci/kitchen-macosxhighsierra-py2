@@ -1,7 +1,7 @@
-@Library('salt@master-1.6-split-pytest') _
+@Library('salt@master-1.5') _
 
 // Pre-nox pipeline
-runSplitTestSuite(
+runTestSuite(
     concurrent_builds: 1,
     distro_name: 'macosx',
     distro_version: 'highsierra',
@@ -13,7 +13,7 @@ runSplitTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '--log-cli-level=warning --ignore=tests/utils',
     python_version: 'py2',
-    splits: ['unit', 'integration', 'multimaster'],
+    run_full: params.runFull,
     testrun_timeout: 6,
     use_spot_instances: false)
 
