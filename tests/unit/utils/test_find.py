@@ -9,8 +9,8 @@ import tempfile
 import stat
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
-from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
@@ -286,7 +286,7 @@ class TestGrepOption(TestCase):
 
     def setUp(self):
         super(TestGrepOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=TMP)
+        self.tmpdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -331,7 +331,7 @@ class TestPrintOption(TestCase):
 
     def setUp(self):
         super(TestPrintOption, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=TMP)
+        self.tmpdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)
@@ -435,7 +435,7 @@ class TestFinder(TestCase):
 
     def setUp(self):
         super(TestFinder, self).setUp()
-        self.tmpdir = tempfile.mkdtemp(dir=TMP)
+        self.tmpdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     def tearDown(self):
         shutil.rmtree(self.tmpdir)

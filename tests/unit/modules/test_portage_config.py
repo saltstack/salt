@@ -10,10 +10,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.paths import TMP
 import salt.utils.files
 
 # Import salt libs
@@ -95,7 +95,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             ('use', ['apple', '-banana', 'ananas', 'orange']),
         ]
 
-        base_path = TMP + '/package.{0}'
+        base_path = RUNTIME_VARS.TMP + '/package.{0}'
 
         def make_line(atom, addition):
             return atom + (' ' + addition if addition != '' else '') + '\n'
