@@ -15,15 +15,15 @@ import os
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import TMP, CODE_DIR
 
 # Import salt libs
 import salt.utils.cloud as cloud
 import salt.utils.platform
 from salt.ext import six
 
-GPG_KEYDIR = os.path.join(TMP, 'gpg-keydir')
+GPG_KEYDIR = os.path.join(RUNTIME_VARS.TMP, 'gpg-keydir')
 
 # The keyring library uses `getcwd()`, let's make sure we in a good directory
 # before importing keyring
@@ -63,8 +63,8 @@ try:
     HAS_KEYRING = True
 except ImportError:
     HAS_KEYRING = False
-
-os.chdir(CODE_DIR)
+finally:
+    os.chdir(RUNTIME_VARS.CODE_DIR)
 
 
 class CloudUtilsTestCase(TestCase):
