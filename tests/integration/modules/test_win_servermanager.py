@@ -10,8 +10,11 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils.platform
 
+import pytest
+
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
+@pytest.mark.windows_whitelisted
 class WinServermanagerTest(ModuleCase):
     '''
     Test for salt.modules.win_servermanager

@@ -16,9 +16,12 @@ from tests.support.case import ModuleCase
 import salt.utils.files
 import salt.utils.stringutils
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class HostsModuleTest(ModuleCase):
     '''
     Test the hosts module

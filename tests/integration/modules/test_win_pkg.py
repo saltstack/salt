@@ -18,6 +18,7 @@ import salt.utils.platform
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
+@pytest.mark.windows_whitelisted
 class WinPKGTest(ModuleCase):
     '''
     Tests for salt.modules.win_pkg. There are already

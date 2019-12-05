@@ -35,7 +35,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import test Libs
 from tests.support.case import SSHCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class SSHCustomModuleTest(SSHCase):
     '''
     Test sls with custom module functionality using ssh

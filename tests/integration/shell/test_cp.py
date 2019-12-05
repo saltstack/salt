@@ -26,10 +26,12 @@ import salt.utils.yaml
 # Import 3rd-party libs
 from salt.ext import six
 
+import pytest
 
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-cp'

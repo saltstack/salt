@@ -30,6 +30,7 @@ FAKE_KEY = 'SOFTWARE\\{0}'.format(generate_random_name('SaltTesting-'))
 
 @pytest.mark.destructive_test
 @skipIf(not salt.utils.platform.is_windows(), 'Windows Specific Test')
+@pytest.mark.windows_whitelisted
 class RegTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Reg state module tests

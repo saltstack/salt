@@ -7,7 +7,10 @@ import os
 # Import Salt Testing libs
 from tests.support.case import ShellCase, SPMCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class SPMTest(ShellCase, SPMCase):
     '''
     Test spm script

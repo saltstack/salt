@@ -11,7 +11,10 @@ from tests.support.case import ShellCase
 # Import Salt libs
 import salt.utils.platform
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class BatchTest(ShellCase):
     '''
     Integration tests for the salt.cli.batch module

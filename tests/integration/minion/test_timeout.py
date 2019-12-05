@@ -13,7 +13,10 @@ import salt.utils.platform
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class MinionTimeoutTestCase(ShellCase):
     '''
     Test minion timing functions

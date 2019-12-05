@@ -31,11 +31,14 @@ import salt.utils.files
 import salt.utils.yaml
 import salt.utils.platform
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 DEBUG = True
 
 
+@pytest.mark.windows_whitelisted
 class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Various integration tests for the salt-minion executable.
