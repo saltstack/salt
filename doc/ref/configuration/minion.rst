@@ -1531,6 +1531,21 @@ List of hosts to bypass HTTP proxy
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
 
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
+
 Docker Configuration
 ====================
 

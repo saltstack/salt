@@ -19,9 +19,9 @@ import logging
 import tests.integration.utils
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import CODE_DIR
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
+from tests.support.runtests import RUNTIME_VARS
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -165,7 +165,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         init_script = testprogram.TestProgram(
             name='init:salt-minion',
-            program=os.path.join(CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
+            program=os.path.join(RUNTIME_VARS.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
             env=cmd_env,
         )
 
