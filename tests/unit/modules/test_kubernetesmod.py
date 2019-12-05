@@ -24,6 +24,14 @@ from salt.modules import kubernetesmod as kubernetes
 
 
 @contextmanager
+def real_kubernetes_library():
+    """
+    Get the actual kubernetes lib instance for testing
+    """
+    yield kubernetes.kubernetes
+
+
+@contextmanager
 def mock_kubernetes_library():
     """
     After fixing the bug in 1c821c0e77de58892c77d8e55386fac25e518c31,
@@ -166,6 +174,33 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     kubernetes.kubernetes.client.CoreV1Api().
                     create_namespaced_service().to_dict.called)
                 # pylint: enable=E1120
+
+    def test_create_service_with_port_success(self):
+        '''
+        Tests service creation with a port. This tests a specific case for issue #55287
+        :return:
+        '''
+        with real_kubernetes_library() as real_kubernetes_lib:
+            with mock_kubernetes_library() as mock_kubernetes_lib:
+                with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
+                    mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
+                        **{"create_namespaced_service.return_value.to_dict.return_value": {}}
+                    )
+                    mock_kubernetes_lib.client.V1ServicePort.side_effect = real_kubernetes_lib.client.V1ServicePort
+                    spec = {
+                        'ports': [{
+                            'port': 3000,
+                            'target_port': 80,
+                            'protocol': 'TCP'
+                        }]
+                    }
+                    self.assertEqual(kubernetes.create_service("test", "default", {}, spec,
+                                                               None, None, None), {})
+                    # pylint: disable=E1120
+                    self.assertTrue(
+                        kubernetes.kubernetes.client.CoreV1Api().
+                        create_namespaced_service().to_dict.called)
+                    # pylint: enable=E1120
 
     @staticmethod
     def settings(name, value=None):

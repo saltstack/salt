@@ -1569,7 +1569,7 @@ def __dict_to_service_spec(spec):
         if key == 'ports':
             spec_obj.ports = []
             for port in value:
-                kube_port = kubernetes.client.V1ServicePort()
+                kube_port = kubernetes.client.V1ServicePort(port=port.get('port', ''))
                 if isinstance(port, dict):
                     for port_key, port_value in iteritems(port):
                         if hasattr(kube_port, port_key):
