@@ -47,6 +47,7 @@ def gen_password():
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
 @pytest.mark.requires_salt_modules('shadow.set_password')
+@pytest.mark.windows_whitelisted
 class UserAuthTest(ModuleCase, SaltReturnAssertsMixin, ShellCase):
     '''
     Test user auth mechanisms

@@ -7,7 +7,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the publish module

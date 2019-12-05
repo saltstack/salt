@@ -13,7 +13,10 @@ from tests.support.unit import skipIf
 from salt.ext import six
 import salt.utils.platform
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class StatusModuleTest(ModuleCase):
     '''
     Test the status module

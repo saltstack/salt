@@ -27,6 +27,8 @@ import salt.utils.stringutils
 import salt.utils.yaml
 import salt.pillar as pillar
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
@@ -234,6 +236,7 @@ class _CommonBase(ModuleCase):
         return ret
 
 
+@pytest.mark.windows_whitelisted
 class BasePillarTest(_CommonBase):
     '''
     Tests for pillar decryption
@@ -290,6 +293,7 @@ class BasePillarTest(_CommonBase):
 
 
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
+@pytest.mark.windows_whitelisted
 class DecryptGPGPillarTest(_CommonBase):
     '''
     Tests for pillar decryption
@@ -492,6 +496,7 @@ class DecryptGPGPillarTest(_CommonBase):
                          expected['secrets']['vault']['qux'])
 
 
+@pytest.mark.windows_whitelisted
 class RefreshPillarTest(ModuleCase):
     '''
     These tests validate the behavior defined in the documentation:

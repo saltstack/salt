@@ -17,8 +17,11 @@ from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
 from tests.integration.utils import testprogram
 
+import pytest
+
 
 @skipIf(True, 'This test file should be in an isolated test space.')
+@pytest.mark.windows_whitelisted
 class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-master'

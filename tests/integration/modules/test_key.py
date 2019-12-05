@@ -7,7 +7,10 @@ import re
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class KeyModuleTest(ModuleCase):
     def test_key_finger(self):
         '''

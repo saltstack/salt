@@ -7,7 +7,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.case import ModuleCase
 from salt.ext import six
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class SysModuleTest(ModuleCase):
     '''
     Validate the sys module

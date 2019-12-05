@@ -16,6 +16,7 @@ import salt.utils.args
 
 
 @pytest.mark.requires_salt_modules('test.ping', 'test.arg')
+@pytest.mark.windows_whitelisted
 class ArgumentTestCase(ModuleCase):
     def test_unsupported_kwarg(self):
         '''

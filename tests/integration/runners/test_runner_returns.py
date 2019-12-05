@@ -20,7 +20,10 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.yaml
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class RunnerReturnsTest(ShellCase):
     '''
     Test the "runner_returns" feature

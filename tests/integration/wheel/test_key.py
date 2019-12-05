@@ -10,7 +10,10 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 # Import Salt libs
 import salt.wheel
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
         self.wheel = salt.wheel.Wheel(dict(self.get_config('client_config')))

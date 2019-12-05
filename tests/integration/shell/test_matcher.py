@@ -15,11 +15,14 @@ from tests.support.unit import skipIf
 import salt.utils.files
 import salt.utils.yaml
 
+import pytest
+
 
 def minion_in_returns(minion, lines):
     return bool([True for line in lines if line == '{0}:'.format(minion)])
 
 
+@pytest.mark.windows_whitelisted
 class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt matchers

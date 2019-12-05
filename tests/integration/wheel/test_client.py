@@ -12,7 +12,10 @@ import salt.auth
 import salt.wheel
 import salt.utils.platform
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
 
     eauth_creds = {

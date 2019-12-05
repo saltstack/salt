@@ -27,8 +27,9 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.utils.schedule
 import salt.utils.platform
-
 from salt.modules.test import ping
+
+import pytest
 
 try:
     import croniter  # pylint: disable=W0611
@@ -49,6 +50,7 @@ DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
 @skipIf(HAS_DATEUTIL_PARSER is False, 'The \'dateutil.parser\' library is not available')
+@pytest.mark.windows_whitelisted
 class SchedulerEvalTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the pkg module

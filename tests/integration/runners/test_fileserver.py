@@ -13,7 +13,10 @@ from tests.support.unit import skipIf
 # Import Salt libs
 import salt.utils.platform
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class FileserverTest(ShellCase):
     '''
     Test the fileserver runner

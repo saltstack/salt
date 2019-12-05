@@ -25,7 +25,7 @@ import salt.utils.platform
 
 # Import 3rd-party libs
 import psutil
-#import pytest
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +48,7 @@ def session_salt_syndic(request, session_salt_master_of_masters, session_salt_sy
             log.warning('Failed to terminate daemon: %s', daemon.__class__.__name__)
 
 
+@pytest.mark.windows_whitelisted
 class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
     '''
     Test the salt-syndic command

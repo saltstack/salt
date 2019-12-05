@@ -17,6 +17,7 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 
+@pytest.mark.windows_whitelisted
 class PyDSLRendererIncludeTestCase(ModuleCase):
 
     def setUp(self):

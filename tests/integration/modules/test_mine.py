@@ -14,7 +14,10 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.utils.platform
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class MineTest(ModuleCase, ShellCase):
     '''
     Test the mine system
