@@ -1,4 +1,3 @@
-pudb
 apache-libcloud==2.0.0
 boto3
 boto>=2.46.0
