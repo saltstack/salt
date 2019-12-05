@@ -57,6 +57,14 @@ def base64_encodestring(instr):
     a newline ('\\n') character after every 76 characters and always
     at the end of the encoded string.
     '''
+    # Handles PY2
+    if six.PY2:
+        return salt.utils.stringutils.to_unicode(
+            base64.encodestring(salt.utils.stringutils.to_bytes(instr)),
+            encoding='utf8' if salt.utils.platform.is_windows() else None
+        )
+
+    # Handles PY3
     return salt.utils.stringutils.to_unicode(
         base64.encodebytes(salt.utils.stringutils.to_bytes(instr)),
         encoding='utf8' if salt.utils.platform.is_windows() else None
@@ -68,7 +76,14 @@ def base64_decodestring(instr):
     Decode a base64-encoded byte-like object using the "modern" Python interface.
     '''
     bvalue = salt.utils.stringutils.to_bytes(instr)
-    decoded = base64.decodebytes(bvalue)
+
+    # Handles PY2
+    if six.PY2:
+        decoded = base64.decodestring(bvalue)
+
+    # Handles PY3
+    if six.PY3:
+        decoded = base64.decodebytes(bvalue)
     try:
         return salt.utils.stringutils.to_unicode(
             decoded,
