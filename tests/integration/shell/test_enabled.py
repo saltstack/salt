@@ -14,7 +14,10 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.utils.platform
 import salt.utils.files
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class EnabledTest(ModuleCase):
     '''
     validate the use of shell processing for cmd.run on the salt command line

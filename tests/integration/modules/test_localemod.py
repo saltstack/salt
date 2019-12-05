@@ -22,6 +22,7 @@ def _find_new_locale(current_locale):
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 @skipIf(salt.utils.platform.is_darwin(), 'locale method is not supported on mac')
 @pytest.mark.requires_salt_modules('locale')
+@pytest.mark.windows_whitelisted
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')

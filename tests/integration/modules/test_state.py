@@ -27,6 +27,7 @@ import salt.utils.stringutils
 from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 
 log = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ def reline(source, dest, force=False, ending=DEFAULT_ENDING):
     os.rename(tmp, dest)
 
 
+@pytest.mark.windows_whitelisted
 class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the state module

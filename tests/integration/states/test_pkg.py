@@ -89,6 +89,7 @@ def runs_on(platforms=None, os_like=None, reason=''):
 
 
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @classmethod
     def setUpClass(cls):

@@ -20,6 +20,7 @@ INIT_DELAY = 5
 
 
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class ServiceTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the service state

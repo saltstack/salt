@@ -14,6 +14,7 @@ from tests.support.case import SPMCase
 
 
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class SPMInstallTest(SPMCase):
     '''
     Validate the spm install command

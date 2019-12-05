@@ -19,6 +19,7 @@ from tests.support.case import ModuleCase
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
 
+@pytest.mark.windows_whitelisted
 class PwUserModuleTest(ModuleCase):
 
     def setUp(self):

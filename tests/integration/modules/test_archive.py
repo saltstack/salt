@@ -30,6 +30,7 @@ except ImportError:
 
 
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class ArchiveTest(ModuleCase):
     '''
     Validate the archive module

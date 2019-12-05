@@ -35,6 +35,7 @@ if not salt.utils.path.which('mysqladmin'):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Module testing database creation on a real MySQL Server.
@@ -615,6 +616,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
@@ -1268,6 +1270,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     User Creation and connection tests
@@ -1641,6 +1644,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
     'Please install MySQL bindings and a MySQL Server before running'
     'MySQL integration tests.'
 )
+@pytest.mark.windows_whitelisted
 class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test file query module

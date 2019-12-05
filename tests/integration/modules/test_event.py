@@ -19,9 +19,11 @@ from tests.support.case import ModuleCase
 import salt.utils.event as event
 
 # Import 3rd-party libs
+import pytest
 from salt.ext.six.moves.queue import Queue, Empty  # pylint: disable=import-error,no-name-in-module
 
 
+@pytest.mark.windows_whitelisted
 class EventModuleTest(ModuleCase):
     def __test_event_fire_master(self):
         events = Queue()

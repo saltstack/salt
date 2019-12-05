@@ -13,6 +13,7 @@ from tests.support.case import SPMCase
 
 
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class SPMInfoTest(SPMCase):
     '''
     Validate the spm info command

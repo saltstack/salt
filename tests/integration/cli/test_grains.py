@@ -23,7 +23,10 @@ import salt.utils.files
 from tests.support.case import ShellCase, SSHCase
 from tests.support.helpers import flaky
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class GrainsTargetingTest(ShellCase):
     '''
     Integration tests for targeting with grains.
@@ -83,6 +86,7 @@ class GrainsTargetingTest(ShellCase):
             os.unlink(key_file)
 
 
+@pytest.mark.windows_whitelisted
 class SSHGrainsTest(SSHCase):
     '''
     Test salt-ssh grains functionality

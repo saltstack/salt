@@ -77,6 +77,7 @@ def _makedirs(path):
 
 
 @pytest.mark.skip_if_binaries_missing('git')
+@pytest.mark.windows_whitelisted
 class GitModuleTest(ModuleCase):
 
     def setUp(self):

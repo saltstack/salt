@@ -16,6 +16,7 @@ import salt.utils.platform
 
 @flaky
 @skipIf(not salt.utils.platform.is_windows(), 'Tests for only Windows')
+@pytest.mark.windows_whitelisted
 class NTPTest(ModuleCase):
     '''
     Validate windows ntp module

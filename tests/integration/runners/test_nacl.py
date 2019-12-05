@@ -11,6 +11,8 @@ import logging
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 
+import pytest
+
 try:
     import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
@@ -22,6 +24,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_LIBNACL, 'skipping test_nacl, libnacl is unavailable')
+@pytest.mark.windows_whitelisted
 class NaclTest(ShellCase):
     '''
     Test the nacl runner

@@ -23,9 +23,12 @@ import salt.utils.path
 from tests.support.case import ShellCase
 from tests.integration.utils import testprogram
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class SaltTest(testprogram.TestProgramCase):
     '''
     Various integration tests for the salt executable.
@@ -78,6 +81,7 @@ class SaltTest(testprogram.TestProgramCase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class RetcodeTestCase(ShellCase):
     '''
     Tests to ensure that we set non-zero retcodes when execution fails

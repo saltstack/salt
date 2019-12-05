@@ -18,9 +18,12 @@ from tests.support.mixins import SaltReturnAssertsMixin
 import salt.utils.files
 import salt.utils.stringutils
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class HostTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the host state

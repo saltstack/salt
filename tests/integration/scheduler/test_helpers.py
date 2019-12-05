@@ -16,7 +16,9 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.utils.schedule
 import salt.utils.platform
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
+
+import pytest
 
 log = logging.getLogger(__name__)
 ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
@@ -30,6 +32,7 @@ DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
 DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
+@pytest.mark.windows_whitelisted
 class SchedulerHelpersTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test scheduler helper functions

@@ -50,6 +50,7 @@ def gen_password():
 @pytest.mark.skip_if_not_root
 @skipIf(pwd is None, 'Skip if no pwd module exists')
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class AuthTest(ShellCase):
     '''
     Test auth mechanisms

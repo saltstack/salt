@@ -10,7 +10,10 @@ import pprint
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class MineTest(ModuleCase):
     '''
     Test the mine system

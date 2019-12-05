@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 
 @skipIf(not salt.utils.platform.is_linux(),
         'These tests can only be run on linux')
+@pytest.mark.windows_whitelisted
 class SystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the system module
@@ -368,6 +369,7 @@ class SystemModuleTest(ModuleCase):
 
 @skipIf(not salt.utils.platform.is_windows(),
         'These tests can only be run on windows')
+@pytest.mark.windows_whitelisted
 class WinSystemModuleTest(ModuleCase):
     '''
     Validate the date/time functions in the win_system module

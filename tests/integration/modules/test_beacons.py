@@ -15,7 +15,10 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class BeaconsAddDeleteTest(ModuleCase):
     '''
     Tests the add and delete functions
@@ -58,6 +61,7 @@ class BeaconsAddDeleteTest(ModuleCase):
         self.run_function('beacons.save', f_timeout=300)
 
 
+@pytest.mark.windows_whitelisted
 class BeaconsTest(ModuleCase):
     '''
     Tests the beacons execution module

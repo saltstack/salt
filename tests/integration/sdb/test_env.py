@@ -14,7 +14,10 @@ from tests.support.mixins import SaltReturnAssertsMixin
 # Import salt libs
 import salt.utils.files
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
 
     def setUp(self):

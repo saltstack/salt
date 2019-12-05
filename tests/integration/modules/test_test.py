@@ -11,7 +11,10 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 import salt.version
 import salt.config
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class TestModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the test module
