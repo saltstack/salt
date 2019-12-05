@@ -10,8 +10,16 @@ like, but also useful for basic http testing.
 from __future__ import absolute_import, print_function, unicode_literals
 import time
 
+try:
+    import urllib.request
+    HAS_URLLIB_REQUEST = True
+except ImportError:
+    HAS_URLLIB_REQUEST = False
+
 # Import Salt libs
 import salt.utils.http
+import salt.utils.path
+import salt.utils.hashutils
 
 
 def query(url, **kwargs):
@@ -114,3 +122,56 @@ def update_ca_bundle(target=None, source=None, merge_files=None):
     return salt.utils.http.update_ca_bundle(
         target, source, __opts__, merge_files
     )
+
+
+def download(target, source, hash=False, hash_type='sha256'):
+    '''
+    Download http file to the host file system.
+
+    target
+        Absolute path to target file.
+
+    source
+        The http source.
+
+    hash: False
+        If set to False, the hash of the downloaded file is not verified, else, the hash of the file.
+
+    hash_type: 'sha256'
+        The type of the hash.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' http.download /tmp/file.tar.gz http://host/file-123.tar.gz
+
+    '''
+    ret = {'Error': "Unable to load the 'urllib.request' library."}
+    if HAS_URLLIB_REQUEST:
+        if not salt.utils.path.is_absolute(target):
+            ret = {'Error': "target: '{}' have to be an absolute path.".format(target)}
+        elif salt.utils.path.is_dir(target):
+            ret = {'Error': "target: '{}' have to be a file path.".format(target)}
+        else:
+            if salt.utils.path.is_file(target):
+                tar_hash = salt.utils.hashutils.get_hash(target, hash_type)
+            else:
+                tar_hash = salt.utils.hashutils.random_hash(hash_type=hash_type)
+
+            tmp_file = salt.utils.path.random_tmp_file()
+            with urllib.request.urlopen(source) as response:
+                __salt__['file.write'](tmp_file, response.read())
+            tmp_hash = salt.utils.hashutils.get_hash(tmp_file, hash_type)
+
+            if hash and tmp_hash != hash:
+                ret = {'Error': {"Hash not equals": {'wanted': hash, 'present': tmp_hash}}}
+            elif tar_hash == tmp_hash:
+                ret = {'Success': "{} is already present.".format(target)}
+            else:
+                __salt__['file.rename'](tmp_file, target)
+                ret = {'Success': "{} is present.".format(target), 'Changes': target}
+
+            __salt__['file.remove'](tmp_file)
+
+    return ret

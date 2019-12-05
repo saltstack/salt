@@ -168,3 +168,54 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
             if 'request_interval' in kwargs:
                 log.debug('delaying query for %s seconds.', kwargs['request_interval'])
                 time.sleep(kwargs['request_interval'])
+
+
+def downloaded(name, source, hash=False, hash_type='sha256'):
+    '''
+    Perform an HTTP query and download the response.
+
+    name
+        The path to download the file.
+
+    source
+        The URL to download the file to.
+
+    hash: False
+        The hash of the file.
+        If False, no hash is used.
+
+    hash_type: sha256
+        The type of hash to use.
+
+    .. code-block:: yaml
+
+        web_archive_is_dowloaded:
+          http.downloaded:
+            - name: /tmp/myFile.tar.gz
+            - source: 'http://example.com/file.tar.gz'
+
+    '''
+
+    ret = {'name': name,
+           'result': None,
+           'comment': '',
+           'changes': {}}
+
+    if 'http.download' not in __salt__:
+        ret['result'] = False
+        ret['comment'] = "'http.download' module is not available on this minion."
+    elif __opts__.get('test', False):
+        ret['result'] = None
+        ret['comment'] = '{} would have been downloaded to {}'.format(source, name)
+    else:
+        ret_module = __salt__['http.download'](name, source, hash, hash_type)
+        if 'Success' in ret_module:
+            ret['result'] = True
+            ret['comment'] = ret_module.get('Success')
+            if ret_module.get('Changes', False):
+                ret['changes'] = {'new file': ret_module.get('Changes', False)}
+        elif 'Error' in ret_module:
+            ret['result'] = False
+            ret['comment'] = ret_module.get('Error')
+
+    return ret

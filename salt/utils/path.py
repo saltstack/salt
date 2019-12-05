@@ -19,7 +19,8 @@ import struct
 import salt.utils.args
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.exceptions import CommandNotFoundError
+import salt.utils.pycrypto
+from salt.exceptions import CommandNotFoundError, SaltInvocationError
 from salt.utils.decorators import memoize as real_memoize
 from salt.utils.decorators.jinja import jinja_filter
 
@@ -29,9 +30,17 @@ from salt.ext import six
 try:
     import win32file
     from pywintypes import error as pywinerror
+
     HAS_WIN32FILE = True
 except ImportError:
     HAS_WIN32FILE = False
+
+try:
+    import pathlib
+    HAS_PATHLIB = True
+except ImportError:
+    HAS_PATHLIB = False
+
 
 log = logging.getLogger(__name__)
 
@@ -69,6 +78,97 @@ def islink(path):
         return False
     else:
         return True
+
+
+def is_absolute(path):
+    '''
+    Test if the path absolute.
+    :param path: Absolute path.
+    :return: True if the path is absolute, else False.
+    '''
+    if HAS_PATHLIB:
+        return pathlib.PurePath(path).is_absolute()
+    else:
+        raise SaltInvocationError('Please install Python3 and pathlib')
+
+
+def exist(path):
+    '''
+    Test if the path exist.
+    :param path: Absolute path.
+    :return: True if the path exist, else False.
+    '''
+    if HAS_PATHLIB:
+        return pathlib.Path(path).exists()
+    else:
+        raise SaltInvocationError('Please install Python3 and pathlib')
+
+
+def is_dir(path):
+    '''
+    Test if the path is a directory.
+    :param path: Absolute path.
+    :return: True if the path is a directory, else False.
+    '''
+    if HAS_PATHLIB:
+        return True if exist(path) and pathlib.Path(path).is_dir() else False
+    else:
+        raise SaltInvocationError('Please install Python3 and pathlib')
+
+
+def is_file(path):
+    '''
+    Test if the path is a file.
+    :param path: Absolute path.
+    :return: True if the path is a file, else False.
+    '''
+    if HAS_PATHLIB:
+        return True if exist(path) and pathlib.Path(path).is_file() else False
+    else:
+        raise SaltInvocationError('Please install Python3 and pathlib')
+
+
+def dir_is_present(path, parents=True):
+    '''
+    Make the directory if it's not present.
+    :param path: Absolute path to the directory to create.
+    :param parents: Make the parents directories.
+    :return: True if the directory is present, else False.
+    '''
+    if HAS_PATHLIB:
+        if not exist(path):
+            pathlib.Path(path).mkdir(parents=parents, exist_ok=True)
+        return is_dir(path)
+    else:
+        raise SaltInvocationError('Please install Python3 and pathlib')
+
+
+def file_is_present(path):
+    '''
+    Touch the file if it's not present.
+    :param path: Absolute path to the file to create.
+    :return: True if the file is present, else False.
+    '''
+    if HAS_PATHLIB:
+        if not exist(path):
+            pathlib.Path(path).touch()
+        return is_file(path)
+    else:
+        raise SaltInvocationError('Please install Python3 and pathlib')
+
+
+def random_tmp_file(tmp_dir='/tmp'):
+    '''
+    Create a temporary file with a random name.
+    :param tmp_dir: Absolute path to the directory to create the random file.
+    :return: The path to the file created.
+    '''
+    ret = None
+    if is_absolute(tmp_dir):
+        tmp_file = join(tmp_dir, salt.utils.pycrypto.secure_password())
+        if file_is_present(tmp_file):
+            ret = tmp_file
+    return ret
 
 
 def readlink(path):
@@ -111,7 +211,7 @@ def readlink(path):
 
     path_buffer_offset = data_parser.size
     absolute_substitute_name_offset = path_buffer_offset + SubstituteNameOffset
-    target_bytes = reparse_data[absolute_substitute_name_offset:absolute_substitute_name_offset+SubstituteNameLength]
+    target_bytes = reparse_data[absolute_substitute_name_offset:absolute_substitute_name_offset + SubstituteNameLength]
     target = target_bytes.decode('UTF-16')
 
     if target.startswith('\\??\\'):
@@ -191,6 +291,7 @@ def which(exe=None):
     '''
     Python clone of /usr/bin/which
     '''
+
     def _is_executable_file_or_link(exe):
         # check for os.X_OK doesn't suffice because directory may executable
         return (os.access(exe, os.X_OK) and
@@ -339,7 +440,8 @@ def sanitize_win_path(winpath):
         winpath = winpath.translate(dict((ord(c), '_') for c in intab))
     elif isinstance(winpath, six.string_types):
         outtab = '_' * len(intab)
-        trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab, outtab)  # pylint: disable=no-member
+        trantab = ''.maketrans(intab, outtab) if six.PY3 else string.maketrans(intab,
+                                                                               outtab)  # pylint: disable=no-member
         winpath = winpath.translate(trantab)
     return winpath
 

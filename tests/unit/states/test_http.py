@@ -44,3 +44,51 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(http.__salt__, {'http.query': mock}):
                 self.assertDictEqual(http.query("salt", "Dude", "stack"),
                                      ret[1])
+
+
+@skipIf(NO_MOCK, NO_MOCK_REASON)
+class TestCaseHttp(TestCase):
+    def test_http_downloaded_module_import_failed(self):
+        ret = {'name': 'myFile',
+               'result': False,
+               'comment': "'http.download' module is not available on this minion.",
+               'changes': {}}
+        self.assertEqual(http.downloaded('myFile', 'http:/fake/url/file.tar.gz'), ret)
+
+    def test_http_downloaded_is_testing(self):
+        mock_http_modules = {'http.download': MagicMock(return_value=True)}
+        with patch.dict(http.__salt__, mock_http_modules):
+            mock__opts__ = {'test': MagicMock(return_value=True)}
+            with patch.dict(http.__opts__, mock__opts__):
+                ret = {'name': 'myFile',
+                       'result': None,
+                       'comment': '{} would have been downloaded to {}'.format('http:/fake/url/file.tar.gz', 'myFile'),
+                       'changes': {}}
+                self.assertEqual(http.downloaded('myFile', 'http:/fake/url/file.tar.gz'), ret)
+
+    def test_http_downloaded_Success(self):
+        mock_http_modules = {'http.download': MagicMock(return_value={'Success': 'Success'})}
+        with patch.dict(http.__salt__, mock_http_modules):
+            ret = {'name': 'myFile',
+                   'result': True,
+                   'comment': 'Success',
+                   'changes': {}}
+            self.assertEqual(http.downloaded('myFile', 'http:/fake/url/file.tar.gz'), ret)
+
+    def test_http_downloaded_Success_Changes(self):
+        mock_http_modules = {'http.download': MagicMock(return_value={'Success': 'Success', 'Changes': 'Changes'})}
+        with patch.dict(http.__salt__, mock_http_modules):
+            ret = {'name': 'myFile',
+                   'result': True,
+                   'comment': 'Success',
+                   'changes': {'new file': 'Changes'}}
+            self.assertEqual(http.downloaded('myFile', 'http:/fake/url/file.tar.gz'), ret)
+
+    def test_http_downloaded_Error(self):
+        mock_http_modules = {'http.download': MagicMock(return_value={'Error': 'Error'})}
+        with patch.dict(http.__salt__, mock_http_modules):
+            ret = {'name': 'myFile',
+                   'result': False,
+                   'comment': 'Error',
+                   'changes': {}}
+            self.assertEqual(http.downloaded('myFile', 'http:/fake/url/file.tar.gz'), ret)
