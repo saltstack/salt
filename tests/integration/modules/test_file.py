@@ -29,6 +29,8 @@ from tests.support.unit import skipIf
 import salt.utils.files
 import salt.utils.platform
 
+import pytest
+
 
 def symlink(source, link_name):
     '''
@@ -40,6 +42,7 @@ def symlink(source, link_name):
         os.symlink(source, link_name)
 
 
+@pytest.mark.windows_whitelisted
 class FileModuleTest(ModuleCase):
     '''
     Validate the file module

@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
     _PKG_32_TARGETS = []

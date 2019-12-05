@@ -20,11 +20,14 @@ if salt.utils.platform.is_windows():
     except ImportError:
         pass
 
+import pytest
+
 
 def _freebsd_or_openbsd():
     return salt.utils.platform.is_freebsd() or salt.utils.platform.is_openbsd()
 
 
+@pytest.mark.windows_whitelisted
 class TestGrainsCore(ModuleCase):
     '''
     Test the core grains grains
@@ -53,6 +56,7 @@ class TestGrainsCore(ModuleCase):
         )
 
 
+@pytest.mark.windows_whitelisted
 class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
     '''
     Test the core windows grains

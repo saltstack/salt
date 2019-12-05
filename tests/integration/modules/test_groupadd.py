@@ -23,6 +23,7 @@ if not salt.utils.platform.is_windows():
 
 @pytest.mark.skip_if_not_root
 @pytest.mark.destructive_test
+@pytest.mark.windows_whitelisted
 class GroupModuleTest(ModuleCase):
     '''
     Validate the linux group system module

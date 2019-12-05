@@ -12,6 +12,8 @@ from tests.support.case import ShellCase
 # Import salt libs
 from salt.returners import librato_return
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 # JOBS DIR and FILES
@@ -47,6 +49,7 @@ MOCK_RET_OBJ = {
 }
 
 
+@pytest.mark.windows_whitelisted
 class libratoTest(ShellCase):
     '''
     Test the librato returner

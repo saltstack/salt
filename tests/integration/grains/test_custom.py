@@ -9,7 +9,10 @@ from __future__ import absolute_import, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class TestGrainsCore(ModuleCase):
     '''
     Test the core grains grains

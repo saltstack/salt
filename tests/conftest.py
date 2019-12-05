@@ -254,7 +254,11 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
-        'requires_salt_modules(*required_module_names): Skip if at least one module is not available. '
+        'requires_salt_modules(*required_module_names): Skip if at least one module is not available.'
+    )
+    config.addinivalue_line(
+        'markers',
+        'windows_whitelisted: Mark test as whitelisted to run under Windows'
     )
     # Make sure the test suite "knows" this is a pytest test run
     RUNTIME_VARS.PYTEST_SESSION = True
@@ -498,6 +502,15 @@ def pytest_runtest_setup(item):
             if len(not_available_modules) == 1:
                 pytest.skip('Salt module \'{}\' is not available'.format(*not_available_modules))
             pytest.skip('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+
+    if salt.utils.platform.is_windows():
+        if not item.fspath.fnmatch(os.path.join(CODE_DIR, 'tests', 'unit', '*')):
+            # Unit tests are whitelisted on windows by default, so, we're only
+            # after all other tests
+            windows_whitelisted_marker = item.get_closest_marker('windows_whitelisted')
+            if windows_whitelisted_marker is None:
+                item._skipped_by_mark = True
+                pytest.skip('Test is not whitelisted for Windows')
 # <---- Test Setup ---------------------------------------------------------------------------------------------------
 
 

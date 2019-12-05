@@ -10,7 +10,10 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 # Import Salt libs
 import salt.runner
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     # This is really an integration test since it needs a salt-master running
     eauth_creds = {

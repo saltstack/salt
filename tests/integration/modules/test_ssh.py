@@ -34,6 +34,7 @@ def check_status():
 
 
 @pytest.mark.skip_if_binaries_missing('ssh', 'ssh-keygen', check_all=True)
+@pytest.mark.windows_whitelisted
 class SSHModuleTest(ModuleCase):
     '''
     Test the ssh module

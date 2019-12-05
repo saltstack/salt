@@ -11,9 +11,12 @@ from tests.support.unit import skipIf
 import salt.utils.path
 import salt.utils.platform
 
+import pytest
+
 URL = 'google-public-dns-a.google.com'
 
 
+@pytest.mark.windows_whitelisted
 class NetworkTest(ModuleCase):
     '''
     Validate network module

@@ -17,7 +17,10 @@ import salt.utils.platform
 # Import 3rd-party libs
 from salt.ext import six
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class TestJinjaRenderer(ModuleCase):
     '''
     Validate that ordering works correctly

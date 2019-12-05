@@ -31,9 +31,12 @@ import salt.utils.platform
 import salt.utils.yaml
 from salt.ext import six
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
     _call_binary_ = 'salt-call'

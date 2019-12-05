@@ -7,10 +7,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.case import ModuleCase
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 import salt.utils.platform
 
 
+@pytest.mark.windows_whitelisted
 class StdTest(ModuleCase):
     '''
     Test standard client calls

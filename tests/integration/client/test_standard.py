@@ -11,7 +11,10 @@ from tests.support.case import ModuleCase
 import salt.utils.files
 import salt.utils.platform
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class StdTest(ModuleCase):
     '''
     Test standard client calls

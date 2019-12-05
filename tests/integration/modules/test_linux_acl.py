@@ -22,6 +22,7 @@ import salt.utils.user
 # Doesn't work. Why?
 # @pytest.mark.requires_salt_modules('acl')
 # @pytest.mark.requires_salt_modules('linux_acl')
+@pytest.mark.windows_whitelisted
 class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
     '''
     Validate the linux_acl module

@@ -21,6 +21,7 @@ from salt.ext import six
         'function destroys ALL containers on the box, which is BAD.')
 @pytest.mark.skip_if_not_root
 @pytest.mark.skip_if_binaries_missing('lxc-start', message='LXC is not installed or minimal version not met')
+@pytest.mark.windows_whitelisted
 class LXCModuleTest(ModuleCase):
     '''
     Test the lxc module

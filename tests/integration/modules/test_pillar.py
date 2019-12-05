@@ -7,7 +7,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class PillarModuleTest(ModuleCase):
     '''
     Validate the pillar module

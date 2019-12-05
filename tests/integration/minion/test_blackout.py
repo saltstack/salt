@@ -17,9 +17,12 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.utils.files
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class MinionBlackoutTestCase(ModuleCase):
     '''
     Test minion blackout functionality

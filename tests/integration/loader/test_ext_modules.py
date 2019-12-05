@@ -18,7 +18,10 @@ import time
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class LoaderOverridesTest(ModuleCase):
 
     def setUp(self):

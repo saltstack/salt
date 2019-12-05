@@ -20,7 +20,10 @@ from tests.support.unit import skipIf
 import salt.config
 import salt.loader
 
+import pytest
 
+
+@pytest.mark.windows_whitelisted
 class LoaderGrainsTest(ModuleCase):
     '''
     Test the loader standard behavior with external grains
@@ -53,6 +56,7 @@ class LoaderGrainsTest(ModuleCase):
 
 
 @skipIf(True, "needs a way to reload minion after config change")
+@pytest.mark.windows_whitelisted
 class LoaderGrainsMergeTest(ModuleCase):
     '''
     Test the loader deep merge behavior with external grains

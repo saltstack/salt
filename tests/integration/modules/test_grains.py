@@ -18,9 +18,12 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class TestModulesGrains(ModuleCase):
     '''
     Test the grains module
@@ -149,6 +152,7 @@ class TestModulesGrains(ModuleCase):
                 get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
 
 
+@pytest.mark.windows_whitelisted
 class GrainsAppendTestCase(ModuleCase):
     '''
     Tests written specifically for the grains.append function.

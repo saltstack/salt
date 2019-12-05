@@ -10,17 +10,19 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-from tests.support.unit import skipIf
-
 # Import salt tests libs
 import tests.integration.utils
+from tests.support.unit import skipIf
 from tests.integration.utils import testprogram
 
 import salt.utils.platform
 
+import pytest
+
 log = logging.getLogger(__name__)
 
 
+@pytest.mark.windows_whitelisted
 class ProxyTest(testprogram.TestProgramCase):
     '''
     Various integration tests for the salt-proxy executable.
