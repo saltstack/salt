@@ -1072,6 +1072,21 @@ Should be greater than overall download time.
 
     http_request_timeout: 3600
 
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
+
 .. _salt-ssh-configuration:
 
 Salt-SSH Configuration

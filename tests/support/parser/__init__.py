@@ -72,7 +72,7 @@ def __global_logging_exception_handler(exc_type, exc_value, exc_traceback,
     # Log the exception
     try:
         msg = (
-            'An un-handled exception was caught by salt-testing\'s global exception handler:\n{}: {}\n{}'.format(
+            'An un-handled exception was caught by salt\'s testing global exception handler:\n{}: {}\n{}'.format(
                 exc_type.__name__,
                 exc_value,
                 ''.join(_format_exception(exc_type, exc_value, exc_traceback)).strip()
@@ -402,7 +402,7 @@ class SaltTestingParser(optparse.OptionParser):
         try:
             return self.__test_mods
         except AttributeError:
-            self.__test_mods = set(tests.support.paths.test_mods())
+            self.__test_mods = set(tests.support.paths.list_test_mods())
             return self.__test_mods
 
     def _map_files(self, files):
@@ -598,12 +598,12 @@ class SaltTestingParser(optparse.OptionParser):
 
         self.validate_options()
 
-        if self.support_destructive_tests_selection:
+        if self.support_destructive_tests_selection and not os.environ.get('DESTRUCTIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # destructive tests should be executed or not.
             os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
 
-        if self.support_expensive_tests_selection:
+        if self.support_expensive_tests_selection and not os.environ.get('EXPENSIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ['EXPENSIVE_TESTS'] = str(self.options.run_expensive)
