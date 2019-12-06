@@ -14,7 +14,8 @@ Versions are `MAJOR.PATCH`.
 
 ### Deprecated
 - [#55552](https://github.com/saltstack/salt/pull/55552) - The config options `hgfs_env_whitelist`, `hgfs_env_blacklist`, `svnfs_env_whitelist`, and `svnfs_env_whitelist` have been deprecated in favor of `hgfs_saltenv_whitelist`, `hgfs_saltenv_blacklist`, `svnfs_saltenv_whitelist`, `svnfs_saltenv_blacklist`.
-
+- [#55545](https://github.com/saltstack/salt/pull/55545) - Deprecate `keyfile` and `key` arguments in nacl utils module. This deprecates the arguments for both the nacl module and runner.
+                                                           Please use `sk_file` instead of `keyfile` and `sk` instead of `key`
 - [#55609](https://github.com/saltstack/salt/pull/55609) - Remove smartos grains `hypervisor_uuid` and `datacenter` in favor of `mdata:sdc:server_uuid` and `mdata:sdc:datacenter_name`.
 - [#55539](https://github.com/saltstack/salt/pull/55539) - Deprecate salt.auth.Authorize class and the any_auth method
 
