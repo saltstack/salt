@@ -9,9 +9,9 @@ import time
 import logging
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky
-from tests.support.paths import TMP
 
 # Import Salt Libs
 from salt.ext import six
@@ -123,7 +123,7 @@ class SSHStateTest(SSHCase):
         state.show_highstate with salt-ssh
         '''
         high = self.run_function('state.show_highstate')
-        destpath = os.path.join(TMP, 'testfile')
+        destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         self.assertIsInstance(high, dict)
         self.assertIn(destpath, high)
         self.assertEqual(high[destpath]['__env__'], 'base')
