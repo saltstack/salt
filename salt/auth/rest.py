@@ -40,7 +40,7 @@ def __virtual__():
     return __virtualname__
 
 
-def rest_auth_setup():
+def _rest_auth_setup():
 
     if "^url" in __opts__["external_auth"]["rest"]:
         return __opts__["external_auth"]["rest"]["^url"]
@@ -53,7 +53,7 @@ def auth(username, password):
     REST authentication
     """
 
-    url = rest_auth_setup()
+    url = _rest_auth_setup()
 
     data = {"username": username, "password": password}
 
