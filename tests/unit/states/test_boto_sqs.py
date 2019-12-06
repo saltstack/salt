@@ -35,7 +35,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
 
     @classmethod
     def tearDownClass(cls):

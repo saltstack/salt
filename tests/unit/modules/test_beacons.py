@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
@@ -22,14 +22,17 @@ from tests.support.mock import (
 import salt.modules.beacons as beacons
 from salt.utils.event import SaltEvent
 
-SOCK_DIR = os.path.join(TMP, 'test-socks')
-
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.beacons
     '''
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
+
     def setup_loader_modules(self):
         return {beacons: {}}
 
@@ -44,7 +47,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                           'beacons': {}},
                         ]
 
-        with patch.dict(beacons.__opts__, {'beacons': {'ps': [{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(beacons.__opts__, {'beacons': {'ps': [{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
@@ -70,7 +73,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                           'tag': '/salt/minion/minion_beacon_add_complete',
                           'beacons': {'ps': [{'processes': {'salt-master': 'stopped', 'apache2': 'stopped'}}]}}]
 
-        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
@@ -81,10 +84,10 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test saving beacons.
         '''
-        comm1 = 'Beacons saved to {0}beacons.conf.'.format(TMP + os.sep)
+        comm1 = 'Beacons saved to {0}beacons.conf.'.format(RUNTIME_VARS.TMP + os.sep)
         with patch.dict(beacons.__opts__, {'config_dir': '', 'beacons': {},
-                                           'default_include': TMP + os.sep,
-                                           'sock_dir': SOCK_DIR}):
+                                           'default_include': RUNTIME_VARS.TMP + os.sep,
+                                           'sock_dir': self.sock_dir}):
 
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
@@ -104,7 +107,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                                       'ps': [{'processes': {'salt-master': 'stopped',
                                                             'apache2': 'stopped'}}]}}]
 
-        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
@@ -122,7 +125,7 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
                                       'ps': [{'processes': {'salt-master': 'stopped',
                                                             'apache2': 'stopped'}}]}}]
 
-        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
