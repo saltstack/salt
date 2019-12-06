@@ -12,8 +12,8 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.helpers import with_tempdir, with_tempfile, destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -336,8 +336,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'root_dir: {0}\n'
                 'log_file: {1}\n'.format(root_dir, fpath)
             )
-        with patch('salt.syspaths.ROOT_DIR', TMP):
-            config = sconfig.master_config(fpath)
+        with patch('salt.syspaths.ROOT_DIR', RUNTIME_VARS.TMP):
+            config = salt.config.master_config(fpath)
         self.assertEqual(config['log_file'], fpath)
 
     @skipIf(
@@ -706,6 +706,79 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(config['minion_id_caching'], False)        # Check the configuration
         self.assertEqual(config['minion_id_lowercase'], True)       # Check the configuration
         self.assertEqual(config['id'], 'king_bob')
+
+    @with_tempdir()
+    def test_minion_id_remove_domain_string_positive(self, tempdir):
+        '''
+        This tests that the values of `minion_id_remove_domain` is suppressed from a generated minion id,
+        effectivly generating a hostname minion_id.
+        '''
+        minion_config = os.path.join(tempdir, 'minion')
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                id_function:
+                  test.echo:
+                    text: king_bob.foo.org
+                minion_id_remove_domain: foo.org
+                minion_id_caching: False
+            '''))
+
+        # Let's load the configuration
+        config = sconfig.minion_config(minion_config)
+        self.assertEqual(config['minion_id_remove_domain'], 'foo.org')
+        self.assertEqual(config['id'], 'king_bob')
+
+    @with_tempdir()
+    def test_minion_id_remove_domain_string_negative(self, tempdir):
+        '''
+        See above
+        '''
+        minion_config = os.path.join(tempdir, 'minion')
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                id_function:
+                  test.echo:
+                    text: king_bob.foo.org
+                minion_id_remove_domain: bar.org
+                minion_id_caching: False
+            '''))
+
+        config = sconfig.minion_config(minion_config)
+        self.assertEqual(config['id'], 'king_bob.foo.org')
+
+    @with_tempdir()
+    def test_minion_id_remove_domain_bool_true(self, tempdir):
+        '''
+        See above
+        '''
+        minion_config = os.path.join(tempdir, 'minion')
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                id_function:
+                  test.echo:
+                    text: king_bob.foo.org
+                minion_id_remove_domain: True
+                minion_id_caching: False
+            '''))
+        config = sconfig.minion_config(minion_config)
+        self.assertEqual(config['id'], 'king_bob')
+
+    @with_tempdir()
+    def test_minion_id_remove_domain_bool_false(self, tempdir):
+        '''
+        See above
+        '''
+        minion_config = os.path.join(tempdir, 'minion')
+        with salt.utils.files.fopen(minion_config, 'w') as fp_:
+            fp_.write(textwrap.dedent('''\
+                id_function:
+                  test.echo:
+                    text: king_bob.foo.org
+                minion_id_remove_domain: False
+                minion_id_caching: False
+            '''))
+        config = sconfig.minion_config(minion_config)
+        self.assertEqual(config['id'], 'king_bob.foo.org')
 
     @with_tempdir()
     def test_backend_rename(self, tempdir):

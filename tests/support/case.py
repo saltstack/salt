@@ -233,11 +233,15 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         arg_str = '--config-dir {0} {1}'.format(self.config_dir, arg_str)
         return self.run_script('salt-cp', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
 
-    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False):
+    def run_call(self, arg_str, with_retcode=False, catch_stderr=False, local=False, timeout=15):
         arg_str = '{0} --config-dir {1} {2}'.format('--local' if local else '',
                                                     self.config_dir, arg_str)
 
-        return self.run_script('salt-call', arg_str, with_retcode=with_retcode, catch_stderr=catch_stderr)
+        return self.run_script('salt-call',
+                               arg_str,
+                               with_retcode=with_retcode,
+                               catch_stderr=catch_stderr,
+                               timeout=timeout)
 
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''
