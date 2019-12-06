@@ -3353,9 +3353,27 @@ def link(src, path):
     try:
         os.link(src, path)
         return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+    except (OSError, IOError) as E:
+        raise CommandExecutionError('Could not create \'{0}\': {1}'.format(path, E))
     return False
+
+
+def is_hardlink(path):
+    '''
+    Check if the path is a hard link by verifying that the number of links
+    is larger than 1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_hardlink /path/to/link
+    '''
+
+    # Simply use lstat and count the st_nlink field to determine if this path
+    # is hardlinked to something.
+    res = lstat(os.path.expanduser(path))
+    return res and res['st_nlink'] > 1
 
 
 def is_link(path):
@@ -5336,11 +5354,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:

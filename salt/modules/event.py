@@ -45,19 +45,6 @@ def fire_master(data, tag, preload=None):
         #  We can't send an event if we're in masterless mode
         log.warning('Local mode detected. Event with tag %s will NOT be sent.', tag)
         return False
-    if __opts__['transport'] == 'raet':
-        channel = salt.transport.client.ReqChannel.factory(__opts__)
-        load = {'id': __opts__['id'],
-                'tag': tag,
-                'data': data,
-                'cmd': '_minion_event'}
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        finally:
-            channel.close()
-        return True
 
     if preload or __opts__.get('__cli') == 'salt-call':
         # If preload is specified, we must send a raw event (this is
