@@ -147,6 +147,9 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The nacl module has deprecated the `keyfile` and `key` arguments. Please use the
+  `sk_file` argument instead.
+
 State Deprecations
 ------------------
 

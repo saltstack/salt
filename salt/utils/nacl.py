@@ -123,14 +123,6 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
         salt-call --local nacl.keygen
     '''
-    if 'keyfile' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk_file\' argument instead.'
-        )
-        sk_file = kwargs['keyfile']
-
     if sk_file is None:
         kp = libnacl.public.SecretKey()
         return {'sk': base64.b64encode(kp.sk), 'pk': base64.b64encode(kp.pk)}
@@ -191,22 +183,6 @@ def enc(data, **kwargs):
 
     box_type: secretbox, sealedbox(default)
     '''
-    if 'keyfile' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk_file\' argument instead.'
-        )
-        kwargs['sk_file'] = kwargs['keyfile']
-
-    if 'key' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'key\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk\' argument instead.'
-        )
-        kwargs['sk'] = kwargs['key']
-
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'secretbox':
         return secretbox_encrypt(data, **kwargs)
@@ -252,28 +228,6 @@ def dec(data, **kwargs):
 
     box_type: secretbox, sealedbox(default)
     '''
-    if 'keyfile' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk_file\' argument instead.'
-        )
-        kwargs['sk_file'] = kwargs['keyfile']
-
-        # set boxtype to `secretbox` to maintain backward compatibility
-        kwargs['box_type'] = 'secretbox'
-
-    if 'key' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'key\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk\' argument instead.'
-        )
-        kwargs['sk'] = kwargs['key']
-
-        # set boxtype to `secretbox` to maintain backward compatibility
-        kwargs['box_type'] = 'secretbox'
-
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'secretbox':
         return secretbox_decrypt(data, **kwargs)
