@@ -35,6 +35,8 @@ log = logging.getLogger(__name__)
 
 __virtualname__ = "rest"
 
+cached_acl = {}
+
 
 def __virtual__():
     return __virtualname__
@@ -65,8 +67,39 @@ def auth(username, password):
     if result["status"] == 200:
         log.debug("eauth REST call returned 200: %s", result)
         if result["dict"] is not None:
-            return result["dict"]
+            cached_acl[username] = result["dict"]
         return True
     else:
         log.debug("eauth REST call failed: %s", result)
         return False
+
+
+def acl(username, **kwargs):
+    """
+    REST authorization
+    """
+    salt_eauth_acl = __opts__["external_auth"]["rest"].get(username, [])
+    log.debug("acl from salt for user %s: %s", username, salt_eauth_acl)
+
+    eauth_rest_acl = cached_acl.get(username, [])
+    log.debug("acl from cached rest for user %s: %s", username, eauth_rest_acl)
+    # This might be an ACL only call with no auth before, so check the rest api
+    # again
+    if not eauth_rest_acl:
+        # Update cached_acl from REST API
+        result = auth(username, kwargs["password"])
+        log.debug("acl rest result: %s", result)
+        if result:
+            eauth_rest_acl = cached_acl.get(username, [])
+            log.debug("acl from rest for user %s: %s", username, eauth_rest_acl)
+
+    merged_acl = salt_eauth_acl + eauth_rest_acl
+
+    log.debug("acl from salt and rest merged for user %s: %s", username, merged_acl)
+    # We have to make the .get's above return [] since we can't merge a
+    # possible list and None. So if merged_acl is falsey we return None so
+    # other eauth's can return an acl.
+    if not merged_acl:
+        return None
+    else:
+        return merged_acl
