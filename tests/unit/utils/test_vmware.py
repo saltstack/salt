@@ -13,6 +13,7 @@ import ssl
 import sys
 
 # Import Salt testing libraries
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
@@ -2655,7 +2656,9 @@ class CreateDvsTestCase(TestCase):
                                      dvs_create_spec=self.mock_dvs_create_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -2724,7 +2727,9 @@ class UpdateDvsTestCase(TestCase):
         salt.utils.vmware.update_dvs(self.mock_dvs_ref, self.mock_dvs_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -3023,7 +3028,9 @@ class CreateDvportgroupTestCase(TestCase):
         salt.utils.vmware.create_dvportgroup(self.mock_dvs_ref, self.mock_pg_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_dvs',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -3096,7 +3103,9 @@ class UpdateDvportgroupTestCase(TestCase):
         salt.utils.vmware.update_dvportgroup(self.mock_pg_ref, self.mock_pg_spec)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_pg',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -3163,7 +3172,9 @@ class RemoveDvportgroupTestCase(TestCase):
         salt.utils.vmware.remove_dvportgroup(self.mock_pg_ref)
         self.mock_wait_for_task.assert_called_once_with(
             self.mock_task, 'fake_pg',
-            '<class \'unit.utils.test_vmware.FakeTaskClass\'>')
+            '<class \'{}unit.utils.test_vmware.FakeTaskClass\'>'.format(
+                'tests.' if RUNTIME_VARS.PYTEST_SESSION else '')
+        )
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
