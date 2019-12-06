@@ -116,8 +116,14 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
         if _is_cli_output(cli_command_result['stdout']):
             cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = False
+
             match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
+            # if match is None then check for wildfly error code
+            if match is None:
+                match = re.search(r'^(WFLYCTL\d+):', cli_result['failure-description'])
+
             cli_result['err_code'] = match.group(1)
+
             cli_result['stdout'] = cli_command_result['stdout']
         else:
             if fail_on_error:
@@ -159,6 +165,7 @@ def __call_cli(jboss_config, command, retries=1):
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
     # It may happen that eventhough server is up it may not respond to the call
+    # TODO add WFLYCTL
     if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
         time.sleep(3)
