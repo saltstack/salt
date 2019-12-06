@@ -20,7 +20,7 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
     mock_open,
     Mock,
@@ -232,23 +232,29 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests error raised when not useing vt and OSError is provided
         '''
+        expected_error = "expect error"
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError)):
-                            self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
+                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=OSError(expected_error))):
+                            with self.assertRaises(CommandExecutionError) as error:
+                                cmdmod.run('foo')
+                            assert error.exception.args[0].endswith(expected_error), repr(error.exception.args[0])
 
     def test_run_no_vt_io_error(self):
         '''
         Tests error raised when not useing vt and IOError is provided
         '''
+        expected_error = "expect error"
         with patch('salt.modules.cmdmod._is_valid_shell', MagicMock(return_value=True)):
             with patch('salt.utils.platform.is_windows', MagicMock(return_value=False)):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
                     with patch('os.access', MagicMock(return_value=True)):
-                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError)):
-                            self.assertRaises(CommandExecutionError, cmdmod._run, 'foo')
+                        with patch('salt.utils.timed_subprocess.TimedProc', MagicMock(side_effect=IOError(expected_error))):
+                            with self.assertRaises(CommandExecutionError) as error:
+                                cmdmod.run('foo')
+                            assert error.exception.args[0].endswith(expected_error), repr(error.exception.args[0])
 
     @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
     @skipIf(True, 'Test breaks unittests runs')
@@ -351,7 +357,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         /dev/stdout.
         '''
         # Since we're using unicode_literals, read the random bytes from a file
-        rand_bytes_file = os.path.join(FILES, 'file', 'base', 'random_bytes')
+        rand_bytes_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'random_bytes')
         with salt.utils.files.fopen(rand_bytes_file, 'rb') as fp_:
             stdout_bytes = fp_.read()
 
@@ -433,3 +439,33 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             ret = cmdmod.run_all('some command', output_encoding='latin1')
 
         self.assertEqual(ret['stdout'], stdout)
+
+    def test_run_chroot_mount(self):
+        '''
+        Test cmdmod.run_chroot mount / umount balance
+        '''
+        mock_mount = MagicMock()
+        mock_umount = MagicMock()
+        mock_run_all = MagicMock()
+        with patch.dict(cmdmod.__salt__, {
+                'mount.mount': mock_mount,
+                'mount.umount': mock_umount}):
+            with patch('salt.modules.cmdmod.run_all', mock_run_all):
+                cmdmod.run_chroot('/mnt', 'cmd')
+                self.assertEqual(mock_mount.call_count, 3)
+                self.assertEqual(mock_umount.call_count, 3)
+
+    def test_run_chroot_mount_bind(self):
+        '''
+        Test cmdmod.run_chroot mount / umount balance with bind mount
+        '''
+        mock_mount = MagicMock()
+        mock_umount = MagicMock()
+        mock_run_all = MagicMock()
+        with patch.dict(cmdmod.__salt__, {
+                'mount.mount': mock_mount,
+                'mount.umount': mock_umount}):
+            with patch('salt.modules.cmdmod.run_all', mock_run_all):
+                cmdmod.run_chroot('/mnt', 'cmd', binds=['/var'])
+                self.assertEqual(mock_mount.call_count, 4)
+                self.assertEqual(mock_umount.call_count, 4)

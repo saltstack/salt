@@ -451,6 +451,331 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                 filestate.symlink(name, target, user=user, group=group),
                 ret)
 
+    @skipIf(salt.utils.platform.is_windows(), 'Do not run on Windows')
+    def test_hardlink(self):
+        '''
+        Test to create a hardlink.
+        '''
+
+        name = os.path.join(os.sep, 'tmp', 'testfile.txt')
+        target = salt.utils.files.mkstemp()
+        test_dir = os.path.join(os.sep, 'tmp')
+        user, group = 'salt', 'saltstack'
+
+        def return_val(**kwargs):
+            res = {
+                'name': name,
+                'result': False,
+                'comment': '',
+                'changes': {},
+            }
+            res.update(kwargs)
+            return res
+
+        mock_t = MagicMock(return_value=True)
+        mock_f = MagicMock(return_value=False)
+        mock_empty = MagicMock(return_value='')
+        mock_uid = MagicMock(return_value='U1001')
+        mock_gid = MagicMock(return_value='g1001')
+        mock_nothing = MagicMock(return_value={})
+        mock_stats = MagicMock(return_value={'inode': 1})
+        mock_execerror = MagicMock(side_effect=CommandExecutionError)
+
+        patches = {}
+        patches['file.user_to_uid'] = mock_empty
+        patches['file.group_to_gid'] = mock_empty
+        patches['user.info'] = mock_empty
+        patches['file.is_hardlink'] = mock_t
+        patches['file.stats'] = mock_empty
+
+        # Argument validation
+        with patch.dict(filestate.__salt__, patches):
+            expected = ('Must provide name to file.hardlink')
+            ret = return_val(comment=expected, name='')
+            self.assertDictEqual(filestate.hardlink('', target), ret)
+
+        # User validation for dir_mode
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_empty}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.object(os.path, 'isabs', mock_t):
+            expected = 'User {0} does not exist'.format(user)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(
+                filestate.hardlink(name, target, user=user, group=group),
+                ret)
+
+        # Group validation for dir_mode
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_empty}),\
+                patch.object(os.path, 'isabs', mock_t):
+            expected = 'Group {0} does not exist'.format(group)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(
+                filestate.hardlink(name, target, user=user, group=group),
+                ret)
+
+        # Absolute path for name
+        nonabs = './non-existent-path/to/non-existent-file'
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}):
+            expected = 'Specified file {0} is not an absolute path'.format(nonabs)
+            ret = return_val(comment=expected, name=nonabs)
+            self.assertDictEqual(filestate.hardlink(nonabs, target, user=user,
+                                                    group=group), ret)
+
+        # Absolute path for target
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}):
+            expected = 'Specified target {0} is not an absolute path'.format(nonabs)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, nonabs, user=user,
+                                                    group=group), ret)
+        # Test option -- nonexistent target
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.object(os.path, 'exists', mock_f),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = 'Target {0} for hard link does not exist'.format(target)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Test option -- target is a directory
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.object(os.path, 'exists', mock_t),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = 'Unable to hard link from directory {0}'.format(test_dir)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, test_dir, user=user,
+                                                    group=group), ret)
+
+        # Test option -- name is a directory
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = 'Unable to hard link to directory {0}'.format(test_dir)
+            ret = return_val(comment=expected, name=test_dir)
+            self.assertDictEqual(filestate.hardlink(test_dir, target, user=user,
+                                                    group=group), ret)
+
+        # Test option -- name does not exist
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = 'Hard link {0} to {1} is set for creation'.format(name, target)
+            changes = dict(new=name)
+            ret = return_val(result=None, comment=expected, name=name, changes=changes)
+            self.assertDictEqual(filestate.hardlink(name, target,
+                                                    user=user, group=group), ret)
+
+        # Test option -- hardlink matches
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_stats}),\
+                patch.object(os.path, 'exists', mock_t),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = 'The hard link {0} is presently targetting {1}'.format(name, target)
+            ret = return_val(result=True, comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target,
+                                                    user=user, group=group), ret)
+
+        # Test option -- hardlink does not match
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os.path, 'exists', mock_t),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = 'Link {0} target is set to be changed to {1}'.format(name, target)
+            changes = dict(change=name)
+            ret = return_val(result=None, comment=expected, name=name, changes=changes)
+            self.assertDictEqual(filestate.hardlink(name, target,
+                                                    user=user, group=group), ret)
+
+        # Test option -- force removal
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.object(os.path, 'exists', mock_t),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = (
+                'The file or directory {0} is set for removal to '
+                'make way for a new hard link targeting {1}'.format(name, target)
+            )
+            ret = return_val(result=None, comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, force=True,
+                                                    user=user, group=group), ret)
+
+        # Test option -- without force removal
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.object(os.path, 'exists', mock_t),\
+                patch.dict(filestate.__opts__, {'test': True}):
+            expected = (
+                'File or directory exists where the hard link {0} '
+                'should be. Did you mean to use force?'.format(name)
+            )
+            ret = return_val(result=False, comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, force=False,
+                                                    user=user, group=group), ret)
+
+        # Target is a directory
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}):
+            expected = 'Unable to hard link from directory {0}'.format(test_dir)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, test_dir, user=user,
+                                                    group=group), ret)
+
+        # Name is a directory
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}):
+            expected = 'Unable to hard link to directory {0}'.format(test_dir)
+            ret = return_val(comment=expected, name=test_dir)
+            self.assertDictEqual(filestate.hardlink(test_dir, target, user=user,
+                                                    group=group), ret)
+
+        # Try overwrite file with link
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.object(os.path, 'isfile', mock_t):
+
+            expected = 'File exists where the hard link {0} should be'.format(name)
+            ret = return_val(comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Try overwrite link with same
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_stats}),\
+                patch.object(os.path, 'isfile', mock_f):
+
+            expected = ('Target of hard link {0} is already pointing '
+                                'to {1}'.format(name, target))
+            ret = return_val(result=True, comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Really overwrite link with same
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
+                patch.object(os.path, 'isfile', mock_f):
+
+            expected = 'Set target of hard link {0} -> {1}'.format(name, target)
+            changes = dict(new=name)
+            ret = return_val(result=True, comment=expected, name=name, changes=changes)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Fail at overwriting link with same
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_execerror}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
+                patch.object(os.path, 'isfile', mock_f):
+
+            expected = ('Unable to set target of hard link {0} -> '
+                              '{1}: {2}'.format(name, target, ''))
+            ret = return_val(result=False, comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Make new link
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_f}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
+                patch.object(os.path, 'isfile', mock_f):
+
+            expected = 'Created new hard link {0} -> {1}'.format(name, target)
+            changes = dict(new=name)
+            ret = return_val(result=True, comment=expected, name=name, changes=changes)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Fail while making new link
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_execerror}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
+                patch.object(os.path, 'isfile', mock_f):
+
+            expected = ('Unable to create new hard link {0} -> '
+                              '{1}: {2}'.format(name, target, ''))
+            ret = return_val(result=False, comment=expected, name=name)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    group=group), ret)
+
+        # Force making new link over file
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_t}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
+                patch.object(os.path, 'isfile', mock_t):
+
+            expected = 'Created new hard link {0} -> {1}'.format(name, target)
+            changes = dict(new=name)
+            changes['forced'] = 'File for hard link was forcibly replaced'
+            ret = return_val(result=True, comment=expected, name=name, changes=changes)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    force=True, group=group), ret)
+
+        # Force making new link over file but error out
+        with patch.dict(filestate.__salt__, patches),\
+                patch.dict(filestate.__salt__, {'file.user_to_uid': mock_uid}),\
+                patch.dict(filestate.__salt__, {'file.group_to_gid': mock_gid}),\
+                patch.dict(filestate.__salt__, {'file.is_hardlink': mock_f}),\
+                patch.dict(filestate.__salt__, {'file.link': mock_execerror}),\
+                patch.dict(filestate.__salt__, {'file.stats': mock_nothing}),\
+                patch.object(os, 'remove', mock_t),\
+                patch.object(os.path, 'isfile', mock_t):
+
+            expected = ('Unable to create new hard link {0} -> '
+                              '{1}: {2}'.format(name, target, ''))
+            changes = dict(forced='File for hard link was forcibly replaced')
+            ret = return_val(result=False, comment=expected, name=name, changes=changes)
+            self.assertDictEqual(filestate.hardlink(name, target, user=user,
+                                                    force=True, group=group), ret)
+
     # 'absent' function tests: 1
     def test_absent(self):
         '''
@@ -1524,7 +1849,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'lexists', mock_lex):
                 comt = ('The target file "{0}" exists and will not be '
                         'overwritten'.format(name))
-                ret.update({'comment': comt, 'result': False})
+                ret.update({'comment': comt, 'result': True})
                 self.assertDictEqual(filestate.rename(name, source), ret)
 
         mock_lex = MagicMock(side_effect=[True, True, True])
