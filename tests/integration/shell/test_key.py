@@ -8,9 +8,10 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
+from tests.support.helpers import skip_if_not_root, destructiveTest
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -115,14 +116,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                 'Unaccepted Keys:',
                 'Rejected Keys:'
             ]
-        elif self.master_opts['transport'] == 'raet':
-            expect = [
-                'Accepted Keys:',
-                'minion',
-                'sub_minion',
-                'Unaccepted Keys:',
-                'Rejected Keys:'
-            ]
         self.assertEqual(data, expect)
 
     def test_list_json_out(self):
@@ -143,10 +136,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_yaml_out(self):
@@ -167,10 +156,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_raw_out(self):
@@ -193,10 +178,6 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        elif self.master_opts['transport'] == 'raet':
-            expect = {'accepted': ['minion', 'sub_minion'],
-                      'rejected': [],
-                      'pending': []}
         self.assertEqual(ret, expect)
 
     def test_list_acc(self):
@@ -207,6 +188,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         expect = ['Accepted Keys:', 'minion', 'sub_minion']
         self.assertEqual(data, expect)
 
+    @skip_if_not_root
+    @destructiveTest
     def test_list_acc_eauth(self):
         '''
         test salt-key -l with eauth
@@ -217,6 +200,8 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
         self._remove_user()
 
+    @skip_if_not_root
+    @destructiveTest
     def test_list_acc_eauth_bad_creds(self):
         '''
         test salt-key -l with eauth and bad creds
@@ -244,15 +229,13 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
             key_names = None
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
-            elif self.master_opts['transport'] == 'raet':
-                key_names = ('minibar.key',)
             for fname in key_names:
                 self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
         finally:
@@ -262,7 +245,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(

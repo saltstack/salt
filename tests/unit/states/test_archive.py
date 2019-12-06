@@ -225,3 +225,47 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 ret['comment'],
                 'Path {0} exists'.format(if_missing)
             )
+
+    def test_clean_parent_conflict(self):
+        '''
+        Tests the call of extraction with gnutar with both clean_parent plus clean set to True
+        '''
+        gnutar = MagicMock(return_value='tar (GNU tar)')
+        source = '/tmp/foo.tar.gz'
+        ret_comment = "Only one of 'clean' and 'clean_parent' can be set to True"
+        mock_false = MagicMock(return_value=False)
+        mock_true = MagicMock(return_value=True)
+        state_single_mock = MagicMock(return_value={'local': {'result': True}})
+        run_all = MagicMock(return_value={'retcode': 0, 'stdout': 'stdout', 'stderr': 'stderr'})
+        mock_source_list = MagicMock(return_value=(source, None))
+        list_mock = MagicMock(return_value={
+            'dirs': [],
+            'files': ['stdout'],
+            'links': [],
+            'top_level_dirs': [],
+            'top_level_files': ['stdout'],
+            'top_level_links': [],
+        })
+        isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+        with patch.dict(archive.__salt__, {'cmd.run': gnutar,
+                                           'file.directory_exists': mock_false,
+                                           'file.file_exists': mock_false,
+                                           'state.single': state_single_mock,
+                                           'file.makedirs': mock_true,
+                                           'cmd.run_all': run_all,
+                                           'archive.list': list_mock,
+                                           'file.source_list': mock_source_list}),\
+                patch.dict(archive.__states__, {'file.directory': mock_true}),\
+                patch.object(os.path, 'isfile', isfile_mock),\
+                patch('salt.utils.path.which', MagicMock(return_value=True)):
+            ret = archive.extracted(os.path.join(os.sep + 'tmp', 'out'),
+                                    source,
+                                    options='xvzf',
+                                    enforce_toplevel=False,
+                                    clean=True,
+                                    clean_parent=True,
+                                    keep=True)
+            self.assertEqual(ret['result'], False)
+            self.assertEqual(ret['changes'], {})
+            self.assertEqual(ret['comment'], ret_comment)
