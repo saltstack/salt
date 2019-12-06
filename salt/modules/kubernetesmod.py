@@ -1118,7 +1118,7 @@ def create_secret(
 
     # encode the secrets using base64 as required by kubernetes
     for key in data:
-        data[key] = base64.b64encode(data[key])
+        data[key] = __base64_str(data[key])
 
     body = kubernetes.client.V1Secret(
         metadata=__dict_to_object_meta(name, namespace, {}),
@@ -1355,7 +1355,7 @@ def replace_secret(name,
 
     # encode the secrets using base64 as required by kubernetes
     for key in data:
-        data[key] = base64.b64encode(data[key])
+        data[key] = __base64_str(data[key])
 
     body = kubernetes.client.V1Secret(
         metadata=__dict_to_object_meta(name, namespace, {}),
@@ -1593,3 +1593,13 @@ def __enforce_only_strings_dict(dictionary):
         ret[six.text_type(key)] = six.text_type(value)
 
     return ret
+
+
+def __base64_str(string):
+    '''
+    Converts a string of data into a base64 encoded string based on python version
+    '''
+    if sys.version_info >= (3, 0):
+        return str(base64.b64encode(string.encode('utf-8')), 'utf-8')
+    else:
+        return base64.b64encode(string)

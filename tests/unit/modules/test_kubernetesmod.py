@@ -16,6 +16,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     Mock,
     patch,
+    ANY,
 )
 
 import salt.utils.files
@@ -167,6 +168,22 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     create_namespaced_secret().to_dict.called)
                 # pylint: enable=E1120
 
+    def test_create_secret_base64_encodes_data(self):
+        '''
+        Tests that secret creation base64 encodes data.
+        :return:
+        '''
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
+                data_value = 'test string'
+                encoded_value = 'dGVzdCBzdHJpbmc='
+                mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
+                    **{"create_namespaced_secret.return_value.to_dict.return_value": {}}
+                )
+                self.assertEqual(kubernetes.create_secret("test", "default", {'test_key': data_value}, None,
+                                                          None, None), {})
+                mock_kubernetes_lib.client.V1Secret.assert_called_with(data={'test_key': encoded_value}, metadata=ANY)
+
     def test_replace_secret(self):
         '''
         Tests secret replacement.
@@ -184,6 +201,22 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     kubernetes.kubernetes.client.CoreV1Api().
                     replace_namespaced_secret().to_dict.called)
                 # pylint: enable=E1120
+
+    def test_replace_secret_base64_encodes_data(self):
+        '''
+        Tests that secret replacement base64 encodes data.
+        :return:
+        '''
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
+                data_value = 'test string'
+                encoded_value = 'dGVzdCBzdHJpbmc='
+                mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
+                    **{"replace_namespaced_secret.return_value.to_dict.return_value": {}}
+                )
+                self.assertEqual(kubernetes.replace_secret("test", {'test_key': data_value}, None,
+                                                          None, None, "default"), {})
+                mock_kubernetes_lib.client.V1Secret.assert_called_with(data={'test_key': encoded_value}, metadata=ANY)
 
     @staticmethod
     def settings(name, value=None):
