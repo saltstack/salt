@@ -31,7 +31,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests that when the _post_master_ini function is called, _metaproxy_call is also called.
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_jid_queue = [123]
         proxy_minion = salt.minion.ProxyMinion(mock_opts, jid_queue=copy.copy(mock_jid_queue), io_loop=tornado.ioloop.IOLoop())
         try:
@@ -44,7 +44,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests that when the _handle_decoded_payload function is called, _metaproxy_call is also called.
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]
@@ -61,7 +61,7 @@ class ProxyMinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests that when the _handle_payload function is called, _metaproxy_call is also called.
         '''
-        mock_opts = salt.config.DEFAULT_MINION_OPTS
+        mock_opts = salt.config.DEFAULT_MINION_OPTS.copy()
         mock_data = {'fun': 'foo.bar',
                      'jid': 123}
         mock_jid_queue = [123]

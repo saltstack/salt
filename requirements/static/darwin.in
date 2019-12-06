@@ -14,7 +14,9 @@ kubernetes<4.0
 mock>=3.0.5; python_version < '3.6'
 more-itertools==5.0.0
 moto
-pylxd>=2.2.5
+# XXX: Temporarily do not install pylxd.
+# pylxd(or likely ws4py) will cause the test suite to hang at the finish line under runtests.py
+# pylxd>=2.2.5
 pyopenssl
 python-etcd>0.4.2
 pyvmomi
