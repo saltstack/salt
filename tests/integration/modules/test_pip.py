@@ -14,9 +14,9 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.files
@@ -38,7 +38,7 @@ class PipModuleTest(ModuleCase):
 
         self.addCleanup(cleanup_environ, os.environ.copy())
 
-        self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
+        self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         # Remove the venv test directory
         self.addCleanup(shutil.rmtree, self.venv_test_dir, ignore_errors=True)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
@@ -68,7 +68,22 @@ class PipModuleTest(ModuleCase):
             if salt.utils.is_windows():
                 python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
             else:
-                python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+                python_binary_names = [
+                    'python{}.{}'.format(*sys.version_info),
+                    'python{}'.format(*sys.version_info),
+                    'python'
+                ]
+                for binary_name in python_binary_names:
+                    python = os.path.join(sys.real_prefix, 'bin', binary_name)
+                    if os.path.exists(python):
+                        break
+                else:
+                    self.fail(
+                        'Couldn\'t find a python binary name under \'{}\' matching: {}'.format(
+                            os.path.join(sys.real_prefix, 'bin'),
+                            python_binary_names
+                        )
+                    )
             # We're running off a virtualenv, and we don't want to create a virtualenv off of
             # a virtualenv
             kwargs = {'python': python}
