@@ -105,6 +105,19 @@ State Deprecations
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
 
+Fileserver Deprecations
+-----------------------
+
+- The hgfs fileserver had the following config options removed:
+
+    - The ``hgfs_env_whitelist`` config option has been removed in favor of ``hgfs_saltenv_whitelist``.
+    - The ``hgfs_env_blacklist`` config option has been removed in favor of ``hgfs_saltenv_blacklist``.
+
+- The svnfs fileserver had the following config options removed:
+
+    - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
+    - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
+
 Engine Removal
 --------------
 
