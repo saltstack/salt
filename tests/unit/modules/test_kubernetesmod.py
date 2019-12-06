@@ -149,6 +149,42 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
                     create_namespaced_deployment().to_dict.called)
                 # pylint: enable=E1120
 
+    def test_create_secret(self):
+        '''
+        Tests secret creation.
+        :return:
+        '''
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
+                mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
+                    **{"create_namespaced_secret.return_value.to_dict.return_value": {}}
+                )
+                self.assertEqual(kubernetes.create_secret("test", "default", {}, None,
+                                                          None, None), {})
+                # pylint: disable=E1120
+                self.assertTrue(
+                    kubernetes.kubernetes.client.CoreV1Api().
+                    create_namespaced_secret().to_dict.called)
+                # pylint: enable=E1120
+
+    def test_replace_secret(self):
+        '''
+        Tests secret replacement.
+        :return:
+        '''
+        with mock_kubernetes_library() as mock_kubernetes_lib:
+            with patch.dict(kubernetes.__salt__, {'config.option': Mock(side_effect=self.settings)}):
+                mock_kubernetes_lib.client.CoreV1Api.return_value = Mock(
+                    **{"replace_namespaced_secret.return_value.to_dict.return_value": {}}
+                )
+                self.assertEqual(kubernetes.replace_secret("test", {}, None,
+                                                          None, None, "default"), {})
+                # pylint: disable=E1120
+                self.assertTrue(
+                    kubernetes.kubernetes.client.CoreV1Api().
+                    replace_namespaced_secret().to_dict.called)
+                # pylint: enable=E1120
+
     @staticmethod
     def settings(name, value=None):
         '''
