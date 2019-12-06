@@ -1306,9 +1306,9 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                         'smbios.get': salt.modules.smbios.get}):
             with patch.object(core,
                               '_windows_virtual',
-                              return_value=MagicMock(return_value={'virtual': 'something'})) as _windows_virtual:
-                _windows_virtual.assert_called_once()
+                              return_value={'virtual': 'something'}) as _windows_virtual:
                 osdata_grains = core.os_data()
+                _windows_virtual.assert_called_once()
 
             self.assertIn('virtual', osdata_grains)
             self.assertNotEqual(osdata_grains['virtual'], 'physical')
