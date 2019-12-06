@@ -182,8 +182,8 @@ def __virtual__():
     # the boto_vpc execution module relies on the create_nat_gateway() method
     # which was added in boto3 1.2.6
     return salt.utils.versions.check_boto_reqs(
-        boto_ver='2.8.0',
-        boto3_ver='1.2.6'
+        boto_ver='2.49.0',
+        boto3_ver='1.10.34'
     )
 
 
