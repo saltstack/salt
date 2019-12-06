@@ -598,12 +598,12 @@ class SaltTestingParser(optparse.OptionParser):
 
         self.validate_options()
 
-        if self.support_destructive_tests_selection:
+        if self.support_destructive_tests_selection and not os.environ.get('DESTRUCTIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # destructive tests should be executed or not.
             os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
 
-        if self.support_expensive_tests_selection:
+        if self.support_expensive_tests_selection and not os.environ.get('EXPENSIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ['EXPENSIVE_TESTS'] = str(self.options.run_expensive)
