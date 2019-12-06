@@ -23,6 +23,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.helpers import patched_environ
 
 # Import salt libs
 import salt.fileserver.gitfs as gitfs
@@ -405,26 +406,18 @@ class GitFSTestBase(object):
 
         repo = git.Repo.init(cls.tmp_repo_dir)
 
-        username_key = str('USERNAME')
-        orig_username = os.environ.get(username_key)
-        environ_copy = os.environ.copy()
         try:
-            if username_key not in os.environ:
+            if salt.utils.platform.is_windows():
+                username = salt.utils.win_functions.get_current_user()
+            else:
+                username = pwd.getpwuid(os.geteuid()).pw_name
+        except AttributeError:
+            log.error(
+                'Unable to get effective username, falling back to \'root\'.'
+            )
+            username = str('root')
 
-                try:
-                    if salt.utils.platform.is_windows():
-                        os.environ[username_key] = \
-                            salt.utils.win_functions.get_current_user()
-                    else:
-                        os.environ[username_key] = \
-                            pwd.getpwuid(os.geteuid()).pw_name
-                except AttributeError:
-                    log.error(
-                        'Unable to get effective username, falling back to '
-                        '\'root\'.'
-                    )
-                    os.environ[username_key] = str('root')
-
+        with patched_environ(USERNAME=username):
             repo.index.add([x for x in os.listdir(cls.tmp_repo_dir)
                             if x != '.git'])
             repo.index.commit('Test')
@@ -437,9 +430,6 @@ class GitFSTestBase(object):
             # Older GitPython versions do not have a close method.
             if hasattr(repo, 'close'):
                 repo.close()
-        finally:
-            os.environ.clear()
-            os.environ.update(environ_copy)
 
     @classmethod
     def tearDownClass(cls):
