@@ -133,7 +133,7 @@ def _compare_policies(new_policy, current_policy):
     otherwise ``False``
     '''
     # Compared dicts, lists, and strings
-    if isinstance(new_policy, six.string_types):
+    if isinstance(new_policy, (six.string_types, six.integer_types)):
         return new_policy == current_policy
     elif isinstance(new_policy, list):
         if isinstance(current_policy, list):
@@ -147,8 +147,6 @@ def _compare_policies(new_policy, current_policy):
                                                  current_policy) == {}
         else:
             return False
-
-
 def set_(name,
          setting=None,
          policy_class=None,
@@ -191,20 +189,21 @@ def set_(name,
            'comment': ''}
     policy_classes = ['machine', 'computer', 'user', 'both']
     if not setting and not computer_policy and not user_policy:
-        msg = 'At least one of the parameters setting, computer_policy, or user_policy'
-        msg = msg + ' must be specified.'
+        msg = 'At least one of the parameters setting, computer_policy, or ' \
+              'user_policy must be specified.'
         ret['result'] = False
         ret['comment'] = msg
         return ret
     if setting and not policy_class:
-        msg = 'A single policy setting was specified but the policy_class was not specified.'
+        msg = 'A single policy setting was specified but the policy_class ' \
+              'was not specified.'
         ret['result'] = False
         ret['comment'] = msg
         return ret
     if setting and (computer_policy or user_policy):
-        msg = 'The setting and computer_policy/user_policy parameters are mutually exclusive.  Please'
-        msg = msg + ' specify either a policy name and setting or a computer_policy and/or user_policy'
-        msg = msg + ' dict'
+        msg = 'The setting and computer_policy/user_policy parameters are ' \
+              'mutually exclusive.  Please specify either a policy name and ' \
+              'setting or a computer_policy and/or user_policy dict'
         ret['result'] = False
         ret['comment'] = msg
         return ret
@@ -295,8 +294,8 @@ def set_(name,
                             break
                 if currently_set:
                     # compare
-                    log.debug('need to compare %s from '
-                              'current/requested policy', policy_name)
+                    log.debug('need to compare %s from current/requested '
+                              'policy', policy_name)
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower()
                     current_policy_json = salt.utils.json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()
