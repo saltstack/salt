@@ -18,8 +18,8 @@ from the REST call.  In the above example, assuming the REST call does not retur
 any additional ACLs, this will authenticate Fred via a REST call and allow him to
 run any execution module and all runners.
 
-The REST call should return a JSON object that maps to a regular eauth YAML structure
-as above.
+The REST call should return a JSON array that maps to a regular eauth YAML
+structure of a user as above.
 
 """
 
