@@ -150,6 +150,22 @@ Module Deprecations
 - The nacl module has deprecated the `keyfile` and `key` arguments. Please use the
   `sk_file` argument instead of `keyfile` and use `sk` instead of `key`.
 
+- The :py:mod:`nacl <salt.modules.nacl>` module has been
+  changed as follows:
+
+    - Support for the ``keyfile`` kwarg has been removed from the
+      following functions. In all cases use ``sk_file`` instead:
+
+        - :py:func:`nacl.keygen <salt.modules.nacl.keygen>`
+        - :py:func:`nacl.enc <salt.modules.nacl.enc>`
+        - :py:func:`nacl.dec <salt.modules.nacl.dec>`
+
+    - Support for the ``key`` kwarg has been removed from the
+      following functions. In all cases use ``sk`` instead:
+
+        - :py:func:`nacl.enc <salt.modules.nacl.enc>`
+        - :py:func:`nacl.dec <salt.modules.nacl.dec>`
+
 State Deprecations
 ------------------
 
