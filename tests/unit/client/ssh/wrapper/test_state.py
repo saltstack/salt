@@ -2,6 +2,7 @@
 '''
     :codeauthor: :email:`saltybob <bbaker@saltstack.com`
 '''
+from __future__ import absolute_import
 
 # Import python libs
 
