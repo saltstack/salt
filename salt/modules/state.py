@@ -1645,6 +1645,9 @@ def show_states(queue=False, **kwargs):
             raise Exception(result)
 
         for s in result:
+            if not isinstance(s, dict):
+                _set_retcode(result)
+                return result
             states[s['__sls__']] = True
     finally:
         st_.pop_active()
