@@ -839,7 +839,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'RemoteRegistryExactPaths': {
@@ -855,7 +856,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'RemoteRegistryPaths': {
@@ -870,7 +872,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'RestrictNullSessAccess': {
@@ -899,7 +902,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'ForceGuest': {
@@ -4108,7 +4112,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'DCAllowedNTLMServers': {
@@ -4122,7 +4127,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'AuditReceivingNTLMTraffic': {
@@ -4309,7 +4315,8 @@ class _policy_info(object):
                             'Type': 'REG_MULTI_SZ'
                         },
                         'Transform': {
-                            'Put': '_multi_string_put_transform'
+                            'Put': '_multi_string_put_transform',
+                            'Get': '_multi_string_get_transform'
                         }
                     },
                     'AuthenticodeEnabled': {
@@ -4713,7 +4720,7 @@ class _policy_info(object):
     @classmethod
     def _multi_string_put_transform(cls, item, **kwargs):
         '''
-        transform for a REG_MULTI_SZ to properly handle "Not Defined"
+        transform for setting REG_MULTI_SZ to properly handle "Not Defined"
         '''
         if isinstance(item, list):
             return item
@@ -4726,9 +4733,21 @@ class _policy_info(object):
             return 'Invalid Value'
 
     @classmethod
+    def _multi_string_get_transform(cls, item, **kwargs):
+        '''
+        transform for getting REG_MULTI_SZ to properly handle `None`
+        '''
+        if isinstance(item, list):
+            return item
+        elif item is None:
+            return 'Not Defined'
+        else:
+            return 'Invalid Value'
+
+    @classmethod
     def _string_put_transform(cls, item, **kwargs):
         '''
-        transfrom for a REG_SZ to properly handle "Not Defined"
+        transform for a REG_SZ to properly handle "Not Defined"
         '''
         if isinstance(item, six.string_types):
             if item.lower() == 'not defined':
