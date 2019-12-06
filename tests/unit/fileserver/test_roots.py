@@ -10,11 +10,10 @@ import os
 import tempfile
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixin
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import BASE_FILES, TMP, TMP_STATE_TREE
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.fileserver.roots as roots
@@ -36,10 +35,10 @@ UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.opts = self.get_temp_config('master')
         self.opts['cachedir'] = self.tmp_cachedir
-        empty_dir = os.path.join(TMP_STATE_TREE, 'empty_dir')
+        empty_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
             os.makedirs(empty_dir)
         return {roots: {'__opts__': self.opts}}
@@ -50,7 +49,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         Create special file_roots for symlink test on Windows
         '''
         if salt.utils.platform.is_windows():
-            root_dir = tempfile.mkdtemp(dir=TMP)
+            root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
             source_sym = os.path.join(root_dir, 'source_sym')
             with salt.utils.files.fopen(source_sym, 'w') as fp_:
                 fp_.write('hello world!\n')
@@ -63,8 +62,8 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             cls.test_symlink_list_file_roots = {'base': [root_dir]}
         else:
             cls.test_symlink_list_file_roots = None
-        cls.tmp_dir = tempfile.mkdtemp(dir=TMP)
-        full_path_to_file = os.path.join(BASE_FILES, 'testfile')
+        cls.tmp_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
         with salt.utils.files.fopen(full_path_to_file, 'rb') as s_fp:
             with salt.utils.files.fopen(os.path.join(cls.tmp_dir, 'testfile'), 'wb') as d_fp:
                 for line in s_fp:
@@ -94,7 +93,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         ret = roots.find_file('testfile')
         self.assertEqual('testfile', ret['rel'])
 
-        full_path_to_file = os.path.join(BASE_FILES, 'testfile')
+        full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
         self.assertEqual(full_path_to_file, ret['path'])
 
     def test_serve_file(self):
@@ -108,7 +107,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             ret = roots.serve_file(load, fnd)
 
             with salt.utils.files.fopen(
-                    os.path.join(BASE_FILES, 'testfile'), 'rb') as fp_:
+                    os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
                 data = fp_.read()
 
             self.assertDictEqual(
@@ -138,7 +137,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         # Hashes are different in Windows. May be how git translates line
         # endings
         with salt.utils.files.fopen(
-                os.path.join(BASE_FILES, 'testfile'), 'rb') as fp_:
+                os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
             hsum = salt.utils.hashutils.sha256_digest(fp_.read())
 
         self.assertDictEqual(
@@ -181,7 +180,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 self.opts['file_roots'] = orig_file_roots
 
     def test_dynamic_file_roots(self):
-        dyn_root_dir = tempfile.mkdtemp(dir=TMP)
+        dyn_root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         top_sls = os.path.join(dyn_root_dir, 'top.sls')
         with salt.utils.files.fopen(top_sls, 'w') as fp_:
             fp_.write("{{saltenv}}:\n  '*':\n    - dynamo\n")

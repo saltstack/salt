@@ -19,13 +19,13 @@ import salt.utils.versions
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.paths import TESTS_DIR
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     from moto import mock_route53_deprecated
     HAS_MOTO = True
 except ImportError:
@@ -76,7 +76,7 @@ class BotoRoute53TestCase(TestCase, LoaderModuleMockMixin):
     TestCase for salt.modules.boto_route53 module
     '''
     def setup_loader_modules(self):
-        self.opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         self.opts['route53.keyid'] = 'GKTADJGHEIQSXMKKRBJ08H'
         self.opts['route53.key'] = 'askdjghsdfjkghWupUjasdflkdfklgjsdfjajkghs'
         utils = salt.loader.utils(self.opts)
