@@ -11,7 +11,6 @@ from __future__ import absolute_import, unicode_literals
 import os
 import sys
 import logging
-import textwrap
 
 # Import Pytest Salt libs
 from pytestsalt.utils import cli_scripts
@@ -26,17 +25,6 @@ def get_script_path(bin_dir, script_name):
     # Late import
     from tests.support.runtests import RUNTIME_VARS
 
-    extra_code = textwrap.dedent(
-        r'''
-        # During test runs, squash the msgpack deprecation warnings
-        import salt
-        import warnings
-        warnings.filterwarnings(
-            'ignore', r'encoding is deprecated, Use raw=False instead\.', DeprecationWarning,
-        )
-        '''
-    )
-
     if not os.path.isdir(bin_dir):
         os.makedirs(bin_dir)
 
@@ -49,7 +37,6 @@ def get_script_path(bin_dir, script_name):
             script_name=script_name,
             executable=sys.executable,
             code_dir=RUNTIME_VARS.CODE_DIR,
-            extra_code=extra_code,
             inject_sitecustomize=True
         )
     log.info('Returning script path %r', script_path)
