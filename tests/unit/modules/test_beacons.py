@@ -85,7 +85,8 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         Test saving beacons.
         '''
         comm1 = 'Beacons saved to {0}beacons.conf.'.format(RUNTIME_VARS.TMP + os.sep)
-        with patch.dict(beacons.__opts__, {'config_dir': '', 'beacons': {},
+        with patch.dict(beacons.__opts__, {'conf_file': os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'foo'),
+                                           'beacons': {},
                                            'default_include': RUNTIME_VARS.TMP + os.sep,
                                            'sock_dir': self.sock_dir}):
 

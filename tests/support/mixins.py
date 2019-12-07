@@ -116,7 +116,6 @@ class AdaptedConfigurationTestCaseMixin(object):
                    root_dir=rdict['root_dir'],
                    )
 
-        rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)
         with salt.utils.files.fopen(rdict['conf_file'], 'w') as wfh:
             salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
