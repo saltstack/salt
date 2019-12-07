@@ -1,54 +1,6 @@
-@Library('salt@1.1') _
+@Library('salt@master-1.5') _
 
-// Define the maximum time, in hours, that a test run should run for
-def global_timeout = 2
-def salt_target_branch = 'master'
-
-properties([
-    buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '10')),
-])
-
-// Be sure to cancel any previously running builds
-def buildNumber = env.BUILD_NUMBER as int
-if (buildNumber > 1) {
-    // This will cancel the previous build which also defined a matching milestone
-    milestone(buildNumber - 1)
-}
-// Define a milestone for this build so that, if another build starts, this one will be aborted
-milestone(buildNumber)
-
-def shell_header
-
-wrappedNode('docs', global_timeout, '#jenkins-prod-pr') {
-
-    shell_header = ''
-    // Checkout the repo
-    stage('checkout-scm') {
-        cleanWs notFailBuild: true
-        checkout scm
-    }
-
-    // Setup the kitchen required bundle
-    stage('Setup') {
-        sh shell_header + '''
-        eval "$(pyenv init -)"
-        pyenv --version
-        pyenv install --skip-existing 3.6.8
-        pyenv shell 3.6.8
-        python --version
-        pip install -U nox-py2
-        nox --version
-        '''
-    }
-
-    stage('Build') {
-        sh shell_header + '''
-        eval "$(pyenv init -)"
-        pyenv shell 3.6.8
-        nox -e docs
-        '''
-        archiveArtifacts artifacts: 'doc/doc-archive.tar.gz'
-    }
-}
+runDocs(
+    env: env)
 
 // vim: ft=groovy

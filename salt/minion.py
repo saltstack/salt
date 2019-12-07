@@ -457,7 +457,7 @@ class MinionBase(object):
 #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
-        self.executors = salt.loader.executors(self.opts, self.functions)
+        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -1525,7 +1525,9 @@ class Minion(MinionBase):
                 instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
                 process = SignalHandlingProcess(
-                    target=self._target, args=(instance, self.opts, data, self.connected)
+                    target=self._target,
+                    name='ProcessPayload',
+                    args=(instance, self.opts, data, self.connected)
                 )
         else:
             process = threading.Thread(
@@ -2186,6 +2188,8 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
+        self.module_refresh(force_refresh)
+
         if self.connected:
             log.debug('Refreshing pillar')
             async_pillar = salt.pillar.get_async_pillar(
@@ -2203,7 +2207,6 @@ class Minion(MinionBase):
                           'One or more masters may be down!')
             finally:
                 async_pillar.destroy()
-        self.module_refresh(force_refresh)
         self.matchers_refresh()
         self.beacons_refresh()
         evt = salt.utils.event.get_event('minion', opts=self.opts)

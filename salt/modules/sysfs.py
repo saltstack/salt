@@ -159,7 +159,7 @@ def target(key, full=True):
     key = os.path.realpath(key)
 
     if not os.path.exists(key):
-        log.debug('Unkown SysFS key %s', key)
+        log.debug('Unknown SysFS key %s', key)
         return False
     elif full:
         return key
