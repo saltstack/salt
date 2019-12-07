@@ -4,11 +4,15 @@
 from __future__ import absolute_import
 import os
 import copy
+import shutil
 import hashlib
 
 # Import Salt Testing Libs
-from tests.integration import AdaptedConfigurationTestCaseMixin
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import TestCase, skipIf
+from tests.support.helpers import patched_environ
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.events import eventpublisher_process
 
 # Import Salt libs
 import salt.auth
@@ -16,7 +20,6 @@ import salt.utils.event
 import salt.utils.json
 import salt.utils.yaml
 from salt.ext.six.moves import map, range  # pylint: disable=import-error
-from tests.unit.utils.test_event import eventpublisher_process, SOCK_DIR  # pylint: disable=import-error
 try:
     HAS_TORNADO = True
 except ImportError:
@@ -94,15 +97,12 @@ class SaltnadoTestCase(TestCase, AdaptedConfigurationTestCaseMixin, AsyncHTTPTes
 
     def setUp(self):
         super(SaltnadoTestCase, self).setUp()
-        self.async_timeout_prev = os.environ.pop('ASYNC_TEST_TIMEOUT', None)
-        os.environ['ASYNC_TEST_TIMEOUT'] = str(30)
+        self.patched_environ = patched_environ(ASYNC_TEST_TIMEOUT='30')
+        self.patched_environ.__enter__()
+        self.addCleanup(self.patched_environ.__exit__)
 
     def tearDown(self):
         super(SaltnadoTestCase, self).tearDown()
-        if self.async_timeout_prev is None:
-            os.environ.pop('ASYNC_TEST_TIMEOUT', None)
-        else:
-            os.environ['ASYNC_TEST_TIMEOUT'] = self.async_timeout_prev
         if hasattr(self, 'http_server'):
             del self.http_server
         if hasattr(self, 'io_loop'):
@@ -805,18 +805,20 @@ class TestSaltnadoUtils(AsyncTestCase):
 @skipIf(not HAS_TORNADO, 'The tornado package needs to be installed')
 class TestEventListener(AsyncTestCase):
     def setUp(self):
-        if not os.path.exists(SOCK_DIR):
-            os.makedirs(SOCK_DIR)
+        self.sock_dir = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
+        if not os.path.exists(self.sock_dir):
+            os.makedirs(self.sock_dir)
+        self.addCleanup(shutil.rmtree, self.sock_dir, ignore_errors=True)
         super(TestEventListener, self).setUp()
 
     def test_simple(self):
         '''
         Test getting a few events
         '''
-        with eventpublisher_process():
-            me = salt.utils.event.MasterEvent(SOCK_DIR)
+        with eventpublisher_process(self.sock_dir):
+            me = salt.utils.event.MasterEvent(self.sock_dir)
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
+                                                    {'sock_dir': self.sock_dir,
                                                      'transport': 'zeromq'})
             self._finished = False  # fit to event_listener's behavior
             event_future = event_listener.get_event(self, 'evt1', callback=self.stop)  # get an event future
@@ -833,10 +835,10 @@ class TestEventListener(AsyncTestCase):
         '''
         Test subscribing events using set_event_handler
         '''
-        with eventpublisher_process():
-            me = salt.utils.event.MasterEvent(SOCK_DIR)
+        with eventpublisher_process(self.sock_dir):
+            me = salt.utils.event.MasterEvent(self.sock_dir)
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
+                                                    {'sock_dir': self.sock_dir,
                                                      'transport': 'zeromq'})
             self._finished = False  # fit to event_listener's behavior
             event_future = event_listener.get_event(self,
@@ -854,9 +856,9 @@ class TestEventListener(AsyncTestCase):
         '''
         Make sure timeouts work correctly
         '''
-        with eventpublisher_process():
+        with eventpublisher_process(self.sock_dir):
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
+                                                    {'sock_dir': self.sock_dir,
                                                      'transport': 'zeromq'})
             self._finished = False  # fit to event_listener's behavior
             event_future = event_listener.get_event(self,
@@ -900,10 +902,10 @@ class TestEventListener(AsyncTestCase):
             if cnt[0] == 2:
                 self.stop()
 
-        with eventpublisher_process():
-            me = salt.utils.event.MasterEvent(SOCK_DIR)
+        with eventpublisher_process(self.sock_dir):
+            me = salt.utils.event.MasterEvent(self.sock_dir)
             event_listener = saltnado.EventListener({},  # we don't use mod_opts, don't save?
-                                                    {'sock_dir': SOCK_DIR,
+                                                    {'sock_dir': self.sock_dir,
                                                      'transport': 'zeromq'})
 
             self.assertEqual(0, len(event_listener.tag_map))

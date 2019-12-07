@@ -680,7 +680,8 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     #   virtual_subtype
-    grains = {'virtual': 'physical'}
+
+    grains = {'virtual': osdata.get('virtual', 'physical')}
 
     # Skip the below loop on platforms which have none of the desired cmds
     # This is a temporary measure until we can write proper virtual hardware
@@ -2401,6 +2402,13 @@ def get_machine_id():
     else:
         with salt.utils.files.fopen(existing_locations[0]) as machineid:
             return {'machine_id': machineid.read().strip()}
+
+
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
 
 
 def path():
