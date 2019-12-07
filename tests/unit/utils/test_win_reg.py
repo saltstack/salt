@@ -179,6 +179,40 @@ class WinFunctionsTestCase(TestCase):
         )
 
     @destructiveTest
+    def test_read_value_multi_sz_empty_list(self):
+        '''
+        An empty REG_MULTI_SZ value should return an empty list, not None
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='empty_list',
+                    vdata=[],
+                    vtype='REG_MULTI_SZ'
+                )
+            )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': [],
+                'vname': 'empty_list',
+                'vtype': 'REG_MULTI_SZ'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='empty_list',
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    @destructiveTest
     def test_set_value(self):
         '''
         Test the set_value function
