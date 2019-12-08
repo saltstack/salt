@@ -18,6 +18,7 @@ import functools
 import threading
 import traceback
 import types
+import weakref
 from zipimport import zipimporter
 
 # Import salt libs
@@ -256,7 +257,7 @@ def minion_mods(
         static_modules=static_modules,
     )
 
-    ret.pack['__salt__'] = ret
+    ret.pack['__salt__'] = weakref.proxy(ret, lambda x: ret.pop('__salt__', None))
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -361,7 +362,7 @@ def proxy(opts, functions=None, returners=None, whitelist=None, utils=None):
         pack={'__salt__': functions, '__ret__': returners, '__utils__': utils},
     )
 
-    ret.pack['__proxy__'] = ret
+    ret.pack['__proxy__'] = weakref.proxy(ret, lambda x: ret.pop('__proxy__', None))
 
     return ret
 
@@ -402,7 +403,7 @@ def pillars(opts, functions, context=None):
                      pack={'__salt__': functions,
                            '__context__': context,
                            '__utils__': utils(opts)})
-    ret.pack['__ext_pillar__'] = ret
+    ret.pack['__ext_pillar__'] = weakref.proxy(ret, lambda x: ret.pop('__ext_pillar__', None))
     return FilterDictWrapper(ret, '.ext_pillar')
 
 
@@ -451,7 +452,7 @@ def outputters(opts):
     )
     wrapped_ret = FilterDictWrapper(ret, '.output')
     # TODO: this name seems terrible... __salt__ should always be execution mods
-    ret.pack['__salt__'] = wrapped_ret
+    ret.pack['__salt__'] = weakref.proxy(wrapped_ret, lambda x: ret.pop('__salt__', None))
     return wrapped_ret
 
 
@@ -533,7 +534,7 @@ def thorium(opts, functions, runners):
             opts,
             tag='thorium',
             pack=pack)
-    ret.pack['__thorium__'] = ret
+    ret.pack['__thorium__'] = weakref.proxy(ret, lambda x: ret.pop('__thorium__', None))
     return ret
 
 
@@ -563,7 +564,7 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None, cont
         pack={'__salt__': functions, '__proxy__': proxy or {}},
         whitelist=whitelist,
     )
-    ret.pack['__states__'] = ret
+    ret.pack['__states__'] = weakref.proxy(ret, lambda x: ret.pop('__states__', None))
     ret.pack['__utils__'] = utils
     ret.pack['__serializers__'] = serializers
     ret.pack['__context__'] = context
@@ -936,7 +937,7 @@ def runner(opts, utils=None, context=None, whitelist=None):
         whitelist=whitelist,
     )
     # TODO: change from __salt__ to something else, we overload __salt__ too much
-    ret.pack['__salt__'] = ret
+    ret.pack['__salt__'] = weakref.proxy(ret, lambda x: ret.pop('__salt__', None))
     return ret
 
 
@@ -1054,7 +1055,7 @@ def executors(opts, functions=None, context=None, proxy=None):
         tag='executor',
         pack={'__salt__': functions, '__context__': context or {}, '__proxy__': proxy or {}},
     )
-    executors.pack['__executors__'] = executors
+    executors.pack['__executors__'] = weakref.proxy(executors, lambda x: executors.pop('__executors__', None))
     return executors
 
 
