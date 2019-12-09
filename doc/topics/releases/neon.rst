@@ -167,6 +167,11 @@ Fileserver Deprecations
     - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
     - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
 
+Cloud Deprecations
+------------------
+
+- The nova cloud driver has been removed in favor of the openstack cloud driver.
+
 Engine Removal
 --------------
 
