@@ -12,9 +12,9 @@ import uuid
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
-import tests.integration as integration
 import salt.config
 import salt.state
 import salt.utils.files
@@ -270,7 +270,7 @@ class RendererMixin(object):
     def setUp(self, *args, **kwargs):
         super(RendererMixin, self).setUp(*args, **kwargs)
 
-        self.root_dir = tempfile.mkdtemp('pyobjects_test_root', dir=integration.TMP)
+        self.root_dir = tempfile.mkdtemp('pyobjects_test_root', dir=RUNTIME_VARS.TMP)
         self.state_tree_dir = os.path.join(self.root_dir, 'state_tree')
         self.cache_dir = os.path.join(self.root_dir, 'cachedir')
         if not os.path.isdir(self.root_dir):
