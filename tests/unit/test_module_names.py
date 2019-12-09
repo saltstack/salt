@@ -15,7 +15,8 @@ import salt.utils.stringutils
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
-from tests.support.paths import CODE_DIR, list_test_mods
+from tests.support.paths import list_test_mods
+from tests.support.runtests import RUNTIME_VARS
 
 EXCLUDED_DIRS = [
     os.path.join('tests', 'pkg'),
@@ -70,10 +71,10 @@ class BadTestModuleNamesTestCase(TestCase):
         Make sure all test modules conform to the test_*.py naming scheme
         '''
         excluded_dirs, included_dirs = tuple(EXCLUDED_DIRS), tuple(INCLUDED_DIRS)
-        tests_dir = os.path.join(CODE_DIR, 'tests')
+        tests_dir = os.path.join(RUNTIME_VARS.CODE_DIR, 'tests')
         bad_names = []
         for root, _, files in salt.utils.path.os_walk(tests_dir):
-            reldir = os.path.relpath(root, CODE_DIR)
+            reldir = os.path.relpath(root, RUNTIME_VARS.CODE_DIR)
             if (reldir.startswith(excluded_dirs) and not self._match_dirs(reldir, included_dirs)) \
                     or reldir.endswith('__pycache__'):
                 continue
@@ -228,7 +229,7 @@ class BadTestModuleNamesTestCase(TestCase):
                 '.'.join((flower[5:], 'py')))
 
             # The full path to the file we expect to find
-            abspath = salt.utils.path.join(CODE_DIR, relpath)
+            abspath = salt.utils.path.join(RUNTIME_VARS.CODE_DIR, relpath)
 
             if not os.path.isfile(abspath):
                 # Maybe this is in a dunder init?
