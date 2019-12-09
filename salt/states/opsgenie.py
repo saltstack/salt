@@ -75,7 +75,7 @@ def create_alert(name=None, api_key=None, reason=None, action_type="Create"):
     ret = {
         'result': '',
         'name': '',
-        'changes': '',
+        'changes': {},
         'comment': ''
     }
 
