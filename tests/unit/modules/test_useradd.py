@@ -415,14 +415,15 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
-            mock = MagicMock(side_effect=[{'name': ''}, False,
+            mock = MagicMock(side_effect=[False, {'name': ''},
                                           {'name': 'salt'}])
             with patch.object(useradd, 'info', mock):
                 self.assertTrue(useradd.rename('name', 'salt'))
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
-            mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
+            mock = MagicMock(side_effect=[False, {'name': ''},
+                                          {'name': ''}])
             with patch.object(useradd, 'info', mock):
                 self.assertFalse(useradd.rename('salt', 'salt'))
 
