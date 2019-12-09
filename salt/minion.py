@@ -2188,6 +2188,8 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
+        self.module_refresh(force_refresh)
+
         if self.connected:
             log.debug('Refreshing pillar')
             async_pillar = salt.pillar.get_async_pillar(
@@ -2205,7 +2207,6 @@ class Minion(MinionBase):
                           'One or more masters may be down!')
             finally:
                 async_pillar.destroy()
-        self.module_refresh(force_refresh)
         self.matchers_refresh()
         self.beacons_refresh()
         evt = salt.utils.event.get_event('minion', opts=self.opts)

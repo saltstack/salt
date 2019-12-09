@@ -90,7 +90,26 @@ LOWPKG_INFO = {
         'name': 'wget',
         'section': 'web',
         'source': 'wget',
-        'version': '1.15-1ubuntu1.14.04.2'
+        'version': '1.15-1ubuntu1.14.04.2',
+        'status': 'ii',
+    },
+    'apache2': {
+        'architecture': 'amd64',
+        'description': """Apache HTTP Server
+ The Apache HTTP Server Project's goal is to build a secure, efficient and
+ extensible HTTP server as standards-compliant open source software. The
+ result has long been the number one web server on the Internet.
+ .
+ Installing this package results in a full installation, including the
+ configuration files, init scripts and support scripts.""",
+        'homepage': 'http://httpd.apache.org/',
+        'install_date': '2016-08-30T22:20:15Z',
+        'maintainer': 'Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>',
+        'name': 'apache2',
+        'section': 'httpd',
+        'source': 'apache2',
+        'version': '2.4.18-2ubuntu3.9',
+        'status': 'rc',
     }
 }
 
@@ -244,14 +263,16 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             'url': 'homepage'
         }
 
-        installed = copy.deepcopy(LOWPKG_INFO)
+        installed = copy.deepcopy({'wget': LOWPKG_INFO['wget']})
         for name in names:
             if installed['wget'].get(names[name], False):
                 installed['wget'][name] = installed['wget'].pop(names[name])
 
         mock = MagicMock(return_value=LOWPKG_INFO)
         with patch.dict(aptpkg.__salt__, {'lowpkg.info': mock}):
+            del installed['wget']['status']
             self.assertEqual(aptpkg.info_installed('wget'), installed)
+            self.assertEqual(len(aptpkg.info_installed()), 1)
 
     def test_owner(self):
         '''
@@ -347,6 +368,39 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
                 with patch.multiple(aptpkg, **patch_kwargs):
                     self.assertEqual(aptpkg.upgrade(), dict())
+
+    def test_upgrade_downloadonly(self):
+        '''
+        Tests the download-only options for upgrade.
+        '''
+        with patch('salt.utils.pkg.clear_rtag', MagicMock()):
+            with patch('salt.modules.aptpkg.list_pkgs',
+                       MagicMock(return_value=UNINSTALL)):
+                mock_cmd = MagicMock(return_value={
+                    'retcode': 0,
+                    'stdout': UPGRADE
+                })
+                patch_kwargs = {
+                    '__salt__': {
+                        'config.get': MagicMock(return_value=True),
+                        'cmd.run_all': mock_cmd
+                    },
+                }
+                with patch.multiple(aptpkg, **patch_kwargs):
+                    aptpkg.upgrade()
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # Here we shouldn't see the parameter and args_matching should be empty.
+                    self.assertFalse(any(args_matching))
+
+                    aptpkg.upgrade(downloadonly=True)
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # --download-only should be in the args list and we should have at least on True in the list.
+                    self.assertTrue(any(args_matching))
+
+                    aptpkg.upgrade(download_only=True)
+                    args_matching = [True for args in patch_kwargs['__salt__']['cmd.run_all'].call_args[0] if "--download-only" in args]
+                    # --download-only should be in the args list and we should have at least on True in the list.
+                    self.assertTrue(any(args_matching))
 
     def test_show(self):
         '''

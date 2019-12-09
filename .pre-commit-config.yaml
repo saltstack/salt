@@ -272,7 +272,7 @@ repos:
       - id: nox-py2
         alias: lint-salt
         name: Lint Salt
-        files: ^((setup|noxfile)|salt/\.*)\.py$
+        files: ^((setup|noxfile)|salt/.*)\.py$
         args:
           - -e
           - lint-salt
@@ -284,8 +284,8 @@ repos:
       - id: nox-py2
         alias: lint-tests
         name: Lint Tests
-        files: ^tests/\.*\.py$
+        files: ^tests/.*\.py$
         args:
           - -e
-          - lint-salt
+          - lint-tests
           - --
