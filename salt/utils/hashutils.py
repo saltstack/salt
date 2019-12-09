@@ -77,13 +77,13 @@ def base64_decodestring(instr):
     '''
     bvalue = salt.utils.stringutils.to_bytes(instr)
 
-    # Handles PY2
-    if six.PY2:
+    if six.PY3:
+        # Handle PY3
+        decoded = base64.decodebytes(bvalue)
+    else:
+        # Handle PY2
         decoded = base64.decodestring(bvalue)
 
-    # Handles PY3
-    if six.PY3:
-        decoded = base64.decodebytes(bvalue)
     try:
         return salt.utils.stringutils.to_unicode(
             decoded,
