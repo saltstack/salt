@@ -147,6 +147,10 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The cmd state module has removed the ``quiet`` kwarg from the
+  :py:func:`cmd.run <salt.modules.cmdmod.run>` function. Please
+  set ``output_loglevel`` to ``quiet`` instead.
+
 State Deprecations
 ------------------
 
