@@ -133,12 +133,12 @@ def request(
     conn.request_cert(request, zone)
 
     #TODO: add timeout parameter here
-    t = time.time() + 300
-    while time.time() < t:
+    timeout_seconds = 300
+    timeout = time.time() + timeout_seconds
+    cert = None
+    while cert is None and time.time() < timeout:
         cert = conn.retrieve_cert(request)
-        if cert:
-            break
-        else:
+        if cert is None:
             time.sleep(5)
 
     if csr_path is None:
