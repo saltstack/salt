@@ -370,7 +370,7 @@ def save(**kwargs):
     beacons = list_(return_yaml=False, include_pillar=False, **kwargs)
 
     # move this file into an configurable opt
-    sfn = os.path.join(__opts__['config_dir'],
+    sfn = os.path.join(os.path.dirname(__opts__['conf_file']),
                        os.path.dirname(__opts__['default_include']),
                        'beacons.conf')
     if beacons:
