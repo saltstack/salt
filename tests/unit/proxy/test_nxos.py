@@ -35,6 +35,8 @@ from tests.unit.modules.nxos.nxos_show_cmd_output import (
 from tests.unit.modules.nxos.nxos_grains import (
     n9k_grains)
 
+from salt.exceptions import CommandExecutionError
+
 import salt.proxy.nxos as nxos_proxy
 
 
@@ -213,6 +215,73 @@ class NxosNxapiProxyTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertEqual(result[0], ['feature bgp', 'router bgp 65535'])
                 self.assertEqual(result[1], [{}])
 
+    def test__init_nxapi(self):
+
+        """ UT: nxos module:_init_nxapi method - successful connectinon """
+
+        opts = nxos_proxy.__opts__
+
+        with patch.dict(nxos_proxy.__utils__, {'nxos.nxapi_request': MagicMock(return_value='data')}):
+
+            result = nxos_proxy._init_nxapi(opts)
+
+            self.assertTrue(nxos_proxy.DEVICE_DETAILS['initialized'])
+            self.assertTrue(nxos_proxy.DEVICE_DETAILS['up'])
+            self.assertTrue(nxos_proxy.DEVICE_DETAILS['no_save_config'])
+            self.assertTrue(result)
+
+    def test__initialized_nxapi(self):
+
+        """ UT: nxos module:_initialized_nxapi method """
+        nxos_proxy.DEVICE_DETAILS['initialized'] = True
+        result = nxos_proxy._initialized_nxapi()
+        self.assertTrue(result)
+
+        del nxos_proxy.DEVICE_DETAILS['initialized']
+        result = nxos_proxy._initialized_nxapi()
+        self.assertFalse(result)
+
+    def test__ping_nxapi(self):
+
+        """ UT: nxos module:_ping_nxapi method """
+        nxos_proxy.DEVICE_DETAILS['up'] = True
+        result = nxos_proxy._ping_nxapi()
+        self.assertTrue(result)
+
+        del nxos_proxy.DEVICE_DETAILS['up']
+        result = nxos_proxy._ping_nxapi()
+        self.assertFalse(result)
+
+    def test__shutdown_nxapi(self):
+
+        """ UT: nxos module:_shutdown_nxapi method """
+
+        opts = {'id': 'value'}
+        nxos_proxy._shutdown_nxapi(opts)
+
+    def test__nxapi_request_ssh_return(self):
+
+        """ UT: nxos module:_nxapi_request method - CONNECTION == 'ssh' """
+
+        nxos_proxy.CONNECTION = 'ssh'
+        commands = 'show version'
+        kwargs = {}
+
+        result = nxos_proxy._nxapi_request(commands, **kwargs)
+        self.assertEqual('_nxapi_request is not available for ssh proxy', result)
+
+    def test__nxapi_request_connect(self):
+
+        """ UT: nxos module:_nxapi_request method """
+
+        nxos_proxy.CONNECTION = 'nxapi'
+        commands = 'show version'
+        kwargs = {}
+
+        with patch.dict(nxos_proxy.__utils__, {'nxos.nxapi_request': MagicMock(return_value='data')}):
+            result = nxos_proxy._nxapi_request(commands, **kwargs)
+            self.assertEqual('data', result)
+
 
 class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
@@ -348,6 +417,17 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertEqual(result[0], ['feature bgp', 'router bgp 65535'])
                     self.assertEqual(result[1], '')
 
+    def test_proxy_config_error(self):
+
+        """ UT: nxos module:proxy_config method - CommandExecutionError """
+
+        kwargs = {'no_save_config': False}
+
+        with patch.object(nxos_proxy, '_sendline_ssh', MagicMock(return_value='')) as get_mock:
+            with self.assertRaises(CommandExecutionError) as einfo:
+                get_mock.side_effect = CommandExecutionError
+                nxos_proxy.proxy_config('show version', **kwargs)
+
     def test__init_ssh(self):
 
         """ UT: nxos module:_init_ssh method - successful connectinon """
@@ -398,7 +478,7 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
         del nxos_proxy.__opts__['proxy']['prompt_name']
 
-        opts = None
+        opts = nxos_proxy.__opts__
 
         class _worker_name():
             def __init__(self):
@@ -414,3 +494,76 @@ class NxosSSHProxyTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertTrue(nxos_proxy.DEVICE_DETAILS['initialized'])
             self.assertTrue(nxos_proxy.DEVICE_DETAILS['no_save_config'])
+
+    def test__initialized_ssh(self):
+
+        """ UT: nxos module:_initialized_ssh method """
+        nxos_proxy.DEVICE_DETAILS['initialized'] = True
+        result = nxos_proxy._initialized_ssh()
+        self.assertTrue(result)
+
+        del nxos_proxy.DEVICE_DETAILS['initialized']
+        result = nxos_proxy._initialized_ssh()
+        self.assertFalse(result)
+
+    def test__parse_output_for_errors(self):
+
+        """ UT: nxos module:_parse_output_for_errors method """
+
+        data = "% Incomplete command at '^' marker."
+        command = 'show'
+        kwargs = {'error_pattern': 'Incomplete'}
+
+        with self.assertRaises(CommandExecutionError) as errinfo:
+            nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+
+        data = "% Incomplete command at '^' marker."
+        command = 'show'
+        kwargs = {'error_pattern': ['Incomplete', 'marker']}
+
+        with self.assertRaises(CommandExecutionError) as errinfo:
+            nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+
+        data = "% Invalid command at '^' marker."
+        command = 'show bep'
+        kwargs = {}
+
+        with self.assertRaises(CommandExecutionError):
+            nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+
+        data = "% Incomplete command at '^' marker."
+        command = 'show'
+        kwargs = {}
+
+        nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+
+        data = "% Incomplete command at '^' marker."
+        command = 'show'
+        kwargs = {'error_pattern': 'foo'}
+
+        result = nxos_proxy._parse_output_for_errors(data, command, **kwargs)
+
+    def test__init_ssh_raise_exception(self):
+
+        """ UT: nxos module:_init_ssh method - raise exception """
+
+        # NOTE: This test causes problems when debuggin with pdb so comment it
+        # out when you need to use pdb.
+
+        del nxos_proxy.__opts__['proxy']['prompt_name']
+
+        opts = None
+
+        class _worker_name():
+            def __init__(self):
+                self.connected = True
+                self.name = 'Process-1'
+
+            def sendline(self, command):
+                return ['', '']
+
+        with patch.object(nxos_proxy, 'SSHConnection', MagicMock(return_value=_worker_name())) as get_mock:
+            with self.assertRaises(SystemExit) as sys_info:
+                with self.assertRaises(Exception) as ex_info:
+                    get_mock.side_effect = Exception
+                    nxos_proxy._init_ssh(opts)

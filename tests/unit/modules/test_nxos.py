@@ -346,6 +346,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
         """ UT: nxos module:grains method """
 
         kwargs = {}
+        nxos.DEVICE_DETAILS['grains_cache'] = {}
         expected_grains = {'software':
                            {'BIOS': 'version 08.36', 'NXOS': 'version 9.2(1)',
                             'BIOS compile time': '06/07/2019',
@@ -357,7 +358,31 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                            'plugins': ['Core Plugin', 'Ethernet Plugin']}
         with patch.dict(nxos.__salt__,
                         {'utils.nxos.system_info': MagicMock(return_value=n9k_grains)}):
-            with patch.object(nxos, 'show', MagicMock(return_value=n9k_show_ver)):
+            with patch.object(nxos, 'show_ver', MagicMock(return_value=n9k_show_ver)):
+
+                # Execute the function under test
+                result = nxos.grains(**kwargs)
+
+                self.assertEqual(result, expected_grains)
+
+    def test_grains_get_cache(self):
+
+        """ UT: nxos module:grains method """
+
+        kwargs = {}
+        expected_grains = {'software':
+                           {'BIOS': 'version 08.36', 'NXOS': 'version 9.2(1)',
+                            'BIOS compile time': '06/07/2019',
+                            'NXOS image file is': 'bootflash:///nxos.9.2.1.bin',
+                            'NXOS compile time': '7/17/2018 16:00:00 [07/18/2018 00:21:19]'},
+                           'hardware':
+                           {'Device name': 'n9k-device',
+                            'bootflash': '53298520 kB'},
+                           'plugins': ['Core Plugin', 'Ethernet Plugin']}
+        nxos.DEVICE_DETAILS['grains_cache'] = expected_grains
+        with patch.dict(nxos.__salt__,
+                        {'utils.nxos.system_info': MagicMock(return_value=n9k_grains)}):
+            with patch.object(nxos, 'show_ver', MagicMock(return_value=n9k_show_ver)):
 
                 # Execute the function under test
                 result = nxos.grains(**kwargs)
@@ -780,6 +805,90 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             result = nxos.save_running_config(**kwargs)
             self.assertEqual(result, save_running_config)
 
+    def test_set_password_enc_false_cs_none(self):
+
+        """ UT: nxos module:set_password method - encrypted False, crypt_salt None """
+
+        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
+        username = 'devops'
+        password = 'test123TMM^&'
+        crypt_salt = 'ZcZqm15X'
+        hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        kwargs = {}
+
+        with patch.object(nxos, 'get_user', MagicMock(return_value=password_line)):
+            with patch.object(nxos, 'secure_password', MagicMock(return_value=crypt_salt)):
+                with patch.object(nxos, 'gen_hash', MagicMock(return_value=hashed_pass)):
+                    with patch.object(nxos, 'config', MagicMock(return_value='password_set')):
+
+                        # Execute the function under test
+                        result = nxos.set_password(username, password, **kwargs)
+                        self.assertEqual('password_set', result)
+
+    def test_set_password_enc_false_cs_set(self):
+
+        """ UT: nxos module:set_password method - encrypted False, crypt_salt set """
+
+        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
+        username = 'devops'
+        password = 'test123TMM^&'
+        crypt_salt = 'ZcZqm15X'
+        hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        kwargs = {}
+
+        with patch.object(nxos, 'get_user', MagicMock(return_value=password_line)):
+            with patch.object(nxos, 'secure_password', MagicMock(return_value=crypt_salt)):
+                with patch.object(nxos, 'gen_hash', MagicMock(return_value=hashed_pass)):
+                    with patch.object(nxos, 'config', MagicMock(return_value='password_set')):
+
+                        # Execute the function under test
+                        result = nxos.set_password(username, password, crypt_salt=crypt_salt, **kwargs)
+                        self.assertEqual('password_set', result)
+
+    def test_set_password_enc_true(self):
+
+        """ UT: nxos module:set_password method - encrypted True """
+
+        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
+        username = 'devops'
+        password = 'test123TMM^&'
+        crypt_salt = 'ZcZqm15X'
+        hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        kwargs = {}
+
+        with patch.object(nxos, 'get_user', MagicMock(return_value=password_line)):
+            with patch.object(nxos, 'secure_password', MagicMock(return_value=crypt_salt)):
+                with patch.object(nxos, 'gen_hash', MagicMock(return_value=hashed_pass)):
+                    with patch.object(nxos, 'config', MagicMock(return_value='password_set')):
+
+                        # Execute the function under test
+                        result = nxos.set_password(username, password, encrypted=True, **kwargs)
+                        self.assertEqual('password_set', result)
+
+    def test_set_password_role_none(self):
+
+        """ UT: nxos module:set_password method - role none """
+
+        password_line = 'username devops password 5 $5$CFENPG$1VUC15BB4rq8fM0TSDaBGlGvVAJBelGFLp9VZEiVPOC  role network-admin'
+        username = 'devops'
+        password = 'test123TMM^&'
+        crypt_salt = 'ZcZqm15X'
+        hashed_pass = '$5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        # password_line = 'username devops password 5 $5$ZcZqm15X$exHN2m6yrPKpYhGArK3Vml3ZjNbJaJYdzWyf0fp1Up2'
+        kwargs = {}
+
+        with patch.object(nxos, 'get_user', MagicMock(return_value=password_line)):
+            with patch.object(nxos, 'secure_password', MagicMock(return_value=crypt_salt)):
+                with patch.object(nxos, 'gen_hash', MagicMock(return_value=hashed_pass)):
+                    with patch.object(nxos, 'config', MagicMock(return_value='password_set')):
+
+                        # Execute the function under test
+                        result = nxos.set_password(username, password, encrypted=True, role='devops', **kwargs)
+                        self.assertEqual('password_set', result)
+
     def test_set_role(self):
 
         """ UT: nxos module:save_running_config method """
@@ -807,3 +916,74 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             # Execute the function under test
             result = nxos.unset_role(username, role, **kwargs)
             self.assertEqual(result, unset_role)
+
+    def test_configure_device(self):
+
+        """ UT: nxos module:_configure_device method """
+
+        kwargs = {}
+
+        with patch('salt.utils.platform.is_proxy', MagicMock(return_value=True)):
+            with patch.dict(nxos.__proxy__, {'nxos.proxy_config': MagicMock(return_value='configured')}):
+
+                result = nxos._configure_device('feature bgp', **kwargs)
+                self.assertEqual(result, 'configured')
+
+        with patch('salt.utils.platform.is_proxy', MagicMock(return_value=False)):
+            with patch.object(nxos, '_nxapi_config', MagicMock(return_value='configured')):
+
+                nxos._configure_device('feature bgp', **kwargs)
+                self.assertEqual(result, 'configured')
+
+    def test_nxapi_config(self):
+
+        """ UT: nxos module:_nxapi_config method """
+
+        kwargs = {}
+
+        mock_cmd = MagicMock(return_value={'nxos': {'no_save_config': True}})
+        with patch.dict(nxos.__salt__, {'config.get': mock_cmd}):
+            with patch.object(nxos, '_nxapi_request', MagicMock(return_value='router_data')):
+
+                    result = nxos._nxapi_config('show version', **kwargs)
+                    self.assertEqual(result, [['show version'], 'router_data'])
+
+    def test_nxapi_config_failure(self):
+
+        """ UT: nxos module:_nxapi_config method """
+
+        kwargs = {}
+        side_effect = ['Failure', 'saved_data']
+
+        mock_cmd = MagicMock(return_value={'nxos': {'no_save_config': False}})
+        with patch.dict(nxos.__salt__, {'config.get': mock_cmd}):
+            with patch.object(nxos, '_nxapi_request', MagicMock(side_effect=side_effect)):
+
+                result = nxos._nxapi_config('show bad_command', **kwargs)
+                self.assertEqual(result, [['show bad_command'], 'Failure'])
+
+    def test_nxapi_request_proxy(self):
+
+        """ UT: nxos module:_nxapi_request method - proxy"""
+
+        kwargs = {}
+
+        with patch('salt.utils.platform.is_proxy', MagicMock(return_value=True)):
+            with patch.dict(nxos.__proxy__, {'nxos._nxapi_request': MagicMock(return_value='router_data')}):
+
+                result = nxos._nxapi_request('show version', kwargs)
+                self.assertEqual(result, 'router_data')
+
+    def test_nxapi_request_no_proxy(self):
+
+        """ UT: nxos module:_nxapi_request method - no proxy"""
+
+        kwargs = {}
+
+        with patch('salt.utils.platform.is_proxy', MagicMock(return_value=False)):
+            mock_cmd = MagicMock(return_value={'nxos': {'no_save_config': True}})
+            with patch.dict(nxos.__salt__, {'config.get': mock_cmd}):
+                with patch.dict(nxos.__utils__, {'nxos.nxapi_request': MagicMock(return_value='router_data')}):
+
+                    result = nxos._nxapi_request('show version', kwargs)
+                    self.assertEqual(result, 'router_data')

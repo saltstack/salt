@@ -446,7 +446,10 @@ def _parse_output_for_errors(data, command, **kwargs):
             'cli_error': data.lstrip(),
         })
     if kwargs.get('error_pattern') is not None:
-        for re_line in kwargs.get('error_pattern'):
+        error_pattern = kwargs.get('error_pattern')
+        if isinstance(error_pattern, str):
+            error_pattern = [error_pattern]
+        for re_line in error_pattern:
             if re.search(re_line, data):
                 raise CommandExecutionError({
                     'rejected_input': command,
