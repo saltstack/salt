@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import functools
 import random
 import string
-import logging
+
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
@@ -19,9 +19,6 @@ from cryptography.hazmat.primitives import serialization
 import pytest
 import tempfile
 from os import environ
-
-import logging
-log = logging.getLogger(__name__)
 
 
 def _random_name(prefix=''):
@@ -51,20 +48,16 @@ class VenafiTest(ShellCase):
 
     @with_random_name
     def test_request(self, name):
-        log.debug("Testing Venafi request cert")
-        log.debug("Using venafi config: %s", self.master_opts['venafi'])
         cn = '{0}.example.com'.format(name)
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 dns_name=cn,
                                 key_password='secretPassword',
                                 zone=environ.get('CLOUDZONE'))
-        log.debug("Ret is:\n %s", ret)
         cert_output = ret['return'][0]
         if not cert_output:
             pytest.fail('venafi_certificate not found in output_value')
 
-        log.debug("Testing certificate:\n %s", cert_output)
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
@@ -74,7 +67,6 @@ class VenafiTest(ShellCase):
         ]
 
         pkey_output = ret['return'][1]
-        log.debug("Testing pkey:\n  %s", pkey_output)
         if not pkey_output:
             pytest.fail('venafi_private key not found in output_value')
 
@@ -93,7 +85,6 @@ class VenafiTest(ShellCase):
 
     @with_random_name
     def test_sign(self, name):
-        log.debug("Testing Venafi sign CSR")
 
         csr_pem = """-----BEGIN CERTIFICATE REQUEST-----
 MIIFbDCCA1QCAQAwgbQxCzAJBgNVBAYTAlVTMQ0wCwYDVQQIDARVdGFoMRIwEAYD
@@ -137,7 +128,6 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
                                     minion_id=cn,
                                     csr_path=csr_path,
                                     zone=environ.get('CLOUDZONE'))
-            log.debug("Ret is:\n %s", ret)
             cert_output = ret['return'][0]
             if not cert_output:
                 pytest.fail('venafi_certificate not found in output_value')

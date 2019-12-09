@@ -104,6 +104,7 @@ def request(
         salt-run venafi.request <minion_id> <dns_name>
     '''
 
+    log.info("Requesting Venafi certificate")
     if zone is None:
         log.error(msg=str("Missing zone parameter"))
         sys.exit(1)
@@ -117,6 +118,7 @@ def request(
         request = CertificateRequest(common_name=dns_name, country=country, province=state, locality=loc,
                                      organization=org, organizational_unit=org_unit, key_password=key_password)
         zone_config = conn.read_zone_conf(zone)
+        log.info("Updating request from zone %s",zone_config)
         request.update_from_zone_config(zone_config)
     else:
         log.info("Will use generated CSR from %s", csr_path)
