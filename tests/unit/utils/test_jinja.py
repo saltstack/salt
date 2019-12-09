@@ -52,7 +52,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
