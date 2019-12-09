@@ -55,8 +55,7 @@ class VenafiTest(ShellCase):
                                 key_password='secretPassword',
                                 zone=environ.get('CLOUDZONE'))
         cert_output = ret['return'][0]
-        if not cert_output:
-            pytest.fail('venafi_certificate not found in output_value')
+        assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
@@ -67,8 +66,7 @@ class VenafiTest(ShellCase):
         ]
 
         pkey_output = ret['return'][1]
-        if not pkey_output:
-            pytest.fail('venafi_private key not found in output_value')
+        assert pkey_output is not None, 'venafi_private key not found in output_value'
 
         pkey = serialization.load_pem_private_key(pkey_output.encode(), password=b'secretPassword',
                                                   backend=default_backend())
@@ -129,8 +127,7 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
                                     csr_path=csr_path,
                                     zone=environ.get('CLOUDZONE'))
             cert_output = ret['return'][0]
-            if not cert_output:
-                pytest.fail('venafi_certificate not found in output_value')
+            assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
             cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
             assert isinstance(cert, x509.Certificate)
