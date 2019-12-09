@@ -1653,7 +1653,7 @@ class PatchedEnviron(object):
         # Make sure there are no unicode characters in the self.kwargs if we're
         # on Python 2. These are being added to `os.environ` and causing
         # problems
-        if not sys.version_info > (3, 0):
+        if sys.version_info < (3,):
             kwargs = self.kwargs.copy()
             clean_kwargs = {}
             for k in self.kwargs:
@@ -1666,7 +1666,6 @@ class PatchedEnviron(object):
             self.kwargs = clean_kwargs
 
         os.environ.update(**self.kwargs)
-
         return self
 
     def __exit__(self, *args):
