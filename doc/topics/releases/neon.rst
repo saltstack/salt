@@ -158,6 +158,10 @@ State Deprecations
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
 
+- The cmd state module has removed the ``quiet`` kwarg from the
+  :py:func:`cmd.run <salt.states.cmd.run>` function. Please
+  set ``output_loglevel`` to ``quiet`` instead.
+
 Fileserver Deprecations
 -----------------------
 
