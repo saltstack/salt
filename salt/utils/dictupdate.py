@@ -152,6 +152,8 @@ def ensure_dict_key(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
+    :rtype: dict
+    :return: Returns the modified in-place `in_dict`.
     '''
     if delimiter in keys:
         a_keys = keys.split(delimiter)
@@ -181,8 +183,8 @@ def _dict_rpartition(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-
-    :return tuple(dict, str)
+    :rtype: tuple(dict, str)
+    :return: (The dict at the one-to-last key, the last key)
     '''
     if delimiter in keys:
         all_but_last_keys, _, last_key = keys.rpartition(delimiter)
@@ -217,8 +219,8 @@ def set_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-
-    :return dict: Though it updates in_dict in-place.
+    :rtype: dict
+    :return: Returns the modified in-place `in_dict`.
     '''
     dict_pointer, last_key = _dict_rpartition(in_dict,
                                               keys,
@@ -246,8 +248,8 @@ def update_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-
-    :return dict: Though it updates in_dict in-place.
+    :rtype: dict
+    :return: Returns the modified in-place `in_dict`.
     '''
     dict_pointer, last_key = _dict_rpartition(in_dict,
                                               keys,
@@ -284,8 +286,8 @@ def append_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-
-    :return dict: Though it updates in_dict in-place.
+    :rtype: dict
+    :return: Returns the modified in-place `in_dict`.
     '''
     dict_pointer, last_key = _dict_rpartition(in_dict,
                                               keys,
@@ -319,8 +321,8 @@ def extend_dict_key_value(
     :param str delimiter: The delimiter to use in `keys`. Defaults to ':'.
     :param bool ordered_dict: Create OrderedDicts if keys are missing.
                               Default: create regular dicts.
-
-    :return dict: Though it updates in_dict in-place.
+    :rtype: dict
+    :return: Returns the modified in-place `in_dict`.
     '''
     dict_pointer, last_key = _dict_rpartition(
         in_dict,
