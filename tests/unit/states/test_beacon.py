@@ -4,10 +4,8 @@
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import os
 
 # Import Salt Testing Libs
-from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
@@ -19,8 +17,6 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import salt.states.beacon as beacon
-
-SOCK_DIR = os.path.join(RUNTIME_VARS.TMP, 'test-socks')
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -44,7 +40,6 @@ class BeaconTestCase(TestCase, LoaderModuleMockMixin):
                'result': False,
                'comment': ''}
 
-        mock_dict = MagicMock(side_effect=[ret, []])
         mock_mod = MagicMock(return_value=ret)
         mock_lst = MagicMock(side_effect=[{beacon_name: {}},
                                           {beacon_name: {}},
