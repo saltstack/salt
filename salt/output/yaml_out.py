@@ -5,7 +5,17 @@ Display return data in YAML format
 
 This outputter defaults to printing in YAML block mode for better readability.
 
-Example output::
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=yaml
+
+Example output:
+
+CLI Example:
+
+.. code-block:: python
 
     saltmine:
       foo:
