@@ -13,8 +13,11 @@ from tests.support.helpers import (
     requires_network,
     requires_salt_modules,
     requires_system_grains)
+from tests.support.unit import skipIf
 
 # Import Salt libs
+from salt.utils import six
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -25,16 +28,16 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
     '''
 
     @classmethod
-    def setUpClass(cls):
+    @requires_system_grains
+    def setUpClass(cls, grains=None):
         cls.ctx = {}
-        cls.pkg = 'htop'
+        cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():
             cls.pkg = 'putty'
-        elif salt.utils.platform.is_darwin():
-            os_release = cls.run_function('grains.get', ['osrelease'])
-            if int(os_release.split('.')[1]) >= 13:
-                cls.pkg = 'wget'
+        elif grains['os_family'] == 'RedHat':
+            cls.pkg = 'units'
 
+    @requires_salt_modules('pkg.refresh_db')
     def setUp(self):
         if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
@@ -174,26 +177,29 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         test holding and unholding a package
         '''
-        version_lock = None
-        lock_pkg = 'yum-plugin-versionlock'
+        ret = None
+        if grains['os_family'] == 'RedHat':
+            # get correct plugin for dnf packages following the logic in `salt.modules.yumpkg._yum`
+            lock_pkg = 'yum-versionlock' if grains['osmajorrelease'] == '5' else 'yum-plugin-versionlock'
+            if 'fedora' in grains['os'].lower() and int(grains['osrelease']) >= 22:
+                if int(grains['osmajorrelease']) >= 26:
+                    lock_pkg = 'python{py}-dnf-plugin-versionlock'.format(py=3 if six.PY3 else 2)
+                else:
+                    lock_pkg = 'python{py}-dnf-plugins-extras-versionlock'.format(py=3 if six.PY3 else '')
+            ret = self.run_state('pkg.installed', name=lock_pkg)
 
         self.run_function('pkg.install', [self.pkg])
-        if grains['os_family'] == 'RedHat':
-            version_lock = self.run_function('pkg.version', [lock_pkg])
-            if not version_lock:
-                self.run_function('pkg.install', [lock_pkg])
 
         hold_ret = self.run_function('pkg.hold', [self.pkg])
+        if 'versionlock is not installed' in hold_ret:
+            self.run_function('pkg.remove', [self.pkg])
+            self.skipTest('Versionlock could not be installed on this system: {}'.format(ret))
         self.assertIn(self.pkg, hold_ret)
         self.assertTrue(hold_ret[self.pkg]['result'])
 
         unhold_ret = self.run_function('pkg.unhold', [self.pkg])
         self.assertIn(self.pkg, unhold_ret)
         self.assertTrue(unhold_ret[self.pkg]['result'])
-
-        if grains['os_family'] == 'RedHat':
-            if not version_lock:
-                self.run_function('pkg.remove', [lock_pkg])
         self.run_function('pkg.remove', [self.pkg])
 
     @destructiveTest
@@ -219,8 +225,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'Suse':
             if not isinstance(ret, dict):
                 self.skipTest('Upstream repo did not return coherent results. Skipping test.')
-            self.assertNotEqual(ret, {})
-        elif grains['os_family'] == 'Suse':
             self.assertNotEqual(ret, {})
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
@@ -250,6 +254,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             keys = ret.keys()
             self.assertIn('less', keys)
             self.assertIn('zypper', keys)
+        else:
+            ret = self.run_function(func, [self.pkg])
+            keys = ret.keys()
+            self.assertIn(self.pkg, keys)
 
     @destructiveTest
     @requires_network()
@@ -259,6 +267,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test running a system upgrade when there are packages that need upgrading
         '''
+        if grains['os'] == 'Arch':
+            self.skipTest('Arch moved to Python 3.8 and we\'re not ready for it yet')
+
         func = 'pkg.upgrade'
 
         # First make sure that an up-to-date copy of the package db is available
@@ -321,6 +332,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
     @requires_salt_modules('pkg.remove', 'pkg.latest_version')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):
@@ -328,17 +340,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         Check that pkg.latest_version returns the latest version of the uninstalled package.
         The package is not installed. Only the package version is checked.
         '''
-        remove = False
-        if salt.utils.platform.is_windows():
-            cmd_info = self.run_function('pkg.version', [self.pkg])
-            remove = cmd_info != ''
-        else:
-            cmd_info = self.run_function('pkg.info_installed', [self.pkg])
-            remove = cmd_info != 'ERROR: package {0} is not installed'.format(self.pkg)
-
-        # remove package if its installed
-        if remove:
-            self.run_function('pkg.remove', [self.pkg])
+        self.run_state('pkg.removed', name=self.pkg)
 
         cmd_pkg = []
         if grains['os_family'] == 'RedHat':
@@ -351,5 +353,13 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
+        elif grains['os_family'] == 'MacOS':
+            brew_bin = salt.utils.path.which('brew')
+            mac_user = self.run_function('file.get_user', [brew_bin])
+            if mac_user == 'root':
+                self.skipTest('brew cannot run as root, try a user in {}'.format(os.listdir('/Users/')))
+            cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)], run_as=mac_user)
+        else:
+            self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
         self.assertIn(pkg_latest, cmd_pkg)
