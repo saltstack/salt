@@ -27,7 +27,7 @@ from tests.support.mock import (
     call,
     mock_open,
     patch)
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.files
@@ -2379,7 +2379,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         # Run _check_directory function
         # Verify that it returns correctly
         # Delete tmp directory structure
-        root_tmp_dir = os.path.join(TMP, 'test__check_dir')
+        root_tmp_dir = os.path.join(RUNTIME_VARS.TMP, 'test__check_dir')
         expected_dir_mode = 0o777
         depth = 3
         try:
