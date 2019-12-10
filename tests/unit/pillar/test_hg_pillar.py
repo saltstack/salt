@@ -13,7 +13,7 @@ import subprocess
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 
 
 COMMIT_USER_NAME = 'test_user'
@@ -38,7 +38,7 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
     maxDiff = None
 
     def setup_loader_modules(self):
-        self.tmpdir = tempfile.mkdtemp(dir=TMP)
+        self.tmpdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.tmpdir)
         cachedir = os.path.join(self.tmpdir, 'cachedir')
         os.makedirs(os.path.join(cachedir, 'hg_pillar'))

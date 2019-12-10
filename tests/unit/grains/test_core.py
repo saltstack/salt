@@ -9,6 +9,7 @@ import logging
 import os
 import socket
 import textwrap
+import platform
 
 # Import Salt Testing Libs
 try:
@@ -33,6 +34,8 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.path
+import salt.modules.cmdmod
+import salt.modules.smbios
 import salt.grains.core as core
 
 # Import 3rd-party libs
@@ -999,6 +1002,38 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
 
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
+    @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
+    def test_fqdns_socket_error(self):
+        '''
+        test the behavior on non-critical socket errors of the dns grain
+        '''
+        def _gen_gethostbyaddr(errno):
+            def _gethostbyaddr(_):
+                herror = socket.herror()
+                herror.errno = errno
+                raise herror
+            return _gethostbyaddr
+
+        for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
+            mock_log = MagicMock()
+            with patch.object(socket, 'gethostbyaddr',
+                              side_effect=_gen_gethostbyaddr(errno)):
+                with patch('salt.grains.core.log', mock_log):
+                    self.assertEqual(core.fqdns(), {'fqdns': []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_not_called()
+
+        mock_log = MagicMock()
+        with patch.object(socket, 'gethostbyaddr',
+                          side_effect=_gen_gethostbyaddr(-1)):
+            with patch('salt.grains.core.log', mock_log):
+                self.assertEqual(core.fqdns(), {'fqdns': []})
+                mock_log.debug.assert_not_called()
+                mock_log.error.assert_called_once()
+
     def test_core_virtual(self):
         '''
         test virtual grain with cmd virt-what
@@ -1263,3 +1298,49 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         finally:
             # change back to original directory
             os.chdir(cwd)
+
+    def test_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    def test_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_osdata_virtual_key_win(self):
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+            with patch.object(core,
+                              '_windows_virtual',
+                              return_value={'virtual': 'something'}) as _windows_virtual:
+                osdata_grains = core.os_data()
+                _windows_virtual.assert_called_once()
+
+            self.assertIn('virtual', osdata_grains)
+            self.assertNotEqual(osdata_grains['virtual'], 'physical')
