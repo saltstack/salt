@@ -7,9 +7,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-import tests.integration as integration
-from tests.support.unit import TestCase, skipIf
+from tests.support.mixins import SaltClientTestCaseMixin
 from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
 from salt import client
@@ -21,7 +21,7 @@ from salt.exceptions import (
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
-                          integration.SaltClientTestCaseMixin):
+                          SaltClientTestCaseMixin):
 
     def test_create_local_client(self):
         local_client = client.LocalClient(mopts=self.get_temp_config('master'))
