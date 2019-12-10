@@ -139,8 +139,12 @@ description:GNU Bourne Again SHell
  the bash-completion package.
 ------
 """})
+
         with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}), \
-             patch.dict(dpkg.__grains__, {'os': 'Ubuntu', 'osrelease_info': (18, 4)}):
+             patch.dict(dpkg.__grains__, {'os': 'Ubuntu', 'osrelease_info': (18, 4)}), \
+             patch('salt.utils.path.which', MagicMock(return_value=False)), \
+             patch('os.path.exists', MagicMock(return_value=True)),\
+             patch('os.path.getmtime', MagicMock(return_value=1560199259.0)):
             self.assertDictEqual(dpkg.info('bash'),
                                  {'bash': {'architecture': 'amd64',
                                            'description': 'GNU Bourne Again SHell\n'
@@ -162,6 +166,7 @@ description:GNU Bourne Again SHell
                                            'homepage': 'http://tiswww.case.edu/php/chet/bash/bashtop.html',
                                            'maintainer': 'Ubuntu Developers '
                                                          '<ubuntu-devel-discuss@lists.ubuntu.com>',
+                                           'install_date': '2019-06-10T20:40:59Z',
                                            'package': 'bash',
                                            'section': 'shells',
                                            'source': 'bash',
