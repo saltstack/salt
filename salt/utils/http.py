@@ -60,6 +60,7 @@ from salt.ext import six
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
+from salt.ext.six.moves import StringIO
 from salt.ext.six.moves.urllib.error import URLError
 from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
@@ -174,6 +175,9 @@ def query(url,
           agent=USERAGENT,
           hide_fields=None,
           raise_error=True,
+          formdata=False,
+          formdata_fieldname=None,
+          formdata_filename=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -344,9 +348,22 @@ def query(url,
                 log.error('The client-side certificate path that'
                           ' was passed is not valid: %s', cert)
 
-        result = sess.request(
-            method, url, params=params, data=data, **req_kwargs
-        )
+        if formdata:
+            if not formdata_fieldname:
+                ret['error'] = ('formdata_fieldname is required when formdata=True')
+                log.error(ret['error'])
+                return ret
+            result = sess.request(
+                method,
+                url,
+                params=params,
+                files={formdata_fieldname: (formdata_filename, StringIO(data))},
+                **req_kwargs
+            )
+        else:
+            result = sess.request(
+                method, url, params=params, data=data, **req_kwargs
+            )
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
