@@ -686,6 +686,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    source_auth=None,
                                                    source_name=None,
                                                    source_format=None,
+                                                   source_initiator=None,
                                                    transient=True,
                                                    start=False,
                                                    connection='myconnection',
@@ -783,6 +784,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    source_auth=None,
                                                    source_name=None,
                                                    source_format=None,
+                                                   source_initiator=None,
                                                    connection=None,
                                                    username=None,
                                                    password=None)
@@ -826,6 +828,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                                                    source_auth=None,
                                                    source_name=None,
                                                    source_format=None,
+                                                   source_initiator=None,
                                                    connection=None,
                                                    username=None,
                                                    password=None)

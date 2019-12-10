@@ -2373,6 +2373,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('source/host').attrib['name'], 'nfs.host')
         self.assertEqual(root.find('source/auth'), None)
 
+    def test_pool_with_iscsi_direct(self):
+        '''
+        Test virt._gen_pool_xml() with a iscsi-direct source
+        '''
+        xml_data = virt._gen_pool_xml('pool',
+                                      'iscsi-direct',
+                                      source_hosts=['iscsi.example.com'],
+                                      source_devices=[{'path': 'iqn.2013-06.com.example:iscsi-pool'}],
+                                      source_initiator='iqn.2013-06.com.example:iscsi-initiator')
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'pool')
+        self.assertEqual(root.attrib['type'], 'iscsi-direct')
+        self.assertEqual(root.find('target'), None)
+        self.assertEqual(root.find('source/device').attrib['path'], 'iqn.2013-06.com.example:iscsi-pool')
+        self.assertEqual(root.findall('source/host')[0].attrib['name'], 'iscsi.example.com')
+        self.assertEqual(root.find('source/initiator/iqn').attrib['name'], 'iqn.2013-06.com.example:iscsi-initiator')
+
     def test_list_pools(self):
         '''
         Test virt.list_pools()

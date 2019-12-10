@@ -683,13 +683,15 @@ def _gen_pool_xml(name,
                   source_hosts=None,
                   source_auth=None,
                   source_name=None,
-                  source_format=None):
+                  source_format=None,
+                  source_initiator=None):
     '''
     Generate the XML string to define a libvirt storage pool
     '''
     hosts = [host.split(':') for host in source_hosts or []]
     source = None
-    if any([source_devices, source_dir, source_adapter, hosts, source_auth, source_name, source_format]):
+    if any([source_devices, source_dir, source_adapter, hosts, source_auth, source_name, source_format,
+            source_initiator]):
         source = {
             'devices': source_devices or [],
             'dir': source_dir,
@@ -697,7 +699,8 @@ def _gen_pool_xml(name,
             'hosts': [{'name': host[0], 'port': host[1] if len(host) > 1 else None} for host in hosts],
             'auth': source_auth,
             'name': source_name,
-            'format': source_format
+            'format': source_format,
+            'initiator': source_initiator,
         }
 
     context = {
@@ -4507,6 +4510,7 @@ def pool_define(name,
                 permissions=None,
                 source_devices=None,
                 source_dir=None,
+                source_initiator=None,
                 source_adapter=None,
                 source_hosts=None,
                 source_auth=None,
@@ -4537,6 +4541,10 @@ def pool_define(name,
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
+    :param source_initiator:
+        Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
+
+        .. versionadded:: neon
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -4646,7 +4654,8 @@ def pool_define(name,
         source_hosts=source_hosts,
         source_auth=source_auth,
         source_name=source_name,
-        source_format=source_format
+        source_format=source_format,
+        source_initiator=source_initiator
     )
     try:
         if transient:
@@ -4670,6 +4679,7 @@ def pool_update(name,
                 permissions=None,
                 source_devices=None,
                 source_dir=None,
+                source_initiator=None,
                 source_adapter=None,
                 source_hosts=None,
                 source_auth=None,
@@ -4700,6 +4710,10 @@ def pool_update(name,
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
+    :param source_initiator:
+        Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
+
+        .. versionadded:: neon
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -4782,6 +4796,7 @@ def pool_update(name,
         permissions=permissions,
         source_devices=source_devices,
         source_dir=source_dir,
+        source_initiator=source_initiator,
         source_adapter=source_adapter,
         source_hosts=source_hosts,
         source_auth=source_auth,
