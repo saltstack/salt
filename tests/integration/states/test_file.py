@@ -579,7 +579,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         flag.
         '''
         contents = 'test_managed_contents_with_newline_one'
-        name = os.path.join(TMP, 'foo')
+        name = os.path.join(RUNTIME_VARS.TMP, 'foo')
 
         # Create a file named foo with contents as above but with a \n at EOF
         self.run_state('file.managed', name=name, contents=contents,
@@ -594,7 +594,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         flag.
         '''
         contents = 'test_managed_contents_with_newline_one'
-        name = os.path.join(TMP, 'bar')
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
 
         # Create a file named foo with contents as above but with a \n at EOF
         self.run_state('file.managed', name=name, contents=contents,
@@ -610,7 +610,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         contents = ('this is a cookie{}this is another cookie'.
                     format(os.linesep))
-        name = os.path.join(TMP, 'bar')
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
 
         # Create a file named foo with contents as above but with a \n at EOF
         self.run_state('file.managed', name=name, contents=contents,
@@ -626,7 +626,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         contents = ('this is a cookie{}this is another cookie'.
                     format(os.linesep))
-        name = os.path.join(TMP, 'bar')
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
 
         # Create a file named foo with contents as above but with a \n at EOF
         self.run_state('file.managed', name=name, contents=contents,
