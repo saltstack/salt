@@ -39,7 +39,7 @@ from salt.ext.six.moves import range
 from salt.transport.zeromq import AsyncReqMessageClientPool
 
 # Import test support libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -217,7 +217,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
                'tcp_master_workers': tcp_master_workers}
         )
 
-        cls.minion_config = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        cls.minion_config = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         cls.minion_config = cls.get_temp_config(
             'minion',
             **{'transport': 'zeromq',
@@ -646,6 +646,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
             executor.submit(self._send_small, opts, 3)
             executor.submit(self._send_large, opts, 4)
         expect = ['{}-{}'.format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
+        time.sleep(0.1)
         server_channel.publish({'tgt_type': 'glob', 'tgt': '*', 'stop': True})
         gather.join()
         server_channel.pub_close()

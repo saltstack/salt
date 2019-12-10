@@ -100,7 +100,7 @@ from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.odict import OrderedDict
 from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess,
+                                SignalHandlingProcess,
                                 ProcessManager)
 from salt.exceptions import (
     CommandExecutionError,
@@ -433,13 +433,14 @@ class MinionBase(object):
 
             salt '*' sys.reload_modules
         '''
-        self.opts['pillar'] = salt.pillar.get_pillar(
-            self.opts,
-            self.opts['grains'],
-            self.opts['id'],
-            self.opts['saltenv'],
-            pillarenv=self.opts.get('pillarenv'),
-        ).compile_pillar()
+        if initial_load:
+            self.opts['pillar'] = salt.pillar.get_pillar(
+                self.opts,
+                self.opts['grains'],
+                self.opts['id'],
+                self.opts['saltenv'],
+                pillarenv=self.opts.get('pillarenv'),
+            ).compile_pillar()
 
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
@@ -456,7 +457,7 @@ class MinionBase(object):
 #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
-        self.executors = salt.loader.executors(self.opts, self.functions)
+        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -1523,8 +1524,10 @@ class Minion(MinionBase):
                 # running on windows
                 instance = None
             with default_signals(signal.SIGINT, signal.SIGTERM):
-                process = SignalHandlingMultiprocessingProcess(
-                    target=self._target, args=(instance, self.opts, data, self.connected)
+                process = SignalHandlingProcess(
+                    target=self._target,
+                    name='ProcessPayload',
+                    args=(instance, self.opts, data, self.connected)
                 )
         else:
             process = threading.Thread(
@@ -2185,6 +2188,8 @@ class Minion(MinionBase):
         '''
         Refresh the pillar
         '''
+        self.module_refresh(force_refresh)
+
         if self.connected:
             log.debug('Refreshing pillar')
             async_pillar = salt.pillar.get_async_pillar(
@@ -2202,9 +2207,10 @@ class Minion(MinionBase):
                           'One or more masters may be down!')
             finally:
                 async_pillar.destroy()
-        self.module_refresh(force_refresh)
         self.matchers_refresh()
         self.beacons_refresh()
+        evt = salt.utils.event.get_event('minion', opts=self.opts)
+        evt.fire_event({'complete': True}, tag='/salt/minion/minion_pillar_refresh_complete')
 
     def manage_schedule(self, tag, data):
         '''
@@ -2730,7 +2736,7 @@ class Minion(MinionBase):
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
                 except Exception:
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
-            self.remove_periodic_callbback('ping', ping_master)
+            self.remove_periodic_callback('ping')
             self.add_periodic_callback('ping', ping_master, ping_interval)
 
         # add handler to subscriber

@@ -6,7 +6,7 @@
 #
 astroid==1.4.9            # via pylint
 backports.functools-lru-cache==1.5  # via isort, pylint
-configparser==3.7.4       # via pylint
+configparser==4.0.2       # via pylint
 futures==3.2.0            # via isort
 isort==4.3.17             # via pylint
 lazy-object-proxy==1.3.1  # via astroid
@@ -14,6 +14,6 @@ mccabe==0.6.1             # via pylint
 modernize==0.5            # via saltpylint
 pycodestyle==2.5.0        # via saltpylint
 pylint==1.6.5
-saltpylint==2019.1.11
+saltpylint==2019.11.14
 six==1.12.0               # via astroid, pylint
 wrapt==1.11.1             # via astroid

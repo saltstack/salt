@@ -29,7 +29,8 @@ from tests.support.helpers import (
     requires_system_grains,
     with_system_user,
     skip_if_not_root,
-    with_tempdir
+    with_tempdir,
+    patched_environ
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
@@ -87,7 +88,22 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
             if salt.utils.is_windows():
                 python = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
             else:
-                python = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))
+                python_binary_names = [
+                    'python{}.{}'.format(*sys.version_info),
+                    'python{}'.format(*sys.version_info),
+                    'python'
+                ]
+                for binary_name in python_binary_names:
+                    python = os.path.join(sys.real_prefix, 'bin', binary_name)
+                    if os.path.exists(python):
+                        break
+                else:
+                    self.fail(
+                        'Couldn\'t find a python binary name under \'{}\' matching: {}'.format(
+                            os.path.join(sys.real_prefix, 'bin'),
+                            python_binary_names
+                        )
+                    )
             # We're running off a virtualenv, and we don't want to create a virtualenv off of
             # a virtualenv, let's point to the actual python that created the virtualenv
             kwargs = {'python': python}
@@ -123,34 +139,28 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
         venv_dir = os.path.join(
             RUNTIME_VARS.TMP, 'pip-installed-errors'
         )
-
-        def cleanup_environ(environ):
-            os.environ.clear()
-            os.environ.update(environ)
-
-        self.addCleanup(cleanup_environ, os.environ.copy())
-
+        self.addCleanup(shutil.rmtree, venv_dir, ignore_errors=True)
         # Since we don't have the virtualenv created, pip.installed will
         # throw an error.
         # Example error strings:
         #  * "Error installing 'pep8': /tmp/pip-installed-errors: not found"
         #  * "Error installing 'pep8': /bin/sh: 1: /tmp/pip-installed-errors: not found"
         #  * "Error installing 'pep8': /bin/bash: /tmp/pip-installed-errors: No such file or directory"
-        os.environ['SHELL'] = '/bin/sh'
-        ret = self.run_function('state.sls', mods='pip-installed-errors')
-        self.assertSaltFalseReturn(ret)
-        self.assertSaltCommentRegexpMatches(
-            ret,
-            'Error installing \'pep8\':'
-        )
+        with patched_environ(SHELL='/bin/sh'):
+            ret = self.run_function('state.sls', mods='pip-installed-errors')
+            self.assertSaltFalseReturn(ret)
+            self.assertSaltCommentRegexpMatches(
+                ret,
+                'Error installing \'pep8\':'
+            )
 
-        # We now create the missing virtualenv
-        ret = self._create_virtualenv(venv_dir)
-        self.assertEqual(ret['retcode'], 0)
+            # We now create the missing virtualenv
+            ret = self.run_function('virtualenv.create', [venv_dir])
+            self.assertEqual(ret['retcode'], 0)
 
-        # The state should not have any issues running now
-        ret = self.run_function('state.sls', mods='pip-installed-errors')
-        self.assertSaltTrueReturn(ret)
+            # The state should not have any issues running now
+            ret = self.run_function('state.sls', mods='pip-installed-errors')
+            self.assertSaltTrueReturn(ret)
 
     @skipIf(six.PY3, 'Issue is specific to carbon module, which is PY2-only')
     @skipIf(salt.utils.platform.is_windows(), "Carbon does not install in Windows")
@@ -598,3 +608,30 @@ class PipStateTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(ographite, ignore_errors=True)
             if os.path.isdir(venv_dir):
                 shutil.rmtree(venv_dir)
+
+
+class PipStateInRequisiteTest(ModuleCase, SaltReturnAssertsMixin):
+
+    @with_tempdir()
+    def test_issue_54755(self, tmpdir):
+        '''
+        Verify github issue 54755 is resolved. This only fails when there is no
+        pip module in the python environment. Since the test suite normally has
+        a pip module this test will pass and is here for posterity. See also
+
+        unit.states.test_pip_state.PipStateUtilsTest.test_pip_purge_method_with_pip
+
+         and
+
+        unit.states.test_pip_state.PipStateUtilsTest.test_pip_purge_method_without_pip
+
+        Which also validate this issue and will pass/fail regardless of whether
+        or not pip is installed.
+        '''
+        file_path = os.path.join(tmpdir, 'issue-54755')
+        ret = self.run_function('state.sls', mods='issue-54755', pillar={'file_path': file_path})
+        key = 'file_|-issue-54755_|-{}_|-managed'.format(file_path)
+        assert key in ret
+        assert ret[key]['result'] is True
+        with salt.utils.files.fopen(file_path, 'r') as fp:
+            assert fp.read().strip() == 'issue-54755'
