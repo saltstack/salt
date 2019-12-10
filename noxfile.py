@@ -5,6 +5,7 @@ noxfile
 
 Nox configuration script
 '''
+# pylint: disable=resource-leakage
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -946,7 +947,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ['setup.py', 'salt/']
+        paths = ['setup.py', 'noxfile.py', 'salt/']
     _lint(session, '.testing.pylintrc', flags, paths)
 
 

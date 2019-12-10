@@ -44,7 +44,7 @@ from pytestsalt.utils import get_unused_localhost_port
 # Import Salt Tests Support libs
 from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
-from tests.support.paths import FILES, TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
@@ -53,8 +53,6 @@ import salt.utils.stringutils
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_functions
-else:
-    import pwd
 
 log = logging.getLogger(__name__)
 
@@ -72,7 +70,7 @@ def no_symlinks():
     try:
         output = subprocess.Popen(
             ['git', 'config', '--get', 'core.symlinks'],
-            cwd=TMP,
+            cwd=RUNTIME_VARS.TMP,
             stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
@@ -1013,7 +1011,7 @@ class WithTempfile(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         if 'prefix' not in kwargs:
             kwargs['prefix'] = '__salt.test.'
         self.kwargs = kwargs
@@ -1044,7 +1042,7 @@ class WithTempdir(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):
@@ -1517,7 +1515,7 @@ class Webserver(object):
             raise ValueError('port must be an integer')
 
         if root is None:
-            root = os.path.join(FILES, 'file', 'base')
+            root = RUNTIME_VARS.BASE_FILES
         try:
             self.root = os.path.realpath(root)
         except AttributeError:
@@ -1536,8 +1534,12 @@ class Webserver(object):
         '''
         self.ioloop = tornado.ioloop.IOLoop()
         self.ioloop.make_current()
-        self.application = tornado.web.Application(
-            [(r'/(.*)', self.handler, {'path': self.root})])
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
+                [(r'/(.*)', self.handler, {'path': self.root})])
+        else:
+            self.application = tornado.web.Application(
+                [(r'/(.*)', self.handler)])
         self.application.listen(self.port)
         self.ioloop.start()
 
@@ -1600,6 +1602,25 @@ class Webserver(object):
         self.server_thread.join()
 
 
+class MirrorPostHandler(tornado.web.RequestHandler):
+    '''
+    Mirror a POST body back to the client
+    '''
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        body = self.request.body
+        log.debug('Incoming body: %s  Incoming args: %s', body, args)
+        self.write(body)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
+
+
 def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
         timeout=None, on_terminate=None):
     '''
@@ -1624,15 +1645,6 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     return (gone, alive)
 
 
-def this_user():
-    '''
-    Get the user associated with the current process.
-    '''
-    if salt.utils.platform.is_windows():
-        return salt.utils.win_functions.get_current_user(with_domain=False)
-    return pwd.getpwuid(os.getuid())[0]
-
-
 def dedent(text, linesep=os.linesep):
     '''
     A wrapper around textwrap.dedent that also sets line endings.
@@ -1645,3 +1657,41 @@ def dedent(text, linesep=os.linesep):
     if not isinstance(text, six.text_type):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+class PatchedEnviron(object):
+
+    def __init__(self, **kwargs):
+        self.cleanup_keys = kwargs.pop('__cleanup__', ())
+        self.kwargs = kwargs
+        self.original_environ = None
+
+    def __enter__(self):
+        self.original_environ = os.environ.copy()
+        for key in self.cleanup_keys:
+            os.environ.pop(key, None)
+
+        # Make sure there are no unicode characters in the self.kwargs if we're
+        # on Python 2. These are being added to `os.environ` and causing
+        # problems
+        if sys.version_info < (3,):
+            kwargs = self.kwargs.copy()
+            clean_kwargs = {}
+            for k in self.kwargs:
+                key = k
+                if isinstance(key, six.text_type):
+                    key = key.encode('utf-8')
+                if isinstance(self.kwargs[k], six.text_type):
+                    kwargs[k] = kwargs[k].encode('utf-8')
+                clean_kwargs[key] = kwargs[k]
+            self.kwargs = clean_kwargs
+
+        os.environ.update(**self.kwargs)
+        return self
+
+    def __exit__(self, *args):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
+
+
+patched_environ = PatchedEnviron
