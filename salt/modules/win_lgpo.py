@@ -490,7 +490,7 @@ class _policy_info(object):
         self.smb_server_name_hardening_levels = {
             0: 'Off',
             1: 'Accept if provided by client',
-            2: 'Require from client',
+            2: 'Required from client',
             None: 'Not Defined',
             '(value not set)': 'Not Defined',
         }
