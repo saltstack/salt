@@ -193,3 +193,12 @@ salt.auth.Authorize Class Removal
 - The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
   the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
   not being used inside of the salt code base.
+
+Jinja Filter Deprecations
+-------------------------
+
+- The following jinja filters are set to be removed in the Aluminium release:
+
+  - :jinja_ref:`json_decode_dict` in favor of :jinja_ref:`tojson`
+  - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`
+  - :jinja_ref:`str_to_num` in favor of :jinja_ref:`to_num`
