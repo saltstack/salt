@@ -78,6 +78,14 @@ The slot syntax has been updated to support parsing dictionary responses and to 
     Duration: 1.229 ms
      Changes:
 
+
+State Changes
+=============
+
+- Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
+  ensure only the specified ssh keys are present for the specified user.
+
+
 Deprecations
 ============
 
