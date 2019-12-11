@@ -669,7 +669,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 minion_id_caching: False
                 minion_id_lowercase: True
             '''))
-        config = sconfig.minion_config(minion_config)  # Load the configuration
+        config = salt.config.minion_config(minion_config)  # Load the configuration
         self.assertEqual(config['minion_id_caching'], False)  # Check the configuration
         self.assertEqual(config['minion_id_lowercase'], True)  # Check the configuration
         self.assertEqual(config['id'], 'king_bob')
@@ -991,7 +991,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'default_include': 'path/to/some/cloud/conf/file',
                 'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
             }
-            self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+            self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_cloud_config_success_dict(self):
@@ -1009,7 +1009,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'default_include': 'path/to/some/cloud/conf/file',
                 'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
             }
-            self.assertEqual(sconfig.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+            self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     # apply_vm_profiles_config tests
 
@@ -1048,7 +1048,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'size': '512MB'
             }
         }
-        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+        self.assertEqual(salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
                                                           defaults=DEFAULT), ret)
 
@@ -1098,7 +1098,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'provider': 'test-config:ec2'
             }
         }
-        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+        self.assertEqual(salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
                                                           defaults=DEFAULT), ret)
 
@@ -1159,7 +1159,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'provider': 'test-config:ec2'
             }
         }
-        self.assertEqual(sconfig.apply_vm_profiles_config(providers,
+        self.assertEqual(salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
                                                           defaults=DEFAULT), ret)
 
@@ -1676,9 +1676,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Ensure that the environment and saltenv options work properly
         '''
-        with patch.object(sconfig, '_adjust_log_file_override', Mock()), \
-             patch.object(sconfig, '_update_ssl_config', Mock()), \
-             patch.object(sconfig, '_update_discovery_config', Mock()):
+        with patch.object(salt.config, '_adjust_log_file_override', Mock()), \
+             patch.object(salt.config, '_update_ssl_config', Mock()), \
+             patch.object(salt.config, '_update_discovery_config', Mock()):
             # MASTER CONFIG
 
             # Ensure that environment overrides saltenv when saltenv not
