@@ -1424,7 +1424,8 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                         'smbios.get': salt.modules.smbios.get}):
             with patch.object(core,
                               '_windows_platform_data',
-                              return_value={'virtual': 'something'}) as _windows_platform_data:
+                              return_value={**core.os_data(), 'virtual': 'something'}) as _windows_platform_data:
+                
                 osdata_grains = core.os_data()
                 _windows_platform_data.assert_called_once()
 
