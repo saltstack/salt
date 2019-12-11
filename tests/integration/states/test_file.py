@@ -584,7 +584,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_state('file.managed', name=tmp_file.name, contents=contents,
                            contents_newline=True)
 
-            with open(tmp_file.name, 'r') as fp_:
+            with salt.utils.fopen(tmp_file.name, 'r') as fp_:
                 self.assertEqual(contents + os.linesep, ''.join(fp_.readlines()))
 
     def test_managed_contents_with_contents_newline_false(self):
@@ -597,7 +597,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Create a file named foo with contents as above but with a \n at EOF
             self.run_state('file.managed', name=tmp_file.name, contents=contents,
                            contents_newline=False)
-            with open(tmp_file.name, 'r') as fp_:
+            with salt.utils.fopen(tmp_file.name, 'r') as fp_:
                 self.assertEqual(contents, ''.join(fp_.readlines()))
 
     def test_managed_multiline_contents_with_contents_newline(self):
@@ -610,7 +610,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Create a file named foo with contents as above but with a \n at EOF
             self.run_state('file.managed', name=tmp_file.name, contents=contents,
                            contents_newline=True)
-            with open(tmp_file.name, 'r') as fp_:
+            with salt.utils.fopen(tmp_file.name, 'r') as fp_:
                 self.assertEqual(contents + os.linesep, ''.join(fp_.readlines()))
 
     def test_managed_multiline_contents_with_contents_newline_false(self):
@@ -624,7 +624,7 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             # Create a file named foo with contents as above but with a \n at EOF
             self.run_state('file.managed', name=tmp_file.name, contents=contents,
                            contents_newline=False)
-            with open(tmp_file.name, 'r') as fp_:
+            with salt.utils.fopen(tmp_file.name, 'r') as fp_:
                 self.assertEqual(contents, ''.join(fp_.readlines()))
 
     @skip_if_not_root
