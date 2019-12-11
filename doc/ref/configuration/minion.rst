@@ -652,6 +652,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -1530,6 +1559,21 @@ List of hosts to bypass HTTP proxy
 .. code-block:: yaml
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
 
 Docker Configuration
 ====================

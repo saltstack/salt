@@ -15,6 +15,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
+import fnmatch
 import functools
 import inspect
 import logging
@@ -38,15 +39,12 @@ import types
 import psutil  # pylint: disable=3rd-party-module-not-gated
 from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
-try:
-    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
-except ImportError:
-    from tests.integration import get_unused_localhost_port
+from pytestsalt.utils import get_unused_localhost_port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
-from tests.support.paths import FILES, TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
@@ -55,8 +53,6 @@ import salt.utils.stringutils
 
 if salt.utils.platform.is_windows():
     import salt.utils.win_functions
-else:
-    import pwd
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +70,7 @@ def no_symlinks():
     try:
         output = subprocess.Popen(
             ['git', 'config', '--get', 'core.symlinks'],
-            cwd=TMP,
+            cwd=RUNTIME_VARS.TMP,
             stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
@@ -198,10 +194,30 @@ def flaky(caller=None, condition=True, attempts=4):
     def wrap(cls):
         for attempt in range(0, attempts):
             try:
+                if attempt > 0:
+                    # Run through setUp again
+                    # We only run it after the first iteration(>0) because the regular
+                    # test runner will have already ran setUp the first time
+                    setup = getattr(cls, 'setUp', None)
+                    if callable(setup):
+                        setup()
                 return caller(cls)
+            except SkipTest as exc:
+                cls.skipTest(exc.args[0])
             except Exception as exc:
+                exc_info = sys.exc_info()
+                if isinstance(exc, SkipTest):
+                    six.reraise(*exc_info)
+                if not isinstance(exc, AssertionError) and log.isEnabledFor(logging.DEBUG):
+                    log.exception(exc, exc_info=exc_info)
                 if attempt >= attempts -1:
-                    raise exc
+                    # We won't try to run tearDown once the attempts are exhausted
+                    # because the regular test runner will do that for us
+                    six.reraise(*exc_info)
+                # Run through tearDown again
+                teardown = getattr(cls, 'tearDown', None)
+                if callable(teardown):
+                    teardown()
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',
@@ -997,7 +1013,7 @@ class WithTempfile(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         if 'prefix' not in kwargs:
             kwargs['prefix'] = '__salt.test.'
         self.kwargs = kwargs
@@ -1028,7 +1044,7 @@ class WithTempdir(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):
@@ -1058,21 +1074,10 @@ def requires_system_grains(func):
     @functools.wraps(func)
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, '__grains__'):
-            import salt.config
-            root_dir = tempfile.mkdtemp(dir=TMP)
-            defaults = salt.config.DEFAULT_MINION_OPTS.copy()
-            defaults.pop('conf_file')
-            defaults.update({
-                'root_dir': root_dir,
-                'cachedir': 'cachedir',
-                'sock_dir': 'sock',
-                'pki_dir': 'pki',
-                'log_file': 'logs/minion',
-                'pidfile': 'pids/minion.pid'
-            })
-            opts = salt.config.minion_config(None, defaults=defaults)
+            # Late import
+            from tests.support.sminion import build_minion_opts
+            opts = build_minion_opts(minion_id='runtests-internal-sminion')
             requires_system_grains.__grains__ = salt.loader.grains(opts)
-            shutil.rmtree(root_dir, ignore_errors=True)
         kwargs['grains'] = requires_system_grains.__grains__
         return func(*args, **kwargs)
     return decorator
@@ -1084,6 +1089,38 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     '''
+
+    def _check_required_salt_modules(*required_salt_modules):
+        # Late import
+        from tests.support.sminion import create_sminion
+        required_salt_modules = set(required_salt_modules)
+        sminion = create_sminion(minion_id='runtests-internal-sminion')
+        available_modules = list(sminion.functions)
+        not_available_modules = set()
+        try:
+            cached_not_available_modules = sminion.__not_availiable_modules__
+        except AttributeError:
+            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
+
+        if cached_not_available_modules:
+            for not_available_module in cached_not_available_modules:
+                if not_available_module in required_salt_modules:
+                    not_available_modules.add(not_available_module)
+                    required_salt_modules.remove(not_available_module)
+
+        for required_module_name in required_salt_modules:
+            search_name = required_module_name
+            if '.' not in search_name:
+                search_name += '.*'
+            if not fnmatch.filter(available_modules, search_name):
+                not_available_modules.add(required_module_name)
+                cached_not_available_modules.add(required_module_name)
+
+        if not_available_modules:
+            if len(not_available_modules) == 1:
+                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
+            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+
     def decorator(caller):
 
         if inspect.isclass(caller):
@@ -1091,67 +1128,19 @@ def requires_salt_modules(*names):
             old_setup = getattr(caller, 'setUp', None)
 
             def setUp(self, *args, **kwargs):
+                _check_required_salt_modules(*names)
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
-                if not hasattr(self, 'run_function'):
-                    raise RuntimeError(
-                        '{0} does not have the \'run_function\' method which '
-                        'is necessary to collect the loaded modules'.format(
-                            self.__class__.__name__
-                        )
-                    )
-
-                if not hasattr(requires_salt_modules, '__available_modules__'):
-                    requires_salt_modules.__available_modules__ = set()
-
-                _names = []
-                for name in names:
-                    if name not in requires_salt_modules.__available_modules__:
-                        _names.append(name)
-
-                if _names:
-                    not_found_modules = self.run_function('runtests_helpers.modules_available', _names)
-                    for name in _names:
-                        if name not in not_found_modules:
-                            requires_salt_modules.__available_modules__.add(name)
-                    if not_found_modules:
-                        if len(not_found_modules) == 1:
-                            self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                        self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
             return caller
 
         # We're simply decorating functions
         @functools.wraps(caller)
         def wrapper(cls):
-
-            if not hasattr(cls, 'run_function'):
-                raise RuntimeError(
-                    '{0} does not have the \'run_function\' method which is '
-                    'necessary to collect the loaded modules'.format(
-                        cls.__class__.__name__
-                    )
-                )
-
-            if not hasattr(requires_salt_modules, '__available_modules__'):
-                requires_salt_modules.__available_modules__ = set()
-
-            _names = []
-            for name in names:
-                if name not in requires_salt_modules.__available_modules__:
-                    _names.append(name)
-
-            if _names:
-                not_found_modules = cls.run_function('runtests_helpers.modules_available', _names)
-                for name in _names:
-                    if name not in not_found_modules:
-                        requires_salt_modules.__available_modules__.add(name)
-                if not_found_modules:
-                    if len(not_found_modules) == 1:
-                        cls.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                    cls.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
+            _check_required_salt_modules(*names)
             return caller(cls)
+
         return wrapper
     return decorator
 
@@ -1528,7 +1517,7 @@ class Webserver(object):
             raise ValueError('port must be an integer')
 
         if root is None:
-            root = os.path.join(FILES, 'file', 'base')
+            root = RUNTIME_VARS.BASE_FILES
         try:
             self.root = os.path.realpath(root)
         except AttributeError:
@@ -1547,8 +1536,12 @@ class Webserver(object):
         '''
         self.ioloop = tornado.ioloop.IOLoop()
         self.ioloop.make_current()
-        self.application = tornado.web.Application(
-            [(r'/(.*)', self.handler, {'path': self.root})])
+        if self.handler == tornado.web.StaticFileHandler:
+            self.application = tornado.web.Application(
+                [(r'/(.*)', self.handler, {'path': self.root})])
+        else:
+            self.application = tornado.web.Application(
+                [(r'/(.*)', self.handler)])
         self.application.listen(self.port)
         self.ioloop.start()
 
@@ -1611,6 +1604,25 @@ class Webserver(object):
         self.server_thread.join()
 
 
+class MirrorPostHandler(tornado.web.RequestHandler):
+    '''
+    Mirror a POST body back to the client
+    '''
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        body = self.request.body
+        log.debug('Incoming body: %s  Incoming args: %s', body, args)
+        self.write(body)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
+
+
 def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
         timeout=None, on_terminate=None):
     '''
@@ -1635,15 +1647,6 @@ def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
     return (gone, alive)
 
 
-def this_user():
-    '''
-    Get the user associated with the current process.
-    '''
-    if salt.utils.platform.is_windows():
-        return salt.utils.win_functions.get_current_user(with_domain=False)
-    return pwd.getpwuid(os.getuid())[0]
-
-
 def dedent(text, linesep=os.linesep):
     '''
     A wrapper around textwrap.dedent that also sets line endings.
@@ -1656,3 +1659,41 @@ def dedent(text, linesep=os.linesep):
     if not isinstance(text, six.text_type):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+class PatchedEnviron(object):
+
+    def __init__(self, **kwargs):
+        self.cleanup_keys = kwargs.pop('__cleanup__', ())
+        self.kwargs = kwargs
+        self.original_environ = None
+
+    def __enter__(self):
+        self.original_environ = os.environ.copy()
+        for key in self.cleanup_keys:
+            os.environ.pop(key, None)
+
+        # Make sure there are no unicode characters in the self.kwargs if we're
+        # on Python 2. These are being added to `os.environ` and causing
+        # problems
+        if sys.version_info < (3,):
+            kwargs = self.kwargs.copy()
+            clean_kwargs = {}
+            for k in self.kwargs:
+                key = k
+                if isinstance(key, six.text_type):
+                    key = key.encode('utf-8')
+                if isinstance(self.kwargs[k], six.text_type):
+                    kwargs[k] = kwargs[k].encode('utf-8')
+                clean_kwargs[key] = kwargs[k]
+            self.kwargs = clean_kwargs
+
+        os.environ.update(**self.kwargs)
+        return self
+
+    def __exit__(self, *args):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
+
+
+patched_environ = PatchedEnviron

@@ -104,6 +104,10 @@ if not hasattr(os, 'uname'):
 
 _INTERFACES = {}
 
+# Possible value for h_errno defined in netdb.h
+HOST_NOT_FOUND = 1
+NO_DATA = 4
+
 
 def _windows_cpudata():
     '''
@@ -680,7 +684,8 @@ def _virtual(osdata):
     # Provides:
     #   virtual
     #   virtual_subtype
-    grains = {'virtual': 'physical'}
+
+    grains = {'virtual': osdata.get('virtual', 'physical')}
 
     # Skip the below loop on platforms which have none of the desired cmds
     # This is a temporary measure until we can write proper virtual hardware
@@ -945,6 +950,7 @@ def _virtual(osdata):
                 with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
+                    grains['virtual'] = 'container'
                     grains['virtual_subtype'] = 'LXC'
                 elif ':/kubepods/' in fhr_contents:
                     grains['virtual_subtype'] = 'kubernetes'
@@ -954,6 +960,7 @@ def _virtual(osdata):
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
                                      ':/docker-ce/')):
+                        grains['virtual'] = 'container'
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -1055,6 +1062,11 @@ def _virtual(osdata):
                     '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
+
+    # If we have a virtual_subtype, we're virtual, but maybe we couldn't
+    # figure out what specific virtual type we were?
+    if grains.get('virtual_subtype') and grains['virtual'] == 'physical':
+        grains['virtual'] = 'virtual'
 
     for command in failed_commands:
         log.info(
@@ -2225,7 +2237,7 @@ def fqdns():
         try:
             fqdns.add(socket.getfqdn(socket.gethostbyaddr(ip)[0]))
         except socket.herror as err:
-            if err.errno == 0:
+            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
                 # No FQDN for this IP address, so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
@@ -2401,6 +2413,13 @@ def get_machine_id():
     else:
         with salt.utils.files.fopen(existing_locations[0]) as machineid:
             return {'machine_id': machineid.read().strip()}
+
+
+def cwd():
+    '''
+    Current working directory
+    '''
+    return {'cwd': os.getcwd()}
 
 
 def path():

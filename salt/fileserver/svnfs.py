@@ -471,13 +471,13 @@ def update():
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'svnfs/hash'),
