@@ -140,15 +140,10 @@ description:GNU Bourne Again SHell
 ------
 """})
 
-        def path_exists(path):
-            if path == '"/var/lib/dpkg/info/bash.list"':
-                return True
-            return False
-
         with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}), \
              patch.dict(dpkg.__grains__, {'os': 'Ubuntu', 'osrelease_info': (18, 4)}), \
              patch('salt.utils.path.which', MagicMock(return_value=False)), \
-             patch('os.path.exists', MagicMock(side_efect=path_exists)),\
+             patch('os.path.exists', MagicMock(return_value=False)),\
              patch('os.path.getmtime', MagicMock(return_value=1560199259.0)):
             self.assertDictEqual(dpkg.info('bash'),
                                  {'bash': {'architecture': 'amd64',
@@ -171,7 +166,6 @@ description:GNU Bourne Again SHell
                                            'homepage': 'http://tiswww.case.edu/php/chet/bash/bashtop.html',
                                            'maintainer': 'Ubuntu Developers '
                                                          '<ubuntu-devel-discuss@lists.ubuntu.com>',
-                                           'install_date': '2019-06-10T20:40:59Z',
                                            'package': 'bash',
                                            'section': 'shells',
                                            'source': 'bash',
