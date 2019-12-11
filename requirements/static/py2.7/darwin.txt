@@ -144,3 +144,7 @@ pyobjc==5.1.2
 pyobjc==5.1.2
 # Passthrough dependencies from pkg/osx/req.txt
 pyobjc==5.1.2
+# Passthrough dependencies from pkg/osx/req.txt
+pyobjc==5.1.2
+# Passthrough dependencies from pkg/osx/req.txt
+pyobjc==5.1.2

@@ -41,4 +41,4 @@ timelib
 tornado<5.0
 virtualenv
 watchdog
-vcert==0.7.1
+vcert~=0.7.0
