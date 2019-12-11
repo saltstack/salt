@@ -77,10 +77,10 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         low_data = {
             "onlyif": [
                 {
-                    "fun": "file.search",
+                    "fun": "test.arg",
                     "args": [
-                        "/etc/crontab",
-                        "run-parts"
+                        "arg1",
+                        "arg2"
                     ]
                 }
             ],
@@ -110,10 +110,10 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         low_data = {
             "unless": [
                 {
-                    "fun": "file.search",
+                    "fun": "test.arg",
                     "args": [
-                        "/etc/crontab",
-                        "run-parts"
+                        "arg1",
+                        "arg2"
                     ]
                 }
             ],
