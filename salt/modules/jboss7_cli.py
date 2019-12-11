@@ -165,7 +165,7 @@ def __call_cli(jboss_config, command, retries=1):
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
     # It may happen that eventhough server is up it may not respond to the call
-    # TODO add WFLYCTL
+    # TODO add WFLYCTL code
     if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
         time.sleep(3)
