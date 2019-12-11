@@ -579,14 +579,13 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         flag.
         '''
         contents = 'test_managed_contents_with_newline_one'
-        name = os.path.join(TMP, 'foo')
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            # Create a file named foo with contents as above but with a \n at EOF
+            self.run_state('file.managed', name=tmp_file.name, contents=contents,
+                           contents_newline=True)
 
-        # Create a file named foo with contents as above but with a \n at EOF
-        self.run_state('file.managed', name=name, contents=contents,
-                       contents_newline=True)
-        with salt.utils.files.fopen(name, 'r') as fp_:
-            last_line = fp_.read()
-            self.assertEqual((contents + os.linesep), last_line)
+            with open(tmp_file.name, 'r') as fp_:
+                self.assertEqual(contents + os.linesep, ''.join(fp_.readlines()))
 
     def test_managed_contents_with_contents_newline_false(self):
         '''
@@ -594,46 +593,39 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
         flag.
         '''
         contents = 'test_managed_contents_with_newline_one'
-        name = os.path.join(TMP, 'bar')
-
-        # Create a file named foo with contents as above but with a \n at EOF
-        self.run_state('file.managed', name=name, contents=contents,
-                       contents_newline=False)
-        with salt.utils.files.fopen(name, 'r') as fp_:
-            last_line = fp_.read()
-            self.assertEqual(contents, last_line)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            # Create a file named foo with contents as above but with a \n at EOF
+            self.run_state('file.managed', name=tmp_file.name, contents=contents,
+                           contents_newline=False)
+            with open(tmp_file.name, 'r') as fp_:
+                self.assertEqual(contents, ''.join(fp_.readlines()))
 
     def test_managed_multiline_contents_with_contents_newline(self):
         '''
         test file.managed with contents by using the non default content_newline
         flag.
         '''
-        contents = ('this is a cookie{}this is another cookie'.
-                    format(os.linesep))
-        name = os.path.join(TMP, 'bar')
-
-        # Create a file named foo with contents as above but with a \n at EOF
-        self.run_state('file.managed', name=name, contents=contents,
-                       contents_newline=True)
-        with salt.utils.files.fopen(name, 'r') as fp_:
-            last_line = fp_.read()
-            self.assertEqual((contents + os.linesep), last_line)
+        contents = 'this is a cookie{}this is another cookie'.format(os.linesep)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            # Create a file named foo with contents as above but with a \n at EOF
+            self.run_state('file.managed', name=tmp_file.name, contents=contents,
+                           contents_newline=True)
+            with open(tmp_file.name, 'r') as fp_:
+                self.assertEqual(contents + os.linesep, ''.join(fp_.readlines()))
 
     def test_managed_multiline_contents_with_contents_newline_false(self):
         '''
         test file.managed with contents by using the non default content_newline
         flag.
         '''
-        contents = ('this is a cookie{}this is another cookie'.
-                    format(os.linesep))
-        name = os.path.join(TMP, 'bar')
+        contents = 'this is a cookie{}this is another cookie'.format(os.linesep)
 
-        # Create a file named foo with contents as above but with a \n at EOF
-        self.run_state('file.managed', name=name, contents=contents,
-                       contents_newline=False)
-        with salt.utils.files.fopen(name, 'r') as fp_:
-            last_line = fp_.read()
-            self.assertEqual(contents, last_line)
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            # Create a file named foo with contents as above but with a \n at EOF
+            self.run_state('file.managed', name=tmp_file.name, contents=contents,
+                           contents_newline=False)
+            with open(tmp_file.name, 'r') as fp_:
+                self.assertEqual(contents, ''.join(fp_.readlines()))
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
