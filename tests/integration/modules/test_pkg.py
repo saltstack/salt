@@ -96,7 +96,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIsInstance(ret, dict,
                                       'The \'pkg.get_repo\' command did not return the excepted dictionary. '
                                       'Output:\n{}'.format(ret))
-
                 self.assertEqual(
                     ret['uri'],
                     uri,

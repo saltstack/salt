@@ -110,7 +110,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 'README'
             )
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
         with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
             with patch.object(os, 'listdir', listdir_mock):
@@ -146,7 +146,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 'README'
             )
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
         with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
             with patch.object(os, 'listdir', listdir_mock):
