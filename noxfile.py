@@ -5,6 +5,7 @@ noxfile
 
 Nox configuration script
 '''
+# pylint: disable=resource-leakage
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -150,10 +151,16 @@ def _install_system_packages(session):
             '/usr/lib/python{py_version}/dist-packages/*apt*'
         ]
     }
-    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
-        system_python_packages[key] = system_python_packages['__debian_based_distros__']
 
     distro = _get_distro_info(session)
+    if not distro['id'].startswith(('debian', 'ubuntu')):
+        # This only applies to debian based distributions
+        return
+
+    system_python_packages['{id}-{version}'.format(**distro)] = \
+            system_python_packages['{id}-{version_parts[major]}'.format(**distro)] = \
+            system_python_packages['__debian_based_distros__'][:]
+
     distro_keys = [
         '{id}'.format(**distro),
         '{id}-{version}'.format(**distro),
@@ -946,7 +953,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ['setup.py', 'salt/']
+        paths = ['setup.py', 'noxfile.py', 'salt/']
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
@@ -1001,7 +1008,7 @@ def docs_html(session, compress):
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     if compress:
-        session.run('tar', '-czvf', 'html-archive.tar.gz', '_build/html', external=True)
+        session.run('tar', '-cJvf', 'html-archive.tar.xz', '_build/html', external=True)
     os.chdir('..')
 
 
@@ -1034,5 +1041,5 @@ def docs_man(session, compress, update):
         session.run('rm', '-rf', 'man/', external=True)
         session.run('cp', '-Rp', '_build/man', 'man/', external=True)
     if compress:
-        session.run('tar', '-czvf', 'man-archive.tar.gz', '_build/man', external=True)
+        session.run('tar', '-cJvf', 'man-archive.tar.xz', '_build/man', external=True)
     os.chdir('..')

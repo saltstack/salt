@@ -9,6 +9,7 @@ import logging
 import os
 import socket
 import textwrap
+import platform
 
 # Import Salt Testing Libs
 try:
@@ -33,6 +34,8 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.path
+import salt.modules.cmdmod
+import salt.modules.smbios
 import salt.grains.core as core
 
 # Import 3rd-party libs
@@ -821,7 +824,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_docker_virtual(self):
         '''
-        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        Test if virtual grains are parsed correctly in Docker.
         '''
         with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
             with patch.object(os.path,
@@ -835,26 +838,79 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         'Testing Docker cgroup substring \'%s\'', cgroup_substr)
                     with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
                         with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                            grains = core._virtual({'kernel': 'Linux'})
                             self.assertEqual(
-                                core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                                grains.get('virtual_subtype'),
                                 'Docker'
                             )
+                            self.assertEqual(
+                                grains.get('virtual'),
+                                'container',
+                            )
+
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    def test_lxc_virtual(self):
+        '''
+        Test if virtual grains are parsed correctly in LXC.
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
+            with patch.object(os.path,
+                              'isfile',
+                              MagicMock(side_effect=lambda x: True if x == '/proc/1/cgroup' else False)):
+                cgroup_data = '10:memory:/lxc/a_long_sha256sum'
+                with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
+                    with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                        grains = core._virtual({'kernel': 'Linux'})
+                        self.assertEqual(
+                            grains.get('virtual_subtype'),
+                            'LXC'
+                        )
+                        self.assertEqual(
+                            grains.get('virtual'),
+                            'container',
+                        )
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_xen_virtual(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
         '''
-        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
-            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
-                patch.object(os.path,
-                             'isfile',
-                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+        with patch.multiple(os.path, isdir=MagicMock(side_effect=lambda x: x == '/sys/bus/xen'),
+                            isfile=MagicMock(side_effect=lambda x:
+                                             x == '/sys/bus/xen/drivers/xenconsole')):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}):
                 log.debug('Testing Xen')
                 self.assertEqual(
                     core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                     'Xen PV DomU'
                 )
+
+    def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual(self):
+        def mockstat(path):
+            if path == '/':
+                return 'fnord'
+            elif path == '/proc/1/root/.':
+                return 'roscivs'
+            return None
+        with patch.dict(
+            core.__salt__,
+            {
+                'cmd.run': MagicMock(return_value=''),
+                'cmd.run_all': MagicMock(return_value={'retcode': 0, 'stdout': ''}),
+            }
+        ):
+            with patch.multiple(
+                os.path,
+                isfile=MagicMock(return_value=False),
+                isdir=MagicMock(side_effect=lambda x: x == '/proc'),
+            ):
+                with patch.multiple(
+                    os,
+                    stat=MagicMock(side_effect=mockstat),
+                ):
+                    grains = core._virtual({'kernel': 'Linux'})
+                    assert grains.get('virtual_subtype') is not None
+                    assert grains.get('virtual') == 'virtual'
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -998,6 +1054,38 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn('fqdns', fqdns)
             self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
+    @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
+    def test_fqdns_socket_error(self):
+        '''
+        test the behavior on non-critical socket errors of the dns grain
+        '''
+        def _gen_gethostbyaddr(errno):
+            def _gethostbyaddr(_):
+                herror = socket.herror()
+                herror.errno = errno
+                raise herror
+            return _gethostbyaddr
+
+        for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
+            mock_log = MagicMock()
+            with patch.object(socket, 'gethostbyaddr',
+                              side_effect=_gen_gethostbyaddr(errno)):
+                with patch('salt.grains.core.log', mock_log):
+                    self.assertEqual(core.fqdns(), {'fqdns': []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_not_called()
+
+        mock_log = MagicMock()
+        with patch.object(socket, 'gethostbyaddr',
+                          side_effect=_gen_gethostbyaddr(-1)):
+            with patch('salt.grains.core.log', mock_log):
+                self.assertEqual(core.fqdns(), {'fqdns': []})
+                mock_log.debug.assert_not_called()
+                mock_log.error.assert_called_once()
 
     def test_core_virtual(self):
         '''
@@ -1241,3 +1329,71 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                 is_proxy.assert_called_once_with()
                 is_windows.assert_not_called()
                 self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+
+    def test_cwd_exists(self):
+        cwd_grain = core.cwd()
+
+        self.assertIsInstance(cwd_grain, dict)
+        self.assertTrue('cwd' in cwd_grain)
+        self.assertEqual(cwd_grain['cwd'], os.getcwd())
+
+    def test_cwd_is_cwd(self):
+        cwd = os.getcwd()
+
+        try:
+            # change directory
+            new_dir = os.path.split(cwd)[0]
+            os.chdir(new_dir)
+
+            cwd_grain = core.cwd()
+
+            self.assertEqual(cwd_grain['cwd'], new_dir)
+        finally:
+            # change back to original directory
+            os.chdir(cwd)
+
+    def test_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    def test_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_osdata_virtual_key_win(self):
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+            with patch.object(core,
+                              '_windows_virtual',
+                              return_value={'virtual': 'something'}) as _windows_virtual:
+                osdata_grains = core.os_data()
+                _windows_virtual.assert_called_once()
+
+            self.assertIn('virtual', osdata_grains)
+            self.assertNotEqual(osdata_grains['virtual'], 'physical')
