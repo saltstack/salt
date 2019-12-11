@@ -121,7 +121,7 @@ Returner Removal
 Grain Deprecations
 ------------------
 
-For ``smartos`` some grains have been deprecated. These grains will be removed in Neon.
+For ``smartos`` some grains have been deprecated. These grains will be removed:
 
   - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
   - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
