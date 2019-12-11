@@ -1758,7 +1758,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         various default dict updates. 'log_file' should be updated to match
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
             expected = '{0}/var/log/salt/api'.format(
                 salt.syspaths.ROOT_DIR if salt.syspaths.ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
@@ -1774,7 +1774,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         various default dict updates. 'pidfile' should be updated to match
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
-        with patch('salt.config.client_config', MagicMock(return_value=MOCK_MASTER_DEFAULT_OPTS)):
+        with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
             expected = '{0}/var/run/salt-api.pid'.format(
                 salt.syspaths.ROOT_DIR if salt.syspaths.ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
