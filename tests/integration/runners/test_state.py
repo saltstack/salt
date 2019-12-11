@@ -16,10 +16,10 @@ import textwrap
 import threading
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.helpers import flaky, expensiveTest
 from tests.support.mock import MagicMock, patch
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 # Import Salt Libs
@@ -347,7 +347,7 @@ class OrchEventTest(ShellCase):
             dir=self.master_d_dir,
             delete=True,
         )
-        self.base_env = tempfile.mkdtemp(dir=TMP)
+        self.base_env = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.base_env)
         self.addCleanup(self.conf.close)
         for attr in ('timeout', 'master_d_dir', 'conf', 'base_env'):
@@ -734,7 +734,7 @@ class OrchEventTest(ShellCase):
                 __reload_config=True).get('jid')
         finally:
             try:
-                os.remove(os.path.join(TMP, 'orch.req_test'))
+                os.remove(os.path.join(RUNTIME_VARS.TMP, 'orch.req_test'))
             except OSError:
                 pass
 

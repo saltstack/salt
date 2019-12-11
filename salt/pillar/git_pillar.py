@@ -226,7 +226,7 @@ from all environments. This behavior can be overridden using a ``pillarenv``.
 Setting a :conf_minion:`pillarenv` in the minion config file will make that
 minion tell the master to ignore any pillar data from environments which don't
 match that pillarenv. A pillarenv can also be specified for a given minion or
-set of minions when :mod:`running states <salt.modules.state>`, by using he
+set of minions when :mod:`running states <salt.modules.state>`, by using the
 ``pillarenv`` argument. The CLI pillarenv will override one set in the minion
 config file. So, assuming that a pillarenv of ``base`` was set for a minion, it
 would not get any of the pillar variables configured in the ``qux`` remote,
