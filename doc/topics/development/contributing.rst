@@ -219,201 +219,34 @@ Fork a Repo Guide_>`_ and is well worth reading.
 Salt's Branch Topology
 ----------------------
 
-There are three different kinds of branches in use: |repo_primary_branch|, main release
-branches, and dot release branches.
+Salt will only be active on one branch which is master.
+This will include bug fixes, features and CVE “Common Vulnerabilities and Exposures”.
 
-- All feature work should go into the ``|repo_primary_branch|`` branch.
-- Bug fixes and documentation changes should go into the oldest **supported
-  main** release branch affected by the the bug or documentation change (you
-  can use the blame button in github to figure out when the bug was introduced).
-  Supported releases are the last 2 releases. For example, if the latest release
-  is 2018.3, the last two release are 2018.3 and 2017.7.
-  Main release branches are named after a year and month, such as
-  ``2016.11`` and ``2017.7``.
-- Hot fixes, as determined by SaltStack's release team, should be submitted
-  against **dot** release branches. Dot release branches are named after a
-  year, month, and version. Examples include ``2016.11.8`` and ``2017.7.2``.
+When the time comes for a new release which should be every 3 to 4 months
+the release will be cut from the master.
 
-.. note::
+To be able to merge code. The code must have well written test.
+Please note you are only expected to write test for what you did not the whole modules or function.
+All tests must also pass.
+The salt stack employee that reviews your pull request might
+request changes or deny the pull request for various reasons.
 
-    GitHub will open pull requests against Salt's main branch, ``|repo_primary_branch|``,
-    by default. Be sure to check which branch is selected when creating the
-    pull request.
+Release Naming Convention
+-------------------------
 
-The |repo_primary_branch| Branch
-================================
+A new convention will start when Salt releases Salt 3000.
+Every new release name will increment by one ‘Salt last_release_number + 1’.
 
-The ``|repo_primary_branch|`` branch is unstable and bleeding-edge. Pull requests containing
-feature additions or non-bug-fix changes should be made against the ``|repo_primary_branch|``
-branch.
+This is very different from past releases which was 'year, month, dot release'.
+For example 2019.2 and 2019.2.3.
 
-.. note::
+Handling CVE’s
+--------------
 
-    If you have a bug fix or documentation change and have already forked your
-    working branch from ``|repo_primary_branch|`` and do not know how to rebase your commits
-    against another branch, then submit it to ``|repo_primary_branch|`` anyway. SaltStack's
-    development team will be happy to back-port it to the correct branch.
-
-    **Please make sure you let the maintainers know that the pull request needs
-    to be back-ported.**
-
-Main Release Branches
-=====================
-
-The current release branch is the most recent stable release. Pull requests
-containing bug fixes or documentation changes should be made against the oldest supported main
-release branch that is affected.
-
-The branch name will be a date-based name such as ``2016.11``.
-
-Bug fixes are made on this branch so that dot release branches can be cut from
-the main release branch without introducing surprises and new features. This
-approach maximizes stability.
-
-Dot Release Branches
-====================
-
-Prior to tagging an official release, a branch will be created when the SaltStack
-release team is ready to tag. The dot release branch is created from a main release
-branch. The dot release branch will be the same name as the tag minus the ``v``.
-For example, the ``2017.7.1`` dot release branch was created from the ``2017.7``
-main release branch. The ``v2017.7.1`` release was tagged at the ``HEAD`` of the
-``2017.7.1`` branch.
-
-This branching strategy will allow for more stability when there is a need for
-a re-tag during the testing phase of the release process and further increases
-stability.
-
-Once the dot release branch is created, the fixes required for a given release,
-as determined by the SaltStack release team, will be added to this branch. All
-commits in this branch will be merged forward into the main release branch as
-well.
-
-Merge Forward Process
-=====================
-
-The Salt repository follows a "Merge Forward" policy. The merge-forward
-behavior means that changes submitted to older main release branches will
-automatically be "merged-forward" into the newer branches.
-
-For example, a pull request is merged into ``2017.7``. Then, the entire
-``2017.7`` branch is merged-forward into the ``2018.3`` branch, and the
-``2018.3`` branch is merged-forward into the ``|repo_primary_branch|`` branch.
-
-This process makes is easy for contributors to make only one pull-request
-against an older branch, but allows the change to propagate to all **main**
-release branches.
-
-The merge-forward work-flow applies to all main release branches and the
-operation runs continuously.
-
-Merge-Forwards for Dot Release Branches
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The merge-forward policy applies to dot release branches as well, but has a
-slightly different behavior. If a change is submitted to a **dot** release
-branch, the dot release branch will be merged into its parent **main**
-release branch.
-
-For example, a pull request is merged into the ``2017.7.2`` release branch.
-Then, the entire ``2017.7.2`` branch is merged-forward into the ``2017.7``
-branch. From there, the merge forward process continues as normal.
-
-The only way in which dot release branches differ from main release branches
-in regard to merge-forwards, is that once a dot release branch is created
-from the main release branch, the dot release branch does not receive merge
-forwards.
-
-.. note::
-
-    The merge forward process for dot release branches is one-way:
-    dot release branch --> main release branch.
-
-Closing GitHub issues from commits
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This "merge-forward" strategy requires that `the magic keywords to close a
-GitHub issue <Closing issues via commit message_>`_ appear in the commit
-message text directly. Only including the text in a pull request will not
-close the issue.
-
-GitHub will close the referenced issue once the *commit* containing the
-magic text is merged into the default branch (``|repo_primary_branch|``). Any magic text
-input only into the pull request description will not be seen at the
-Git-level when those commits are merged-forward. In other words, only the
-commits are merged-forward and not the pull request text.
-
-.. _backporting-pull-requests:
-
-Backporting Pull Requests
-=========================
-
-If a bug is fixed on ``|repo_primary_branch|`` and the bug is also present on a
-currently-supported release branch, it will need to be back-ported to an
-applicable branch.
-
-.. note:: Most Salt contributors can skip these instructions
-
-    These instructions do not need to be read in order to contribute to the
-    Salt project! The SaltStack team will back-port fixes on behalf of
-    contributors in order to keep the contribution process easy.
-
-    These instructions are intended for frequent Salt contributors, advanced
-    Git users, SaltStack employees, or independent souls who wish to back-port
-    changes themselves.
-
-It is often easiest to fix a bug on the oldest supported release branch and
-then merge that branch forward into ``|repo_primary_branch|`` (as described earlier in this
-document). When that is not possible the fix must be back-ported, or copied,
-into any other affected branches.
-
-These steps assume a pull request ``#1234`` has been merged into ``|repo_primary_branch|``.
-And ``upstream`` is the name of the remote pointing to the main Salt repo.
-
-#.  Identify the oldest supported release branch that is affected by the bug.
-
-#.  Create a new branch for the back-port by reusing the same branch from the
-    original pull request.
-
-    Name the branch ``bp-<NNNN>`` and use the number of the original pull
-    request.
-
-    .. code-block:: bash
-
-        git fetch upstream refs/pull/1234/head:bp-1234
-        git checkout bp-1234
-
-#.  Find the parent commit of the original pull request.
-
-    The parent commit of the original pull request must be known in order to
-    rebase onto a release branch. The easiest way to find this is on GitHub.
-
-    Open the original pull request on GitHub and find the first commit in the
-    list of commits. Select and copy the SHA for that commit. The parent of
-    that commit can be specified by appending ``~1`` to the end.
-
-#.  Rebase the new branch on top of the release branch.
-
-    * ``<release-branch>`` is the branch identified in step #1.
-
-    * ``<orig-base>`` is the SHA identified in step #3 -- don't forget to add
-      ``~1`` to the end!
-
-    .. code-block:: bash
-
-        git rebase --onto <release-branch> <orig-base> bp-1234
-
-    Note, release branches prior to ``2016.11`` will not be able to make use of
-    rebase and must use cherry-picking instead.
-
-#.  Push the back-port branch to GitHub and open a new pull request.
-
-    Opening a pull request for the back-port allows for the test suite and
-    normal code-review process.
-
-    .. code-block:: bash
-
-        git push -u origin bp-1234
+Salt will make a new release identical to its last.
+The only difference will be the path/fix for the CVE.
+This should make the upgrade process a lot smoother for people
+because the odds of something breaking is a lot smaller.
 
 Keeping Salt Forks in Sync
 --------------------------
