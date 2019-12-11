@@ -13,6 +13,7 @@ Versions are `MAJOR.PATCH`.
 - [#54943](https://github.com/saltstack/salt/pull/54943) - RAET transport method has been removed per the deprecation schedule - [@s0undt3ch](https://github.com/s0undt3ch)
 
 ### Deprecated
+- [#55609](https://github.com/saltstack/salt/pull/55609) - Remove smartos grains `hypervisor_uuid` and `datacenter` in favor of `mdata:sdc:server_uuid` and `mdata:sdc:datacenter_name`.
 
 ### Changed
 
