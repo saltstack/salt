@@ -1630,11 +1630,11 @@ def master(master=None, connected=True):
 
     # Connection to master is not as expected
     if master_connection_status is not connected:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        if master_connection_status:
-            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
-        else:
-            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+            if master_connection_status:
+                event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+            else:
+                event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
 
     return master_connection_status
 
@@ -1677,8 +1677,8 @@ def ping_master(master):
         pass
 
     if result:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
+        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+            event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
     return result
 
