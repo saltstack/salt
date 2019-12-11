@@ -117,3 +117,11 @@ Returner Removal
 - The hipchat returner has been removed due to the service being retired. For users migrating
   to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
   replacement.
+
+Grain Deprecations
+------------------
+
+For ``smartos`` some grains have been deprecated. These grains will be removed in Neon.
+
+  - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
+  - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
