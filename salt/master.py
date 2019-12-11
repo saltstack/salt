@@ -943,8 +943,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class MWorker(salt.utils.process.SignalHandlingProcess):

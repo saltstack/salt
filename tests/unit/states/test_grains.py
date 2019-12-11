@@ -10,8 +10,8 @@ import os
 import contextlib
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
 
@@ -29,13 +29,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         grains_test_dir = '__salt_test_state_grains'
-        if not os.path.exists(os.path.join(TMP, grains_test_dir)):
-            os.makedirs(os.path.join(TMP, grains_test_dir))
+        if not os.path.exists(os.path.join(RUNTIME_VARS.TMP, grains_test_dir)):
+            os.makedirs(os.path.join(RUNTIME_VARS.TMP, grains_test_dir))
         loader_globals = {
             '__opts__': {
                 'test': False,
-                'conf_file': os.path.join(TMP, grains_test_dir, 'minion'),
-                'cachedir':  os.path.join(TMP, grains_test_dir),
+                'conf_file': os.path.join(RUNTIME_VARS.TMP, grains_test_dir, 'minion'),
+                'cachedir':  os.path.join(RUNTIME_VARS.TMP, grains_test_dir),
                 'local': True,
             },
             '__salt__': {
@@ -99,6 +99,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(ret['result'], True)
             self.assertEqual(ret['comment'], 'Grain exists')
             self.assertEqual(ret['changes'], {})
+
+    # 'make_hashable' function tests: 1
+
+    def test_make_hashable(self):
+        with self.setGrains({'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}):
+            hashable_list = {'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}
+            self.assertEqual(grains.make_hashable(grains.__grains__).issubset(grains.make_hashable(hashable_list)), True)
 
     # 'present' function tests: 12
 
