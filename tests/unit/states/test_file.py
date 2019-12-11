@@ -351,27 +351,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                              'file.lchown': mock_f}),\
                 patch.dict(filestate.__opts__, {'test': False}),\
                 patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
-                patch.object(os.path, 'isfile', mock_t),\
-                patch.object(os.path, 'exists', mock_f),\
-                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
-            comt = 'File exists where the symlink {0} should be'.format(name)
-            ret = return_val({'comment': comt,
-                              'result': False,
-                              'changes': {}})
-            self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group),
-                ret)
-
-        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
-                                             'file.user_to_uid': mock_uid,
-                                             'file.group_to_gid': mock_gid,
-                                             'file.is_link': mock_f,
-                                             'file.readlink': mock_target,
-                                             'file.symlink': mock_t,
-                                             'user.info': mock_t,
-                                             'file.lchown': mock_f}),\
-                patch.dict(filestate.__opts__, {'test': False}),\
-                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
                 patch.object(os.path, 'isdir', mock_t),\
                 patch.object(os.path, 'exists', mock_f),\
                 patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
@@ -1091,8 +1070,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                                 with patch.object(salt.utils.files, 'mkstemp',
                                                   return_value=name):
-                                    comt = ('Unable to copy file {0} to {1}: '
-                                            .format(name, name))
+                                    comt = ('Unable to copy file {0} to {0}: '
+                                            .format(name))
                                     ret.update({'comment': comt, 'result': False})
                                     self.assertDictEqual(filestate.managed
                                                          (name, user=user,
