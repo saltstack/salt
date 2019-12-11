@@ -140,10 +140,15 @@ description:GNU Bourne Again SHell
 ------
 """})
 
+        def path_exists(path):
+            if path == '"/var/lib/dpkg/info/bash.list"':
+                return True
+            return False
+
         with patch.dict(dpkg.__salt__, {'cmd.run_all': mock}), \
              patch.dict(dpkg.__grains__, {'os': 'Ubuntu', 'osrelease_info': (18, 4)}), \
              patch('salt.utils.path.which', MagicMock(return_value=False)), \
-             patch('os.path.exists', MagicMock(return_value=True)),\
+             patch('os.path.exists', MagicMock(side_efect=path_exists)),\
              patch('os.path.getmtime', MagicMock(return_value=1560199259.0)):
             self.assertDictEqual(dpkg.info('bash'),
                                  {'bash': {'architecture': 'amd64',
