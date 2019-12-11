@@ -678,5 +678,5 @@ class NetworkTestCase(TestCase):
 
     def test_netlink_tool_remote_on(self):
         with patch('subprocess.check_output', return_value=NETLINK_SS):
-            remotes = network._netlink_tool_remote_on('4505', 'remote')
+            remotes = network._netlink_tool_remote_on('4505', 'remote_port')
             self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))

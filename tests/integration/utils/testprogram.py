@@ -31,7 +31,7 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 from tests.support.unit import TestCase
 from tests.support.helpers import win32_kill_process_tree
-from tests.support.paths import CODE_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.processes import terminate_process, terminate_process_list
 
 log = logging.getLogger(__name__)
@@ -389,8 +389,8 @@ class TestProgram(six.with_metaclass(TestProgramMeta, object)):
                     if path not in env_pypath:
                         env_pypath.append(path)
             # Always ensure that the test tree is searched first for python modules
-            if CODE_DIR != env_pypath[0]:
-                env_pypath.insert(0, CODE_DIR)
+            if RUNTIME_VARS.CODE_DIR != env_pypath[0]:
+                env_pypath.insert(0, RUNTIME_VARS.CODE_DIR)
             if salt.utils.platform.is_windows():
                 env_delta['PYTHONPATH'] = ';'.join(env_pypath)
             else:
@@ -694,7 +694,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram)):
     def install_script(self):
         '''Generate the script file that calls python objects and libraries.'''
         lines = []
-        script_source = os.path.join(CODE_DIR, 'scripts', self.script)
+        script_source = os.path.join(RUNTIME_VARS.CODE_DIR, 'scripts', self.script)
         with salt.utils.files.fopen(script_source, 'r') as sso:
             lines.extend(sso.readlines())
         if lines[0].startswith('#!'):

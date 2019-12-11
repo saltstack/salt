@@ -2,5 +2,5 @@ cmd.run:
   salt.function:
     - tgt: minion
     - arg:
-      - /bin/false
+      - "$(which false)"
     - failhard: True
