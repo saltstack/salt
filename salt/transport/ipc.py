@@ -222,6 +222,7 @@ class IPCServer(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -229,6 +230,7 @@ class IPCServer(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
 
 class IPCClient(object):
@@ -339,6 +341,7 @@ class IPCClient(object):
 
                 yield tornado.gen.sleep(1)
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -346,6 +349,7 @@ class IPCClient(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
     def close(self):
         '''
@@ -569,6 +573,7 @@ class IPCMessagePublisher(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -576,6 +581,7 @@ class IPCMessagePublisher(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -726,6 +732,8 @@ class IPCMessageSubscriber(IPCClient):
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
 
+    # pylint: disable=W1701
     def __del__(self):
         if IPCMessageSubscriber in globals():
             self.close()
+    # pylint: enable=W1701
