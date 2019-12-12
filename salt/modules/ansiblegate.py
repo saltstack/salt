@@ -158,10 +158,6 @@ class AnsibleModuleCaller(object):
         :param kwargs: keywords to the module
         :return:
         """
-        if six.PY3:
-            python_exec = 'python3'
-        else:
-            python_exec = 'python'
 
         module = self._resolver.load_module(module)
         if not hasattr(module, "main"):
@@ -189,7 +185,7 @@ class AnsibleModuleCaller(object):
         else:
             proc_out_stdout = proc_out.stdout
         proc_exc = salt.utils.timed_subprocess.TimedProc(
-            [python_exec, module.__file__],
+            [sys.executable, module.__file__],
             stdin=proc_out_stdout,
             stdout=subprocess.PIPE,
             timeout=self.timeout
