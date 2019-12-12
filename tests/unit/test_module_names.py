@@ -50,7 +50,6 @@ EXCLUDED_FILES = [
     os.path.join('tests', 'virtualname.py'),
     os.path.join('tests', 'committer_parser.py'),
     os.path.join('tests', 'zypp_plugin.py'),
-    os.path.join('tests', 'tox-helper.py'),
     os.path.join('tests', 'unit', 'transport', 'mixins.py'),
     os.path.join('tests', 'integration', 'utils', 'testprogram.py'),
 ]
