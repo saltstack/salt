@@ -166,6 +166,7 @@ class TestSaltCacheLoader(TestCase):
             opts = self.opts
         with patch.object(SaltCacheLoader, 'file_client', Mock()):
             loader = SaltCacheLoader(opts, saltenv)
+            self.addCleanup(setattr, SaltCacheLoader, '_cached_client', None)
         # Create a mock file client and attach it to the loader
         MockFileClient(loader)
         return loader

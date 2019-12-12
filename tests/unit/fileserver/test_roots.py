@@ -35,9 +35,7 @@ UNICODE_DIRNAME = UNICODE_ENVNAME = 'соль'
 class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
-        self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.opts = self.get_temp_config('master')
-        self.opts['cachedir'] = self.tmp_cachedir
         empty_dir = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, 'empty_dir')
         if not os.path.isdir(empty_dir):
             os.makedirs(empty_dir)
