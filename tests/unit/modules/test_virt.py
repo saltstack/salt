@@ -2389,6 +2389,97 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.findall('source/host')[0].attrib['name'], 'iscsi.example.com')
         self.assertEqual(root.find('source/initiator/iqn').attrib['name'], 'iqn.2013-06.com.example:iscsi-initiator')
 
+    def test_pool_define(self):
+        '''
+        Test virt.pool_define()
+        '''
+        mock_pool = MagicMock()
+        mock_secret = MagicMock()
+        mock_secret_define = MagicMock(return_value=mock_secret)
+        self.mock_conn.secretDefineXML = mock_secret_define
+        self.mock_conn.storagePoolCreateXML = MagicMock(return_value=mock_pool)
+        self.mock_conn.storagePoolDefineXML = MagicMock(return_value=mock_pool)
+
+        mocks = [mock_pool, mock_secret, mock_secret_define, self.mock_conn.storagePoolCreateXML,
+                self.mock_conn.secretDefineXML, self.mock_conn.storagePoolDefineXML]
+
+        # Test case with already defined secret and permanent pool
+        self.assertTrue(virt.pool_define('default',
+                                         'rbd',
+                                         source_hosts=['one.example.com', 'two.example.com'],
+                                         source_name='rbdvol',
+                                         source_auth={
+                                            'type': 'ceph',
+                                            'username': 'admin',
+                                            'secret': {
+                                                'type': 'uuid',
+                                                'value': 'someuuid'
+                                            }
+                                         }))
+        self.mock_conn.storagePoolDefineXML.assert_called_once()
+        self.mock_conn.storagePoolCreateXML.assert_not_called()
+        mock_pool.create.assert_called_once()
+        mock_secret_define.assert_not_called()
+
+        # Test case with Ceph secret to be defined and transient pool
+        for mock in mocks:
+            mock.reset_mock()
+        self.assertTrue(virt.pool_define('default',
+                                         'rbd',
+                                         transient=True,
+                                         source_hosts=['one.example.com', 'two.example.com'],
+                                         source_name='rbdvol',
+                                         source_auth={
+                                            'username': 'admin',
+                                            'password': 'c2VjcmV0'
+                                         }))
+        self.mock_conn.storagePoolDefineXML.assert_not_called()
+
+        pool_xml = self.mock_conn.storagePoolCreateXML.call_args[0][0]
+        root = ET.fromstring(pool_xml)
+        self.assertEqual(root.find('source/auth').attrib['type'], 'ceph')
+        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
+        self.assertEqual(root.find('source/auth/secret').attrib['usage'], 'pool_default')
+        mock_pool.create.assert_not_called()
+        mock_secret.setValue.assert_called_once_with(b'secret')
+
+        secret_xml = mock_secret_define.call_args[0][0]
+        root = ET.fromstring(secret_xml)
+        self.assertEqual(root.find('usage/name').text, 'pool_default')
+        self.assertEqual(root.find('usage').attrib['type'], 'ceph')
+        self.assertEqual(root.attrib['private'], 'yes')
+        self.assertEqual(root.find('description').text, 'Passphrase for default pool created by Salt')
+
+        # Test case with iscsi secret not starting
+        for mock in mocks:
+            mock.reset_mock()
+        self.assertTrue(virt.pool_define('default',
+                                         'iscsi',
+                                         target='/dev/disk/by-path',
+                                         source_hosts=['iscsi.example.com'],
+                                         source_devices=[{'path': 'iqn.2013-06.com.example:iscsi-pool'}],
+                                         source_auth={
+                                            'username': 'admin',
+                                            'password': 'secret'
+                                         },
+                                         start=False))
+        self.mock_conn.storagePoolCreateXML.assert_not_called()
+
+        pool_xml = self.mock_conn.storagePoolDefineXML.call_args[0][0]
+        root = ET.fromstring(pool_xml)
+        self.assertEqual(root.find('source/auth').attrib['type'], 'chap')
+        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
+        self.assertEqual(root.find('source/auth/secret').attrib['usage'], 'pool_default')
+        mock_pool.create.assert_not_called()
+        mock_secret.setValue.assert_called_once_with('secret')
+
+        secret_xml = mock_secret_define.call_args[0][0]
+        root = ET.fromstring(secret_xml)
+        self.assertEqual(root.find('usage/target').text, 'pool_default')
+        self.assertEqual(root.find('usage').attrib['type'], 'iscsi')
+        self.assertEqual(root.attrib['private'], 'yes')
+        self.assertEqual(root.find('description').text, 'Passphrase for default pool created by Salt')
+
     def test_list_pools(self):
         '''
         Test virt.list_pools()
@@ -2822,3 +2913,108 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                              permissions={'mode': '0775', 'owner': '0', 'group': '100'},
                              test=True))
         self.mock_conn.storagePoolDefineXML.assert_not_called()
+
+    def test_pool_update_password(self):
+        '''
+        Test the pool_update function, where the password only is changed
+        '''
+        current_xml = '''<pool type='rbd'>
+          <name>default</name>
+          <uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>
+          <capacity unit='bytes'>1999421108224</capacity>
+          <allocation unit='bytes'>713207042048</allocation>
+          <available unit='bytes'>1286214066176</available>
+          <source>
+            <name>iscsi-images</name>
+            <host name='ses4.tf.local'/>
+            <host name='ses5.tf.local'/>
+            <auth username='libvirt' type='ceph'>
+              <secret uuid='14e9a0f1-8fbf-4097-b816-5b094c182212'/>
+            </auth>
+          </source>
+        </pool>'''
+
+        expected_xml = '<pool type="rbd">' \
+                       '<name>default</name>' \
+                         '<uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>' \
+                         '<capacity unit="bytes">1999421108224</capacity>' \
+                         '<allocation unit="bytes">713207042048</allocation>' \
+                         '<available unit="bytes">1286214066176</available>' \
+                         '<source>' \
+                           '<host name="ses4.tf.local" />' \
+                           '<host name="ses5.tf.local" />' \
+                           '<auth type="ceph" username="libvirt">' \
+                             '<secret uuid="14e9a0f1-8fbf-4097-b816-5b094c182212" />' \
+                           '</auth>' \
+                           '<name>iscsi-images</name>' \
+                         '</source>' \
+                       '</pool>'
+
+        mock_secret = MagicMock()
+        self.mock_conn.secretLookupByUUIDString = MagicMock(return_value=mock_secret)
+
+        mocked_pool = MagicMock()
+        mocked_pool.XMLDesc = MagicMock(return_value=current_xml)
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
+        self.mock_conn.storagePoolDefineXML = MagicMock()
+
+        self.assertTrue(
+            virt.pool_update('default',
+                             'rbd',
+                             source_name='iscsi-images',
+                             source_hosts=['ses4.tf.local', 'ses5.tf.local'],
+                             source_auth={'username': 'libvirt',
+                                          'password': 'c2VjcmV0'}))
+        self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
+        mock_secret.setValue.assert_called_once_with(b'secret')
+
+    def test_pool_update_password_create(self):
+        '''
+        Test the pool_update function, where the password only is changed
+        '''
+        current_xml = '''<pool type='rbd'>
+          <name>default</name>
+          <uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>
+          <capacity unit='bytes'>1999421108224</capacity>
+          <allocation unit='bytes'>713207042048</allocation>
+          <available unit='bytes'>1286214066176</available>
+          <source>
+            <name>iscsi-images</name>
+            <host name='ses4.tf.local'/>
+            <host name='ses5.tf.local'/>
+          </source>
+        </pool>'''
+
+        expected_xml = '<pool type="rbd">' \
+                       '<name>default</name>' \
+                         '<uuid>20fbe05c-ab40-418a-9afa-136d512f0ede</uuid>' \
+                         '<capacity unit="bytes">1999421108224</capacity>' \
+                         '<allocation unit="bytes">713207042048</allocation>' \
+                         '<available unit="bytes">1286214066176</available>' \
+                         '<source>' \
+                           '<host name="ses4.tf.local" />' \
+                           '<host name="ses5.tf.local" />' \
+                           '<auth type="ceph" username="libvirt">' \
+                             '<secret usage="pool_default" />' \
+                           '</auth>' \
+                           '<name>iscsi-images</name>' \
+                         '</source>' \
+                       '</pool>'
+
+        mock_secret = MagicMock()
+        self.mock_conn.secretDefineXML = MagicMock(return_value=mock_secret)
+
+        mocked_pool = MagicMock()
+        mocked_pool.XMLDesc = MagicMock(return_value=current_xml)
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
+        self.mock_conn.storagePoolDefineXML = MagicMock()
+
+        self.assertTrue(
+            virt.pool_update('default',
+                             'rbd',
+                             source_name='iscsi-images',
+                             source_hosts=['ses4.tf.local', 'ses5.tf.local'],
+                             source_auth={'username': 'libvirt',
+                                          'password': 'c2VjcmV0'}))
+        self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
+        mock_secret.setValue.assert_called_once_with(b'secret')
