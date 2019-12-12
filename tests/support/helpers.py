@@ -323,14 +323,14 @@ class RedirectStdStreams(object):
                 pass
 
 
-class TestsLoggingHandler(object):
+class TstSuiteLoggingHandler(object):
     '''
     Simple logging handler which can be used to test if certain logging
     messages get emitted or not:
 
     .. code-block:: python
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             # (...)               Do what ever you wish here
             handler.messages    # here are the emitted log messages
 
