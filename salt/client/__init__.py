@@ -97,16 +97,13 @@ def get_local_client(
         # Late import to prevent circular import
         import salt.config
         opts = salt.config.client_config(c_path)
-    if opts['transport'] == 'raet':
-        import salt.client.raet
-        return salt.client.raet.LocalClient(mopts=opts)
+
     # TODO: AIO core is separate from transport
-    elif opts['transport'] in ('zeromq', 'tcp'):
-        return LocalClient(
-            mopts=opts,
-            skip_perm_errors=skip_perm_errors,
-            io_loop=io_loop,
-            auto_reconnect=auto_reconnect)
+    return LocalClient(
+        mopts=opts,
+        skip_perm_errors=skip_perm_errors,
+        io_loop=io_loop,
+        auto_reconnect=auto_reconnect)
 
 
 class LocalClient(object):
@@ -547,7 +544,7 @@ class LocalClient(object):
                 'tgt_type': tgt_type,
                 'ret': ret,
                 'batch': batch,
-                'failhard': kwargs.get('failhard', False),
+                'failhard': kwargs.get('failhard', self.opts.get('failhard', False)),
                 'raw': kwargs.get('raw', False)}
 
         if 'timeout' in kwargs:
@@ -1882,6 +1879,7 @@ class LocalClient(object):
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
+    # pylint: disable=W1701
     def __del__(self):
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
@@ -1889,6 +1887,7 @@ class LocalClient(object):
         if hasattr(self, 'event'):
             # The call below will take care of calling 'self.event.destroy()'
             del self.event
+    # pylint: enable=W1701
 
     def _clean_up_subscriptions(self, job_id):
         if self.opts.get('order_masters'):

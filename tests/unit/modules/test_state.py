@@ -13,8 +13,8 @@ import textwrap
 import time
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP, TMP_CONF_DIR
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     Mock,
@@ -344,7 +344,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['state', 'args', 'systemd', 'path', 'platform']
         )
         utils.keys()
@@ -631,6 +631,19 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(state.show_low_sls("foo"), "A")
             self.assertListEqual(state.show_states("foo"), ['abc'])
+
+    def test_show_states_missing_sls(self):
+        '''
+        Test state.show_states when a sls file defined
+        in a top.sls file is missing
+        '''
+        msg = ["No matching sls found for 'cloud' in evn 'base'"]
+        chunks_mock = MagicMock(side_effect=[msg])
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock),\
+            patch('salt.state.HighState.compile_low_chunks', chunks_mock):
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), [msg[0]])
 
     def test_sls_id(self):
         '''
@@ -1308,7 +1321,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         return {
             state: {
                 '__opts__': salt.config.minion_config(
-                    os.path.join(TMP_CONF_DIR, 'minion')
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
                 ),
                 '__salt__': {
                     'saltutil.is_running': MagicMock(return_value=[]),
@@ -1317,8 +1330,8 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        self.cachedir = tempfile.mkdtemp(dir=TMP)
-        self.fileserver_root = tempfile.mkdtemp(dir=TMP)
+        self.cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.fileserver_root = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.cachedir, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.fileserver_root, ignore_errors=True)
 

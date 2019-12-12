@@ -9,8 +9,8 @@ import time
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     NO_MOCK,
@@ -34,7 +34,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['state']
         )
         return {
@@ -43,7 +43,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                 '__opts__': {
                     '__role': 'master',
                     'file_client': 'remote',
-                    'sock_dir': tempfile.mkdtemp(dir=TMP),
+                    'sock_dir': tempfile.mkdtemp(dir=RUNTIME_VARS.TMP),
                     'transport': 'tcp'
                 },
                 '__salt__': {'saltutil.cmd': MagicMock()},
@@ -302,7 +302,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class StatemodTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         return {
             saltmod: {
                 '__env__': 'base',

@@ -28,7 +28,7 @@ pyopenssl==19.0.0
 python-dateutil==2.8.0
 python-gnupg==0.4.4
 pythonnet==2.3.0
-pyyaml==3.13
+pyyaml==5.1.2
 pyzmq==18.0.1
 requests==2.21.0
 setproctitle

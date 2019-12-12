@@ -450,7 +450,9 @@ class MySQLTestCase(TestCase, LoaderModuleMockMixin):
         connect_mock = MagicMock()
         with patch.object(mysql, '_connect', connect_mock):
             with patch.dict(mysql.__salt__, {'config.option': MagicMock()}):
-                side_effect = MySQLdb.OperationalError(9999, 'Something Went Wrong')
+                # Use the OperationalError from the salt mysql module because that
+                # exception can come from either MySQLdb or pymysql
+                side_effect = mysql.OperationalError(9999, 'Something Went Wrong')
                 with patch.object(mysql, '_execute', MagicMock(side_effect=side_effect)):
                     mysql.query('testdb', 'SELECT * FROM testdb')
             self.assertIn('mysql.error', mysql.__context__)
