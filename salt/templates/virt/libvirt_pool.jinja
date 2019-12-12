@@ -50,7 +50,7 @@
     {% endif %}
     {% if ptype in ['iscsi', 'rbd', 'iscsi-direct'] and source.auth %}
     <auth type='{{source.auth.type}}' username='{{ source.auth.username }}'>
-      <secret type='{{ source.auth.secret.type }}' {{ source.auth.secret.type }}='{{source.auth.secret.value}}'/>
+      <secret {{ source.auth.secret.type }}='{{source.auth.secret.value}}'/>
     </auth>
     {% endif %}
     {% if ptype in ['logical', 'rbd', 'sheepdog', 'gluster'] and source.name %}
