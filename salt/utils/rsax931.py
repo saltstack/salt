@@ -8,6 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import glob
 import sys
 import os
+import platform
 
 # Import Salt libs
 import salt.utils.platform
@@ -35,7 +36,10 @@ def _load_libcrypto():
             os.path.dirname(sys.executable),
             'libcrypto.so*'))[0])
     else:
-        lib = find_library('crypto')
+        if platform.system() == 'Darwin' and int(platform.release().split('.')[0]) > 19:
+            lib = '/usr/local/opt/openssl@1.1/lib/libcrypto.dylib'
+        else:
+            lib = find_library('crypto')
         if not lib and sys.platform.startswith('sunos5'):
             # ctypes.util.find_library defaults to 32 bit library path on sunos5, test for 64 bit python execution
             lib = find_library('crypto', sys.maxsize > 2**32)
