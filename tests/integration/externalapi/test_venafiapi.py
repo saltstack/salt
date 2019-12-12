@@ -16,7 +16,6 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization
-import pytest
 import tempfile
 from os import environ
 
