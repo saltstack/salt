@@ -24,6 +24,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     Test salt matchers
     '''
 
+    _call_binary_ = 'salt'
+
     def test_list(self):
         '''
         test salt -L matcher
