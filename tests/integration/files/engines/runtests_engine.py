@@ -14,6 +14,7 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import sys
 import errno
 import socket
@@ -49,6 +50,7 @@ class PyTestEngine(object):
     def __init__(self, opts):
         self.opts = opts
         self.sock = None
+        self.stop_sending_events_file = opts.get('pytest_stop_sending_events_file')
 
     def start(self):
         self.io_loop = ioloop.IOLoop()
@@ -58,9 +60,9 @@ class PyTestEngine(object):
 
     @gen.coroutine
     def _start(self):
-        self.io_loop.spawn_callback(self.fire_master_started_event)
         port = int(self.opts['runtests_conn_check_port'])
-        log.info('Starting Pytest Engine(role=%s) on port %s', self.opts['__role'], port)
+        log.warning('Starting Pytest Engine(role=%s, id=%s) on port %s', self.opts['__role'], self.opts['id'], port)
+
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.setblocking(0)
@@ -73,6 +75,9 @@ class PyTestEngine(object):
                 self.sock,
                 self.handle_connection,
             )
+
+        if self.opts['__role'] == 'master':
+            yield self.fire_master_started_event()
 
     def handle_connection(self, connection, address):
         log.warning('Accepted connection from %s. Role: %s', address, self.opts['__role'])
@@ -92,17 +97,20 @@ class PyTestEngine(object):
 
     @gen.coroutine
     def fire_master_started_event(self):
-        log.info('Firing salt-master started event...')
+        log.info('Firing salt-%s started event...', self.opts['__role'])
         event_bus = salt.utils.event.get_master_event(self.opts, self.opts['sock_dir'], listen=False)
-        master_start_event_tag = 'salt/master/{0}/start'.format(self.opts['id'])
-        load = {'id': self.opts['id'], 'tag': master_start_event_tag, 'data': {}}
+        start_event_tag = 'salt/{}/{}/start'.format(self.opts['__role'], self.opts['id'])
+        log.info('Firing salt-%s started event. Tag: %s', self.opts['__role'], start_event_tag)
+        load = {'id': self.opts['id'], 'tag': start_event_tag, 'data': {}}
         # One minute should be more than enough to fire these events every second in order
         # for pytest-salt to pickup that the master is running
-        timeout = 60
+        timeout = 30
         while True:
+            if self.stop_sending_events_file and not os.path.exists(self.stop_sending_events_file):
+                break
             timeout -= 1
             try:
-                event_bus.fire_event(load, master_start_event_tag, timeout=500)
+                event_bus.fire_event(load, start_event_tag, timeout=500)
                 if timeout <= 0:
                     break
                 yield gen.sleep(1)
