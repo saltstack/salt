@@ -19,6 +19,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
+<<<<<<< HEAD
 
 import salt.modules.ansiblegate as ansible
 import salt.utils.platform
@@ -27,6 +28,9 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch, MockTimedProc
 from tests.support.unit import TestCase, skipIf
 
+=======
+import sys
+>>>>>>> Fix ansiblegate unit tests to use sys.executable
 try:
     import pytest
 except ImportError as import_error:
@@ -185,10 +189,7 @@ description:
             _ansible_module_caller = ansible.AnsibleModuleCaller(ansible._resolver)
             with patch("salt.utils.timed_subprocess.TimedProc", proc):
                 ret = _ansible_module_caller.call("one.two.three", "arg_1", kwarg1="foobar")
-                if six.PY3:
-                    proc.assert_any_call(["python3", "foofile"], stdin=ANSIBLE_MODULE_ARGS, stdout=-1, timeout=1200)
-                else:
-                    proc.assert_any_call(["python", "foofile"], stdin=ANSIBLE_MODULE_ARGS, stdout=-1, timeout=1200)
+                proc.assert_any_call([sys.executable, "foofile"], stdin=ANSIBLE_MODULE_ARGS, stdout=-1, timeout=1200)
                 try:
                     proc.assert_any_call(["echo", "{'ANSIBLE_MODULE_ARGS': {'kwarg1': 'foobar', '_raw_params': 'arg_1'}}"], stdout=-1, timeout=1200)
                 except AssertionError:
