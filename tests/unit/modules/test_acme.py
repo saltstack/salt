@@ -9,6 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Python libs
 import textwrap
 import datetime
+import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -197,7 +198,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
             'retcode': 0
         }
         result_no_renew = {
-            "comment": "Certificate /etc/letsencrypt/live/test/cert.pem unchanged",
+            "comment": "Certificate " + os.path.join('/etc/letsencrypt/live/test', 'cert.pem') + " unchanged",
             "not_after": datetime.datetime.fromtimestamp(valid_timestamp).isoformat(),
             "changes": {},
             "result": True
