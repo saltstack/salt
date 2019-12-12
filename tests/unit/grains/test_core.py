@@ -1384,16 +1384,54 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertNotEqual(virtual_grains['virtual'], 'physical')
 
     @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
     def test_osdata_virtual_key_win(self):
         with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
                                         'cmd.run_all': salt.modules.cmdmod.run_all,
                                         'cmd.retcode': salt.modules.cmdmod.retcode,
                                         'smbios.get': salt.modules.smbios.get}):
+
+            _windows_platform_data_ret = core.os_data()
+            _windows_platform_data_ret['virtual'] = 'something'
+
             with patch.object(core,
-                              '_windows_virtual',
-                              return_value={'virtual': 'something'}) as _windows_virtual:
+                              '_windows_platform_data',
+                              return_value=_windows_platform_data_ret) as _windows_platform_data:
+
                 osdata_grains = core.os_data()
-                _windows_virtual.assert_called_once()
+                _windows_platform_data.assert_called_once()
 
             self.assertIn('virtual', osdata_grains)
             self.assertNotEqual(osdata_grains['virtual'], 'physical')
