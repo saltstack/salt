@@ -33,7 +33,7 @@ from salt.pillar import git_pillar
 from tests.support.case import ModuleCase
 from tests.support.unit import SkipTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin, SaltReturnAssertsMixin
-from tests.support.helpers import get_unused_localhost_port, requires_system_grains
+from tests.support.helpers import get_unused_localhost_port, requires_system_grains, patched_environ
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import patch
 from pytestsalt.utils import SaltDaemonScriptBase as _SaltDaemonScriptBase, terminate_process
@@ -318,7 +318,7 @@ class SaltClientMixin(ModuleCase):
 
     @classmethod
     @requires_system_grains
-    def setUpClass(cls, grains=None):
+    def setUpClass(cls, grains=None):  # pylint: disable=arguments-differ
         # Cent OS 6 has too old a version of git to handle the make_repo code, as
         # it lacks the -c option for git itself.
         make_repo = getattr(cls, 'make_repo', None)
@@ -444,6 +444,8 @@ class SSHDMixin(SaltClientMixin, SaltReturnAssertsMixin):
             except KeyError:
                 log.warning('Failed to delete test account. Salt return:\n%s',
                             pprint.pformat(ret))
+            cls.prep_states_ran = False
+            cls.known_hosts_setup = False
         shutil.rmtree(cls.sshd_config_dir, ignore_errors=True)
         ssh_dir = os.path.expanduser('~/.ssh')
         for filename in (cls.id_rsa_nopass,
@@ -556,6 +558,7 @@ class WebserverMixin(SaltClientMixin, SaltReturnAssertsMixin):
             log.info('[%s] %s stopped', cls.uwsgi_proc.log_prefix, cls.uwsgi_proc.__class__.__name__)
             cls.uwsgi_proc = None
         shutil.rmtree(cls.root_dir, ignore_errors=True)
+        cls.prep_states_ran = False
         super(WebserverMixin, cls).tearDownClass()
 
 
@@ -893,15 +896,8 @@ class GitPillarSSHTestBase(GitPillarTestBase, SSHDMixin):
         passphraselsess key is used to auth without needing to modify the root
         user's ssh config file.
         '''
-
-        def cleanup_environ(environ):
-            os.environ.clear()
-            os.environ.update(environ)
-
-        self.addCleanup(cleanup_environ, os.environ.copy())
-
-        os.environ['GIT_SSH'] = self.git_ssh
-        return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
+        with patched_environ(GIT_SSH=self.git_ssh):
+            return super(GitPillarSSHTestBase, self).get_pillar(ext_pillar_conf)
 
 
 class GitPillarHTTPTestBase(GitPillarTestBase, WebserverMixin):

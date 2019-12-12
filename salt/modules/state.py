@@ -2400,37 +2400,37 @@ def event(tagmatch='*',
 
         salt-call --local state.event pretty=True
     '''
-    sevent = salt.utils.event.get_event(
-                 node,
-                 sock_dir or __opts__['sock_dir'],
-                 __opts__['transport'],
-                 opts=__opts__,
-                 listen=True)
+    with salt.utils.event.get_event(
+            node,
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True) as sevent:
 
-    while True:
-        ret = sevent.get_event(full=True, auto_reconnect=True)
-        if ret is None:
-            continue
+        while True:
+            ret = sevent.get_event(full=True, auto_reconnect=True)
+            if ret is None:
+                continue
 
-        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
-            if not quiet:
-                salt.utils.stringutils.print_cli(
-                    str('{0}\t{1}').format(  # future lint: blacklisted-function
-                        salt.utils.stringutils.to_str(ret['tag']),
-                        salt.utils.json.dumps(
-                            ret['data'],
-                            sort_keys=pretty,
-                            indent=None if not pretty else 4)
+            if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
+                if not quiet:
+                    salt.utils.stringutils.print_cli(
+                        str('{0}\t{1}').format(  # future lint: blacklisted-function
+                            salt.utils.stringutils.to_str(ret['tag']),
+                            salt.utils.json.dumps(
+                                ret['data'],
+                                sort_keys=pretty,
+                                indent=None if not pretty else 4)
+                        )
                     )
-                )
-                sys.stdout.flush()
+                    sys.stdout.flush()
 
-            if count > 0:
-                count -= 1
-                log.debug('Remaining event matches: %s', count)
+                if count > 0:
+                    count -= 1
+                    log.debug('Remaining event matches: %s', count)
 
-            if count == 0:
-                break
-        else:
-            log.debug('Skipping event tag: %s', ret['tag'])
-            continue
+                if count == 0:
+                    break
+            else:
+                log.debug('Skipping event tag: %s', ret['tag'])
+                continue
