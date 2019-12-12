@@ -125,8 +125,11 @@ class AsyncReqChannel(AsyncChannel):
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPReqChannel(opts, **kwargs)
         elif ttype == 'local':
-            import salt.transport.local
-            return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
+            raise Exception(
+                'There\'s no AsyncLocalChannel implementation yet'
+            )
+            # import salt.transport.local
+            # return salt.transport.local.AsyncLocalChannel(opts, **kwargs)
         else:
             raise Exception(
                 'Channels are only defined for tcp, zeromq, and local'
@@ -145,6 +148,18 @@ class AsyncReqChannel(AsyncChannel):
         the minion and the master (not other minions etc.)
         '''
         raise NotImplementedError()
+
+    def close(self):
+        '''
+        Close the channel
+        '''
+        raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class AsyncPubChannel(AsyncChannel):
