@@ -1722,11 +1722,10 @@ class LocalClient(object):
             salt.utils.zeromq.ip_bracket(self.opts['interface']),
             six.text_type(self.opts['ret_port'])
         )
-        channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                           crypt='clear',
-                                                           master_uri=master_uri)
 
-        try:
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      master_uri=master_uri) as channel:
             try:
                 # Ensure that the event subscriber is connected.
                 # If not, we won't get a response, so error out
@@ -1769,9 +1768,6 @@ class LocalClient(object):
 
             if not payload:
                 return payload
-        finally:
-            # We have the payload, let's get rid of the channel fast(GC'ed faster)
-            channel.close()
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1831,11 +1827,11 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                io_loop=io_loop,
-                                                                crypt='clear',
-                                                                master_uri=master_uri)
-        try:
+
+        with salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                           io_loop=io_loop,
+                                                           crypt='clear',
+                                                           master_uri=master_uri) as channel:
             try:
                 # Ensure that the event subscriber is connected.
                 # If not, we won't get a response, so error out
@@ -1877,9 +1873,6 @@ class LocalClient(object):
 
             if not payload:
                 raise tornado.gen.Return(payload)
-        finally:
-            # We have the payload, let's get rid of the channel fast(GC'ed faster)
-            channel.close()
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})

@@ -1372,13 +1372,11 @@ class StateFire(object):
             'tok': self.auth.gen_token(b'salt'),
         })
 
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception as exc:
-            log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True
 
     def fire_running(self, running):
@@ -1404,11 +1402,9 @@ class StateFire(object):
                 'tag': tag,
                 'data': running[stag],
             })
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception as exc:
-            log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True

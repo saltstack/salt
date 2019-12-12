@@ -1669,8 +1669,7 @@ def ping_master(master):
     load = {'cmd': 'ping'}
 
     result = False
-    channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
-    try:
+    with salt.transport.client.ReqChannel.factory(opts, crypt='clear') as channel:
         try:
             payload = channel.send(load, tries=0, timeout=timeout)
             result = True
@@ -1682,8 +1681,6 @@ def ping_master(master):
                 event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
         return result
-    finally:
-        channel.close()
 
 
 def proxy_reconnect(proxy_name, opts=None):

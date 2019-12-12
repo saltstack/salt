@@ -65,6 +65,12 @@ class Channel(object):
     def close(self):
         pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class PublishTestCase(TestCase, LoaderModuleMockMixin):

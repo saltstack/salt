@@ -691,13 +691,10 @@ class Resolver(object):
             salt.utils.zeromq.ip_bracket(self.opts['interface']),
             six.text_type(self.opts['ret_port'])
         )
-        channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                           crypt='clear',
-                                                           master_uri=master_uri)
-        try:
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      master_uri=master_uri) as channel:
             return channel.send(load)
-        finally:
-            channel.close()
 
     def cli(self, eauth):
         '''
