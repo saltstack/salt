@@ -164,8 +164,11 @@ class AsyncPubChannel(AsyncChannel):
             import salt.transport.tcp
             return salt.transport.tcp.AsyncTCPPubChannel(opts, **kwargs)
         elif ttype == 'local':  # TODO:
-            import salt.transport.local
-            return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
+            raise Exception(
+                'There\'s no AsyncLocalPubChannel implementation yet'
+            )
+            # import salt.transport.local
+            # return salt.transport.local.AsyncLocalPubChannel(opts, **kwargs)
         else:
             raise Exception(
                 'Channels are only defined for tcp, zeromq, and local'
@@ -178,11 +181,23 @@ class AsyncPubChannel(AsyncChannel):
         '''
         raise NotImplementedError()
 
+    def close(self):
+        '''
+        Close the channel
+        '''
+        raise NotImplementedError()
+
     def on_recv(self, callback):
         '''
         When jobs are received pass them (decoded) to callback
         '''
         raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class AsyncPushChannel(object):
