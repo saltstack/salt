@@ -383,9 +383,11 @@ def refresh_grains(**kwargs):
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
-    refresh_modules()
     if _refresh_pillar:
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
+    else:
+        refresh_modules()
     return True
 
 
@@ -425,7 +427,7 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     ret = _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 
@@ -913,8 +915,47 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         )
     ret = _sync('pillar', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
+    return ret
+
+
+def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Neon
+
+    Sync executors from ``salt://_executors`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for log handlers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new log handlers are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_executors
+        salt '*' saltutil.sync_executors saltenv=dev
+        salt '*' saltutil.sync_executors saltenv=base,dev
+    '''
+    ret = _sync('executors', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
     return ret
 
 
@@ -978,6 +1019,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['output'] = sync_output(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['utils'] = sync_utils(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['executors'] = sync_executors(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
@@ -986,7 +1028,7 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 
@@ -1081,12 +1123,12 @@ def refresh_modules(**kwargs):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
-            ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
-            # Wait for the finish event to fire
-            log.trace('refresh_modules waiting for module refresh to complete')
-            # Blocks until we hear this event or until the timeout expires
-            eventer.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=True) as event_bus:
+                ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
+                # Wait for the finish event to fire
+                log.trace('refresh_modules waiting for module refresh to complete')
+                # Blocks until we hear this event or until the timeout expires
+                event_bus.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
