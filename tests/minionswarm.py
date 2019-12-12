@@ -28,7 +28,7 @@ import salt.utils.yaml
 # Import third party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-import tests.support.helpers
+import tests.support.runtests
 
 
 OSES = [
@@ -148,7 +148,7 @@ def parse():
         '-c', '--config-dir', default='',
         help=('Pass in a configuration directory containing base configuration.')
         )
-    parser.add_option('-u', '--user', default=tests.support.helpers.this_user())
+    parser.add_option('-u', '--user', default=tests.support.runtests.this_user())
 
     options, _args = parser.parse_args()
 
