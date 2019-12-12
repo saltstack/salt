@@ -202,6 +202,8 @@ def flaky(caller=None, condition=True, attempts=4):
                     if callable(setup):
                         setup()
                 return caller(cls)
+            except SkipTest as exc:
+                cls.skipTest(exc.args[0])
             except Exception as exc:
                 exc_info = sys.exc_info()
                 if isinstance(exc, SkipTest):

@@ -108,7 +108,8 @@ else:
         skip,
         skipIf,
         TestResult,
-        TextTestResult as _TextTestResult
+        TextTestResult as _TextTestResult,
+        SkipTest,
     )
     from unittest.case import _id, SkipTest
 
