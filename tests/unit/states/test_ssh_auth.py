@@ -102,3 +102,78 @@ class SshAuthTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Removed'}})
                 self.assertDictEqual(ssh_auth.absent(name, user, source), ret)
+
+    def test_manage(self):
+        '''
+        Test to verifies that the specified SSH key is absent.
+        '''
+        user = 'root'
+        ret = {'name': '',
+               'changes': {},
+               'result': None,
+               'comment': ''}
+
+        mock_rm = MagicMock(side_effect=['User authorized keys file not present',
+                                      'Key removed'])
+        mock_up = MagicMock(side_effect=['update', 'updated'])
+        mock_set = MagicMock(side_effect=['replace', 'new'])
+        mock_keys = MagicMock(return_value={'somekey': {
+                        "enc": "ssh-rsa",
+                        "comment": "user@host",
+                        "options": [],
+                        "fingerprint": "b7"}})
+        with patch.dict(ssh_auth.__salt__, {'ssh.rm_auth_key': mock_rm,
+                                            'ssh.set_auth_key': mock_set,
+                                            'ssh.check_key': mock_up,
+                                            'ssh.auth_keys': mock_keys}):
+            with patch('salt.states.ssh_auth.present') as call_mocked_present:
+                mock_present = {'comment': '',
+                                'changes': {},
+                                'result': None
+                               }
+                call_mocked_present.return_value = mock_present
+                with patch.dict(ssh_auth.__opts__, {'test': True}):
+                    # test: expected keys found. No chanages
+                    self.assertDictEqual(ssh_auth.manage('sshid', ['somekey'], user), ret)
+
+                    comt = ('somekey Key set for removal')
+                    ret.update({'comment': comt})
+                    # test: unexpected sshkey found. Should be removed.
+                    self.assertDictEqual(ssh_auth.manage('sshid', [], user), ret)
+
+            with patch('salt.states.ssh_auth.present') as call_mocked_present:
+                mock_present = {'comment': '',
+                                'changes': {},
+                                'result': True
+                               }
+                call_mocked_present.return_value = mock_present
+                with patch.dict(ssh_auth.__opts__, {'test': False}):
+                    # expected keys found. No changes
+                    ret = {'name': '',
+                           'changes': {},
+                           'result': True,
+                           'comment': ''}
+                    self.assertDictEqual(ssh_auth.manage('sshid', ['somekey'], user), ret)
+
+                    with patch('salt.states.ssh_auth.absent') as call_mocked_absent:
+                        mock_absent = {'comment': 'Key removed'}
+                        call_mocked_absent.return_value = mock_absent
+                        ret.update({'comment': '', 'result': True,
+                                    'changes': {'somekey': 'Key removed'}})
+                        # unexpected sshkey found. Was removed.
+                        self.assertDictEqual(ssh_auth.manage('sshid', ['addkey'], user), ret)
+
+            # add a key
+            with patch('salt.states.ssh_auth.present') as call_mocked_present:
+                mock_present = {'comment': 'The authorized host key newkey for user {} was added'.format(user),
+                                'changes': {'newkey': 'New'},
+                                'result': True
+                               }
+                call_mocked_present.return_value = mock_present
+                with patch.dict(ssh_auth.__opts__, {'test': False}):
+                    # added key newkey
+                    ret = {'name': '',
+                           'changes': {'newkey': 'New'},
+                           'result': True,
+                           'comment': ''}
+                    self.assertDictEqual(ssh_auth.manage('sshid', ['newkey', 'somekey'], user), ret)
