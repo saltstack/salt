@@ -180,10 +180,10 @@ class AnsibleModuleCaller(object):
             timeout=self.timeout,
         )
         proc_out.run()
-        if six.PY3:
-            proc_out_stdout = proc_out.stdout.decode()
-        else:
+        if six.PY2:
             proc_out_stdout = proc_out.stdout
+        else:
+            proc_out_stdout = proc_out.stdout.decode()
         proc_exc = salt.utils.timed_subprocess.TimedProc(
             [sys.executable, module.__file__],
             stdin=proc_out_stdout,
