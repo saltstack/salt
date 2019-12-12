@@ -43,7 +43,6 @@ EXCLUDED_FILES = [
     os.path.join('tests', 'runtests.py'),
     os.path.join('tests', 'jenkins.py'),
     os.path.join('tests', 'salt-tcpdump.py'),
-    os.path.join('tests', 'conftest.py'),
     os.path.join('tests', 'packdump.py'),
     os.path.join('tests', 'consist.py'),
     os.path.join('tests', 'modparser.py'),
@@ -78,7 +77,7 @@ class BadTestModuleNamesTestCase(TestCase):
                     or reldir.endswith('__pycache__'):
                 continue
             for fname in files:
-                if fname == '__init__.py' or not fname.endswith('.py'):
+                if fname in ('__init__.py', 'conftest.py') or not fname.endswith('.py'):
                     continue
                 relpath = os.path.join(reldir, fname)
                 if relpath in EXCLUDED_FILES:
