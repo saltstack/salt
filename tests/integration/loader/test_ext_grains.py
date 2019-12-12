@@ -24,6 +24,7 @@ from tests.support.unit import skipIf
 # Import salt libs
 import salt.config
 import salt.loader
+import salt.utils
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class GrainsPrecedenceTest(ModuleCase):
         Test that /etc/salt/grains overrides core
         '''
         etc_salt_grains_file = os.path.join(TMP_CONF_DIR, 'grains')
-        with open(etc_salt_grains_file, 'w') as etc_:
+        with salt.utils.fopen(etc_salt_grains_file, 'w') as etc_:
             etc_.write('localhost: cosmos')
 
         self.run_function('saltutil.refresh_grains')
@@ -98,12 +99,15 @@ class GrainsPrecedenceTest(ModuleCase):
         self.assertEqual(grains.get('localhost'), 'alien')
         self.run_function('grains.delkey', arg=('localhost'))
 
-    def test_minion_config_override(self):
+    def test_minion_config_grains(self):
+        '''
+        Test that minion config overrides core
+        '''
         minion_config_filename = os.path.join(TMP_CONF_DIR, 'minion')
         # read original contents
         opts = salt.config.minion_config(minion_config_filename)
         opts['grains']['localhost'] = 'not-local'
-        with open(minion_config_filename, 'w') as cfg_:
+        with salt.utils.fopen(minion_config_filename, 'w') as cfg_:
             yaml.safe_dump(opts, cfg_, default_flow_style=False)
 
         self.run_function('saltutil.refresh_grains')
@@ -113,18 +117,18 @@ class GrainsPrecedenceTest(ModuleCase):
 
         # restore original contents
         del opts['grains']['localhost']
-        with open(minion_config_filename, 'w') as cfg_:
+        with salt.utils.fopen(minion_config_filename, 'w') as cfg_:
             yaml.safe_dump(opts, cfg_, default_flow_style=False)
 
         self.run_function('saltutil.refresh_grains')
 
-    def test_overwrite_localhost_custom_grains_module(self):
+    def test_custom_overwrite(self):
         '''
         Test that custom grain module overwrites core 'localhost' grain
         '''
         filename = 'overwrite_localhost_{0}.py'.format(int(time.time()))
         custom_grain_abs_path = os.path.join(BASE_FILES, '_grains', filename)
-        with open(custom_grain_abs_path, 'w') as file_:
+        with salt.utils.fopen(custom_grain_abs_path, 'w') as file_:
             file_.write("def overwrite_localhost():{0}".format(os.linesep))
             file_.write("    return {{'localhost': 'overwrite-localhost'}}{0}".format(os.linesep))
 
@@ -144,13 +148,13 @@ class GrainsPrecedenceTest(ModuleCase):
 
         self.run_function('saltutil.sync_grains')
 
-    def test_overwrite_zfs_support_custom_grains_module(self):
+    def test_zfs_overwrite(self):
         '''
         Test that 'core' grains modules not included in 'core' namespace can be overwritten
         '''
         filename = 'overwrite_zfs_support_{0}.py'.format(int(time.time()))
         custom_grain_abs_path = os.path.join(BASE_FILES, '_grains', filename)
-        with open(custom_grain_abs_path, 'w') as file_:
+        with salt.utils.fopen(custom_grain_abs_path, 'w') as file_:
             file_.write("def overwrite_zfs_support():{0}".format(os.linesep))
             file_.write("    return {{'zfs_support': 'dinosaur'}}{0}".format(os.linesep))
 
@@ -172,6 +176,8 @@ class GrainsPrecedenceTest(ModuleCase):
         self.run_function('saltutil.sync_grains')
 
     def test_dummy(self):
+        '''
+        Dummy test
+        '''
         grains = self.run_function('grains.items')
         self.assertTrue('custom_grain_test' in grains)
-
