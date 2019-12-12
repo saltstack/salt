@@ -2335,7 +2335,6 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.findall('source/host')[1].attrib['port'], '69')
         self.assertEqual(root.find('source/auth').attrib['type'], 'ceph')
         self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
-        self.assertEqual(root.find('source/auth/secret').attrib['type'], 'uuid')
         self.assertEqual(root.find('source/auth/secret').attrib['uuid'], 'someuuid')
 
     def test_pool_with_netfs(self):
