@@ -274,7 +274,6 @@ class SaltNova(object):
                   **kwargs):
         if auth is None:
             auth = {}
-        verify = kwargs.get('verify', False)
 
         loader = keystoneauth1.loading.get_plugin_loader(os_auth_plugin or 'password')
 
@@ -316,9 +315,12 @@ class SaltNova(object):
         conn = client.Client(version=self.version, session=self.session, **self.client_kwargs)
         self.kwargs['auth_token'] = conn.client.session.get_token()
         identity_service_type = kwargs.get('identity_service_type', 'identity')
-        self.catalog = conn.client.session.get('/auth/catalog',
-                                               endpoint_filter={'service_type': identity_service_type}).json().get(
-            'catalog', [])
+        self.catalog = conn.client.session.get(
+            '/auth/catalog',
+            endpoint_filter={
+                'service_type': identity_service_type
+            }
+        ).json().get('catalog', [])
         if conn.client.get_endpoint(service_type=identity_service_type).endswith('v3'):
             self._v3_setup(region_name)
         else:
@@ -565,15 +567,11 @@ class SaltNova(object):
         '''
         if self.volume_conn is None:
             raise SaltCloudSystemExit('No cinder endpoint available')
-        nt_ks = self.volume_conn
+
         volumes = self.volume_list(
             search_opts={'display_name': name},
         )
         volume = volumes[name]
-        #        except Exception as esc:
-        #            # volume doesn't exist
-        #            log.error(esc.strerror)
-        #            return {'name': name, 'status': 'deleted'}
 
         return volume
 
