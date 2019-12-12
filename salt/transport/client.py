@@ -25,6 +25,12 @@ class ReqChannel(object):
         sync = SyncWrapper(AsyncReqChannel.factory, (opts,), kwargs)
         return sync
 
+    def close(self):
+        '''
+        Close the channel
+        '''
+        raise NotImplementedError()
+
     def send(self, load, tries=3, timeout=60, raw=False):
         '''
         Send "load" to the master.
@@ -37,6 +43,12 @@ class ReqChannel(object):
         the minion and the master (not other minions etc.)
         '''
         raise NotImplementedError()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class PushChannel(object):
