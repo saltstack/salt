@@ -74,6 +74,7 @@ The calls not using the libvirt connection setup are:
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
 import copy
 import os
 import re
@@ -710,6 +711,24 @@ def _gen_pool_xml(name,
         'source': source
     }
     fn_ = 'libvirt_pool.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template %s', fn_)
+        return ''
+    return template.render(**context)
+
+
+def _gen_secret_xml(auth_type, usage, description):
+    '''
+    Generate a libvirt secret definition XML
+    '''
+    context = {
+        'type': auth_type,
+        'usage': usage,
+        'description': description,
+    }
+    fn_ = 'libvirt_secret.jinja'
     try:
         template = JINJA.get_template(fn_)
     except jinja2.exceptions.TemplateNotFound:
@@ -4591,6 +4610,10 @@ def pool_define(name,
                 }
             }
 
+        Since neon, instead the source authentication can only contain ``username``
+        and ``password`` properties. In this case the libvirt secret will be defined and used.
+        For Ceph authentications a base64 encoded key is expected.
+
     :param source_name:
         Identifier of name-based sources.
     :param source_format:
@@ -4643,6 +4666,8 @@ def pool_define(name,
     .. versionadded:: 2019.2.0
     '''
     conn = __get_conn(**kwargs)
+    auth = _pool_set_secret(conn, ptype, name, source_auth)
+
     pool_xml = _gen_pool_xml(
         name,
         ptype,
@@ -4652,7 +4677,7 @@ def pool_define(name,
         source_dir=source_dir,
         source_adapter=source_adapter,
         source_hosts=source_hosts,
-        source_auth=source_auth,
+        source_auth=auth,
         source_name=source_name,
         source_format=source_format,
         source_initiator=source_initiator
@@ -4671,6 +4696,51 @@ def pool_define(name,
 
     # libvirt function will raise a libvirtError in case of failure
     return True
+
+
+def _pool_set_secret(conn, pool_type, pool_name, source_auth, uuid=None, usage=None, test=False):
+    secret_types = {
+        'rbd': 'ceph',
+        'iscsi': 'chap',
+        'iscsi-direct': 'chap'
+    }
+    secret_type = secret_types.get(pool_type)
+    auth = source_auth
+    if source_auth and 'username' in source_auth and 'password' in source_auth:
+        if secret_type:
+            # Get the previously defined secret if any
+            secret = None
+            if usage:
+                usage_type = libvirt.VIR_SECRET_USAGE_TYPE_CEPH if secret_type == 'ceph' \
+                                else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                secret = conn.secretLookupByUsage(usage_type, usage)
+            elif uuid:
+                secret = conn.secretLookupByUUIDString(uuid)
+
+            # Create secret if needed
+            if not secret:
+                description = 'Passphrase for {} pool created by Salt'.format(pool_name)
+                if not usage:
+                    usage = 'pool_{}'.format(pool_name)
+                secret_xml = _gen_secret_xml(secret_type, usage, description)
+                if not test:
+                    secret = conn.secretDefineXML(secret_xml)
+
+            # Assign the password to it
+            password = auth['password']
+            if pool_type == 'rbd':
+                # RBD password are already base64-encoded, but libvirt will base64-encode them later
+                password = base64.b64decode(salt.utils.stringutils.to_bytes(password))
+            if not test:
+                secret.setValue(password)
+
+            # update auth with secret reference
+            auth['type'] = secret_type
+            auth['secret'] = {
+                'type': 'uuid' if uuid else 'usage',
+                'value': uuid if uuid else usage,
+            }
+    return auth
 
 
 def pool_update(name,
@@ -4760,6 +4830,10 @@ def pool_update(name,
                 }
             }
 
+        Since neon, instead the source authentication can only contain ``username``
+        and ``password`` properties. In this case the libvirt secret will be defined and used.
+        For Ceph authentications a base64 encoded key is expected.
+
     :param source_name:
         Identifier of name-based sources.
     :param source_format:
@@ -4789,27 +4863,35 @@ def pool_update(name,
 
     .. versionadded:: neon
     '''
-    new_xml = ElementTree.fromstring(_gen_pool_xml(
-        name,
-        ptype,
-        target,
-        permissions=permissions,
-        source_devices=source_devices,
-        source_dir=source_dir,
-        source_initiator=source_initiator,
-        source_adapter=source_adapter,
-        source_hosts=source_hosts,
-        source_auth=source_auth,
-        source_name=source_name,
-        source_format=source_format
-    ))
-
     # Get the current definition to compare the two
     conn = __get_conn(**kwargs)
     needs_update = False
     try:
         pool = conn.storagePoolLookupByName(name)
         old_xml = ElementTree.fromstring(pool.XMLDesc())
+
+        # If we have username and password in source_auth generate a new secret
+        # Or change the value of the existing one
+        secret_node = old_xml.find('source/auth/secret')
+        usage = secret_node.get('usage') if secret_node is not None else None
+        uuid = secret_node.get('uuid') if secret_node is not None else None
+        auth = _pool_set_secret(conn, ptype, name, source_auth, uuid=uuid, usage=usage, test=test)
+
+        # Compute new definition
+        new_xml = ElementTree.fromstring(_gen_pool_xml(
+            name,
+            ptype,
+            target,
+            permissions=permissions,
+            source_devices=source_devices,
+            source_dir=source_dir,
+            source_initiator=source_initiator,
+            source_adapter=source_adapter,
+            source_hosts=source_hosts,
+            source_auth=auth,
+            source_name=source_name,
+            source_format=source_format
+        ))
 
         # Copy over the uuid, capacity, allocation, available elements
         elements_to_copy = ['available', 'allocation', 'capacity', 'uuid']
