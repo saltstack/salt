@@ -689,6 +689,25 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                             with self.assertRaises(CommandExecutionError):
                                 nxos.config(config_file=config_file, **kwargs)
 
+    def test_config_nxos_error_ssh(self):
+
+        """ UT: nxos module:config method - nxos device error over ssh transport """
+
+        commands = ['feature bgp', 'router bgp 57']
+        kwargs = {}
+        config_result = [['feature bgp', 'router bgp 57'], u'bgp instance is already running; Tag is 55']
+        expected_output = 'COMMAND_LIST: feature bgp ; router bgp 57\nbgp instance is already running; Tag is 55\n'
+
+        with patch.object(nxos, 'show', MagicMock(return_value=initial_config[0])):
+            mock_cmd = MagicMock(return_value=template_engine_file_str)
+            with patch.dict(nxos.__salt__, {'file.apply_template_on_contents': mock_cmd}):
+                with patch.object(nxos, '_configure_device', MagicMock(return_value=config_result)):
+                    with patch.object(nxos, 'show', MagicMock(return_value=modified_config[0])):
+
+                        # Execute the function under test
+                        result = nxos.config(commands, **kwargs)
+                        self.assertEqual(result, expected_output)
+
     def test_commands_error(self):
 
         """ UT: nxos module:config method - Mandatory arg commands not specified """
