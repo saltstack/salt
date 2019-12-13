@@ -299,8 +299,10 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+       This argument has been deprecated. Please use ``refresh`` instead.
+       The ``refresh_db`` argument will continue to work to ensure backwards
+       compatibility, but we recommend using the preferred ``refresh``
+       argument instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
@@ -308,12 +310,6 @@ def managed(name, ppa=None, **kwargs):
        packages. Setting a require in the pkg state will not work for this.
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         kwargs['refresh'] = kwargs.pop('refresh_db')
 
     ret = {'name': name,
