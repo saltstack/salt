@@ -11,7 +11,7 @@ import shutil
 import datetime
 import time
 
-# Import Salt Testing libs
+# Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
@@ -299,6 +299,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key('xxxxxxxxxxxxxxxx')
                     self.assertEqual(ret, _expected_result)
 
+    @destructiveTest  # Need to run as root!?
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_delete_key(self):
         '''

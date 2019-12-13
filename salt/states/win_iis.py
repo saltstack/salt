@@ -779,7 +779,7 @@ def remove_vdir(name, site, app='/'):
 
 def set_app(name, site, settings=None):
     # pylint: disable=anomalous-backslash-in-string
-    '''
+    r'''
     .. versionadded:: 2017.7.0
 
     Set the value of the setting for an IIS web application.
