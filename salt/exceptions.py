@@ -574,6 +574,12 @@ class MissingSmb(SaltException):
     '''
 
 
+class LoggingRuntimeError(RuntimeError):
+    '''
+    Raised when we encounter an error while logging
+    '''
+
+
 class NxosError(SaltException):
     '''
     NX-OS Base Exception class

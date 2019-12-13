@@ -24,6 +24,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     Test salt matchers
     '''
 
+    _call_binary_ = 'salt'
+
     def test_list(self):
         '''
         test salt -L matcher
@@ -229,8 +231,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                 'No command was sent, no jid was '
                 'assigned.'
             )
-        elif self.master_opts['transport'] == 'raet':
-            expect = ''
         self.assertEqual(
             ''.join(data),
             expect

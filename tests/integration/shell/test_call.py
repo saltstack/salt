@@ -16,9 +16,9 @@ import shutil
 import sys
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
@@ -64,8 +64,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn('"local": true', ''.join(out))
 
     def test_local_sls_call(self):
-        fileroot = os.path.join(FILES, 'file', 'base')
-        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
+        fileroot = os.path.join(RUNTIME_VARS.FILES, 'file', 'base')
+        out = self.run_call('--file-root {0} state.sls saltcalllocal'.format(fileroot), local=True)
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
         self.assertIn('hello', ''.join(out))
@@ -78,8 +78,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         function twice, see https://github.com/saltstack/salt/pull/49552
         '''
         def _run_call(cmd):
-            cmd = '--out=json --local ' + cmd
-            return salt.utils.json.loads(''.join(self.run_call(cmd)))['local']
+            cmd = '--out=json ' + cmd
+            return salt.utils.json.loads(''.join(self.run_call(cmd, local=True)))['local']
 
         ret = _run_call('state.single file.append name={0} text="foo"'.format(name))
         ret = ret[next(iter(ret))]
@@ -92,8 +92,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             contents = fp_.read()
         assert contents.count('foo') == 1, contents
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @flaky
+    @skipIf(salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(), 'This test requires a supported master')
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
         assert 'salt \'*\' user.delete name remove=True force=True' in ''.join(ret)
@@ -111,8 +110,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         for this minion, salt-call should exit non-zero if invoked with
         option --retcode-passthrough
         '''
-        src = os.path.join(FILES, 'file/base/top.sls')
-        dst = os.path.join(FILES, 'file/base/top.sls.bak')
+        src = os.path.join(RUNTIME_VARS.BASE_FILES, 'top.sls')
+        dst = os.path.join(RUNTIME_VARS.BASE_FILES, 'top.sls.bak')
         shutil.move(src, dst)
         expected_comment = 'No states found for this minion'
         try:
@@ -156,7 +155,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         test when log_file is set to a syslog file that does not exist
         '''
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'log_file_incorrect')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'log_file_incorrect')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -196,7 +195,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_15074_output_file_append(self):
-        output_file_append = os.path.join(TMP, 'issue-15074')
+        output_file_append = os.path.join(RUNTIME_VARS.TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
             _ = self.run_script(
@@ -230,7 +229,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_14979_output_file_permissions(self):
-        output_file = os.path.join(TMP, 'issue-14979')
+        output_file = os.path.join(RUNTIME_VARS.TMP, 'issue-14979')
         with salt.utils.files.set_umask(0o077):
             try:
                 # Let's create an initial output file with some data
@@ -322,7 +321,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         Teardown method to remove installed packages
         '''
         user = ''
-        user_info = self.run_call('--local grains.get username')
+        user_info = self.run_call(' grains.get username', local=True)
         if user_info and isinstance(user_info, (list, tuple)) and isinstance(user_info[-1], six.string_types):
             user = user_info[-1].strip()
         super(CallTest, self).tearDown()
@@ -356,7 +355,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         '''
         ret = self.run_call('state.highstate', local=True)
 
-        destpath = os.path.join(TMP, 'testfile')
+        destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         exp_out = ['    Function: file.managed', '      Result: True',
                    '          ID: {0}'.format(destpath)]
 

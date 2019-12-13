@@ -59,7 +59,6 @@ import fnmatch
 import hashlib
 import logging
 import datetime
-import sys
 
 try:
     from collections.abc import MutableMapping
@@ -129,27 +128,20 @@ def get_event(
     '''
     sock_dir = sock_dir or opts['sock_dir']
     # TODO: AIO core is separate from transport
-    if transport in ('zeromq', 'tcp'):
-        if node == 'master':
-            return MasterEvent(sock_dir,
-                               opts,
-                               listen=listen,
-                               io_loop=io_loop,
-                               keep_loop=keep_loop,
-                               raise_errors=raise_errors)
-        return SaltEvent(node,
-                         sock_dir,
-                         opts,
-                         listen=listen,
-                         io_loop=io_loop,
-                         keep_loop=keep_loop,
-                         raise_errors=raise_errors)
-    elif transport == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RAETEvent(node,
-                                              sock_dir=sock_dir,
-                                              listen=listen,
-                                              opts=opts)
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
 def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
@@ -159,11 +151,6 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen
-        )
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -870,6 +857,7 @@ class SaltEvent(object):
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
 
+    # pylint: disable=W1701
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
@@ -877,6 +865,13 @@ class SaltEvent(object):
             self.destroy()
         except Exception:
             pass
+    # pylint: enable=W1701
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -925,6 +920,15 @@ class NamespacedEvent(object):
         self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
+
+    def destroy(self):
+        self.event.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MinionEvent(SaltEvent):
@@ -1044,11 +1048,13 @@ class AsyncEventPublisher(object):
         if hasattr(self, 'puller'):
             self.puller.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
-class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventPublisher(salt.utils.process.SignalHandlingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -1063,7 +1069,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -1153,31 +1158,27 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.close()
         super(EventPublisher, self)._handle_signals(signum, sigframe)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
-class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventReturn(salt.utils.process.SignalHandlingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
-    def __new__(cls, *args, **kwargs):
-        if sys.platform.startswith('win'):
-            # This is required for Windows.  On Linux, when a process is
-            # forked, the module namespace is copied and the current process
-            # gets all of sys.modules from where the fork happens.  This is not
-            # the case for Windows.
-            import salt.minion
-        instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
-        return instance
-
     def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
+        # This is required because the process is forked and the module no
+        # longer exists in the global namespace.
+        import salt.minion
+
         super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
@@ -1193,7 +1194,6 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
