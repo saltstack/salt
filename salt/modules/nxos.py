@@ -660,8 +660,10 @@ def replace(old_value, new_value, full_match=False, **kwargs):
         lines['old'].append(line.group(0))
         lines['new'].append(repl.sub(new_value, line.group(0)))
 
-    delete_config(lines['old'], **kwargs)
-    add_config(lines['new'], **kwargs)
+    if lines['old']:
+        delete_config(lines['old'], **kwargs)
+    if lines['new']:
+        add_config(lines['new'], **kwargs)
 
     return lines
 

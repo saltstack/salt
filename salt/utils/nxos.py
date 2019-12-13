@@ -242,10 +242,10 @@ class NxapiClient(object):
         # subesequent loop.
         if not isinstance(output, list):
             output = [output]
-        if isinstance(command_list, string_types):
-            command_list = [cmd.strip() for cmd in command_list.split(';')]
         if not isinstance(command_list, list):
             command_list = [command_list]
+        if len(command_list) == 1 and ';' in command_list[0]:
+            command_list = [cmd.strip() for cmd in command_list[0].split(';')]
 
         for cmd_result, cmd in zip(output, command_list):
             code = cmd_result.get('code')
