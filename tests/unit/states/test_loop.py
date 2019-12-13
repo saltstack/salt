@@ -29,7 +29,7 @@ class LoopTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {
-            loop: {
+            salt.states.loop: {
                 '__opts__': {'test': False},
                 '__salt__': {self.func: self.mock},
             }
