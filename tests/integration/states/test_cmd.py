@@ -9,36 +9,41 @@ import os
 import textwrap
 import tempfile
 import time
+import sys
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP_STATE_TREE
 from tests.support.mixins import SaltReturnAssertsMixin
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 
-IS_WINDOWS = salt.utils.platform.is_windows()
+# Import 3rd-party libs
+from salt.ext import six
 
 
 class CMDTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     Validate the cmd state
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.__cmd = 'dir' if salt.utils.platform.is_windows() else 'ls'
+
     def test_run_simple(self):
         '''
         cmd.run
         '''
-        cmd = 'dir' if IS_WINDOWS else 'ls'
-        ret = self.run_state('cmd.run', name=cmd, cwd=tempfile.gettempdir())
+        ret = self.run_state('cmd.run', name=self.__cmd, cwd=tempfile.gettempdir())
         self.assertSaltTrueReturn(ret)
 
     def test_test_run_simple(self):
         '''
         cmd.run test interface
         '''
-        ret = self.run_state('cmd.run', name='ls',
+        ret = self.run_state('cmd.run', name=self.__cmd,
                              cwd=tempfile.gettempdir(), test=True)
         self.assertSaltNoneReturn(ret)
 
@@ -48,12 +53,12 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         ret = self.run_state(
             u'cmd.run',
-            name=u'ls',
+            name=self.__cmd,
             hide_output=True)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret[u'changes'][u'stdout'], u'')
-        self.assertEqual(ret[u'changes'][u'stderr'], u'')
+        self.assertEqual(ret['changes']['stdout'], '')
+        self.assertEqual(ret['changes']['stderr'], '')
 
 
 class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
@@ -63,7 +68,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = 'run_redirect'
         state_filename = self.state_name + '.sls'
-        self.state_file = os.path.join(TMP_STATE_TREE, state_filename)
+        self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
 
         # Create the testfile and release the handle
         fd, self.test_file = tempfile.mkstemp()
@@ -71,7 +76,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         # Create the testfile and release the handle
         fd, self.test_tmp_path = tempfile.mkstemp()
@@ -79,7 +84,7 @@ class CMDRunRedirectTest(ModuleCase, SaltReturnAssertsMixin):
             os.close(fd)
         except OSError as exc:
             if exc.errno != errno.EBADF:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         super(CMDRunRedirectTest, self).setUp()
 
@@ -181,7 +186,7 @@ class CMDRunWatchTest(ModuleCase, SaltReturnAssertsMixin):
     def setUp(self):
         self.state_name = 'run_watch'
         state_filename = self.state_name + '.sls'
-        self.state_file = os.path.join(TMP_STATE_TREE, state_filename)
+        self.state_file = os.path.join(RUNTIME_VARS.TMP_STATE_TREE, state_filename)
         super(CMDRunWatchTest, self).setUp()
 
     def tearDown(self):

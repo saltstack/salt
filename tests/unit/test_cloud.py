@@ -5,8 +5,10 @@
 
 # Import Python libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
@@ -17,6 +19,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.cloud
+import salt.config
 
 EXAMPLE_PROVIDERS = {
  'nyc_vcenter': {'vmware': {'driver': 'vmware',
@@ -114,9 +117,12 @@ class MapConfTest(TestCase):
         with patch('salt.config.check_driver_dependencies', MagicMock(return_value=True)), \
                 patch('salt.cloud.Map.read', MagicMock(return_value=EXAMPLE_MAP)):
             self.maxDiff = None
-            opts = {'extension_modules': '/var/cache/salt/master/extmods',
-                    'optimization_order': [0, 1, 2],
-                    'providers': EXAMPLE_PROVIDERS, 'profiles': EXAMPLE_PROFILES}
+            opts = salt.config.cloud_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'cloud'))
+            opts.update({
+                'optimization_order': [0, 1, 2],
+                'providers': EXAMPLE_PROVIDERS,
+                'profiles': EXAMPLE_PROFILES
+            })
             cloud_map = salt.cloud.Map(opts)
 
             merged_profile = {
