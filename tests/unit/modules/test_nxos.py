@@ -480,25 +480,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
 
                 self.assertIn(n9k_show_ver, result)
 
-    # def test_sendline_socket_error(self):
-    #
-    #     """ UT: nxos module:sendline method - socket error """
-    #
-    #     kwargs = {}
-    #     command = 'show version'
-    #     method = 'cli_show_ascii'
-    #
-    #     with patch('salt.utils.platform.is_proxy', MagicMock(return_value=True)):
-    #         error = MagicMock(side_effect=socket_error())
-    #         with patch.dict(nxos.__proxy__, {'nxos.sendline': error}):
-    #
-    #             # Execute the function under test
-    #             result = nxos.sendline(command, method, **kwargs)
-    #
-    #             import pdb ; pdb.set_traace()
-    #
-    #             self.assertIn(n9k_show_ver, result)
-
     def test_show_raw_text_invalid(self):
 
         """ UT: nxos module:show method - invalid argument """
@@ -762,24 +743,6 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
                 result = nxos.delete_config(lines, **kwargs)
                 self.assertEqual(result, delete_config)
 
-    # def test_delete_config_error(self):
-    #
-    #     """ UT: nxos module:delete_config method - CommandExecutionError """
-    #
-    #     kwargs = {}
-    #     lines_list = ['feature does_not_exist']
-    #
-    #     for lines in lines_list:
-    #         error = MagicMock(side_effect=CommandExecutionError({'rejected_input': 'no foo bar',
-    #                                                              'code': '400',
-    #                                                              'message': 'CLI execution error',
-    #                                                              'cli_error': '% Invalid command\n',
-    #                                                              'previous_commands': []}))
-    #         with patch.object(nxos, 'config', error):
-    #             # Execute the function under test
-    #             with self.assertRaises(CommandExecutionError):
-    #                 nxos.delete_config(lines, **kwargs)
-
     def test_remove_user(self):
 
         """ UT: nxos module:remove_user method """
@@ -792,6 +755,60 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             # Execute the function under test
             result = nxos.remove_user(user, **kwargs)
             self.assertEqual(result, remove_user)
+
+    def test_replace(self):
+
+        """ UT: nxos module:replace method """
+
+        old_value = 'feature bgp'
+        new_value = 'feature ospf'
+        kwargs = {}
+
+        with patch.object(nxos, 'show_run', MagicMock(return_value=n9k_show_running_config_list[0])):
+            with patch.object(nxos, 'delete_config', MagicMock(return_value=None)):
+                with patch.object(nxos, 'add_config', MagicMock(return_value=None)):
+
+                    # Execute the function under test
+                    result = nxos.replace(old_value, new_value, **kwargs)
+
+                    self.assertEqual(result['old'], ['feature bgp'])
+                    self.assertEqual(result['new'], ['feature ospf'])
+
+    def test_replace_full_match_true(self):
+
+        """ UT: nxos module:replace method - full match true"""
+
+        kwargs = {}
+        old_value = 'feature bgp'
+        new_value = 'feature ospf'
+        kwargs = {}
+
+        with patch.object(nxos, 'show_run', MagicMock(return_value=n9k_show_running_config_list[0])):
+            with patch.object(nxos, 'delete_config', MagicMock(return_value=None)):
+                with patch.object(nxos, 'add_config', MagicMock(return_value=None)):
+
+                    # Execute the function under test
+                    result = nxos.replace(old_value, new_value, full_match=True, **kwargs)
+                    self.assertEqual(result['old'], ['feature bgp'])
+                    self.assertEqual(result['new'], ['feature ospf'])
+
+    def test_replace_no_match(self):
+
+        """ UT: nxos module:replace method - no match """
+
+        old_value = 'feature does_not_exist'
+        new_value = 'feature ospf'
+        kwargs = {}
+
+        with patch.object(nxos, 'show_run', MagicMock(return_value=n9k_show_running_config_list[0])):
+            with patch.object(nxos, 'delete_config', MagicMock(return_value=None)):
+                with patch.object(nxos, 'add_config', MagicMock(return_value=None)):
+
+                    # Execute the function under test
+                    result = nxos.replace(old_value, new_value, **kwargs)
+                    print(result)
+                    self.assertEqual(result['old'], [])
+                    self.assertEqual(result['new'], [])
 
     def test_save_running_config(self):
 
