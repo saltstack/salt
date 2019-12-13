@@ -51,12 +51,6 @@ except ImportError:
     pass
 
 try:
-    import zmq.utils.monitor
-    HAS_ZMQ_MONITOR = True
-except ImportError:
-    HAS_ZMQ_MONITOR = False
-
-try:
     import salt.utils.win_functions
     HAS_WIN_FUNCTIONS = True
 except ImportError:
