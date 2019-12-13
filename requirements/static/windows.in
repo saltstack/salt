@@ -21,7 +21,6 @@ psutil
 pyopenssl
 python-gnupg
 pyvmomi
-pywin32==223
 rfc3987
 salttesting==2017.6.1
 sed
