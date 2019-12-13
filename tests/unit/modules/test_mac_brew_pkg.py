@@ -13,15 +13,14 @@ import salt.utils.pkg
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, Mock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, Mock, patch
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
 HOMEBREW_BIN = '/usr/local/bin/brew'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BrewTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.mac_brew module
