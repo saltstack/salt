@@ -9,7 +9,7 @@ from salt.ext import six
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, ANY
+from tests.support.mock import Mock, patch, ANY
 
 try:
     import wmi
@@ -20,7 +20,6 @@ except ImportError:
 import salt.modules.win_status as status
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(status.HAS_WMI is False, 'This test requires Windows')
 class TestProcsBase(TestCase):
     def __init__(self, *args, **kwargs):
