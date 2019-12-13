@@ -172,8 +172,7 @@ class NxosTestCase(TestCase, LoaderModuleMockMixin):
             # Execute the function under test
             result = nxos.check_password(username, password, encrypted=False, **kwargs)
 
-            # TODO: This fails on mac.  SHould be an assertTrue
-            self.assertFalse(result)
+            self.assertTrue(result)
 
     def test_check_password_password_encrypted_true(self):
 
