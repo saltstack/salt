@@ -13,7 +13,6 @@ from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
 
 # Import Salt Libs
 import salt.states.loop
-from salt.ext.six.moves import range
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -85,7 +84,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
     Test cases for salt.states.loop
     '''
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(opts)
         return {salt.states.loop: {
             '__opts__': opts,
@@ -97,10 +96,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         Test response when test_mode is enabled.
         '''
         with \
-                patch.dict(salt.states.loop.__salt__, {
+                patch.dict(salt.states.loop.__salt__, {  # pylint: disable=no-member
                     'foo.foo': True,
                 }), \
-                patch.dict(salt.states.loop.__opts__, {
+                patch.dict(salt.states.loop.__opts__, {  # pylint: disable=no-member
                     'test': True,
                 }):
             self.assertDictEqual(
@@ -123,11 +122,11 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         Test for an immediate success.
         '''
         with \
-                patch.dict(salt.states.loop.__salt__, {
+                patch.dict(salt.states.loop.__salt__, {  # pylint: disable=no-member
                     'foo.foo': lambda: 2,
                     'foo.baz': lambda x, y: True,
                 }), \
-                patch.dict(salt.states.loop.__utils__, {
+                patch.dict(salt.states.loop.__utils__, {  # pylint: disable=no-member
                     'foo.baz': lambda x, y: True,
                 }):
             self.assertDictEqual(
@@ -187,7 +186,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         Test for an immediate failure.
         Period and timeout will be set to 0.01 to assume one attempt.
         '''
-        with patch.dict(salt.states.loop.__salt__, {'foo.bar': lambda: False}):
+        with patch.dict(salt.states.loop.__salt__, {'foo.bar': lambda: False}):  # pylint: disable=no-member
             self.assertDictEqual(
                 salt.states.loop.until(
                     name='foo.bar',
@@ -212,7 +211,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         '''
         Test a couple of eval exceptions.
         '''
-        with patch.dict(salt.states.loop.__salt__, {'foo.bar': lambda: None}):
+        with patch.dict(salt.states.loop.__salt__, {'foo.bar': lambda: None}):  # pylint: disable=no-member
             self.assertRaises(
                 SyntaxError,
                 salt.states.loop.until,
@@ -230,7 +229,9 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         '''
         Test exception handling in until_no_eval.
         '''
-        with patch.dict(salt.states.loop.__salt__,
+        with \
+                patch.dict(
+                    salt.states.loop.__salt__,  # pylint: disable=no-member
                     {'foo.bar': MagicMock(side_effect=KeyError(str('FOO')))}
                 ):
             self.assertDictEqual(
@@ -248,8 +249,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         Note: Do not merge these two tests in one with-block, as the side_effect
         iterator is shared.
         '''
-        with patch.dict(salt.states.loop.__salt__,
-                    {'foo.bar': MagicMock(side_effect=range(1, 7))}
+        with \
+                patch.dict(
+                    salt.states.loop.__salt__,  # pylint: disable=no-member
+                    {'foo.bar': MagicMock(side_effect=list(range(1, 7)))}
                 ):
             self.assertDictEqual(
                 salt.states.loop.until(
@@ -261,8 +264,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                  'comment': 'Condition m_ret == 5 was met'}
             )
 
-        with patch.dict(salt.states.loop.__salt__,
-                    {'foo.bar': MagicMock(side_effect=range(1, 7))}
+        with \
+                patch.dict(
+                    salt.states.loop.__salt__,  # pylint: disable=no-member
+                    {'foo.bar': MagicMock(side_effect=list(range(1, 7)))}
                 ):
             self.assertDictEqual(
                 salt.states.loop.until_no_eval(
@@ -278,8 +283,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
         '''
         Test if the function fails after the designated timeout.
         '''
-        with patch.dict(salt.states.loop.__salt__,
-                    {'foo.bar': MagicMock(side_effect=range(1, 7))}
+        with \
+                patch.dict(
+                    salt.states.loop.__salt__,  # pylint: disable=no-member
+                    {'foo.bar': MagicMock(side_effect=list(range(1, 7)))}
                 ):
             self.assertDictEqual(
                 salt.states.loop.until(
@@ -291,8 +298,10 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                  'comment': 'Timed out while waiting for condition m_ret == 5'}
             )
 
-        with patch.dict(salt.states.loop.__salt__,
-                    {'foo.bar': MagicMock(side_effect=range(1, 7))}
+        with \
+                patch.dict(
+                    salt.states.loop.__salt__,  # pylint: disable=no-member
+                    {'foo.bar': MagicMock(side_effect=list(range(1, 7)))}
                 ):
             self.assertDictEqual(
                 salt.states.loop.until_no_eval(
