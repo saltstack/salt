@@ -7,6 +7,8 @@
 
     Prepare py.test for our test suite
 '''
+# pylint: disable=wrong-import-order,wrong-import-position,3rd-party-local-module-not-gated
+# pylint: disable=redefined-outer-name,invalid-name
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -74,7 +76,7 @@ else:
         os.environ[str('COVERAGE_PROCESS_START')] = str(COVERAGERC_FILE)
 
 # Define the pytest plugins we rely on
-pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-runtests-bridge']  # pylint: disable=invalid-name
+pytest_plugins = ['tempdir', 'helpers_namespace', 'salt-runtests-bridge']
 
 # Define where not to collect tests from
 collect_ignore = ['setup.py']
