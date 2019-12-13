@@ -16,7 +16,6 @@ import datetime
 
 # Import Salt Testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt libs
 from salt.utils import immutabletypes
@@ -33,7 +32,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PayloadTestCase(TestCase):
 
     def assertNoOrderedDict(self, data):

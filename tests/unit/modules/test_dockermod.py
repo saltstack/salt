@@ -12,8 +12,6 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
     Mock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch,
     call
 )
@@ -37,7 +35,6 @@ def _docker_py_version():
     return (0,)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(docker_mod.HAS_DOCKER_PY is False, 'docker-py must be installed to run these tests. Skipping.')
 class DockerTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -45,7 +42,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['args', 'docker', 'json', 'state', 'thin',
                        'systemd', 'path', 'platform']
         )

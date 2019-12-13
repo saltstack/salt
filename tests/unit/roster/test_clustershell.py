@@ -8,8 +8,6 @@ from __future__ import absolute_import
 # Import Salt Testing libraries
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-        NO_MOCK,
-        NO_MOCK_REASON,
         MagicMock,
         patch)
 
@@ -21,7 +19,6 @@ except (ImportError, OSError) as e:
     HAS_CLUSTERSHELL = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_CLUSTERSHELL is False, 'Install Python Clustershell bindings before running these tests.')
 class ClusterShellTestCase(TestCase):
     '''

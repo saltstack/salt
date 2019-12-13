@@ -10,15 +10,12 @@ import shutil
 import tempfile
 
 # Import Salt Testing libs
-import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import BASE_FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.exceptions
@@ -32,7 +29,6 @@ except ImportError as err:
     pytest = None
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     TestCase for the state compiler.
@@ -76,7 +72,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def setUp(self):
-        root_dir = tempfile.mkdtemp(dir=integration.TMP)
+        root_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.state_tree_dir = os.path.join(root_dir, 'state_tree')
         cache_dir = os.path.join(root_dir, 'cachedir')
         for dpath in (root_dir, self.state_tree_dir, cache_dir):
@@ -155,7 +151,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         sls_dir = 'issue-47182'
         shutil.copytree(
-            os.path.join(BASE_FILES, sls_dir),
+            os.path.join(RUNTIME_VARS.BASE_FILES, sls_dir),
             os.path.join(self.state_tree_dir, sls_dir)
         )
         shutil.move(
@@ -172,7 +168,6 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret, [('somestuff', 'cmd')])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''
