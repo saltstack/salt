@@ -14,8 +14,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -23,7 +21,6 @@ import salt.modules.win_system as win_system
 import salt.utils.platform
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
     '''

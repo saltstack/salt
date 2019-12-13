@@ -52,6 +52,7 @@ Module to provide Elasticsearch compatibility to Salt
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import sys
 
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError, SaltInvocationError
@@ -171,7 +172,7 @@ def ping(allow_failure=False, hosts=None, profile=None):
         _get_instance(hosts, profile)
     except CommandExecutionError as e:
         if allow_failure:
-            raise e
+            six.reraise(*sys.exc_info())
         return False
     return True
 

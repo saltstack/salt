@@ -10,10 +10,8 @@ import shutil
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     mock_open,
     patch)
@@ -42,7 +40,6 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
             return six.text_type(self)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.libvirt
