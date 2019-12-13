@@ -107,13 +107,12 @@ def fire(data, tag):
         salt '*' event.fire '{"data":"my event data"}' 'tag'
     '''
     try:
-        event = salt.utils.event.get_event('minion',  # was __opts__['id']
+        with salt.utils.event.get_event('minion',  # was __opts__['id']
                                            sock_dir=__opts__['sock_dir'],
                                            transport=__opts__['transport'],
                                            opts=__opts__,
-                                           listen=False)
-
-        return event.fire_event(data, tag)
+                                           listen=False) as event:
+            return event.fire_event(data, tag)
     except Exception:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)

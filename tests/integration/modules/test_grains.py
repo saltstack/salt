@@ -10,10 +10,13 @@ import os
 import time
 import pprint
 
+# Import Salt libs
+from salt.ext.six.moves import range
+
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.unit import skipIf
 from tests.support.helpers import flaky
+from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
@@ -174,7 +177,8 @@ class GrainsAppendTestCase(ModuleCase):
               'salttesting-grain-key'.format(self.GRAIN_VAL)
 
         # First, make sure the test grain is present
-        self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
         # Now try to append again
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
@@ -226,3 +230,17 @@ class GrainsAppendTestCase(ModuleCase):
                 pprint.pformat(append_2)
             )
         )
+
+    def test_grains_remove_add(self):
+        second_grain = self.GRAIN_VAL + '-2'
+        ret = self.run_function('grains.get', [self.GRAIN_KEY])
+        self.assertEqual(ret, [])
+
+        for i in range(10):
+            self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+
+            self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
