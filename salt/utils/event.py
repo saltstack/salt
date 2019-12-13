@@ -857,6 +857,7 @@ class SaltEvent(object):
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
 
+    # pylint: disable=W1701
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
@@ -864,6 +865,13 @@ class SaltEvent(object):
             self.destroy()
         except Exception:
             pass
+    # pylint: enable=W1701
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -912,6 +920,15 @@ class NamespacedEvent(object):
         self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
+
+    def destroy(self):
+        self.event.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MinionEvent(SaltEvent):
@@ -1031,8 +1048,10 @@ class AsyncEventPublisher(object):
         if hasattr(self, 'puller'):
             self.puller.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 class EventPublisher(salt.utils.process.SignalHandlingProcess):
@@ -1139,8 +1158,10 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
         self.close()
         super(EventPublisher, self)._handle_signals(signum, sigframe)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 class EventReturn(salt.utils.process.SignalHandlingProcess):

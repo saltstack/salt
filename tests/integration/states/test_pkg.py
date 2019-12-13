@@ -31,7 +31,6 @@ from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-b
 
 try:
     from distro import LinuxDistribution
-
     pre_grains = LinuxDistribution()
 except ImportError:
     pre_grains = None

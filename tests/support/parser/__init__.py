@@ -30,7 +30,7 @@ from functools import partial
 from collections import namedtuple
 
 import tests.support.paths
-from tests.support import helpers
+from tests.support import processes
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
@@ -860,18 +860,18 @@ class SaltTestingParser(optparse.OptionParser):
         Run the finalization procedures. Show report, clean-up file-system, etc
         '''
         # Collect any child processes still laying around
-        children = helpers.collect_child_processes(os.getpid())
+        children = processes.collect_child_processes(os.getpid())
         if self.options.no_report is False:
             self.print_overall_testsuite_report()
         self.post_execution_cleanup()
         # Brute force approach to terminate this process and its children
         if children:
             log.info('Terminating test suite child processes: %s', children)
-            helpers.terminate_process(children=children, kill_children=True)
-            children = helpers.collect_child_processes(os.getpid())
+            processes.terminate_process(children=children, kill_children=True)
+            children = processes.collect_child_processes(os.getpid())
             if children:
                 log.info('Second run at terminating test suite child processes: %s', children)
-                helpers.terminate_process(children=children, kill_children=True)
+                processes.terminate_process(children=children, kill_children=True)
         exit_msg = 'Test suite execution finalized with exit code: {}'.format(exit_code)
         log.info(exit_msg)
         self.exit(status=exit_code, msg=exit_msg + '\n')

@@ -7,7 +7,7 @@ import os
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import patch, MagicMock
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
@@ -168,7 +168,6 @@ class BotoUtilsCacheIdTestCase(BotoUtilsTestCaseBase):
         self.assertEqual(cache_id(resource_name), resource_id)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'

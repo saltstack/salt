@@ -11,8 +11,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -32,7 +30,6 @@ except ImportError:
 
 @skipIf(HAS_URLLIB3 is False, 'urllib3 module must be installed.')
 @skipIf(HAS_ETCD is False, 'python-etcd module must be installed.')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class EtcdUtilTestCase(TestCase):
     '''
     Test cases for salt.utils.etcd_util
