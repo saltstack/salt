@@ -66,6 +66,12 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(linux_lvm.pvdisplay(), {})
 
+        mock = MagicMock(return_value={'retcode': 1})
+        with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
+            self.assertDictEqual(linux_lvm.pvdisplay(quiet=True), {})
+            mock.assert_called_with(['pvdisplay', '-c'], ignore_retcode=True,
+                                    python_shell=False)
+
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'A:B:C:D:E:F:G:H:I:J:K'})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
@@ -105,6 +111,12 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
             self.assertDictEqual(linux_lvm.vgdisplay(), {})
+
+        mock = MagicMock(return_value={'retcode': 1})
+        with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
+            self.assertDictEqual(linux_lvm.vgdisplay(quiet=True), {})
+            mock.assert_called_with(['vgdisplay', '-c'], ignore_retcode=True,
+                                    python_shell=False)
 
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'A:B:C:D:E:F:G:H:I:J:K:L:M:N:O:P:Q'})

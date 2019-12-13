@@ -5,6 +5,7 @@ IPC transport classes
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import sys
 import errno
 import logging
 import socket
@@ -221,6 +222,7 @@ class IPCServer(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -228,6 +230,7 @@ class IPCServer(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
 
 class IPCClient(object):
@@ -338,17 +341,15 @@ class IPCClient(object):
 
                 yield tornado.gen.sleep(1)
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
-        except socket.error as exc:
-            if exc.errno != errno.EBADF:
-                # If its not a bad file descriptor error, raise
-                raise
         except TypeError:
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
     def close(self):
         '''
@@ -364,7 +365,12 @@ class IPCClient(object):
         log.debug('Closing %s instance', self.__class__.__name__)
 
         if self.stream is not None and not self.stream.closed():
-            self.stream.close()
+            try:
+                self.stream.close()
+            except socket.error as exc:
+                if exc.errno != errno.EBADF:
+                    # If its not a bad file descriptor error, raise
+                    six.reraise(*sys.exc_info())
 
 
 class IPCMessageClient(IPCClient):
@@ -567,6 +573,7 @@ class IPCMessagePublisher(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -574,6 +581,7 @@ class IPCMessagePublisher(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -724,6 +732,8 @@ class IPCMessageSubscriber(IPCClient):
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
 
+    # pylint: disable=W1701
     def __del__(self):
         if IPCMessageSubscriber in globals():
             self.close()
+    # pylint: enable=W1701
