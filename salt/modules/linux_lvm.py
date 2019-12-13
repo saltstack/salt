@@ -64,16 +64,20 @@ def fullversion():
     return ret
 
 
-def pvdisplay(pvname='', real=False):
+def pvdisplay(pvname='', real=False, quiet=False):
     '''
     Return information about the physical volume(s)
 
     pvname
         physical device name
+
     real
         dereference any symlinks and report the real device
 
         .. versionadded:: 2015.8.7
+
+    quiet
+        if the physical volume is not present, do not show any error
 
 
     CLI Examples:
@@ -87,7 +91,8 @@ def pvdisplay(pvname='', real=False):
     cmd = ['pvdisplay', '-c']
     if pvname:
         cmd.append(pvname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -118,9 +123,15 @@ def pvdisplay(pvname='', real=False):
     return ret
 
 
-def vgdisplay(vgname=''):
+def vgdisplay(vgname='', quiet=False):
     '''
     Return information about the volume group(s)
+
+    vgname
+        volume group name
+
+    quiet
+        if the volume group is not present, do not show any error
 
     CLI Examples:
 
@@ -133,7 +144,8 @@ def vgdisplay(vgname=''):
     cmd = ['vgdisplay', '-c']
     if vgname:
         cmd.append(vgname)
-    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -167,6 +179,12 @@ def lvdisplay(lvname='', quiet=False):
     '''
     Return information about the logical volume(s)
 
+    lvname
+        logical device name
+
+    quiet
+        if the logical volume is not present, do not show any error
+
     CLI Examples:
 
     .. code-block:: bash
@@ -178,10 +196,8 @@ def lvdisplay(lvname='', quiet=False):
     cmd = ['lvdisplay', '-c']
     if lvname:
         cmd.append(lvname)
-    if quiet:
-        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False, output_loglevel='quiet')
-    else:
-        cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    cmd_ret = __salt__['cmd.run_all'](cmd, python_shell=False,
+                                      ignore_retcode=quiet)
 
     if cmd_ret['retcode'] != 0:
         return {}
@@ -230,7 +246,7 @@ def pvcreate(devices, override=True, **kwargs):
     for device in devices:
         if not os.path.exists(device):
             raise CommandExecutionError('{0} does not exist'.format(device))
-        if not pvdisplay(device):
+        if not pvdisplay(device, quiet=True):
             cmd.append(device)
         elif not override:
             raise CommandExecutionError('Device "{0}" is already an LVM physical volume.'.format(device))
@@ -295,7 +311,7 @@ def pvremove(devices, override=True):
 
     # Verify pvcremove was successful
     for device in devices:
-        if pvdisplay(device):
+        if pvdisplay(device, quiet=True):
             raise CommandExecutionError('Device "{0}" was not affected.'.format(device))
 
     return True

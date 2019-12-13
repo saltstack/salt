@@ -14,11 +14,11 @@ import re
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
 from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
-from tests.support.paths import BASE_FILES, TMP, TMP_CONF_DIR
 
 # Import Salt libs
 import salt.config
@@ -52,7 +52,6 @@ try:
 except ImportError:
     HAS_TIMELIB = False
 
-CACHEDIR = os.path.join(TMP, 'jinja-template-cache')
 BLINESEP = salt.utils.stringutils.to_bytes(os.linesep)
 
 
@@ -112,7 +111,7 @@ class TestSaltCacheLoader(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.opts = {
@@ -167,6 +166,7 @@ class TestSaltCacheLoader(TestCase):
             opts = self.opts
         with patch.object(SaltCacheLoader, 'file_client', Mock()):
             loader = SaltCacheLoader(opts, saltenv)
+            self.addCleanup(setattr, SaltCacheLoader, '_cached_client', None)
         # Create a mock file client and attach it to the loader
         MockFileClient(loader)
         return loader
@@ -264,7 +264,7 @@ class TestGetTemplate(TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.template_dir = os.path.join(self.tempdir, 'files', 'test')
         _setup_test_dir(
-            os.path.join(BASE_FILES, 'templates'),
+            os.path.join(RUNTIME_VARS.BASE_FILES, 'templates'),
             self.template_dir
         )
         self.local_opts = {
@@ -601,16 +601,16 @@ class TestJinjaDefaultOptions(TestCase):
     def __init__(self, *args, **kws):
         TestCase.__init__(self, *args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -663,16 +663,16 @@ class TestCustomExtensions(TestCase):
     def __init__(self, *args, **kws):
         super(TestCustomExtensions, self).__init__(*args, **kws)
         self.local_opts = {
-            'cachedir': CACHEDIR,
+            'cachedir': os.path.join(RUNTIME_VARS.TMP, 'jinja-template-cache'),
             'file_buffer_size': 1048576,
             'file_client': 'local',
             'file_ignore_regex': None,
             'file_ignore_glob': None,
             'file_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'pillar_roots': {
-                'test': [os.path.join(BASE_FILES, 'templates')]
+                'test': [os.path.join(RUNTIME_VARS.BASE_FILES, 'templates')]
             },
             'fileserver_backend': ['roots'],
             'hash_type': 'md5',
@@ -1343,7 +1343,7 @@ class TestDotNotationLookup(ModuleCase):
             'mocktest.ping': lambda: True,
             'mockgrains.get': lambda x: 'jerry',
         }
-        minion_opts = salt.config.minion_config(os.path.join(TMP_CONF_DIR, 'minion'))
+        minion_opts = salt.config.minion_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion'))
         render = salt.loader.render(minion_opts, functions)
         self.jinja = render.get('jinja')
 

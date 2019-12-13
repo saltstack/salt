@@ -5,6 +5,7 @@ noxfile
 
 Nox configuration script
 '''
+# pylint: disable=resource-leakage
 
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
@@ -53,6 +54,9 @@ RUNTESTS_LOGFILE = os.path.join(
     'artifacts', 'logs',
     'runtests-{}.log'.format(datetime.datetime.now().strftime('%Y%m%d%H%M%S.%f'))
 )
+
+# Prevent Python from writing bytecode
+os.environ[str('PYTHONDONTWRITEBYTECODE')] = str('1')
 
 
 def _create_ci_directories():
@@ -147,10 +151,16 @@ def _install_system_packages(session):
             '/usr/lib/python{py_version}/dist-packages/*apt*'
         ]
     }
-    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
-        system_python_packages[key] = system_python_packages['__debian_based_distros__']
 
     distro = _get_distro_info(session)
+    if not distro['id'].startswith(('debian', 'ubuntu')):
+        # This only applies to debian based distributions
+        return
+
+    system_python_packages['{id}-{version}'.format(**distro)] = \
+            system_python_packages['{id}-{version_parts[major]}'.format(**distro)] = \
+            system_python_packages['__debian_based_distros__'][:]
+
     distro_keys = [
         '{id}'.format(**distro),
         '{id}-{version}'.format(**distro),
@@ -350,19 +360,23 @@ def _run_with_coverage(session, *test_cmd):
             python_path_entries.remove(SITECUSTOMIZE_DIR)
         python_path_entries.insert(0, SITECUSTOMIZE_DIR)
         python_path_env_var = os.pathsep.join(python_path_entries)
+
+    env = {
+        # The updated python path so that sitecustomize is importable
+        'PYTHONPATH': python_path_env_var,
+        # The full path to the .coverage data file. Makes sure we always write
+        # them to the same directory
+        'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
+        # Instruct sub processes to also run under coverage
+        'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
+    }
+    if IS_DARWIN:
+        # Don't nuke our multiprocessing efforts objc!
+        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+        env['OBJC_DISABLE_INITIALIZE_FORK_SAFETY'] = 'YES'
+
     try:
-        session.run(
-            *test_cmd,
-            env={
-                # The updated python path so that sitecustomize is importable
-                'PYTHONPATH': python_path_env_var,
-                # The full path to the .coverage data file. Makes sure we always write
-                # them to the same directory
-                'COVERAGE_FILE': os.path.abspath(os.path.join(REPO_ROOT, '.coverage')),
-                # Instruct sub processes to also run under coverage
-                'COVERAGE_PROCESS_START': os.path.join(REPO_ROOT, '.coveragerc')
-            }
-        )
+        session.run(*test_cmd, env=env)
     finally:
         # Always combine and generate the XML coverage report
         try:
@@ -394,7 +408,13 @@ def _runtests(session, coverage, cmd_args):
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', os.path.join('tests', 'runtests.py'), *cmd_args)
         else:
-            session.run('python', os.path.join('tests', 'runtests.py'), *cmd_args)
+            cmd_args = ['python', os.path.join('tests', 'runtests.py')] + list(cmd_args)
+            env = None
+            if IS_DARWIN:
+                # Don't nuke our multiprocessing efforts objc!
+                # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+                env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
+            session.run(*cmd_args, env=env)
     except CommandFailed:
         # Disabling re-running failed tests for the time being
         raise
@@ -845,11 +865,17 @@ def _pytest(session, coverage, cmd_args):
     # Create required artifacts directories
     _create_ci_directories()
 
+    env = None
+    if IS_DARWIN:
+        # Don't nuke our multiprocessing efforts objc!
+        # https://stackoverflow.com/questions/50168647/multiprocessing-causes-python-to-crash-and-gives-an-error-may-have-been-in-progr
+        env = {'OBJC_DISABLE_INITIALIZE_FORK_SAFETY': 'YES'}
+
     try:
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
-            session.run('py.test', *cmd_args)
+            session.run('py.test', *cmd_args, env=env)
     except CommandFailed:
         # Re-run failed tests
         session.log('Re-running failed tests')
@@ -857,7 +883,7 @@ def _pytest(session, coverage, cmd_args):
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
-            session.run('py.test', *cmd_args)
+            session.run('py.test', *cmd_args, env=env)
 
 
 def _lint(session, rcfile, flags, paths):
@@ -927,7 +953,7 @@ def lint_salt(session):
     if session.posargs:
         paths = session.posargs
     else:
-        paths = ['setup.py', 'salt/']
+        paths = ['setup.py', 'noxfile.py', 'salt/']
     _lint(session, '.testing.pylintrc', flags, paths)
 
 
@@ -982,7 +1008,7 @@ def docs_html(session, compress):
     session.run('make', 'clean', external=True)
     session.run('make', 'html', 'SPHINXOPTS=-W', external=True)
     if compress:
-        session.run('tar', '-czvf', 'html-archive.tar.gz', '_build/html', external=True)
+        session.run('tar', '-cJvf', 'html-archive.tar.xz', '_build/html', external=True)
     os.chdir('..')
 
 
@@ -1015,5 +1041,5 @@ def docs_man(session, compress, update):
         session.run('rm', '-rf', 'man/', external=True)
         session.run('cp', '-Rp', '_build/man', 'man/', external=True)
     if compress:
-        session.run('tar', '-czvf', 'man-archive.tar.gz', '_build/man', external=True)
+        session.run('tar', '-cJvf', 'man-archive.tar.xz', '_build/man', external=True)
     os.chdir('..')

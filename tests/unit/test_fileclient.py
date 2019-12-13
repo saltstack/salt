@@ -11,11 +11,10 @@ import os
 import shutil
 
 # Import Salt Testing libs
-from tests.integration import AdaptedConfigurationTestCaseMixin
-from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
 from tests.support.mock import patch, Mock, MagicMock, NO_MOCK, NO_MOCK_REASON
-from tests.support.paths import TMP
 from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.files
@@ -73,30 +72,30 @@ class FileclientTestCase(TestCase):
 
 
 SALTENVS = ('base', 'dev')
-FS_ROOT = os.path.join(TMP, 'fileclient_fs_root')
-CACHE_ROOT = os.path.join(TMP, 'fileclient_cache_root')
 SUBDIR = 'subdir'
 SUBDIR_FILES = ('foo.txt', 'bar.txt', 'baz.txt')
 
 
-def _get_file_roots():
+def _get_file_roots(fs_root):
     return dict(
-        [(x, [os.path.join(FS_ROOT, x)]) for x in SALTENVS]
+        [(x, [os.path.join(fs_root, x)]) for x in SALTENVS]
     )
-
-
-MOCKED_OPTS = {
-    'file_roots': _get_file_roots(),
-    'fileserver_backend': ['roots'],
-    'cachedir': CACHE_ROOT,
-    'file_client': 'local',
-}
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
+        FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+        CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
+        MOCKED_OPTS = {
+            'file_roots': _get_file_roots(FS_ROOT),
+            'fileserver_backend': ['roots'],
+            'cachedir': CACHE_ROOT,
+            'file_client': 'local',
+        }
+        self.addCleanup(shutil.rmtree, FS_ROOT, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, CACHE_ROOT, ignore_errors=True)
         return {fileclient: {'__opts__': MOCKED_OPTS}}
 
     def setUp(self):
@@ -136,7 +135,17 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
     '''
 
     def setup_loader_modules(self):
-        return {fileclient: {'__opts__': MOCKED_OPTS}}
+        self.FS_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_fs_root')
+        self.CACHE_ROOT = os.path.join(RUNTIME_VARS.TMP, 'fileclient_cache_root')
+        self.MOCKED_OPTS = {
+            'file_roots': _get_file_roots(self.FS_ROOT),
+            'fileserver_backend': ['roots'],
+            'cachedir': self.CACHE_ROOT,
+            'file_client': 'local',
+        }
+        self.addCleanup(shutil.rmtree, self.FS_ROOT, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, self.CACHE_ROOT, ignore_errors=True)
+        return {fileclient: {'__opts__': self.MOCKED_OPTS}}
 
     def setUp(self):
         '''
@@ -162,7 +171,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
 
         # Crete the FS_ROOT
         for saltenv in SALTENVS:
-            saltenv_root = os.path.join(FS_ROOT, saltenv)
+            saltenv_root = os.path.join(self.FS_ROOT, saltenv)
             # Make sure we have a fresh root dir for this saltenv
             _new_dir(saltenv_root)
 
@@ -184,21 +193,14 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     )
 
         # Create the CACHE_ROOT
-        _new_dir(CACHE_ROOT)
-
-    def tearDown(self):
-        '''
-        Remove the directories created for these tests
-        '''
-        shutil.rmtree(FS_ROOT)
-        shutil.rmtree(CACHE_ROOT)
+        _new_dir(self.CACHE_ROOT)
 
     def test_cache_dir(self):
         '''
         Ensure entire directory is cached to correct location
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -237,8 +239,8 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         cachedir is specified and that cachedir is an absolute path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
-        alt_cachedir = os.path.join(TMP, 'abs_cachedir')
+        patched_opts.update(self.MOCKED_OPTS)
+        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -277,7 +279,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         cachedir is specified and that cachedir is a relative path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = 'foo'
 
         with patch.dict(fileclient.__opts__, patched_opts):
@@ -317,7 +319,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         Ensure file is cached to correct location
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -346,8 +348,8 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         specified and that cachedir is an absolute path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
-        alt_cachedir = os.path.join(TMP, 'abs_cachedir')
+        patched_opts.update(self.MOCKED_OPTS)
+        alt_cachedir = os.path.join(RUNTIME_VARS.TMP, 'abs_cachedir')
 
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
@@ -380,7 +382,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         specified and that cachedir is a relative path
         '''
         patched_opts = dict((x, y) for x, y in six.iteritems(self.minion_opts))
-        patched_opts.update(MOCKED_OPTS)
+        patched_opts.update(self.MOCKED_OPTS)
         alt_cachedir = 'foo'
 
         with patch.dict(fileclient.__opts__, patched_opts):
