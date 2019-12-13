@@ -148,6 +148,29 @@ class CmdTestCase(TestCase, LoaderModuleMockMixin):
                                 'skip_watch': True})
                     self.assertDictEqual(cmd.run(name, onlyif=''), ret)
 
+    def test_run_root(self):
+        '''
+        Test to run a command with a different root
+        '''
+        name = 'cmd.script'
+
+        ret = {'name': name,
+               'result': False,
+               'changes': {},
+               'comment': ''}
+
+        with patch.dict(cmd.__grains__, {'shell': 'shell'}):
+            with patch.dict(cmd.__opts__, {'test': False}):
+                mock = MagicMock(side_effect=[CommandExecutionError,
+                                              {'retcode': 1}])
+                with patch.dict(cmd.__salt__, {'cmd.run_chroot': mock}):
+                    ret.update({'comment': '', 'result': False})
+                    self.assertDictEqual(cmd.run(name, root='/mnt'), ret)
+
+                    ret.update({'comment': 'Command "cmd.script" run',
+                                'result': False, 'changes': {'retcode': 1}})
+                    self.assertDictEqual(cmd.run(name, root='/mnt'), ret)
+
     # 'script' function tests: 1
 
     def test_script(self):

@@ -805,7 +805,7 @@ class Terminal(object):
                         'else call waitpid() on our process?'
                     )
                 else:
-                    raise err
+                    six.reraise(*sys.exc_info())
 
             # I have to do this twice for Solaris.
             # I can't even believe that I figured this out...
@@ -824,7 +824,7 @@ class Terminal(object):
                             'someone else call waitpid() on our process?'
                         )
                     else:
-                        raise
+                        six.reraise(*sys.exc_info())
 
                 # If pid is still 0 after two calls to waitpid() then the
                 # process really is alive. This seems to work on all platforms,
@@ -931,6 +931,7 @@ class Terminal(object):
     # <---- Linux Methods ----------------------------------------------------
 
     # ----- Cleanup!!! ------------------------------------------------------>
+    # pylint: disable=W1701
     def __del__(self, _maxsize=sys.maxsize, _active=_ACTIVE):  # pylint: disable=W0102
         # I've disabled W0102 above which is regarding a dangerous default
         # value of [] for _ACTIVE, though, this is how Python itself handles
@@ -945,5 +946,6 @@ class Terminal(object):
         if self.isalive() and _ACTIVE is not None:
             # Child is still running, keep us alive until we can wait on it.
             _ACTIVE.append(self)
+    # pylint: enable=W1701
     # <---- Cleanup!!! -------------------------------------------------------
 # <---- Platform Specific Methods --------------------------------------------
