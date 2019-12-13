@@ -18,9 +18,7 @@ import os
 import re
 import sys
 import time
-import stat
 import errno
-import signal
 import textwrap
 import logging
 import tempfile
@@ -29,16 +27,14 @@ from datetime import datetime, timedelta
 
 # Import salt testing libs
 from tests.support.unit import TestCase
-from tests.support.helpers import (
-    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
-)
+from tests.support.helpers import RedirectStdStreams, requires_sshd_server
+from tests.support.processes import terminate_process
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.mixins import (
-        AdaptedConfigurationTestCaseMixin,
-        SaltClientTestCaseMixin,
-        SaltMultimasterClientTestCaseMixin,
-        )
-from tests.support.paths import ScriptPathMixin, INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
+from tests.support.mixins import (AdaptedConfigurationTestCaseMixin,
+                                  SaltClientTestCaseMixin,
+                                  SaltMultimasterClientTestCaseMixin)
+from tests.support.paths import INTEGRATION_TEST_DIR, CODE_DIR, PYEXEC, SCRIPT_DIR
+from tests.support.cli_scripts import ScriptPathMixin
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -48,73 +44,14 @@ STATE_FUNCTION_RUNNING_RE = re.compile(
     r'''The function (?:"|')(?P<state_func>.*)(?:"|') is running as PID '''
     r'(?P<pid>[\d]+) and was started at (?P<date>.*) with jid (?P<jid>[\d]+)'
 )
-SCRIPT_TEMPLATES = {
-    'salt': [
-        'from salt.scripts import salt_main\n',
-        'if __name__ == \'__main__\':'
-        '    salt_main()'
-    ],
-    'salt-api': [
-        'import salt.cli\n',
-        'def main():',
-        '    sapi = salt.cli.SaltAPI()',
-        '    sapi.run()\n',
-        'if __name__ == \'__main__\':',
-        '    main()'
-    ],
-    'common': [
-        'from salt.scripts import salt_{0}\n',
-        'if __name__ == \'__main__\':',
-        '    salt_{0}()'
-    ]
-}
 
 log = logging.getLogger(__name__)
 
 
-class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin):
     '''
     Execute a test for a shell command
     '''
-
-    def get_script_path(self, script_name):
-        '''
-        Return the path to a testing runtime script
-        '''
-        if not os.path.isdir(RUNTIME_VARS.TMP_SCRIPT_DIR):
-            os.makedirs(RUNTIME_VARS.TMP_SCRIPT_DIR)
-
-        script_path = os.path.join(RUNTIME_VARS.TMP_SCRIPT_DIR, script_name)
-        if not os.path.isfile(script_path):
-            log.debug('Generating {0}'.format(script_path))
-
-            # Late import
-            import salt.utils.files
-
-            with salt.utils.files.fopen(script_path, 'w') as sfh:
-                script_template = SCRIPT_TEMPLATES.get(script_name, None)
-                if script_template is None:
-                    script_template = SCRIPT_TEMPLATES.get('common', None)
-                if script_template is None:
-                    raise RuntimeError(
-                        '{0} does not know how to handle the {1} script'.format(
-                            self.__class__.__name__,
-                            script_name
-                        )
-                    )
-                contents = (
-                    '#!{0}\n'.format(sys.executable) +
-                    '\n'.join(script_template).format(script_name.replace('salt-', ''))
-                )
-                sfh.write(contents)
-                log.debug(
-                    'Wrote the following contents to temp script %s:\n%s',
-                    script_path, contents
-                )
-            st = os.stat(script_path)
-            os.chmod(script_path, st.st_mode | stat.S_IEXEC)
-
-        return script_path
 
     def run_salt(self, arg_str, with_retcode=False, catch_stderr=False, timeout=15):
         r'''
@@ -378,33 +315,7 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     if process.returncode is not None:
                         break
                 else:
-                    # We've reached the timeout
-                    if term_sent is False:
-                        # Kill the process group since sending the term signal
-                        # would only terminate the shell, not the command
-                        # executed in the shell
-                        if salt.utils.platform.is_windows():
-                            _, alive = win32_kill_process_tree(process.pid)
-                            if alive:
-                                log.error("Child processes still alive: %s", alive)
-                        else:
-                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                        term_sent = True
-                        continue
-
-                    try:
-                        # As a last resort, kill the process group
-                        if salt.utils.platform.is_windows():
-                            _, alive = win32_kill_process_tree(process.pid)
-                            if alive:
-                                log.error("Child processes still alive: %s", alive)
-                        else:
-                            os.killpg(os.getpgid(process.pid), signal.SIGINT)
-                    except OSError as exc:
-                        if exc.errno != errno.ESRCH:
-                            # If errno is not "no such process", raise
-                            raise
-
+                    terminate_process(process.pid, kill_children=True)
                     return format_return(
                         process.returncode,
                         *process.communicate(),
@@ -852,15 +763,20 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                           timeout=timeout,
                           kwarg=kwargs)
 
+        if RUNTIME_VARS.PYTEST_SESSION:
+            fail_or_skip_func = self.fail
+        else:
+            fail_or_skip_func = self.skipTest
+
         if minion_tgt not in orig:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
                 'from the minion \'{0}\'. Command output: {1}'.format(
                     minion_tgt, orig
                 )
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
                 'the minion \'{1}\'. Command output: {2}'.format(
                     function, minion_tgt, orig
@@ -954,15 +870,20 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
                                             timeout=timeout,
                                             kwarg=kwargs)
 
+        if RUNTIME_VARS.PYTEST_SESSION:
+            fail_or_skip_func = self.fail
+        else:
+            fail_or_skip_func = self.skipTest
+
         if minion_tgt not in orig:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
                 'from the minion \'{0}\'. Command output: {1}'.format(
                     minion_tgt, orig
                 )
             )
         elif orig[minion_tgt] is None and function not in known_to_return_none:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
                 'the minion \'{1}\'. Command output: {2}'.format(
                     function, minion_tgt, orig
@@ -997,8 +918,12 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         behavior of the raw function call
         '''
         orig = self.client.cmd('minion', function, arg, timeout=timeout)
+        if RUNTIME_VARS.PYTEST_SESSION:
+            fail_or_skip_func = self.fail
+        else:
+            fail_or_skip_func = self.skipTest
         if 'minion' not in orig:
-            self.skipTest(
+            fail_or_skip_func(
                 'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
                 'from the minion. Command output: {0}'.format(orig)
             )
