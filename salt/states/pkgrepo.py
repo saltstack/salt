@@ -96,7 +96,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
-import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
