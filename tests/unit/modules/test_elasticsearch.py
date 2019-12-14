@@ -11,8 +11,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -27,7 +25,6 @@ except Exception:
     NO_ELASTIC = True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_ELASTIC, 'Install elasticsearch-py before running Elasticsearch unit tests.')
 class ElasticsearchTestCase(TestCase):
     '''
