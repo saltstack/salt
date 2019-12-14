@@ -78,6 +78,11 @@ def until(name,
            'result': False,
            'comment': ''}
 
+    if m_args is None:
+        m_args = ()
+    if m_kwargs is None:
+        m_kwargs = {}
+
     if name not in __salt__:
         ret['comment'] = 'Cannot find module {0}'.format(name)
         return ret
@@ -94,6 +99,10 @@ def until(name,
         ret['comment'] = 'The execution module {0} will be run'.format(name)
         ret['result'] = None
         return ret
+    if not m_args:
+        m_args = []
+    if not m_kwargs:
+        m_kwargs = {}
 
     def timed_out():
         if time.time() >= timeout:

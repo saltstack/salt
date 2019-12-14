@@ -13,13 +13,11 @@ import salt.daemons.masterapi as masterapi
 import salt.utils.platform
 
 # Import Salt Testing Libs
-from tests.support.paths import TMP_CONF_DIR
-from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.unit import TestCase
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
@@ -59,7 +57,6 @@ def patch_check_permissions(uid=1, groups=None, is_windows=False, permissive_pki
     return decorator
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AutoKeyTest(TestCase):
     '''
     Tests for the salt.daemons.masterapi.AutoKey class
@@ -241,7 +238,6 @@ class AutoKeyTest(TestCase):
         self._test_check_autosign_grains(test_func, file_content=file_content, permissions_ret=False)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalFuncsTestCase(TestCase):
     '''
     TestCase for salt.daemons.masterapi.LocalFuncs class
@@ -570,7 +566,7 @@ class RemoteFuncsTestCase(TestCase):
     '''
 
     def setUp(self):
-        opts = salt.config.master_config(os.path.join(TMP_CONF_DIR, 'master'))
+        opts = salt.config.master_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.funcs = masterapi.RemoteFuncs(opts)
         self.funcs.cache = FakeCache()
 
