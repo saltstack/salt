@@ -20,14 +20,12 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import destructiveTest
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     Mock,
     MagicMock,
     call,
     mock_open,
     patch)
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.files
@@ -44,7 +42,6 @@ from salt.ext.six.moves import range
 import salt.utils.win_functions
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -2358,7 +2355,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         # Run _check_directory function
         # Verify that it returns correctly
         # Delete tmp directory structure
-        root_tmp_dir = os.path.join(TMP, 'test__check_dir')
+        root_tmp_dir = os.path.join(RUNTIME_VARS.TMP, 'test__check_dir')
         expected_dir_mode = 0o777
         depth = 3
         try:
