@@ -344,7 +344,7 @@ class CPModuleTest(ModuleCase):
                 ])
             if ret.find('HTTP 599') == -1:
                 break
-            time.sleep(sleeep)
+            time.sleep(sleep)
         if ret.find('HTTP 599') != -1:
             raise Exception(
                 'https://repo.saltstack.com/index.html returned 599 error'
