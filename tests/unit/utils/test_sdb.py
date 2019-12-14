@@ -10,17 +10,12 @@ import os
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.unit import TestCase
 
 # Import Salt Libs
 import salt.utils.sdb as sdb
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SdbTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sdb
