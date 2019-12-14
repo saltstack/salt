@@ -29,8 +29,6 @@ from tests.support.helpers import (
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import salt libs
@@ -261,7 +259,6 @@ class TestVerify(TestCase):
                     resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
                 shutil.rmtree(tempdir)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_verify_log(self):
         '''
         Test that verify_log works as expected

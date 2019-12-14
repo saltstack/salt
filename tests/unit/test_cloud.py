@@ -8,14 +8,9 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
-)
 
 # Import Salt libs
 import salt.cloud
@@ -104,7 +99,6 @@ EXAMPLE_MAP = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MapConfTest(TestCase):
     '''
     Validate evaluation of salt-cloud map configuration
