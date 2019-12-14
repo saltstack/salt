@@ -9,7 +9,7 @@ from salt.beacons import twilio_txt_msg
 # Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import 3rd Party libs
 try:
@@ -104,7 +104,6 @@ class MockTwilioRestClient(object):
 
 
 @skipIf(not HAS_TWILIO, 'twilio.rest is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TwilioMsgTxtBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.twilio_txt_msg

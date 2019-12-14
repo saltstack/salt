@@ -8,12 +8,10 @@ import tempfile
 import shutil
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     mock_open,
     patch)
@@ -42,7 +40,6 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
             return six.text_type(self)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.libvirt
@@ -57,7 +54,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.pki_dir = tempfile.mkdtemp(dir=TMP)
+        cls.pki_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
 
     @classmethod
     def tearDownClass(cls):

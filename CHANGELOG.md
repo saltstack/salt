@@ -13,6 +13,7 @@ Versions are `MAJOR.PATCH`.
 - [#54943](https://github.com/saltstack/salt/pull/54943) - RAET transport method has been removed per the deprecation schedule - [@s0undt3ch](https://github.com/s0undt3ch)
 
 ### Deprecated
+- [#55539](https://github.com/saltstack/salt/pull/55539) - Deprecate salt.auth.Authorize class and the any_auth method
 
 ### Changed
 
@@ -24,6 +25,7 @@ Versions are `MAJOR.PATCH`.
 ### Added
 
 - [#54917](https://github.com/saltstack/salt/pull/54917) - Added get_settings, put_settings and flush_synced methods for Elasticsearch module. - [@Oloremo](https://github.com/Oloremo)
+- [#55418](https://github.com/saltstack/salt/pull/55418) - Added clean_parent argument for the archive state. - [@Oloremo](https://github.com/Oloremo)
 
 ---
 
