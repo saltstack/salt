@@ -13,10 +13,8 @@ import salt.states.module as module
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -107,7 +105,6 @@ def _mocked_none_return(ret=None):
     return ret
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests module state (salt/states/module.py)
