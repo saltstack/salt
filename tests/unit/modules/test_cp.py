@@ -8,14 +8,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     mock_open,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -27,7 +25,6 @@ import salt.modules.cp as cp
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CpTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.cp module

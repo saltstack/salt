@@ -537,7 +537,7 @@ def thorium(opts, functions, runners):
     return ret
 
 
-def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
+def states(opts, functions, utils, serializers, whitelist=None, proxy=None, context=None):
     '''
     Returns the state modules
 
@@ -553,6 +553,9 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None, None)
     '''
+    if context is None:
+        context = {}
+
     ret = LazyLoader(
         _module_dirs(opts, 'states'),
         opts,
@@ -563,6 +566,7 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
     ret.pack['__states__'] = ret
     ret.pack['__utils__'] = utils
     ret.pack['__serializers__'] = serializers
+    ret.pack['__context__'] = context
     return ret
 
 
@@ -623,12 +627,17 @@ def ssh_wrapper(opts, functions=None, context=None):
     )
 
 
-def render(opts, functions, states=None, proxy=None):
+def render(opts, functions, states=None, proxy=None, context=None):
     '''
     Returns the render modules
     '''
+    if context is None:
+        context = {}
+
     pack = {'__salt__': functions,
-            '__grains__': opts.get('grains', {})}
+            '__grains__': opts.get('grains', {}),
+            '__context__': context}
+
     if states:
         pack['__states__'] = states
     pack['__proxy__'] = proxy or {}

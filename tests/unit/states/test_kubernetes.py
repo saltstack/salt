@@ -13,8 +13,6 @@ from contextlib import contextmanager
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -24,7 +22,6 @@ from salt.states import kubernetes
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(kubernetes is False, "Probably Kubernetes client lib is not installed. \
                               Skipping test_kubernetes.py")
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
