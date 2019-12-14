@@ -19,8 +19,6 @@ from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 
@@ -36,7 +34,6 @@ import salt.utils.decorators.path
 
 
 # Skip this test case if we don't have access to mock!
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZpoolTestCase(TestCase, LoaderModuleMockMixin):
     '''
     This class contains a set of functions that test salt.modules.zpool module

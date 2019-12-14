@@ -83,7 +83,6 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                     fhw.write(line + ending)
 
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'firstif')
-        _reline(destpath)
         destpath = os.path.join(RUNTIME_VARS.BASE_FILES, 'testappend', 'secondif')
         _reline(destpath)
         cls.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
@@ -816,9 +815,9 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 'result': True,
                 'changes': True,
             },
-            'cmd_|-C_|-/bin/false_|-run': {
+            'cmd_|-C_|-$(which false)_|-run': {
                 '__run_num__': 1,
-                'comment': 'Command "/bin/false" run',
+                'comment': 'Command "$(which false)" run',
                 'result': False,
                 'changes': True,
             },
