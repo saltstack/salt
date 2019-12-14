@@ -2160,6 +2160,9 @@ def _get_name_map(saltenv='base'):
 
 
 def get_package_info(name, saltenv='base'):
+    '''
+    Return package info. Returns empty map if package not available.
+    '''
     return _get_package_info(name=name, saltenv=saltenv)
 
 
