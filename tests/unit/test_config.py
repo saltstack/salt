@@ -15,8 +15,6 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     Mock,
     MagicMock,
     patch
@@ -890,7 +888,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     # cloud_config tests
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_double_master_path(self):
         '''
         Tests passing in master_config_path and master_config kwargs.
@@ -899,7 +896,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                               master_config_path='foo', master_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_double_providers_path(self):
         '''
         Tests passing in providers_config_path and providers_config kwargs.
@@ -908,7 +904,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                               providers_config_path='foo', providers_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_double_profiles_path(self):
         '''
         Tests passing in profiles_config_path and profiles_config kwargs.
@@ -917,7 +912,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                               profiles_config_path='foo', profiles_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_providers_in_opts(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -929,7 +923,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                                   providers_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_providers_in_opts_path(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -942,7 +935,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                                       providers_config_path='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_deploy_scripts_search_path(self):
         '''
         Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
@@ -986,7 +978,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertRaises(SaltCloudConfigError, salt.config.apply_cloud_config,
                           overrides, defaults=DEFAULT)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_cloud_config_success_list(self):
         '''
         Tests success when valid data is passed into the function as a list
@@ -1002,7 +993,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                    'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
             self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_cloud_config_success_dict(self):
         '''
         Tests success when valid data is passed into function as a dictionary
@@ -1454,7 +1444,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
 # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_without_errors(self):
         '''
         Tests that include_config function returns valid configuration
@@ -1469,7 +1458,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertEqual(config_opts, configuration)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_with_errors(self):
         '''
         Tests that include_config function returns valid configuration even on errors
@@ -1484,7 +1472,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertEqual(config_opts, configuration)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_with_errors_exit(self):
         '''
         Tests that include_config exits on errors
@@ -1522,7 +1509,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         ret.update(kwargs)
         return ret
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_config(self):
         '''
         Ensure that the environment and saltenv options work properly
@@ -1590,7 +1576,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertEqual(ret['saltenv'], 'foo')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class APIConfigTestCase(DefaultConfigsBase, TestCase):
     '''
     TestCase for the api_config function in salt.config.__init__.py

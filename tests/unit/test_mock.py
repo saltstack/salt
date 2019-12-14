@@ -15,8 +15,8 @@ import salt.utils.stringutils
 from salt.ext import six
 
 # Import Salt Testing Libs
-from tests.support.mock import patch, mock_open, NO_MOCK, NO_MOCK_REASON
-from tests.support.unit import TestCase, skipIf
+from tests.support.mock import patch, mock_open
+from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
 
@@ -285,7 +285,6 @@ class MockOpenMixin(object):
                     pass
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MockOpenTestCase(TestCase, MockOpenMixin):
     '''
     Tests for our mock_open helper to ensure that it behaves as closely as

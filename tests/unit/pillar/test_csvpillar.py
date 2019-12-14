@@ -5,14 +5,13 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, mock_open, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import patch, mock_open
 
 # Import Salt Libs
 import salt.pillar.csvpillar as csvpillar
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CSVPillarTestCase(TestCase):
     def test_001_load_utf8_csv(self):
         fake_csv = "id,foo,bar\r\nminion1,foo1,bar1"
