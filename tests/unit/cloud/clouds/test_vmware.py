@@ -13,7 +13,7 @@ from copy import deepcopy
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt import config
@@ -74,7 +74,6 @@ class ExtendedTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(exc.message, exc_msg)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_LIBS, 'Install pyVmomi to be able to run this test.')
 class VMwareTestCase(ExtendedTestCase):
     '''
