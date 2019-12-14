@@ -22,7 +22,7 @@ import salt.transport.server
 import salt.transport.client
 import salt.exceptions
 from salt.ext.six.moves import range
-from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient
+from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient, TCPPubServerChannel
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
@@ -223,7 +223,7 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         for k, v in six.iteritems(self.io_loop._handlers):
             if self._start_handlers.get(k) != v:
                 failures.append((k, v))
-        if len(failures) > 0:
+        if failures:
             raise Exception('FDs still attached to the IOLoop: {0}'.format(failures))
         del self.channel
         del self._start_handlers
@@ -359,3 +359,73 @@ class SaltMessageClientCleanupTest(TestCase, AdaptedConfigurationTestCaseMixin):
             orig_loop.stop = orig_loop.real_stop
             del orig_loop.real_stop
             del orig_loop.stop_called
+
+
+class TCPPubServerChannelTest(TestCase, AdaptedConfigurationTestCaseMixin):
+    @patch('salt.master.SMaster.secrets')
+    @patch('salt.crypt.Crypticle')
+    @patch('salt.utils.asynchronous.SyncWrapper')
+    def test_publish_filtering(self, sync_wrapper, crypticle, secrets):
+        opts = self.get_temp_config('master')
+        opts["sign_pub_messages"] = False
+        channel = TCPPubServerChannel(opts)
+
+        wrap = MagicMock()
+        crypt = MagicMock()
+        crypt.dumps.return_value = {"test": "value"}
+
+        secrets.return_value = {"aes": {"secret": None}}
+        crypticle.return_value = crypt
+        sync_wrapper.return_value = wrap
+
+        # try simple publish with glob tgt_type
+        channel.publish({"test": "value", "tgt_type": "glob", "tgt": "*"})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it without any specific topic
+        assert "topic_lst" not in payload
+
+        # try simple publish with list tgt_type
+        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it with correct topic
+        assert "topic_lst" in payload
+        self.assertEqual(payload["topic_lst"], ["minion01"])
+
+        # try with syndic settings
+        opts['order_masters'] = True
+        channel.publish({"test": "value", "tgt_type": "list", "tgt": ["minion01"]})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it without topic for syndics
+        assert "topic_lst" not in payload
+
+    @patch('salt.utils.minions.CkMinions.check_minions')
+    @patch('salt.master.SMaster.secrets')
+    @patch('salt.crypt.Crypticle')
+    @patch('salt.utils.asynchronous.SyncWrapper')
+    def test_publish_filtering_str_list(self, sync_wrapper, crypticle, secrets, check_minions):
+        opts = self.get_temp_config('master')
+        opts["sign_pub_messages"] = False
+        channel = TCPPubServerChannel(opts)
+
+        wrap = MagicMock()
+        crypt = MagicMock()
+        crypt.dumps.return_value = {"test": "value"}
+
+        secrets.return_value = {"aes": {"secret": None}}
+        crypticle.return_value = crypt
+        sync_wrapper.return_value = wrap
+        check_minions.return_value = {"minions": ["minion02"]}
+
+        # try simple publish with list tgt_type
+        channel.publish({"test": "value", "tgt_type": "list", "tgt": "minion02"})
+        payload = wrap.send.call_args[0][0]
+
+        # verify we send it with correct topic
+        assert "topic_lst" in payload
+        self.assertEqual(payload["topic_lst"], ["minion02"])
+
+        # verify it was correctly calling check_minions
+        check_minions.assert_called_with("minion02", tgt_type="list")
