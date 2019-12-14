@@ -2062,7 +2062,8 @@ def running(name,
                 __context__[contextkey] = new_container_info.get(
                     'NetworkSettings', {}).get('Networks', {})
             return __context__[contextkey]
-        autoip_keys = __opts__['docker.compare_container_networks'].get('automatic', [])
+        autoip_keys = __salt__['config.option'](
+            'docker.compare_container_networks').get('automatic', [])
         for net_name, net_changes in six.iteritems(
                 ret['changes'].get('container', {}).get('Networks', {})):
             if 'IPConfiguration' in net_changes \
