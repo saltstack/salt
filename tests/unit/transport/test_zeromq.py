@@ -461,7 +461,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
                     break
                 last_msg = time.time()
                 results.append(payload['jid'])
-        return results
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_publish_to_pubserv_ipc(self):
@@ -613,6 +612,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         for i in range(num):
             load = {'tgt_type': 'glob', 'tgt': '*', 'jid': '{}-{}'.format(sid, i)}
             server_channel.publish(load)
+        server_channel.close()
 
     @staticmethod
     def _send_large(opts, sid, num=10, size=250000 * 3):
@@ -620,6 +620,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         for i in range(num):
             load = {'tgt_type': 'glob', 'tgt': '*', 'jid': '{}-{}'.format(sid, i), 'xdata': '0' * size}
             server_channel.publish(load)
+        server_channel.close()
 
     def test_issue_36469_tcp(self):
         '''
@@ -628,38 +629,6 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         https://github.com/saltstack/salt/issues/36469
         '''
         opts = dict(self.master_config, ipc_mode='tcp', pub_hwm=0)
-        server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
-        server_channel.pre_fork(self.process_manager, kwargs={
-            'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
-        })
-        send_num = 10 * 4
-        expect = []
-        results = []
-        pub_uri = 'tcp://{interface}:{publish_port}'.format(**opts)
-        # Allow time for server channel to start, especially on windows
-        time.sleep(2)
-        gather = threading.Thread(target=self._gather_results, args=(self.minion_config, pub_uri, results,))
-        gather.start()
-        with ThreadPoolExecutor(max_workers=4) as executor:
-            executor.submit(self._send_small, opts, 1)
-            executor.submit(self._send_small, opts, 2)
-            executor.submit(self._send_small, opts, 3)
-            executor.submit(self._send_large, opts, 4)
-        expect = ['{}-{}'.format(a, b) for a in range(10) for b in (1, 2, 3, 4)]
-        time.sleep(0.1)
-        server_channel.publish({'tgt_type': 'glob', 'tgt': '*', 'stop': True})
-        gather.join()
-        server_channel.pub_close()
-        assert len(results) == send_num, (len(results), set(expect).difference(results))
-
-    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
-    def test_issue_36469_udp(self):
-        '''
-        Test sending both large and small messags to publisher using UDP
-
-        https://github.com/saltstack/salt/issues/36469
-        '''
-        opts = dict(self.master_config, ipc_mode='udp', pub_hwm=0)
         server_channel = salt.transport.zeromq.ZeroMQPubServerChannel(opts)
         server_channel.pre_fork(self.process_manager, kwargs={
             'log_queue': salt.log.setup.get_multiprocessing_logging_queue()
