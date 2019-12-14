@@ -13,15 +13,14 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.parted_partition as parted
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
