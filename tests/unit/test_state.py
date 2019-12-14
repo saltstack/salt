@@ -12,8 +12,6 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
@@ -31,7 +29,6 @@ except ImportError as err:
     pytest = None
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     TestCase for the state compiler.
@@ -171,7 +168,6 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret, [('somestuff', 'cmd')])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''

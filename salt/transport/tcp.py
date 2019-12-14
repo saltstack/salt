@@ -1544,7 +1544,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
-        if load['tgt_type'] == 'list':
+        if load['tgt_type'] == 'list' and not self.opts.get("order_masters", False):
             if isinstance(load['tgt'], six.string_types):
                 # Fetch a list of minions that match
                 _res = self.ckminions.check_minions(load['tgt'],
