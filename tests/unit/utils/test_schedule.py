@@ -12,7 +12,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
@@ -29,8 +29,8 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+
 # pylint: disable=too-many-public-methods,invalid-name
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ScheduleTestCase(TestCase):
     '''
     Unit tests for salt.utils.schedule module

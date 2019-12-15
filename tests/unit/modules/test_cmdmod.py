@@ -25,8 +25,6 @@ from tests.support.mock import (
     mock_open,
     Mock,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -69,7 +67,6 @@ class MockTimedProc(object):
         return self._stderr
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit tests for the salt.modules.cmdmod module

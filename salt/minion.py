@@ -423,7 +423,7 @@ class MinionBase(object):
         self.opts = opts
         self.beacons_leader = opts.get('beacons_leader', True)
 
-    def gen_modules(self, initial_load=False):
+    def gen_modules(self, initial_load=False, context=None):
         '''
         Tell the minion to reload the execution modules
 
@@ -442,22 +442,26 @@ class MinionBase(object):
                 pillarenv=self.opts.get('pillarenv'),
             ).compile_pillar()
 
-        self.utils = salt.loader.utils(self.opts)
-        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
+        self.utils = salt.loader.utils(self.opts, context=context)
+        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, context=context)
         self.serializers = salt.loader.serializers(self.opts)
-        self.returners = salt.loader.returners(self.opts, self.functions)
-        self.proxy = salt.loader.proxy(self.opts, self.functions, self.returners, None)
+        self.returners = salt.loader.returners(self.opts, functions=self.functions, context=context)
+        self.proxy = salt.loader.proxy(self.opts, functions=self.functions, returners=self.returners)
         # TODO: remove
         self.function_errors = {}  # Keep the funcs clean
         self.states = salt.loader.states(self.opts,
-                self.functions,
-                self.utils,
-                self.serializers)
-        self.rend = salt.loader.render(self.opts, self.functions)
+                                         functions=self.functions,
+                                         utils=self.utils,
+                                         serializers=self.serializers,
+                                         context=context)
+        self.rend = salt.loader.render(self.opts, functions=self.functions, context=context)
 #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
-        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
+        self.executors = salt.loader.executors(self.opts,
+                                               functions=self.functions,
+                                               proxy=self.proxy,
+                                               context=context)
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -829,7 +833,7 @@ class SMinion(MinionBase):
     generate all of the salt minion functions and present them with these
     functions for general use.
     '''
-    def __init__(self, opts):
+    def __init__(self, opts, context=None):
         # Late setup of the opts grains, so we can log from the grains module
         import salt.loader
         opts['grains'] = salt.loader.grains(opts)
@@ -843,7 +847,7 @@ class SMinion(MinionBase):
             io_loop.run_sync(
                 lambda: self.eval_master(self.opts, failed=True)
             )
-        self.gen_modules(initial_load=True)
+        self.gen_modules(initial_load=True, context=context or {})
 
         # If configured, cache pillar data on the minion
         if self.opts['file_client'] == 'remote' and self.opts.get('minion_pillar_cache', False):
@@ -1638,8 +1642,8 @@ class Minion(MinionBase):
                         minion_blackout_violation = True
                 if minion_blackout_violation:
                     raise SaltInvocationError('Minion in blackout mode. Set \'minion_blackout\' '
-                                             'to False in pillar or grains to resume operations. Only '
-                                             'saltutil.refresh_pillar allowed in blackout mode.')
+                                              'to False in pillar or grains to resume operations. Only '
+                                              'saltutil.refresh_pillar allowed in blackout mode.')
 
                 if function_name in minion_instance.functions:
                     func = minion_instance.functions[function_name]
@@ -3393,7 +3397,7 @@ class SProxyMinion(SMinion):
     generate all of the salt minion functions and present them with these
     functions for general use.
     '''
-    def gen_modules(self, initial_load=False):
+    def gen_modules(self, initial_load=False, context=None):
         '''
         Tell the minion to reload the execution modules
 
@@ -3428,13 +3432,23 @@ class SProxyMinion(SMinion):
         # Then load the proxy module
         self.proxy = salt.loader.proxy(self.opts)
 
-        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+        self.utils = salt.loader.utils(self.opts, proxy=self.proxy, context=context)
 
-        self.functions = salt.loader.minion_mods(self.opts, utils=self.utils, notify=False, proxy=self.proxy)
-        self.returners = salt.loader.returners(self.opts, self.functions, proxy=self.proxy)
+        self.functions = salt.loader.minion_mods(self.opts,
+                                                 utils=self.utils,
+                                                 notify=False,
+                                                 proxy=self.proxy,
+                                                 context=context)
+        self.returners = salt.loader.returners(self.opts,
+                                               functions=self.functions,
+                                               proxy=self.proxy,
+                                               context=context)
         self.matchers = salt.loader.matchers(self.opts)
         self.functions['sys.reload_modules'] = self.gen_modules
-        self.executors = salt.loader.executors(self.opts, self.functions, proxy=self.proxy)
+        self.executors = salt.loader.executors(self.opts,
+                                               functions=self.functions,
+                                               proxy=self.proxy,
+                                               context=context)
 
         fq_proxyname = self.opts['proxy']['proxytype']
 
@@ -3449,7 +3463,7 @@ class SProxyMinion(SMinion):
         self.proxy.pack['__pillar__'] = self.opts['pillar']
 
         # Reload utils as well (chicken and egg, __utils__ needs __proxy__ and __proxy__ needs __utils__
-        self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
+        self.utils = salt.loader.utils(self.opts, proxy=self.proxy, context=context)
         self.proxy.pack['__utils__'] = self.utils
 
         # Reload all modules so all dunder variables are injected
