@@ -1669,18 +1669,18 @@ def ping_master(master):
     load = {'cmd': 'ping'}
 
     result = False
-    channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
-    try:
-        payload = channel.send(load, tries=0, timeout=timeout)
-        result = True
-    except Exception as e:
-        pass
+    with salt.transport.client.ReqChannel.factory(opts, crypt='clear') as channel:
+        try:
+            payload = channel.send(load, tries=0, timeout=timeout)
+            result = True
+        except Exception as e:
+            pass
 
-    if result:
-        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
-            event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
+        if result:
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+                event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
-    return result
+        return result
 
 
 def proxy_reconnect(proxy_name, opts=None):

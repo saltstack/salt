@@ -51,12 +51,6 @@ except ImportError:
     pass
 
 try:
-    import zmq.utils.monitor
-    HAS_ZMQ_MONITOR = True
-except ImportError:
-    HAS_ZMQ_MONITOR = False
-
-try:
     import salt.utils.win_functions
     HAS_WIN_FUNCTIONS = True
 except ImportError:
@@ -650,6 +644,7 @@ class MinionBase(object):
                 opts.update(prep_ip_port(opts))
                 opts['master_uri_list'].append(resolve_dns(opts)['master_uri'])
 
+            pub_channel = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -695,6 +690,8 @@ class MinionBase(object):
                             msg = ('Master %s could not be reached, trying next '
                                    'next master (if any)', opts['master'])
                         log.info(msg)
+                        pub_channel.close()
+                        pub_channel = None
                         continue
 
                 if not conn:
@@ -706,6 +703,8 @@ class MinionBase(object):
                             'No master could be reached or all masters '
                             'denied the minion\'s connection attempt.'
                         )
+                        if pub_channel:
+                            pub_channel.close()
                         # If the code reaches this point, 'last_exc'
                         # should already be set.
                         raise last_exc  # pylint: disable=E0702
@@ -718,6 +717,7 @@ class MinionBase(object):
         else:
             if opts['random_master']:
                 log.warning('random_master is True but there is only one master specified. Ignoring.')
+            pub_channel = None
             while True:
                 if attempts != 0:
                     # Give up a little time between connection attempts
@@ -755,10 +755,12 @@ class MinionBase(object):
                     self.tok = pub_channel.auth.gen_token(b'salt')
                     self.connected = True
                     raise tornado.gen.Return((opts['master'], pub_channel))
-                except SaltClientError as exc:
+                except SaltClientError:
                     if attempts == tries:
                         # Exhausted all attempts. Return exception.
                         self.connected = False
+                        if pub_channel:
+                            pub_channel.close()
                         six.reraise(*sys.exc_info())
 
     def _discover_masters(self):
@@ -1412,11 +1414,8 @@ class Minion(MinionBase):
             sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
             load['sig'] = sig
 
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
             return channel.send(load, timeout=timeout)
-        finally:
-            channel.close()
 
     @tornado.gen.coroutine
     def _send_req_async(self, load, timeout):
@@ -1427,12 +1426,9 @@ class Minion(MinionBase):
             sig = salt.crypt.sign_message(minion_privkey_path, salt.serializers.msgpack.serialize(load))
             load['sig'] = sig
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts)
-        try:
+        with salt.transport.client.AsyncReqChannel.factory(self.opts) as channel:
             ret = yield channel.send(load, timeout=timeout)
             raise tornado.gen.Return(ret)
-        finally:
-            channel.close()
 
     def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
         '''
@@ -2345,16 +2341,14 @@ class Minion(MinionBase):
         '''
         Send mine data to the master
         '''
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        data['tok'] = self.tok
-        try:
-            ret = channel.send(data)
-            return ret
-        except SaltReqTimeoutError:
-            log.warning('Unable to send mine data to master.')
-            return None
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            data['tok'] = self.tok
+            try:
+                ret = channel.send(data)
+                return ret
+            except SaltReqTimeoutError:
+                log.warning('Unable to send mine data to master.')
+                return None
 
     @tornado.gen.coroutine
     def handle_event(self, package):
