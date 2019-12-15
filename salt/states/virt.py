@@ -145,35 +145,45 @@ def keys(name, basepath='/etc/pki', **kwargs):
     return ret
 
 
-def _virt_call(domain, function, section, comment,
+def _virt_call(domain, function, section, comment, state=None,
                connection=None, username=None, password=None, **kwargs):
     '''
     Helper to call the virt functions. Wildcards supported.
 
-    :param domain:
-    :param function:
-    :param section:
-    :param comment:
-    :return:
+    :param domain: the domain to apply the function on. Can contain wildcards.
+    :param function: virt function to call
+    :param section: key for the changed domains in the return changes dictionary
+    :param comment: comment to return
+    :param state: the expected final state of the VM. If None the VM state won't be checked.
+    :return: the salt state return
     '''
     ret = {'name': domain, 'changes': {}, 'result': True, 'comment': ''}
     targeted_domains = fnmatch.filter(__salt__['virt.list_domains'](), domain)
     changed_domains = list()
     ignored_domains = list()
+    noaction_domains = list()
     for targeted_domain in targeted_domains:
         try:
-            response = __salt__['virt.{0}'.format(function)](targeted_domain,
-                                                             connection=connection,
-                                                             username=username,
-                                                             password=password,
-                                                             **kwargs)
-            if isinstance(response, dict):
-                response = response['name']
-            changed_domains.append({'domain': targeted_domain, function: response})
+            action_needed = True
+            # If a state has been provided, use it to see if we have something to do
+            if state is not None:
+                domain_state = __salt__['virt.vm_state'](targeted_domain)
+                action_needed = domain_state.get(targeted_domain) != state
+            if action_needed:
+                response = __salt__['virt.{0}'.format(function)](targeted_domain,
+                                                                 connection=connection,
+                                                                 username=username,
+                                                                 password=password,
+                                                                 **kwargs)
+                if isinstance(response, dict):
+                    response = response['name']
+                changed_domains.append({'domain': targeted_domain, function: response})
+            else:
+                noaction_domains.append(targeted_domain)
         except libvirt.libvirtError as err:
             ignored_domains.append({'domain': targeted_domain, 'issue': six.text_type(err)})
     if not changed_domains:
-        ret['result'] = False
+        ret['result'] = not ignored_domains and bool(targeted_domains)
         ret['comment'] = 'No changes had happened'
         if ignored_domains:
             ret['changes'] = {'ignored': ignored_domains}
@@ -206,7 +216,7 @@ def stopped(name, connection=None, username=None, password=None):
           virt.stopped
     '''
 
-    return _virt_call(name, 'shutdown', 'stopped', "Machine has been shut down",
+    return _virt_call(name, 'shutdown', 'stopped', 'Machine has been shut down', state='shutdown',
                       connection=connection, username=username, password=password)
 
 
@@ -231,8 +241,7 @@ def powered_off(name, connection=None, username=None, password=None):
         domain_name:
           virt.stopped
     '''
-
-    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off',
+    return _virt_call(name, 'stop', 'unpowered', 'Machine has been powered off', state='shutdown',
                       connection=connection, username=username, password=password)
 
 
@@ -389,8 +398,8 @@ def running(name,
 
     try:
         try:
-            __salt__['virt.vm_state'](name)
-            if __salt__['virt.vm_state'](name) != 'running':
+            domain_state = __salt__['virt.vm_state'](name)
+            if domain_state.get(name) != 'running':
                 action_msg = 'started'
                 if update:
                     status = __salt__['virt.update'](name,
@@ -670,7 +679,7 @@ def network_running(name,
     try:
         info = __salt__['virt.network_info'](name, connection=connection, username=username, password=password)
         if info:
-            if info['active']:
+            if info[name]['active']:
                 ret['comment'] = 'Network {0} exists and is running'.format(name)
             else:
                 __salt__['virt.network_start'](name, connection=connection, username=username, password=password)
@@ -680,7 +689,7 @@ def network_running(name,
             __salt__['virt.network_define'](name,
                                             bridge,
                                             forward,
-                                            vport,
+                                            vport=vport,
                                             tag=tag,
                                             autostart=autostart,
                                             start=True,
@@ -744,11 +753,11 @@ def pool_running(name,
                 - owner: 1000
                 - group: 100
             - source:
-                - dir: samba_share
-                - hosts:
-                   one.example.com
-                   two.example.com
-                - format: cifs
+                dir: samba_share
+                hosts:
+                  - one.example.com
+                  - two.example.com
+                format: cifs
             - autostart: True
 
     '''
@@ -761,7 +770,7 @@ def pool_running(name,
     try:
         info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
         if info:
-            if info['state'] == 'running':
+            if info[name]['state'] == 'running':
                 ret['comment'] = 'Pool {0} exists and is running'.format(name)
             else:
                 __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
@@ -795,6 +804,12 @@ def pool_running(name,
                                         connection=connection,
                                         username=username,
                                         password=password)
+
+            __salt__['virt.pool_start'](name,
+                                        connection=connection,
+                                        username=username,
+                                        password=password)
+
             ret['changes'][name] = 'Pool defined and started'
             ret['comment'] = 'Pool {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
