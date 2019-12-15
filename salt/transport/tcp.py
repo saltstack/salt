@@ -10,7 +10,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 from __future__ import absolute_import, print_function, unicode_literals
 import errno
 import logging
-import msgpack
+import os
 import socket
 import sys
 import time
@@ -56,7 +56,6 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
-import msgpack
 try:
     from M2Crypto import RSA
     HAS_M2 = True
@@ -779,7 +778,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         '''
         log.trace('Req client %s connected', address)
         self.clients.append((stream, address))
-        unpacker = msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker()
         try:
             while True:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -1078,7 +1077,7 @@ class SaltMessageClient(object):
                     not self._connecting_future.done() or
                     self._connecting_future.result() is not True):
                 yield self._connecting_future
-            unpacker = msgpack.Unpacker()
+            unpacker = salt.utils.msgpack.Unpacker()
             while not self._closing:
                 try:
                     self._read_until_future = self._stream.read_bytes(4096, partial=True)
@@ -1358,7 +1357,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
 
     @tornado.gen.coroutine
     def _stream_read(self, client):
-        unpacker = msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
                 client._read_until_future = client.stream.read_bytes(4096, partial=True)

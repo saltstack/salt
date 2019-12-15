@@ -10,7 +10,6 @@ import copy
 import errno
 import hashlib
 import logging
-import msgpack
 import multiprocessing
 import os
 import pipes
@@ -22,11 +21,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import subprocess
-import multiprocessing
-import logging
-import pipes
-import msgpack
 import traceback
 import uuid
 
@@ -2635,9 +2629,7 @@ def cachedir_index_add(minion_id, profile, driver, provider, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(
-                salt.utils.msgpack.msgpack.load(
-                    fh_, encoding=MSGPACK_ENCODING))
+            index = salt.utils.data.decode(salt.utils.msgpack.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         index = {}
 
@@ -2671,8 +2663,7 @@ def cachedir_index_del(minion_id, base=None):
     if os.path.exists(index_file):
         mode = 'rb' if six.PY3 else 'r'
         with salt.utils.files.fopen(index_file, mode) as fh_:
-            index = salt.utils.data.decode(
-                salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
+            index = salt.utils.data.decode(salt.utils.msgpack.load(fh_, encoding=MSGPACK_ENCODING))
     else:
         return
 

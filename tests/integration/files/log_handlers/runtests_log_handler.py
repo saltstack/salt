@@ -93,8 +93,7 @@ def process_queue(port, queue):
                 break
             # Just log everything, filtering will happen on the main process
             # logging handlers
-            sock.sendall(salt.utils.msgpack.dumps(record.__dict__,
-                                                  encoding='utf-8'))
+            sock.sendall(salt.utils.msgpack.dumps(record.__dict__, encoding='utf-8'))
         except (IOError, EOFError, KeyboardInterrupt, SystemExit):
             try:
                 sock.shutdown(socket.SHUT_RDWR)

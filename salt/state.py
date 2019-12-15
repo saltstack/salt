@@ -40,7 +40,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
-import salt.utils.msgpack as msgpack
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
@@ -2260,7 +2260,7 @@ class State(object):
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
                             pdat = msgpack_deserialize(fp_.read())
-                        except msgpack.UnpackValueError:
+                        except salt.utils.msgpack.exceptions.UnpackValueError:
                             # Reading race condition
                             if tries > 10:
                                 # Break out if there are a ton of read errors

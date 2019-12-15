@@ -44,6 +44,7 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
@@ -82,12 +83,6 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-
-try:
-    import salt.utils.msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
 
 try:
     import certifi
@@ -270,7 +265,7 @@ def query(url,
     if session_cookie_jar is None:
         session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
@@ -650,7 +645,7 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
