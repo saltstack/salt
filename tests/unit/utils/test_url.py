@@ -8,16 +8,13 @@ import salt.utils.platform
 import salt.utils.url
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class UrlTestCase(TestCase):
     '''
     TestCase for salt.utils.url module
