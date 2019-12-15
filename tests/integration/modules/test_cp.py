@@ -12,6 +12,7 @@ import shutil
 import signal
 import tempfile
 import textwrap
+import time
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -330,13 +331,24 @@ class CPModuleTest(ModuleCase):
         '''
         cp.get_url with https:// source given and destination set as None
         '''
+        timeout = 500
+        start = time.time()
+        sleep = 5
         tgt = None
-        ret = self.run_function(
-            'cp.get_url',
-            [
-                'https://repo.saltstack.com/index.html',
-                tgt,
-            ])
+        while time.time() - start <= timeout:
+            ret = self.run_function(
+                'cp.get_url',
+                [
+                    'https://repo.saltstack.com/index.html',
+                    tgt,
+                ])
+            if ret.find('HTTP 599') == -1:
+                break
+            time.sleep(sleep)
+        if ret.find('HTTP 599') != -1:
+            raise Exception(
+                'https://repo.saltstack.com/index.html returned 599 error'
+            )
         self.assertIn('Bootstrap', ret)
         self.assertIn('Debian', ret)
         self.assertIn('Windows', ret)
