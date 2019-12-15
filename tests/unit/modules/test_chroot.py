@@ -33,12 +33,7 @@ import sys
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch,
-)
+from tests.support.mock import MagicMock, patch
 
 from salt.exceptions import CommandExecutionError
 import salt.utils.platform
@@ -46,7 +41,6 @@ import salt.modules.chroot as chroot
 
 
 @skipIf(salt.utils.platform.is_windows(), 'This test cannot work on Windows')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ChrootTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.chroot

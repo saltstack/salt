@@ -1431,8 +1431,8 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    channel = salt.transport.client.ReqChannel.factory(__opts__)
-    channel.close()
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+        log.debug('Recreating channel to force key regen')
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1459,18 +1459,16 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__['master_uri'])
 
     for master in masters:
-        channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
-        tok = channel.auth.gen_token(b'salt')
-        load = {'cmd': 'revoke_auth',
-                'id': __opts__['id'],
-                'tok': tok,
-                'preserve_minion_cache': preserve_minion_cache}
-        try:
-            channel.send(load)
-        except SaltReqTimeoutError:
-            ret = False
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(__opts__, master_uri=master) as channel:
+            tok = channel.auth.gen_token(b'salt')
+            load = {'cmd': 'revoke_auth',
+                    'id': __opts__['id'],
+                    'tok': tok,
+                    'preserve_minion_cache': preserve_minion_cache}
+            try:
+                channel.send(load)
+            except SaltReqTimeoutError:
+                ret = False
     return ret
 
 

@@ -13,8 +13,8 @@ import shutil
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.helpers import TstSuiteLoggingHandler
 
 # Import Salt Libs
@@ -46,7 +46,6 @@ FILE_DATA = {
 _CHECK_MINIONS_RETURN = {'minions': [MINION_ID], 'missing': []}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class FileTreePillarTestCase(TestCase, LoaderModuleMockMixin):
     'test file_tree pillar'
     maxDiff = None

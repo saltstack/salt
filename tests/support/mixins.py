@@ -26,7 +26,7 @@ import subprocess
 import multiprocessing
 
 # Import Salt Testing Libs
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.paths import CODE_DIR
 
@@ -423,9 +423,6 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
 
         @functools.wraps(setup_func)
         def wrapper(self):
-            if NO_MOCK:
-                self.skipTest(NO_MOCK_REASON)
-
             loader_modules_configs = self.setup_loader_modules()
             if not isinstance(loader_modules_configs, dict):
                 raise RuntimeError(
