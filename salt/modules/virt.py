@@ -107,6 +107,8 @@ import salt.utils.templates
 import salt.utils.validate.net
 import salt.utils.versions
 import salt.utils.yaml
+
+from salt.utils.virt import check_remote, download_remote
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -119,6 +121,8 @@ JINJA = jinja2.Environment(
         os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'virt')
     )
 )
+
+CACHE_DIR = '/var/lib/libvirt/saltinst'
 
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
@@ -1146,6 +1150,34 @@ def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
     return nicp
 
 
+def _handle_remote_boot_params(orig_boot):
+    """
+    Checks if the boot parameters contain a remote path. If so, it will copy
+    the parameters, download the files specified in the remote path, and return
+    a new dictionary with updated paths containing the canonical path to the
+    kernel and/or initrd
+
+    :param orig_boot: The original boot parameters passed to the init or update
+    functions.
+    """
+    saltinst_dir = None
+    new_boot = orig_boot.copy()
+
+    try:
+        for key in ['kernel', 'initrd']:
+            if check_remote(orig_boot.get(key)):
+                if saltinst_dir is None:
+                    os.makedirs(CACHE_DIR)
+                    saltinst_dir = CACHE_DIR
+
+                new_boot[key] = download_remote(orig_boot.get(key),
+                                                saltinst_dir)
+
+        return new_boot
+    except Exception as err:
+        raise err
+
+
 def init(name,
          cpu,
          mem,
@@ -1298,11 +1330,15 @@ def init(name,
     :param password: password to connect with, overriding defaults
 
                      .. versionadded:: 2019.2.0
-    :param boot: Specifies kernel for the virtual machine, as well as boot
-                 parameters for the virtual machine. This is an optionl
-                 parameter, and all of the keys are optional within the
-                 dictionary.
-         .. code-block:: python
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
             {
                 'kernel': '/root/f8-i386-vmlinuz',
                 'initrd': '/root/f8-i386-initrd',
@@ -1310,7 +1346,6 @@ def init(name,
             }
 
         .. versionadded:: neon
-    :
 
     .. _init-nic-def:
 
@@ -1558,6 +1593,9 @@ def init(name,
     if arch is None:
         arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
+    if boot is not None:
+        boot = _handle_remote_boot_params(boot)
+
     vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch,
                       graphics, boot, **kwargs)
     conn = __get_conn(**kwargs)
@@ -1774,12 +1812,15 @@ def update(name,
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    :param boot: Specifies kernel for the virtual machine, as well as boot
-                 parameters for the virtual machine. This is an optionl
-                 parameter, and all of the keys are optional within the
-                 dictionary.
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
 
         .. code-block:: python
+
             {
                 'kernel': '/root/f8-i386-vmlinuz',
                 'initrd': '/root/f8-i386-initrd',
@@ -1828,6 +1869,10 @@ def update(name,
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get('type')
     all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
+
+    if boot is not None:
+        boot = _handle_remote_boot_params(boot)
+
     new_desc = ElementTree.fromstring(_gen_xml(name,
                                                cpu,
                                                mem,
