@@ -18,7 +18,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
+from tests.support.mock import patch, MagicMock, Mock
 
 # Import Salt libs
 import salt.config
@@ -534,7 +534,6 @@ class TestGetTemplate(TestCase):
         )
 
     @skipIf(six.PY3, 'Not applicable to Python 3')
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_unicode_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             template = 'hello\n\n{{ bad\n\nfoo한'
@@ -547,7 +546,6 @@ class TestGetTemplate(TestCase):
                 dict(opts=self.local_opts, saltenv='test', salt=self.local_salt)
             )
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_render_with_utf8_syntax_error(self):
         with patch.object(builtins, '__salt_system_encoding__', 'utf-8'):
             template = 'hello\n\n{{ bad\n\nfoo한'

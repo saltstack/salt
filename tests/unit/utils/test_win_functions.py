@@ -5,7 +5,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock
 
 # Import Salt Libs
 import salt.utils.platform
@@ -23,7 +23,6 @@ except ImportError:
     HAS_WIN32 = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinFunctionsTestCase(TestCase):
     '''
     Test cases for salt.utils.win_functions

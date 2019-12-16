@@ -788,16 +788,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
 
         return orig[minion_tgt]
 
-    def run_function_all_masters(self, function, arg=(), minion_tgt='minion', timeout=300, **kwargs):
-        '''
-        Run a single salt function from all the masters in multimaster environment
-        and condition the return down to match the behavior of the raw function call
-        '''
-        ret = []
-        for master in range(len(self.clients)):
-            ret.append(self.run_function(function, arg, minion_tgt, timeout, master_tgt=master, **kwargs))
-        return ret
-
     def run_state(self, function, **kwargs):
         '''
         Run the state.single command and return the state return structure
