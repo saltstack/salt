@@ -12,7 +12,8 @@ from tests.support.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,
-    requires_system_grains)
+    requires_system_grains,
+    skip_if_not_root)
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -29,7 +30,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     @requires_system_grains
-    def setUpClass(cls, grains=None):
+    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
         cls.ctx = {}
         cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():
@@ -37,6 +38,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'RedHat':
             cls.pkg = 'units'
 
+    @skip_if_not_root
     @requires_salt_modules('pkg.refresh_db')
     def setUp(self):
         if 'refresh' not in self.ctx:
@@ -96,7 +98,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIsInstance(ret, dict,
                                       'The \'pkg.get_repo\' command did not return the excepted dictionary. '
                                       'Output:\n{}'.format(ret))
-
                 self.assertEqual(
                     ret['uri'],
                     uri,
