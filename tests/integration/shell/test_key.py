@@ -252,15 +252,15 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                 arg_str + ' --keysize=1024', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The minimum value for keysize is 2048', error
+                'error: The minimum value for keysize is 2048', '\n'.join(error)
             )
 
             data, error = self.run_key(
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The maximum value for keysize is 32768',
-                error
+                'error: The maximum value for keysize is 32768',
+                '\n'.join(error)
             )
         finally:
             shutil.rmtree(tempdir)

@@ -9,10 +9,8 @@ import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -43,10 +41,9 @@ def _isfile_side_effect(path):
         '/tmp/test_extracted_tar': False,
         'c:\\tmp\\test_extracted_tar': False,
         '/private/tmp/test_extracted_tar': False,
-    }[path]
+    }[path.lower() if salt.utils.platform.is_windows() else path]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -82,11 +79,11 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
             'z -v -weird-long-opt arg',
         ]
         ret_tar_opts = [
-            ['tar', 'x', '--no-anchored', 'foo', '-f'],
+            ['tar', 'xv', '--no-anchored', 'foo', '-f'],
             ['tar', 'xv', '-p', '--opt', '-f'],
-            ['tar', 'x', '-v', '-p', '-f'],
-            ['tar', 'x', '--long-opt', '-z', '-f'],
-            ['tar', 'xz', '-v', '-weird-long-opt', 'arg', '-f'],
+            ['tar', 'xv', '-p', '-f'],
+            ['tar', 'xv', '--long-opt', '-z', '-f'],
+            ['tar', 'xvz', '-weird-long-opt', 'arg', '-f'],
         ]
 
         mock_true = MagicMock(return_value=True)
@@ -163,7 +160,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stdout')
+            self.assertEqual(ret['changes']['extracted_files'], ['stdout'])
 
     def test_tar_bsdtar(self):
         '''
@@ -202,7 +199,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], 'stderr')
+            self.assertEqual(ret['changes']['extracted_files'], ['stderr'])
 
     def test_extracted_when_if_missing_path_exists(self):
         '''
