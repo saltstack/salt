@@ -344,14 +344,13 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
-                    'virt.vm_state': MagicMock(return_value='running'),
+                    'virt.vm_state': MagicMock(return_value={'myvm': 'running'}),
                     'virt.update': MagicMock(return_value={'definition': True, 'cpu': True})
                 }):
             ret.update({'changes': {'myvm': {'definition': True, 'cpu': True}},
                         'result': True,
                         'comment': 'Domain myvm updated, restart to fully apply the changes'})
             self.assertDictEqual(virt.running('myvm', update=True, boot=boot), ret)
-
 
         # Working update case when stopped
         with patch.dict(virt.__salt__, {  # pylint: disable=no-member
