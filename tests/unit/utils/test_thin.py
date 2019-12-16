@@ -7,10 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import TestsLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -29,7 +27,6 @@ except ImportError:
     pytest = None
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class SSHThinTestCase(TestCase):
     '''
@@ -456,7 +453,7 @@ class SSHThinTestCase(TestCase):
         Test thin.gen_thin function if the opposite python
         binary does not exist
         '''
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             thin.gen_thin('')
             salt.utils.thin.subprocess.Popen.assert_not_called()
 

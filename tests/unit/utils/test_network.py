@@ -6,15 +6,12 @@ import socket
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf
 from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     mock_open,
     create_autospec,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 # Import salt libs
@@ -134,7 +131,6 @@ IPV6_SUBNETS = {True: ('::1/128',),
                 False: ('::1', '::1/129', 'FOO', 9, 'aj01::feac/64')}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase):
 
     def test_sanitize_host(self):
@@ -678,5 +674,5 @@ class NetworkTestCase(TestCase):
 
     def test_netlink_tool_remote_on(self):
         with patch('subprocess.check_output', return_value=NETLINK_SS):
-            remotes = network._netlink_tool_remote_on('4505', 'remote')
+            remotes = network._netlink_tool_remote_on('4505', 'remote_port')
             self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))

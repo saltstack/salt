@@ -11,20 +11,14 @@ import shutil
 import datetime
 import time
 
-# Import Salt Testing libs
+# Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import TMP
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
-import salt.utils.path
 import salt.utils.platform
 import salt.utils.files
 import salt.modules.gpg as gpg
@@ -168,7 +162,6 @@ except ImportError:
 
 
 @destructiveTest
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -180,14 +173,14 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def setUp(self):
         super(GpgTestCase, self).setUp()
-        self.gpghome = os.path.join(TMP, 'gpghome')
+        self.gpghome = os.path.join(RUNTIME_VARS.TMP, 'gpghome')
         if not os.path.isdir(self.gpghome):
             # left behind... Don't fail because of this!
             os.makedirs(self.gpghome)
-        self.gpgfile_pub = os.path.join(TMP, 'gpgfile.pub')
+        self.gpgfile_pub = os.path.join(RUNTIME_VARS.TMP, 'gpgfile.pub')
         with salt.utils.files.fopen(self.gpgfile_pub, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes(GPG_TEST_PUB_KEY))
-        self.gpgfile_priv = os.path.join(TMP, 'gpgfile.priv')
+        self.gpgfile_priv = os.path.join(RUNTIME_VARS.TMP, 'gpgfile.priv')
         with salt.utils.files.fopen(self.gpgfile_priv, 'wb') as fp:
             fp.write(salt.utils.stringutils.to_bytes(GPG_TEST_PRIV_KEY))
         self.user = 'salt'
@@ -300,6 +293,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key('xxxxxxxxxxxxxxxx')
                     self.assertEqual(ret, _expected_result)
 
+    @destructiveTest  # Need to run as root!?
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_delete_key(self):
         '''
