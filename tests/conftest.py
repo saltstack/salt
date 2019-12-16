@@ -360,12 +360,14 @@ def pytest_runtest_setup(item):
     destructive_tests_marker = item.get_closest_marker('destructive_test')
     if destructive_tests_marker is not None or _has_unittest_attr(item, '__destructive_test__'):
         if item.config.getoption('--run-destructive') is False:
+            item._skipped_by_mark = True
             pytest.skip('Destructive tests are disabled')
     os.environ[str('DESTRUCTIVE_TESTS')] = str(item.config.getoption('--run-destructive'))
 
     expensive_tests_marker = item.get_closest_marker('expensive_test')
     if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):
         if item.config.getoption('--run-expensive') is False:
+            item._skipped_by_mark = True
             pytest.skip('Expensive tests are disabled')
     os.environ[str('EXPENSIVE_TESTS')] = str(item.config.getoption('--run-expensive'))
 
@@ -393,6 +395,7 @@ def pytest_runtest_setup(item):
         if check_all:
             for binary in binaries:
                 if salt.utils.path.which(binary) is None:
+                    item._skipped_by_mark = True
                     pytest.skip(
                         '{0}The "{1}" binary was not found'.format(
                             message and '{0}. '.format(message) or '',
@@ -400,6 +403,7 @@ def pytest_runtest_setup(item):
                         )
                     )
         elif salt.utils.path.which_bin(binaries) is None:
+            item._skipped_by_mark = True
             pytest.skip(
                 '{0}None of the following binaries was found: {1}'.format(
                     message and '{0}. '.format(message) or '',
@@ -444,6 +448,7 @@ def pytest_runtest_setup(item):
             if has_local_network is False:
                 # Since we're only supposed to check local network, and no
                 # local network was detected, skip the test
+                item._skipped_by_mark = True
                 pytest.skip('No local network was detected')
 
         # We are using the google.com DNS records as numerical IPs to avoid
@@ -463,6 +468,7 @@ def pytest_runtest_setup(item):
                 # Let's check the next IP
                 continue
             else:
+                item._skipped_by_mark = True
                 pytest.skip('No internet network connection was detected')
 
     requires_salt_modules_marker = item.get_closest_marker('requires_salt_modules')
