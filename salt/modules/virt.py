@@ -695,7 +695,7 @@ def _gen_pool_xml(name,
             source_initiator]):
         source = {
             'devices': source_devices or [],
-            'dir': source_dir,
+            'dir': source_dir if source_format != 'cifs' or not source_dir else source_dir.lstrip('/'),
             'adapter': source_adapter,
             'hosts': [{'name': host[0], 'port': host[1] if len(host) > 1 else None} for host in hosts],
             'auth': source_auth,
