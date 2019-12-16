@@ -33,7 +33,7 @@ from salt.runners.winrepo import (
 )
 from salt.ext import six
 import salt.utils.gitfs
-import salt.utils.msgpack
+import salt.utils.msgpack as msgpack
 # pylint: enable=unused-import
 
 log = logging.getLogger(__name__)
