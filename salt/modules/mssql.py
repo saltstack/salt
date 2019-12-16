@@ -23,7 +23,7 @@ Module to provide MS SQL Server compatibility to salt.
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-from json import JSONEncoder, loads
+from salt.utils.json import JSONEncoder, loads
 
 import salt.ext.six as six
 

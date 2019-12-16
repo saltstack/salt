@@ -48,7 +48,7 @@ Azure (ARM) Resource Execution Module
 
 # Python libs
 from __future__ import absolute_import
-from json import loads, dumps
+from salt.utils.json import loads, dumps
 import logging
 
 # Azure libs
