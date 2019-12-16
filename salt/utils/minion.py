@@ -99,9 +99,13 @@ def _read_proc_file(path, opts):
             except IOError:
                 log.debug('Unable to remove proc file %s.', path)
             return None
-        if data.get('jid') == current_thread:
+        thread_name = '{}-Job-{}'.format(data.get('jid'), data.get('jid'))
+        if data.get('jid') == current_thread or thread_name == current_thread:
             return None
-        if not data.get('jid') in [x.name for x in threading.enumerate()]:
+        found = data.get('jid') in [x.name for x in threading.enumerate()]
+        if not found:
+            found = thread_name in [x.name for x in threading.enumerate()]
+        if not found:
             try:
                 os.remove(path)
             except IOError:
