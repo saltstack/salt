@@ -11,11 +11,11 @@ import shutil
 import logging
 from collections import OrderedDict
 
-import yaml
 import pytest
 import psutil
 
 import salt.utils.files
+from salt.serializers import yaml
 from salt.utils.immutabletypes import freeze
 from tests.support.runtests import RUNTIME_VARS
 from pytestsalt.fixtures.ports import get_unused_localhost_port
@@ -125,7 +125,7 @@ def session_mm_master_config_file(session_mm_conf_dir):
 @pytest.fixture(scope='session')
 def session_mm_master_default_options(session_master_default_options):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_master')) as rfh:
-        config_file_opts = yaml.load(rfh.read())
+        config_file_opts = yaml.deserialize(rfh.read())
         opts = session_master_default_options.copy()
         if config_file_opts:
             opts.update(config_file_opts)
@@ -323,7 +323,7 @@ def session_mm_secondary_master_config_file(session_mm_secondary_conf_dir):
 def session_mm_secondary_master_default_options(session_master_default_options):
     opts = session_master_default_options.copy()
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_sub_master')) as rfh:
-        opts.update(yaml.load(rfh.read()))
+        opts.update(yaml.deserialize(rfh.read()))
         return opts
 
 
@@ -468,7 +468,7 @@ def session_mm_secondary_minion_config_file(session_mm_secondary_conf_dir):
 def session_mm_secondary_minion_default_options(session_secondary_minion_default_options):
     opts = session_secondary_minion_default_options.copy()
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_sub_minion')) as rfh:
-        opts.update(yaml.load(rfh.read()))
+        opts.update(yaml.deserialize(rfh.read()))
     return opts
 
 
@@ -592,7 +592,7 @@ def session_mm_minion_config_file(session_mm_conf_dir):
 def session_mm_minion_default_options(session_minion_default_options):
     opts = session_minion_default_options.copy()
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, 'mm_sub_minion')) as rfh:
-        opts.update(yaml.load(rfh.read()))
+        opts.update(yaml.deserialize(rfh.read()))
     return opts
 
 
