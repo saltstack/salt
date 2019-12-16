@@ -30,7 +30,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     @requires_system_grains
-    def setUpClass(cls, grains=None):
+    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
         cls.ctx = {}
         cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():

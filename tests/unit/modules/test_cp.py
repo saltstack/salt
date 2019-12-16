@@ -140,14 +140,14 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
                                _auth=MagicMock(**{'return_value.gen_token.return_value': 'token'}),
                                __opts__={'id': 'abc', 'file_buffer_size': 10}), \
                 patch('salt.utils.files.fopen', mock_open(read_data=b'content')) as m_open, \
-                patch('salt.transport.client.ReqChannel.factory', MagicMock()):
+                patch('salt.transport.client.ReqChannel.factory', MagicMock()) as req_channel_factory_mock:
             response = cp.push(filename)
             assert response, response
             num_opens = len(m_open.filehandles[filename])
             assert num_opens == 1, num_opens
             fh_ = m_open.filehandles[filename][0]
             assert fh_.read.call_count == 2, fh_.read.call_count
-            salt.transport.client.ReqChannel.factory({}).send.assert_called_once_with(
+            req_channel_factory_mock().__enter__().send.assert_called_once_with(
                 dict(
                     loc=fh_.tell(),  # pylint: disable=resource-leakage
                     cmd='_file_recv',
