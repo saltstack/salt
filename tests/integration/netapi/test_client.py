@@ -6,7 +6,7 @@ import os
 import time
 
 # Import Salt Testing libs
-from tests.support.paths import TMP_CONF_DIR
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
@@ -25,14 +25,14 @@ class NetapiClientTest(TestCase):
         '''
         Set up a NetapiClient instance
         '''
-        opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
+        opts = salt.config.client_config(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
     def tearDown(self):
         del self.netapi
 
     def test_local(self):
-        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping'}
+        low = {'client': 'local', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
@@ -44,7 +44,7 @@ class NetapiClientTest(TestCase):
         self.assertEqual(ret, {'minion': True, 'sub_minion': True})
 
     def test_local_batch(self):
-        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping'}
+        low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
