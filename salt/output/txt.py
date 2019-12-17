@@ -3,9 +3,14 @@
 Simple text outputter
 =====================
 
-The txt outputter has been developed to make the output from shell
-commands on minions appear as they do when the command is executed
-on the minion.
+The ``txt`` outputter has been developed to make the output from shell commands
+on minions appear as they do when the command is executed on the minion.
+
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=txt
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
