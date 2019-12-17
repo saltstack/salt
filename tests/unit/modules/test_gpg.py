@@ -11,17 +11,12 @@ import shutil
 import datetime
 import time
 
-# Import Salt Testing libs
+# Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    MagicMock,
-    patch
-)
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.utils.platform
@@ -167,7 +162,6 @@ except ImportError:
 
 
 @destructiveTest
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_linux(), 'These tests can only be run on linux')
 class GpgTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -299,6 +293,7 @@ class GpgTestCase(TestCase, LoaderModuleMockMixin):
                     ret = gpg.get_key('xxxxxxxxxxxxxxxx')
                     self.assertEqual(ret, _expected_result)
 
+    @destructiveTest  # Need to run as root!?
     @skipIf(not HAS_GPG, 'GPG Module Unavailable')
     def test_delete_key(self):
         '''

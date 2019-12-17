@@ -72,16 +72,15 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
-            try:
-                channel.send(load)
-                # channel.send was successful.
-                # Ensure ret is True.
-                ret = True
-            except Exception:
-                ret = False
-            finally:
-                channel.close()
+            with salt.transport.client.ReqChannel.factory(__opts__,
+                                                          master_uri=master) as channel:
+                try:
+                    channel.send(load)
+                    # channel.send was successful.
+                    # Ensure ret is True.
+                    ret = True
+                except Exception:  # pylint: disable=bare-except
+                    ret = False
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster

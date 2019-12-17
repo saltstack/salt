@@ -243,15 +243,21 @@ class Serial(object):
         except (OverflowError, msgpack.exceptions.PackValueError):
             # msgpack<=0.4.6 don't call ext encoder on very long integers raising the error instead.
             # Convert any very long longs to strings and call dumps again.
-            def verylong_encoder(obj):
+            def verylong_encoder(obj, context):
+                # Make sure we catch recursion here.
+                objid = id(obj)
+                if objid in context:
+                    return '<Recursion on {} with id={}>'.format(type(obj).__name__, id(obj))
+                context.add(objid)
+
                 if isinstance(obj, dict):
                     for key, value in six.iteritems(obj.copy()):
-                        obj[key] = verylong_encoder(value)
+                        obj[key] = verylong_encoder(value, context)
                     return dict(obj)
                 elif isinstance(obj, (list, tuple)):
                     obj = list(obj)
                     for idx, entry in enumerate(obj):
-                        obj[idx] = verylong_encoder(entry)
+                        obj[idx] = verylong_encoder(entry, context)
                     return obj
                 # A value of an Integer object is limited from -(2^63) upto (2^64)-1 by MessagePack
                 # spec. Here we care only of JIDs that are positive integers.
@@ -260,7 +266,7 @@ class Serial(object):
                 else:
                     return obj
 
-            msg = verylong_encoder(msg)
+            msg = verylong_encoder(msg, set())
             if msgpack.version >= (0, 4, 0):
                 return msgpack.dumps(msg, default=ext_type_encoder, use_bin_type=use_bin_type)
             else:
