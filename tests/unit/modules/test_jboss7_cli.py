@@ -13,6 +13,15 @@ from salt.ext import six
 import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
 
+from tests.support.mock import (
+    Mock,
+    MagicMock,
+    patch,
+    mock_open,
+    NO_MOCK,
+    NO_MOCK_REASON
+)
+
 
 class CmdMock(object):
     commands = []
@@ -430,3 +439,6 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
         jboss7_cli.run_operation(self.jboss_config, operation)
 
         self.assertEqual(self.cmd.get_last_command(), r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple, value=\"DOMAIN\\\\\\\\user\")"')
+
+    def test_run_operation_WFLYCTL_support(self):
+        x = jboss7_cli._call_cli
