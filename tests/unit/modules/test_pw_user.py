@@ -12,8 +12,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -27,7 +25,6 @@ except ImportError:
 
 
 @skipIf(not HAS_PWD, 'These tests can only run on systems with the python pwd module')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PwUserTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pw_user

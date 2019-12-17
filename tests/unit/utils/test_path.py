@@ -14,7 +14,7 @@ import tempfile
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch
 
 # Import Salt libs
 import salt.utils.compat
@@ -137,7 +137,6 @@ class PathJoinTestCase(TestCase):
             salt.utils.compat.reload(module)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PathTestCase(TestCase):
     def test_which_bin(self):
         ret = salt.utils.path.which_bin('str')
@@ -160,14 +159,12 @@ class PathTestCase(TestCase):
         self.assertEqual(salt.utils.path.sanitize_win_path('\\windows\\system'), '\\windows\\system')
         self.assertEqual(salt.utils.path.sanitize_win_path('\\bo:g|us\\p?at*h>'), '\\bo_g_us\\p_at_h_')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_check_or_die(self):
         self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, None)
 
         with patch('salt.utils.path.which', return_value=False):
             self.assertRaises(CommandNotFoundError, salt.utils.path.check_or_die, 'FAKE COMMAND')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_join(self):
         with patch('salt.utils.platform.is_windows', return_value=False) as is_windows_mock:
             self.assertFalse(is_windows_mock.return_value)
@@ -176,7 +173,6 @@ class PathTestCase(TestCase):
             self.assertEqual(ret, expected_path)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestWhich(TestCase):
     '''
     Tests salt.utils.path.which function to ensure that it returns True as
