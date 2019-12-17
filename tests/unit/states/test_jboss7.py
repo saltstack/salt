@@ -260,3 +260,7 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
                 self.assertEqual(six.text_type(e), 'Incorrect binding name.')
+
+    def test_(self):
+        pass
+    # TODO
