@@ -151,10 +151,16 @@ def _install_system_packages(session):
             '/usr/lib/python{py_version}/dist-packages/*apt*'
         ]
     }
-    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
-        system_python_packages[key] = system_python_packages['__debian_based_distros__']
 
     distro = _get_distro_info(session)
+    if not distro['id'].startswith(('debian', 'ubuntu')):
+        # This only applies to debian based distributions
+        return
+
+    system_python_packages['{id}-{version}'.format(**distro)] = \
+            system_python_packages['{id}-{version_parts[major]}'.format(**distro)] = \
+            system_python_packages['__debian_based_distros__'][:]
+
     distro_keys = [
         '{id}'.format(**distro),
         '{id}-{version}'.format(**distro),

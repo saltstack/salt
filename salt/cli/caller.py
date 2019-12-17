@@ -315,11 +315,9 @@ class ZeroMQCaller(BaseCaller):
         '''
         Return the data up to the master
         '''
-        channel = salt.transport.client.ReqChannel.factory(self.opts, usage='salt_call')
-        load = {'cmd': '_return', 'id': self.opts['id']}
-        for key, value in six.iteritems(ret):
-            load[key] = value
-        try:
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      usage='salt_call') as channel:
+            load = {'cmd': '_return', 'id': self.opts['id']}
+            for key, value in six.iteritems(ret):
+                load[key] = value
             channel.send(load)
-        finally:
-            channel.close()

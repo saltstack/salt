@@ -8,8 +8,8 @@ any remotes.
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.gitfs
@@ -19,7 +19,6 @@ from salt.exceptions import FileserverConfigError
 OPTS = {'cachedir': '/tmp/gitfs-test-cache'}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGitFSProvider(TestCase):
 
     def test_provider_case_insensitive(self):
