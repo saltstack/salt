@@ -11,8 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -125,7 +123,6 @@ class BotoCloudWatchEventTestCaseMixin(object):
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatchEventTestCaseMixin):
     '''
     TestCase for salt.modules.boto_cloudwatch_event module
