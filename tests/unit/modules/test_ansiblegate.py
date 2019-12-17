@@ -29,8 +29,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 import salt.modules.ansiblegate as ansible
@@ -38,7 +36,6 @@ import salt.utils.platform
 from salt.exceptions import LoaderError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_PYTEST, False)
 @skipIf(salt.utils.platform.is_windows(), 'Not supported on Windows')
 class AnsiblegateTestCase(TestCase, LoaderModuleMockMixin):
