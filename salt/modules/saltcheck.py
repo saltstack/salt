@@ -144,10 +144,10 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import time
-from salt.utils.json import loads, dumps
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.yaml
 import salt.client
@@ -699,7 +699,7 @@ class StateTestLoader(object):
         # use the salt renderer module to interpret jinja and etc
         tests = _render_file(filepath)
         # use json as a convenient way to convert the OrderedDicts from salt renderer
-        mydict = loads(dumps(tests))
+        mydict = salt.utils.json.loads(salt.utils.json.dumps(tests))
         for key, value in mydict.items():
             self.test_dict[key] = value
         return

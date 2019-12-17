@@ -24,9 +24,9 @@ import logging
 log = logging.getLogger(__name__)
 
 # salt lib
-from salt.utils.json import loads, dumps
 from salt.ext import six
 # import NAPALM utils
+import salt.utils.json
 import salt.utils.napalm
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ def _ordered_dict_to_dict(config):
     Forced the datatype to dict, in case OrderedDict is used.
     '''
 
-    return loads(dumps(config))
+    return salt.utils.json.loads(salt.utils.json.dumps(config))
 
 
 def _expand_config(config, defaults):
