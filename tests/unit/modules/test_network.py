@@ -16,8 +16,6 @@ from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -30,7 +28,6 @@ from salt._compat import ipaddress
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.network
