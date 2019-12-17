@@ -210,6 +210,7 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
     kubernetesmod
     launchctl_service
@@ -231,6 +232,7 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew_pkg
     macdefaults
