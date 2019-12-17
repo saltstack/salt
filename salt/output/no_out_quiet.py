@@ -4,6 +4,12 @@ Display no output
 =================
 
 No output is produced when this outputter is selected
+
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=quiet
 '''
 
 # Define the module's virtual name

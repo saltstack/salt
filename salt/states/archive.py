@@ -183,6 +183,7 @@ def extracted(name,
               force=False,
               overwrite=False,
               clean=False,
+              clean_parent=False,
               user=None,
               group=None,
               if_missing=None,
@@ -412,6 +413,10 @@ def extracted(name,
         Set this to ``True`` if archive should be extracted if source_hash has
         changed. This would extract regardless of the ``if_missing`` parameter.
 
+        Note that this is only checked if the ``source`` value has not changed.
+        If it has (e.g. to increment a version number in the path) then the
+        archive will not be extracted even if the hash has changed.
+
         .. versionadded:: 2016.3.0
 
     skip_verify : False
@@ -521,6 +526,14 @@ def extracted(name,
             ``overwrite`` is set to ``True``.
 
         .. versionadded:: 2016.11.1
+
+    clean_parent : False
+        If ``True``, and the archive is extracted, delete the parent
+        directory (i.e. the directory into which the archive is extracted), and
+        then re-create that directory before extracting. Note that ``clean``
+        and ``clean_parent`` are mutually exclusive.
+
+        .. versionadded:: Sodium
 
     user
         The user to own each extracted file. Not available on Windows.
@@ -1076,6 +1089,11 @@ def extracted(name,
                           ))
         return ret
 
+    if clean and clean_parent:
+        ret['comment'] = "Only one of 'clean' and 'clean_parent' can be set to True"
+        ret['result'] = False
+        return ret
+
     extraction_needed = overwrite
     contents_missing = False
 
@@ -1148,6 +1166,15 @@ def extracted(name,
                         )
                     )
                     return ret
+                if __opts__['test'] and clean_parent and contents is not None:
+                    ret['result'] = None
+                    ret['comment'] += (
+                        ' Since the \'clean_parent\' option is enabled, the '
+                        'destination parent directory would be removed first '
+                        'and then re-created and the archive would be '
+                        'extracted'
+                    )
+                    return ret
 
                 # Skip notices of incorrect types if we're cleaning
                 if not (clean and contents is not None):
@@ -1215,6 +1242,26 @@ def extracted(name,
                 ret['comment'] += ', after cleaning destination path(s)'
             _add_explanation(ret, source_hash_trigger, contents_missing)
             return ret
+
+        if clean_parent and contents is not None:
+            errors = []
+            log.debug('Removing directory %s due to clean_parent set to True', name)
+            try:
+                salt.utils.files.rm_rf(name.rstrip(os.sep))
+                ret['changes'].setdefault(
+                    'removed', "Directory {} was removed prior to the extraction".format(name))
+            except OSError as exc:
+                if exc.errno != errno.ENOENT:
+                    errors.append(six.text_type(exc))
+            if errors:
+                msg = (
+                    'Unable to remove the directory {}. The following '
+                    'errors were observed:\n'.format(name)
+                )
+                for error in errors:
+                    msg += '\n- {0}'.format(error)
+                ret['comment'] = msg
+                return ret
 
         if clean and contents is not None:
             errors = []
@@ -1350,10 +1397,13 @@ def extracted(name,
                         )
                         return ret
 
-                    tar_opts = shlex.split(options)
+                    # Ignore verbose file list options as we are already using
+                    # "v" below in tar_shortopts
+                    tar_opts = [x for x in shlex.split(options)
+                                if x not in ('v', '-v', '--verbose')]
 
                     tar_cmd = ['tar']
-                    tar_shortopts = 'x'
+                    tar_shortopts = 'xv'
                     tar_longopts = []
 
                     for position, opt in enumerate(tar_opts):
@@ -1383,9 +1433,9 @@ def extracted(name,
                         ret['changes'] = results
                         return ret
                     if _is_bsdtar():
-                        files = results['stderr']
+                        files = results['stderr'].splitlines()
                     else:
-                        files = results['stdout']
+                        files = results['stdout'].splitlines()
                     if not files:
                         files = 'no tar output so far'
         except CommandExecutionError as exc:

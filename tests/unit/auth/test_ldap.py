@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import salt.auth.ldap
 
 # Import Salt Testing Libs
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch
 from tests.support.unit import skipIf, TestCase
 
 salt.auth.ldap.__opts__ = {}
@@ -28,7 +28,6 @@ class Bind(object):
         ]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.auth.ldap.HAS_LDAP, 'Install python-ldap for this test')
 class LDAPAuthTestCase(TestCase):
     '''
