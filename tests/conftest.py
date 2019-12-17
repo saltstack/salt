@@ -239,29 +239,40 @@ def pytest_configure(config):
 
 
 # ----- Test Setup -------------------------------------------------------------------------------------------------->
+def _has_unittest_attr(item, attr):
+    # XXX: This is a hack while we support both runtests.py and PyTest
+    if hasattr(item.obj, attr):
+        return True
+    if item.cls and hasattr(item.cls, attr):
+        return True
+    if item.parent and hasattr(item.parent.obj, attr):
+        return True
+    return False
+
+
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
     '''
     Fixtures injection based on markers or test skips based on CLI arguments
     '''
-    destructive_tests_marker = item.get_marker('destructive_test')
-    if destructive_tests_marker is not None:
+    destructive_tests_marker = item.get_closest_marker('destructive_test')
+    if destructive_tests_marker is not None or _has_unittest_attr(item, '__destructive_test__'):
         if item.config.getoption('--run-destructive') is False:
             pytest.skip('Destructive tests are disabled')
     os.environ['DESTRUCTIVE_TESTS'] = six.text_type(item.config.getoption('--run-destructive'))
 
-    expensive_tests_marker = item.get_marker('expensive_test')
-    if expensive_tests_marker is not None:
+    expensive_tests_marker = item.get_closest_marker('expensive_test')
+    if expensive_tests_marker is not None or _has_unittest_attr(item, '__expensive_test__'):
         if item.config.getoption('--run-expensive') is False:
             pytest.skip('Expensive tests are disabled')
     os.environ['EXPENSIVE_TESTS'] = six.text_type(item.config.getoption('--run-expensive'))
 
-    skip_if_not_root_marker = item.get_marker('skip_if_not_root')
-    if skip_if_not_root_marker is not None:
+    skip_if_not_root_marker = item.get_closest_marker('skip_if_not_root')
+    if skip_if_not_root_marker is not None or _has_unittest_attr(item, '__skip_if_not_root__'):
         if os.getuid() != 0:
             pytest.skip('You must be logged in as root to run this test')
 
-    skip_if_binaries_missing_marker = item.get_marker('skip_if_binaries_missing')
+    skip_if_binaries_missing_marker = item.get_closest_marker('skip_if_binaries_missing')
     if skip_if_binaries_missing_marker is not None:
         binaries = skip_if_binaries_missing_marker.args
         if len(binaries) == 1:
@@ -286,7 +297,7 @@ def pytest_runtest_setup(item):
                 )
             )
 
-    requires_network_marker = item.get_marker('requires_network')
+    requires_network_marker = item.get_closest_marker('requires_network')
     if requires_network_marker is not None:
         only_local_network = requires_network_marker.kwargs.get('only_local_network', False)
         has_local_network = False
