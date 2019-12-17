@@ -5,8 +5,8 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -18,7 +18,6 @@ STUB_MEMORY_USAGE = namedtuple('vmem', 'total available percent used free active
                                1156378624, 4750528512, 898908160)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MemUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.memusage

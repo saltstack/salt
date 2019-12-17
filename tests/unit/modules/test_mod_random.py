@@ -11,8 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -45,7 +43,6 @@ SUPPORTED_HASHLIB = _test_hashlib()
 
 
 @skipIf(not SUPPORTED_HASHLIB, 'Hashlib does not contain needed functionality')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.mod_random
