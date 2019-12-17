@@ -233,43 +233,43 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
         # instantiate some classes inside our new process
-        self.event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 self.opts['__role'],
                 self.opts['sock_dir'],
                 self.opts['transport'],
                 opts=self.opts,
-                listen=True)
-        self.wrap = ReactWrap(self.opts)
+                listen=True) as event:
+            self.wrap = ReactWrap(self.opts)
 
-        for data in self.event.iter_events(full=True):
-            # skip all events fired by ourselves
-            if data['data'].get('user') == self.wrap.event_user:
-                continue
-            if data['tag'].endswith('salt/reactors/manage/add'):
-                _data = data['data']
-                res = self.add_reactor(_data['event'], _data['reactors'])
-                self.event.fire_event({'reactors': self.list_all(),
-                                       'result': res},
-                                      'salt/reactors/manage/add-complete')
-            elif data['tag'].endswith('salt/reactors/manage/delete'):
-                _data = data['data']
-                res = self.delete_reactor(_data['event'])
-                self.event.fire_event({'reactors': self.list_all(),
-                                       'result': res},
-                                      'salt/reactors/manage/delete-complete')
-            elif data['tag'].endswith('salt/reactors/manage/list'):
-                self.event.fire_event({'reactors': self.list_all()},
-                                      'salt/reactors/manage/list-results')
-            else:
-                reactors = self.list_reactors(data['tag'])
-                if not reactors:
+            for data in event.iter_events(full=True):
+                # skip all events fired by ourselves
+                if data['data'].get('user') == self.wrap.event_user:
                     continue
-                chunks = self.reactions(data['tag'], data['data'], reactors)
-                if chunks:
-                    try:
-                        self.call_reactions(chunks)
-                    except SystemExit:
-                        log.warning('Exit ignored by reactor')
+                if data['tag'].endswith('salt/reactors/manage/add'):
+                    _data = data['data']
+                    res = self.add_reactor(_data['event'], _data['reactors'])
+                    event.fire_event({'reactors': self.list_all(),
+                                           'result': res},
+                                          'salt/reactors/manage/add-complete')
+                elif data['tag'].endswith('salt/reactors/manage/delete'):
+                    _data = data['data']
+                    res = self.delete_reactor(_data['event'])
+                    event.fire_event({'reactors': self.list_all(),
+                                           'result': res},
+                                          'salt/reactors/manage/delete-complete')
+                elif data['tag'].endswith('salt/reactors/manage/list'):
+                    event.fire_event({'reactors': self.list_all()},
+                                          'salt/reactors/manage/list-results')
+                else:
+                    reactors = self.list_reactors(data['tag'])
+                    if not reactors:
+                        continue
+                    chunks = self.reactions(data['tag'], data['data'], reactors)
+                    if chunks:
+                        try:
+                            self.call_reactions(chunks)
+                        except SystemExit:
+                            log.warning('Exit ignored by reactor')
 
 
 class ReactWrap(object):

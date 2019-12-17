@@ -5,24 +5,24 @@ Utility functions for salt.cloud
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import errno
-import os
-import stat
 import codecs
-import shutil
-import uuid
+import copy
+import errno
 import hashlib
+import logging
+import msgpack
+import multiprocessing
+import os
+import pipes
+import re
+import shutil
 import socket
+import stat
+import subprocess
+import sys
 import tempfile
 import time
-import subprocess
-import multiprocessing
-import logging
-import pipes
-import msgpack
 import traceback
-import copy
-import re
 import uuid
 
 
@@ -1981,25 +1981,20 @@ def fire_event(key, msg, tag, sock_dir, args=None, transport='zeromq'):
     '''
     Fire deploy action
     '''
-    event = salt.utils.event.get_event(
-        'master',
-        sock_dir,
-        transport,
-        listen=False)
+    with salt.utils.event.get_event('master', sock_dir, transport, listen=False) as event:
+        try:
+            event.fire_event(msg, tag)
+        except ValueError:
+            # We're using at least a 0.17.x version of salt
+            if isinstance(args, dict):
+                args[key] = msg
+            else:
+                args = {key: msg}
+            event.fire_event(args, tag)
 
-    try:
-        event.fire_event(msg, tag)
-    except ValueError:
-        # We're using at least a 0.17.x version of salt
-        if isinstance(args, dict):
-            args[key] = msg
-        else:
-            args = {key: msg}
-        event.fire_event(args, tag)
-
-    # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
-    # Assertion failed: get_load () == 0 (poller_base.cpp:32)
-    time.sleep(0.025)
+        # https://github.com/zeromq/pyzmq/issues/173#issuecomment-4037083
+        # Assertion failed: get_load () == 0 (poller_base.cpp:32)
+        time.sleep(0.025)
 
 
 def _exec_ssh_cmd(cmd, error_msg=None, allow_failure=False, **kwargs):
@@ -2072,7 +2067,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
                     os.close(tmpfd)
                 except OSError as exc:
                     if exc.errno != errno.EBADF:
-                        raise exc
+                        six.reraise(*sys.exc_info())
 
         log.debug('Uploading %s to %s', dest_path, kwargs['hostname'])
 
@@ -2143,7 +2138,7 @@ def scp_file(dest_path, contents=None, kwargs=None, local_file=None):
                 os.remove(file_to_upload)
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
-                    raise exc
+                    six.reraise(*sys.exc_info())
     return retcode
 
 
@@ -2180,7 +2175,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
                     os.close(tmpfd)
                 except OSError as exc:
                     if exc.errno != errno.EBADF:
-                        raise exc
+                        six.reraise(*sys.exc_info())
 
         if local_file is not None:
             file_to_upload = local_file
@@ -2245,7 +2240,7 @@ def sftp_file(dest_path, contents=None, kwargs=None, local_file=None):
                 os.remove(file_to_upload)
             except OSError as exc:
                 if exc.errno != errno.ENOENT:
-                    raise exc
+                    six.reraise(*sys.exc_info())
     return retcode
 
 
@@ -2378,19 +2373,19 @@ def check_auth(name, sock_dir=None, queue=None, timeout=300):
     This function is called from a multiprocess instance, to wait for a minion
     to become available to receive salt commands
     '''
-    event = salt.utils.event.SaltEvent('master', sock_dir, listen=True)
-    starttime = time.mktime(time.localtime())
-    newtimeout = timeout
-    log.debug('In check_auth, waiting for %s to become available', name)
-    while newtimeout > 0:
-        newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
-        ret = event.get_event(full=True)
-        if ret is None:
-            continue
-        if ret['tag'] == 'salt/minion/{0}/start'.format(name):
-            queue.put(name)
-            newtimeout = 0
-            log.debug('Minion %s is ready to receive commands', name)
+    with salt.utils.event.SaltEvent('master', sock_dir, listen=True) as event:
+        starttime = time.mktime(time.localtime())
+        newtimeout = timeout
+        log.debug('In check_auth, waiting for %s to become available', name)
+        while newtimeout > 0:
+            newtimeout = timeout - (time.mktime(time.localtime()) - starttime)
+            ret = event.get_event(full=True)
+            if ret is None:
+                continue
+            if ret['tag'] == 'salt/minion/{0}/start'.format(name):
+                queue.put(name)
+                newtimeout = 0
+                log.debug('Minion %s is ready to receive commands', name)
 
 
 def ip_to_int(ip):

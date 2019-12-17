@@ -4167,7 +4167,7 @@ def _get_dvportgroup_teaming(pg_name, pg_default_port_config):
 
 def _get_dvportgroup_dict(pg_ref):
     '''
-    Returns a dictionary with a distributed virutal portgroup data
+    Returns a dictionary with a distributed virtual portgroup data
 
 
     pg_ref

@@ -11,10 +11,10 @@ from salt.exceptions import SaltCloudSystemExit
 import salt.utils.files
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, PropertyMock
-from tests.support.paths import TMP
+from tests.support.mock import patch, PropertyMock
 from tests.unit.test_crypt import PRIVKEY_DATA
 
 PASS_DATA = (
@@ -26,7 +26,6 @@ PASS_DATA = (
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class EC2TestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.ec2 module.
@@ -34,7 +33,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
 
     def setUp(self):
         super(EC2TestCase, self).setUp()
-        with tempfile.NamedTemporaryFile(dir=TMP, suffix='.pem', delete=True) as fp:
+        with tempfile.NamedTemporaryFile(dir=RUNTIME_VARS.TMP, suffix='.pem', delete=True) as fp:
             self.key_file = fp.name
 
     def tearDown(self):
