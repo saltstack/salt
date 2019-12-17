@@ -629,7 +629,7 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
-    grains['virtual'] = 'physical'
+    grains['virtual'] = osdata.get('virtual', 'physical')
 
     # It is possible that the 'manufacturer' and/or 'productname' grains
     # exist but have a value of None.
@@ -950,6 +950,7 @@ def _virtual(osdata):
                 with salt.utils.files.fopen('/proc/1/cgroup', 'r') as fhr:
                     fhr_contents = fhr.read()
                 if ':/lxc/' in fhr_contents:
+                    grains['virtual'] = 'container'
                     grains['virtual_subtype'] = 'LXC'
                 elif ':/kubepods/' in fhr_contents:
                     grains['virtual_subtype'] = 'kubernetes'
@@ -959,6 +960,7 @@ def _virtual(osdata):
                     if any(x in fhr_contents
                            for x in (':/system.slice/docker', ':/docker/',
                                      ':/docker-ce/')):
+                        grains['virtual'] = 'container'
                         grains['virtual_subtype'] = 'Docker'
             except IOError:
                 pass
@@ -1060,6 +1062,11 @@ def _virtual(osdata):
                     '{0} -n machdep.idle-mechanism'.format(sysctl)) == 'xen':
                 if os.path.isfile('/var/run/xenconsoled.pid'):
                     grains['virtual_subtype'] = 'Xen Dom0'
+
+    # If we have a virtual_subtype, we're virtual, but maybe we couldn't
+    # figure out what specific virtual type we were?
+    if grains.get('virtual_subtype') and grains['virtual'] == 'physical':
+        grains['virtual'] = 'virtual'
 
     for command in failed_commands:
         log.info(
@@ -2748,26 +2755,6 @@ def _hw_data(osdata):
     elif osdata['kernel'] == 'AIX':
         cmd = salt.utils.path.which('prtconf')
         if cmd:
-            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
-            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
-                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
-                for regex in [re.compile(r) for r in [regstring]]:
-                    res = regex.search(data)
-                    if res and len(res.groups()) >= 1:
-                        grains[dest] = res.group(1).strip().replace("'", '')
-
-            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
-            for regex in product_regexes:
-                res = regex.search(data)
-                if res and len(res.groups()) >= 1:
-                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
-                    break
-        else:
-            log.error('The \'prtconf\' binary was not found in $PATH.')
-
-    elif osdata['kernel'] == 'AIX':
-        cmd = salt.utils.path.which('prtconf')
-        if data:
             data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
             for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
                                     ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
