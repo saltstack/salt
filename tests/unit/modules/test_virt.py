@@ -13,8 +13,8 @@ import datetime
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.yaml
@@ -49,7 +49,6 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
         '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.module.virt
@@ -2663,3 +2662,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName.return_value = mock_pool
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes('default'))
+
+    @patch('salt.modules.virt._is_kvm_hyper', return_value=True)
+    @patch('salt.modules.virt._is_xen_hyper', return_value=False)
+    def test_get_hypervisor(self, isxen_mock, iskvm_mock):
+        '''
+        test the virt.get_hypervisor() function
+        '''
+        self.assertEqual('kvm', virt.get_hypervisor())
+
+        iskvm_mock.return_value = False
+        self.assertIsNone(virt.get_hypervisor())
+
+        isxen_mock.return_value = True
+        self.assertEqual('xen', virt.get_hypervisor())

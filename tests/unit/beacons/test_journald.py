@@ -6,8 +6,8 @@ import datetime
 from uuid import UUID
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock
+from tests.support.unit import TestCase
+from tests.support.mock import Mock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -74,7 +74,6 @@ class SystemdJournaldMock(Mock):
 SYSTEMD_MOCK = SystemdJournaldMock()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.journald

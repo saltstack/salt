@@ -12,12 +12,10 @@ import logging
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -65,7 +63,6 @@ class RequestPutResponseMock(Mock):
         return {'_id': 4321}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TelegramModuleTest(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.telegram.

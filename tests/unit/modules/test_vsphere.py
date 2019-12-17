@@ -25,8 +25,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
     call
 )
 
@@ -44,7 +42,6 @@ PASSWORD = 'SuperSecret!'
 ERROR = 'Some Testing Error Message'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class VsphereTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.modules.vsphere module.
@@ -566,7 +563,6 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
                              vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.get_proxy_type
@@ -581,7 +577,6 @@ class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('fake_proxy_type', ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.supports_proxies decorator
@@ -613,7 +608,6 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
                          excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere._get_proxy_connection_details
@@ -739,7 +733,6 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                          excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.gets_service_instance_via_proxy
@@ -911,7 +904,6 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_si)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.get_service_instance_via_proxy
@@ -954,7 +946,6 @@ class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, mock_si)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.disconnect
@@ -991,7 +982,6 @@ class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, True)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.test_vcenter_connection
@@ -1066,7 +1056,6 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, False)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1152,7 +1141,6 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, [{'name': 'fake_dc1'}, {'name': 'fake_dc2'}])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1203,7 +1191,6 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, {'create_datacenter': True})
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1292,7 +1279,6 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_si, self.mock_host, 'fake_disk_id', hostname='fake_host')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1382,7 +1368,6 @@ class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1477,7 +1462,6 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not vsphere.HAS_JSONSCHEMA, 'The \'jsonschema\' library is missing')
 class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
@@ -1646,7 +1630,6 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1738,7 +1721,6 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
         self.mock__get_cluster_dict.assert_called_once_with('cl', self.mock_cl)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1822,7 +1804,6 @@ class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_ds_ref, 'new_ds_name')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere._get_proxy_target

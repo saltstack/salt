@@ -24,7 +24,7 @@ from tests.support.helpers import (
 )
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, SkipTest
 
 
 @destructiveTest
@@ -35,11 +35,13 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
     Test ansible.playbooks states
     '''
 
+    @classmethod
     @requires_system_grains
-    def setUp(self, grains=None):
+    def setUpClass(cls, grains=None):  # pylint: disable=arguments-differ
         if grains.get('os_family') == 'RedHat' and grains.get('osmajorrelease') == 6:
-            self.skipTest('This test hangs the test suite on RedHat 6. Skipping for now.')
+            raise SkipTest('This test hangs the test suite on RedHat 6. Skipping for now.')
 
+    def setUp(self):
         priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test')
         data = {
             'all': {
