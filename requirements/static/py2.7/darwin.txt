@@ -134,3 +134,5 @@ zc.lockfile==1.4          # via cherrypy
 zipp==0.6.0               # via importlib-metadata
 # Passthrough dependencies from pkg/osx/req.txt
 pyobjc==5.1.2
+# Passthrough dependencies from pkg/osx/req.txt
+pyobjc==5.1.2
