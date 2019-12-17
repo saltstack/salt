@@ -52,7 +52,7 @@ class ReqChannel(object):
         return self
 
     def __exit__(self, *args):
-        self.stop()
+        self.close()
 
 
 class PushChannel(object):

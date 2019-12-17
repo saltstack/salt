@@ -317,4 +317,4 @@ class SyncWrapper(object):
         return self
 
     def __exit__(self, exc_type, exc_val, tb):
-        self.stop()
+        self.close()
