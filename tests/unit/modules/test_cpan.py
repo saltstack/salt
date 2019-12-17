@@ -7,18 +7,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 # Import Salt Libs
 import salt.modules.cpan as cpan
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CpanTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cpan

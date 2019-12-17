@@ -7,7 +7,7 @@ import logging
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, mock_open
+from tests.support.mock import patch, MagicMock, mock_open
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -27,7 +27,6 @@ pack = (7, 6216, b'pts/14\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.[s]
