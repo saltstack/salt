@@ -31,7 +31,7 @@ class JinjaFiltersTest(object):
         '''
         test jinja filter data.compare_list
         '''
-        _expected = {'ret': {'old': 'b'}}
+        _expected = {'ret': {'old': ['b']}}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_compare_lists'])
         self.assertIn('module_|-test_|-test.echo_|-run', ret)
