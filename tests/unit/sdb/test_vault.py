@@ -56,10 +56,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
     def test_set_question_mark(self):
         '''
         Test salt.sdb.vault.set_ while using the old
-        deprecated solution with a question mark. This
-        should not split correctly and the call args will
-        not include the entire path (foo)
-
+        deprecated solution with a question mark.
         '''
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
@@ -67,8 +64,8 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
             vault.set_('sdb://myvault/path/to/foo?bar', 'super awesome')
 
         assert mock_vault.call_args_list == [call('POST',
-                                                  'v1/sdb://myvault/path/to',
-                                                  None, json={'foo?bar': 'super awesome'})]
+                                                  'v1/sdb://myvault/path/to/foo',
+                                                  None, json={'bar': 'super awesome'})]
 
     def test_get(self):
         '''
@@ -87,9 +84,7 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
     def test_get_question_mark(self):
         '''
         Test salt.sdb.vault.get while using the old
-        deprecated solution with a question mark. This
-        should not split correctly and the call args will
-        not include the entire path (foo)
+        deprecated solution with a question mark.
         '''
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
@@ -97,5 +92,5 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}):
             vault.get('sdb://myvault/path/to/foo?bar')
         assert mock_vault.call_args_list == [call('GET',
-                                                  'v1/sdb://myvault/path/to',
+                                                  'v1/sdb://myvault/path/to/foo',
                                                   None)]

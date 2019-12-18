@@ -56,7 +56,10 @@ def set_(key, value, profile=None):
     '''
     Set a key/value pair in the vault service
     '''
-    path, key = key.rsplit('/', 1)
+    if '?' in key:
+        path, key = key.split('?')
+    else:
+        path, key = key.rsplit('/', 1)
 
     try:
         url = 'v1/{0}'.format(path)
@@ -79,7 +82,10 @@ def get(key, profile=None):
     '''
     Get a value from the vault service
     '''
-    path, key = key.rsplit('/', 1)
+    if '?' in key:
+        path, key = key.split('?')
+    else:
+        path, key = key.rsplit('/', 1)
 
     try:
         url = 'v1/{0}'.format(path)

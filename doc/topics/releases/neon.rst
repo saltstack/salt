@@ -105,16 +105,6 @@ State Deprecations
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
 
-SDB Deprecations
-----------------
-
-- The vault sdb module has deprecated using ? between the path and key for the following methods:
-
-  - :py:func:`sdb.vault.get <salt.sdb.vault.get>`
-  - :py:func:`sdb.vault.set <salt.sdb.vault.set_>`
-
-  Please use / to separate between path and key.
-
 Engine Removal
 --------------
 
