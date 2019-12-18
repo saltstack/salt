@@ -33,6 +33,8 @@ class SyndicTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     Test the salt-syndic command
     '''
 
+    _call_binary_ = 'salt-syndic'
+
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_user(self):
         '''

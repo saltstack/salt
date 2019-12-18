@@ -7,10 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -18,7 +16,6 @@ from tests.support.mock import (
 import salt.states.boto_iam_role as boto_iam_role
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoIAMRoleTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.boto_iam_role
