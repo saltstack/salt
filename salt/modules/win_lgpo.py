@@ -4831,7 +4831,7 @@ def _remove_invalid_xmlns(xml_file):
     return xml_tree
 
 
-def _parse_xml(admfile):
+def _parse_xml(adm_file):
     '''
     Parse the admx/adml file. There are 3 scenarios (so far) that we'll likely
     encounter:
@@ -4845,15 +4845,15 @@ def _parse_xml(admfile):
     parser = lxml.etree.XMLParser(remove_comments=True)
     try:
         # First we'll try to parse valid xml
-        xml_tree = lxml.etree.parse(admfile, parser=parser)
+        xml_tree = lxml.etree.parse(adm_file, parser=parser)
     except lxml.etree.XMLSyntaxError:
         try:
             # Next we'll try invalid encoding (see issue #38100)
-            xml_tree = _remove_unicode_encoding(admfile)
+            xml_tree = _remove_unicode_encoding(adm_file)
         except lxml.etree.XMLSyntaxError:
             # Finally we'll try invalid xmlns entry, if this fails, we just want
             # to raise the error
-            xml_tree = _remove_invalid_xmlns(admfile)
+            xml_tree = _remove_invalid_xmlns(adm_file)
     return xml_tree
 
 
