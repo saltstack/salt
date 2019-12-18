@@ -13,7 +13,7 @@ import sys
 # Import Salt libs
 import salt.utils.data
 import salt.utils.stringutils
-from salt.utils.thread_local_proxy import ThreadLocalProxy
+import salt.utils.thread_local_proxy as thread_local_proxy
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -123,8 +123,7 @@ def dump(obj, fp, **kwargs):
     orig_enc_func = kwargs.pop('default', lambda x: x)
 
     def _enc_func(_obj):
-        _obj = ThreadLocalProxy.unproxy(_obj)
-        return orig_enc_func(_obj)
+        return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(_obj))
 
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
@@ -152,8 +151,7 @@ def dumps(obj, **kwargs):
     orig_enc_func = kwargs.pop('default', lambda x: x)
 
     def _enc_func(_obj):
-        _obj = ThreadLocalProxy.unproxy(_obj)
-        return orig_enc_func(_obj)
+        return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(_obj))
 
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False

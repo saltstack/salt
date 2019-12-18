@@ -2,12 +2,13 @@
 '''
 Functions to work with MessagePack
 '''
+
 # Import Python libs
 from __future__ import absolute_import
 import logging
 
 # Import Salt libs
-from salt.utils.thread_local_proxy import ThreadLocalProxy
+import salt.utils.thread_local_proxy as thread_local_proxy
 
 log = logging.getLogger(__name__)
 
@@ -92,8 +93,7 @@ def pack(o, stream, **kwargs):
     orig_enc_func = kwargs.pop('default', lambda x: x)
 
     def _enc_func(obj):
-        obj = ThreadLocalProxy.unproxy(obj)
-        return orig_enc_func(obj)
+        return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(obj))
 
     # Writes to a stream, there is no return
     msgpack.pack(o, stream, default=_enc_func, **_sanitize_msgpack_kwargs(kwargs))
@@ -112,8 +112,7 @@ def packb(o, **kwargs):
     orig_enc_func = kwargs.pop('default', lambda x: x)
 
     def _enc_func(obj):
-        obj = ThreadLocalProxy.unproxy(obj)
-        return orig_enc_func(obj)
+        return orig_enc_func(thread_local_proxy.ThreadLocalProxy.unproxy(obj))
 
     return msgpack.packb(o, default=_enc_func, **_sanitize_msgpack_kwargs(kwargs))
 

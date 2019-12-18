@@ -14,7 +14,6 @@ import time
 import logging
 import inspect
 import tempfile
-import threading
 import functools
 import threading
 import traceback
@@ -36,10 +35,10 @@ import salt.utils.odict
 import salt.utils.platform
 import salt.utils.versions
 import salt.utils.stringutils
+import salt.utils.thread_local_proxy as thread_local_proxy
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
-from salt.utils.thread_local_proxy import ThreadLocalProxy
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -1153,13 +1152,13 @@ def _inject_into_mod(mod, name, value, force_lock=False):
     # False or a lock must be added to the ThreadLocalProxy.
     if force_lock:
         with _inject_into_mod.lock:
-            if isinstance(old_value, ThreadLocalProxy):
-                ThreadLocalProxy.set_reference(old_value, value)
+            if isinstance(old_value, thread_local_proxy.ThreadLocalProxy):
+                thread_local_proxy.ThreadLocalProxy.set_reference(old_value, value)
             else:
-                setattr(mod, name, ThreadLocalProxy(value, True))
+                setattr(mod, name, thread_local_proxy.ThreadLocalProxy(value, True))
     else:
-        if isinstance(old_value, ThreadLocalProxy):
-            ThreadLocalProxy.set_reference(old_value, value)
+        if isinstance(old_value, thread_local_proxy.ThreadLocalProxy):
+            thread_local_proxy.ThreadLocalProxy.set_reference(old_value, value)
         else:
             _inject_into_mod(mod, name, value, True)
 
@@ -1265,7 +1264,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         for k, v in six.iteritems(self.pack):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                value = ThreadLocalProxy.unproxy(self.context_dict.get(k, {}))
+                value = thread_local_proxy.ThreadLocalProxy.unproxy(self.context_dict.get(k, {}))
 
                 self.context_dict[k] = value
                 self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
@@ -1545,13 +1544,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         '''
         if '__grains__' not in self.pack:
-            _grains = ThreadLocalProxy.unproxy(opts.get('grains', {}))
+            _grains = thread_local_proxy.ThreadLocalProxy.unproxy(opts.get('grains', {}))
 
             self.context_dict['grains'] = _grains
             self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
 
         if '__pillar__' not in self.pack:
-            pillar = ThreadLocalProxy.unproxy(opts.get('pillar', {}))
+            pillar = thread_local_proxy.ThreadLocalProxy.unproxy(opts.get('pillar', {}))
 
             self.context_dict['pillar'] = pillar
             self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')
