@@ -52,7 +52,7 @@ class VenafiTest(ShellCase):
                                 minion_id=cn,
                                 dns_name=cn,
                                 key_password='secretPassword',
-                                zone=environ.get('CLOUDZONE'))
+                                zone='fake')
         cert_output = ret['return'][0]
         assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
@@ -125,7 +125,7 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
             ret = self.run_run_plus(fun='venafi.request',
                                     minion_id=cn,
                                     csr_path=csr_path,
-                                    zone=environ.get('CLOUDZONE'))
+                                    zone='fake')
             cert_output = ret['return'][0]
             print("temp debug:" + cert_output)
             assert cert_output is not None, 'venafi_certificate not found in `output_value`'
