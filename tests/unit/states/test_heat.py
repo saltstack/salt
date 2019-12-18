@@ -15,9 +15,12 @@ from tests.support.mock import (
 
 # Import Salt Libs
 import tests.unit.modules.test_heat
+import salt.utils.platform
 import salt.states.heat as heat
 import salt.modules.file as file_
 import salt.modules.heat
+import salt.modules.win_file as win_file
+import salt.utils.win_dacl as dacl
 
 
 class HeatTestCase(TestCase, LoaderModuleMockMixin):
@@ -42,8 +45,17 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                                      False}),
                              'config.backup_mode':
                              MagicMock(return_value=False)}
-            }
+            },
+            win_file: {
+                '__utils__': {'dacl.check_perms': salt.utils.win_dacl.check_perms}
+                },
+            dacl: {'__opts__': {'test': False}},
         }
+
+    def setUp(self):
+        self.patch_check = patch('salt.modules.file.check_perms', file_.check_perms)
+        if salt.utils.platform.is_windows():
+            self.patch_check = patch('salt.modules.file.check_perms', win_file.check_perms)
 
     def test_heat_deployed(self):
         '''
@@ -67,7 +79,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(return_value={'result': True, 'comment':
                                                 "Created stack 'mystack'."}))
 
-        with patch_heat, patch_file, patch_create:
+        with patch_heat, patch_file, patch_create, self.patch_check:
             ret = heat.deployed(name='mystack',
                                 profile='openstack1',
                                 template=os.path.join(RUNTIME_VARS.BASE_FILES,
@@ -98,7 +110,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(return_value={'result': True, 'comment':
                                                 "Created stack 'mystack'."}))
 
-        with patch_heat, patch_file, patch_create:
+        with patch_heat, patch_file, patch_create, self.patch_check:
             ret = heat.deployed(name='mystack',
                                 profile='openstack1',
                                 template=os.path.join(RUNTIME_VARS.BASE_FILES,
@@ -133,7 +145,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(return_value={'result': True, 'comment':
                                                 "Created stack 'mystack'."}))
 
-        with patch_heat, patch_file, patch_create:
+        with patch_heat, patch_file, patch_create, self.patch_check:
             ret = heat.deployed(name='mystack',
                                 profile='openstack1',
                                 template=os.path.join(RUNTIME_VARS.BASE_FILES,
