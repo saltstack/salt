@@ -7,11 +7,9 @@ Test case for the vault SDB module
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     call,
     patch)
@@ -20,7 +18,6 @@ from tests.support.mock import (
 import salt.sdb.vault as vault
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestVaultSDB(LoaderModuleMockMixin, TestCase):
     '''
     Test case for the vault SDB module
