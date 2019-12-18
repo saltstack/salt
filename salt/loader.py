@@ -1265,10 +1265,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         for k, v in six.iteritems(self.pack):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                value = self.context_dict.get(k, {})
-
-                if isinstance(value, ThreadLocalProxy):
-                    value = ThreadLocalProxy.unproxy(value)
+                value = ThreadLocalProxy.unproxy(self.context_dict.get(k, {}))
 
                 self.context_dict[k] = value
                 self.pack[k] = salt.utils.context.NamespacedDictWrapper(self.context_dict, k)
@@ -1548,19 +1545,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Strip out of the opts any logger instance
         '''
         if '__grains__' not in self.pack:
-            grains = opts.get('grains', {})
+            _grains = ThreadLocalProxy.unproxy(opts.get('grains', {}))
 
-            if isinstance(grains, ThreadLocalProxy):
-                grains = ThreadLocalProxy.unproxy(grains)
-
-            self.context_dict['grains'] = grains
+            self.context_dict['grains'] = _grains
             self.pack['__grains__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'grains')
 
         if '__pillar__' not in self.pack:
-            pillar = opts.get('pillar', {})
-
-            if isinstance(pillar, ThreadLocalProxy):
-                pillar = ThreadLocalProxy.unproxy(pillar)
+            pillar = ThreadLocalProxy.unproxy(opts.get('pillar', {}))
 
             self.context_dict['pillar'] = pillar
             self.pack['__pillar__'] = salt.utils.context.NamespacedDictWrapper(self.context_dict, 'pillar')

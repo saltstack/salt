@@ -122,9 +122,9 @@ def dump(obj, fp, **kwargs):
     json_module = kwargs.pop('_json_module', json)
     orig_enc_func = kwargs.pop('default', lambda x: x)
 
-    def _enc_func(obj):
-        obj = ThreadLocalProxy.unproxy(obj)
-        return orig_enc_func(obj)
+    def _enc_func(_obj):
+        _obj = ThreadLocalProxy.unproxy(_obj)
+        return orig_enc_func(_obj)
 
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
@@ -151,9 +151,9 @@ def dumps(obj, **kwargs):
     json_module = kwargs.pop('_json_module', json)
     orig_enc_func = kwargs.pop('default', lambda x: x)
 
-    def _enc_func(obj):
-        obj = ThreadLocalProxy.unproxy(obj)
-        return orig_enc_func(obj)
+    def _enc_func(_obj):
+        _obj = ThreadLocalProxy.unproxy(_obj)
+        return orig_enc_func(_obj)
 
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False
