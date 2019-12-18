@@ -2,9 +2,13 @@
 '''
 Tests for loop state(s)
 '''
-
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+
+# Disable pylint complaining about incompatible python3 code and suggesting
+# from salt.ext.six.moves import range
+# which is not needed (nor used) as the range is used as iterable for both py2 and py3.
+# pylint: disable=incompatible-py3-code
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
