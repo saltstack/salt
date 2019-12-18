@@ -4807,7 +4807,10 @@ def _remove_unicode_encoding(xml_file):
     '''
     attempts to remove the "encoding='unicode'" from an xml file
     as lxml does not support that on a windows node currently
+
     see issue #38100 (Search.adml)
+
+    For some reason this file is encoded 'utf-16'
     '''
     with salt.utils.files.fopen(xml_file, 'rb') as f:
         xml_content = f.read()
@@ -4821,7 +4824,10 @@ def _remove_invalid_xmlns(xml_file):
     '''
     Attempts to remove an invalid xmlns entry in newer versions of
     WindowsDefender.adml
+
     xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
+
+    For some reason this file is encoded 'utf-8'
     '''
     with salt.utils.files.fopen(xml_file, 'rb') as f:
         xml_content = f.read()
@@ -4882,7 +4888,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
         if root == path:
             for t_admx_file in files:
                 admx_file = os.path.join(root, t_admx_file)
-                # Parse xml
+                # Parse xml for the ADMX file
                 try:
                     xml_tree = _parse_xml(admx_file)
                 except lxml.etree.XMLSyntaxError:
@@ -4973,11 +4979,11 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                                 raise SaltInvocationError(msg.format(language,
                                                                      display_language_fallback,
                                                                      t_admx_file))
-                # Parse xml
+                # Parse xml for the ADML file
                 try:
                     xml_tree = _parse_xml(adml_file)
                 except lxml.etree.XMLSyntaxError:
-                    log.error('An error was found while processing admx '
+                    log.error('An error was found while processing adml '
                               'file %s, all policies from this file will '
                               'be unavailable via this module', adml_file)
                     continue
