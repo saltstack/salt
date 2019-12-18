@@ -81,7 +81,7 @@ from the ``kevinopenstack`` profile above, you would use:
 
 .. warning::
     The ``vault`` driver previously only supported splitting the path and key with
-    a question mark. This has sense been deprecated in favor of using the standard
+    a question mark. This has since been deprecated in favor of using the standard
     / to split the path and key. The use of the questions mark will still be supported
     to ensure backwards compatibility, but please use the prefered method using /.
     The deprecated approach required the full path to where the key is stored,
