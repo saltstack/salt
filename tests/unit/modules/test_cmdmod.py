@@ -21,7 +21,7 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.helpers import TestsLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import (
     mock_open,
     Mock,
@@ -448,7 +448,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         msg = "INFO:Executing command 'some command' in directory"
         with patch('salt.utils.timed_subprocess.TimedProc', proc):
-            with TestsLoggingHandler() as log_handler:
+            with TstSuiteLoggingHandler() as log_handler:
                 ret = cmdmod.run_all('some command', output_loglevel='quiet')
                 assert not [x for x in log_handler.messages if msg in x]
 
@@ -464,7 +464,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
 
         msg = "INFO:Executing command 'some command' in directory"
         with patch('salt.utils.timed_subprocess.TimedProc', proc):
-            with TestsLoggingHandler() as log_handler:
+            with TstSuiteLoggingHandler() as log_handler:
                 ret = cmdmod.run_all('some command', output_loglevel='debug')
                 assert [x for x in log_handler.messages if msg in x]
 
