@@ -14,8 +14,12 @@ from tests.support.mock import (
 )
 
 # Import Salt Libs
+import salt.utils.platform
+import salt.modules.win_file
 import salt.modules.heat as heat
 import salt.modules.file as file_
+import salt.modules.win_file as win_file
+import salt.utils.win_dacl as dacl
 
 
 class MockStacks(object):
@@ -77,8 +81,17 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                                      False}),
                              'config.backup_mode':
                              MagicMock(return_value=False)}
-            }
+            },
+            win_file: {
+                '__utils__': {'dacl.check_perms': salt.utils.win_dacl.check_perms}
+                },
+            dacl: {'__opts__': {'test': False}},
         }
+
+    def setUp(self):
+        self.patch_check = patch('salt.modules.file.check_perms', file_.check_perms)
+        if salt.utils.platform.is_windows():
+            self.patch_check = patch('salt.modules.file.check_perms', win_file.check_perms)
 
     def test_heat_create_stack(self):
         '''
@@ -88,7 +101,8 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                 {'file.get_managed': file_.get_managed,
                                  'file.manage_file': file_.manage_file, },
                                )
-        with patch_file:
+
+        with patch_file, self.patch_check:
             ret = heat.create_stack(name='mystack',
                                     profile='openstack1',
                                     template_file=os.path.join(RUNTIME_VARS.BASE_FILES,
@@ -103,7 +117,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                 {'file.get_managed': file_.get_managed,
                                  'file.manage_file': file_.manage_file, },
                                )
-        with patch_file:
+        with patch_file, self.patch_check:
             ret = heat.create_stack(name='mystack',
                                     profile='openstack1',
                                     environment=os.path.join(RUNTIME_VARS.BASE_FILES,
@@ -123,7 +137,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                )
         patch_template = patch('salt.modules.heat._parse_template', MagicMock(return_value=True))
         env_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'templates', 'heat-env.yml')
-        with patch_file, patch_template:
+        with patch_file, patch_template, self.patch_check:
             ret = heat.create_stack(name='mystack',
                                     profile='openstack1',
                                     environment=env_file,
@@ -139,7 +153,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                 {'file.get_managed': file_.get_managed,
                                  'file.manage_file': file_.manage_file, },
                                )
-        with patch_file:
+        with patch_file, self.patch_check:
             ret = heat.update_stack(name='mystack',
                                     profile='openstack1',
                                     template_file=os.path.join(RUNTIME_VARS.BASE_FILES,
@@ -155,7 +169,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                 {'file.get_managed': file_.get_managed,
                                  'file.manage_file': file_.manage_file, },
                                )
-        with patch_file:
+        with patch_file, self.patch_check:
             ret = heat.update_stack(name='mystack',
                                     profile='openstack1',
                                     template_file=os.path.join(RUNTIME_VARS.BASE_FILES,
@@ -176,7 +190,7 @@ class HeatTestCase(TestCase, LoaderModuleMockMixin):
                                  MagicMock(side_effect=[{'result': True},
                                                         {'result': False}]), }
                                )
-        with patch_file:
+        with patch_file, self.patch_check:
             ret = heat.update_stack(name='mystack',
                                     profile='openstack1',
                                     template_file=os.path.join(RUNTIME_VARS.BASE_FILES,
