@@ -56,6 +56,7 @@ class VenafiTest(ShellCase):
         cert_output = ret['return'][0]
         assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
+        print("temp debug:"+cert_output)
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
@@ -126,6 +127,7 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
                                     csr_path=csr_path,
                                     zone=environ.get('CLOUDZONE'))
             cert_output = ret['return'][0]
+            print("temp debug:" + cert_output)
             assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
             cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
