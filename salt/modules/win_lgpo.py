@@ -5788,12 +5788,11 @@ def _encode_string(value):
     encoded_null = chr(0).encode('utf-16-le')
     if value is None:
         return encoded_null
-    else:
+    elif not isinstance(value, six.string_types):
         # Should we raise an error here, or attempt to cast to a string
-        if not isinstance(value, six.string_types):
-            raise TypeError('Value {0} is not a string type\n'
-                            'Type: {1}'.format(repr(value), type(value)))
-        return b''.join([value.encode('utf-16-le'), encoded_null])
+        raise TypeError('Value {0} is not a string type\n'
+                        'Type: {1}'.format(repr(value), type(value)))
+    return b''.join([value.encode('utf-16-le'), encoded_null])
 
 
 def _buildKnownDataSearchString(reg_key, reg_valueName, reg_vtype, reg_data,
@@ -5955,7 +5954,8 @@ def _processValueItem(element, reg_key, reg_valuename, policy, parent_element,
             if 'expandable' in element.attrib:
                 if element.attrib['expandable'].lower() == 'true':
                     this_vtype = 'REG_EXPAND_SZ'
-            this_element_value = _encode_string(this_element_value)
+            if this_element_value is not None:
+                this_element_value = _encode_string(this_element_value)
         elif etree.QName(element).localname == 'multiText':
             this_vtype = 'REG_MULTI_SZ' if not check_deleted else 'REG_SZ'
             if this_element_value is not None:
