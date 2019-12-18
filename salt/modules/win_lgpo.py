@@ -4807,13 +4807,54 @@ def _remove_unicode_encoding(xml_file):
     '''
     attempts to remove the "encoding='unicode'" from an xml file
     as lxml does not support that on a windows node currently
-    see issue #38100
+    see issue #38100 (Search.adml)
     '''
     with salt.utils.files.fopen(xml_file, 'rb') as f:
         xml_content = f.read()
-    modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '', xml_content.decode('utf-16'), count=1)
-    xmltree = lxml.etree.parse(six.StringIO(modified_xml))
-    return xmltree
+    modified_xml = re.sub(r' encoding=[\'"]+unicode[\'"]+', '',
+                          xml_content.decode('utf-16'), count=1)
+    xml_tree = lxml.etree.parse(six.StringIO(modified_xml))
+    return xml_tree
+
+
+def _remove_invalid_xmlns(xml_file):
+    '''
+    Attempts to remove an invalid xmlns entry in newer versions of
+    WindowsDefender.adml
+    xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions"
+    '''
+    with salt.utils.files.fopen(xml_file, 'rb') as f:
+        xml_content = f.read()
+    modified_xml = re.sub(r' xmlns=[\'"]+.*[\'"]+', '',
+                          xml_content.decode('utf-8'), count=1)
+    xml_tree = lxml.etree.parse(six.StringIO(modified_xml))
+    return xml_tree
+
+
+def _parse_xml(admfile):
+    '''
+    Parse the admx/adml file. There are 3 scenarios (so far) that we'll likely
+    encounter:
+
+    1. Valid File
+    2. invalid encoding (encoding="unicode") which the lxml library doesn't
+       recognize
+    3. invalid xmlns entry in the xml header, which the lxml library doesn't
+       recognize
+    '''
+    parser = lxml.etree.XMLParser(remove_comments=True)
+    try:
+        # First we'll try to parse valid xml
+        xml_tree = lxml.etree.parse(admfile, parser=parser)
+    except lxml.etree.XMLSyntaxError:
+        try:
+            # Next we'll try invalid encoding (see issue #38100)
+            xml_tree = _remove_unicode_encoding(admfile)
+        except lxml.etree.XMLSyntaxError:
+            # Finally we'll try invalid xmlns entry, if this fails, we just want
+            # to raise the error
+            xml_tree = _remove_invalid_xmlns(admfile)
+    return xml_tree
 
 
 def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
@@ -4839,42 +4880,36 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
     policydef_resources_xpath = etree.XPath('/policyDefinitionResources')
     for root, dirs, files in salt.utils.path.os_walk(path):
         if root == path:
-            for t_admfile in files:
-                admfile = os.path.join(root, t_admfile)
-                parser = lxml.etree.XMLParser(remove_comments=True)
-                # see issue #38100
+            for t_admx_file in files:
+                admx_file = os.path.join(root, t_admx_file)
+                # Parse xml
                 try:
-                    xmltree = lxml.etree.parse(admfile, parser=parser)
+                    xml_tree = _parse_xml(admx_file)
                 except lxml.etree.XMLSyntaxError:
-                    try:
-                        xmltree = _remove_unicode_encoding(admfile)
-                    # TODO: This needs to be more specific
-                    except Exception:
-                        log.exception('Handle this explicitly')
-                        log.error('A error was found while processing admx '
-                                  'file %s, all policies from this file will '
-                                  'be unavailable via this module', admfile)
-                        continue
-                namespaces = xmltree.getroot().nsmap
+                    log.error('An error was found while processing admx '
+                              'file %s, all policies from this file will '
+                              'be unavailable via this module', admx_file)
+                    continue
+                namespaces = xml_tree.getroot().nsmap
                 namespace_string = ''
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
                     namespace_string = 'None:'
-                this_prefix = xmltree.xpath(
+                this_prefix = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@prefix'.format(namespace_string),
                         namespaces=namespaces)[0]
-                this_namespace = xmltree.xpath(
+                this_namespace = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}target/@namespace'.format(namespace_string),
                         namespaces=namespaces)[0]
-                categories = xmltree.xpath(
+                categories = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}categories/{0}category'.format(namespace_string),
                         namespaces=namespaces)
                 for category in categories:
                     temp_cat = category
                     temp_cat = _updateNamespace(temp_cat, this_namespace)
                     policydefs_categories_xpath(t_policy_definitions)[0].append(temp_cat)
-                policies = xmltree.xpath('/{0}policyDefinitions/{0}policies/{0}policy'.format(namespace_string),
+                policies = xml_tree.xpath('/{0}policyDefinitions/{0}policies/{0}policy'.format(namespace_string),
                                          namespaces=namespaces)
                 for policy in policies:
                     temp_pol = policy
@@ -4883,7 +4918,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                         temp_pol = _updatePolicyElements(temp_pol, temp_pol.attrib['key'])
 
                     policydefs_policies_xpath(t_policy_definitions)[0].append(temp_pol)
-                policy_namespaces = xmltree.xpath(
+                policy_namespaces = xml_tree.xpath(
                         '/{0}policyDefinitions/{0}policyNamespaces/{0}*'.format(namespace_string),
                         namespaces=namespaces)
                 for policy_ns in policy_namespaces:
@@ -4898,65 +4933,58 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                 adml_file = os.path.join(
                     root,
                     language,
-                    os.path.splitext(t_admfile)[0] + '.adml')
+                    os.path.splitext(t_admx_file)[0] + '.adml')
                 if not __salt__['file.file_exists'](adml_file):
                     log.info('An ADML file in the specified ADML language '
                              '"%s" does not exist for the ADMX "%s", the '
                              'the abbreviated language code will be tried.',
-                             language, t_admfile)
+                             language, t_admx_file)
 
                     adml_file = os.path.join(
                         root,
                         language.split('-')[0],
-                        os.path.splitext(t_admfile)[0] + '.adml')
+                        os.path.splitext(t_admx_file)[0] + '.adml')
                     if not __salt__['file.file_exists'](adml_file):
                         log.info('An ADML file in the specified ADML language '
                                  'code %s does not exist for the ADMX "%s", '
                                  'the fallback language will be tried.',
-                                 language[:2], t_admfile)
+                                 language[:2], t_admx_file)
 
                         adml_file = os.path.join(
                             root,
                             display_language_fallback,
-                            os.path.splitext(t_admfile)[0] + '.adml')
+                            os.path.splitext(t_admx_file)[0] + '.adml')
                         if not __salt__['file.file_exists'](adml_file):
                             log.info('An ADML file in the specified ADML '
                                      'fallback language "%s" '
                                      'does not exist for the ADMX "%s" '
                                      'the abbreviated fallback language code '
                                      'will be tried.',
-                                     display_language_fallback, t_admfile)
+                                     display_language_fallback, t_admx_file)
 
                             adml_file = os.path.join(
                                 root,
                                 display_language_fallback.split('-')[0],
-                                os.path.splitext(t_admfile)[0] + '.adml')
+                                os.path.splitext(t_admx_file)[0] + '.adml')
                             if not __salt__['file.file_exists'](adml_file):
                                 msg = ('An ADML file in the specified ADML language '
                                        '"{0}" and the fallback language "{1}" do not '
                                        'exist for the ADMX "{2}".')
                                 raise SaltInvocationError(msg.format(language,
                                                                      display_language_fallback,
-                                                                     t_admfile))
+                                                                     t_admx_file))
+                # Parse xml
                 try:
-                    xmltree = lxml.etree.parse(adml_file)
+                    xml_tree = _parse_xml(adml_file)
                 except lxml.etree.XMLSyntaxError:
-                    # see issue #38100
-                    try:
-                        xmltree = _remove_unicode_encoding(adml_file)
-                    # TODO: This needs to be more specific
-                    except Exception:
-                        log.exception('Handle this explicitly')
-                        log.error('An error was found while processing '
-                                  'adml file %s, all policy '
-                                  'language data from this file will be '
-                                  'unavailable via this module',
-                                  adml_file)
-                        continue
+                    log.error('An error was found while processing admx '
+                              'file %s, all policies from this file will '
+                              'be unavailable via this module', adml_file)
+                    continue
                 if None in namespaces:
                     namespaces['None'] = namespaces[None]
                     namespaces.pop(None)
-                policydefs_resources = policydefs_resources_localname_xpath(xmltree)
+                policydefs_resources = policydefs_resources_localname_xpath(xml_tree)
                 for policydefs_resource in policydefs_resources:
                     t_poldef = policydefs_resource
                     t_poldef = _updateNamespace(t_poldef, this_namespace)
