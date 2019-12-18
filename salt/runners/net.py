@@ -80,10 +80,15 @@ from salt.ext.six.moves import map
 try:
     from netaddr import IPNetwork  # netaddr is already required by napalm-base
     from netaddr.core import AddrFormatError
-    from napalm_base import helpers as napalm_helpers
+    from napalm.base import helpers as napalm_helpers
     HAS_NAPALM_BASE = True
 except ImportError:
     HAS_NAPALM_BASE = False
+    try:
+        from napalm_base import helpers as napalm_helpers
+        HAS_NAPALM_BASE = True
+    except ImportError:
+        HAS_NAPALM_BASE = False
 
 # -----------------------------------------------------------------------------
 # module properties
