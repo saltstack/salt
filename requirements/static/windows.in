@@ -31,3 +31,9 @@ virtualenv
 timelib
 tornado<5.0
 wmi==1.4.9
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+wempy; python_version <'3'
