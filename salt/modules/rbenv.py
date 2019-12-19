@@ -247,7 +247,7 @@ def install_ruby(ruby, runas=None):
 
     if isinstance(build_env, dict):
         env.update(build_env)
-    elif isinstance(build_env, str):
+    elif isinstance(build_env, six.text_type) and '=' in build_env:
         env.update(dict(build_arg.split('=', 1) for build_arg in salt.utils.args.shlex_split(six.text_type(build_env))))
 
     ret = {}

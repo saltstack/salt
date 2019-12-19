@@ -56,7 +56,7 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                             {'cmd.has_exec': MagicMock(return_value=True)}):
                 self.assertTrue(rbenv.is_installed())
 
-    def test_install_ruby(self):
+    def test_install_ruby_with_default_config(self):
         '''
         Test for install a ruby implementation.
         '''
@@ -75,6 +75,49 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(rbenv, 'uninstall_ruby',
                                       return_value=None):
                         self.assertFalse(rbenv.install_ruby('ruby'))
+
+    def test_install_ruby_with_string_config(self):
+        '''
+        Test for install a ruby implementation using rbenv:build_env as a string.
+        '''
+        with patch.dict(rbenv.__grains__, {'os': 'FreeBSD'}):
+            string_config_ret = 'RUBY_CFLAGS="-O3"'
+            with patch.dict(rbenv.__salt__,
+                            {'config.get': MagicMock(return_value=string_config_ret)}):
+                with patch.object(rbenv, '_rbenv_exec',
+                                  return_value={'retcode': 0,
+                                                'stderr': 'stderr'}):
+                    with patch.object(rbenv, 'rehash', return_value=None):
+                        self.assertEqual(rbenv.install_ruby('ruby'), 'stderr')
+
+                with patch.object(rbenv, '_rbenv_exec',
+                                  return_value={'retcode': 1,
+                                                'stderr': 'stderr'}):
+                    with patch.object(rbenv, 'uninstall_ruby',
+                                      return_value=None):
+                        self.assertFalse(rbenv.install_ruby('ruby'))
+
+    def test_install_ruby_with_dictionary_config(self):
+        '''
+        Test for install a ruby implementation using rbenv:build_env as a dictionary.
+        '''
+        with patch.dict(rbenv.__grains__, {'os': 'FreeBSD'}):
+            dict_config_ret = {'RUBY_CFLAGS': '-O3'}
+            with patch.dict(rbenv.__salt__,
+                            {'config.get': MagicMock(return_value=dict_config_ret)}):
+                with patch.object(rbenv, '_rbenv_exec',
+                                  return_value={'retcode': 0,
+                                                'stderr': 'stderr'}):
+                    with patch.object(rbenv, 'rehash', return_value=None):
+                        self.assertEqual(rbenv.install_ruby('ruby'), 'stderr')
+
+                with patch.object(rbenv, '_rbenv_exec',
+                                  return_value={'retcode': 1,
+                                                'stderr': 'stderr'}):
+                    with patch.object(rbenv, 'uninstall_ruby',
+                                      return_value=None):
+                        self.assertFalse(rbenv.install_ruby('ruby'))
+
 
     def test_uninstall_ruby(self):
         '''
