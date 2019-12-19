@@ -360,7 +360,7 @@ def encode(data, encoding=None, errors='strict', keep=False,
 
 
 @jinja_filter('json_decode_dict')  # Remove this for Aluminium
-@jinja_filter('json_encode_dict')  # Remove this for Aluminium
+@jinja_filter('json_encode_dict')
 def encode_dict(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
@@ -413,7 +413,7 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
 
 
 @jinja_filter('json_decode_list')  # Remove this for Aluminium
-@jinja_filter('json_encode_list')  # Remove this for Aluminium
+@jinja_filter('json_encode_list')
 def encode_list(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
