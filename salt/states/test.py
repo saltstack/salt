@@ -197,7 +197,7 @@ def configurable_test_state(name, changes=True, result=True, comment='', warning
         String to fill the comment field with.
         Default is ''
 
-    .. versionadded:: 2018.3.5
+    .. versionadded:: Neon
 
     warnings:
         A string (or a list of strings) to fill the warnings field with.
