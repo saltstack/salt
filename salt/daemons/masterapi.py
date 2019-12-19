@@ -562,7 +562,6 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-
         expr_form = load.get('expr_form')
         # keep both expr_form and tgt_type to ensure
         # comptability between old versions of salt
@@ -570,7 +569,6 @@ class RemoteFuncs(object):
             match_type = expr_form
         else:
             match_type = load.get('tgt_type', 'glob')
-
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':
