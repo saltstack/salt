@@ -118,7 +118,6 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                                       return_value=None):
                         self.assertFalse(rbenv.install_ruby('ruby'))
 
-
     def test_uninstall_ruby(self):
         '''
         Test for uninstall a ruby implementation.
