@@ -443,6 +443,7 @@ def lvcreate(
         salt '*' lvm.lvcreate new_volume_name     vg_name size=10G
         salt '*' lvm.lvcreate new_volume_name     vg_name extents=100 pv=/dev/sdb
         salt '*' lvm.lvcreate new_snapshot        vg_name snapshot=volume_name size=3G
+        salt '*' lvm.lvcreate new_volume_name     vg_name extents=100%PVS pv='["/dev/sdb", "/dev/sdc"]'
 
     .. versionadded:: to_complete
 
@@ -521,8 +522,11 @@ def lvcreate(
     else:
         return "Error: Either size or extents must be specified"
 
-    if pv:
+    if pv and isinstance(pv, list):
+        cmd.extend(pv)
+    elif pv:
         cmd.append(pv)
+
     if extra_arguments:
         cmd.extend(extra_arguments)
 
