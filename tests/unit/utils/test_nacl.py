@@ -26,7 +26,6 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
     def setUp(self):
         self.key = 'C16NxgBhw8cqbhvPCDAn2pirwW1A1WEVLUexCsoUD2Y='
         self.pub = '+XWFfZXnfItS++a4gQf8Adu1aUlTgHWyTfsglbTdXyg='
-        #self.data = 'tqXzeIJnTAM9Xf0mdLcpEdklMbfBGPj2oTKmlgrm3S1DTVVHNnh9h8mU1GKllGq/+cYsk6m5WhGdk58='
 
     def test_keygen(self):
         '''
@@ -60,7 +59,6 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
                 self.key
             )
 
-        # test key_file
         ret = nacl.keygen(keyfile=fpath)
         assert 'saved pk_file: {}.pub'.format(fpath) == ret
 
@@ -79,7 +77,6 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
                 self.pub
             )
 
-        # test key_file
         kwargs = {'opts': {'pki_dir': os.path.dirname(fpath)},
                   'keyfile': fpath,
                   'pk_file': fpath + '.pub'}
@@ -101,7 +98,6 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
                 self.pub
             )
 
-        # test key_file
         kwargs = {'opts': {'pki_dir': os.path.dirname(fpath)},
                   'sk_file': fpath,
                   'pk_file': fpath + '.pub'}
@@ -123,7 +119,6 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
                 self.pub
             )
 
-        # test key_file
         kwargs = {'opts': {'pki_dir': os.path.dirname(fpath)},
                   'keyfile': fpath,
                   'pk_file': fpath + '.pub'}
@@ -148,7 +143,6 @@ class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
                 self.pub
             )
 
-        # test key_file
         kwargs = {'opts': {'pki_dir': os.path.dirname(fpath)},
                   'sk_file': fpath,
                   'pk_file': fpath + '.pub'}
