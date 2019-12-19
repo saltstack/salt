@@ -132,7 +132,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.run_function('pkg.refresh_db')
             self.ctx['refresh'] = True
 
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version')
     def test_pkg_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -151,7 +151,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_002_installed_with_version(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -181,7 +180,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_003_installed_multipkg(self):
         '''
         This is a destructive test as it installs and then removes two packages
@@ -205,7 +203,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_004_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
@@ -239,7 +236,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing')
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version')
     def test_pkg_005_installed_32bit(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -265,7 +262,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_32_TARGETS, 'No 32 bit packages have been specified for testing')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_006_installed_32bit_with_version(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -301,7 +297,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_DOT_TARGETS, 'No packages with "." in their name have been configured for')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_007_with_dot_in_pkgname(self=None):
         '''
         This tests for the regression found in the following issue:
@@ -323,7 +318,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_EPOCH_TARGETS, 'No targets have been configured with "epoch" in the version')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_008_epoch_in_version(self):
         '''
         This tests for the regression found in the following issue:
@@ -347,7 +341,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.version', 'pkg.info_installed', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version', 'pkg.info_installed')
     @runs_on(platforms=['linux'], reason='This test only runs on linux')
     def test_pkg_009_latest_with_epoch(self):
         '''
@@ -367,7 +361,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function('pkg.info_installed', [package])
         self.assertTrue(pkgquery in six.text_type(ret))
 
-    @requires_salt_modules('pkg.latest', 'pkg.removed')
     def test_pkg_010_latest(self):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -386,7 +379,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.latest', 'pkg.list_pkgs', 'pkg.list_upgrades', 'pkg.version')
+    @requires_salt_modules('pkg.list_pkgs', 'pkg.list_upgrades', 'pkg.version')
     @runs_on(platforms=['linux'], os_like=['debian'], reason='This test only runs on Debian based linux distributions')
     def test_pkg_011_latest_only_upgrade(self):
         '''
@@ -437,7 +430,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             )
 
     @skipIf(not _WILDCARDS_SUPPORTED, 'Wildcards in pkg.install are not supported')
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version')
     def test_pkg_012_installed_with_wildcard_version(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -486,7 +479,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.version', 'pkg.latest_version', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version', 'pkg.latest_version')
     @runs_on(platforms=['linux'], os_like=['debian', 'redhat'], reason='Comparison operator not specially implemented')
     def test_pkg_013_installed_with_comparison_operator(self):
         '''
@@ -522,7 +515,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=target)
             self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version')
     @runs_on(platforms=['linux'], os_like=['redhat'], reason='Comparison operator not specially implemented')
     def test_pkg_014_installed_missing_release(self):
         '''
@@ -549,7 +542,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @requires_salt_modules('pkg.hold', 'pkg.unhold', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.hold', 'pkg.unhold')
     def test_pkg_015_installed_held(self):
         '''
         Tests that a package can be held even when the package is already installed.
@@ -608,7 +601,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not provided')
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed')
+    @requires_salt_modules('pkg.version')
     def test_pkg_cap_001_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -634,7 +627,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_cap_002_already_installed(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -668,7 +660,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
     @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported')
-    @requires_salt_modules('pkg.installed', 'pkg.removed')
     def test_pkg_cap_003_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
@@ -721,7 +712,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.version', 'pkg.latest', 'pkg.removed')
+    @requires_salt_modules('pkg.version')
     def test_pkg_cap_004_latest(self):
         '''
         This tests pkg.latest with a package that has no epoch (or a zero
@@ -751,7 +742,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed', 'pkg.downloaded')
+    @requires_salt_modules('pkg.version')
     def test_pkg_cap_005_downloaded(self):
         '''
         This is a destructive test as it installs and then removes a package
@@ -776,7 +767,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @requires_salt_modules('pkg.version', 'pkg.installed', 'pkg.removed', 'pkg.uptodate')
+    @requires_salt_modules('pkg.version')
     def test_pkg_cap_006_uptodate(self):
         '''
         This is a destructive test as it installs and then removes a package
