@@ -201,4 +201,3 @@ Jinja Filter Deprecations
 
   - :jinja_ref:`json_decode_dict` in favor of :jinja_ref:`tojson`
   - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`
-  - :jinja_ref:`str_to_num` in favor of :jinja_ref:`to_num`
