@@ -4838,13 +4838,11 @@ def pool_undefine(name, **kwargs):
         conn.close()
 
 
-def pool_delete(name, fast=True, **kwargs):
+def pool_delete(name, **kwargs):
     '''
     Delete the resources of a defined libvirt storage pool.
 
     :param name: libvirt storage pool name
-    :param fast: if set to False, zeroes out all the data.
-                 Default value is True.
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
@@ -4860,10 +4858,7 @@ def pool_delete(name, fast=True, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
-        flags = libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
-        if fast:
-            flags = libvirt.VIR_STORAGE_POOL_DELETE_ZEROED
-        return not bool(pool.delete(flags))
+        return not bool(pool.delete(libvirt.VIR_STORAGE_POOL_DELETE_NORMAL))
     finally:
         conn.close()
 

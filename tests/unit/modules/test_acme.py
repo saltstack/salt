@@ -13,8 +13,8 @@ import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Module
 import salt.modules.acme as acme
@@ -22,7 +22,6 @@ import salt.utils.dictupdate
 from salt.exceptions import SaltInvocationError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AcmeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.acme
@@ -161,7 +160,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                    again. To non-interactively renew *all* of your certificates, run
                    "certbot renew"
                  - If you like Certbot, please consider supporting our work by:
-                
+
                    Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
                    Donating to EFF:                    https://eff.org/donate-le
                 '''),
