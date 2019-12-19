@@ -25,10 +25,10 @@ import logging
 log = logging.getLogger(__name__)
 
 from copy import deepcopy
-from json import loads, dumps
 
 # salt modules
 from salt.ext import six
+import salt.utils.json
 # import NAPALM utils
 import salt.utils.napalm
 
@@ -205,7 +205,7 @@ def _ordered_dict_to_dict(probes):
 
     '''Mandatory to be dict type in order to be used in the NAPALM Jinja template.'''
 
-    return loads(dumps(probes))
+    return salt.utils.json.loads(salt.utils.json.dumps(probes))
 
 
 def _set_rpm_probes(probes):
