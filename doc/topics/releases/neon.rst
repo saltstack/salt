@@ -52,6 +52,34 @@ as well as managing keystore files.
             Hn+GmxZA
             -----END CERTIFICATE-----
 
+
+Troubleshooting Jinja map files
+===============================
+
+A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
+has been added.
+
+Assuming the map is loaded in your formula SLS as follows:
+
+.. code-block:: jinja
+
+  {% from "myformula/map.jinja" import myformula with context %}
+
+The following command can be used to load the map and check the results:
+
+.. code-block:: bash
+
+  salt myminion jinja.load_map myformula/map.jinja myformula
+
+The module can be also used to test ``json`` and ``yaml`` maps:
+
+.. code-block:: bash
+
+  salt myminion jinja.import_yaml myformula/defaults.yaml
+
+  salt myminion jinja.import_json myformula/defaults.json
+
+
 Slot Syntax Updates
 ===================
 
@@ -77,6 +105,14 @@ The slot syntax has been updated to support parsing dictionary responses and to 
      Started: 09:59:58.623575
     Duration: 1.229 ms
      Changes:
+
+
+State Changes
+=============
+
+- Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
+  ensure only the specified ssh keys are present for the specified user.
+
 
 Deprecations
 ============
@@ -109,3 +145,18 @@ Returner Removal
 - The hipchat returner has been removed due to the service being retired. For users migrating
   to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
   replacement.
+
+Grain Deprecations
+------------------
+
+For ``smartos`` some grains have been deprecated. These grains have been removed.
+
+  - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
+  - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+salt.auth.Authorize Class Removal
+---------------------------------
+- The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
+  the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
+  not being used inside of the salt code base.
+
