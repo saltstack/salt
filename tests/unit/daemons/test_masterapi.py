@@ -595,14 +595,10 @@ class RemoteFuncsTestCase(TestCase):
             )
         self.assertDictEqual(ret, dict(webserver='2001:db8::1:3'))
 
-    def test_mine_get_post_neon_compat(self):
+    def test_mine_get_pre_nitrogen_compat(self):
         '''
-        Asserts that pre-Nitrogen API key ``expr_form`` is not still accepted.
-        Pre-Nitrogen it would accept both ``tgt_type`` and ``expr_form``.
+        Asserts that pre-Nitrogen API key ``expr_form`` is still accepted.
+
+        This is what minions before Nitrogen would issue.
         '''
-        try:
-            self.test_mine_get(tgt_type_key='expr_form')
-        except AssertionError:
-            pass
-        else:
-            self.fail('expr_form was found in mine_get')
+        self.test_mine_get(tgt_type_key='expr_form')

@@ -44,7 +44,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 
@@ -563,7 +562,15 @@ class RemoteFuncs(object):
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
-        match_type = load.get('tgt_type', 'glob')
+
+        expr_form = load.get('expr_form')
+        # keep both expr_form and tgt_type to ensure
+        # comptability between old versions of salt
+        if expr_form is not None and 'tgt_type' not in load:
+            match_type = expr_form
+        else:
+            match_type = load.get('tgt_type', 'glob')
+
         if match_type.lower() == 'pillar':
             match_type = 'pillar_exact'
         if match_type.lower() == 'compound':
