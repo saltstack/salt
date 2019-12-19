@@ -17,7 +17,6 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import serialization
 import tempfile
-from os import environ
 
 
 def _random_name(prefix=''):
