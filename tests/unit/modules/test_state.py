@@ -13,16 +13,14 @@ import textwrap
 import time
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP, TMP_CONF_DIR
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -336,7 +334,6 @@ class MockTarFile(object):
         return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.state
@@ -1321,7 +1318,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         return {
             state: {
                 '__opts__': salt.config.minion_config(
-                    os.path.join(TMP_CONF_DIR, 'minion')
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
                 ),
                 '__salt__': {
                     'saltutil.is_running': MagicMock(return_value=[]),
@@ -1330,8 +1327,8 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        self.cachedir = tempfile.mkdtemp(dir=TMP)
-        self.fileserver_root = tempfile.mkdtemp(dir=TMP)
+        self.cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.fileserver_root = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.cachedir, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.fileserver_root, ignore_errors=True)
 

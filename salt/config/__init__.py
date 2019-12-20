@@ -704,8 +704,6 @@ VALID_OPTS = immutabletypes.freeze({
     'hgfs_root': six.string_types,
     'hgfs_base': six.string_types,
     'hgfs_branch_method': six.string_types,
-    'hgfs_env_whitelist': list,
-    'hgfs_env_blacklist': list,
     'hgfs_saltenv_whitelist': list,
     'hgfs_saltenv_blacklist': list,
     'svnfs_remotes': list,
@@ -714,8 +712,6 @@ VALID_OPTS = immutabletypes.freeze({
     'svnfs_trunk': six.string_types,
     'svnfs_branches': six.string_types,
     'svnfs_tags': six.string_types,
-    'svnfs_env_whitelist': list,
-    'svnfs_env_blacklist': list,
     'svnfs_saltenv_whitelist': list,
     'svnfs_saltenv_blacklist': list,
     'minionfs_env': six.string_types,
@@ -954,6 +950,9 @@ VALID_OPTS = immutabletypes.freeze({
     # Always generate minion id in lowercase.
     'minion_id_lowercase': bool,
 
+    # Remove either a single domain (foo.org), or all (True) from a generated minion id.
+    'minion_id_remove_domain': (six.string_types, bool),
+
     # If set, the master will sign all publications before they are sent out
     'sign_pub_messages': bool,
 
@@ -1165,9 +1164,6 @@ VALID_OPTS = immutabletypes.freeze({
     # part of the extra_minion_data param
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
-
-    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
-    'docker.compare_container_networks': dict,
 
     # SSDP discovery publisher description.
     # Contains publisher configuration and minion mapping.
@@ -1440,6 +1436,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'grains_refresh_every': 0,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
+    'minion_id_remove_domain': False,
     'keysize': 2048,
     'transport': 'zeromq',
     'auth_timeout': 5,
@@ -1478,11 +1475,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
-    'docker.compare_container_networks': {
-        'static': ['Aliases', 'Links', 'IPAMConfig'],
-        'automatic': ['IPAddress', 'Gateway',
-                      'GlobalIPv6Address', 'IPv6Gateway'],
-    },
     'discovery': False,
     'schedule': {},
     'ssh_merge_pillar': True
@@ -1586,8 +1578,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
-    'hgfs_env_whitelist': [],
-    'hgfs_env_blacklist': [],
     'hgfs_saltenv_whitelist': [],
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
@@ -1599,8 +1589,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'svnfs_trunk': 'trunk',
     'svnfs_branches': 'branches',
     'svnfs_tags': 'tags',
-    'svnfs_env_whitelist': [],
-    'svnfs_env_blacklist': [],
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,
@@ -3565,6 +3553,26 @@ def call_id_function(opts):
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
 
+def remove_domain_from_fqdn(opts, newid):
+    '''
+    Depending on the values of `minion_id_remove_domain`,
+    remove all domains or a single domain from a FQDN, effectivly generating a hostname.
+    '''
+    opt_domain = opts.get('minion_id_remove_domain')
+    if opt_domain is True:
+        if '.' in newid:
+            # Remove any domain
+            newid, xdomain = newid.split('.', 1)
+            log.debug('Removed any domain (%s) from minion id.', xdomain)
+    else:
+        # Must be string type
+        if newid.upper().endswith('.' + opt_domain.upper()):
+            # Remove single domain
+            newid = newid[:-len('.' + opt_domain)]
+            log.debug('Removed single domain %s from minion id.', opt_domain)
+    return newid
+
+
 def get_id(opts, cache_minion_id=False):
     '''
     Guess the id of the minion.
@@ -3616,6 +3624,11 @@ def get_id(opts, cache_minion_id=False):
     if opts.get('minion_id_lowercase'):
         newid = newid.lower()
         log.debug('Changed minion id %s to lowercase.', newid)
+
+    # Optionally remove one or many domains in a generated minion id
+    if opts.get('minion_id_remove_domain'):
+        newid = remove_domain_from_fqdn(opts, newid)
+
     if '__role' in opts and opts.get('__role') == 'minion':
         if opts.get('id_function'):
             log.debug(

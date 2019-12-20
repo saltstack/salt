@@ -6,7 +6,15 @@ Python pretty-print (pprint)
 The python pretty-print system was once the default outputter. It simply
 passes the return data through to ``pprint.pformat`` and prints the results.
 
-Example output::
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=pprint
+
+Example output:
+
+.. code-block:: python
 
     {'saltmine': {'foo': {'bar': 'baz',
                           'dictionary': {'abc': 123, 'def': 456},
