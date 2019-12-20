@@ -617,7 +617,7 @@ def remove_masquerade(zone=None, permanent=True):
     return __firewall_cmd(cmd)
 
 
-def add_port(zone, port, permanent=True):
+def add_port(zone, port, permanent=True, force_masquerade=False):
     '''
     Allow specific ports in a zone.
 
@@ -628,7 +628,14 @@ def add_port(zone, port, permanent=True):
     .. code-block:: bash
 
         salt '*' firewalld.add_port internal 443/tcp
+
+    force_masquerade
+        when a zone is created ensure masquerade is also enabled
+        on that zone.
     '''
+    if force_masquerade and not get_masquerade(zone):
+        add_masquerade(zone)
+
     cmd = '--zone={0} --add-port={1}'.format(zone, port)
 
     if permanent:
@@ -677,7 +684,7 @@ def list_ports(zone, permanent=True):
     return __firewall_cmd(cmd).split()
 
 
-def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True):
+def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True, force_masquerade=False):
     '''
     Add port forwarding.
 
@@ -688,7 +695,14 @@ def add_port_fwd(zone, src, dest, proto='tcp', dstaddr='', permanent=True):
     .. code-block:: bash
 
         salt '*' firewalld.add_port_fwd public 80 443 tcp
+
+    force_masquerade
+        when a zone is created ensure masquerade is also enabled
+        on that zone.
     '''
+    if force_masquerade and not get_masquerade(zone):
+        add_masquerade(zone)
+
     cmd = '--zone={0} --add-forward-port=port={1}:proto={2}:toport={3}:toaddr={4}'.format(
         zone,
         src,

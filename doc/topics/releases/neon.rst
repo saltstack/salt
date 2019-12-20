@@ -167,12 +167,6 @@ Fileserver Deprecations
     - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
     - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
 
-- The :py:mod`firewalld <salt.states.firewalld>` state has been changed as follows:
-
-    - The default setting for the ``prune_services`` option in the
-      :py:func:`firewalld.present <salt.states.firewalld.present>` function has changed
-      from ``True`` to ``False``.
-
 Engine Removal
 --------------
 
@@ -185,18 +179,6 @@ Returner Removal
 - The hipchat returner has been removed due to the service being retired. For users migrating
   to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
   replacement.
-
-- The :py:mod`firewalld <salt.modules.firewalld>` module has been changed as
-  follows:
-
-    - Support for the ``force_masquerade`` option has been removed from the
-      :py:func:`firewalld.add_port <salt.module.firewalld.add_port` function. Please
-      use the :py:func:`firewalld.add_masquerade <salt.modules.firewalld.add_masquerade`
-      function instead.
-    - Support for the ``force_masquerade`` option has been removed from the
-      :py:func:`firewalld.add_port_fwd <salt.module.firewalld.add_port_fwd` function. Please
-      use the :py:func:`firewalld.add_masquerade <salt.modules.firewalld.add_masquerade`
-      function instead.
 
 Grain Deprecations
 ------------------

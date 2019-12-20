@@ -501,7 +501,6 @@ def _present(name,
         for port in new_ports:
             if not __opts__['test']:
                 try:
-                    # TODO: force_masquerade to be removed in future release
                     __salt__['firewalld.add_port'](name, port, permanent=True, force_masquerade=False)
                 except CommandExecutionError as err:
                     ret['comment'] = 'Error: {0}'.format(err)
@@ -550,7 +549,6 @@ def _present(name,
         for fwd in new_port_fwd:
             if not __opts__['test']:
                 try:
-                    # TODO: force_masquerade to be removed in future release
                     __salt__['firewalld.add_port_fwd'](name, fwd.srcport,
                         fwd.destport, fwd.protocol, fwd.destaddr, permanent=True,
                         force_masquerade=False)
