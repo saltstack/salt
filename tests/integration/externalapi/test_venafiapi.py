@@ -47,6 +47,7 @@ class VenafiTest(ShellCase):
     @with_random_name
     def test_request(self, name):
         cn = '{0}.example.com'.format(name)
+        print("requesting cn "+cn)
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 dns_name=cn,
