@@ -115,26 +115,20 @@ For openSUSE Tumbleweed run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/openSUSE_Tumbleweed/systemsmanagement:saltstack.repo
-    zypper refresh
     zypper install salt salt-minion salt-master
 
 
-For openSUSE 42.1 Leap run the following as root:
+For openSUSE 15.0 Leap run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/openSUSE_Leap_42.1/systemsmanagement:saltstack.repo
-    zypper refresh
     zypper install salt salt-minion salt-master
 
 
-For openSUSE 13.2 run the following as root:
+For openSUSE 15.1 run the following as root:
 
 .. code-block:: bash
 
-    zypper addrepo http://download.opensuse.org/repositories/systemsmanagement:/saltstack/openSUSE_13.2/systemsmanagement:saltstack.repo
-    zypper refresh
     zypper install salt salt-minion salt-master
 
 SUSE Linux Enterprise

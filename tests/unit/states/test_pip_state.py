@@ -10,11 +10,12 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.states.pip_state as pip_state
@@ -30,7 +31,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PIP,
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
@@ -282,3 +282,30 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                 'successfully installed',
                 {'test': ret}
             )
+
+
+class PipStateUtilsTest(TestCase):
+
+    def test_has_internal_exceptions_mod_function(self):
+        assert pip_state.pip_has_internal_exceptions_mod('10.0')
+        assert pip_state.pip_has_internal_exceptions_mod('18.1')
+        assert not pip_state.pip_has_internal_exceptions_mod('9.99')
+
+    def test_has_exceptions_mod_function(self):
+        assert pip_state.pip_has_exceptions_mod('1.0')
+        assert not pip_state.pip_has_exceptions_mod('0.1')
+        assert not pip_state.pip_has_exceptions_mod('10.0')
+
+    def test_pip_purge_method_with_pip(self):
+        mock_modules = sys.modules.copy()
+        mock_modules.pop('pip', None)
+        mock_modules['pip'] = object()
+        with patch('sys.modules', mock_modules):
+            pip_state.purge_pip()
+        assert 'pip' not in mock_modules
+
+    def test_pip_purge_method_without_pip(self):
+        mock_modules = sys.modules.copy()
+        mock_modules.pop('pip', None)
+        with patch('sys.modules', mock_modules):
+            pip_state.purge_pip()
