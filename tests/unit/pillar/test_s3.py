@@ -12,6 +12,7 @@ from tests.support.mock import patch, mock_open, MagicMock
 
 # Import Salt Libs
 import salt.pillar.s3 as s3_pillar
+from salt.ext.six.moves import range
 
 log = logging.getLogger(__name__)
 
