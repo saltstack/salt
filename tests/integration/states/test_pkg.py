@@ -544,6 +544,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
+    @skipIf(True, 'Test is being worked on in master. See https://github.com/saltstack/salt/pull/55707')
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
     def test_pkg_015_installed_held(self):
         '''
