@@ -20,6 +20,10 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
+# One to one mappings
+JSONEncoder = json.JSONEncoder
+
+
 def __split(raw):
     '''
     Performs a splitlines on the string. This function exists to make mocking

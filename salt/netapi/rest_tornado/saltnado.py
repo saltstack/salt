@@ -223,7 +223,7 @@ from salt.exceptions import (
 )
 
 salt.utils.zeromq.install_zmq()
-json = salt.utils.json.import_json()
+_json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
 
@@ -233,7 +233,7 @@ def _json_dumps(obj, **kwargs):
     salt.utils.json.import_json(). This ensures that we properly encode any
     strings in the object before we perform the serialization.
     '''
-    return salt.utils.json.dumps(obj, _json_module=json, **kwargs)
+    return salt.utils.json.dumps(obj, _json_module=_json, **kwargs)
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
 #     necessarily use the same API under the hood
