@@ -23,7 +23,7 @@ import salt.config
 @skipIf(NO_MOCK, NO_MOCK_REASON)
 class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.engine.sqs_events
+    Test cases for salt.engine.slack
     '''
 
     def setup_loader_modules(self):

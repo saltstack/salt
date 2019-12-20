@@ -10,7 +10,8 @@ engine modules
     :toctree:
     :template: autosummary.rst.tmpl
 
-    docker_events
+
+    fluent
     http_logstash
     ircbot
     junos_syslog
