@@ -147,21 +147,12 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
-- The heat module has removed the ``enviroment`` kwarg from the
-  :py:func:`heat.create_stack <salt.modules.heat.create_stack>` and
-  :py:func:`heat.update_stack <salt.modules.heat.update_stack>` functions due
-  to a spelling error. Please use ``environment`` instead.
-
 State Deprecations
 ------------------
 
 - The hipchat state has been removed due to the service being retired.
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
-
-- The heat state module has removed the ``enviroment`` kwarg from the
-  :py:func:`heat.deployed <salt.states.heat.deployed>` function due
-  to a spelling error. Please use ``environment`` instead.
 
 Fileserver Deprecations
 -----------------------
