@@ -12,6 +12,7 @@ import tempfile
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
@@ -452,7 +453,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 ret = cmdmod.run_all('some command', output_loglevel='quiet')
                 assert not [x for x in log_handler.messages if msg in x]
 
-        self.assertEqual(ret['stdout'], stdout)
+        self.assertEqual(ret['stdout'],
+                         salt.utils.stringutils.to_unicode(stdout))
 
     def test_run_all_output_loglevel_debug(self):
         '''
@@ -468,7 +470,8 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                 ret = cmdmod.run_all('some command', output_loglevel='debug')
                 assert [x for x in log_handler.messages if msg in x]
 
-        self.assertEqual(ret['stdout'], stdout)
+        self.assertEqual(ret['stdout'],
+                         salt.utils.stringutils.to_unicode(stdout))
 
     def test_run_chroot_mount(self):
         '''
