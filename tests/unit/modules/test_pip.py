@@ -7,8 +7,8 @@ import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.platform
@@ -16,7 +16,6 @@ import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PipTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {pip: {'__salt__': {'cmd.which_bin': lambda _: 'pip'}}}
@@ -750,6 +749,53 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                 python_shell=False,
             )
 
+    def test_install_proxy_false_argument_in_resulting_command(self):
+        '''
+        Checking that there is no proxy set if proxy arg is set to False
+        even if the global proxy is set.
+        '''
+        pkg = 'pep8'
+        proxy = False
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        config_mock = {'proxy_host': 'salt-proxy',
+                       'proxy_port': '3128',
+                       'proxy_username': 'salt-user',
+                       'proxy_password': 'salt-passwd'}
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(pip.__opts__, config_mock):
+                pip.install(pkg, proxy=proxy)
+                expected = [sys.executable, '-m', 'pip', 'install', pkg]
+                mock.assert_called_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
+
+    def test_install_global_proxy_in_resulting_command(self):
+        '''
+        Checking that there is proxy set if global proxy is set.
+        '''
+        pkg = 'pep8'
+        proxy = 'http://salt-user:salt-passwd@salt-proxy:3128'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        config_mock = {'proxy_host': 'salt-proxy',
+                       'proxy_port': '3128',
+                       'proxy_username': 'salt-user',
+                       'proxy_password': 'salt-passwd'}
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(pip.__opts__, config_mock):
+                pip.install(pkg)
+                expected = [sys.executable, '-m', 'pip', 'install', '--proxy', proxy, pkg]
+                mock.assert_called_with(
+                    expected,
+                    saltenv='base',
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
+
     def test_install_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
             cached_reqs = [
@@ -802,6 +848,41 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
+
+    def test_install_extra_args_arguments_in_resulting_command(self):
+        pkg = 'pep8'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            pip.install(pkg, extra_args=[
+                {"--latest-pip-kwarg": "param"},
+                "--latest-pip-arg"
+            ])
+            expected = [
+                sys.executable, '-m', 'pip', 'install', pkg,
+                "--latest-pip-kwarg", "param", "--latest-pip-arg"
+            ]
+            mock.assert_called_with(
+                expected,
+                saltenv='base',
+                runas=None,
+                use_vt=False,
+                python_shell=False,
+            )
+
+    def test_install_extra_args_arguments_recursion_error(self):
+        pkg = 'pep8'
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+
+            self.assertRaises(TypeError, lambda: pip.install(
+                pkg, extra_args=[
+                    {"--latest-pip-kwarg": ["param1", "param2"]},
+                ]))
+
+            self.assertRaises(TypeError, lambda: pip.install(
+                pkg, extra_args=[
+                    {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
+                ]))
 
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
@@ -859,21 +940,54 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                 )
 
-    def test_uninstall_proxy_argument_in_resulting_command(self):
+    def test_uninstall_global_proxy_in_resulting_command(self):
+        '''
+        Checking that there is proxy set if global proxy is set.
+        '''
         pkg = 'pep8'
-        proxy = 'salt-user:salt-passwd@salt-proxy:3128'
+        proxy = 'http://salt-user:salt-passwd@salt-proxy:3128'
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        config_mock = {'proxy_host': 'salt-proxy',
+                       'proxy_port': '3128',
+                       'proxy_username': 'salt-user',
+                       'proxy_password': 'salt-passwd'}
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            pip.uninstall(pkg, proxy=proxy)
-            expected = [sys.executable, '-m', 'pip', 'uninstall', '-y', '--proxy', proxy, pkg]
-            mock.assert_called_with(
-                expected,
-                saltenv='base',
-                cwd=None,
-                runas=None,
-                use_vt=False,
-                python_shell=False,
-            )
+            with patch.dict(pip.__opts__, config_mock):
+                pip.uninstall(pkg)
+                expected = [sys.executable, '-m', 'pip', 'uninstall', '-y', '--proxy', proxy, pkg]
+                mock.assert_called_with(
+                    expected,
+                    saltenv='base',
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
+
+    def test_uninstall_proxy_false_argument_in_resulting_command(self):
+        '''
+        Checking that there is no proxy set if proxy arg is set to False
+        even if the global proxy is set.
+        '''
+        pkg = 'pep8'
+        proxy = False
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        config_mock = {'proxy_host': 'salt-proxy',
+                       'proxy_port': '3128',
+                       'proxy_username': 'salt-user',
+                       'proxy_password': 'salt-passwd'}
+        with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
+            with patch.dict(pip.__opts__, config_mock):
+                pip.uninstall(pkg, proxy=proxy)
+                expected = [sys.executable, '-m', 'pip', 'uninstall', '-y', pkg]
+                mock.assert_called_with(
+                    expected,
+                    saltenv='base',
+                    cwd=None,
+                    runas=None,
+                    use_vt=False,
+                    python_shell=False,
+                )
 
     def test_uninstall_log_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -1280,8 +1394,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'
-        # Lower than 1.4 versions don't end-up with `--pre` in the resulting
-        # output
+        # Lower than 1.4 versions don't end up with `--pre` in the resulting output
         mock = MagicMock(side_effect=[
             {'retcode': 0, 'stdout': 'pip 1.2.0 /path/to/site-packages/pip'},
             {'retcode': 0, 'stdout': ''}

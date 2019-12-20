@@ -13,8 +13,8 @@ import datetime
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.yaml
@@ -38,6 +38,10 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
     '''
     Libvirt library mock
     '''
+    class virDomain(MagicMock):
+        '''
+        virDomain mock
+        '''
 
     class libvirtError(Exception):
         '''
@@ -45,7 +49,6 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
         '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.module.virt
@@ -76,7 +79,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         Define VM to use in tests
         '''
         self.mock_conn.listDefinedDomains.return_value = [name]  # pylint: disable=no-member
-        mock_domain = MagicMock()
+        mock_domain = self.mock_libvirt.virDomain()
         self.mock_conn.lookupByName.return_value = mock_domain  # pylint: disable=no-member
         mock_domain.XMLDesc.return_value = xml  # pylint: disable=no-member
 
@@ -1437,6 +1440,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('bridge', nic['type'])
         self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
 
+    def test_get_xml(self):
+        '''
+        Test virt.get_xml()
+        '''
+        xml = '''<domain type='kvm' id='7'>
+              <name>test-vm</name>
+              <devices>
+                <graphics type='vnc' port='5900' autoport='yes' listen='0.0.0.0'>
+                  <listen type='address' address='0.0.0.0'/>
+                </graphics>
+              </devices>
+            </domain>
+        '''
+        domain = self.set_mock_vm("test-vm", xml)
+        self.assertEqual(xml, virt.get_xml('test-vm'))
+        self.assertEqual(xml, virt.get_xml(domain))
+
     def test_parse_qemu_img_info(self):
         '''
         Make sure that qemu-img info output is properly parsed
@@ -2642,3 +2662,34 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName.return_value = mock_pool
         # pylint: enable=no-member
         self.assertEqual(names, virt.pool_list_volumes('default'))
+
+    @patch('salt.modules.virt._is_kvm_hyper', return_value=True)
+    @patch('salt.modules.virt._is_xen_hyper', return_value=False)
+    def test_get_hypervisor(self, isxen_mock, iskvm_mock):
+        '''
+        test the virt.get_hypervisor() function
+        '''
+        self.assertEqual('kvm', virt.get_hypervisor())
+
+        iskvm_mock.return_value = False
+        self.assertIsNone(virt.get_hypervisor())
+
+        isxen_mock.return_value = True
+        self.assertEqual('xen', virt.get_hypervisor())
+
+    def test_pool_delete(self):
+        '''
+        Test virt.pool_delete function
+        '''
+        mock_pool = MagicMock()
+        mock_pool.delete = MagicMock(return_value=0)
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
+
+        res = virt.pool_delete('test-pool')
+        self.assertTrue(res)
+
+        self.mock_conn.storagePoolLookupByName.assert_called_once_with('test-pool')
+
+        # Shouldn't be called with another parameter so far since those are not implemented
+        # and thus throwing exceptions.
+        mock_pool.delete.assert_called_once_with(self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL)

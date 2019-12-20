@@ -122,7 +122,15 @@ def shutdown(at_time=None):
 
         salt '*' system.shutdown 5
     '''
-    cmd = ['shutdown', '-h', ('{0}'.format(at_time) if at_time else 'now')]
+    if (salt.utils.platform.is_freebsd() or
+            salt.utils.platform.is_netbsd() or
+            salt.utils.platform.is_openbsd()):
+        # these platforms don't power off by default when halted
+        flag = '-p'
+    else:
+        flag = '-h'
+
+    cmd = ['shutdown', flag, ('{0}'.format(at_time) if at_time else 'now')]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
