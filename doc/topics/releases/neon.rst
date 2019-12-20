@@ -52,6 +52,34 @@ as well as managing keystore files.
             Hn+GmxZA
             -----END CERTIFICATE-----
 
+
+Troubleshooting Jinja map files
+===============================
+
+A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
+has been added.
+
+Assuming the map is loaded in your formula SLS as follows:
+
+.. code-block:: jinja
+
+  {% from "myformula/map.jinja" import myformula with context %}
+
+The following command can be used to load the map and check the results:
+
+.. code-block:: bash
+
+  salt myminion jinja.load_map myformula/map.jinja myformula
+
+The module can be also used to test ``json`` and ``yaml`` maps:
+
+.. code-block:: bash
+
+  salt myminion jinja.import_yaml myformula/defaults.yaml
+
+  salt myminion jinja.import_json myformula/defaults.json
+
+
 Slot Syntax Updates
 ===================
 
@@ -104,6 +132,19 @@ State Deprecations
 - The hipchat state has been removed due to the service being retired.
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
+Fileserver Deprecations
+-----------------------
+
+- The hgfs fileserver had the following config options removed:
+
+    - The ``hgfs_env_whitelist`` config option has been removed in favor of ``hgfs_saltenv_whitelist``.
+    - The ``hgfs_env_blacklist`` config option has been removed in favor of ``hgfs_saltenv_blacklist``.
+
+- The svnfs fileserver had the following config options removed:
+
+    - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
+    - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
 
 Engine Removal
 --------------
