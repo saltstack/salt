@@ -13,8 +13,6 @@ from tests.support.mock import (
     MagicMock,
     Mock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -63,12 +61,10 @@ class MockGroupObj(object):
         pass
 
 
-if not NO_MOCK:
-    sam_mock = MagicMock(side_effect=lambda x: 'HOST\\' + x)
+sam_mock = MagicMock(side_effect=lambda x: 'HOST\\' + x)
 
 
 @skipIf(not HAS_WIN_LIBS, 'win_groupadd unit tests can only be run if win32com, pythoncom, and pywintypes are installed')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_groupadd
