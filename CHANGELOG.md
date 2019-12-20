@@ -20,7 +20,7 @@ Versions are `MAJOR.PATCH`.
 - [#55573](https://github.com/saltstack/salt/pull/55573) - Deprecate `quiet` kwarg in cmd.run state module. Please set `output_loglevel` to `quiet` instead.
 - [#55641](https://github.com/saltstack/salt/pull/55641) - Deprecate `enviroment` kwarg from heat state and execution module. Please use correct spelling `environment`.
 - [#55682](https://github.com/saltstack/salt/pull/55682) - Deprecate `get_known_host` and `recv_known_host` functions from ssh module.
-
+- [#55683](https://github.com/saltstack/salt/pull/55683) - Deprecate `prune_services` in the firewall state module to be False by default. And update `force_masquerade` to be False by default in the firewall execution module.
 
 ### Changed
 

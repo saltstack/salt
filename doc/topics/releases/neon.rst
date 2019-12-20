@@ -191,6 +191,16 @@ Module Deprecations
       :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
       function instead.
 
+- The :py:mod`firewalld <salt.modules.firewalld>` module has been changed as
+  follows:
+
+    - The default setting for the ``force_masquerade`` option in the
+      :py:func:`firewalld.add_port <salt.module.firewalld.add_port` function has changed
+      from ``True`` to ``False``.
+    - Support for the ``force_masquerade`` option in the
+      :py:func:`firewalld.add_port_fwd <salt.module.firewalld.add_port_fwd` function has
+      been changed from ``True`` to ``False``.
+
 State Deprecations
 ------------------
 
@@ -205,6 +215,12 @@ State Deprecations
 - The heat state module has removed the ``enviroment`` kwarg from the
   :py:func:`heat.deployed <salt.states.heat.deployed>` function due
   to a spelling error. Please use ``environment`` instead.
+
+- The :py:mod`firewalld <salt.states.firewalld>` state has been changed as follows:
+
+    - The default setting for the ``prune_services`` option in the
+      :py:func:`firewalld.present <salt.states.firewalld.present>` function has changed
+      from ``True`` to ``False``.
 
 Fileserver Deprecations
 -----------------------
