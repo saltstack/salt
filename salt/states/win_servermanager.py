@@ -12,7 +12,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import salt modules
 import salt.utils.data
-import salt.utils.versions
 
 
 def __virtual__():
@@ -58,8 +57,9 @@ def installed(name,
             Install all sub-features as well. If the feature is installed but
             one of its sub-features are not installed set this will install
             additional sub-features. This argument was previously renamed from
-            ``force``. To ensure backwards compatibility ``force`` will to work
-            but please update your states to use the preferred ``recurse`` arg.
+            ``force``. To ensure backwards compatibility ``force`` will
+            continue to work but please update your states to use the preferred
+            ``recurse`` arg.
 
         source (Optional[str]):
             Path to the source files if missing from the target system. None
