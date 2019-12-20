@@ -45,11 +45,9 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         return {ec2: {'__opts__': {}}}
 
     def test__validate_key_path_and_mode(self):
-
         # Key file exists
         with patch('os.path.exists', return_value=True):
             with patch('os.stat') as patched_stat:
-
                 type(patched_stat.return_value).st_mode = PropertyMock(return_value=0o644)
                 self.assertRaises(
                     SaltCloudSystemExit, ec2._validate_key_path_and_mode, 'key_file')
@@ -73,7 +71,7 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
     def test_get_password_data(self, query, get_provider, get_location, _get_node):
         query.return_value = [
             {
-            'passwordData': PASS_DATA
+                'passwordData': PASS_DATA
             }
         ]
         _get_node.return_value = {'instanceId': 'i-abcdef'}
@@ -111,3 +109,61 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
 
         # we should have only ran aws.query once when testing the aws filter
         aws_query.assert_called_once()
+
+    @patch('salt.cloud.clouds.ec2.config.get_cloud_config_value')
+    @patch('salt.cloud.clouds.ec2.get_location')
+    @patch('salt.cloud.clouds.ec2.get_availability_zone')
+    @patch('salt.cloud.clouds.ec2.get_provider')
+    @patch('salt.cloud.clouds.ec2.get_spot_config')
+    @patch('salt.cloud.clouds.ec2._param_from_config')
+    @patch('salt.cloud.clouds.ec2.securitygroupid')
+    def test_termination_protection(self,
+                                    securitygroupid,
+                                    _param_from_config,
+                                    get_spot_config,
+                                    get_provider,
+                                    get_availability_zone,
+                                    get_location,
+                                    config):
+        '''
+        Verify that `set_termination_protection` updates the right parameters
+        '''
+        vm = {'name': 'taco'}
+        set_del_root_vol_on_destroy = 'yes'
+        termination_protection = True
+        config.side_effect = [None] * 2 + ['test/*'] + [None] * 13 + [set_del_root_vol_on_destroy, termination_protection]
+        get_location.return_value = 'us-west2'
+        get_availability_zone.return_value = None
+        get_provider.return_value = 'ec2'
+        get_spot_config.return_value = None
+        securitygroupid.return_value = None
+
+        self.assertRaises(salt.exceptions.SaltCloudConfigError, ec2.request_instance, vm)
+        _param_from_config.assert_called_once_with('DisableApiTermination', True)
+
+    @patch('salt.cloud.clouds.ec2.config.get_cloud_config_value')
+    @patch('salt.cloud.clouds.ec2.get_location')
+    @patch('salt.cloud.clouds.ec2.get_availability_zone')
+    @patch('salt.cloud.clouds.ec2.get_provider')
+    @patch('salt.cloud.clouds.ec2.get_spot_config')
+    @patch('salt.cloud.clouds.ec2.securitygroupid')
+    def test_termination_protection_exception(self,
+                                              securitygroupid,
+                                              get_spot_config,
+                                              get_provider,
+                                              get_availability_zone,
+                                              get_location,
+                                              config):
+        '''
+        Verify improper `set_termination_protection` parameters raises an exception
+        '''
+        vm = {'name': 'taco'}
+        termination_protection = 'not a bool'
+        config.side_effect = [None] * 2 + ['test/*'] + [None] * 14 + [termination_protection]
+        get_location.return_value = 'us-west2'
+        get_availability_zone.return_value = None
+        get_provider.return_value = 'ec2'
+        get_spot_config.return_value = None
+        securitygroupid.return_value = None
+
+        self.assertRaises(salt.exceptions.SaltCloudConfigError, ec2.request_instance, vm)
