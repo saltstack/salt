@@ -6,9 +6,9 @@ import os
 import tempfile
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.paths import TMP
 
 # Import salt libs
 import salt.utils.path
@@ -22,7 +22,7 @@ class VirtualenvModuleTest(ModuleCase):
     '''
     def setUp(self):
         super(VirtualenvModuleTest, self).setUp()
-        self.venv_test_dir = tempfile.mkdtemp(dir=TMP)
+        self.venv_test_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.venv_dir = os.path.join(self.venv_test_dir, 'venv')
 
     def test_create_defaults(self):
