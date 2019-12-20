@@ -9,8 +9,8 @@ import logging
 import multiprocessing
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import SaltClientTestCaseMixin
 
 # Import Salt libs
@@ -223,7 +223,6 @@ def _syndic_exec_test(child_pipe):
     child_pipe.close()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
     '''
     Unit test for the daemons starter classes.

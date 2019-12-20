@@ -10,8 +10,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch,
     mock_open
 )
@@ -27,7 +25,6 @@ GET_ZONE_FILE = 'salt.modules.timezone._get_zone_file'
 GET_LOCALTIME_PATH = 'salt.modules.timezone._get_localtime_path'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -86,7 +83,6 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         return temp
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Timezone test case
