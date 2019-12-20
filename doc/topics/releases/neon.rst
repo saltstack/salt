@@ -30,6 +30,30 @@ The slot syntax has been updated to support parsing dictionary responses and to 
     Duration: 1.229 ms
      Changes:
 
+Enhancements to Engines
+=======================
+
+  - A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been added to
+  export Salt events to fluentd.
+
+  .. code-block:: yaml
+
+    engines:
+      - fluent
+          host: localhost
+          port: 24224
+
+  .. code-block:: none
+
+    <source>
+      @type forward
+      port 24224
+    </source>
+    <match saltstack.**>
+      @type file
+      path /var/log/td-agent/saltstack
+    </match>
+
 Deprecations
 ============
 
