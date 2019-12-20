@@ -1960,7 +1960,7 @@ def resolve_image_id(name):
     return False
 
 
-def resolve_tag(name, tags=None, **kwargs):
+def resolve_tag(name, **kwargs):
     '''
     .. versionadded:: 2017.7.2
     .. versionchanged:: 2018.3.0
@@ -1990,7 +1990,6 @@ def resolve_tag(name, tags=None, **kwargs):
 
     tags
         .. deprecated:: 2018.3.0
-            Ignored if passed, will be removed in the Neon release.
 
     CLI Examples:
 
@@ -2004,13 +2003,6 @@ def resolve_tag(name, tags=None, **kwargs):
     all_ = kwargs.pop('all', False)
     if kwargs:
         __utils__['args.invalid_kwargs'](kwargs)
-
-    if tags is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'tags\' argument to docker.resolve_tag is deprecated. It no '
-            'longer is used, and will be removed in the Neon release.'
-        )
 
     try:
         inspect_result = inspect_image(name)
@@ -3937,8 +3929,7 @@ def build(path=None,
           api_response=False,
           fileobj=None,
           dockerfile=None,
-          buildargs=None,
-          image=None):
+          buildargs=None):
     '''
     .. versionchanged:: 2018.3.0
         If the built image should be tagged, then the repository and tag must
@@ -4026,14 +4017,6 @@ def build(path=None,
     '''
     _prep_pull()
 
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.build has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if repository or tag:
         if not repository and tag:
             # Have to have both or neither
@@ -4118,8 +4101,7 @@ def commit(name,
            repository,
            tag='latest',
            message=None,
-           author=None,
-           image=None):
+           author=None):
     '''
     .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
@@ -4168,14 +4150,6 @@ def commit(name,
 
         salt myminion docker.commit mycontainer myuser/myimage mytag
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.commit has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
@@ -4201,7 +4175,6 @@ def commit(name,
     if image_id is None:
         raise CommandExecutionError('No image ID was returned in API response')
 
-    ret['Image'] = image
     ret['Id'] = image_id
     return ret
 
@@ -4266,8 +4239,7 @@ def dangling(prune=False, force=False):
 def import_(source,
             repository,
             tag='latest',
-            api_response=False,
-            image=None):
+            api_response=False):
     '''
     .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
@@ -4319,14 +4291,6 @@ def import_(source,
         salt myminion docker.import /tmp/cent7-minimal.tar.xz myuser/centos:7
         salt myminion docker.import salt://dockerimages/cent7-minimal.tar.xz myuser/centos:7
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.import has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
@@ -4375,7 +4339,7 @@ def import_(source,
     return ret
 
 
-def load(path, repository=None, tag=None, image=None):
+def load(path, repository=None, tag=None):
     '''
     .. versionchanged:: 2018.3.0
         If the loaded image should be tagged, then the repository and tag must
@@ -4437,14 +4401,6 @@ def load(path, repository=None, tag=None, image=None):
         salt myminion docker.load /path/to/image.tar
         salt myminion docker.load salt://path/to/docker/saved/image.tar repository=myuser/myimage tag=mytag
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.load has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if (repository or tag) and not (repository and tag):
         # Have to have both or neither
         raise SaltInvocationError(
@@ -5003,7 +4959,7 @@ def save(name,
     return ret
 
 
-def tag_(name, repository, tag='latest', force=False, image=None):
+def tag_(name, repository, tag='latest', force=False):
     '''
     .. versionchanged:: 2018.3.0
         The repository and tag must now be passed separately using the
@@ -5039,14 +4995,6 @@ def tag_(name, repository, tag='latest', force=False, image=None):
 
         salt myminion docker.tag 0123456789ab myrepo/mycontainer mytag
     '''
-    if image is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'image\' argument to docker.tag has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        respository = image
-
     if not isinstance(repository, six.string_types):
         repository = six.text_type(repository)
     if not isinstance(tag, six.string_types):
@@ -5442,15 +5390,6 @@ def connect_container_to_network(container, net_id, **kwargs):
         salt myminion docker.connect_container_to_network web-1 1f9d2454d0872b68dd9e8744c6e7a4c66b86f10abaccc21e14f7f014f729b2bc
     '''
     kwargs = __utils__['args.clean_kwargs'](**kwargs)
-    network_id = kwargs.pop('network_id', None)
-    if network_id is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'network_id\' argument to docker.build has been deprecated, '
-            'please use \'net_id\' instead.'
-        )
-        net_id = network_id
-
     log.debug(
         'Connecting container \'%s\' to network \'%s\' with the following '
         'configuration: %s', container, net_id, kwargs
@@ -5461,7 +5400,7 @@ def connect_container_to_network(container, net_id, **kwargs):
                                **kwargs)
     log.debug(
         'Successfully connected container \'%s\' to network \'%s\'',
-        container, network_id
+        container, net_id
     )
     _clear_context()
     return True
@@ -7006,15 +6945,6 @@ def sls_build(repository,
         salt myminion docker.sls_build imgname base=mybase mods=rails,web
 
     '''
-    name = kwargs.pop('name', None)
-    if name is not None:
-        __utils__['versions.warn_until'](
-            'Neon',
-            'The \'name\' argument to docker.sls_build has been deprecated, '
-            'please use \'repository\' instead.'
-        )
-        repository = name
-
     create_kwargs = __utils__['args.clean_kwargs'](**copy.deepcopy(kwargs))
     for key in ('image', 'name', 'cmd', 'interactive', 'tty', 'extra_filerefs'):
         try:
