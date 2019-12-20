@@ -68,6 +68,22 @@ first line in the stanza) or the ``- name`` parameter.
     - require:
       - pkg: vim
 
+Glog matching in requisites
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. versionadded:: 0.9.8
+
+Glob matching is supported in requisites. This is mostly useful for file
+changes. In the example below, a change in ``/etc/apache2/httpd.conf`` or
+``/etc/apache2/sites-available/default.conf`` will reload/restart the service:
+
+.. code-block:: yaml
+
+    apache2:
+      service.running:
+        - watch:
+          - file: /etc/apache2/*
+
 Omitting state module in requisites
 -----------------------------------
 
@@ -917,7 +933,7 @@ For example:
         - names:
           - first_deploy_cmd
           - second_deploy_cmd
-        - unless: ls /usr/bin/vim
+        - unless: some_check
 
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.

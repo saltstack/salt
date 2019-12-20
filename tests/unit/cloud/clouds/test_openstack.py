@@ -14,8 +14,8 @@ from salt.cloud.clouds import openstack
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 
 class MockImage(object):
@@ -53,7 +53,6 @@ class MockConn(object):
         return [self.node]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class OpenstackTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.openstack module.

@@ -42,6 +42,101 @@ Example:
       assertion: assertEqual
       expected-return:  'hello'
 
+Example with jinja
+------------------
+
+.. code-block:: jinja
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
+Example with setup state including pillar
+-----------------------------------------
+
+.. code-block:: yaml
+
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    verify_vim:
+      module_and_function: pkg.version
+      args:
+        - vim
+      assertion: assertNotEmpty
+
+Example with skip
+-----------------
+
+.. code-block:: yaml
+
+    package_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - apache2
+      assertion: assertFalse
+      skip: True
+
+Example with assertion_section
+------------------------------
+
+.. code-block:: yaml
+
+    validate_shell:
+      module_and_function: user.info
+      args:
+        - root
+      assertion: assertEqual
+      expected-return: /bin/bash
+      assertion_section: shell
+
+Example suppressing print results
+---------------------------------
+
+.. code-block:: yaml
+
+    validate_env_nameNode:
+      module_and_function: hadoop.dfs
+      args:
+        - text
+        - /oozie/common/env.properties
+      expected-return: nameNode = hdfs://nameservice2
+      assertion: assertNotIn
+      print_result: False
+
+Supported assertions
+====================
+
+* assertEqual
+* assertNotEqual
+* assertTrue
+* assertFalse
+* assertIn
+* assertNotIn
+* assertGreater
+* assertGreaterEqual
+* assertLess
+* assertLessEqual
+* assertEmpty
+* assertNotEmpty
+
+.. warning::
+
+  The saltcheck.state_apply function is an alias for
+  :py:func:`state.apply <salt.modules.state.apply>`. If using the
+  :ref:`ACL system <acl-eauth>` ``saltcheck.*`` might provide more capability
+  than intended if only ``saltcheck.run_state_tests`` and
+  ``saltcheck.run_highstate_tests`` are needed.
 '''
 
 # Import Python libs
@@ -49,10 +144,10 @@ from __future__ import absolute_import, unicode_literals, print_function
 import logging
 import os
 import time
-from json import loads, dumps
 
 # Import Salt libs
 import salt.utils.files
+import salt.utils.json
 import salt.utils.path
 import salt.utils.yaml
 import salt.client
@@ -604,7 +699,7 @@ class StateTestLoader(object):
         # use the salt renderer module to interpret jinja and etc
         tests = _render_file(filepath)
         # use json as a convenient way to convert the OrderedDicts from salt renderer
-        mydict = loads(dumps(tests))
+        mydict = salt.utils.json.loads(salt.utils.json.dumps(tests))
         for key, value in mydict.items():
             self.test_dict[key] = value
         return
