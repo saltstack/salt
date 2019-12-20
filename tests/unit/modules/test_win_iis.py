@@ -16,12 +16,10 @@ import salt.utils.json
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 APP_LIST = {
@@ -116,7 +114,6 @@ CONTAINER_SETTING = {
 CERT_BINDING_INFO = '*:443:mytestsite.local'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_iis
@@ -131,9 +128,9 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_iis._srvmgr',
                    MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_apppools',
-                      MagicMock(return_value=dict())), \
-                patch.dict(win_iis.__salt__):
+             patch('salt.modules.win_iis.list_apppools',
+                   MagicMock(return_value=dict())), \
+             patch.dict(win_iis.__salt__):
             self.assertTrue(win_iis.create_apppool('MyTestPool'))
 
     def test_list_apppools(self):
@@ -141,8 +138,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         Test - List all configured IIS application pools.
         '''
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value=LIST_APPPOOLS_SRVMGR)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value=LIST_APPPOOLS_SRVMGR)):
             self.assertEqual(win_iis.list_apppools(), APPPOOL_LIST)
 
     def test_remove_apppool(self):
@@ -150,12 +147,12 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         Test - Remove an IIS application pool.
         '''
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_apppools',
-                      MagicMock(return_value={'MyTestPool': {
-                                              'applications': list(),
-                                              'state': 'Started'}})):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_apppools',
+                   MagicMock(return_value={'MyTestPool': {
+                       'applications': list(),
+                       'state': 'Started'}})):
             self.assertTrue(win_iis.remove_apppool('MyTestPool'))
 
     def test_restart_apppool(self):
@@ -163,8 +160,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         Test - Restart an IIS application pool.
         '''
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})):
             self.assertTrue(win_iis.restart_apppool('MyTestPool'))
 
     def test_create_site(self):
@@ -175,12 +172,12 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                   'apppool': 'MyTestPool', 'hostheader': 'mytestsite.local',
                   'ipaddress': '*', 'port': 80, 'protocol': 'http'}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_sites',
-                      MagicMock(return_value=dict())), \
-                patch('salt.modules.win_iis.list_apppools',
-                      MagicMock(return_value=dict())):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_sites',
+                   MagicMock(return_value=dict())), \
+             patch('salt.modules.win_iis.list_apppools',
+                   MagicMock(return_value=dict())):
             self.assertTrue(win_iis.create_site(**kwargs))
 
     def test_create_site_failed(self):
@@ -191,12 +188,12 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                   'apppool': 'MyTestPool', 'hostheader': 'mytestsite.local',
                   'ipaddress': '*', 'port': 80, 'protocol': 'invalid-protocol-name'}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_sites',
-                      MagicMock(return_value=dict())), \
-                patch('salt.modules.win_iis.list_apppools',
-                      MagicMock(return_value=dict())):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_sites',
+                   MagicMock(return_value=dict())), \
+             patch('salt.modules.win_iis.list_apppools',
+                   MagicMock(return_value=dict())):
             self.assertRaises(SaltInvocationError, win_iis.create_site, **kwargs)
 
     def test_remove_site(self):
@@ -204,10 +201,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         Test - Delete a website from IIS.
         '''
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_sites',
-                      MagicMock(return_value=SITE_LIST)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_sites',
+                   MagicMock(return_value=SITE_LIST)):
             self.assertTrue(win_iis.remove_site('MyTestSite'))
 
     def test_create_app(self):
@@ -217,11 +214,11 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'name': 'testApp', 'site': 'MyTestSite',
                   'sourcepath': r'C:\inetpub\apps\testApp', 'apppool': 'MyTestPool'}
         with patch.dict(win_iis.__salt__), \
-                patch('os.path.isdir', MagicMock(return_value=True)), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_apps',
-                      MagicMock(return_value=APP_LIST)):
+             patch('os.path.isdir', MagicMock(return_value=True)), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_apps',
+                   MagicMock(return_value=APP_LIST)):
             self.assertTrue(win_iis.create_app(**kwargs))
 
     def test_list_apps(self):
@@ -229,8 +226,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         Test - Get all configured IIS applications for the specified site.
         '''
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value=LIST_APPS_SRVMGR)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value=LIST_APPS_SRVMGR)):
             self.assertEqual(win_iis.list_apps('MyTestSite'), APP_LIST)
 
     def test_remove_app(self):
@@ -239,10 +236,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         kwargs = {'name': 'otherApp', 'site': 'MyTestSite'}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_apps',
-                      MagicMock(return_value=APP_LIST)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_apps',
+                   MagicMock(return_value=APP_LIST)):
             self.assertTrue(win_iis.remove_app(**kwargs))
 
     def test_create_binding(self):
@@ -252,10 +249,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'site': 'MyTestSite', 'hostheader': '', 'ipaddress': '*',
                   'port': 80, 'protocol': 'http', 'sslflags': 0}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_bindings',
-                      MagicMock(return_value=BINDING_LIST)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_bindings',
+                   MagicMock(return_value=BINDING_LIST)):
             self.assertTrue(win_iis.create_binding(**kwargs))
 
     def test_create_binding_failed(self):
@@ -265,10 +262,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'site': 'MyTestSite', 'hostheader': '', 'ipaddress': '*',
                   'port': 80, 'protocol': 'invalid-protocol-name', 'sslflags': 999}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_bindings',
-                      MagicMock(return_value=BINDING_LIST)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_bindings',
+                   MagicMock(return_value=BINDING_LIST)):
             self.assertRaises(SaltInvocationError, win_iis.create_binding, **kwargs)
 
     def test_list_bindings(self):
@@ -276,8 +273,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         Test - Get all configured IIS bindings for the specified site.
         '''
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis.list_sites',
-                      MagicMock(return_value=SITE_LIST)):
+             patch('salt.modules.win_iis.list_sites',
+                   MagicMock(return_value=SITE_LIST)):
             self.assertEqual(win_iis.list_bindings('MyTestSite'), BINDING_LIST)
 
     def test_remove_binding(self):
@@ -287,10 +284,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'site': 'MyTestSite', 'hostheader': 'myothertestsite.local',
                   'ipaddress': '*', 'port': 443}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_bindings',
-                      MagicMock(return_value=BINDING_LIST)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_bindings',
+                   MagicMock(return_value=BINDING_LIST)):
             self.assertTrue(win_iis.remove_binding(**kwargs))
 
     def test_create_vdir(self):
@@ -300,12 +297,12 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'name': 'TestVdir', 'site': 'MyTestSite',
                   'sourcepath': r'C:\inetpub\vdirs\TestVdir'}
         with patch.dict(win_iis.__salt__), \
-                patch('os.path.isdir',
-                      MagicMock(return_value=True)), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_vdirs',
-                       MagicMock(return_value=VDIR_LIST)):
+             patch('os.path.isdir',
+                   MagicMock(return_value=True)), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_vdirs',
+                   MagicMock(return_value=VDIR_LIST)):
             self.assertTrue(win_iis.create_vdir(**kwargs))
 
     def test_list_vdirs(self):
@@ -318,8 +315,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value=LIST_VDIRS_SRVMGR)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value=LIST_VDIRS_SRVMGR)):
             self.assertEqual(win_iis.list_vdirs('MyTestSite'), vdirs)
 
     def test_remove_vdir(self):
@@ -328,10 +325,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         kwargs = {'name': 'TestOtherVdir', 'site': 'MyTestSite'}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_vdirs',
-                      MagicMock(return_value=VDIR_LIST)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_vdirs',
+                   MagicMock(return_value=VDIR_LIST)):
             self.assertTrue(win_iis.remove_vdir(**kwargs))
 
     def test_create_cert_binding(self):
@@ -342,15 +339,15 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                   'site': 'MyTestSite', 'hostheader': 'mytestsite.local',
                   'ipaddress': '*', 'port': 443}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._list_certs',
-                      MagicMock(return_value={'9988776655443322111000AAABBBCCCDDDEEEFFF': None})), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0, 'stdout': 10})), \
-                patch('salt.utils.json.loads', MagicMock(return_value=[{'MajorVersion': 10, 'MinorVersion': 0}])), \
-                patch('salt.modules.win_iis.list_bindings',
-                      MagicMock(return_value=BINDING_LIST)), \
-               patch('salt.modules.win_iis.list_cert_bindings',
-                      MagicMock(return_value={CERT_BINDING_INFO: BINDING_LIST[CERT_BINDING_INFO]})):
+             patch('salt.modules.win_iis._list_certs',
+                   MagicMock(return_value={'9988776655443322111000AAABBBCCCDDDEEEFFF': None})), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0, 'stdout': 10})), \
+             patch('salt.utils.json.loads', MagicMock(return_value=[{'MajorVersion': 10, 'MinorVersion': 0}])), \
+             patch('salt.modules.win_iis.list_bindings',
+                   MagicMock(return_value=BINDING_LIST)), \
+             patch('salt.modules.win_iis.list_cert_bindings',
+                   MagicMock(return_value={CERT_BINDING_INFO: BINDING_LIST[CERT_BINDING_INFO]})):
             self.assertTrue(win_iis.create_cert_binding(**kwargs))
 
     def test_list_cert_bindings(self):
@@ -359,8 +356,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         '''
         key = '*:443:mytestsite.local'
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis.list_sites',
-                      MagicMock(return_value=SITE_LIST)):
+             patch('salt.modules.win_iis.list_sites',
+                   MagicMock(return_value=SITE_LIST)):
             self.assertEqual(win_iis.list_cert_bindings('MyTestSite'),
                              {key: BINDING_LIST[key]})
 
@@ -372,10 +369,10 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
                   'site': 'MyOtherTestSite', 'hostheader': 'myothertestsite.local',
                   'ipaddress': '*', 'port': 443}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.list_cert_bindings',
-                      MagicMock(return_value={CERT_BINDING_INFO: BINDING_LIST[CERT_BINDING_INFO]})):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.list_cert_bindings',
+                   MagicMock(return_value={CERT_BINDING_INFO: BINDING_LIST[CERT_BINDING_INFO]})):
             self.assertTrue(win_iis.remove_cert_binding(**kwargs))
 
     def test_get_container_setting(self):
@@ -385,8 +382,8 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'name': 'MyTestSite', 'container': 'AppPools',
                   'settings': ['managedPipelineMode']}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value=CONTAINER_SETTING)):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value=CONTAINER_SETTING)):
             self.assertEqual(win_iis.get_container_setting(**kwargs),
                              {'managedPipelineMode': 'Integrated'})
 
@@ -397,8 +394,159 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         kwargs = {'name': 'MyTestSite', 'container': 'AppPools',
                   'settings': {'managedPipelineMode': 'Integrated'}}
         with patch.dict(win_iis.__salt__), \
-                patch('salt.modules.win_iis._srvmgr',
-                      MagicMock(return_value={'retcode': 0})), \
-                patch('salt.modules.win_iis.get_container_setting',
-                       MagicMock(return_value={'managedPipelineMode': 'Integrated'})):
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0})), \
+             patch('salt.modules.win_iis.get_container_setting',
+                   MagicMock(return_value={'managedPipelineMode': 'Integrated'})):
             self.assertTrue(win_iis.set_container_setting(**kwargs))
+
+    def test__collection_match_to_index(self):
+        bad_match = {'key_0': 'value'}
+        first_match = {'key_1': 'value'}
+        second_match = {'key_2': 'value'}
+        collection = [first_match, second_match]
+        settings = [{'name': 'enabled', 'value': collection}]
+        with patch.dict(win_iis.__salt__), \
+             patch('salt.modules.win_iis.get_webconfiguration_settings',
+                   MagicMock(return_value=settings)):
+            ret = win_iis._collection_match_to_index('pspath', 'colfilter', 'name', bad_match)
+            self.assertEqual(ret, -1)
+            ret = win_iis._collection_match_to_index('pspath', 'colfilter', 'name', first_match)
+            self.assertEqual(ret, 0)
+            ret = win_iis._collection_match_to_index('pspath', 'colfilter', 'name', second_match)
+            self.assertEqual(ret, 1)
+
+    def test__prepare_settings(self):
+        simple_setting = {'name': 'value', 'filter': 'value'}
+        collection_setting = {'name': 'Collection[{yaml:\n\tdata}]', 'filter': 'value'}
+        with patch.dict(win_iis.__salt__), \
+             patch('salt.modules.win_iis._collection_match_to_index',
+                   MagicMock(return_value=0)):
+            ret = win_iis._prepare_settings('pspath', [
+                simple_setting, collection_setting, {'invalid': 'setting'}, {'name': 'filter-less_setting'}
+            ])
+            self.assertEqual(ret, [simple_setting, collection_setting])
+
+    @patch('salt.modules.win_iis.log')
+    def test_get_webconfiguration_settings_empty(self, mock_log):
+        ret = win_iis.get_webconfiguration_settings('name', settings=[])
+        mock_log.warning.assert_called_once_with('No settings provided')
+        self.assertEqual(ret, {})
+
+    def test_get_webconfiguration_settings(self):
+        # Setup
+        name = 'IIS'
+        collection_setting = {'name': 'Collection[{yaml:\n\tdata}]', 'filter': 'value'}
+        filter_setting = {'name': 'enabled',
+                          'filter': 'system.webServer / security / authentication / anonymousAuthentication'}
+        settings = [collection_setting, filter_setting]
+
+        ps_cmd = ['$Settings = New-Object System.Collections.ArrayList;', ]
+        for setting in settings:
+            ps_cmd.extend([
+                "$Property = Get-WebConfigurationProperty -PSPath '{}'".format(name),
+                "-Name '{name}' -Filter '{filter}' -ErrorAction Stop;".format(
+                    filter=setting['filter'], name=setting['name']),
+                'if (([String]::IsNullOrEmpty($Property) -eq $False) -and',
+                "($Property.GetType()).Name -eq 'ConfigurationAttribute') {",
+                '$Property = $Property | Select-Object',
+                '-ExpandProperty Value };',
+                "$Settings.add(@{{filter='{filter}';name='{name}';value=[String] $Property}})| Out-Null;".format(
+                    filter=setting['filter'], name=setting['name']),
+                '$Property = $Null;',
+            ])
+        ps_cmd.append('$Settings')
+
+        # Execute
+        with patch.dict(win_iis.__salt__), \
+             patch('salt.modules.win_iis._prepare_settings',
+                   MagicMock(return_value=settings)), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0, 'stdout': '{}'})):
+            ret = win_iis.get_webconfiguration_settings(name, settings=settings)
+
+            # Verify
+            win_iis._srvmgr.assert_called_with(cmd=ps_cmd, return_json=True)
+            self.assertEqual(ret, {})
+
+    @patch('salt.modules.win_iis.log')
+    def test_set_webconfiguration_settings_empty(self, mock_log):
+        ret = win_iis.set_webconfiguration_settings('name', settings=[])
+        mock_log.warning.assert_called_once_with('No settings provided')
+        self.assertEqual(ret, False)
+
+    @patch('salt.modules.win_iis.log')
+    def test_set_webconfiguration_settings_no_changes(self, mock_log):
+        # Setup
+        name = 'IIS'
+        setting = {
+            'name': 'Collection[{yaml:\n\tdata}]',
+            'filter': 'system.webServer / security / authentication / anonymousAuthentication',
+            'value': []
+        }
+        settings = [setting]
+
+        # Execute
+        with patch.dict(win_iis.__salt__), \
+             patch('salt.modules.win_iis._prepare_settings',
+                   MagicMock(return_value=settings)), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0, 'stdout': '{}'})), \
+             patch('salt.modules.win_iis.get_webconfiguration_settings',
+                   MagicMock(return_value=settings)):
+            ret = win_iis.set_webconfiguration_settings(name, settings=settings)
+
+            # Verify
+            mock_log.debug.assert_called_with('Settings already contain the provided values.')
+            self.assertEqual(ret, True)
+
+    @patch('salt.modules.win_iis.log')
+    def test_set_webconfiguration_settings_failed(self, mock_log):
+        # Setup
+        name = 'IIS'
+        setting = {
+            'name': 'Collection[{yaml:\n\tdata}]',
+            'filter': 'system.webServer / security / authentication / anonymousAuthentication',
+            'value': []
+        }
+        settings = [setting]
+
+        # Execute
+        with patch.dict(win_iis.__salt__), \
+             patch('salt.modules.win_iis._prepare_settings',
+                   MagicMock(return_value=settings)), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0, 'stdout': '{}'})), \
+             patch('salt.modules.win_iis.get_webconfiguration_settings',
+                   MagicMock(side_effect=[[], [{'value': 'unexpected_change!'}]])):
+
+            ret = win_iis.set_webconfiguration_settings(name, settings=settings)
+
+            # Verify
+            self.assertEqual(ret, False)
+            mock_log.error.assert_called_with('Failed to change settings: %s', settings)
+
+    @patch('salt.modules.win_iis.log')
+    def test_set_webconfiguration_settings(self, mock_log):
+        # Setup
+        name = 'IIS'
+        setting = {
+            'name': 'Collection[{yaml:\n\tdata}]',
+            'filter': 'system.webServer / security / authentication / anonymousAuthentication',
+            'value': []
+        }
+        settings = [setting]
+
+        # Execute
+        with patch.dict(win_iis.__salt__), \
+             patch('salt.modules.win_iis._prepare_settings',
+                   MagicMock(return_value=settings)), \
+             patch('salt.modules.win_iis._srvmgr',
+                   MagicMock(return_value={'retcode': 0, 'stdout': '{}'})), \
+             patch('salt.modules.win_iis.get_webconfiguration_settings',
+                   MagicMock(side_effect=[[], settings])):
+            ret = win_iis.set_webconfiguration_settings(name, settings=settings)
+
+            # Verify
+            self.assertEqual(ret, True)
+            mock_log.debug.assert_called_with('Settings configured successfully: %s', settings)

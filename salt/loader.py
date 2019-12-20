@@ -34,6 +34,7 @@ import salt.utils.lazy
 import salt.utils.odict
 import salt.utils.platform
 import salt.utils.versions
+import salt.utils.stringutils
 from salt.exceptions import LoaderError
 from salt.template import check_render_pipe_str
 from salt.utils.decorators import Depends
@@ -276,8 +277,8 @@ def minion_mods(
                         ret[f_key] = funcs[func]
 
     if notify:
-        evt = salt.utils.event.get_event('minion', opts=opts, listen=False)
-        evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
+        with salt.utils.event.get_event('minion', opts=opts, listen=False) as evt:
+            evt.fire_event({'complete': True}, tag='/salt/minion/minion_mod_complete')
 
     return ret
 
@@ -536,7 +537,7 @@ def thorium(opts, functions, runners):
     return ret
 
 
-def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
+def states(opts, functions, utils, serializers, whitelist=None, proxy=None, context=None):
     '''
     Returns the state modules
 
@@ -552,6 +553,9 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
         __opts__ = salt.config.minion_config('/etc/salt/minion')
         statemods = salt.loader.states(__opts__, None, None)
     '''
+    if context is None:
+        context = {}
+
     ret = LazyLoader(
         _module_dirs(opts, 'states'),
         opts,
@@ -562,6 +566,7 @@ def states(opts, functions, utils, serializers, whitelist=None, proxy=None):
     ret.pack['__states__'] = ret
     ret.pack['__utils__'] = utils
     ret.pack['__serializers__'] = serializers
+    ret.pack['__context__'] = context
     return ret
 
 
@@ -622,12 +627,17 @@ def ssh_wrapper(opts, functions=None, context=None):
     )
 
 
-def render(opts, functions, states=None, proxy=None):
+def render(opts, functions, states=None, proxy=None, context=None):
     '''
     Returns the render modules
     '''
+    if context is None:
+        context = {}
+
     pack = {'__salt__': functions,
-            '__grains__': opts.get('grains', {})}
+            '__grains__': opts.get('grains', {}),
+            '__context__': context}
+
     if states:
         pack['__states__'] = states
     pack['__proxy__'] = proxy or {}
@@ -773,6 +783,7 @@ def grains(opts, force_refresh=False, proxy=None):
         opts['grains'] = {}
 
     grains_data = {}
+    blist = opts.get('grains_blacklist', [])
     funcs = grain_funcs(opts, proxy=proxy)
     if force_refresh:  # if we refresh, lets reload grain modules
         funcs.clear()
@@ -784,6 +795,14 @@ def grains(opts, force_refresh=False, proxy=None):
         ret = funcs[key]()
         if not isinstance(ret, dict):
             continue
+        if blist:
+            for key in list(ret):
+                for block in blist:
+                    if salt.utils.stringutils.expr_match(key, block):
+                        del ret[key]
+                        log.trace('Filtering %s grain', key)
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
@@ -819,6 +838,14 @@ def grains(opts, force_refresh=False, proxy=None):
             continue
         if not isinstance(ret, dict):
             continue
+        if blist:
+            for key in list(ret):
+                for block in blist:
+                    if salt.utils.stringutils.expr_match(key, block):
+                        del ret[key]
+                        log.trace('Filtering %s grain', key)
+            if not ret:
+                continue
         if grains_deep_merge:
             salt.utils.dictupdate.update(grains_data, ret)
         else:
@@ -939,7 +966,7 @@ def sdb(opts, functions=None, whitelist=None, utils=None):
             '__sdb__': functions,
             '__opts__': opts,
             '__utils__': utils,
-            '__salt__': minion_mods(opts, utils),
+            '__salt__': minion_mods(opts, utils=utils),
         },
         whitelist=whitelist,
     )
@@ -1882,20 +1909,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     # The module is renaming itself. Updating the module name
                     # with the new name
                     log.trace('Loaded %s as virtual %s', module_name, virtual)
-
-                    if not hasattr(mod, '__virtualname__'):
-                        salt.utils.versions.warn_until(
-                            'Hydrogen',
-                            'The \'{0}\' module is renaming itself in its '
-                            '__virtual__() function ({1} => {2}). Please '
-                            'set it\'s virtual name as the '
-                            '\'__virtualname__\' module attribute. '
-                            'Example: "__virtualname__ = \'{2}\'"'.format(
-                                mod.__name__,
-                                module_name,
-                                virtual
-                            )
-                        )
 
                     if virtualname != virtual:
                         # The __virtualname__ attribute does not match what's

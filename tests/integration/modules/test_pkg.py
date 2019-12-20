@@ -12,10 +12,13 @@ from tests.support.helpers import (
     destructiveTest,
     requires_network,
     requires_salt_modules,
-    requires_system_grains)
+    requires_system_grains,
+    skip_if_not_root)
+from tests.support.unit import skipIf
 
 # Import Salt libs
 from salt.utils import six
+import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
 
@@ -27,16 +30,16 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
     @classmethod
     @requires_system_grains
-    def setUpClass(cls, grains):
+    def setUpClass(cls, grains):  # pylint: disable=arguments-differ
         cls.ctx = {}
         cls.pkg = 'figlet'
         if salt.utils.platform.is_windows():
             cls.pkg = 'putty'
-        elif salt.utils.platform.is_darwin():
-            cls.pkg = 'wget' if int(grains['osmajorrelease']) >= 13 else 'htop'
         elif grains['os_family'] == 'RedHat':
             cls.pkg = 'units'
 
+    @skip_if_not_root
+    @requires_salt_modules('pkg.refresh_db')
     def setUp(self):
         if 'refresh' not in self.ctx:
             self.run_function('pkg.refresh_db')
@@ -95,7 +98,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertIsInstance(ret, dict,
                                       'The \'pkg.get_repo\' command did not return the excepted dictionary. '
                                       'Output:\n{}'.format(ret))
-
                 self.assertEqual(
                     ret['uri'],
                     uri,
@@ -225,8 +227,6 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             if not isinstance(ret, dict):
                 self.skipTest('Upstream repo did not return coherent results. Skipping test.')
             self.assertNotEqual(ret, {})
-        elif grains['os_family'] == 'Suse':
-            self.assertNotEqual(ret, {})
             for source, state in ret.items():
                 self.assertIn(state, (True, False, None))
 
@@ -255,6 +255,10 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             keys = ret.keys()
             self.assertIn('less', keys)
             self.assertIn('zypper', keys)
+        else:
+            ret = self.run_function(func, [self.pkg])
+            keys = ret.keys()
+            self.assertIn(self.pkg, keys)
 
     @destructiveTest
     @requires_network()
@@ -264,6 +268,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test running a system upgrade when there are packages that need upgrading
         '''
+        if grains['os'] == 'Arch':
+            self.skipTest('Arch moved to Python 3.8 and we\'re not ready for it yet')
+
         func = 'pkg.upgrade'
 
         # First make sure that an up-to-date copy of the package db is available
@@ -326,6 +333,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 self.assertNotEqual(ret, {})
 
     @destructiveTest
+    @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
     @requires_salt_modules('pkg.remove', 'pkg.latest_version')
     @requires_system_grains
     def test_pkg_latest_version(self, grains):
@@ -347,8 +355,11 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':
-            self.skipTest('TODO the following command needs to be run as a non-root user')
-            #cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)])
+            brew_bin = salt.utils.path.which('brew')
+            mac_user = self.run_function('file.get_user', [brew_bin])
+            if mac_user == 'root':
+                self.skipTest('brew cannot run as root, try a user in {}'.format(os.listdir('/Users/')))
+            cmd_pkg = self.run_function('cmd.run', ['brew info {0}'.format(self.pkg)], run_as=mac_user)
         else:
             self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])

@@ -9,15 +9,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 # Import Salt Libs
+import salt.loader
 import salt.modules.match as match
 import salt.matchers.compound_match as compound_match
 import salt.matchers.glob_match as glob_match
@@ -33,7 +32,6 @@ MATCHERS_DICT = {
 MINION_ID = 'bar03'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.loader.matchers', MagicMock(return_value=MATCHERS_DICT))
 class MatchTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -60,6 +58,43 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
                 '__opts__': {'id': MINION_ID}
             }
         }
+
+    def test_compound_with_minion_id(self):
+        '''
+        Make sure that when a minion_id IS past, that it is contained in opts
+        '''
+        mock_compound_match = MagicMock()
+        target = 'bar04'
+        new_minion_id = 'new_minion_id'
+
+        with patch.object(salt.loader, 'matchers', return_value={'compound_match.match': mock_compound_match}) as matchers:
+            match.compound(target, minion_id=new_minion_id)
+
+            # The matcher should get called with MINION_ID
+            matchers.assert_called_once()
+            matchers_opts = matchers.call_args[0][0]
+            self.assertEqual(matchers_opts.get('id'), new_minion_id)
+
+            # The compound matcher should not get MINION_ID, no opts should be passed
+            mock_compound_match.assert_called_once_with(target)
+
+    def test_compound(self):
+        '''
+        Test issue #55149
+        '''
+        mock_compound_match = MagicMock()
+        target = 'bar04'
+
+        with patch.object(salt.loader, 'matchers', return_value={'compound_match.match': mock_compound_match}) as matchers:
+            match.compound(target)
+
+            # The matcher should get called with MINION_ID
+            matchers.assert_called_once()
+            self.assertEqual(len(matchers.call_args[0]), 1)
+            self.assertEqual(matchers.call_args[0][0].get('id'), MINION_ID)
+
+            # The compound matcher should not get MINION_ID, no opts should be passed
+            mock_compound_match.assert_called_once_with(target)
 
     def test_filter_by(self):
         '''
