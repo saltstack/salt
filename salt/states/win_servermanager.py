@@ -57,7 +57,9 @@ def installed(name,
         recurse (Optional[bool]):
             Install all sub-features as well. If the feature is installed but
             one of its sub-features are not installed set this will install
-            additional sub-features
+            additional sub-features. This argument was previously renamed from
+            ``force``. To ensure backwards compatibility ``force`` will to work
+            but please update your states to use the preferred ``recurse`` arg.
 
         source (Optional[str]):
             Path to the source files if missing from the target system. None
@@ -112,6 +114,9 @@ def installed(name,
             - exclude:
               - Web-Server
     '''
+    if 'force' in kwargs:
+        kwargs.pop('force')
+
     ret = {'name': name,
            'result': True,
            'changes': {},
