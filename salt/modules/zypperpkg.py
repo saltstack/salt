@@ -1492,7 +1492,7 @@ def upgrade(refresh=True,
         if isinstance(fromrepo, six.string_types):
             fromrepo = [fromrepo]
         for repo in fromrepo:
-            cmd_update.extend(['--from', repo])
+            cmd_update.extend(['--from' if dist_upgrade else '--repo', repo])
         log.info('Targeting repos: %s', fromrepo)
 
     if dist_upgrade:
