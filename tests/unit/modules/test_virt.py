@@ -13,8 +13,8 @@ import datetime
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.utils.yaml
@@ -49,7 +49,6 @@ class LibvirtMock(MagicMock):  # pylint: disable=too-many-ancestors
         '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class VirtTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.module.virt
@@ -2677,3 +2676,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         isxen_mock.return_value = True
         self.assertEqual('xen', virt.get_hypervisor())
+
+    def test_pool_delete(self):
+        '''
+        Test virt.pool_delete function
+        '''
+        mock_pool = MagicMock()
+        mock_pool.delete = MagicMock(return_value=0)
+        self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
+
+        res = virt.pool_delete('test-pool')
+        self.assertTrue(res)
+
+        self.mock_conn.storagePoolLookupByName.assert_called_once_with('test-pool')
+
+        # Shouldn't be called with another parameter so far since those are not implemented
+        # and thus throwing exceptions.
+        mock_pool.delete.assert_called_once_with(self.mock_libvirt.VIR_STORAGE_POOL_DELETE_NORMAL)
