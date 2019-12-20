@@ -26,7 +26,8 @@ def installed(name,
               recurse=False,
               restart=False,
               source=None,
-              exclude=None):
+              exclude=None,
+              **kwargs):
     '''
     Install the windows feature. To install a single feature, use the ``name``
     parameter. To install multiple features, use the ``features`` parameter.
