@@ -49,7 +49,6 @@ google-auth==1.6.3        # via kubernetes
 idna==2.8
 importlib-metadata==0.23  # via pluggy, pytest
 ipaddress==1.0.22
-jaraco.classes==2.0       # via cherrypy
 jaraco.functools==2.0     # via tempora
 jinja2==2.10.1
 jmespath==0.9.4           # via boto3, botocore
@@ -91,7 +90,7 @@ pyparsing==2.4.5          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.11.27
+pytest-salt==2019.12.18
 pytest-tempdir==2019.10.12
 pytest==4.6.6
 python-dateutil==2.8.0
@@ -133,5 +132,7 @@ xmltodict==0.12.0         # via moto
 yamlordereddictloader==0.4.0
 zc.lockfile==1.4          # via cherrypy
 zipp==0.6.0               # via importlib-metadata
+# Passthrough dependencies from pkg/osx/req.txt
+pyobjc==5.1.2
 # Passthrough dependencies from pkg/osx/req.txt
 pyobjc==5.1.2

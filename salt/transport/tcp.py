@@ -23,6 +23,7 @@ import salt.crypt
 import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
@@ -55,7 +56,6 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
-import msgpack
 try:
     from M2Crypto import RSA
     HAS_M2 = True
@@ -586,7 +586,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not isinstance(body, dict):
                 # TODO: For some reason we need to decode here for things
                 #       to work. Fix this.
-                body = msgpack.loads(body)
+                body = salt.utils.msgpack.loads(body)
                 if six.PY3:
                     body = salt.transport.frame.decode_embedded_strs(body)
             ret = yield self._decode_payload(body)
@@ -778,7 +778,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         '''
         log.trace('Req client %s connected', address)
         self.clients.append((stream, address))
-        unpacker = msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker()
         try:
             while True:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -1077,7 +1077,7 @@ class SaltMessageClient(object):
                     not self._connecting_future.done() or
                     self._connecting_future.result() is not True):
                 yield self._connecting_future
-            unpacker = msgpack.Unpacker()
+            unpacker = salt.utils.msgpack.Unpacker()
             while not self._closing:
                 try:
                     self._read_until_future = self._stream.read_bytes(4096, partial=True)
@@ -1357,7 +1357,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
 
     @tornado.gen.coroutine
     def _stream_read(self, client):
-        unpacker = msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
                 client._read_until_future = client.stream.read_bytes(4096, partial=True)
@@ -1544,7 +1544,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
-        if load['tgt_type'] == 'list':
+        if load['tgt_type'] == 'list' and not self.opts.get("order_masters", False):
             if isinstance(load['tgt'], six.string_types):
                 # Fetch a list of minions that match
                 _res = self.ckminions.check_minions(load['tgt'],
