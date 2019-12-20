@@ -22,7 +22,7 @@ except ImportError:
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 from tests.support.helpers import patched_environ
 
 # Import salt libs
@@ -400,8 +400,8 @@ class GitFSTestBase(object):
                 raise
 
         shutil.copytree(
-             salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-             salt.ext.six.text_type(cls.tmp_repo_dir + '/')
+            salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
+            salt.ext.six.text_type(cls.tmp_repo_dir + '/')
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)
@@ -475,7 +475,6 @@ class GitFSTestBase(object):
 
 
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -522,7 +521,6 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required for temp repo setup'.format(GITPYTHON_MINVER))
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
 @skipIf(salt.utils.platform.is_windows(), 'Skip Pygit2 on windows, due to pygit2 access error on windows')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class Pygit2Test(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

@@ -44,6 +44,7 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
@@ -84,12 +85,6 @@ except ImportError:
     HAS_REQUESTS = False
 
 try:
-    import msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
-
-try:
     import certifi
     HAS_CERTIFI = True
 except ImportError:
@@ -105,6 +100,8 @@ def __decompressContent(coding, pgctnt):
     Currently supports identity/none, deflate, and gzip, which should
     cover 99%+ of the content on the internet.
     '''
+    if not pgctnt:
+        return pgctnt
 
     log.trace("Decompressing %s byte content with compression type: %s", len(pgctnt), coding)
 
@@ -122,9 +119,6 @@ def __decompressContent(coding, pgctnt):
         raise ValueError("Brotli compression is not currently supported")
     elif coding == "compress":
         raise ValueError("LZW compression is not currently supported")
-
-    elif coding == 'identity':
-        pass
 
     log.trace("Content size after decompression: %s", len(pgctnt))
     return pgctnt
@@ -271,19 +265,19 @@ def query(url,
     if session_cookie_jar is None:
         session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
             with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
-                session_cookies = msgpack.load(fh_)
+                session_cookies = salt.utils.msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
-                msgpack.dump('', fh_)
+                salt.utils.msgpack.dump('', fh_)
 
     for header in header_list:
         comps = header.split(':')
@@ -651,15 +645,15 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
-                    msgpack.dump({'Cookie': session_cookies}, fh_)
+                    salt.utils.msgpack.dump({'Cookie': session_cookies}, fh_)
                 else:
-                    msgpack.dump('', fh_)
+                    salt.utils.msgpack.dump('', fh_)
 
     if status is True:
         ret['status'] = result_status_code

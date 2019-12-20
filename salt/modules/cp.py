@@ -831,8 +831,8 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
             'path': load_path_list,
             'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
-    channel = salt.transport.client.ReqChannel.factory(__opts__)
-    try:
+
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
         with salt.utils.files.fopen(path, 'rb') as fp_:
             init_send = False
             while True:
@@ -855,8 +855,6 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                               'setting on the master.')
                     return ret
                 init_send = True
-    finally:
-        channel.close()
 
 
 def push_dir(path, glob=None, upload_path=None):

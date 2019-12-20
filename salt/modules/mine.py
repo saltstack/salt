@@ -75,12 +75,8 @@ def _mine_get(load, opts):
                       'Mine could not be retrieved.'
                       )
             return False
-    channel = salt.transport.client.ReqChannel.factory(opts)
-    try:
-        ret = channel.send(load)
-    finally:
-        channel.close()
-    return ret
+    with salt.transport.client.ReqChannel.factory(opts) as channel:
+        return channel.send(load)
 
 
 def update(clear=False, mine_functions=None):
