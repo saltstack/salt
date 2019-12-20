@@ -125,6 +125,27 @@ Module Deprecations
   :py:func:`MS Teams <salt.modules.msteams>`, or
   :py:func:`Slack <salt.modules.slack_notify>` may be suitable replacements.
 
+- The :py:mod:`dockermod <salt.modules.dockermod>` module has been
+  changed as follows:
+
+    - Support for the ``tags`` kwarg has been removed from the
+      :py:func:`dockermod.resolve_tag <salt.modules.dockermod.resolve_tag>`
+      function.
+    - Support for the ``network_id`` kwarg has been removed from the
+      :py:func:`dockermod.connect_container_to_network <salt.modules.dockermod.connect_container_to_network>`
+      function. Please use ``net_id`` instead.
+    - Support for the ``name`` kwarg has been removed from the
+      :py:func:`dockermod.sls_build <salt.modules.dockermod.sls_build>`
+      function. Please use ``repository`` and ``tag`` instead.
+    - Support for the ``image`` kwarg has been removed from the following
+      functions. In all cases, please use both the ``repository`` and ``tag``
+      options instead:
+
+        - :py:func:`dockermod.build <salt.modules.dockermod.build>`
+        - :py:func:`dockermod.commit <salt.modules.dockermod.commit>`
+        - :py:func:`dockermod.import <salt.modules.dockermod.import_>`
+        - :py:func:`dockermod.load <salt.modules.dockermod.load>`
+        - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
 State Deprecations
 ------------------
@@ -172,4 +193,3 @@ salt.auth.Authorize Class Removal
 - The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
   the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
   not being used inside of the salt code base.
-
