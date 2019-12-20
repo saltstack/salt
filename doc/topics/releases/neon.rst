@@ -4,6 +4,57 @@
 Salt Release Notes - Codename Neon
 ==================================
 
+Troubleshooting Jinja map files
+===============================
+
+A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
+has been added.
+
+Assuming the map is loaded in your formula SLS as follows:
+
+.. code-block:: jinja
+
+  {% from "myformula/map.jinja" import myformula with context %}
+
+The following command can be used to load the map and check the results:
+
+.. code-block:: bash
+
+  salt myminion jinja.load_map myformula/map.jinja myformula
+
+The module can be also used to test ``json`` and ``yaml`` maps:
+
+.. code-block:: bash
+
+  salt myminion jinja.import_yaml myformula/defaults.yaml
+
+  salt myminion jinja.import_json myformula/defaults.json
+
+Slot Syntax Updates
+===================
+
+The slot syntax has been updated to support parsing dictionary responses and to append text.
+
+.. code-block:: yaml
+
+  demo dict parsing and append:
+    test.configurable_test_state:
+      - name: slot example
+      - changes: False
+      - comment: __slot__:salt:test.arg(shell="/bin/bash").kwargs.shell ~ /appended
+
+.. code-block:: none
+
+  local:
+    ----------
+          ID: demo dict parsing and append
+    Function: test.configurable_test_state
+        Name: slot example
+      Result: True
+     Comment: /bin/bash/appended
+     Started: 09:59:58.623575
+    Duration: 1.229 ms
+     Changes:
 
 Keystore State and Module
 =========================
@@ -52,7 +103,6 @@ as well as managing keystore files.
             Hn+GmxZA
             -----END CERTIFICATE-----
 
-
 XML Module
 ==========
 
@@ -89,34 +139,6 @@ editing values from an xpath query, or editing XML IDs.
         - xpath: .//actor[@id='1']
         - value: William Shatner
 
-
-Slot Syntax Updates
-===================
-
-The slot syntax has been updated to support parsing dictionary responses and to append text.
-
-.. code-block:: yaml
-
-  demo dict parsing and append:
-    test.configurable_test_state:
-      - name: slot example
-      - changes: False
-      - comment: __slot__:salt:test.arg(shell="/bin/bash").kwargs.shell ~ /appended
-
-.. code-block:: none
-
-  local:
-    ----------
-          ID: demo dict parsing and append
-    Function: test.configurable_test_state
-        Name: slot example
-      Result: True
-     Comment: /bin/bash/appended
-     Started: 09:59:58.623575
-    Duration: 1.229 ms
-     Changes:
-
-
 State Changes
 =============
 
@@ -135,6 +157,27 @@ Module Deprecations
   :py:func:`MS Teams <salt.modules.msteams>`, or
   :py:func:`Slack <salt.modules.slack_notify>` may be suitable replacements.
 
+- The :py:mod:`dockermod <salt.modules.dockermod>` module has been
+  changed as follows:
+
+    - Support for the ``tags`` kwarg has been removed from the
+      :py:func:`dockermod.resolve_tag <salt.modules.dockermod.resolve_tag>`
+      function.
+    - Support for the ``network_id`` kwarg has been removed from the
+      :py:func:`dockermod.connect_container_to_network <salt.modules.dockermod.connect_container_to_network>`
+      function. Please use ``net_id`` instead.
+    - Support for the ``name`` kwarg has been removed from the
+      :py:func:`dockermod.sls_build <salt.modules.dockermod.sls_build>`
+      function. Please use ``repository`` and ``tag`` instead.
+    - Support for the ``image`` kwarg has been removed from the following
+      functions. In all cases, please use both the ``repository`` and ``tag``
+      options instead:
+
+        - :py:func:`dockermod.build <salt.modules.dockermod.build>`
+        - :py:func:`dockermod.commit <salt.modules.dockermod.commit>`
+        - :py:func:`dockermod.import <salt.modules.dockermod.import_>`
+        - :py:func:`dockermod.load <salt.modules.dockermod.load>`
+        - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
 State Deprecations
 ------------------
@@ -142,6 +185,19 @@ State Deprecations
 - The hipchat state has been removed due to the service being retired.
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
+Fileserver Deprecations
+-----------------------
+
+- The hgfs fileserver had the following config options removed:
+
+    - The ``hgfs_env_whitelist`` config option has been removed in favor of ``hgfs_saltenv_whitelist``.
+    - The ``hgfs_env_blacklist`` config option has been removed in favor of ``hgfs_saltenv_blacklist``.
+
+- The svnfs fileserver had the following config options removed:
+
+    - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
+    - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
 
 Engine Removal
 --------------
@@ -155,3 +211,17 @@ Returner Removal
 - The hipchat returner has been removed due to the service being retired. For users migrating
   to Slack, the :py:func:`slack <salt.returners.slack_returner>` returner may be a suitable
   replacement.
+
+Grain Deprecations
+------------------
+
+For ``smartos`` some grains have been deprecated. These grains have been removed.
+
+  - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
+  - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+salt.auth.Authorize Class Removal
+---------------------------------
+- The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
+  the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
+  not being used inside of the salt code base.

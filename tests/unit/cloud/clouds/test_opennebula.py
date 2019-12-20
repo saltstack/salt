@@ -9,7 +9,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt Libs
 from salt.cloud.clouds import opennebula
@@ -25,7 +25,6 @@ except ImportError:
 VM_NAME = 'my-vm'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class OpenNebulaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.opennebula module.
