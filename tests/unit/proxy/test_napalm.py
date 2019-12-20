@@ -8,11 +8,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -35,7 +33,6 @@ def mock_get_device(opts, *args, **kwargs):
     }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.utils.napalm.get_device', mock_get_device)
 class NapalmProxyTestCase(TestCase, LoaderModuleMockMixin):
 

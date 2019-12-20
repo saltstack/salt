@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import SaltClientTestCaseMixin
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
@@ -19,7 +19,6 @@ from salt.exceptions import (
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LocalClientTestCase(TestCase,
                           SaltClientTestCaseMixin):
 
