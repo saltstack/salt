@@ -14,9 +14,13 @@ Versions are `MAJOR.PATCH`.
 
 ### Deprecated
 - [#55552](https://github.com/saltstack/salt/pull/55552) - The config options `hgfs_env_whitelist`, `hgfs_env_blacklist`, `svnfs_env_whitelist`, and `svnfs_env_whitelist` have been deprecated in favor of `hgfs_saltenv_whitelist`, `hgfs_saltenv_blacklist`, `svnfs_saltenv_whitelist`, `svnfs_saltenv_blacklist`.
-
+- [#55569](https://github.com/saltstack/salt/pull/55569) - Deprecate nova cloud driver in favor of the openstack driver.
 - [#55609](https://github.com/saltstack/salt/pull/55609) - Remove smartos grains `hypervisor_uuid` and `datacenter` in favor of `mdata:sdc:server_uuid` and `mdata:sdc:datacenter_name`.
 - [#55539](https://github.com/saltstack/salt/pull/55539) - Deprecate salt.auth.Authorize class and the any_auth method
+- [#55573](https://github.com/saltstack/salt/pull/55573) - Deprecate `quiet` kwarg in cmd.run state module. Please set `output_loglevel` to `quiet` instead.
+- [#55641](https://github.com/saltstack/salt/pull/55641) - Deprecate `enviroment` kwarg from heat state and execution module. Please use correct spelling `environment`.
+- [#55682](https://github.com/saltstack/salt/pull/55682) - Deprecate `get_known_host` and `recv_known_host` functions from ssh module.
+- [#55684](https://github.com/saltstack/salt/pull/55684) - Deprecate `rand_str` function from test module. Please use `rand_hash` instead.
 
 
 ### Changed

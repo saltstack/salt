@@ -176,12 +176,41 @@ Module Deprecations
         - :py:func:`dockermod.load <salt.modules.dockermod.load>`
         - :py:func:`dockermod.tag <salt.modules.dockermod.tag_>`
 
+- The heat module has removed the ``enviroment`` kwarg from the
+  :py:func:`heat.create_stack <salt.modules.heat.create_stack>` and
+  :py:func:`heat.update_stack <salt.modules.heat.update_stack>` functions due
+  to a spelling error. Please use ``environment`` instead.
+
+- The :py:mod:`ssh <salt.modules.ssh>` execution module has been
+  changed as follows:
+
+    - Support for the ``ssh.get_known_host`` function has been removed. Please use the
+      :py:func:`ssh.get_known_host_entries <salt.modules.ssh.get_known_host_entries>`
+      function instead.
+    - Support for the ``ssh.recv_known_host`` function has been removed. Please use the
+      :py:func:`ssh.recv_known_host_entries <salt.modules.ssh.recv_known_host_entries>`
+      function instead.
+
+- The :py:mod:`test <salt.modules.test>` execution module has been changed as follows:
+
+    - Support for the :py:func:`test.rand_str <salt.modules.test.rand_str>` has been
+      removed. Please use the :py:func:`test.random_hash <salt.modules.test.random_hash>`
+      function instead.
+
 State Deprecations
 ------------------
 
 - The hipchat state has been removed due to the service being retired.
   :py:func:`MS Teams <salt.states.msteams>` or
   :py:func:`Slack <salt.states.slack>` may be suitable replacements.
+
+- The cmd state module has removed the ``quiet`` kwarg from the
+  :py:func:`cmd.run <salt.states.cmd.run>` function. Please
+  set ``output_loglevel`` to ``quiet`` instead.
+
+- The heat state module has removed the ``enviroment`` kwarg from the
+  :py:func:`heat.deployed <salt.states.heat.deployed>` function due
+  to a spelling error. Please use ``environment`` instead.
 
 Fileserver Deprecations
 -----------------------
@@ -216,6 +245,20 @@ For ``smartos`` some grains have been deprecated. These grains have been removed
 
   - The ``hypervisor_uuid`` has been replaced with ``mdata:sdc:server_uuid`` grain.
   - The ``datacenter`` has been replaced with ``mdata:sdc:datacenter_name`` grain.
+
+Cloud Deprecations
+------------------
+
+- The nova cloud driver has been removed in favor of the openstack cloud driver.
+
+
+Jinja Filter Deprecations
+-------------------------
+
+- The following jinja filters are set to be removed in the Aluminium release:
+
+  - :jinja_ref:`json_decode_dict` in favor of :jinja_ref:`tojson`
+  - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`
 
 salt.auth.Authorize Class Removal
 ---------------------------------
