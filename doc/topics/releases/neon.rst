@@ -271,7 +271,7 @@ Jinja Filter Deprecations
   - :jinja_ref:`json_decode_list` in favor of :jinja_ref:`tojson`
 
 Utils Deprecations
------------------
+------------------
 - All of the functions in salt.utils.__init__.py have been removed. These
   include:
 
