@@ -434,35 +434,3 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         # Ensure that the correct server cert serial is amongst
         # the revoked certificates
         self.assertIn(serial_number, crl)
-
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
-    def test_create_csr(self):
-        '''
-        Test create_csr
-        :return:
-        '''
-        ca_key = default_values['ca_key']
-
-        ret = x509.create_csr(text=True,
-                              public_key=ca_key,
-                              CN='Redacted Root CA')
-        self.assertIn(b'BEGIN CERTIFICATE REQUEST', ret)
-
-    @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailable')
-    def test_create_csr_ext_mapping(self):
-        '''
-        Test create_csr with ext_mapping
-        :return:
-        '''
-        ca_key = default_values['ca_key']
-
-        ret = x509.create_csr(text=True,
-                              public_key=ca_key,
-                              CN='Redacted Root CA',
-                              DomainController='ASN1:UTF8String:SomeOneSomeWhere',
-                              ext_mapping={'1.3.6.1.4.1.311.20.2': 'DomainController'})
-
-        self.assertIn(b'BEGIN CERTIFICATE REQUEST', ret)
-
-        ret = x509.read_csr(ret)
-        self.assertIn(b'1.3.6.1.4.1.311.20.2', ret['X509v3 Extensions'])
