@@ -595,10 +595,9 @@ class AsyncAuth(object):
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                io_loop=self.io_loop)
-        try:
+        with salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           io_loop=self.io_loop) as channel:
             error = None
             while True:
                 try:
@@ -654,8 +653,6 @@ class AsyncAuth(object):
                 if self.opts.get('auth_events') is True:
                     with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
                         event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
-        finally:
-            channel.close()
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -1220,10 +1217,9 @@ class SAuth(AsyncAuth):
         '''
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
-        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        try:
+        with salt.transport.client.ReqChannel.factory(self.opts, crypt='clear') as channel:
             while True:
                 creds = self.sign_in(channel=channel)
                 if creds == 'retry':
@@ -1249,8 +1245,6 @@ class SAuth(AsyncAuth):
                 break
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
-        finally:
-            channel.close()
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''

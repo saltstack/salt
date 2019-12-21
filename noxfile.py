@@ -877,13 +877,22 @@ def _pytest(session, coverage, cmd_args):
         else:
             session.run('py.test', *cmd_args, env=env)
     except CommandFailed:
+        # Not rerunning failed tests for now
+        raise
+
+        # pylint: disable=unreachable
         # Re-run failed tests
         session.log('Re-running failed tests')
+
+        for idx, parg in enumerate(cmd_args):
+            if parg.startswith('--junitxml='):
+                cmd_args[idx] = parg.replace('.xml', '-rerun-failed.xml')
         cmd_args.append('--lf')
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
             session.run('py.test', *cmd_args, env=env)
+        # pylint: enable=unreachable
 
 
 def _lint(session, rcfile, flags, paths):

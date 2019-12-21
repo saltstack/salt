@@ -52,6 +52,7 @@ import salt.output
 import salt.version
 import salt.utils.color
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
@@ -63,7 +64,6 @@ from salt.utils.immutabletypes import freeze
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 
 try:
@@ -142,7 +142,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer, object):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = msgpack.Unpacker(encoding='utf-8')
+        unpacker = salt.utils.msgpack.Unpacker(encoding='utf-8')
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)

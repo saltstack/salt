@@ -20,8 +20,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import destructiveTest
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     Mock,
     MagicMock,
     call,
@@ -44,7 +42,6 @@ from salt.ext.six.moves import range
 import salt.utils.win_functions
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

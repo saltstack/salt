@@ -9,10 +9,8 @@ import os
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -46,7 +44,6 @@ def _isfile_side_effect(path):
     }[path.lower() if salt.utils.platform.is_windows() else path]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

@@ -10,7 +10,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, call, NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.mock import patch, call, MagicMock
 
 # Import Salt libraries
 import salt.master
@@ -20,7 +20,6 @@ from salt.exceptions import SaltDeserializationError
 import salt.utils.platform
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LoadAuthTestCase(TestCase):
 
     def setUp(self):  # pylint: disable=W0221
