@@ -21,6 +21,7 @@ The data structure needs to be:
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import os
+import sys
 import time
 import random
 import logging
@@ -97,16 +98,13 @@ def get_local_client(
         # Late import to prevent circular import
         import salt.config
         opts = salt.config.client_config(c_path)
-    if opts['transport'] == 'raet':
-        import salt.client.raet
-        return salt.client.raet.LocalClient(mopts=opts)
+
     # TODO: AIO core is separate from transport
-    elif opts['transport'] in ('zeromq', 'tcp'):
-        return LocalClient(
-            mopts=opts,
-            skip_perm_errors=skip_perm_errors,
-            io_loop=io_loop,
-            auto_reconnect=auto_reconnect)
+    return LocalClient(
+        mopts=opts,
+        skip_perm_errors=skip_perm_errors,
+        io_loop=io_loop,
+        auto_reconnect=auto_reconnect)
 
 
 class LocalClient(object):
@@ -341,9 +339,9 @@ class LocalClient(object):
                 'The salt master could not be contacted. Is master running?'
             )
         except AuthenticationError as err:
-            raise AuthenticationError(err)
+            six.reraise(*sys.exc_info())
         except AuthorizationError as err:
-            raise AuthorizationError(err)
+            six.reraise(*sys.exc_info())
         except Exception as general_exception:
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
@@ -547,7 +545,7 @@ class LocalClient(object):
                 'tgt_type': tgt_type,
                 'ret': ret,
                 'batch': batch,
-                'failhard': kwargs.get('failhard', False),
+                'failhard': kwargs.get('failhard', self.opts.get('failhard', False)),
                 'raw': kwargs.get('raw', False)}
 
         if 'timeout' in kwargs:
@@ -1720,56 +1718,56 @@ class LocalClient(object):
                 timeout,
                 **kwargs)
 
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                           crypt='clear',
-                                                           master_uri=master_uri)
+        master_uri = 'tcp://{}:{}'.format(
+            salt.utils.zeromq.ip_bracket(self.opts['interface']),
+            six.text_type(self.opts['ret_port'])
+        )
 
-        try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if listen and not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
-            payload = channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
-            raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. You '
-                'may need to run your command with `--async` in order to '
-                'bypass the congested event bus. With `--async`, the CLI tool '
-                'will print the job id (jid) and exit immediately without '
-                'listening for responses. You can then use '
-                '`salt-run jobs.lookup_jid` to look up the results of the job '
-                'in the job cache later.'
-            )
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      master_uri=master_uri) as channel:
+            try:
+                # Ensure that the event subscriber is connected.
+                # If not, we won't get a response, so error out
+                if listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+                payload = channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError as err:
+                log.error(err)
+                raise SaltReqTimeoutError(
+                    'Salt request timed out. The master is not responding. You '
+                    'may need to run your command with `--async` in order to '
+                    'bypass the congested event bus. With `--async`, the CLI tool '
+                    'will print the job id (jid) and exit immediately without '
+                    'listening for responses. You can then use '
+                    '`salt-run jobs.lookup_jid` to look up the results of the job '
+                    'in the job cache later.'
+                )
 
-        if not payload:
-            # The master key could have changed out from under us! Regen
-            # and try again if the key has changed
-            key = self.__read_master_key()
-            if key == self.key:
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    return payload
+                self.key = key
+                payload_kwargs['key'] = self.key
+                payload = channel.send(payload_kwargs)
+
+            error = payload.pop('error', None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get('name', '')
+                    err_msg = error.get('message', '')
+                    if err_name == 'AuthenticationError':
+                        raise AuthenticationError(err_msg)
+                    elif err_name == 'AuthorizationError':
+                        raise AuthorizationError(err_msg)
+
+                raise PublishError(error)
+
+            if not payload:
                 return payload
-            self.key = key
-            payload_kwargs['key'] = self.key
-            payload = channel.send(payload_kwargs)
-
-        error = payload.pop('error', None)
-        if error is not None:
-            if isinstance(error, dict):
-                err_name = error.get('name', '')
-                err_msg = error.get('message', '')
-                if err_name == 'AuthenticationError':
-                    raise AuthenticationError(err_msg)
-                elif err_name == 'AuthorizationError':
-                    raise AuthorizationError(err_msg)
-
-            raise PublishError(error)
-
-        if not payload:
-            return payload
-
-        # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        channel.close()
 
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
@@ -1829,59 +1827,57 @@ class LocalClient(object):
 
         master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
                      ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                io_loop=io_loop,
-                                                                crypt='clear',
-                                                                master_uri=master_uri)
 
-        try:
-            # Ensure that the event subscriber is connected.
-            # If not, we won't get a response, so error out
-            if listen and not self.event.connect_pub(timeout=timeout):
-                raise SaltReqTimeoutError()
-            payload = yield channel.send(payload_kwargs, timeout=timeout)
-        except SaltReqTimeoutError:
-            raise SaltReqTimeoutError(
-                'Salt request timed out. The master is not responding. You '
-                'may need to run your command with `--async` in order to '
-                'bypass the congested event bus. With `--async`, the CLI tool '
-                'will print the job id (jid) and exit immediately without '
-                'listening for responses. You can then use '
-                '`salt-run jobs.lookup_jid` to look up the results of the job '
-                'in the job cache later.'
-            )
+        with salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                           io_loop=io_loop,
+                                                           crypt='clear',
+                                                           master_uri=master_uri) as channel:
+            try:
+                # Ensure that the event subscriber is connected.
+                # If not, we won't get a response, so error out
+                if listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+                payload = yield channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError:
+                raise SaltReqTimeoutError(
+                    'Salt request timed out. The master is not responding. You '
+                    'may need to run your command with `--async` in order to '
+                    'bypass the congested event bus. With `--async`, the CLI tool '
+                    'will print the job id (jid) and exit immediately without '
+                    'listening for responses. You can then use '
+                    '`salt-run jobs.lookup_jid` to look up the results of the job '
+                    'in the job cache later.'
+                )
 
-        if not payload:
-            # The master key could have changed out from under us! Regen
-            # and try again if the key has changed
-            key = self.__read_master_key()
-            if key == self.key:
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    raise tornado.gen.Return(payload)
+                self.key = key
+                payload_kwargs['key'] = self.key
+                payload = yield channel.send(payload_kwargs)
+
+            error = payload.pop('error', None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get('name', '')
+                    err_msg = error.get('message', '')
+                    if err_name == 'AuthenticationError':
+                        raise AuthenticationError(err_msg)
+                    elif err_name == 'AuthorizationError':
+                        raise AuthorizationError(err_msg)
+
+                raise PublishError(error)
+
+            if not payload:
                 raise tornado.gen.Return(payload)
-            self.key = key
-            payload_kwargs['key'] = self.key
-            payload = yield channel.send(payload_kwargs)
-
-        error = payload.pop('error', None)
-        if error is not None:
-            if isinstance(error, dict):
-                err_name = error.get('name', '')
-                err_msg = error.get('message', '')
-                if err_name == 'AuthenticationError':
-                    raise AuthenticationError(err_msg)
-                elif err_name == 'AuthorizationError':
-                    raise AuthorizationError(err_msg)
-
-            raise PublishError(error)
-
-        if not payload:
-            raise tornado.gen.Return(payload)
-
-        # We have the payload, let's get rid of the channel fast(GC'ed faster)
-        channel.close()
 
         raise tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
+    # pylint: disable=W1701
     def __del__(self):
         # This IS really necessary!
         # When running tests, if self.events is not destroyed, we leak 2
@@ -1889,6 +1885,7 @@ class LocalClient(object):
         if hasattr(self, 'event'):
             # The call below will take care of calling 'self.event.destroy()'
             del self.event
+    # pylint: enable=W1701
 
     def _clean_up_subscriptions(self, job_id):
         if self.opts.get('order_masters'):

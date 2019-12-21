@@ -10,8 +10,6 @@ import sys
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -21,7 +19,6 @@ import salt.states.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not sys.platform.startswith('linux'), 'Test for Linux only')
 class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
     '''
