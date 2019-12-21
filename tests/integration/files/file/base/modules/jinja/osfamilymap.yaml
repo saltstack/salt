@@ -1,0 +1,36 @@
+---
+Debian:
+  pkg:
+    name: template-debian
+  config: /etc/template.d/custom.conf
+
+RedHat:
+  pkg:
+    name: template-redhat
+  config: /etc/template.conf
+
+Suse:
+  pkg:
+    name: template-suse
+
+Gentoo: {}
+
+Arch:
+  pkg:
+    name: template-arch
+  service:
+    name: service-arch
+
+Alpine: {}
+
+FreeBSD:
+  rootgroup: wheel
+
+OpenBSD:
+  rootgroup: wheel
+
+Solaris: {}
+
+Windows: {}
+
+MacOS: {}
