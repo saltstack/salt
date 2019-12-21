@@ -61,7 +61,6 @@ junos-eznc==2.2.0
 jxmlease==1.0.1
 keyring==5.7.1
 kubernetes==3.0.0
-libnacl==1.7
 linode-python==1.1.1
 lxml==4.3.3               # via junos-eznc, ncclient
 mako==1.0.7
