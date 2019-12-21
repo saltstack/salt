@@ -39,7 +39,10 @@ Current known limitations
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
+import chardet
 import csv
+import glob
+import hashlib
 import io
 import os
 import logging
@@ -114,7 +117,8 @@ try:
     VALUE_XPATH = etree.XPath('.//*[local-name() = "value"]')
     TRUE_LIST_XPATH = etree.XPath('.//*[local-name() = "trueList"]')
     FALSE_LIST_XPATH = etree.XPath('.//*[local-name() = "falseList"]')
-    REGKEY_XPATH = etree.XPath('//*[translate(@*[local-name() = "key"], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = $keyvalue]')
+    # REGKEY_XPATH = etree.XPath('//*[translate(@*[local-name() = "key"], "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz") = $keyvalue]')
+    REGKEY_XPATH = etree.XPath('//*[@key = $keyvalue]')
     POLICY_ANCESTOR_XPATH = etree.XPath('ancestor::*[local-name() = "policy"]')
     ALL_CLASS_POLICY_XPATH = etree.XPath('//*[local-name() = "policy" and (@*[local-name() = "class"] = "Both" or @*[local-name() = "class"] = $registry_class)]')
     ADML_DISPLAY_NAME_XPATH = etree.XPath('//*[local-name() = $displayNameType and @*[local-name() = "id"] = $displayNameId]')
@@ -4849,17 +4853,62 @@ def _parse_xml(adm_file):
        recognize
     '''
     parser = lxml.etree.XMLParser(remove_comments=True)
+
+    modified_xml = ''
+    with salt.utils.files.fopen(adm_file, 'rb') as rfh:
+        file_hash = hashlib.md5(rfh.read()).hexdigest()
+
+    name, ext = os.path.splitext(os.path.basename(adm_file))
+    hashed_filename = '%s-%s%s' % (name, file_hash, ext)
+
+    cache_dir = os.path.join(__opts__['cachedir'], 'lgpo', 'policy_defs')
+    if not os.path.exists(cache_dir):
+        os.makedirs(cache_dir)
+
+    out_file = os.path.join(cache_dir, hashed_filename)
+
+    if not os.path.isfile(out_file):
+        log.debug('LGPO: Generating policy template cache for %s%s' % (name, ext))
+
+        # Remove old files, keep the cache clean
+        file_list = glob.glob(os.path.join(cache_dir, '%s*%s' % (name, ext)))
+        for file_path in file_list:
+            os.remove(file_path)
+
+        # Load the file
+        with salt.utils.files.fopen(adm_file, 'rb') as rfh:
+
+            encoding = 'utf-8'
+            raw = rfh.read()
+            try:
+                raw = raw.decode(encoding)
+            except UnicodeDecodeError:
+                log.trace('LGPO: Detecting encoding')
+                encoding = chardet.detect(raw)['encoding']
+                raw = raw.decode(encoding)
+            for line in raw.split('\r\n'):
+                if 'key="' in line:
+                    start = line.index('key="')
+                    q1 = line[start:].index('"') + start
+                    q2 = line[q1 + 1:].index('"') + q1 + 1
+                    line = line.replace(line[start:q2], line[start:q2].lower())
+                    found_key = True
+                modified_xml += line + '\r\n'
+
+        with salt.utils.files.fopen(out_file, 'wb') as wfh:
+            wfh.write(modified_xml.encode(encoding))
+
     try:
         # First we'll try to parse valid xml
-        xml_tree = lxml.etree.parse(adm_file, parser=parser)
+        xml_tree = lxml.etree.parse(out_file, parser=parser)
     except lxml.etree.XMLSyntaxError:
         try:
             # Next we'll try invalid encoding (see issue #38100)
-            xml_tree = _remove_unicode_encoding(adm_file)
+            xml_tree = _remove_unicode_encoding(out_file)
         except lxml.etree.XMLSyntaxError:
             # Finally we'll try invalid xmlns entry, if this fails, we just want
             # to raise the error
-            xml_tree = _remove_invalid_xmlns(adm_file)
+            xml_tree = _remove_invalid_xmlns(out_file)
     return xml_tree
 
 
