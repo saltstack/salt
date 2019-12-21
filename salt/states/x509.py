@@ -152,6 +152,25 @@ This state creates a private key then requests a certificate signed by ca accord
             bits: 4096
             backup: True
 
+This other state creates a private key then requests a certificate signed by ca
+according to the www policy but adds a strict date range for the certificate to
+be considered valid.
+/srv/salt/www-time-limited.sls
+.. code-block:: yaml
+    /etc/pki/www-time-limited.crt:
+      x509.certificate_managed:
+        - ca_server: ca
+        - signing_policy: www
+        - public_key: /etc/pki/www-time-limited.key
+        - CN: www.example.com
+        - not_before: 2019-05-05 00:00:00
+        - not_after: 2020-05-05 14:30:00
+        - backup: True
+        - managed_private_key:
+            name: /etc/pki/www-time-limited.key
+            bits: 4096
+            backup: True
+
 '''
 
 # Import Python Libs
@@ -393,6 +412,17 @@ def certificate_managed(name,
         <salt.modules.x509.create_certificate>` or :py:func:`file.managed
         <salt.states.file.managed>` are supported.
 
+    not_before:
+        Initial validity date for the certificate. This date must be specified
+        in the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: Neon
+    not_after:
+        Final validity date for the certificate. This date must be specified in
+        the format '%Y-%m-%d %H:%M:%S'.
+
+        .. versionadded:: Neon
+
     Examples:
 
     .. code-block:: yaml
@@ -523,8 +553,16 @@ def certificate_managed(name,
         new_comp = new
 
     new_certificate = False
+
+    # We will compare the date difference here only if it wasn't specified by
+    # default.
+    if 'not_after' in kwargs or 'not_before' in kwargs:
+        remaining_days_ok = True
+    else:
+        remaining_days_ok = (current_days_remaining > days_remaining)
+
     if (current_comp == new_comp and
-            current_days_remaining > days_remaining and
+            remaining_days_ok and
             __salt__['x509.verify_signature'](name, new_issuer_public_key)):
         certificate = __salt__['x509.get_pem_entry'](
             name, pem_type='CERTIFICATE')
