@@ -19,6 +19,7 @@ import salt.beacons.network_settings as network_settings
 import logging
 log = logging.getLogger(__name__)
 
+
 class MockIPClass(object):
     def __init__(self, *args, **kwargs):
         self.args = args
