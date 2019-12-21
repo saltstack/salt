@@ -48,8 +48,10 @@ Azure (ARM) Resource Execution Module
 
 # Python libs
 from __future__ import absolute_import
-from json import loads, dumps
 import logging
+
+# Salt Libs
+import salt.utils.json
 
 # Azure libs
 HAS_LIBS = False
@@ -1061,7 +1063,7 @@ def policy_definition_create_or_update(name, policy_rule, **kwargs):  # pylint: 
     polconn = __utils__['azurearm.get_client']('policy', **kwargs)
 
     # Convert OrderedDict to dict
-    prop_kwargs = {'policy_rule': loads(dumps(policy_rule))}
+    prop_kwargs = {'policy_rule': salt.utils.json.loads(salt.utils.json.dumps(policy_rule))}
 
     policy_kwargs = kwargs.copy()
     policy_kwargs.update(prop_kwargs)
