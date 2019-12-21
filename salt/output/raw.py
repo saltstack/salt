@@ -11,8 +11,17 @@ formatted/indented.
 This was the original outputter used by Salt before the outputter system was
 developed.
 
-Example output::
+CLI Example:
 
+.. code-block:: bash
+
+    salt '*' foo.bar --out=raw
+
+Example output:
+
+.. code-block:: python
+
+    salt '*' foo.bar --out=table
     {'myminion': {'foo': {'list': ['Hello', 'World'], 'bar': 'baz', 'dictionary': {'abc': 123, 'def': 456}}}}
 '''
 
