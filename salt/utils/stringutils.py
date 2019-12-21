@@ -161,7 +161,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
-@jinja_filter('str_to_num')  # Remove this for Neon
+@jinja_filter('str_to_num')
 @jinja_filter('to_num')
 def to_num(text):
     '''
