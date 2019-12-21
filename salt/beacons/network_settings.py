@@ -12,6 +12,7 @@ try:
     IP = IPDB()
     HAS_PYROUTE2 = True
 except ImportError:
+    IP = None
     HAS_PYROUTE2 = False
 
 import ast

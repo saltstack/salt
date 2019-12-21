@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 # Salt testing libs
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 try:
     from pyroute2 import IPDB
@@ -18,6 +18,14 @@ import salt.beacons.network_settings as network_settings
 
 import logging
 log = logging.getLogger(__name__)
+
+class MockIPClass(object):
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+    def by_name(self):
+        return {}
 
 
 class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
@@ -62,8 +70,9 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         with patch.object(network_settings, 'LAST_STATS', {}), \
+            patch.object(network_settings, 'IP', MockIPClass), \
             patch('salt.beacons.network_settings._copy_interfaces_info',
-                   MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
+                  MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
             ret = network_settings.beacon(config)
             self.assertEqual(ret, [])
 
@@ -88,8 +97,9 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         with patch.object(network_settings, 'LAST_STATS', {}), \
+            patch.object(network_settings, 'IP', MockIPClass), \
             patch('salt.beacons.network_settings._copy_interfaces_info',
-                   MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
+                  MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
             ret = network_settings.beacon(config)
             self.assertEqual(ret, [])
 
@@ -110,8 +120,9 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         with patch.object(network_settings, 'LAST_STATS', {}), \
+            patch.object(network_settings, 'IP', MockIPClass), \
             patch('salt.beacons.network_settings._copy_interfaces_info',
-                   MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
+                  MagicMock(side_effect=[LAST_STATS, NEW_STATS])):
             ret = network_settings.beacon(config)
             self.assertEqual(ret, [])
 
