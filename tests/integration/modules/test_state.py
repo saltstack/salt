@@ -2212,7 +2212,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
         test the output from running and echo command with non-ascii
         characters.
         '''
-        ret = self.run_function('state.sls', ['issue-46672-a'])
+        ret = self.run_function('state.sls', ['issue-46672-a'], timeout=60)
         key = list(ret.keys())[0]
         log.debug('== ret %s ==', type(ret))
         _expected = 'This is Æ test!'
