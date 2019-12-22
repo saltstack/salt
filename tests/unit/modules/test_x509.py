@@ -102,6 +102,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 @skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
 
+
     def setup_loader_modules(self):
         return {x509: {}}
 
@@ -348,7 +349,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
         ca_cert = x509.create_certificate(**ca_kwargs)
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_key_file:
-            ca_key_file.write(ca_key)
+            ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
@@ -390,7 +391,7 @@ class X509TestCase(TestCase, LoaderModuleMockMixin):
 
         # Save CA cert + key and server cert to disk as PEM files
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_key_file:
-            ca_key_file.write(ca_key)
+            ca_key_file.write(salt.utils.stringutils.to_str(ca_key))
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
