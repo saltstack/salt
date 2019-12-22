@@ -235,6 +235,11 @@ Fileserver Deprecations
     - The ``svnfs_env_whitelist`` config option has been removed in favor of ``svnfs_saltenv_whitelist``.
     - The ``svnfs_env_blacklist`` config option has been removed in favor of ``svnfs_saltenv_blacklist``.
 
+- The gitfs fileserver had the following config options removed:
+
+    - The ``gitfs_env_whitelist`` config option has been removed in favor of ``gitfs_saltenv_whitelist``.
+    - The ``gitfs_env_blacklist`` config option has been removed in favor of ``gitfs_saltenv_blacklist``.
+
 Engine Removal
 --------------
 

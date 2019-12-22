@@ -22,6 +22,7 @@ Versions are `MAJOR.PATCH`.
 - [#55682](https://github.com/saltstack/salt/pull/55682) - Deprecate `get_known_host` and `recv_known_host` functions from ssh module.
 - [#55683](https://github.com/saltstack/salt/pull/55683) - Deprecate `prune_services` in the firewall state module to be False by default. And update `force_masquerade` to be False by default in the firewall execution module.
 - [#55722](https://github.com/saltstack/salt/pull/55722) - Deprecate all functions in salt/utils/__init__.py.
+- [#55725](https://github.com/saltstack/salt/pull/55725) - Deprecate `gitfs_env_whitelist` and `gitfs_env_blacklist` in favor of `gitfs_saltenv_whitelist` and `gitfs_saltenv_blacklist`.
 
 ### Changed
 
