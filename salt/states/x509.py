@@ -155,8 +155,11 @@ This state creates a private key then requests a certificate signed by ca accord
 This other state creates a private key then requests a certificate signed by ca
 according to the www policy but adds a strict date range for the certificate to
 be considered valid.
+
 /srv/salt/www-time-limited.sls
+
 .. code-block:: yaml
+
     /etc/pki/www-time-limited.crt:
       x509.certificate_managed:
         - ca_server: ca

@@ -99,9 +99,9 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
     }
 }
 
+
 @skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
-
 
     def setup_loader_modules(self):
         return {x509: {}}
