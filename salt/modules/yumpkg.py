@@ -145,6 +145,8 @@ def _yum():
         if ('fedora' in __grains__['os'].lower()
            and int(__grains__['osrelease']) >= 22):
             __context__[contextkey] = 'dnf'
+        elif (__grains__['os_family'] == 'RedHat'
+             and int(__grains__['osrelease']) >= 8):
         else:
             __context__[contextkey] = 'yum'
     return __context__[contextkey]
@@ -215,6 +217,9 @@ def _check_versionlock():
                 vl_plugin = 'python3-dnf-plugin-versionlock'
             else:
                 vl_plugin = 'python2-dnf-plugin-versionlock'
+        elif (__grains__.get('os_family') == 'RedHat'
+             and __grains__.get('osmajorrelease') >= 8):
+            vl_plugin = 'python3-dnf-plugin-versionlock'
         else:
             if six.PY3:
                 vl_plugin = 'python3-dnf-plugins-extras-versionlock'
