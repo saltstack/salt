@@ -431,7 +431,7 @@ def delete_stack(name=None, poll=0, timeout=60, profile=None):
 
 def create_stack(name=None, template_file=None, environment=None,
                  parameters=None, poll=0, rollback=False, timeout=60,
-                 profile=None, enviroment=None):
+                 profile=None):
     '''
     Create a stack (heat stack-create)
 
@@ -472,16 +472,9 @@ def create_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The misspelled version is still supported for backward compatibility, but will
-        be removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt Neon.
 
     '''
-    if environment is None and enviroment is not None:
-        salt.utils.versions.warn_until('Neon', (
-            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
-            "parameter which will be removed in Salt Neon."
-        ))
-        environment = enviroment
     h_client = _auth(profile)
     ret = {
         'result': True,
@@ -496,9 +489,11 @@ def create_stack(name=None, template_file=None, environment=None,
             template=None,
             source=template_file,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             context=None,
             defaults=None,
@@ -514,6 +509,7 @@ def create_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             backup=None,
             makedirs=True,
@@ -556,9 +552,11 @@ def create_stack(name=None, template_file=None, environment=None,
             template=None,
             source=environment,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             context=None,
             defaults=None,
@@ -574,6 +572,7 @@ def create_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             backup=None,
             makedirs=True,
@@ -626,7 +625,7 @@ def create_stack(name=None, template_file=None, environment=None,
 
 def update_stack(name=None, template_file=None, environment=None,
                  parameters=None, poll=0, rollback=False, timeout=60,
-                 profile=None, enviroment=None):
+                 profile=None):
     '''
     Update a stack (heat stack-template)
 
@@ -667,16 +666,9 @@ def update_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The misspelled version is still supported for backward compatibility, but will
-        be removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt Neon.
 
     '''
-    if environment is None and enviroment is not None:
-        salt.utils.versions.warn_until('Neon', (
-            "Please use the 'environment' parameter instead of the misspelled 'enviroment' "
-            "parameter which will be removed in Salt Neon."
-        ))
-        environment = enviroment
     h_client = _auth(profile)
     ret = {
         'result': True,
@@ -695,9 +687,11 @@ def update_stack(name=None, template_file=None, environment=None,
             template=None,
             source=template_file,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             context=None,
             defaults=None,
@@ -713,6 +707,7 @@ def update_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             backup=None,
             makedirs=True,
@@ -755,9 +750,11 @@ def update_stack(name=None, template_file=None, environment=None,
             template=None,
             source=environment,
             source_hash=None,
+            source_hash_name=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             context=None,
             defaults=None,
@@ -773,6 +770,7 @@ def update_stack(name=None, template_file=None, environment=None,
             user=None,
             group=None,
             mode=None,
+            attrs=None,
             saltenv='base',
             backup=None,
             makedirs=True,
