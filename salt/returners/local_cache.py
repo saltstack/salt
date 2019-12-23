@@ -450,7 +450,7 @@ def clean_old_jobs():
                         try:
                             shutil.rmtree(f_path)
                         except OSError as err:
-                            log.error('Unable to remove %s: %s', t_path, err)
+                            log.error('Unable to remove %s: %s', f_path, err)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
