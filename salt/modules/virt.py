@@ -74,6 +74,7 @@ The calls not using the libvirt connection setup are:
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
 import copy
 import os
 import re
@@ -683,26 +684,51 @@ def _gen_pool_xml(name,
                   source_hosts=None,
                   source_auth=None,
                   source_name=None,
-                  source_format=None):
+                  source_format=None,
+                  source_initiator=None):
     '''
     Generate the XML string to define a libvirt storage pool
     '''
     hosts = [host.split(':') for host in source_hosts or []]
-    context = {
-        'name': name,
-        'ptype': ptype,
-        'target': {'path': target, 'permissions': permissions},
-        'source': {
+    source = None
+    if any([source_devices, source_dir, source_adapter, hosts, source_auth, source_name, source_format,
+            source_initiator]):
+        source = {
             'devices': source_devices or [],
-            'dir': source_dir,
+            'dir': source_dir if source_format != 'cifs' or not source_dir else source_dir.lstrip('/'),
             'adapter': source_adapter,
             'hosts': [{'name': host[0], 'port': host[1] if len(host) > 1 else None} for host in hosts],
             'auth': source_auth,
             'name': source_name,
-            'format': source_format
+            'format': source_format,
+            'initiator': source_initiator,
         }
+
+    context = {
+        'name': name,
+        'ptype': ptype,
+        'target': {'path': target, 'permissions': permissions},
+        'source': source
     }
     fn_ = 'libvirt_pool.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template %s', fn_)
+        return ''
+    return template.render(**context)
+
+
+def _gen_secret_xml(auth_type, usage, description):
+    '''
+    Generate a libvirt secret definition XML
+    '''
+    context = {
+        'type': auth_type,
+        'usage': usage,
+        'description': description,
+    }
+    fn_ = 'libvirt_secret.jinja'
     try:
         template = JINJA.get_template(fn_)
     except jinja2.exceptions.TemplateNotFound:
@@ -4503,6 +4529,7 @@ def pool_define(name,
                 permissions=None,
                 source_devices=None,
                 source_dir=None,
+                source_initiator=None,
                 source_adapter=None,
                 source_hosts=None,
                 source_auth=None,
@@ -4533,6 +4560,10 @@ def pool_define(name,
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
+    :param source_initiator:
+        Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
+
+        .. versionadded:: neon
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -4564,7 +4595,7 @@ def pool_define(name,
                 'username': 'admin',
                 'secret': {
                     'type': 'uuid',
-                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                    'value': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
                 }
             }
 
@@ -4575,9 +4606,13 @@ def pool_define(name,
                 'username': 'myname',
                 'secret': {
                     'type': 'usage',
-                    'uuid': 'mycluster_myname'
+                    'value': 'mycluster_myname'
                 }
             }
+
+        Since neon, instead the source authentication can only contain ``username``
+        and ``password`` properties. In this case the libvirt secret will be defined and used.
+        For Ceph authentications a base64 encoded key is expected.
 
     :param source_name:
         Identifier of name-based sources.
@@ -4631,6 +4666,8 @@ def pool_define(name,
     .. versionadded:: 2019.2.0
     '''
     conn = __get_conn(**kwargs)
+    auth = _pool_set_secret(conn, ptype, name, source_auth)
+
     pool_xml = _gen_pool_xml(
         name,
         ptype,
@@ -4640,9 +4677,10 @@ def pool_define(name,
         source_dir=source_dir,
         source_adapter=source_adapter,
         source_hosts=source_hosts,
-        source_auth=source_auth,
+        source_auth=auth,
         source_name=source_name,
-        source_format=source_format
+        source_format=source_format,
+        source_initiator=source_initiator
     )
     try:
         if transient:
@@ -4658,6 +4696,236 @@ def pool_define(name,
 
     # libvirt function will raise a libvirtError in case of failure
     return True
+
+
+def _pool_set_secret(conn, pool_type, pool_name, source_auth, uuid=None, usage=None, test=False):
+    secret_types = {
+        'rbd': 'ceph',
+        'iscsi': 'chap',
+        'iscsi-direct': 'chap'
+    }
+    secret_type = secret_types.get(pool_type)
+    auth = source_auth
+    if source_auth and 'username' in source_auth and 'password' in source_auth:
+        if secret_type:
+            # Get the previously defined secret if any
+            secret = None
+            if usage:
+                usage_type = libvirt.VIR_SECRET_USAGE_TYPE_CEPH if secret_type == 'ceph' \
+                                else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                secret = conn.secretLookupByUsage(usage_type, usage)
+            elif uuid:
+                secret = conn.secretLookupByUUIDString(uuid)
+
+            # Create secret if needed
+            if not secret:
+                description = 'Passphrase for {} pool created by Salt'.format(pool_name)
+                if not usage:
+                    usage = 'pool_{}'.format(pool_name)
+                secret_xml = _gen_secret_xml(secret_type, usage, description)
+                if not test:
+                    secret = conn.secretDefineXML(secret_xml)
+
+            # Assign the password to it
+            password = auth['password']
+            if pool_type == 'rbd':
+                # RBD password are already base64-encoded, but libvirt will base64-encode them later
+                password = base64.b64decode(salt.utils.stringutils.to_bytes(password))
+            if not test:
+                secret.setValue(password)
+
+            # update auth with secret reference
+            auth['type'] = secret_type
+            auth['secret'] = {
+                'type': 'uuid' if uuid else 'usage',
+                'value': uuid if uuid else usage,
+            }
+    return auth
+
+
+def pool_update(name,
+                ptype,
+                target=None,
+                permissions=None,
+                source_devices=None,
+                source_dir=None,
+                source_initiator=None,
+                source_adapter=None,
+                source_hosts=None,
+                source_auth=None,
+                source_name=None,
+                source_format=None,
+                test=False,
+                **kwargs):
+    '''
+    Update a libvirt storage pool if needed.
+    If called with test=True, this is also reporting whether an update would be performed.
+
+    :param name: Pool name
+    :param ptype:
+        Pool type. See `libvirt documentation <https://libvirt.org/storage.html>`_  for the
+        possible values.
+    :param target: Pool full path target
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source_devices:
+        List of source devices for pools backed by physical devices. (Default: ``None``)
+
+        Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
+        keys. The path is the qualified name for iSCSI devices.
+
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for more informations on the use of ``part_separator``
+    :param source_dir:
+        Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
+        (Default: ``None``)
+    :param source_initiator:
+        Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
+
+        .. versionadded:: neon
+    :param source_adapter:
+        SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
+        ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
+        and ``parent_address`` keys.
+
+        The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
+        The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
+        ``slot`` and ``function`` properties.
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for the meaning and possible values of these properties.
+    :param source_hosts:
+        List of source for pools backed by storage from remote servers. Each item is the hostname
+        optionally followed by the port separated by a colon. (Default: ``None``)
+    :param source_auth:
+        Source authentication details. (Default: ``None``)
+
+        The value is a dictionary with ``type``, ``username`` and ``secret`` keys. The type
+        can be one of ``ceph`` for Ceph RBD or ``chap`` for iSCSI sources.
+
+        The ``secret`` value links to a libvirt secret object. It is a dictionary with
+        ``type`` and ``value`` keys. The type value can be either ``uuid`` or ``usage``.
+
+        Examples:
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'ceph',
+                'username': 'admin',
+                'secret': {
+                    'type': 'uuid',
+                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                }
+            }
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'chap',
+                'username': 'myname',
+                'secret': {
+                    'type': 'usage',
+                    'uuid': 'mycluster_myname'
+                }
+            }
+
+        Since neon, instead the source authentication can only contain ``username``
+        and ``password`` properties. In this case the libvirt secret will be defined and used.
+        For Ceph authentications a base64 encoded key is expected.
+
+    :param source_name:
+        Identifier of name-based sources.
+    :param source_format:
+        String representing the source format. The possible values are depending on the
+        source type. See `libvirt documentation <https://libvirt.org/storage.html>`_ for
+        the possible values.
+    :param test: run in dry-run mode if set to True
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: Example:
+
+    Local folder pool:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_update somepool dir target=/srv/mypool \
+                                  permissions="{'mode': '0744' 'ower': 107, 'group': 107 }"
+
+    CIFS backed pool:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_update myshare netfs source_format=cifs \
+                                  source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
+
+    .. versionadded:: neon
+    '''
+    # Get the current definition to compare the two
+    conn = __get_conn(**kwargs)
+    needs_update = False
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        old_xml = ElementTree.fromstring(pool.XMLDesc())
+
+        # If we have username and password in source_auth generate a new secret
+        # Or change the value of the existing one
+        secret_node = old_xml.find('source/auth/secret')
+        usage = secret_node.get('usage') if secret_node is not None else None
+        uuid = secret_node.get('uuid') if secret_node is not None else None
+        auth = _pool_set_secret(conn, ptype, name, source_auth, uuid=uuid, usage=usage, test=test)
+
+        # Compute new definition
+        new_xml = ElementTree.fromstring(_gen_pool_xml(
+            name,
+            ptype,
+            target,
+            permissions=permissions,
+            source_devices=source_devices,
+            source_dir=source_dir,
+            source_initiator=source_initiator,
+            source_adapter=source_adapter,
+            source_hosts=source_hosts,
+            source_auth=auth,
+            source_name=source_name,
+            source_format=source_format
+        ))
+
+        # Copy over the uuid, capacity, allocation, available elements
+        elements_to_copy = ['available', 'allocation', 'capacity', 'uuid']
+        for to_copy in elements_to_copy:
+            element = old_xml.find(to_copy)
+            new_xml.insert(1, element)
+
+        # Filter out spaces and empty elements like <source/> since those would mislead the comparison
+        def visit_xml(node, fn):
+            fn(node)
+            for child in node:
+                visit_xml(child, fn)
+
+        def space_stripper(node):
+            if node.tail is not None:
+                node.tail = node.tail.strip(' \t\n')
+            if node.text is not None:
+                node.text = node.text.strip(' \t\n')
+
+        visit_xml(old_xml, space_stripper)
+        visit_xml(new_xml, space_stripper)
+
+        def empty_node_remover(node):
+            for child in node:
+                if not child.tail and not child.text and not child.items() and not child:
+                    node.remove(child)
+        visit_xml(old_xml, empty_node_remover)
+
+        needs_update = ElementTree.tostring(old_xml) != ElementTree.tostring(new_xml)
+        if needs_update and not test:
+            conn.storagePoolDefineXML(salt.utils.stringutils.to_str(ElementTree.tostring(new_xml)))
+    finally:
+        conn.close()
+    return needs_update
 
 
 def list_pools(**kwargs):
