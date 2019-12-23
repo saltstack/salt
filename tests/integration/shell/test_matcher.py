@@ -352,7 +352,7 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         Test to see if we're supporting --doc
         '''
         expect_to_find = 'test.ping:'
-        stdout, stderr = self.run_salt('-d "*" test', catch_stderr=True)
+        stdout, stderr = self.run_salt('-d "*" test', catch_stderr=True, timeout=120)
         error_msg = dedent('''
         Failed to find \'{expected}\' in output
 
