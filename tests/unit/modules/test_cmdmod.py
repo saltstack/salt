@@ -12,6 +12,7 @@ import tempfile
 # Import Salt Libs
 import salt.utils.files
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.modules.cmdmod as cmdmod
 from salt.exceptions import CommandExecutionError
 from salt.log import LOG_LEVELS
@@ -21,6 +22,7 @@ from salt.ext.six.moves import builtins  # pylint: disable=import-error
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import TstSuiteLoggingHandler
 from tests.support.mock import (
     mock_open,
     Mock,
@@ -436,6 +438,40 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
             ret = cmdmod.run_all('some command', output_encoding='latin1')
 
         self.assertEqual(ret['stdout'], stdout)
+
+    def test_run_all_output_loglevel_quiet(self):
+        '''
+        Test that specifying quiet for loglevel
+        does not log the command.
+        '''
+        stdout = b'test'
+        proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
+
+        msg = "INFO:Executing command 'some command' in directory"
+        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+            with TstSuiteLoggingHandler() as log_handler:
+                ret = cmdmod.run_all('some command', output_loglevel='quiet')
+                assert not [x for x in log_handler.messages if msg in x]
+
+        self.assertEqual(ret['stdout'],
+                         salt.utils.stringutils.to_unicode(stdout))
+
+    def test_run_all_output_loglevel_debug(self):
+        '''
+        Test that specifying debug for loglevel
+        does log the command.
+        '''
+        stdout = b'test'
+        proc = MagicMock(return_value=MockTimedProc(stdout=stdout))
+
+        msg = "INFO:Executing command 'some command' in directory"
+        with patch('salt.utils.timed_subprocess.TimedProc', proc):
+            with TstSuiteLoggingHandler() as log_handler:
+                ret = cmdmod.run_all('some command', output_loglevel='debug')
+                assert [x for x in log_handler.messages if msg in x]
+
+        self.assertEqual(ret['stdout'],
+                         salt.utils.stringutils.to_unicode(stdout))
 
     def test_run_chroot_mount(self):
         '''

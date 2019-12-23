@@ -241,9 +241,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         func = 'pkg.info_installed'
 
         if grains['os_family'] == 'Debian':
-            ret = self.run_function(func, ['bash-completion', 'dpkg'])
+            ret = self.run_function(func, ['bash', 'dpkg'])
             keys = ret.keys()
-            self.assertIn('bash-completion', keys)
+            self.assertIn('bash', keys)
             self.assertIn('dpkg', keys)
         elif grains['os_family'] == 'RedHat':
             ret = self.run_function(func, ['rpm', 'bash'])
