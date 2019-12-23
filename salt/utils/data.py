@@ -143,13 +143,13 @@ def compare_lists(old=None, new=None):
     Compare before and after results from various salt functions, returning a
     dict describing the changes that were made
     '''
-    ret = dict()
+    ret = {}
     for item in new:
         if item not in old:
-            ret['new'] = item
+            ret.setdefault('new', []).append(item)
     for item in old:
         if item not in new:
-            ret['old'] = item
+            ret.setdefault('old', []).append(item)
     return ret
 
 
@@ -359,8 +359,8 @@ def encode(data, encoding=None, errors='strict', keep=False,
         return data
 
 
-@jinja_filter('json_decode_dict')  # Remove this for Neon
-@jinja_filter('json_encode_dict')  # Remove this for Neon
+@jinja_filter('json_decode_dict')  # Remove this for Aluminium
+@jinja_filter('json_encode_dict')
 def encode_dict(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
@@ -412,8 +412,8 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
     return rv
 
 
-@jinja_filter('json_decode_list')  # Remove this for Neon
-@jinja_filter('json_encode_list')  # Remove this for Neon
+@jinja_filter('json_decode_list')  # Remove this for Aluminium
+@jinja_filter('json_encode_list')
 def encode_list(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
