@@ -11,12 +11,10 @@ import copy
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -64,7 +62,6 @@ PACKAGES = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class OpkgTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.opkg

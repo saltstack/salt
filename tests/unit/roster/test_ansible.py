@@ -6,14 +6,11 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 from tests.support import mixins
 from tests.support.unit import skipIf, TestCase
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.paths import TESTS_DIR
 
 # Import Salt Libs
 import salt.config
@@ -56,12 +53,11 @@ EXPECTED = {
 
 
 @skipIf(not salt.utils.path.which('ansible-inventory'), 'Skipping because ansible-inventory is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AnsibleRosterTestCase(TestCase, mixins.LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.roster_dir = os.path.join(TESTS_DIR, 'unit/files/rosters/ansible/')
+        cls.roster_dir = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/rosters/ansible/')
         cls.opts = {'roster_defaults': {'passwd': 'test123'}}
 
     @classmethod

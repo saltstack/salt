@@ -79,6 +79,25 @@ from the ``kevinopenstack`` profile above, you would use:
 
     salt-call sdb.get sdb://kevinopenstack/password
 
+.. warning::
+    The ``vault`` driver previously only supported splitting the path and key with
+    a question mark. This has since been deprecated in favor of using the standard
+    / to split the path and key. The use of the questions mark will still be supported
+    to ensure backwards compatibility, but please use the prefered method using /.
+    The deprecated approach required the full path to where the key is stored,
+    followed by a question mark, followed by the key to be retrieved.  If you were
+    using a profile called ``myvault``, you would use a URI that looks like:
+
+    .. code-block:: bash
+
+        salt-call sdb.get 'sdb://myvault/secret/salt?saltstack'
+
+    Instead of the above please use the prefered URI using / instead:
+
+    .. code-block:: bash
+
+        salt-call sdb.get 'sdb://myvault/secret/salt/saltstack'
+
 Setting a value uses the same URI as would be used to retrieve it, followed
 by the value as another argument.
 
