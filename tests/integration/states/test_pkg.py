@@ -17,7 +17,6 @@ from tests.support.helpers import (
     destructiveTest,
     requires_system_grains,
     requires_salt_modules,
-    flaky
 )
 
 # Import Salt libs
@@ -66,7 +65,6 @@ _PKG_TARGETS_EPOCH = {
 _WILDCARDS_SUPPORTED = ('Arch', 'Debian', 'RedHat')
 
 
-@flaky
 @destructiveTest
 @requires_salt_modules('pkg.version', 'pkg.latest_version')
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
@@ -174,6 +172,63 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if len(names) == 1:
             return ret[names[0]]
         return ret
+
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=360, **kwargs):
+        '''
+        Run a single salt function and condition the return down to match the
+        behavior of the raw function call
+        '''
+        job_repr = 'Job(tgt={tgt}, func={function}({args}, {kwargs})'.format(
+            tgt=minion_tgt,
+            function=function,
+            args=arg,
+            kwargs=kwargs
+        )
+        log.warning('Running: %s', job_repr)
+        job_data = self.client.run_job(minion_tgt,
+                                       function,
+                                       arg=arg,
+                                       kwarg=kwargs,
+                                       timeout=timeout)
+        if not job_data.get('minions'):
+            self.fail(
+                'The job({}) was not published to any minions.'.format(job_repr)
+            )
+        jid = job_data['jid']
+        minions = job_data['minions']
+        ret = None
+        try:
+            for fn_ret in self.client.get_iter_returns(jid,
+                                                       minions,
+                                                       timeout=timeout,
+                                                       tgt=minion_tgt):
+                if not fn_ret:
+                    continue
+                if minion_tgt not in fn_ret:
+                    continue
+                # Try to match stalled state functions
+                ret = fn_ret[minion_tgt]
+                log.warning('The job(%s) returned: %s', job_repr, ret)
+                ret = self._check_state_return(ret['ret'])
+                break
+            else:
+                self.fail(
+                    'Failed to get the return for the published job({}).'.format(job_repr)
+                )
+            return ret
+        finally:
+            # Never leave a job running behind
+            from tests.support.sminion import create_sminion
+            sminion = create_sminion(minion_id='runtests-internal-sminion')
+            running_job_info = sminion.functions.saltutil.find_job(jid)
+            if running_job_info:
+                log.warning(
+                    'Killing job(%s) which was found still running. Job Data: %s',
+                    job_repr,
+                    running_job_info
+                )
+                # The job is still running
+                sminion.functions.saltutil.kill_job(jid)
 
     def test_pkg_001_installed(self):
         '''
