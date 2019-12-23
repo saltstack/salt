@@ -37,16 +37,16 @@ class SaltCloudCliTest(ShellCase,
 
     def test_function_arguments(self):
         self.assertIn(
-            'salt-cloud: error: --function expects two arguments: '
+            'error: --function expects two arguments: '
             '<function-name> <provider>',
-            self.run_cloud('--function show_image -h', catch_stderr=True)[1]
+            '\n'.join(self.run_cloud('--function show_image -h', catch_stderr=True)[1])
         )
 
     def test_list_providers_accepts_no_arguments(self):
         self.assertIn(
-            'salt-cloud: error: \'--list-providers\' does not accept any '
+            'error: \'--list-providers\' does not accept any '
             'arguments',
-            self.run_cloud('--list-providers ec2', catch_stderr=True)[1]
+            '\n'.join(self.run_cloud('--list-providers ec2', catch_stderr=True)[1])
         )
 
     def test_mutually_exclusive_query_options(self):
@@ -56,13 +56,15 @@ class SaltCloudCliTest(ShellCase,
         while True:
             for idx in range(1, len(test_options)):
                 self.assertIn(
-                    'salt-cloud: error: The options {0}/{1} are mutually '
+                    'error: The options {0}/{1} are mutually '
                     'exclusive. Please only choose one of them'.format(
                         test_options[0], test_options[idx]
                     ),
-                    self.run_cloud(
-                        '{0} {1}'.format(test_options[0], test_options[idx]),
-                        catch_stderr=True)[1]
+                    '\n'.join(
+                        self.run_cloud(
+                            '{0} {1}'.format(test_options[0], test_options[idx]),
+                            catch_stderr=True)[1]
+                    )
                 )
             # Remove the first option from the list
             test_options.pop(0)
@@ -81,11 +83,11 @@ class SaltCloudCliTest(ShellCase,
                 )
                 try:
                     self.assertIn(
-                        'salt-cloud: error: The options {0}/{1} are mutually '
+                        'error: The options {0}/{1} are mutually '
                         'exclusive. Please only choose one of them'.format(
                             test_options[0], test_options[idx]
                         ),
-                        output[1]
+                        '\n'.join(output[1])
                     )
                 except AssertionError:
                     print(output)

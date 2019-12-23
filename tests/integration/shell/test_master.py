@@ -21,6 +21,8 @@ from tests.integration.utils import testprogram
 @skipIf(True, 'This test file should be in an isolated test space.')
 class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
 
+    _call_binary_ = 'salt-master'
+
     def test_exit_status_unknown_user(self):
         '''
         Ensure correct exit status when the master is configured to run as an unknown user.

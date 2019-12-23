@@ -18,8 +18,6 @@ try:
     from tests.support.mixins import LoaderModuleMockMixin
     from tests.support.unit import skipIf, TestCase
     from tests.support.mock import (
-        NO_MOCK,
-        NO_MOCK_REASON,
         MagicMock,
         patch)
 
@@ -33,7 +31,6 @@ KERNEL_LIST = ['4.4.0-70-generic', '4.4.0-71-generic', '4.5.1-14-generic']
 STATE_NAME = 'kernelpkg-test'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_MODULES, 'Salt modules could not be loaded')
 class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
     '''

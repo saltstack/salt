@@ -5,7 +5,6 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -14,7 +13,6 @@ import salt.utils.win_lgpo_netsh as win_lgpo_netsh
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLgpoNetshTestCase(TestCase):
     def test_get_settings_firewallpolicy_local(self):
