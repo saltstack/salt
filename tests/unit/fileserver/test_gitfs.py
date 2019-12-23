@@ -344,13 +344,13 @@ class GitFSTestFuncs(object):
 
     def test_env_deprecated_opts(self):
         '''
-        ensure deprecated options env_whitelist
-        and env_blacklist do not cause gitfs to
+        ensure deprecated options gitfs_env_whitelist
+        and gitfs_env_blacklist do not cause gitfs to
         not load.
         '''
         opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
-            env_whitelist: base
-            env_blacklist: ''
+            gitfs_env_whitelist: base
+            gitfs_env_blacklist: ''
             '''))
         with patch.dict(gitfs.__opts__, opts):
             gitfs.update()
