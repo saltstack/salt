@@ -9,7 +9,7 @@ import os
 import tests.integration.cloud.helpers
 from tests.support.case import ShellCase
 from tests.support.unit import TestCase, skipIf
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 from salt.ext import six
@@ -57,7 +57,7 @@ class VirtualboxCloudTestCase(ShellCase):
         @return:
         @rtype: dict
         """
-        config_path = os.path.join(FILES, 'conf')
+        config_path = os.path.join(RUNTIME_VARS.FILES, 'conf')
         arg_str = '--out=json -c {0} {1}'.format(config_path, arg_str)
         # arg_str = "{0} --log-level=error".format(arg_str)
         log.debug("running salt-cloud with %s", arg_str)
