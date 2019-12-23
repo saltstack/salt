@@ -218,7 +218,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # Don't perform this test on FreeBSD since version specification is not
         # supported.
         if os_family == 'FreeBSD':
-            return
+            self.skip('Version specification not supported on FreeBSD')
 
         # Make sure that we have targets that match the os_family. If this
         # fails then the _PKG_TARGETS dict above needs to have an entry added,
