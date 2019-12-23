@@ -197,9 +197,7 @@ https://alt.fedoraproject.org/cloud
 openSUSE
 ~~~~~~~~
 
-http://download.opensuse.org/repositories/openSUSE:/Leap:/42.1:/Images/images
-
-(look for JeOS-for-kvm-and-xen variant)
+https://download.opensuse.org/distribution/leap/15.1/jeos/openSUSE-Leap-15.1-JeOS.x86_64-15.1.0-kvm-and-xen-Current.qcow2.meta4
 
 SUSE
 ~~~~
