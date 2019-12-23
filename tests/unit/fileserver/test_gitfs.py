@@ -314,6 +314,51 @@ class GitFSTestFuncs(object):
             # the envs list, but the branches should not.
             self.assertEqual(ret, ['base', 'foo'])
 
+    def test_saltenv_blacklist(self):
+        '''
+        test saltenv_blacklist
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_saltenv_blacklist: base
+            '''))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.envs(ignore_cache=True)
+            assert 'base' not in ret
+            assert UNICODE_ENVNAME in ret
+            assert 'mytag' in ret
+
+    def test_saltenv_whitelist(self):
+        '''
+        test saltenv_whitelist
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            gitfs_saltenv_whitelist: base
+            '''))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.envs(ignore_cache=True)
+            assert 'base' in ret
+            assert UNICODE_ENVNAME not in ret
+            assert 'mytag' not in ret
+
+    def test_env_deprecated_opts(self):
+        '''
+        ensure deprecated options env_whitelist
+        and env_blacklist do not cause gitfs to
+        not load.
+        '''
+        opts = salt.utils.yaml.safe_load(textwrap.dedent('''\
+            env_whitelist: base
+            env_blacklist: ''
+            '''))
+        with patch.dict(gitfs.__opts__, opts):
+            gitfs.update()
+            ret = gitfs.envs(ignore_cache=True)
+            assert 'base' in ret
+            assert UNICODE_ENVNAME in ret
+            assert 'mytag' in ret
+
     def test_disable_saltenv_mapping_global_with_mapping_defined_per_remote(self):
         '''
         Test the global gitfs_disable_saltenv_mapping config option, combined
