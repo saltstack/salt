@@ -62,7 +62,7 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' http.wait_for_successful_query http://somelink.com/ wait_for=160
+        salt '*' http.wait_for_successful_query http://somelink.com/ wait_for=160 request_interval=1
     '''
 
     starttime = time.time()
@@ -83,6 +83,9 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
                 raise caught_exception  # pylint: disable=E0702
 
             return result
+        elif 'request_interval' in kwargs:
+            # Space requests out by delaying for an interval
+            time.sleep(kwargs['request_interval'])
 
 
 def update_ca_bundle(target=None, source=None, merge_files=None):
