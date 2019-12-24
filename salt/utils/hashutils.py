@@ -159,6 +159,7 @@ def hmac_compute(string, shared_secret):
     return hmac_hash
 
 
+@jinja_filter('rand_str')
 @jinja_filter('random_hash')
 def random_hash(size=9999999999, hash_type=None):
     '''
