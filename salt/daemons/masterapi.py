@@ -549,6 +549,18 @@ class RemoteFuncs(object):
         if not skip_verify:
             if any(key not in load for key in ('id', 'tgt', 'fun')):
                 return {}
+
+        if isinstance(load['fun'], six.string_types):
+            functions = list(set(load['fun'].split(',')))
+            _ret_dict = len(functions) > 1
+        elif isinstance(load['fun'], list):
+            functions = load['fun']
+            _ret_dict = True
+        else:
+            return {}
+
+        functions_allowed = []
+
         if 'mine_get' in self.opts:
             # If master side acl defined.
             if not isinstance(self.opts['mine_get'], dict):
@@ -558,11 +570,18 @@ class RemoteFuncs(object):
                 if re.match(match, load['id']):
                     if isinstance(self.opts['mine_get'][match], list):
                         perms.update(self.opts['mine_get'][match])
-            if not any(re.match(perm, load['fun']) for perm in perms):
+            for fun in functions:
+                if any(re.match(perm, fun) for perm in perms):
+                    functions_allowed.append(fun)
+            if not functions_allowed:
                 return {}
+        else:
+            functions_allowed = functions
+
         ret = {}
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
+
         expr_form = load.get('expr_form')
         # keep both expr_form and tgt_type to ensure
         # comptability between old versions of salt
