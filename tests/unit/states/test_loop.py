@@ -300,7 +300,7 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                  'comment': 'Timed out while waiting for condition m_ret == 5'}
             )
 
-        # period and timeout below has been doubled to keep windows machines from
+        # period and timeout below has been increased to keep windows machines from
         # returning a lower number of attempts (because it's slower).
         with \
                 patch.dict(
@@ -311,8 +311,8 @@ class LoopTestCaseNoEval(TestCase, LoaderModuleMockMixin):
                 salt.states.loop.until_no_eval(
                     name='foo.bar',
                     expected=5,
-                    period=0.02,
-                    timeout=0.06),
+                    period=0.2,
+                    timeout=0.5),
                 {'name': 'foo.bar', 'result': False, 'changes': {},
                  'comment': 'Call did not produce the expected result after 3 attempts'}
             )
