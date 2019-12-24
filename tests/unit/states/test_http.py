@@ -138,4 +138,3 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
             with patch('time.sleep', MagicMock()) as sleep_mock:
                 self.assertEqual(http.wait_for_successful_query('url', status=200), {'result': True})
                 sleep_mock.assert_not_called()
- 
