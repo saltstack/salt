@@ -9,8 +9,8 @@ Type=notify
 NotifyAccess=all
 LimitNOFILE=8192
 ExecStart=/usr/bin/salt-minion
-Restart=on-failure
-RestartSec=2s
+Restart=always        
+RestartSec=5s         
 
 [Install]
 WantedBy=multi-user.target
