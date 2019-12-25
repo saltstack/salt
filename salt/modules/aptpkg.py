@@ -2054,6 +2054,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         .. versionadded:: 2015.8.9
 
+    refresh : True
+        Enable or disable (True or False) refreshing of the apt package
+        database. The previous ``refresh_db`` argument was deprecated in
+        favor of ``refresh```. The ``refresh_db`` argument will still
+        continue to work to ensure backwards compatibility, but please
+        change to using the preferred ``refresh``.
+
     .. note::
         Due to the way keys are stored for APT, there is a known issue where
         the key won't be updated unless another change is made at the same
@@ -2067,12 +2074,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         refresh = kwargs['refresh_db']
     else:
         refresh = kwargs.get('refresh', True)

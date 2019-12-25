@@ -11,9 +11,6 @@ import logging
 import socket
 import time
 
-# Import 3rd-party libs
-import msgpack
-
 # Import Tornado libs
 import tornado
 import tornado.gen
@@ -23,6 +20,7 @@ from tornado.locks import Lock
 from tornado.ioloop import IOLoop, TimeoutError as TornadoTimeoutError
 from tornado.iostream import IOStream, StreamClosedError
 # Import Salt libs
+import salt.utils.msgpack
 import salt.transport.client
 import salt.transport.frame
 from salt.ext import six
@@ -166,7 +164,7 @@ class IPCServer(object):
             else:
                 return _null
         # msgpack deprecated `encoding` starting with version 0.5.2
-        if msgpack.version >= (0, 5, 2):
+        if salt.utils.msgpack.version >= (0, 5, 2):
             # Under Py2 we still want raw to be set to True
             msgpack_kwargs = {'raw': six.PY2}
         else:
@@ -174,7 +172,7 @@ class IPCServer(object):
                 msgpack_kwargs = {'encoding': None}
             else:
                 msgpack_kwargs = {'encoding': 'utf-8'}
-        unpacker = msgpack.Unpacker(**msgpack_kwargs)
+        unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
         while not stream.closed():
             try:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -222,6 +220,7 @@ class IPCServer(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -229,6 +228,7 @@ class IPCServer(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
 
 class IPCClient(object):
@@ -261,7 +261,7 @@ class IPCClient(object):
         self._closing = False
         self.stream = None
         # msgpack deprecated `encoding` starting with version 0.5.2
-        if msgpack.version >= (0, 5, 2):
+        if salt.utils.msgpack.version >= (0, 5, 2):
             # Under Py2 we still want raw to be set to True
             msgpack_kwargs = {'raw': six.PY2}
         else:
@@ -269,7 +269,7 @@ class IPCClient(object):
                 msgpack_kwargs = {'encoding': None}
             else:
                 msgpack_kwargs = {'encoding': 'utf-8'}
-        self.unpacker = msgpack.Unpacker(**msgpack_kwargs)
+        self.unpacker = salt.utils.msgpack.Unpacker(**msgpack_kwargs)
 
     def connected(self):
         return self.stream is not None and not self.stream.closed()
@@ -339,6 +339,7 @@ class IPCClient(object):
 
                 yield tornado.gen.sleep(1)
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -346,6 +347,7 @@ class IPCClient(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
     def close(self):
         '''
@@ -569,6 +571,7 @@ class IPCMessagePublisher(object):
         if hasattr(self.sock, 'close'):
             self.sock.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         try:
             self.close()
@@ -576,6 +579,7 @@ class IPCMessagePublisher(object):
             # This is raised when Python's GC has collected objects which
             # would be needed when calling self.close()
             pass
+    # pylint: enable=W1701
 
 
 class IPCMessageSubscriber(IPCClient):
@@ -726,6 +730,8 @@ class IPCMessageSubscriber(IPCClient):
             if exc and not isinstance(exc, StreamClosedError):
                 log.error("Read future returned exception %r", exc)
 
+    # pylint: disable=W1701
     def __del__(self):
         if IPCMessageSubscriber in globals():
             self.close()
+    # pylint: enable=W1701

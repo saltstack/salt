@@ -659,6 +659,7 @@ VALID_OPTS = immutabletypes.freeze({
     'roots_update_interval': int,
     'azurefs_update_interval': int,
     'gitfs_update_interval': int,
+    'git_pillar_update_interval': int,
     'hgfs_update_interval': int,
     'minionfs_update_interval': int,
     's3fs_update_interval': int,
@@ -704,8 +705,6 @@ VALID_OPTS = immutabletypes.freeze({
     'hgfs_root': six.string_types,
     'hgfs_base': six.string_types,
     'hgfs_branch_method': six.string_types,
-    'hgfs_env_whitelist': list,
-    'hgfs_env_blacklist': list,
     'hgfs_saltenv_whitelist': list,
     'hgfs_saltenv_blacklist': list,
     'svnfs_remotes': list,
@@ -714,8 +713,6 @@ VALID_OPTS = immutabletypes.freeze({
     'svnfs_trunk': six.string_types,
     'svnfs_branches': six.string_types,
     'svnfs_tags': six.string_types,
-    'svnfs_env_whitelist': list,
-    'svnfs_env_blacklist': list,
     'svnfs_saltenv_whitelist': list,
     'svnfs_saltenv_blacklist': list,
     'minionfs_env': six.string_types,
@@ -1169,9 +1166,6 @@ VALID_OPTS = immutabletypes.freeze({
     # Subconfig entries can be specified by using the ':' notation (e.g. key:subkey)
     'pass_to_ext_pillars': (six.string_types, list),
 
-    # Used by salt.modules.dockermod.compare_container_networks to specify which keys are compared
-    'docker.compare_container_networks': dict,
-
     # SSDP discovery publisher description.
     # Contains publisher configuration and minion mapping.
     # Setting it to False disables discovery
@@ -1296,6 +1290,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1482,11 +1477,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'extmod_whitelist': {},
     'extmod_blacklist': {},
     'minion_sign_messages': False,
-    'docker.compare_container_networks': {
-        'static': ['Aliases', 'Links', 'IPAMConfig'],
-        'automatic': ['IPAddress', 'Gateway',
-                      'GlobalIPv6Address', 'IPv6Gateway'],
-    },
     'discovery': False,
     'schedule': {},
     'ssh_merge_pillar': True
@@ -1545,6 +1535,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1590,8 +1581,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'hgfs_root': '',
     'hgfs_base': 'default',
     'hgfs_branch_method': 'branches',
-    'hgfs_env_whitelist': [],
-    'hgfs_env_blacklist': [],
     'hgfs_saltenv_whitelist': [],
     'hgfs_saltenv_blacklist': [],
     'show_timeout': True,
@@ -1603,8 +1592,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'svnfs_trunk': 'trunk',
     'svnfs_branches': 'branches',
     'svnfs_tags': 'tags',
-    'svnfs_env_whitelist': [],
-    'svnfs_env_blacklist': [],
     'svnfs_saltenv_whitelist': [],
     'svnfs_saltenv_blacklist': [],
     'max_event_size': 1048576,

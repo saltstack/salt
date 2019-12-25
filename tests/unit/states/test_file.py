@@ -20,14 +20,12 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.helpers import destructiveTest
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     Mock,
     MagicMock,
     call,
     mock_open,
     patch)
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
 
 # Import salt libs
 import salt.utils.files
@@ -44,7 +42,6 @@ from salt.ext.six.moves import range
 import salt.utils.win_functions
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestFileState(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -337,27 +334,6 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
             ret = return_val({'comment': comt,
                               'changes': {},
                               'result': False})
-            self.assertDictEqual(
-                filestate.symlink(name, target, user=user, group=group),
-                ret)
-
-        with patch.dict(filestate.__salt__, {'config.manage_mode': mock_t,
-                                             'file.user_to_uid': mock_uid,
-                                             'file.group_to_gid': mock_gid,
-                                             'file.is_link': mock_f,
-                                             'file.readlink': mock_target,
-                                             'file.symlink': mock_t,
-                                             'user.info': mock_t,
-                                             'file.lchown': mock_f}),\
-                patch.dict(filestate.__opts__, {'test': False}),\
-                patch.object(os.path, 'isdir', MagicMock(side_effect=[True, False])),\
-                patch.object(os.path, 'isfile', mock_t),\
-                patch.object(os.path, 'exists', mock_f),\
-                patch('salt.utils.win_functions.get_sid_from_name', return_value='test-sid'):
-            comt = 'File exists where the symlink {0} should be'.format(name)
-            ret = return_val({'comment': comt,
-                              'result': False,
-                              'changes': {}})
             self.assertDictEqual(
                 filestate.symlink(name, target, user=user, group=group),
                 ret)
@@ -1091,8 +1067,8 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
 
                                 with patch.object(salt.utils.files, 'mkstemp',
                                                   return_value=name):
-                                    comt = ('Unable to copy file {0} to {1}: '
-                                            .format(name, name))
+                                    comt = ('Unable to copy file {0} to {0}: '
+                                            .format(name))
                                     ret.update({'comment': comt, 'result': False})
                                     self.assertDictEqual(filestate.managed
                                                          (name, user=user,
@@ -2379,7 +2355,7 @@ class TestFilePrivateFunctions(TestCase, LoaderModuleMockMixin):
         # Run _check_directory function
         # Verify that it returns correctly
         # Delete tmp directory structure
-        root_tmp_dir = os.path.join(TMP, 'test__check_dir')
+        root_tmp_dir = os.path.join(RUNTIME_VARS.TMP, 'test__check_dir')
         expected_dir_mode = 0o777
         depth = 3
         try:
