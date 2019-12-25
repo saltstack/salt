@@ -171,7 +171,6 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
     http
     ifttt
@@ -200,6 +199,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
     jira_mod
     junos
     k8s
@@ -211,6 +211,7 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
     kubernetesmod
     launchctl_service
@@ -232,6 +233,7 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew_pkg
     macdefaults
@@ -362,7 +364,6 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris

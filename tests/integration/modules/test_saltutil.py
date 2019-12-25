@@ -10,9 +10,9 @@ import time
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-from tests.support.paths import TMP_PILLAR_TREE
 from tests.support.unit import skipIf
 
 # Import Salt Libs
@@ -65,6 +65,12 @@ class SaltUtilModuleTest(ModuleCase):
         self.assertIn('priv', ret['return'])
 
 
+class SyncGrainsTest(ModuleCase):
+    def test_sync_grains(self):
+        ret = self.run_function('saltutil.sync_grains')
+        self.assertEqual(ret, [])
+
+
 class SaltUtilSyncModuleTest(ModuleCase):
     '''
     Testcase for the saltutil sync execution module
@@ -98,6 +104,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
+                           'executors': [],
                            'output': [],
                            'thorium': [],
                            'serializers': []}
@@ -121,6 +128,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
+                           'executors': [],
                            'output': [],
                            'thorium': [],
                            'serializers': []}
@@ -147,6 +155,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'states': [],
                            'sdb': [],
                            'proxymodules': [],
+                           'executors': [],
                            'output': [],
                            'thorium': [],
                            'serializers': []}
@@ -163,6 +172,7 @@ class SaltUtilSyncModuleTest(ModuleCase):
                            'beacons': [],
                            'utils': [],
                            'returners': [],
+                           'executors': [],
                            'modules': [],
                            'renderers': [],
                            'log_handlers': [],
@@ -194,12 +204,12 @@ class SaltUtilSyncPillarTest(ModuleCase):
         pre_pillar = self.run_function('pillar.raw')
         self.assertNotIn(pillar_key, pre_pillar.get(pillar_key, 'didnotwork'))
 
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'add_pillar.sls'), 'w') as fp:
             fp.write(salt.utils.stringutils.to_str(
                 '{0}: itworked'.format(pillar_key)
             ))
 
-        with salt.utils.files.fopen(os.path.join(TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, 'top.sls'), 'w') as fp:
             fp.write(textwrap.dedent('''\
                      base:
                        '*':
@@ -224,5 +234,5 @@ class SaltUtilSyncPillarTest(ModuleCase):
         self.assertIn(pillar_key, post_pillar.get(pillar_key, 'didnotwork'))
 
     def tearDown(self):
-        for filename in os.listdir(TMP_PILLAR_TREE):
-            os.remove(os.path.join(TMP_PILLAR_TREE, filename))
+        for filename in os.listdir(RUNTIME_VARS.TMP_PILLAR_TREE):
+            os.remove(os.path.join(RUNTIME_VARS.TMP_PILLAR_TREE, filename))

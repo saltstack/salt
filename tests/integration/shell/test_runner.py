@@ -29,6 +29,8 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
     Test the salt-run command
     '''
 
+    _call_binary_ = 'salt-run'
+
     def _add_user(self):
         '''
         helper method to add user
