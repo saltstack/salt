@@ -335,26 +335,20 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
         cmd.run should invoke a new bash login only
         when bash is the default shell for the selected user
         '''
-        class _CommandHandler:
+        class _CommandHandler(object):
             '''
-            Class for capture cmd
+            Class for capturing cmd
             '''
             def __init__(self):
-                self.clear()
-
-            def get(self):
-                return self._cmd
-
-            def set(self, cmd):
-                self._cmd = cmd
+                self.cmd = None
 
             def clear(self):
-                self._cmd = None
+                self.cmd = None
 
         cmd_handler = _CommandHandler()
 
         def mock_proc(__cmd__, **kwargs):
-            cmd_handler.set(' '.join(__cmd__))
+            cmd_handler.cmd = ' '.join(__cmd__)
             return MagicMock(return_value=MockTimedProc(stdout=None, stderr=None))
 
         with patch('pwd.getpwnam') as getpwnam_mock:
@@ -371,7 +365,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                                 runas='foobar',
                                 use_vt=False)
 
-                    self.assertRegex(cmd_handler.get(), "{} -l -c".format(user_default_shell),
+                    self.assertRegex(cmd_handler.cmd, "{} -l -c".format(user_default_shell),
                                         "cmd invokes right bash session on macOS")
 
                 # User default shell is '/bin/zsh'
@@ -385,7 +379,7 @@ class CMDMODTestCase(TestCase, LoaderModuleMockMixin):
                                 runas='foobar',
                                 use_vt=False)
 
-                    self.assertNotRegex(cmd_handler.get(), "bash -l -c",
+                    self.assertNotRegex(cmd_handler.cmd, "bash -l -c",
                                         "cmd does not invoke user shell on macOS")
 
     def test_run_cwd_doesnt_exist_issue_7154(self):
