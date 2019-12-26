@@ -391,7 +391,7 @@
 #mine_interval: 60
 
 # Windows platforms lack posix IPC and must rely on slower TCP based inter-
-# process communications. Set ipc_mode to 'tcp' on such systems
+# process communications.  ipc_mode is set to 'tcp' on such systems.
 #ipc_mode: ipc
 
 # Overwrite the default tcp ports used by the minion when ipc_mode is set to 'tcp'
