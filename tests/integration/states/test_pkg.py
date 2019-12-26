@@ -8,6 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
+import pprint
+from datetime import datetime
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -173,17 +175,23 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             return ret[names[0]]
         return ret
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=360, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=600, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-        job_repr = 'Job(tgt={tgt}, func={function}({args}, {kwargs})'.format(
+        accept_job_start = datetime.utcnow()
+        job_repr = 'Job(tgt={tgt}, func={function}({args}'.format(
             tgt=minion_tgt,
             function=function,
-            args=arg,
-            kwargs=kwargs
+            args=', '.join([repr(_arg) for _arg in arg])
         )
+        if kwargs:
+            _kwargs = []
+            for key, value in kwargs.items():
+                _kwargs.append('{}={}'.format(key, repr(value)))
+            job_repr += ', {}'.format(', '.join(_kwargs))
+        job_repr += ')'
         log.warning('Running: %s', job_repr)
         job_data = self.client.run_job(minion_tgt,
                                        function,
@@ -192,15 +200,20 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                        timeout=timeout)
         if not job_data.get('minions'):
             self.fail(
-                'The job({}) was not published to any minions.'.format(job_repr)
+                'The job({}) was not published to any minions after {}.'.format(
+                    job_repr,
+                    repr(datetime.utcnow() - accept_job_start)
+                )
             )
+        accept_job_time = datetime.utcnow() - accept_job_start
+        get_return_start = datetime.utcnow()
         jid = job_data['jid']
         minions = job_data['minions']
-        ret = None
+        ret = running_job_info = None
         try:
             for fn_ret in self.client.get_iter_returns(jid,
                                                        minions,
-                                                       timeout=timeout,
+                                                       timeout=timeout + 60,
                                                        tgt=minion_tgt):
                 if not fn_ret:
                     continue
@@ -208,19 +221,38 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                     continue
                 # Try to match stalled state functions
                 ret = fn_ret[minion_tgt]
-                log.warning('The job(%s) returned: %s', job_repr, ret)
+                get_return_time = datetime.utcnow() - get_return_start
+                log.warning(
+                    'The job(%s) returned after %s: %s',
+                    job_repr,
+                    repr(get_return_time),
+                    ret
+                )
                 ret = self._check_state_return(ret['ret'])
                 break
             else:
-                self.fail(
-                    'Failed to get the return for the published job({}).'.format(job_repr)
+                get_return_time = datetime.utcnow() - get_return_start
+                err_msg = 'Failed to get the return for the published job({}) after {}.'.format(
+                    job_repr,
+                    repr(get_return_time)
                 )
+                # Never leave a job running behind
+                from tests.support.sminion import create_sminion
+                sminion = create_sminion(minion_id='runtests-internal-sminion')
+                running_job_info = sminion.functions.saltutil.find_job(jid)
+                if running_job_info:
+                    err_msg = 'The job however was found still running. Details\n{}'.format(
+                        pprint.pformat(running_job_info)
+                    )
+
+                self.fail(err_msg)
             return ret
         finally:
             # Never leave a job running behind
-            from tests.support.sminion import create_sminion
-            sminion = create_sminion(minion_id='runtests-internal-sminion')
-            running_job_info = sminion.functions.saltutil.find_job(jid)
+            if running_job_info is None:
+                from tests.support.sminion import create_sminion
+                sminion = create_sminion(minion_id='runtests-internal-sminion')
+                running_job_info = sminion.functions.saltutil.find_job(jid)
             if running_job_info:
                 log.warning(
                     'Killing job(%s) which was found still running. Job Data: %s',
@@ -254,10 +286,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertFalse(version)
 
-        ret = self.run_state('pkg.installed', name=target, refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state('pkg.installed', name=target, refresh=False)
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_002_installed_with_version(self):
         '''
@@ -297,13 +334,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertTrue(version)
 
-        ret = self.run_state('pkg.installed',
-                             name=target,
-                             version=version,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_003_installed_multipkg(self):
         '''
@@ -330,15 +372,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         except AssertionError:
             self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=pkg_targets))
 
+        installed = False
         try:
             ret = self.run_state('pkg.installed',
                                  name=None,
                                  pkgs=pkg_targets,
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
+            installed = True
         finally:
             ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_004_installed_multipkg_with_version(self):
         '''
@@ -379,15 +424,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         pkgs = [{pkg_targets[0]: version}, pkg_targets[1]]
 
+        installed = False
         try:
             ret = self.run_state('pkg.installed',
                                  name=None,
                                  pkgs=pkgs,
                                  refresh=False)
             self.assertSaltTrueReturn(ret)
+            installed = True
         finally:
             ret = self.run_state('pkg.removed', name=None, pkgs=pkg_targets)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_005_installed_32bit(self):
         '''
@@ -417,12 +465,17 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             # below
             self.assertFalse(bool(version))
 
-            ret = self.run_state('pkg.installed',
-                                 name=target,
-                                 refresh=False)
-            self.assertSaltTrueReturn(ret)
-            ret = self.run_state('pkg.removed', name=target)
-            self.assertSaltTrueReturn(ret)
+            installed = False
+            try:
+                ret = self.run_state('pkg.installed',
+                                     name=target,
+                                     refresh=False)
+                self.assertSaltTrueReturn(ret)
+                installed = True
+            finally:
+                ret = self.run_state('pkg.removed', name=target)
+                if installed:
+                    self.assertSaltTrueReturn(ret)
 
     def test_pkg_006_installed_32bit_with_version(self):
         '''
@@ -462,13 +515,18 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # below
         self.assertTrue(bool(version))
 
-        ret = self.run_state('pkg.installed',
-                             name=target,
-                             version=version,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_007_with_dot_in_pkgname(self):
         '''
@@ -494,10 +552,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # the target needs to not be installed before we run the
         # pkg.installed state below
         self.assertTrue(bool(version))
-        ret = self.run_state('pkg.installed', name=target, refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state('pkg.installed', name=target, refresh=False)
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_008_epoch_in_version(self):
         '''
@@ -523,15 +586,21 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # the target needs to not be installed before we run the
         # pkg.installed state below
         self.assertTrue(bool(version))
-        ret = self.run_state('pkg.installed',
-                             name=target,
-                             version=version,
-                             refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state('pkg.installed',
+                                 name=target,
+                                 version=version,
+                                 refresh=False)
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
+    @skipIf(salt.utils.platform.is_darwin(), 'minion is darwin')
     def test_pkg_009_latest_with_epoch(self):
         '''
         This tests for the following issue:
@@ -599,10 +668,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertTrue(version)
 
-        ret = self.run_state('pkg.latest', name=target, refresh=False)
-        self.assertSaltTrueReturn(ret)
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state('pkg.latest', name=target, refresh=False)
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_012_latest_only_upgrade(self):
         '''
@@ -701,41 +775,45 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertFalse(version)
 
-        ret = self.run_state(
-            'pkg.installed',
-            name=target,
-            version='*',
-            refresh=False,
-        )
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state(
+                'pkg.installed',
+                name=target,
+                version='*',
+                refresh=False,
+            )
+            self.assertSaltTrueReturn(ret)
+            installed = True
 
-        # Repeat state, should pass
-        ret = self.run_state(
-            'pkg.installed',
-            name=target,
-            version='*',
-            refresh=False,
-        )
+            # Repeat state, should pass
+            ret = self.run_state(
+                'pkg.installed',
+                name=target,
+                version='*',
+                refresh=False,
+            )
 
-        expected_comment = (
-            'All specified packages are already installed and are at the '
-            'desired version'
-        )
-        self.assertSaltTrueReturn(ret)
-        self.assertEqual(ret[next(iter(ret))]['comment'], expected_comment)
+            expected_comment = (
+                'All specified packages are already installed and are at the '
+                'desired version'
+            )
+            self.assertSaltTrueReturn(ret)
+            self.assertEqual(ret[next(iter(ret))]['comment'], expected_comment)
 
-        # Repeat one more time with unavailable version, test should fail
-        ret = self.run_state(
-            'pkg.installed',
-            name=target,
-            version='93413*',
-            refresh=False,
-        )
-        self.assertSaltFalseReturn(ret)
-
-        # Clean up
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+            # Repeat one more time with unavailable version, test should fail
+            ret = self.run_state(
+                'pkg.installed',
+                name=target,
+                version='93413*',
+                refresh=False,
+            )
+            self.assertSaltFalseReturn(ret)
+        finally:
+            # Clean up
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_014_installed_with_comparison_operator(self):
         '''
@@ -769,6 +847,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             [target],
             refresh=False)
 
+        installed = False
         try:
             ret = self.run_state(
                 'pkg.installed',
@@ -777,6 +856,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                 refresh=False,
             )
             self.assertSaltTrueReturn(ret)
+            installed = True
 
             # The version that was installed should be the latest available
             version = self.run_function('pkg.version', [target])
@@ -784,7 +864,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         finally:
             # Clean up
             ret = self.run_state('pkg.removed', name=target)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     def test_pkg_014_installed_missing_release(self):  # pylint: disable=unused-argument
         '''
@@ -811,17 +892,21 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to not be installed before we run the states below
         self.assertFalse(version)
 
-        ret = self.run_state(
-            'pkg.installed',
-            name=target,
-            version=salt.utils.pkg.rpm.version_to_evr(version)[1],
-            refresh=False,
-        )
-        self.assertSaltTrueReturn(ret)
-
-        # Clean up
-        ret = self.run_state('pkg.removed', name=target)
-        self.assertSaltTrueReturn(ret)
+        installed = False
+        try:
+            ret = self.run_state(
+                'pkg.installed',
+                name=target,
+                version=salt.utils.pkg.rpm.version_to_evr(version)[1],
+                refresh=False,
+            )
+            self.assertSaltTrueReturn(ret)
+            installed = True
+        finally:
+            # Clean up
+            ret = self.run_state('pkg.removed', name=target)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     @requires_salt_modules('pkg.group_install')
     def test_group_installed_handle_missing_package_group(self):  # pylint: disable=unused-argument
@@ -876,14 +961,17 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
+        installed = False
         try:
             ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True, test=True)
             self.assertInSaltComment("The following packages would be installed/updated: {0}".format(realpkg), ret)
             ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
+            installed = True
         finally:
             ret = self.run_state('pkg.removed', name=realpkg)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_pkg_cap_002_already_installed(self):
@@ -909,6 +997,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
+        installed = False
         try:
             # install the package
             ret = self.run_state('pkg.installed', name=realpkg, refresh=False)
@@ -920,11 +1009,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
             ret = self.run_state('pkg.installed', name=target, refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
+            installed = True
 
             self.assertInSaltComment("packages are already installed", ret)
         finally:
             ret = self.run_state('pkg.removed', name=realpkg)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_pkg_cap_003_installed_multipkg_with_version(self):
@@ -971,6 +1062,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertTrue(version)
         self.assertTrue(realver)
 
+        installed = False
         try:
             pkgs = [{pkg_targets[0]: version}, pkg_targets[1], {capability: realver}]
             ret = self.run_state('pkg.installed',
@@ -991,13 +1083,15 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                  pkgs=pkgs,
                                  refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
+            installed = True
             cleanup_pkgs = pkg_targets
             cleanup_pkgs.append(realpkg)
         finally:
-            ret = self.run_state('pkg.removed',
-                                 name='test_pkg_cap_003_installed_multipkg_with_version-remove',
-                                 pkgs=cleanup_pkgs)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                ret = self.run_state('pkg.removed',
+                                     name='test_pkg_cap_003_installed_multipkg_with_version-remove',
+                                     pkgs=cleanup_pkgs)
+                self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_pkg_cap_004_latest(self):
@@ -1024,18 +1118,21 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
+        installed = False
         try:
             ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True, test=True)
             self.assertInSaltComment("The following packages would be installed/upgraded: {0}".format(realpkg), ret)
             ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
+            installed = True
 
             ret = self.run_state('pkg.latest', name=target, refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
             self.assertInSaltComment("is already up-to-date", ret)
         finally:
             ret = self.run_state('pkg.removed', name=realpkg)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
     def test_pkg_cap_005_downloaded(self):
@@ -1094,10 +1191,12 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertFalse(version)
         self.assertFalse(realver)
 
+        installed = False
         try:
             ret = self.run_state('pkg.installed', name=target,
                                  refresh=False, resolve_capabilities=True)
             self.assertSaltTrueReturn(ret)
+            installed = True
             ret = self.run_state('pkg.uptodate',
                                  name='test_pkg_cap_006_uptodate',
                                  pkgs=[target],
@@ -1107,7 +1206,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertInSaltComment("System is already up-to-date", ret)
         finally:
             ret = self.run_state('pkg.removed', name=realpkg)
-            self.assertSaltTrueReturn(ret)
+            if installed:
+                self.assertSaltTrueReturn(ret)
 
     @skipIf(True, 'WAR ROOM TEMPORARY SKIP')            # needs to be rewritten to allow for dnf on Fedora 30 and RHEL 8
     @requires_salt_modules('pkg.hold', 'pkg.unhold')
