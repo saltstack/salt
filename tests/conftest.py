@@ -22,6 +22,7 @@ import fnmatch
 import logging
 import tempfile
 import textwrap
+from functools import partial, wraps
 from contextlib import contextmanager
 
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -337,6 +338,77 @@ def pytest_runtest_logfinish(nodeid):
     called after ``pytest_runtest_call``
     '''
     log.debug('<<<<< END <<<<<<< %s', nodeid)
+
+
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_collection_modifyitems(config, items):
+    # Let PyTest or other plugins handle the initial collection
+    yield
+    groups_collection_modifyitems(config, items)
+
+    log.warning('Mofifying collected tests to keep track of fixture usage')
+    for item in items:
+        for fixture in item.fixturenames:
+            if fixture not in item._fixtureinfo.name2fixturedefs:
+                continue
+            for fixturedef in item._fixtureinfo.name2fixturedefs[fixture]:
+                try:
+                    node_ids = fixturedef.node_ids
+                except AttributeError:
+                    node_ids = fixturedef.node_ids = set()
+                node_ids.add(item.nodeid)
+                try:
+                    fixturedef.finish.__wrapped__
+                except AttributeError:
+                    original_func = fixturedef.finish
+
+                    def wrapper(func, fixturedef):
+
+                        @wraps(func)
+                        def wrapped(self, request):
+                            if self.node_ids:
+                                log.warning(
+                                    '%s is still going to be used, not terminating it. '
+                                    'Still in use on:\n%s',
+                                    self,
+                                    pprint.pformat(self.node_ids)
+                                )
+                                return
+                            log.warning('Finish called on %s', self)
+                            return func(request)
+                        return partial(wrapped, fixturedef)
+
+                    fixturedef.finish = wrapper(fixturedef.finish, fixturedef)
+                    try:
+                        fixturedef.finish.__wrapped__
+                    except AttributeError:
+                        fixturedef.finish.__wrapped__ = original_func
+
+
+@pytest.hookimpl(trylast=True, hookwrapper=True)
+def pytest_pyfunc_call(pyfuncitem):
+    used_fixture_defs = []
+    #log.info('Before %s values: %s', pyfuncitem.nodeid, values)
+    for fixture in pyfuncitem.fixturenames:
+        if fixture not in pyfuncitem._fixtureinfo.name2fixturedefs:
+            continue
+        for fixturedef in reversed(pyfuncitem._fixtureinfo.name2fixturedefs[fixture]):
+            used_fixture_defs.append(fixturedef)
+    for fixturedef in used_fixture_defs:
+        log.warning('Before Test. Fixture: %s; Node IDs: %s', fixturedef, fixturedef.node_ids)
+    try:
+        outcome = yield
+    finally:
+        #log.info('After %s values: %s', pyfuncitem.nodeid, values)
+        for fixturedef in used_fixture_defs:
+            fixturedef.node_ids.remove(pyfuncitem.nodeid)
+            if not fixturedef.node_ids:
+                # This fixture is not used in any more test functions
+                log.warning('The fixture %s is not being used in any more tests, terminate it.', fixturedef)
+                fixturedef.finish(pyfuncitem._request)
+        #log.info('After %s fixture teardown values: %s', pyfuncitem.nodeid, values)
+    for fixturedef in used_fixture_defs:
+        log.warning(' After Test. Fixture: %s; Node IDs: %s', fixturedef, fixturedef.node_ids)
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
@@ -544,11 +616,7 @@ def get_group(items, group_count, group_size, group_id):
     return items[start:end]
 
 
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_collection_modifyitems(config, items):
-    # Let PyTest or other plugins handle the initial collection
-    yield
-
+def groups_collection_modifyitems(config, items):
     group_count = config.getoption('test-group-count')
     group_id = config.getoption('test-group')
 
