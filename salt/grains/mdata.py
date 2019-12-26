@@ -4,7 +4,7 @@ SmartOS Metadata grain provider
 
 :maintainer:    Jorge Schrauwen <sjorge@blackdot.be>
 :maturity:      new
-:depends:       salt.utils, salt.module.cmdmod
+:depends:       salt.module.cmdmod
 :platform:      SmartOS
 
 .. versionadded:: nitrogen
