@@ -1450,7 +1450,7 @@ def hardlink(
     if user is None:
         user = __opts__['user']
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
                 'The group argument for {0} has been ignored as this '
