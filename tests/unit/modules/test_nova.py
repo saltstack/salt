@@ -8,19 +8,16 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.modules.nova as nova
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NovaTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.nova
