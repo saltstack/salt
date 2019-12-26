@@ -1450,7 +1450,7 @@ def hardlink(
     if user is None:
         user = __opts__['user']
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
                 'The group argument for {0} has been ignored as this '
@@ -2213,7 +2213,9 @@ def managed(name,
         (use ~ in YAML), the file will be created as an empty file and
         the content will not be managed. This is also the case when a file
         already exists and the source is undefined; the contents of the file
-        will not be changed or managed.
+        will not be changed or managed. If source is left blank or None, please
+        also set replaced to False to make your intention explicit.
+
 
         If the file is hosted on a HTTP or FTP server then the source_hash
         argument is also required.
@@ -2570,8 +2572,10 @@ def managed(name,
 
         If ``True``, files managed using ``contents``, ``contents_pillar``, or
         ``contents_grains`` will have a newline added to the end of the file if
-        one is not present. Setting this option to ``False`` will omit this
-        final newline.
+        one is not present. Setting this option to ``False`` will ensure the
+        final line, or entry, does not contain a new line. If the last line, or
+        entry in the file does contain a new line already, this option will not
+        remove it.
 
     contents_delimiter
         .. versionadded:: 2015.8.4
@@ -2894,8 +2898,11 @@ def managed(name,
             for part in validated_contents:
                 for line in part.splitlines():
                     contents += line.rstrip('\n').rstrip('\r') + os.linesep
-            if contents_newline and not contents.endswith(os.linesep):
-                contents += os.linesep
+            if not contents_newline:
+                # If contents newline is set to False, strip out the newline
+                # character and carriage return character
+                contents = contents.rstrip('\n').rstrip('\r')
+
         except UnicodeDecodeError:
             # Either something terrible happened, or we have binary data.
             if template:

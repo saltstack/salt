@@ -13,7 +13,7 @@ import tempfile
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ShellCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import patch, MagicMock
 
 # Import Salt libs
 import salt.config
@@ -35,7 +35,6 @@ self:
 '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.path.which('ssh'), "No ssh binary found in path")
 class SSHPasswordTests(ShellCase):
     def test_password_failure(self):
@@ -105,7 +104,6 @@ class SSHRosterDefaults(TestCase):
                 shutil.rmtree(tempdir)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SSHSingleTests(TestCase):
     def setUp(self):
         self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
