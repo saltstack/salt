@@ -14,8 +14,8 @@ import pipes
 import logging
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 
 # Import salt libs
@@ -31,6 +31,8 @@ log = logging.getLogger(__name__)
 
 
 class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
+
+    _call_binary_ = 'salt-cp'
 
     def test_cp_testfile(self):
         '''
@@ -64,7 +66,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 continue
             ret = self.run_salt(
                 '--out yaml {0} file.directory_exists {1}'.format(
-                    quote(minion), TMP
+                    quote(minion), RUNTIME_VARS.TMP
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
@@ -72,7 +74,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 ret = self.run_salt(
                     '--out yaml {0} file.makedirs {1}'.format(
                         quote(minion),
-                        TMP
+                        RUNTIME_VARS.TMP
                     )
                 )
 
@@ -80,7 +82,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 self.assertTrue(data[minion])
 
             minion_testfile = os.path.join(
-                TMP, 'cp_{0}_testfile'.format(idx)
+                RUNTIME_VARS.TMP, 'cp_{0}_testfile'.format(idx)
             )
 
             ret = self.run_cp('--out pprint {0} {1} {2}'.format(

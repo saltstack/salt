@@ -20,11 +20,11 @@ import salt.utils.atomicfile
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.minions
+import salt.utils.msgpack
 import salt.utils.stringutils
 import salt.exceptions
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 
@@ -450,7 +450,7 @@ def clean_old_jobs():
                         try:
                             shutil.rmtree(f_path)
                         except OSError as err:
-                            log.error('Unable to remove %s: %s', t_path, err)
+                            log.error('Unable to remove %s: %s', f_path, err)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
@@ -520,7 +520,7 @@ def save_reg(data):
             raise
     try:
         with salt.utils.files.fopen(regfile, 'a') as fh_:
-            msgpack.dump(data, fh_)
+            salt.utils.msgpack.dump(data, fh_)
     except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
@@ -534,7 +534,7 @@ def load_reg():
     regfile = os.path.join(reg_dir, 'register')
     try:
         with salt.utils.files.fopen(regfile, 'r') as fh_:
-            return msgpack.load(fh_)
+            return salt.utils.msgpack.load(fh_)
     except Exception:
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

@@ -12,12 +12,9 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
-from tests.support.paths import BASE_FILES
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
@@ -32,7 +29,6 @@ except ImportError as err:
     pytest = None
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     TestCase for the state compiler.
@@ -72,6 +68,72 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             with self.assertRaises(salt.exceptions.SaltRenderError):
                 state_obj.call_high(high_data)
+
+    def test_verify_onlyif_parse(self):
+        low_data = {
+            "onlyif": [
+                {
+                    "fun": "test.arg",
+                    "args": [
+                        "arg1",
+                        "arg2"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is true', 'result': False}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_unless_parse(self):
+        low_data = {
+            "unless": [
+                {
+                    "fun": "test.arg",
+                    "args": [
+                        "arg1",
+                        "arg2"
+                    ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, '')
+            self.assertEqual(expected_result, return_result)
 
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -155,7 +217,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         sls_dir = 'issue-47182'
         shutil.copytree(
-            os.path.join(BASE_FILES, sls_dir),
+            os.path.join(RUNTIME_VARS.BASE_FILES, sls_dir),
             os.path.join(self.state_tree_dir, sls_dir)
         )
         shutil.move(
@@ -172,7 +234,6 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(ret, [('somestuff', 'cmd')])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(pytest is None, 'PyTest is missing')
 class StateReturnsTestCase(TestCase):
     '''

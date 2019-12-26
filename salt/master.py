@@ -224,7 +224,9 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         # Make Start Times
         last = int(time.time())
+        last_git_pillar_update = last
 
+        git_pillar_update_interval = self.opts.get('git_pillar_update_interval', 0)
         old_present = set()
         while True:
             now = int(time.time())
@@ -232,7 +234,9 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            self.handle_git_pillar()
+            if (now - last_git_pillar_update) >= git_pillar_update_interval:
+                last_git_pillar_update = now
+                self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
             self.handle_presence(old_present)
@@ -943,8 +947,10 @@ class ReqServer(salt.utils.process.SignalHandlingProcess):
             self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class MWorker(salt.utils.process.SignalHandlingProcess):

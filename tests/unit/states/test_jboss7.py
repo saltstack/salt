@@ -6,8 +6,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.states.jboss7 as jboss7
@@ -15,7 +15,6 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
