@@ -27,3 +27,9 @@ supervisor==3.3.5; python_version < '3'
 virtualenv
 watchdog
 yamlordereddictloader
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+wempy; python_version <'3'
