@@ -17,7 +17,7 @@ from tests.support.helpers import (
 from tests.support.unit import skipIf
 
 # Import Salt libs
-from salt.utils import six
+from salt.ext import six
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
@@ -241,9 +241,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         func = 'pkg.info_installed'
 
         if grains['os_family'] == 'Debian':
-            ret = self.run_function(func, ['bash-completion', 'dpkg'])
+            ret = self.run_function(func, ['bash', 'dpkg'])
             keys = ret.keys()
-            self.assertIn('bash-completion', keys)
+            self.assertIn('bash', keys)
             self.assertIn('dpkg', keys)
         elif grains['os_family'] == 'RedHat':
             ret = self.run_function(func, ['rpm', 'bash'])
