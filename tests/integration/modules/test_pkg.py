@@ -17,7 +17,7 @@ from tests.support.helpers import (
 from tests.support.unit import skipIf
 
 # Import Salt libs
-from salt.utils import six
+from salt.ext import six
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
