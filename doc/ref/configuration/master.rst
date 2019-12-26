@@ -4255,6 +4255,21 @@ explanation <git-pillar-multiple-remotes>` from the git_pillar documentation.
 
     git_pillar_includes: False
 
+``git_pillar_update_interval``
+******************************
+
+.. versionadded:: neon
+
+Default: ``60``
+
+This option defines the default update interval (in seconds) for git_pillar
+remotes. The update is handled within the global loop, hence
+``git_pillar_update_interval`` should be a multiple of ``loop_interval``.
+
+.. code-block:: yaml
+
+    git_pillar_update_interval: 120
+
 .. _git-ext-pillar-auth-opts:
 
 Git External Pillar Authentication Options

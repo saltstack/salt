@@ -914,7 +914,7 @@ Example:
     Renamed from ``json_decode_list`` to ``json_encode_list``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_list`` will be supported until the Neon
+    when it was added. ``json_decode_list`` will be supported until the Aluminium
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -947,7 +947,7 @@ Returns:
     Renamed from ``json_decode_dict`` to ``json_encode_dict``. When you encode
     something you get bytes, and when you decode, you get your locale's
     encoding (usually a ``unicode`` type). This filter was incorrectly-named
-    when it was added. ``json_decode_dict`` will be supported until the Neon
+    when it was added. ``json_decode_dict`` will be supported until the Aluminium
     release.
 .. deprecated:: 2018.3.3,2019.2.0
     The :jinja_ref:`tojson` filter accomplishes what this filter was designed
@@ -995,8 +995,8 @@ installed, then the upstream version of the filter will be used. See the
 .. versionadded:: 2017.7.0
 .. versionadded:: 2018.3.0
     Renamed from ``rand_str`` to ``random_hash`` to more accurately describe
-    what the filter does. ``rand_str`` will be supported until the Neon
-    release.
+    what the filter does. ``rand_str`` will be supported to ensure backwards
+    compatibility but please use the preferred ``random_hash``.
 
 Generates a random number between 1 and the number passed to the filter, and
 then hashes it. The default hash type is the one specified by the minion's
