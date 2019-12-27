@@ -5,14 +5,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, Mock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, Mock, patch
 
 # Import salt libs
 import salt.modules.uwsgi as uwsgi
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class UwsgiTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

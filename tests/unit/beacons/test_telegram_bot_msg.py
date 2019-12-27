@@ -10,7 +10,7 @@ from salt.beacons import telegram_bot_msg
 # Salt testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Third-party libs
 try:
@@ -24,7 +24,6 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(not HAS_TELEGRAM, 'telegram is not available')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TelegramBotMsgBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.telegram_bot

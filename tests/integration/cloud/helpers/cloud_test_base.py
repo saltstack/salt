@@ -26,6 +26,7 @@ TIMEOUT = 500
 log = logging.getLogger(__name__)
 
 
+@expensiveTest
 class CloudTest(ShellCase):
     PROVIDER = ''
     REQUIRED_PROVIDER_CONFIG_ITEMS = tuple()
@@ -178,7 +179,6 @@ class CloudTest(ShellCase):
     def profile_str(self):
         return self.PROVIDER + '-config'
 
-    @expensiveTest
     def setUp(self):
         '''
         Sets up the test requirements.  In child classes, define PROVIDER and REQUIRED_CONFIG_ITEMS or this will fail

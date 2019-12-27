@@ -9,16 +9,15 @@ import subprocess
 import textwrap
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock
 
 # Import Salt libs
 import salt.utils.stringutils
 import salt.tops.ext_nodes as ext_nodes
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ExtNodesTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {
