@@ -57,13 +57,6 @@ def set_(key, value, profile=None):
     Set a key/value pair in the vault service
     '''
     if '?' in key:
-        __utils__['versions.warn_until'](
-            'Neon',
-            (
-                'Using ? to seperate between the path and key for vault has been deprecated '
-                'and will be removed in {version}.  Please just use a /.'
-            ),
-        )
         path, key = key.split('?')
     else:
         path, key = key.rsplit('/', 1)
@@ -90,13 +83,6 @@ def get(key, profile=None):
     Get a value from the vault service
     '''
     if '?' in key:
-        __utils__['versions.warn_until'](
-            'Neon',
-            (
-                'Using ? to seperate between the path and key for vault has been deprecated '
-                'and will be removed in {version}.  Please just use a /.'
-            ),
-        )
         path, key = key.split('?')
     else:
         path, key = key.rsplit('/', 1)
