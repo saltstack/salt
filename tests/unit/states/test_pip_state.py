@@ -15,7 +15,7 @@ import sys
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.states.pip_state as pip_state
@@ -31,7 +31,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PIP,
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
