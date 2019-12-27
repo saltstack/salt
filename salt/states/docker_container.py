@@ -1237,8 +1237,6 @@ def running(name,
           ``--net=none``). Not to be confused with Python's ``None``.
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
-        - Any name that identifies an existing network that might be created
-          with ``docker.network_present``.
 
           .. warning::
 
@@ -2062,7 +2060,8 @@ def running(name,
                 __context__[contextkey] = new_container_info.get(
                     'NetworkSettings', {}).get('Networks', {})
             return __context__[contextkey]
-        autoip_keys = __opts__['docker.compare_container_networks'].get('automatic', [])
+        autoip_keys = __salt__['config.option'](
+            'docker.compare_container_networks').get('automatic', [])
         for net_name, net_changes in six.iteritems(
                 ret['changes'].get('container', {}).get('Networks', {})):
             if 'IPConfiguration' in net_changes \
