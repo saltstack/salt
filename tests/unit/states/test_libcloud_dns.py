@@ -8,11 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.unit import TestCase
 import salt.states.libcloud_dns as libcloud_dns
 from salt.modules.libcloud_dns import _simple_record, _simple_zone
 
@@ -37,7 +33,6 @@ class DNSTestRecord(object):
         self.extra = {}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

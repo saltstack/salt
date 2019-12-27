@@ -22,7 +22,6 @@ cloud modules
     linode
     lxc
     msazure
-    nova
     oneandone
     opennebula
     openstack

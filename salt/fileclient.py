@@ -1018,11 +1018,16 @@ class RemoteClient(Client):
         '''
         Reset the channel, in the event of an interruption
         '''
+        # Close the previous channel
+        self.channel.close()
+        # Instantiate a new one
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def destroy(self):
         if self._closing:

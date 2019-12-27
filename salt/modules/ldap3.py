@@ -409,7 +409,7 @@ def add(connect_spec, dn, attributes):
     if 'unicodePwd' in attributes:
         attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
 
-    modlist = ldap.modlist.addModlist(attributes),
+    modlist = ldap.modlist.addModlist(attributes)
     try:
         l.c.add_s(dn, modlist)
     except ldap.LDAPError as e:

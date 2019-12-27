@@ -12,11 +12,9 @@ import logging
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -26,7 +24,6 @@ import salt.returners.pgjsonb as pgjsonb
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PGJsonbCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for the local_cache.clean_old_jobs function.
