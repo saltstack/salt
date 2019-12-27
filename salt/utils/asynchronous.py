@@ -5,9 +5,12 @@ Helpers/utils for working with tornado asynchronous stuff
 
 from __future__ import absolute_import, print_function, unicode_literals
 
+import sys
+
 import tornado.ioloop
 import tornado.concurrent
 import contextlib
+from salt.ext import six
 from salt.utils import zeromq
 
 
@@ -51,9 +54,9 @@ class SyncWrapper(object):
     def __getattribute__(self, key):
         try:
             return object.__getattribute__(self, key)
-        except AttributeError as ex:
+        except AttributeError:
             if key == 'asynchronous':
-                raise ex
+                six.reraise(*sys.exc_info())
         attr = getattr(self.asynchronous, key)
         if hasattr(attr, '__call__'):
             def wrap(*args, **kwargs):
@@ -64,19 +67,14 @@ class SyncWrapper(object):
                         ret = self._block_future(ret)
                     return ret
             return wrap
-
-        else:
-            return attr
+        return attr
 
     def _block_future(self, future):
         self.io_loop.add_future(future, lambda future: self.io_loop.stop())
         self.io_loop.start()
         return future.result()
 
-    def __del__(self):
-        '''
-        On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
-        '''
+    def close(self):
         if hasattr(self, 'asynchronous'):
             if hasattr(self.asynchronous, 'close'):
                 # Certain things such as streams should be closed before
@@ -94,3 +92,17 @@ class SyncWrapper(object):
         elif hasattr(self, 'io_loop'):
             self.io_loop.close()
             del self.io_loop
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        '''
+        On deletion of the asynchronous wrapper, make sure to clean up the asynchronous stuff
+        '''
+        self.close()
+    # pylint: enable=W1701
