@@ -24,8 +24,6 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -58,7 +56,6 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1034,7 +1031,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert core.dns() == ret
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     @patch('salt.utils.network.ip_addrs6',
            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
@@ -1056,7 +1052,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
     @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
     def test_fqdns_socket_error(self):

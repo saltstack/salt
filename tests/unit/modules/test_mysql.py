@@ -13,7 +13,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch, call
+from tests.support.mock import MagicMock, patch, call
 
 # Import salt libs
 import salt.modules.mysql as mysql
@@ -71,7 +71,6 @@ __all_privileges__ = [
 ]
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(NO_MYSQL, 'Install MySQL bindings before running MySQL unit tests.')
 class MySQLTestCase(TestCase, LoaderModuleMockMixin):
 
