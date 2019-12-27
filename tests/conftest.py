@@ -409,6 +409,7 @@ def pytest_runtest_protocol(item, nextitem):
                 fixturedef.finish(item._request)
     for fixturedef in used_fixture_defs:
         log.warning(' After Test. Fixture: %s; Node IDs:\n%s', fixturedef, pprint.pformat(list(fixturedef.node_ids)))
+    return outcome
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
