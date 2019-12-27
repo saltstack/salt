@@ -8,8 +8,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
-import pprint
-from datetime import datetime
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
@@ -73,6 +71,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     '''
     pkg.installed state tests
     '''
+
+    RUN_FUNCTION_TIMEOUT = 600
 
     @classmethod
     @requires_system_grains
@@ -174,93 +174,6 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         if len(names) == 1:
             return ret[names[0]]
         return ret
-
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=600, **kwargs):
-        '''
-        Run a single salt function and condition the return down to match the
-        behavior of the raw function call
-        '''
-        accept_job_start = datetime.utcnow()
-        job_repr = 'Job(tgt={tgt}, func={function}({args}'.format(
-            tgt=minion_tgt,
-            function=function,
-            args=', '.join([repr(_arg) for _arg in arg])
-        )
-        if kwargs:
-            _kwargs = []
-            for key, value in kwargs.items():
-                _kwargs.append('{}={}'.format(key, repr(value)))
-            job_repr += ', {}'.format(', '.join(_kwargs))
-        job_repr += ')'
-        log.warning('Running: %s', job_repr)
-        job_data = self.client.run_job(minion_tgt,
-                                       function,
-                                       arg=arg,
-                                       kwarg=kwargs,
-                                       timeout=timeout)
-        if not job_data.get('minions'):
-            self.fail(
-                'The job({}) was not published to any minions after {}.'.format(
-                    job_repr,
-                    repr(datetime.utcnow() - accept_job_start)
-                )
-            )
-        accept_job_time = datetime.utcnow() - accept_job_start
-        get_return_start = datetime.utcnow()
-        jid = job_data['jid']
-        minions = job_data['minions']
-        ret = running_job_info = None
-        try:
-            for fn_ret in self.client.get_iter_returns(jid,
-                                                       minions,
-                                                       timeout=timeout + 60,
-                                                       tgt=minion_tgt):
-                if not fn_ret:
-                    continue
-                if minion_tgt not in fn_ret:
-                    continue
-                # Try to match stalled state functions
-                ret = fn_ret[minion_tgt]
-                get_return_time = datetime.utcnow() - get_return_start
-                log.warning(
-                    'The job(%s) returned after %s: %s',
-                    job_repr,
-                    repr(get_return_time),
-                    ret
-                )
-                ret = self._check_state_return(ret['ret'])
-                break
-            else:
-                get_return_time = datetime.utcnow() - get_return_start
-                err_msg = 'Failed to get the return for the published job({}) after {}.'.format(
-                    job_repr,
-                    repr(get_return_time)
-                )
-                # Never leave a job running behind
-                from tests.support.sminion import create_sminion
-                sminion = create_sminion(minion_id='runtests-internal-sminion')
-                running_job_info = sminion.functions.saltutil.find_job(jid)
-                if running_job_info:
-                    err_msg = 'The job however was found still running. Details\n{}'.format(
-                        pprint.pformat(running_job_info)
-                    )
-
-                self.fail(err_msg)
-            return ret
-        finally:
-            # Never leave a job running behind
-            if running_job_info is None:
-                from tests.support.sminion import create_sminion
-                sminion = create_sminion(minion_id='runtests-internal-sminion')
-                running_job_info = sminion.functions.saltutil.find_job(jid)
-            if running_job_info:
-                log.warning(
-                    'Killing job(%s) which was found still running. Job Data: %s',
-                    job_repr,
-                    running_job_info
-                )
-                # The job is still running
-                sminion.functions.saltutil.kill_job(jid)
 
     def test_pkg_001_installed(self):
         '''
