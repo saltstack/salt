@@ -935,6 +935,12 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                     err_msg += ' The job however was found still running. Details\n{}'.format(
                         pprint.pformat(running_job_info)
                     )
+                else:
+                    cached_job_info = sminion.functions.saltutil.find_cached_job(jid)
+                    if cached_job_info and 'jobs cache directory not found' not in cached_job_info:
+                        err_msg += ' The cached job details is:\n{}'.format(
+                            pprint.pformat(cached_job_info)
+                        )
                 self.fail(err_msg)
         finally:
             # Never leave a job running behind

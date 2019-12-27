@@ -817,6 +817,7 @@ class TestDaemon(object):
         minion_opts['pki_dir'] = os.path.join(TMP_ROOT_DIR, 'pki')
         minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
         minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
+        minion_opts['cache_jobs'] = True
         if virtualenv_binary:
             minion_opts['venv_bin'] = virtualenv_binary
 
