@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 # Import salt testing libs
 from tests.support.unit import TestCase
 from tests.support.helpers import (
-    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree
+    RedirectStdStreams, requires_sshd_server, win32_kill_process_tree, format_timedelta
 )
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import (
@@ -833,18 +833,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
-
-        def format_timedelta(tdelta):
-            minutes, seconds = divmod(tdelta.seconds, 60)
-            milliseconds = tdelta.microseconds // 1000
-            microseconds = tdelta.microseconds - milliseconds * 1000
-            if minutes:
-                return '{}m{}s'.format(minutes, seconds)
-            if seconds:
-                return '{}.{}s'.format(seconds, milliseconds)
-            if milliseconds:
-                return '{}.{}ms'.format(milliseconds, microseconds)
-            return '{}\u00b5s'.format(microseconds)
 
         if timeout is None:
             timeout = self.RUN_FUNCTION_TIMEOUT

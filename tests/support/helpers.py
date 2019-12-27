@@ -34,6 +34,7 @@ import time
 import tornado.ioloop
 import tornado.web
 import types
+from datetime import timedelta
 
 # Import 3rd-party libs
 import psutil  # pylint: disable=3rd-party-module-not-gated
@@ -1648,3 +1649,20 @@ def dedent(text, linesep=os.linesep):
     if not isinstance(text, six.text_type):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+def format_timedelta(tdelta):
+    if not isinstance(tdelta, timedelta):
+        raise RuntimeError(
+            'Only datetime.timedelta instances are acceptable'
+        )
+    minutes, seconds = divmod(tdelta.seconds, 60)
+    milliseconds = tdelta.microseconds // 1000
+    microseconds = tdelta.microseconds - milliseconds * 1000
+    if minutes:
+        return '{}m{}s'.format(minutes, seconds)
+    if seconds:
+        return '{}.{}s'.format(seconds, milliseconds)
+    if milliseconds:
+        return '{}.{}ms'.format(milliseconds, microseconds)
+    return '{}\u00b5s'.format(microseconds)
