@@ -142,6 +142,11 @@ State Changes
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
 
+Module Changes
+==============
+
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
 
 Deprecations
 ============
