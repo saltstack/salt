@@ -326,22 +326,40 @@ def pytest_report_header():
 
 def pytest_runtest_logstart(nodeid):
     '''
-    implements the runtest_setup/call/teardown protocol for
-    the given test item, including capturing exceptions and calling
-    reporting hooks.
+    signal the start of running a single test item.
+
+    This hook will be called **before** :func:`pytest_runtest_setup`, :func:`pytest_runtest_call` and
+    :func:`pytest_runtest_teardown` hooks.
+
+    :param str nodeid: full id of the item
+    :param location: a triple of ``(filename, linenum, testname)``
     '''
     log.debug('>>>>> START >>>>> %s', nodeid)
 
 
 def pytest_runtest_logfinish(nodeid):
     '''
-    called after ``pytest_runtest_call``
+    signal the complete finish of running a single test item.
+
+    This hook will be called **after** :func:`pytest_runtest_setup`, :func:`pytest_runtest_call` and
+    :func:`pytest_runtest_teardown` hooks.
+
+    :param str nodeid: full id of the item
+    :param location: a triple of ``(filename, linenum, testname)``
     '''
     log.debug('<<<<< END <<<<<<< %s', nodeid)
 
 
 @pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_collection_modifyitems(config, items):
+    '''
+    called after collection has been performed, may filter or re-order
+    the items in-place.
+
+    :param _pytest.main.Session session: the pytest session object
+    :param _pytest.config.Config config: pytest config object
+    :param List[_pytest.nodes.Item] items: list of item objects
+    '''
     # Let PyTest or other plugins handle the initial collection
     yield
     groups_collection_modifyitems(config, items)
@@ -366,16 +384,22 @@ def pytest_collection_modifyitems(config, items):
 
                         @wraps(func)
                         def wrapped(self, request):
-                            if self.node_ids:
-                                log.warning(
-                                    '%s is still going to be used, not terminating it. '
-                                    'Still in use on:\n%s',
-                                    self,
-                                    pprint.pformat(self.node_ids)
-                                )
-                                return
-                            log.warning('Finish called on %s', self)
-                            return func(request)
+                            try:
+                                return self._finished
+                            except AttributeError:
+                                if self.node_ids:
+                                    log.debug(
+                                        '%s is still going to be used, not terminating it. '
+                                        'Still in use on:\n%s',
+                                        self,
+                                        pprint.pformat(list(self.node_ids))
+                                    )
+                                    return
+                                log.debug('Finish called on %s', self)
+                                try:
+                                    return func(request)
+                                finally:
+                                    self._finished = True
                         return partial(wrapped, fixturedef)
 
                     fixturedef.finish = wrapper(fixturedef.finish, fixturedef)
@@ -386,29 +410,41 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.hookimpl(trylast=True, hookwrapper=True)
-def pytest_pyfunc_call(pyfuncitem):
+def pytest_runtest_protocol(item, nextitem):
+    '''
+    implements the runtest_setup/call/teardown protocol for
+    the given test item, including capturing exceptions and calling
+    reporting hooks.
+
+    :arg item: test item for which the runtest protocol is performed.
+
+    :arg nextitem: the scheduled-to-be-next test item (or None if this
+                   is the end my friend).  This argument is passed on to
+                   :py:func:`pytest_runtest_teardown`.
+
+    :return boolean: True if no further hook implementations should be invoked.
+
+
+    Stops at first non-None result, see :ref:`firstresult`
+    '''
+    request = item._request
     used_fixture_defs = []
-    #log.info('Before %s values: %s', pyfuncitem.nodeid, values)
-    for fixture in pyfuncitem.fixturenames:
-        if fixture not in pyfuncitem._fixtureinfo.name2fixturedefs:
+    for fixture in item.fixturenames:
+        if fixture not in item._fixtureinfo.name2fixturedefs:
             continue
-        for fixturedef in reversed(pyfuncitem._fixtureinfo.name2fixturedefs[fixture]):
+        for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
             used_fixture_defs.append(fixturedef)
-    for fixturedef in used_fixture_defs:
-        log.warning('Before Test. Fixture: %s; Node IDs: %s', fixturedef, fixturedef.node_ids)
     try:
-        outcome = yield
+        # Run the test
+        yield
     finally:
-        #log.info('After %s values: %s', pyfuncitem.nodeid, values)
         for fixturedef in used_fixture_defs:
-            fixturedef.node_ids.remove(pyfuncitem.nodeid)
+            fixturedef.node_ids.remove(item.nodeid)
             if not fixturedef.node_ids:
                 # This fixture is not used in any more test functions
-                log.warning('The fixture %s is not being used in any more tests, terminate it.', fixturedef)
-                fixturedef.finish(pyfuncitem._request)
-        #log.info('After %s fixture teardown values: %s', pyfuncitem.nodeid, values)
-    for fixturedef in used_fixture_defs:
-        log.warning(' After Test. Fixture: %s; Node IDs: %s', fixturedef, fixturedef.node_ids)
+                fixturedef.finish(request)
+    del request
+    del used_fixture_defs
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
