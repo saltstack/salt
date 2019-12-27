@@ -8,6 +8,7 @@ from __future__ import absolute_import, unicode_literals
 # Import Python libs
 import json  # future lint: blacklisted-module
 import logging
+import sys
 
 # Import Salt libs
 import salt.utils.data
@@ -17,6 +18,10 @@ import salt.utils.stringutils
 from salt.ext import six
 
 log = logging.getLogger(__name__)
+
+
+# One to one mappings
+JSONEncoder = json.JSONEncoder
 
 
 def __split(raw):
@@ -95,7 +100,7 @@ def loads(s, **kwargs):
         if six.PY3 and isinstance(s, bytes):
             return json_module.loads(salt.utils.stringutils.to_unicode(s), **kwargs)
         else:
-            raise exc
+            six.reraise(*sys.exc_info())
 
 
 def dump(obj, fp, **kwargs):

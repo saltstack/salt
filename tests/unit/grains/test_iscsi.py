@@ -8,20 +8,17 @@ import errno
 import textwrap
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     patch,
     mock_open,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.grains.iscsi as iscsi
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IscsiGrainsTestCase(TestCase):
     '''
     Test cases for iscsi grains
