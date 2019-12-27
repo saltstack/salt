@@ -34,9 +34,6 @@ The Azure ARM cloud module is used to control access to Microsoft Azure Resource
       * ``client_id``
       * ``secret``
 
-    if using MSI-style authentication:
-      * ``subscription_id``
-
     Optional provider parameters:
 
     **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud. Possible values:
@@ -254,22 +251,14 @@ def get_configured_provider():
     provider = __is_provider_configured(
         __opts__,
         __active_provider_name__ or __virtualname__,
-        ('subscription_id', 'tenant', 'client_id', 'secret'),
+        ('subscription_id', 'tenant', 'client_id', 'secret')
     )
 
     if provider is False:
         provider = __is_provider_configured(
             __opts__,
             __active_provider_name__ or __virtualname__,
-            ('subscription_id', 'username', 'password'),
-        )
-
-    if provider is False:
-        # check if using MSI style credentials...
-        provider = config.is_provider_configured(
-            __opts__,
-            __active_provider_name__ or __virtualname__,
-            required_keys=('subscription_id',),
+            ('subscription_id', 'username', 'password')
         )
 
     return provider
@@ -322,13 +311,11 @@ def get_conn(client_type):
         )
         conn_kwargs.update({'client_id': client_id, 'secret': secret,
                             'tenant': tenant})
-
-    username = config.get_cloud_config_value(
-        'username',
-        get_configured_provider(), __opts__, search_global=False
-    )
-
-    if username is not None:
+    else:
+        username = config.get_cloud_config_value(
+            'username',
+            get_configured_provider(), __opts__, search_global=False
+        )
         password = config.get_cloud_config_value(
             'password',
             get_configured_provider(), __opts__, search_global=False
@@ -1048,15 +1035,6 @@ def request_instance(vm_):
         default=False
     )
 
-    vm_password = salt.utils.stringutils.to_str(
-        config.get_cloud_config_value(
-            'ssh_password', vm_, __opts__, search_global=True,
-            default=config.get_cloud_config_value(
-                'win_password', vm_, __opts__, search_global=True
-            )
-        )
-    )
-
     os_kwargs = {}
     win_installer = config.get_cloud_config_value(
         'win_installer', vm_, __opts__, search_global=True
@@ -1074,6 +1052,16 @@ def request_instance(vm_):
             ssh=sshconfiguration,
         )
         os_kwargs['linux_configuration'] = linuxconfiguration
+        vm_password = None
+    else:
+        vm_password = salt.utils.stringutils.to_str(
+            config.get_cloud_config_value(
+                'ssh_password', vm_, __opts__, search_global=True,
+                default=config.get_cloud_config_value(
+                    'win_password', vm_, __opts__, search_global=True
+                )
+            )
+        )
 
     if win_installer or (vm_password is not None and not disable_password_authentication):
         if not isinstance(vm_password, str):
@@ -1340,7 +1328,7 @@ def request_instance(vm_):
         ),
         network_profile=NetworkProfile(
             network_interfaces=[
-                NetworkInterfaceReference(vm_['iface_id']),
+                NetworkInterfaceReference(id=vm_['iface_id']),
             ],
         ),
         availability_set=availability_set,

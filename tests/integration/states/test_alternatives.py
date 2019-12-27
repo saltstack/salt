@@ -12,7 +12,7 @@ from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 NO_ALTERNATIVES = False
 if not os.path.exists('/etc/alternatives'):
@@ -20,6 +20,7 @@ if not os.path.exists('/etc/alternatives'):
 
 
 @skipIf(NO_ALTERNATIVES, '/etc/alternatives does not exist on the system')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class AlterantivesStateTest(ModuleCase, SaltReturnAssertsMixin):
     @destructiveTest
     def test_install_set_and_remove(self):

@@ -58,7 +58,7 @@ class TemporaryLoggingHandler(logging.NullHandler):
     .. versionadded:: 0.17.0
     '''
 
-    def __init__(self, level=logging.NOTSET, max_queue_size=100000):
+    def __init__(self, level=logging.NOTSET, max_queue_size=10000):
         super(TemporaryLoggingHandler, self).__init__(level=level)
         self.__messages = collections.deque(maxlen=max_queue_size)
 

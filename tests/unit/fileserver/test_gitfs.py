@@ -88,6 +88,7 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
             'gitfs_root': '',
             'fileserver_backend': ['gitfs'],
             'gitfs_base': 'master',
+            'gitfs_fallback': '',
             'fileserver_events': True,
             'transport': 'zeromq',
             'gitfs_mountpoint': '',
@@ -263,6 +264,81 @@ class GitFSTestFuncs(object):
         self.assertIn('grail', ret)
         self.assertIn(UNICODE_DIRNAME, ret)
 
+    def test_find_and_serve_file(self):
+        with patch.dict(gitfs.__opts__, {'file_buffer_size': 262144}):
+            gitfs.update()
+
+            # find_file
+            ret = gitfs.find_file('testfile')
+            self.assertEqual('testfile', ret['rel'])
+
+            full_path_to_file = salt.utils.path.join(gitfs.__opts__['cachedir'], 'gitfs', 'refs', 'base', 'testfile')
+            self.assertEqual(full_path_to_file, ret['path'])
+
+            # serve_file
+            load = {'saltenv': 'base',
+                    'path': full_path_to_file,
+                    'loc': 0
+                    }
+            fnd = {'path': full_path_to_file,
+                   'rel': 'testfile'}
+            ret = gitfs.serve_file(load, fnd)
+
+            with salt.utils.files.fopen(
+                    os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'r') as fp_:  # NB: Why not 'rb'?
+                data = fp_.read()
+
+            self.assertDictEqual(
+                ret,
+                {'data': data,
+                 'dest': 'testfile'})
+
+    def test_file_list_fallback(self):
+        with patch.dict(gitfs.__opts__, {'gitfs_fallback': 'master'}):
+            gitfs.update()
+            ret = gitfs.file_list({'saltenv': 'notexisting'})
+            self.assertIn('testfile', ret)
+            self.assertIn(UNICODE_FILENAME, ret)
+            # This function does not use os.sep, the Salt fileserver uses the
+            # forward slash, hence it being explicitly used to join here.
+            self.assertIn('/'.join((UNICODE_DIRNAME, 'foo.txt')), ret)
+
+    def test_dir_list_fallback(self):
+        with patch.dict(gitfs.__opts__, {'gitfs_fallback': 'master'}):
+            gitfs.update()
+            ret = gitfs.dir_list({'saltenv': 'notexisting'})
+            self.assertIn('grail', ret)
+            self.assertIn(UNICODE_DIRNAME, ret)
+
+    def test_find_and_serve_file_fallback(self):
+        with patch.dict(gitfs.__opts__, {'file_buffer_size': 262144, 'gitfs_fallback': 'master'}):
+            gitfs.update()
+
+            # find_file
+            ret = gitfs.find_file('testfile', tgt_env='notexisting')
+            self.assertEqual('testfile', ret['rel'])
+
+            full_path_to_file = salt.utils.path.join(gitfs.__opts__['cachedir'], 'gitfs', 'refs', 'notexisting', 'testfile')
+            self.assertEqual(full_path_to_file, ret['path'])
+
+            # serve_file
+            load = {'saltenv': 'notexisting',
+                    'path': full_path_to_file,
+                    'loc': 0
+                    }
+            fnd = {'path': full_path_to_file,
+                   'rel': 'testfile'}
+            ret = gitfs.serve_file(load, fnd)
+
+            with salt.utils.files.fopen(
+                    os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'r') as fp_:  # NB: Why not 'rb'?
+                data = fp_.read()
+
+            self.assertDictEqual(
+                ret,
+                {'data': data,
+                 'dest': 'testfile'})
+
     def test_envs(self):
         gitfs.update()
         ret = gitfs.envs(ignore_cache=True)
@@ -397,7 +473,7 @@ class GitFSTestBase(object):
             shutil.rmtree(cls.tmp_repo_dir)
         except OSError as exc:
             if exc.errno == errno.EACCES:
-                log.error("Access error removeing file %s", cls.tmp_repo_dir)
+                log.error("Access error removing file %s", cls.tmp_repo_dir)
             elif exc.errno != errno.ENOENT:
                 raise
         shutil.copytree(
@@ -486,6 +562,7 @@ class GitPythonTest(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMix
             'gitfs_root': '',
             'fileserver_backend': ['gitfs'],
             'gitfs_base': 'master',
+            'gitfs_fallback': '',
             'fileserver_events': True,
             'transport': 'zeromq',
             'gitfs_mountpoint': '',
@@ -532,6 +609,7 @@ class Pygit2Test(GitFSTestBase, GitFSTestFuncs, TestCase, LoaderModuleMockMixin)
             'gitfs_root': '',
             'fileserver_backend': ['gitfs'],
             'gitfs_base': 'master',
+            'gitfs_fallback': '',
             'fileserver_events': True,
             'transport': 'zeromq',
             'gitfs_mountpoint': '',

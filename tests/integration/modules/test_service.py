@@ -6,7 +6,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, flaky
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import Salt libs
 import salt.utils.path
@@ -15,6 +15,7 @@ import salt.utils.systemd
 
 
 @destructiveTest
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ServiceModuleTest(ModuleCase):
     '''
     Module testing the service module

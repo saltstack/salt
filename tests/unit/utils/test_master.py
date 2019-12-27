@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 # Import Python Libs
 from __future__ import absolute_import
+import os
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.mock import (
     patch,
     mock_open,
 )
 
+# Import Salt Libs
 import salt.utils.master as master
+import salt.utils.platform
 
 try:
     import salt.utils.psutil_compat as psutil
@@ -55,13 +58,18 @@ class MasterUtilsReadProcTestCase(TestCase):
 @skipIf(not HAS_PSUTIL, "psutil needed to run test")
 class MasterUtilsIsPidHealthyPsUtil(TestCase):
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def tests_pid_not_running(self):
         assert master.is_pid_healthy(99999999) is False
 
     def test_is_pid_healthy_running_salt(self):
         with patch('psutil.Process.cmdline', return_value=['salt']):
-            assert master.is_pid_healthy(1) is True
+            # Windows needs an actual PID, so we'll use os.getpid()
+            # Unless we can figure out how to mock psutil.Process
+            # so that it doesn't enter the except block
+            self.assertTrue(master.is_pid_healthy(os.getpid()))
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_is_pid_healthy_not_running_salt(self):
         with patch('psutil.Process.cmdline', return_value=['tacos']):
             assert master.is_pid_healthy(1) is False
@@ -81,15 +89,24 @@ class MasterUtilsIsPidHealthy(TestCase):
         with patch("salt.utils.platform.is_windows", return_value=True):
             assert master.is_pid_healthy(1) is True
 
+    @skipIf(salt.utils.platform.is_windows(),
+            'is_pid_healthy always returns True on Windows')
+    @skipIf(salt.utils.platform.is_aix(),
+            'is_pid_healthy always returns True on AIX')
     def test_pid_not_running(self):
         assert master.is_pid_healthy(99999999) is False
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_is_pid_healthy_running_salt(self):
         m_fopen = mock_open(read_data=b'salt')
         with patch('salt.utils.process.os_is_running', return_value=True):
             with patch('salt.utils.files.fopen', m_fopen):
                 assert master.is_pid_healthy(12345) is True
 
+    @skipIf(salt.utils.platform.is_windows(),
+            'is_pid_healthy always returns True on Windows')
+    @skipIf(salt.utils.platform.is_aix(),
+            'is_pid_healthy always returns True on AIX')
     def test_is_pid_healthy_not_running_salt(self):
         m_fopen = mock_open(read_data=b'tacos')
         with patch('salt.utils.process.os_is_running', return_value=True):

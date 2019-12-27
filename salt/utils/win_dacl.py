@@ -931,6 +931,7 @@ def dacl(obj_name=None, obj_type='file'):
                     if ace[1] & perm == perm:
                         ace_perms.append(
                             self.ace_perms[obj_type]['advanced'][perm])
+                ace_perms.sort()
 
             # If still nothing, it must be undefined
             if not ace_perms:

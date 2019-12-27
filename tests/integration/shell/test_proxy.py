@@ -10,7 +10,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
-from tests.support.unit import skipIf
+from tests.support.unit import skipIf, WAR_ROOM_SKIP
 
 # Import salt tests libs
 import tests.integration.utils
@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class ProxyTest(testprogram.TestProgramCase):
     '''
     Various integration tests for the salt-proxy executable.

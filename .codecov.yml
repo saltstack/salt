@@ -3,7 +3,7 @@ codecov:
     - drone.saltstack.com
     - jenkinsci.saltstack.com
 
-  branch: develop
+  branch: neon
 
   notify:
     require_ci_to_pass: no

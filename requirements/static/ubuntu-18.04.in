@@ -20,7 +20,8 @@ mock>=2.0.0; python_version < '3.6'
 more-itertools==5.0.0
 moto
 msgpack-python >= 0.4.2, != 0.5.5
-paramiko==2.1.2
+paramiko==2.1.2; python_version < '3.7'
+paramiko>=2.2.3; python_version >= '3.7'
 psutil
 # Let's install cryptodome instead of pycrypto because of pycrypto's outstanding security issues
 # PyCrypto, if pulled, will be removed from the generated static requirements

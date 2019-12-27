@@ -295,10 +295,10 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                 'NETWORK SERVICE': {
                     'deny': {
                         'applies to': 'This key and subkeys',
-                        'permissions': ['Set Value',
-                                        'Delete',
-                                        'Write Owner',
-                                        'Write DAC']}}}}
+                        'permissions': ['Delete',
+                                        'Set Value',
+                                        'Write DAC',
+                                        'Write Owner']}}}}
         self.assertDictEqual(
             win_dacl.get_permissions(
                 obj_name=self.obj_name,
@@ -595,10 +595,10 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                 'NETWORK SERVICE': {
                     'deny': {
                         'applies to': 'Not Inherited (file)',
-                        'permissions': ['Delete',
+                        'permissions': ['Change permissions',
                                         'Create files / write data',
-                                        'Write attributes',
-                                        'Change permissions']}}}}
+                                        'Delete',
+                                        'Write attributes']}}}}
         self.assertDictEqual(
             win_dacl.get_permissions(
                 obj_name=self.obj_name,

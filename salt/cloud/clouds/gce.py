@@ -53,6 +53,7 @@ import sys
 import re
 import pprint
 import logging
+import msgpack
 from ast import literal_eval
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -90,7 +91,6 @@ from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
-import salt.utils.msgpack
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
@@ -252,12 +252,6 @@ def _expand_address(addy):
     ret = {}
     ret.update(addy.__dict__)
     ret['extra']['zone'] = addy.region.name
-    return ret
-
-
-def _expand_region(region):
-    ret = {}
-    ret['name'] = region.name
     return ret
 
 
@@ -1257,7 +1251,6 @@ def create_address(kwargs=None, call=None):
     name = kwargs['name']
     ex_region = kwargs['region']
     ex_address = kwargs.get("address", None)
-    kwargs['region'] = _expand_region(kwargs['region'])
 
     conn = get_conn()
 
@@ -1265,7 +1258,7 @@ def create_address(kwargs=None, call=None):
         'event',
         'create address',
         'salt/cloud/address/creating',
-        args=salt.utils.data.simple_types_filter(kwargs),
+        args=kwargs,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -1276,7 +1269,7 @@ def create_address(kwargs=None, call=None):
         'event',
         'created address',
         'salt/cloud/address/created',
-        args=salt.utils.data.simple_types_filter(kwargs),
+        args=kwargs,
         sock_dir=__opts__['sock_dir'],
         transport=__opts__['transport']
     )
@@ -2485,19 +2478,13 @@ def request_instance(vm_):
 
     if external_ip.lower() == 'ephemeral':
         external_ip = 'ephemeral'
-        vm_['external_ip'] = external_ip
     elif external_ip == 'None':
         external_ip = None
-        vm_['external_ip'] = external_ip
     else:
         region = __get_region(conn, vm_)
         external_ip = __create_orget_address(conn, external_ip, region)
-        vm_['external_ip'] = {
-            'name': external_ip.name,
-            'address': external_ip.address,
-            'region': external_ip.region.name
-        }
     kwargs['external_ip'] = external_ip
+    vm_['external_ip'] = external_ip
 
     if LIBCLOUD_VERSION_INFO > (0, 15, 1):
 
@@ -2520,27 +2507,6 @@ def request_instance(vm_):
                 'The value of \'ex_disk_type\' needs to be one of: '
                 '\'pd-standard\', \'pd-ssd\''
             )
-
-    # GCE accelerator options are only supported as of libcloud >= 2.3.0
-    # and Python 3+ is required so that libcloud will detect a type of
-    # 'string' rather than 'unicode'
-    if LIBCLOUD_VERSION_INFO >= (2, 3, 0) and isinstance(u'test', str):
-
-        kwargs.update({
-            'ex_accelerator_type': config.get_cloud_config_value(
-                'ex_accelerator_type', vm_, __opts__, default=None),
-            'ex_accelerator_count': config.get_cloud_config_value(
-                'ex_accelerator_count', vm_, __opts__, default=None)
-        })
-        if kwargs.get('ex_accelerator_type'):
-            log.warning(
-                'An accelerator is being attached to this instance, '
-                'the ex_on_host_maintenance setting is being set to '
-                '\'TERMINATE\' as a result'
-            )
-            kwargs.update({
-                'ex_on_host_maintenance': 'TERMINATE'
-            })
 
     log.info(
         'Creating GCE instance %s in %s',
@@ -2663,7 +2629,7 @@ def update_pricing(kwargs=None, call=None):
         __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        salt.utils.msgpack.dump(price_json['dict'], fho)
+        msgpack.dump(price_json['dict'], fho)
 
     return True
 
@@ -2702,7 +2668,7 @@ def show_pricing(kwargs=None, call=None):
         update_pricing()
 
     with salt.utils.files.fopen(pricefile, 'r') as fho:
-        sizes = salt.utils.msgpack.load(fho)
+        sizes = msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])
 

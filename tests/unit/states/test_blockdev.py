@@ -8,7 +8,7 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.mock import (
     NO_MOCK,
     NO_MOCK_REASON,
@@ -109,6 +109,7 @@ class BlockdevTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.dict(blockdev.__opts__, {'test': False}):
                         self.assertDictEqual(blockdev.formatted(name), ret)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test__checkblk(self):
         '''
         Confirm that we call cmd.run with ignore_retcode=True

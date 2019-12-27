@@ -18,6 +18,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 from datetime import datetime, timedelta, tzinfo
 import re
 import os.path
+import logging
 
 # Import Salt libs
 import salt.utils.files
@@ -26,6 +27,7 @@ import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.utils.decorators import depends
 
+log = logging.getLogger(__name__)
 __virtualname__ = 'system'
 
 

@@ -164,7 +164,7 @@ def get_python_executable():
     to create virtualenvs on windows.
     '''
     try:
-        if salt.utils.is_windows():
+        if salt.utils.platform.is_windows():
             python_binary = os.path.join(sys.real_prefix, os.path.basename(sys.executable))
         else:
             python_binary = os.path.join(sys.real_prefix, 'bin', os.path.basename(sys.executable))

@@ -40,7 +40,7 @@ from salt.transport.zeromq import AsyncReqMessageClientPool
 
 # Import test support libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase, skipIf, WAR_ROOM_SKIP
 from tests.support.helpers import flaky, get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
@@ -372,6 +372,7 @@ class ZMQConfigTest(TestCase):
                                                          source_port=s_port) == 'tcp://0.0.0.0:{0};{1}:{2}'.format(s_port, m_ip, m_port)
 
 
+@skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
 class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @classmethod

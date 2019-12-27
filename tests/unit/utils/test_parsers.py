@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 
 # Import Salt Testing Libs
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import skipIf, WAR_ROOM_SKIP, TestCase
 from tests.support.helpers import destructiveTest, skip_if_not_root
 from tests.support.mock import (
     MagicMock,
@@ -204,6 +204,7 @@ class LogSettingsParserTests(TestCase):
         # Check log file logger log level
         self.assertEqual(self.log_setup.log_level_logfile, log_level)
 
+    @skipIf(WAR_ROOM_SKIP, 'WAR ROOM TEMPORARY SKIP')
     def test_get_log_level_default(self):
         '''
         Tests that log level match the default value
