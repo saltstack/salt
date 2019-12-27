@@ -81,7 +81,6 @@ from tests.support.helpers import (
     requires_system_grains,
     skip_if_not_root
 )
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -517,7 +516,6 @@ class GitPythonMixin(object):
 
 
 @destructiveTest
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
@@ -532,7 +530,6 @@ class TestGitPythonSSH(GitPillarSSHTestBase, GitPythonMixin):
     passphrase = PASSWORD
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
@@ -545,7 +542,6 @@ class TestGitPythonHTTP(GitPillarHTTPTestBase, GitPythonMixin):
     pass
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_GITPYTHON, 'GitPython >= {0} required'.format(GITPYTHON_MINVER))
@@ -581,7 +577,6 @@ class TestGitPythonAuthenticatedHTTP(TestGitPythonHTTP, GitPythonMixin):
 
 
 @destructiveTest
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
@@ -1867,7 +1862,6 @@ class TestPygit2SSH(GitPillarSSHTestBase):
         self.assertEqual(ret, expected)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
@@ -2271,7 +2265,6 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
         )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
 @skip_if_not_root
 @skipIf(not HAS_PYGIT2, 'pygit2 >= {0} and libgit2 >= {1} required'.format(PYGIT2_MINVER, LIBGIT2_MINVER))
