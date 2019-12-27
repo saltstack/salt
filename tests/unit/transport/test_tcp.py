@@ -231,6 +231,26 @@ class BaseTCPPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         del self._start_handlers
 
 
+class AsyncTCPPubChannelTest(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
+    def test_connect_publish_port(self):
+        '''
+        test when publish_port is not 4506
+        '''
+        opts = self.get_temp_config('master')
+        opts['master_uri'] = ''
+        opts['master_ip'] = '127.0.0.1'
+        opts['publish_port'] = 1234
+        channel = salt.transport.tcp.AsyncTCPPubChannel(opts)
+        patch_auth = MagicMock(return_value=True)
+        patch_client = MagicMock(spec=SaltMessageClientPool)
+        with patch('salt.crypt.AsyncAuth.gen_token', patch_auth), \
+                patch('salt.crypt.AsyncAuth.authenticated', patch_auth), \
+                patch('salt.transport.tcp.SaltMessageClientPool',
+                      patch_client):
+            channel.connect()
+        assert patch_client.call_args[0][0]['publish_port'] == opts['publish_port']
+
+
 @skipIf(True, 'Skip until we can devote time to fix this test')
 class AsyncPubChannelTest(BaseTCPPubCase, PubChannelMixin):
     '''
