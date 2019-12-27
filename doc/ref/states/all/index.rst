@@ -92,6 +92,7 @@ state modules
     docker_volume
     drac
     dracr
+    drbd
     dvs
     elasticsearch
     elasticsearch_index
