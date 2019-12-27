@@ -20,6 +20,7 @@ import sys
 import time
 import stat
 import errno
+import pprint
 import signal
 import textwrap
 import logging
@@ -896,10 +897,10 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
 
                 get_return_time = datetime.utcnow() - get_return_start
                 log.info(
-                    'The %s finished after %s. Return: %s',
+                    'The %s finished after %s. Return:\n%s',
                     job_repr,
                     format_timedelta(get_return_time),
-                    ret
+                    pprint.pformat(fn_ret)
                 )
 
                 if minion_tgt not in fn_ret:
@@ -922,7 +923,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                 break
             else:
                 get_return_time = datetime.utcnow() - get_return_start
-                err_msg = 'Failed to get the return for the published job({}) after {}.'.format(
+                err_msg = 'Failed to get the return for the published {} after {}.'.format(
                     job_repr,
                     format_timedelta(get_return_time)
                 )
@@ -945,7 +946,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                 log.info(
                     'Killing %s which was found still running. Job Data: %s',
                     job_repr,
-                    running_job_info
+                    pprint.pformat(running_job_info)
                 )
                 # The job is still running
                 sminion.functions.saltutil.kill_job(jid)
