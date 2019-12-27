@@ -3,10 +3,11 @@
 # Import python libs
 from __future__ import absolute_import
 import time
+from datetime import datetime
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky, dedent
+from tests.support.helpers import flaky, dedent, format_timedelta
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
 
@@ -351,10 +352,12 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         Test to see if we're supporting --doc
         '''
+        start = datetime.utcnow()
         expect_to_find = 'test.ping:'
-        stdout, stderr = self.run_salt('-d "*" test', catch_stderr=True, timeout=120)
+        stdout, stderr = self.run_salt('-d "*" test', catch_stderr=True, timeout=240)
+        stop = datetime.utcnow()
         error_msg = dedent('''
-        Failed to find \'{expected}\' in output
+        Failed to find \'{expected}\' in output after {delta}
 
         {sep}
         --- STDOUT -----
@@ -366,7 +369,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         '''.format(sep='-' * 80,
                    expected=expect_to_find,
                    stdout='\n'.join(stdout).strip(),
-                   stderr='\n'.join(stderr).strip()))
+                   stderr='\n'.join(stderr).strip(),
+                   delta=format_timedelta(stop - start)))
         self.assertIn(expect_to_find, stdout, msg=error_msg)
 
     def test_salt_documentation_too_many_arguments(self):
