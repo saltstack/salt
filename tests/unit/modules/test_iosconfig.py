@@ -9,15 +9,13 @@ import textwrap
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
 
 # Import Salt modules
 from salt.utils.odict import OrderedDict
 import salt.modules.iosconfig as iosconfig
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestModulesIOSConfig(TestCase, LoaderModuleMockMixin):
 
     running_config = textwrap.dedent('''\
