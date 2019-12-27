@@ -16,12 +16,10 @@ import salt.utils.json
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 APP_LIST = {
@@ -116,7 +114,6 @@ CONTAINER_SETTING = {
 CERT_BINDING_INFO = '*:443:mytestsite.local'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.win_iis
