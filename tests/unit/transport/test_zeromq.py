@@ -495,6 +495,27 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         server_channel.pub_close()
         assert len(results) == send_num, (len(results), set(expect).difference(results))
 
+    def test_zeromq_publish_port(self):
+        '''
+        test when connecting that we
+        use the publish_port set in opts
+        when its not 4506
+        '''
+        opts = dict(self.master_config, ipc_mode='ipc',
+                    pub_hwm=0, recon_randomize=False,
+                    publish_port=455505,
+                    recon_default=1, recon_max=2, master_ip='127.0.0.1',
+                    acceptance_wait_time=5, acceptance_wait_time_max=5)
+        opts['master_uri'] = 'tcp://{interface}:{publish_port}'.format(**opts)
+
+        channel = salt.transport.zeromq.AsyncZeroMQPubChannel(opts)
+        patch_socket = MagicMock(return_value=True)
+        patch_auth = MagicMock(return_value=True)
+        with patch.object(channel, '_socket', patch_socket), \
+            patch.object(channel, 'auth', patch_auth):
+            channel.connect()
+        assert str(opts['publish_port']) in patch_socket.mock_calls[0][1][0]
+
     def test_zeromq_zeromq_filtering_decode_message_no_match(self):
         '''
         test AsyncZeroMQPubChannel _decode_messages when

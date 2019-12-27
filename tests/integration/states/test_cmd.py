@@ -39,6 +39,15 @@ class CMDTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('cmd.run', name=self.__cmd, cwd=tempfile.gettempdir())
         self.assertSaltTrueReturn(ret)
 
+    def test_run_output_loglevel(self):
+        '''
+        cmd.run with output_loglevel=quiet
+        '''
+        ret = self.run_state('cmd.run', name=self.__cmd,
+                             cwd=tempfile.gettempdir(),
+                             output_loglevel='quiet')
+        self.assertSaltTrueReturn(ret)
+
     def test_test_run_simple(self):
         '''
         cmd.run test interface
