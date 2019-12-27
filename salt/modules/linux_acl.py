@@ -62,7 +62,14 @@ def getfacl(*args, **kwargs):
     _raise_on_no_files(*args)
 
     ret = {}
-    cmd = 'getfacl --absolute-names'
+
+    if salt.utils.platform.is_linux():
+        # On Linux, --absolute-names makes returned paths absolute, not relative
+        cmd = 'getfacl --absolute-names'
+    else:
+        # FreeBSD and Illumos return absolute paths by default
+        cmd = 'getfacl'
+
     if recursive:
         cmd += ' -R'
     for dentry in args:
