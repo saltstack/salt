@@ -12,7 +12,6 @@ import sys
 import time
 import warnings
 import collections
-
 TESTS_DIR = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
 if os.name == 'nt':
     TESTS_DIR = TESTS_DIR.replace('\\', '\\\\')
@@ -43,6 +42,8 @@ except ImportError:
     pass
 
 # Import salt libs
+from salt.ext import six
+
 try:
     from tests.support.paths import TMP, SYS_TMP_DIR, INTEGRATION_TEST_DIR
     from tests.support.paths import CODE_DIR as SALT_ROOT
@@ -56,7 +57,7 @@ except ImportError as exc:
     print('Current sys.path:')
     import pprint
     pprint.pprint(sys.path)
-    raise exc
+    six.reraise(*sys.exc_info())
 
 from tests.integration import TestDaemon, TestDaemonStartFailed  # pylint: disable=W0403
 from tests.multimaster import MultimasterTestDaemon
