@@ -11,6 +11,7 @@ import copy
 import fnmatch
 import logging
 import re
+import functools
 
 try:
     from collections.abc import Mapping, MutableMapping, Sequence
@@ -143,13 +144,13 @@ def compare_lists(old=None, new=None):
     Compare before and after results from various salt functions, returning a
     dict describing the changes that were made
     '''
-    ret = dict()
+    ret = {}
     for item in new:
         if item not in old:
-            ret['new'] = item
+            ret.setdefault('new', []).append(item)
     for item in old:
         if item not in new:
-            ret['old'] = item
+            ret.setdefault('old', []).append(item)
     return ret
 
 
@@ -359,8 +360,8 @@ def encode(data, encoding=None, errors='strict', keep=False,
         return data
 
 
-@jinja_filter('json_decode_dict')  # Remove this for Neon
-@jinja_filter('json_encode_dict')  # Remove this for Neon
+@jinja_filter('json_decode_dict')  # Remove this for Aluminium
+@jinja_filter('json_encode_dict')
 def encode_dict(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
@@ -412,8 +413,8 @@ def encode_dict(data, encoding=None, errors='strict', keep=False,
     return rv
 
 
-@jinja_filter('json_decode_list')  # Remove this for Neon
-@jinja_filter('json_encode_list')  # Remove this for Neon
+@jinja_filter('json_decode_list')  # Remove this for Aluminium
+@jinja_filter('json_encode_list')
 def encode_list(data, encoding=None, errors='strict', keep=False,
                 preserve_dict_class=False, preserve_tuples=False):
     '''
@@ -976,3 +977,50 @@ def stringify(data):
             item = six.text_type(item)
         ret.append(item)
     return ret
+
+
+def _is_not_considered_falsey(value, ignore_types=()):
+    '''
+    Helper function for filter_falsey to determine if something is not to be
+    considered falsey.
+    :param any value: The value to consider
+    :param list ignore_types: The types to ignore when considering the value.
+    :return bool
+    '''
+    return isinstance(value, bool) or type(value) in ignore_types or value
+
+
+def filter_falsey(data, recurse_depth=None, ignore_types=()):
+    '''
+    Helper function to remove items from an iterable with falsey value.
+    Removes ``None``, ``{}`` and ``[]``, 0, '' (but does not remove ``False``).
+    Recurses into sub-iterables if ``recurse`` is set to ``True``.
+    :param dict/list data: Source iterable (dict, OrderedDict, list, set, ...) to process.
+    :param int recurse_depth: Recurse this many levels into values that are dicts
+        or lists to also process those. Default: 0 (do not recurse)
+    :param list ignore_types: Contains types that can be falsey but must not
+        be filtered. Default: Only booleans are not filtered.
+    :return type(data)
+    .. version-added:: Neon
+    '''
+    filter_element = (
+        functools.partial(filter_falsey,
+                          recurse_depth=recurse_depth-1,
+                          ignore_types=ignore_types)
+        if recurse_depth else lambda x: x
+    )
+
+    if isinstance(data, dict):
+        processed_elements = [(key, filter_element(value)) for key, value in six.iteritems(data)]
+        return type(data)([
+            (key, value)
+            for key, value in processed_elements
+            if _is_not_considered_falsey(value, ignore_types=ignore_types)
+        ])
+    if hasattr(data, '__iter__') and not isinstance(data, six.string_types):
+        processed_elements = (filter_element(value) for value in data)
+        return type(data)([
+            value for value in processed_elements
+            if _is_not_considered_falsey(value, ignore_types=ignore_types)
+        ])
+    return data

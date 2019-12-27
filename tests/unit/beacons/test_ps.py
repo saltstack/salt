@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -24,7 +24,6 @@ class FakeProcess(object):
         return self._name
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.[s]
