@@ -10,6 +10,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_binaries_missing
+from tests.support.unit import skipIf
 
 # Import salt libs
 import salt.utils.files
@@ -54,6 +55,8 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         shutil.rmtree(self.mydir, ignore_errors=True)
         super(LinuxAclModuleTest, self).tearDown()
 
+    @skipIf(not salt.utils.platform.is_linux(),
+            "Only Linux's getfacl has --version")
     def test_version(self):
         self.assertRegex(self.run_function('acl.version'), r'\d+\.\d+\.\d+')
 
