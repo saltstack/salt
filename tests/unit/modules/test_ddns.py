@@ -20,8 +20,6 @@ from tests.support.mock import (
     mock_open,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -30,7 +28,6 @@ import salt.modules.ddns as ddns
 
 
 @skipIf(HAS_DNS is False, 'dnspython libs not installed')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DDNSTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for the salt.modules.ddns module
