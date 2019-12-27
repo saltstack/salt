@@ -580,7 +580,8 @@ def pytest_cloud(session, coverage):
         '--no-print-logs',
         '-ra',
         '-s',
-        os.path.join('tests', 'integration', 'cloud', 'providers')
+        '--run-expensive',
+        '-k', 'cloud'
     ] + session.posargs
     _pytest(session, coverage, cmd_args)
 
