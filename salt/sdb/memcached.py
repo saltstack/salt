@@ -18,8 +18,8 @@ requires very little. In the example:
 
     mymemcache:
       driver: memcached
-      host: localhost
-      port: 11211
+      memcached.host: localhost
+      memcached.port: 11211
 
 The ``driver`` refers to the memcached module, ``host`` and ``port`` the
 memcached server to connect to (defaults to ``localhost`` and ``11211``,
