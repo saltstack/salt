@@ -374,7 +374,7 @@ def pytest_collection_modifyitems(config, items):
                                     '%s is still going to be used, not terminating it. '
                                     'Still in use on:\n%s',
                                     self,
-                                    pprint.pformat(self.node_ids)
+                                    pprint.pformat(list(self.node_ids))
                                 )
                                 return
                             log.warning('Finish called on %s', self)
@@ -389,29 +389,26 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.hookimpl(trylast=True, hookwrapper=True)
-def pytest_pyfunc_call(pyfuncitem):
+def pytest_runtest_protocol(item, nextitem):
     used_fixture_defs = []
-    #log.info('Before %s values: %s', pyfuncitem.nodeid, values)
-    for fixture in pyfuncitem.fixturenames:
-        if fixture not in pyfuncitem._fixtureinfo.name2fixturedefs:
+    for fixture in item.fixturenames:
+        if fixture not in item._fixtureinfo.name2fixturedefs:
             continue
-        for fixturedef in reversed(pyfuncitem._fixtureinfo.name2fixturedefs[fixture]):
+        for fixturedef in reversed(item._fixtureinfo.name2fixturedefs[fixture]):
             used_fixture_defs.append(fixturedef)
     for fixturedef in used_fixture_defs:
-        log.warning('Before Test. Fixture: %s; Node IDs: %s', fixturedef, fixturedef.node_ids)
+        log.warning('Before Test. Fixture: %s; Node IDs:\n%s', fixturedef, pprint.pformat(list(fixturedef.node_ids)))
     try:
         outcome = yield
     finally:
-        #log.info('After %s values: %s', pyfuncitem.nodeid, values)
         for fixturedef in used_fixture_defs:
-            fixturedef.node_ids.remove(pyfuncitem.nodeid)
+            fixturedef.node_ids.remove(item.nodeid)
             if not fixturedef.node_ids:
                 # This fixture is not used in any more test functions
                 log.warning('The fixture %s is not being used in any more tests, terminate it.', fixturedef)
-                fixturedef.finish(pyfuncitem._request)
-        #log.info('After %s fixture teardown values: %s', pyfuncitem.nodeid, values)
+                fixturedef.finish(item._request)
     for fixturedef in used_fixture_defs:
-        log.warning(' After Test. Fixture: %s; Node IDs: %s', fixturedef, fixturedef.node_ids)
+        log.warning(' After Test. Fixture: %s; Node IDs:\n%s', fixturedef, pprint.pformat(list(fixturedef.node_ids)))
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
