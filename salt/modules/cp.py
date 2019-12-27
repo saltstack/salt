@@ -711,8 +711,8 @@ def list_minion(saltenv='base'):
 
 def is_cached(path, saltenv='base'):
     '''
-    Return a boolean if the given path on the master has been cached on the
-    minion
+    Returns the full path to a file if it is cached locally on the minion
+    otherwise returns a blank string
 
     CLI Example:
 
