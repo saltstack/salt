@@ -7,12 +7,11 @@ Simple Smoke Tests for Connected SSH minions
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase
-from tests.support.helpers import requires_sshd_server
+from tests.support.case import SSHCase
+from tests.support.helpers import skip_if_not_root
 
 
-@requires_sshd_server
-class SSHMasterTestCase(ModuleCase):
+class SSHMasterTestCase(SSHCase):
     '''
     Test ssh master functionality
     '''
@@ -23,6 +22,7 @@ class SSHMasterTestCase(ModuleCase):
         ret = self.run_function('test.ping', minion_tgt='localhost')
         self.assertEqual(ret, True)
 
+    @skip_if_not_root
     def test_service(self):
         service = 'cron'
         os_family = self.run_function('grains.get', ['os_family'], minion_tgt='localhost')
