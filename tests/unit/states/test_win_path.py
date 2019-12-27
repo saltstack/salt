@@ -9,13 +9,11 @@ import copy
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -24,7 +22,6 @@ import salt.states.win_path as win_path
 NAME = 'salt'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinPathTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the win_path state
