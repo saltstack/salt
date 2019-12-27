@@ -53,7 +53,6 @@ import sys
 import re
 import pprint
 import logging
-import msgpack
 from ast import literal_eval
 from salt.utils.versions import LooseVersion as _LooseVersion
 
@@ -91,6 +90,7 @@ from salt.ext import six
 import salt.utils.cloud
 import salt.utils.files
 import salt.utils.http
+import salt.utils.msgpack
 import salt.config as config
 from salt.cloud.libcloudfuncs import *  # pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
 from salt.exceptions import (
@@ -2629,7 +2629,7 @@ def update_pricing(kwargs=None, call=None):
         __opts__['cachedir'], 'gce-pricing.p'
     )
     with salt.utils.files.fopen(outfile, 'w') as fho:
-        msgpack.dump(price_json['dict'], fho)
+        salt.utils.msgpack.dump(price_json['dict'], fho)
 
     return True
 
@@ -2668,7 +2668,7 @@ def show_pricing(kwargs=None, call=None):
         update_pricing()
 
     with salt.utils.files.fopen(pricefile, 'r') as fho:
-        sizes = msgpack.load(fho)
+        sizes = salt.utils.msgpack.load(fho)
 
     per_hour = float(sizes['gcp_price_list'][size][region])
 

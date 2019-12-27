@@ -269,6 +269,14 @@ def refresh_db(failhard=False, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
+def _append_noaction_if_testmode(cmd, **kwargs):
+    '''
+    Adds the --noaction flag to the command if it's running in the test mode.
+    '''
+    if bool(kwargs.get('test') or __opts__.get('test')):
+        cmd.append('--noaction')
+
+
 def install(name=None,
             refresh=False,
             pkgs=None,
@@ -366,6 +374,7 @@ def install(name=None,
     to_reinstall = []
     to_downgrade = []
 
+    _append_noaction_if_testmode(cmd_prefix, **kwargs)
     if pkg_params is None or len(pkg_params) == 0:
         return {}
     elif pkg_type == 'file':
@@ -540,6 +549,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=unused-argument
     if not targets:
         return {}
     cmd = ['opkg', 'remove']
+    _append_noaction_if_testmode(cmd, **kwargs)
     if kwargs.get('remove_dependencies', False):
         cmd.append('--force-removal-of-dependent-packages')
     if kwargs.get('auto_remove_deps', False):
