@@ -21,6 +21,7 @@ cachetools==3.1.0         # via google-auth
 certifi==2019.3.9
 cffi==1.12.2
 chardet==3.0.4            # via requests
+cheetah3==3.1.0
 cheroot==6.5.4            # via cherrypy
 cherrypy==17.3.0
 contextlib2==0.5.5        # via cherrypy
@@ -32,6 +33,7 @@ docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 future==0.17.1            # via python-jose
+genshi==0.7.3
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.11
 google-auth==1.6.3        # via kubernetes
@@ -51,6 +53,7 @@ kazoo==2.6.1
 keyring==5.7.1
 kubernetes==3.0.0
 lxml==4.3.3               # via junos-eznc, ncclient
+mako==1.1.0
 markupsafe==1.1.1
 mock==3.0.5 ; python_version < "3.6"
 more-itertools==5.0.0
@@ -79,7 +82,7 @@ pyparsing==2.4.5          # via packaging
 pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.7.10
-pytest-salt==2019.11.27
+pytest-salt==2019.12.18
 pytest-tempdir==2019.10.12
 pytest==4.6.6
 python-dateutil==2.8.0    # via botocore, croniter, kubernetes, moto

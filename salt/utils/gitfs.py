@@ -159,8 +159,6 @@ def enforce_types(key, val):
         'ssl_verify': bool,
         'insecure_auth': bool,
         'disable_saltenv_mapping': bool,
-        'env_whitelist': 'stringlist',
-        'env_blacklist': 'stringlist',
         'saltenv_whitelist': 'stringlist',
         'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
@@ -390,17 +388,6 @@ class GitProvider(object):
                 'configurable parameter. Falling back to %s for %s remote '
                 '\'%s\'.', default_refspecs, self.role, self.id
             )
-
-        for item in ('env_whitelist', 'env_blacklist'):
-            val = getattr(self, item, None)
-            if val:
-                salt.utils.versions.warn_until(
-                    'Neon',
-                    'The gitfs_{0} config option (and {0} per-remote config '
-                    'option) have been renamed to gitfs_salt{0} (and '
-                    'salt{0}). Please update your configuration.'.format(item)
-                )
-                setattr(self, 'salt{0}'.format(item), val)
 
         # Discard the conf dictionary since we have set all of the config
         # params as attributes
