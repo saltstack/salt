@@ -27,7 +27,7 @@ def _find_new_locale(current_locale):
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
         locale = self.run_function('locale.get_locale')
-        self.assertNotIn('Unsupported platform!', locale)
+        self.assertNotIn('ERROR:', locale)
 
     @destructiveTest
     def test_gen_locale(self):
@@ -46,7 +46,7 @@ class LocaleModuleTest(ModuleCase):
         locale = self.run_function('locale.get_locale')
         new_locale = _find_new_locale(locale)
         ret = self.run_function('locale.gen_locale', [new_locale])
-        self.assertTrue(ret)
+        self.assertNotIn('ERROR:', locale)
 
     @destructiveTest
     def test_set_locale(self):
