@@ -143,6 +143,16 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_function(func, ['/bin/ls'])
         self.assertNotEqual(len(ret), 0)
 
+    # Similar to pkg.owner, but for FreeBSD's pkgng
+    @requires_salt_modules('pkg.which')
+    def test_which(self):
+        '''
+        test finding the package owning a file
+        '''
+        func = 'pkg.which'
+        ret = self.run_function(func, ['/usr/local/bin/salt-call'])
+        self.assertNotEqual(len(ret), 0)
+
     @destructiveTest
     @requires_salt_modules('pkg.version', 'pkg.install', 'pkg.remove')
     @requires_network()
