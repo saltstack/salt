@@ -33,7 +33,7 @@ from unittest import (
     expectedFailure,
     TestSuite as _TestSuite,
     skip,
-    skipIf as _skipIf,
+    skipIf,
     TestResult,
     TextTestResult as _TextTestResult
 )
@@ -377,14 +377,6 @@ class TextTestRunner(_TextTestRunner):
     Custom Text tests runner to log the start and the end of a test case
     '''
     resultclass = TextTestResult
-
-
-def skipIf(skip, reason):
-    from tests.support.runtests import RUNTIME_VARS
-    if RUNTIME_VARS.PYTEST_SESSION:
-        import pytest
-        return pytest.mark.skipif(skip, reason=reason)
-    return _skipIf(skip, reason)
 
 
 __all__ = [
