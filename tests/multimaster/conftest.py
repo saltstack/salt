@@ -24,8 +24,8 @@ from pytestsalt.fixtures.daemons import SaltMaster, SaltMinion, start_daemon
 
 log = logging.getLogger(__name__)
 
-SESSION_ROOT_DIR = 'session-mm-root'
-SESSION_SECONDARY_ROOT_DIR = 'session-secondary-mm-root'
+SESSION_ROOT_DIR = 'sess-mm-root'
+SESSION_SECONDARY_ROOT_DIR = 'sess-sec-mm-root'
 
 
 @pytest.fixture(scope='session')
