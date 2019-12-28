@@ -152,7 +152,7 @@ def get_locale():
         elif 'Solaris' in __grains__['os_family']:
             cmd = 'grep "^LANG=" /etc/default/init'
         else:  # don't waste time on a failing cmd.run
-            raise CommandExecutionError('Error: "{0}" is unsupported!'.format(__grains__['oscodename']))
+            raise CommandExecutionError('Error: "{0}" is unsupported!'.format(__grains__['os_family']))
 
         if cmd:
             try:
