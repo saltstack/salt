@@ -23,6 +23,7 @@ def _find_new_locale(current_locale):
 
 @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
 @skipIf(salt.utils.platform.is_darwin(), 'locale method is not supported on mac')
+@skipIf(salt.utils.platform.is_freebsd(), 'locale module is not supported on FreeBSD')
 @requires_salt_modules('locale')
 class LocaleModuleTest(ModuleCase):
     def test_get_locale(self):
