@@ -11,7 +11,7 @@ runTestSuite(
     kitchen_platforms_file: '/var/jenkins/workspace/pre-golden-nox-platforms.yml',
     kitchen_verifier_file: '/var/jenkins/workspace/nox-verifier.yml',
     nox_env_name: 'pytest-zeromq',
-    nox_passthrough_opts: '--ignore=tests/utils',
+    nox_passthrough_opts: '',
     python_version: 'py2',
     run_full: params.runFull,
     testrun_timeout: 6,
