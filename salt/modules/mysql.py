@@ -1467,7 +1467,10 @@ def user_create(user,
         args['password'] = six.text_type(password)
     elif password_hash is not None:
         if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-            qry += ' IDENTIFIED BY %(password)s'
+            if 'MariaDB' in server_version:
+                qry += ' IDENTIFIED BY PASSWORD %(password)s'
+            else:
+                qry += ' IDENTIFIED BY %(password)s'
         else:
             qry += ' IDENTIFIED BY PASSWORD %(password)s'
         args['password'] = password_hash
@@ -1584,7 +1587,10 @@ def user_chpass(user,
     args['user'] = user
     args['host'] = host
     if salt.utils.versions.version_cmp(server_version, compare_version) >= 0:
-        qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
+        if 'MariaDB' in server_version and password_hash is not None:
+            qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY PASSWORD %(password)s;"
+        else:
+            qry = "ALTER USER %(user)s@%(host)s IDENTIFIED BY %(password)s;"
     else:
         qry = ('UPDATE mysql.user SET ' + password_column + '=' + password_sql +
                ' WHERE User=%(user)s AND Host = %(host)s;')
