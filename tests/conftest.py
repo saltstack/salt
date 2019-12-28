@@ -231,10 +231,6 @@ def pytest_configure(config):
         if dirname != 'tests':
             config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, dirname))
 
-    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'templates'))
-    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/kitchen'))
-    config.addinivalue_line('norecursedirs', os.path.join(CODE_DIR, 'tests/support'))
-
     # Expose the markers we use to pytest CLI
     config.addinivalue_line(
         'markers',
