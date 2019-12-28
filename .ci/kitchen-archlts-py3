@@ -8,7 +8,7 @@ runTestSuite(
     golden_images_branch: 'master',
     jenkins_slave_label: 'kitchen-slave',
     nox_env_name: 'pytest-zeromq',
-    nox_passthrough_opts: '--ignore=tests/utils tests/integration/modules/test_pkg.py',
+    nox_passthrough_opts: 'tests/integration/modules/test_pkg.py',
     python_version: 'py3',
     testrun_timeout: 6,
     use_spot_instances: true)
