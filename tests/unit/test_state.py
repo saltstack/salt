@@ -16,12 +16,15 @@ from tests.support.mock import (
     patch)
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import with_tempfile
 
 # Import Salt libs
 import salt.exceptions
 import salt.state
 from salt.utils.odict import OrderedDict
 from salt.utils.decorators import state as statedecorators
+import salt.utils.files
+import salt.utils.platform
 
 try:
     import pytest
@@ -111,6 +114,89 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                         "arg1",
                         "arg2"
                     ]
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'unless condition is true', 'result': True, 'skip_watch': True}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_unless(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def _expand_win_path(self, path):
+        """
+        Expand C:/users/admini~1/appdata/local/temp/salt-tests-tmpdir/...
+        into C:/users/adminitrator/appdata/local/temp/salt-tests-tmpdir/...
+        to prevent file.search from expanding the "~" with os.path.expanduser
+        """
+        if salt.utils.platform.is_windows():
+            import win32file
+            return win32file.GetLongPathName(path).replace('\\', '/')
+        else:
+            return path
+
+    @with_tempfile()
+    def test_verify_onlyif_parse_slots(self, name):
+        with salt.utils.files.fopen(name, 'w') as fp:
+            fp.write('file-contents')
+        low_data = {
+            "onlyif": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "__slot__:salt:test.echo({})".format(self._expand_win_path(name)),
+                    ],
+                    "pattern": "__slot__:salt:test.echo(file-contents)",
+                }
+            ],
+            "name": "mysql-server-5.7",
+            "state": "debconf",
+            "__id__": "set root password",
+            "fun": "set",
+            "__env__": "base",
+            "__sls__": "debconf",
+            "data": {
+                "mysql-server/root_password": {
+                    "type": "password",
+                    "value": "temp123"
+                }
+            },
+            "order": 10000
+        }
+        expected_result = {'comment': 'onlyif condition is true', 'result': False}
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    @with_tempfile()
+    def test_verify_unless_parse_slots(self, name):
+        with salt.utils.files.fopen(name, 'w') as fp:
+            fp.write('file-contents')
+        low_data = {
+            "unless": [
+                {
+                    "fun": "file.search",
+                    "args": [
+                        "__slot__:salt:test.echo({})".format(self._expand_win_path(name)),
+                    ],
+                    "pattern": "__slot__:salt:test.echo(file-contents)",
                 }
             ],
             "name": "mysql-server-5.7",

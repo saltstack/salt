@@ -108,7 +108,7 @@ editing values from an xpath query, or editing XML IDs.
   # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
   local:
       Patrick Stewart
-
+      
 .. code-block:: yaml
 
     ensure_value_true:
@@ -117,12 +117,89 @@ editing values from an xpath query, or editing XML IDs.
         - xpath: .//actor[@id='1']
         - value: William Shatner
 
+Troubleshooting Jinja map files
+===============================
+
+A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
+has been added.
+
+Assuming the map is loaded in your formula SLS as follows:
+
+.. code-block:: jinja
+
+  {% from "myformula/map.jinja" import myformula with context %}
+
+The following command can be used to load the map and check the results:
+
+.. code-block:: bash
+
+  salt myminion jinja.load_map myformula/map.jinja myformula
+
+The module can be also used to test ``json`` and ``yaml`` maps:
+
+.. code-block:: bash
+
+  salt myminion jinja.import_yaml myformula/defaults.yaml
+
+  salt myminion jinja.import_json myformula/defaults.json
+
+Slot Syntax Updates
+===================
+
+The slot syntax has been updated to support parsing dictionary responses and to append text.
+
+.. code-block:: yaml
+
+  demo dict parsing and append:
+    test.configurable_test_state:
+      - name: slot example
+      - changes: False
+      - comment: __slot__:salt:test.arg(shell="/bin/bash").kwargs.shell ~ /appended
+
+.. code-block:: none
+
+  local:
+    ----------
+          ID: demo dict parsing and append
+    Function: test.configurable_test_state
+        Name: slot example
+      Result: True
+     Comment: /bin/bash/appended
+     Started: 09:59:58.623575
+    Duration: 1.229 ms
+     Changes:
+
+Also, slot parsing is now supported inside of nested state data structures (dicts, lists, unless/onlyif args):
+
+.. code-block:: yaml
+
+  demo slot parsing for nested elements:
+    file.managed:
+      - name: /tmp/slot.txt
+      - source: salt://slot.j2
+      - template: jinja
+      - context:
+          # Slot inside of the nested context dictionary
+          variable: __slot__:salt:test.echo(a_value)
+      - unless:
+        - fun: file.search
+          args:
+            # Slot as unless argument
+            - __slot__:salt:test.echo(/tmp/slot.txt)
+            - "DO NOT OVERRIDE"
+          ignore_if_missing: True
+
 State Changes
 =============
 
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
 
+Module Changes
+==============
+
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
 
 Deprecations
 ============
