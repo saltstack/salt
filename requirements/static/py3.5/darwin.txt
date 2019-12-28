@@ -85,6 +85,7 @@ pyserial==3.4             # via junos-eznc
 pytest-helpers-namespace==2019.1.8
 pytest-salt-runtests-bridge==2019.12.5
 pytest-salt==2019.12.27
+pytest-subtests==0.2.1 ; python_version >= "3.4"
 pytest-tempdir==2019.10.12
 pytest==4.6.9
 python-dateutil==2.8.0
