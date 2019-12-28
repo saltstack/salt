@@ -3018,3 +3018,123 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                           'password': 'c2VjcmV0'}))
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
         mock_secret.setValue.assert_called_once_with(b'secret')
+
+    def test_pool_capabilities(self):
+        '''
+        Test virt.pool_capabilities where libvirt has the pool-capabilities feature
+        '''
+        xml_caps = '''
+<storagepoolCapabilities>
+  <pool type='disk' supported='yes'>
+    <poolOptions>
+      <defaultFormat type='unknown'/>
+      <enum name='sourceFormatType'>
+        <value>unknown</value>
+        <value>dos</value>
+        <value>dvh</value>
+      </enum>
+    </poolOptions>
+    <volOptions>
+      <defaultFormat type='none'/>
+      <enum name='targetFormatType'>
+        <value>none</value>
+        <value>linux</value>
+      </enum>
+    </volOptions>
+  </pool>
+  <pool type='iscsi' supported='yes'>
+  </pool>
+  <pool type='rbd' supported='yes'>
+    <volOptions>
+      <defaultFormat type='raw'/>
+      <enum name='targetFormatType'>
+      </enum>
+    </volOptions>
+  </pool>
+  <pool type='sheepdog' supported='no'>
+  </pool>
+</storagepoolCapabilities>
+        '''
+        self.mock_conn.getStoragePoolCapabilities = MagicMock(return_value=xml_caps)
+
+        actual = virt.pool_capabilities()
+        self.assertEqual({
+            'computed': False,
+            'pool_types': [{
+                'name': 'disk',
+                'supported': True,
+                'options': {
+                    'pool': {
+                        'default_format': 'unknown',
+                        'sourceFormatType': ['unknown', 'dos', 'dvh']
+                    },
+                    'volume': {
+                        'default_format': 'none',
+                        'targetFormatType': ['none', 'linux']
+                    }
+                }
+            },
+            {
+                'name': 'iscsi',
+                'supported': True,
+            },
+            {
+                'name': 'rbd',
+                'supported': True,
+                'options': {
+                    'volume': {
+                        'default_format': 'raw',
+                        'targetFormatType': []
+                    }
+                }
+            },
+            {
+                'name': 'sheepdog',
+                'supported': False,
+            },
+        ]}, actual)
+
+    @patch('salt.modules.virt.get_hypervisor', return_value='kvm')
+    def test_pool_capabilities_computed(self, mock_get_hypervisor):
+        '''
+        Test virt.pool_capabilities where libvirt doesn't have the pool-capabilities feature
+        '''
+        self.mock_conn.getLibVersion = MagicMock(return_value=4006000)
+        del self.mock_conn.getStoragePoolCapabilities
+
+        actual = virt.pool_capabilities()
+
+        self.assertTrue(actual['computed'])
+        backends = actual['pool_types']
+
+        # libvirt version matching check
+        self.assertFalse([backend for backend in backends if backend['name'] == 'iscsi-direct'][0]['supported'])
+        self.assertTrue([backend for backend in backends if backend['name'] == 'gluster'][0]['supported'])
+        self.assertFalse([backend for backend in backends if backend['name'] == 'zfs'][0]['supported'])
+
+        # test case matching other hypervisors
+        mock_get_hypervisor.return_value = 'xen'
+        backends = virt.pool_capabilities()['pool_types']
+        self.assertFalse([backend for backend in backends if backend['name'] == 'gluster'][0]['supported'])
+
+        mock_get_hypervisor.return_value = 'bhyve'
+        backends = virt.pool_capabilities()['pool_types']
+        self.assertFalse([backend for backend in backends if backend['name'] == 'gluster'][0]['supported'])
+        self.assertTrue([backend for backend in backends if backend['name'] == 'zfs'][0]['supported'])
+
+        # Test options output
+        self.assertNotIn('options', [backend for backend in backends if backend['name'] == 'iscsi'][0])
+        self.assertNotIn('pool', [backend for backend in backends if backend['name'] == 'dir'][0]['options'])
+        self.assertNotIn('volume', [backend for backend in backends if backend['name'] == 'logical'][0]['options'])
+        self.assertEqual({
+                'pool': {
+                    'default_format': 'auto',
+                    'sourceFormatType': ['auto', 'nfs', 'glusterfs', 'cifs']
+                },
+                'volume': {
+                    'default_format': 'raw',
+                    'targetFormatType': ['none', 'raw', 'dir', 'bochs', 'cloop', 'dmg', 'iso', 'vpc', 'vdi',
+                          'fat', 'vhd', 'ploop', 'cow', 'qcow', 'qcow2', 'qed', 'vmdk']
+                }
+            },
+            [backend for backend in backends if backend['name'] == 'netfs'][0]['options'])
