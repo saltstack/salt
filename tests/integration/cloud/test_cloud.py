@@ -9,12 +9,14 @@ from __future__ import absolute_import, print_function, unicode_literals
 import pytest
 
 # Import Salt Testing libs
+from tests.support.helpers import PRE_PYTEST_SKIP
 from tests.integration.cloud.helpers.cloud_test_base import CloudTest
 
 # Import Salt libs
 import salt.cloud
 
 
+@PRE_PYTEST_SKIP
 class CloudClientTestCase(CloudTest):
     '''
     Integration tests for the CloudClient class. Uses DigitalOcean as a salt-cloud provider.

@@ -35,6 +35,7 @@ import tornado.web
 import types
 
 # Import 3rd-party libs
+import pytest
 from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
 from pytestsalt.utils import get_unused_localhost_port
@@ -52,6 +53,11 @@ import salt.utils.stringutils
 log = logging.getLogger(__name__)
 
 HAS_SYMLINKS = None
+
+
+PRE_PYTEST_SKIP_OR_NOT = 'PRE_PYTEST_DONT_SKIP' not in os.environ
+PRE_PYTEST_SKIP_REASON = 'PRE PYTEST - This test was skipped before running under pytest'
+PRE_PYTEST_SKIP = pytest.mark.skipif(PRE_PYTEST_SKIP_OR_NOT, reason=PRE_PYTEST_SKIP_REASON)
 
 
 def no_symlinks():
