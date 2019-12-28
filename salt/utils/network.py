@@ -1904,7 +1904,7 @@ def connection_check(addr, port=80, safe=False, ipv6=None):
 
 
 @jinja_filter('dns_check')
-def dns_check(addr, port=80, safe=False, ipv6=None):
+def dns_check(addr, port=None, safe=False, ipv6=None):
     '''
     Return an ip address resolved by dns in a format usable in URLs (ipv6 in brackets).
     Obeys system preference for IPv4/6 address resolution - this can be overridden by

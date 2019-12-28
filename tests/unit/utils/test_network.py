@@ -274,7 +274,10 @@ class NetworkTestCase(TestCase):
         for host in hosts:
             with patch.object(socket, 'getaddrinfo', create_autospec(socket.getaddrinfo, return_value=host['mocked'])):
                 with patch('socket.socket', create_autospec(socket.socket)):
-                    ret = network.dns_check(host['host'], host['port'])
+                    if 'port' in host:
+                        ret = network.dns_check(host['host'], host['port'])
+                    else:
+                        ret = network.dns_check(host['host'])
                     self.assertEqual(ret, host['ret'])
 
     def test_dns_check_ipv6_filter(self):
