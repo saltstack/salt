@@ -352,6 +352,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Arch':
             cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
+        elif grains['os_family'] == 'FreeBSD':
+            cmd_pkg = self.run_function('cmd.run', ['pkg search -S name -qQ version -e {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':
