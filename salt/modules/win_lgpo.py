@@ -6189,7 +6189,7 @@ def _checkAllAdmxPolicies(policy_class,
                    re.sub(re.escape(module_policy_data.reg_pol_header.encode('utf-16-le')),
                           b'',
                           policy_file_data))).split(']['.encode('utf-16-le'))
-        log.trace('Parsing %s policies...', len(policy_filedata_split))
+        log.trace('Searching %s policies...', len(policy_filedata_split))
         start_time = time.time()
         # Get the policy for each item defined in Registry.pol
         for policy_item in policy_filedata_split:
@@ -6198,9 +6198,7 @@ def _checkAllAdmxPolicies(policy_class,
                 # Find the policy definitions with this key
                 admx_items = REGKEY_XPATH(admx_policy_definitions,
                                           keyvalue=policy_item_key)
-                log.warning('%s not mapped', policy_item_key)
-                log.warning('Found %s policies using the original method',
-                            len(admx_items))
+                log.trace('Found %s policies for %s', len(admx_items), policy_item_key)
                 for admx_item in admx_items:
                     # If this is a policy, append it to admx_policies
                     if etree.QName(admx_item).localname == 'policy':
@@ -6211,10 +6209,10 @@ def _checkAllAdmxPolicies(policy_class,
                         for policy_item in POLICY_ANCESTOR_XPATH(admx_item):
                             if policy_item not in admx_policies:
                                 admx_policies.append(policy_item)
-        log.trace('Parsing complete: %s seconds', time.time() - start_time)
+        log.trace('Search complete: %s seconds', time.time() - start_time)
 
         if return_not_configured:
-            log.debug('Gathering non configured policies')
+            log.trace('Gathering non configured policies')
             start_time = time.time()
             not_configured_policies = ALL_CLASS_POLICY_XPATH(admx_policy_definitions, registry_class=policy_class)
             for policy_item in admx_policies:
@@ -6244,7 +6242,7 @@ def _checkAllAdmxPolicies(policy_class,
                     adml_language=adml_language)
             log.trace('Gathering complete: %s seconds', time.time() - start_time)
 
-        log.debug('Examining %s policies...', len(admx_policies))
+        log.trace('Examining %s policies...', len(admx_policies))
         start_time = time.time()
         for admx_policy in admx_policies:
             this_valuename = None
@@ -6362,12 +6360,9 @@ def _checkAllAdmxPolicies(policy_class,
                                 return_full_policy_names=return_full_policy_names,
                                 adml_language=adml_language)
                             required_elements[this_element_name] = None
-                            child_key = this_key
-                            child_valuename = this_valuename
-                            if 'key' in child_item.attrib:
-                                child_key = child_item.attrib['key']
-                            if 'valueName' in child_item.attrib:
-                                child_valuename = child_item.attrib['valueName']
+                            child_key = child_item.attrib.get('key', this_key)
+                            child_valuename = child_item.attrib.get(
+                                'valueName', this_valuename)
 
                             if etree.QName(child_item).localname == 'boolean':
                                 # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
@@ -6576,9 +6571,9 @@ def _checkAllAdmxPolicies(policy_class,
                 # When the state does it's first `lgpo.get` it would return `AllowTelemetry`
                 # On the second run, it would return `Allow Telemetry`
                 # This makes sure we're always returning the full_name when required
-                if admx_policy.attrib['name'] in policy_vals[this_policynamespace][this_policyname]:
+                if this_policyname in policy_vals[this_policynamespace][this_policyname]:
                     full_name = full_names[this_policynamespace][this_policyname]
-                    setting = policy_vals[this_policynamespace][this_policyname].pop(admx_policy.attrib['name'])
+                    setting = policy_vals[this_policynamespace][this_policyname].pop(this_policyname)
                     policy_vals[this_policynamespace][this_policyname][full_name] = setting
             if this_policynamespace in policy_vals and this_policyname in policy_vals[this_policynamespace]:
                 if this_policynamespace not in hierarchy:
@@ -7384,6 +7379,7 @@ def _lookup_admin_template(policy_name,
         hierarchy = []
         hierarchy_policy_name = policy_name
         if not adml_search_results:
+            log.warning('Trying another: %s' % policy_name)
             if '\\' in policy_name:
                 hierarchy = policy_name.split('\\')
                 policy_name = hierarchy.pop()
@@ -7505,7 +7501,7 @@ def _lookup_admin_template(policy_name,
                                     return True, search_result, policy_aliases, None
                                 else:
                                     msg = ('ADMX policy with the display name {0} does not'
-                                           'have the required name attribtue')
+                                           'have the required name attribute')
                                     msg = msg.format(policy_name)
                                     return False, None, [], msg
                         if not found:
@@ -7778,7 +7774,6 @@ def get(policy_class=None, return_full_policy_names=True,
     '''
 
     vals = {}
-    modal_returns = {}
     _policydata = _policy_info()
 
     if policy_class is None or policy_class.lower() == 'both':
@@ -7806,46 +7801,7 @@ def get(policy_class=None, return_full_policy_names=True,
                         policy_name = policy
             if _pol:
                 vals_key_name = policy_name
-                if 'Registry' in _pol:
-                    # get value from registry
-                    class_vals[policy_name] = __salt__['reg.read_value'](
-                        _pol['Registry']['Hive'],
-                        _pol['Registry']['Path'],
-                        _pol['Registry']['Value'])['vdata']
-                    log.trace(
-                        'Value %r found for reg policy %s',
-                        class_vals[policy_name], policy_name
-                    )
-                elif 'Secedit' in _pol:
-                    # get value from secedit
-                    _val = _get_secedit_value(option=_pol['Secedit']['Option'])
-                    class_vals[policy_name] = _val
-                elif 'NetSH' in _pol:
-                    # get value from netsh
-                    class_vals[policy_name] = _findOptionValueNetSH(
-                        profile=_pol['NetSH']['Profile'],
-                        option=_pol['NetSH']['Option'])
-                elif 'AdvAudit' in _pol:
-                    # get value from auditpol
-                    class_vals[policy_name] = _findOptionValueAdvAudit(
-                        option=_pol['AdvAudit']['Option'])
-                elif 'NetUserModal' in _pol:
-                    # get value from UserNetMod
-                    if _pol['NetUserModal']['Modal'] not in modal_returns:
-                        modal_returns[_pol['NetUserModal']['Modal']] = win32net.NetUserModalsGet(
-                                None,
-                                _pol['NetUserModal']['Modal'])
-                    class_vals[policy_name] = modal_returns[_pol['NetUserModal']['Modal']][_pol['NetUserModal']['Option']]
-                elif 'LsaRights' in _pol:
-                    class_vals[policy_name] = _getRightsAssignments(_pol['LsaRights']['Option'])
-                elif 'ScriptIni' in _pol:
-                    log.trace('Working with ScriptIni setting %s', policy_name)
-                    class_vals[policy_name] = _getScriptSettingsFromIniFile(_pol)
-                if policy_name in class_vals:
-                    class_vals[policy_name] = _transform_value(
-                        value=class_vals[policy_name],
-                        policy=_policydata.policies[p_class]['policies'][policy_name],
-                        transform_type='Get')
+                class_vals[policy_name] = _get_policy_info_setting(_pol)
                 if return_full_policy_names:
                     class_vals[_pol['Policy']] = class_vals.pop(policy_name)
                     vals_key_name = _pol['Policy']
@@ -7866,7 +7822,7 @@ def get(policy_class=None, return_full_policy_names=True,
             else:
                 msg = 'The specified policy {0} is not currently available ' \
                       'to be configured via this module'
-                raise SaltInvocationError(msg.format(policy_name))
+                raise CommandExecutionError(msg.format(policy_name))
         class_vals = dictupdate.update(
             class_vals,
             _checkAllAdmxPolicies(policy_class=p_class,
@@ -7881,6 +7837,679 @@ def get(policy_class=None, return_full_policy_names=True,
         vals = dictupdate.update(vals, class_vals)
 
     return vals
+
+
+def _get_policy_info_setting(policy_definition):
+    '''
+    Some policies are defined in this module and others by the ADMX/ADML files
+    on the machine. This function loads the current values for policies defined
+    in this module.
+
+    Args:
+        policy_definition (dict):
+            A sub-dict of Policies property of the _policy_info() class.
+            Basically a dictionary that defines the policy
+
+    Returns:
+        The transformed value. The transform is defined in the policy
+        definition. It can be a list, a string, a dictionary, depending on how
+        it's defined
+
+    Usage:
+        policy_data = _policy_info()
+        policy_name = 'RemoteRegistryExactPaths'
+        policy_definition = policy_data.policies['Machine']['policies'][policy_name]
+        policy_value = _get_policy_info_setting(policy_definition)
+    '''
+    if 'Registry' in policy_definition:
+        # Get value using the Registry mechanism
+        value = __salt__['reg.read_value'](
+            policy_definition['Registry']['Hive'],
+            policy_definition['Registry']['Path'],
+            policy_definition['Registry']['Value'])['vdata']
+        log.trace('Value %r found for Regisry policy %s',
+                  value, policy_definition['Policy'])
+    elif 'Secedit' in policy_definition:
+        # Get value using the Secedit mechanism
+        value = _get_secedit_value(
+            option=policy_definition['Secedit']['Option'])
+        log.trace('Value %r found for Secedit policy %s',
+                  value, policy_definition['Policy'])
+    elif 'NetSH' in policy_definition:
+        # Get value using the NetSH mechanism
+        value = _findOptionValueNetSH(
+            profile=policy_definition['NetSH']['Profile'],
+            option=policy_definition['NetSH']['Option'])
+        log.trace('Value %r found for NetSH policy %s',
+                  value, policy_definition['Policy'])
+    elif 'AdvAudit' in policy_definition:
+        # Get value using the AuditPol mechanism
+        value = _findOptionValueAdvAudit(
+            option=policy_definition['AdvAudit']['Option'])
+        log.trace('Value %r found for AuditPol policy %s',
+                  value, policy_definition['Policy'])
+    elif 'NetUserModal' in policy_definition:
+        # Get value using the NetUserModal mechanism
+        modal_return = win32net.NetUserModalsGet(
+            None, policy_definition['NetUserModal']['Modal'])
+        value = modal_return[
+            policy_definition['NetUserModal']['Option']]
+        log.trace('Value %r found for NetUserModal policy %s',
+                  value, policy_definition['Policy'])
+    elif 'LsaRights' in policy_definition:
+        # Get value using the LSARights mechanism
+        value = _getRightsAssignments(policy_definition['LsaRights']['Option'])
+        log.trace('Value %r found for LSARights policy %s',
+                  value, policy_definition['Policy'])
+    elif 'ScriptIni' in policy_definition:
+        value = _getScriptSettingsFromIniFile(policy_definition)
+        log.trace('Value %r found for ScriptIni policy %s',
+                  value, policy_definition['Policy'])
+    else:
+        message = 'Unknown or missing mechanism in policy_definition\n' \
+                  'r%'.format(policy_definition)
+        raise CommandExecutionError(message)
+    value = _transform_value(value=value,
+                             policy=policy_definition,
+                             transform_type='Get')
+    return value
+
+
+def _get_policy_adm_setting(admx_policy,
+                            policy_class,
+                            adml_language='en-US',
+                            return_full_policy_names=False,
+                            hierarchical_return=False):
+    '''
+    Get the current setting for polices set via the policy templates (ADMX/ADML)
+    files
+
+    Args:
+        admx_policy (obj):
+            The XPath object as returned by the ``_lookup_admin_template``
+            function
+
+        policy_class (str):
+            The policy class. Must be one of ``machine`` or ``user``
+
+        adml_language (str):
+            The language code for the adml file to use for localization. The
+            default is ``en-US``
+
+        return_full_policy_names (bool):
+            Returns the full policy name regardless of what was passed in
+            ``policy_name``
+
+        hierarchical_return (bool):
+            Returns a hierarchical view of the policy showing its parents
+
+    Returns:
+        dict: A dictionary containing the policy settings
+
+    Usage:
+        policy_name = 'AutoUpdateCfg'
+        policy_class = 'machine'
+        adml_language = 'en-US'
+        success, policy_obj, _, _ = _lookup_admin_template(
+            policy_name=policy_name,
+            policy_class=policy_class,
+            adml_language=adml_language)
+        if success:
+            setting = _get_policy_adm_setting(
+                admx_policy=policy_obj,
+                policy_class=policy_class,
+                adml_language=adml_language,
+                return_full_policy_names=return_full_policy_names,
+                hierarchical_return=hierarchical_return
+            )
+    '''
+    # TODO: Need to figure out how to get the lgpo.get function to use this code
+    # TODO: as it is very similar
+    # Validate policy Key and Name attributes
+    this_key = admx_policy.attrib.get('key', None)
+    this_policy_name = admx_policy.attrib.get('name', None)
+    if this_key is None or this_policy_name is None:
+        msg = 'Policy is missing the required "key" or "name" attribute:\n' \
+              '%s' % admx_policy.attrib
+        raise CommandExecutionError(msg)
+
+    # Get additional settings
+    this_value_name = admx_policy.attrib.get('valueName', None)
+    this_policy_setting = 'Not Configured'
+    this_policy_namespace = admx_policy.nsmap[admx_policy.prefix]
+
+    # Set some default values, these will get flipped below
+    element_only_enabled_disabled = True
+    explicit_enable_disable_value_setting = False
+
+    # Load additional data
+    policy_data = _policy_info()
+    policy_file_data = _read_regpol_file(
+        policy_data.admx_registry_classes[policy_class]['policy_path'])
+    adml_policy_resources = _get_policy_resources(language=adml_language)
+
+    if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
+        # some policies have a disabled list but not an enabled list
+        # added this to address those issues
+        if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
+            element_only_enabled_disabled = False
+            explicit_enable_disable_value_setting = True
+            if _checkValueItemParent(policy_element=admx_policy,
+                                     policy_name=this_policy_name,
+                                     policy_key=this_key,
+                                     policy_valueName=this_value_name,
+                                     xpath_object=ENABLED_VALUE_XPATH,
+                                     policy_file_data=policy_file_data):
+                log.trace('%s is enabled by detected ENABLED_VALUE_XPATH',
+                          this_policy_name)
+                this_policy_setting = 'Enabled'
+    if DISABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
+        # some policies have a disabled list but not an enabled list
+        # added this to address those issues
+        if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
+            element_only_enabled_disabled = False
+            explicit_enable_disable_value_setting = True
+            if _checkValueItemParent(policy_element=admx_policy,
+                                     policy_name=this_policy_name,
+                                     policy_key=this_key,
+                                     policy_valueName=this_value_name,
+                                     xpath_object=DISABLED_VALUE_XPATH,
+                                     policy_file_data=policy_file_data):
+                log.trace('%s is disabled by detected DISABLED_VALUE_XPATH',
+                          this_policy_name)
+                this_policy_setting = 'Disabled'
+    if ENABLED_LIST_XPATH(admx_policy):
+        if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
+            element_only_enabled_disabled = False
+            explicit_enable_disable_value_setting = True
+            if _checkListItem(policy_element=admx_policy,
+                              policy_name=this_policy_name,
+                              policy_key=this_key,
+                              xpath_object=ENABLED_LIST_XPATH,
+                              policy_file_data=policy_file_data):
+                log.trace('%s is enabled by detected ENABLED_LIST_XPATH',
+                          this_policy_name)
+                this_policy_setting = 'Enabled'
+    if DISABLED_LIST_XPATH(admx_policy):
+        if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
+            element_only_enabled_disabled = False
+            explicit_enable_disable_value_setting = True
+            if _checkListItem(policy_element=admx_policy,
+                              policy_name=this_policy_name,
+                              policy_key=this_key,
+                              xpath_object=DISABLED_LIST_XPATH,
+                              policy_file_data=policy_file_data):
+                log.trace('%s is disabled by detected DISABLED_LIST_XPATH',
+                          this_policy_name)
+                this_policy_setting = 'Disabled'
+
+    if not explicit_enable_disable_value_setting and this_value_name:
+        # the policy has a key/valuename but no explicit Enabled/Disabled
+        # Value or List
+        # these seem to default to a REG_DWORD 1 = "Enabled" **del. = "Disabled"
+        if _regexSearchRegPolData(re.escape(_buildKnownDataSearchString(
+                    reg_key=this_key,
+                    reg_valueName=this_value_name,
+                    reg_vtype='REG_DWORD',
+                    reg_data='1')),
+                policy_file_data):
+            log.trace('%s is enabled by no explicit enable/disable list or '
+                      'value', this_policy_name)
+            this_policy_setting = 'Enabled'
+        elif _regexSearchRegPolData(re.escape(_buildKnownDataSearchString(
+                    reg_key=this_key,
+                    reg_valueName=this_value_name,
+                    reg_vtype='REG_DWORD',
+                    reg_data=None,
+                    check_deleted=True)),
+                policy_file_data):
+            log.trace('%s is disabled by no explicit enable/disable list or '
+                      'value', this_policy_name)
+            this_policy_setting = 'Disabled'
+
+    full_names = {}
+    policy_vals = {}
+    hierarchy = {}
+    if ELEMENTS_XPATH(admx_policy):
+        if element_only_enabled_disabled or this_policy_setting == 'Enabled':
+            # TODO does this need to be modified based on the 'required' attribute?
+            required_elements = {}
+            configured_elements = {}
+            policy_disabled_elements = 0
+            for elements_item in ELEMENTS_XPATH(admx_policy):
+                for child_item in elements_item.getchildren():
+                    this_element_name = _getFullPolicyName(
+                        policy_item=child_item,
+                        policy_name=child_item.attrib['id'],
+                        return_full_policy_names=return_full_policy_names,
+                        adml_language=adml_language)
+                    required_elements[this_element_name] = None
+                    child_key = child_item.attrib.get('key', this_key)
+                    child_value_name = child_item.attrib.get('valueName',
+                                                             this_value_name)
+                    if etree.QName(child_item).localname == 'boolean':
+                        # https://msdn.microsoft.com/en-us/library/dn605978(v=vs.85).aspx
+                        if child_item.getchildren():
+                            if TRUE_VALUE_XPATH(child_item) and this_element_name not in configured_elements:
+                                if _checkValueItemParent(
+                                        policy_element=child_item,
+                                        policy_name=this_policy_name,
+                                        policy_key=child_key,
+                                        policy_valueName=child_value_name,
+                                        xpath_object=TRUE_VALUE_XPATH,
+                                        policy_file_data=policy_file_data):
+                                    configured_elements[this_element_name] = True
+                                    log.trace('element %s is configured true',
+                                              child_item.attrib['id'])
+                            if FALSE_VALUE_XPATH(child_item) and this_element_name not in configured_elements:
+                                if _checkValueItemParent(
+                                        policy_element=child_item,
+                                        policy_name=this_policy_name,
+                                        policy_key=child_key,
+                                        policy_valueName=child_value_name,
+                                        xpath_object=FALSE_VALUE_XPATH,
+                                        policy_file_data=policy_file_data):
+                                    configured_elements[this_element_name] = False
+                                    policy_disabled_elements = policy_disabled_elements + 1
+                                    log.trace('element %s is configured false',
+                                              child_item.attrib['id'])
+                            # WARNING - no standard ADMX files use true/falseList
+                            # so this hasn't actually been tested
+                            if TRUE_LIST_XPATH(child_item) and this_element_name not in configured_elements:
+                                log.trace('checking trueList')
+                                if _checkListItem(
+                                        policy_element=child_item,
+                                        policy_name=this_policy_name,
+                                        policy_key=this_key,
+                                        xpath_object=TRUE_LIST_XPATH,
+                                        policy_file_data=policy_file_data):
+                                    configured_elements[this_element_name] = True
+                                    log.trace('element %s is configured true',
+                                              child_item.attrib['id'])
+                            if FALSE_LIST_XPATH(child_item) and this_element_name not in configured_elements:
+                                log.trace('checking falseList')
+                                if _checkListItem(
+                                        policy_element=child_item,
+                                        policy_name=this_policy_name,
+                                        policy_key=this_key,
+                                        xpath_object=FALSE_LIST_XPATH,
+                                        policy_file_data=policy_file_data):
+                                    configured_elements[this_element_name] = False
+                                    policy_disabled_elements = policy_disabled_elements + 1
+                                    log.trace('element %s is configured false',
+                                              child_item.attrib['id'])
+                        else:
+                            if _regexSearchRegPolData(
+                                    re.escape(_processValueItem(
+                                        element=child_item,
+                                        reg_key=child_key,
+                                        reg_valuename=child_value_name,
+                                        policy=admx_policy,
+                                        parent_element=elements_item,
+                                        check_deleted=True)),
+                                    policy_file_data):
+                                configured_elements[this_element_name] = False
+                                policy_disabled_elements = policy_disabled_elements + 1
+                                log.trace('element %s is configured false', child_item.attrib['id'])
+                            elif _regexSearchRegPolData(
+                                    re.escape(_processValueItem(
+                                        element=child_item,
+                                        reg_key=child_key,
+                                        reg_valuename=child_value_name,
+                                        policy=admx_policy,
+                                        parent_element=elements_item,
+                                        check_deleted=False)),
+                                    policy_file_data):
+                                configured_elements[this_element_name] = True
+                                log.trace('element %s is configured true',
+                                          child_item.attrib['id'])
+                    elif etree.QName(child_item).localname == 'decimal' \
+                        or etree.QName(child_item).localname == 'text' \
+                        or etree.QName(child_item).localname == 'longDecimal' \
+                        or etree.QName(child_item).localname == 'multiText':
+                        # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
+                        if _regexSearchRegPolData(
+                                re.escape(_processValueItem(
+                                    element=child_item,
+                                    reg_key=child_key,
+                                    reg_valuename=child_value_name,
+                                    policy=admx_policy,
+                                    parent_element=elements_item,
+                                    check_deleted=True)),
+                                policy_file_data):
+                            configured_elements[this_element_name] = 'Disabled'
+                            policy_disabled_elements = policy_disabled_elements + 1
+                            log.trace('element %s is disabled',
+                                      child_item.attrib['id'])
+                        elif _regexSearchRegPolData(
+                                re.escape(_processValueItem(
+                                    element=child_item,
+                                    reg_key=child_key,
+                                    reg_valuename=child_value_name,
+                                    policy=admx_policy,
+                                    parent_element=elements_item,
+                                    check_deleted=False)),
+                                policy_file_data):
+                            configured_value = _getDataFromRegPolData(
+                                    _processValueItem(
+                                        element=child_item,
+                                        reg_key=child_key,
+                                        reg_valuename=child_value_name,
+                                        policy=admx_policy,
+                                        parent_element=elements_item,
+                                        check_deleted=False),
+                                    policy_file_data)
+                            configured_elements[this_element_name] = configured_value
+                            log.trace('element %s is enabled, value == %s',
+                                      child_item.attrib['id'],
+                                      configured_value)
+                    elif etree.QName(child_item).localname == 'enum':
+                        if _regexSearchRegPolData(
+                                re.escape(_processValueItem(
+                                    element=child_item,
+                                    reg_key=child_key,
+                                    reg_valuename=child_value_name,
+                                    policy=admx_policy,
+                                    parent_element=elements_item,
+                                    check_deleted=True)),
+                                policy_file_data):
+                            log.trace('enum element %s is disabled',
+                                      child_item.attrib['id'])
+                            configured_elements[this_element_name] = 'Disabled'
+                            policy_disabled_elements = policy_disabled_elements + 1
+                        else:
+                            for enum_item in child_item.getchildren():
+                                if _checkValueItemParent(
+                                        policy_element=enum_item,
+                                        policy_name=child_item.attrib['id'],
+                                        policy_key=child_key,
+                                        policy_valueName=child_value_name,
+                                        xpath_object=VALUE_XPATH,
+                                        policy_file_data=policy_file_data):
+                                    if VALUE_LIST_XPATH(enum_item):
+                                        log.trace('enum item has a valueList')
+                                        if _checkListItem(
+                                                policy_element=enum_item,
+                                                policy_name=this_policy_name,
+                                                policy_key=child_key,
+                                                xpath_object=VALUE_LIST_XPATH,
+                                                policy_file_data=policy_file_data):
+                                            log.trace('all valueList items exist in file')
+                                            configured_elements[this_element_name] = _getAdmlDisplayName(
+                                                adml_xml_data=adml_policy_resources,
+                                                display_name=enum_item.attrib['displayName'])
+                                    else:
+                                        configured_elements[this_element_name] = _getAdmlDisplayName(
+                                            adml_xml_data=adml_policy_resources,
+                                            display_name=enum_item.attrib['displayName'])
+                    elif etree.QName(child_item).localname == 'list':
+                        return_value_name = False
+                        if 'explicitValue' in child_item.attrib \
+                                and child_item.attrib['explicitValue'].lower() == 'true':
+                            log.trace('explicitValue list, we will return value names')
+                            return_value_name = True
+                        if _regexSearchRegPolData(
+                                re.escape(_processValueItem(
+                                    element=child_item,
+                                    reg_key=child_key,
+                                    reg_valuename=child_value_name,
+                                    policy=admx_policy,
+                                    parent_element=elements_item,
+                                    check_deleted=False)) + salt.utils.stringutils.to_bytes(r'(?!\*\*delvals\.)'),
+                                policy_file_data):
+                            configured_value = _getDataFromRegPolData(
+                                _processValueItem(
+                                    element=child_item,
+                                    reg_key=child_key,
+                                    reg_valuename=child_value_name,
+                                    policy=admx_policy,
+                                    parent_element=elements_item,
+                                    check_deleted=False),
+                                policy_file_data=policy_file_data,
+                                return_value_name=return_value_name)
+                            configured_elements[this_element_name] = configured_value
+                            log.trace('element %s is enabled values: %s',
+                                      child_item.attrib['id'],
+                                      configured_value)
+                        elif _regexSearchRegPolData(
+                                re.escape(_processValueItem(
+                                    element=child_item,
+                                    reg_key=child_key,
+                                    reg_valuename=child_value_name,
+                                    policy=admx_policy,
+                                    parent_element=elements_item,
+                                    check_deleted=True)),
+                                policy_file_data):
+                            configured_elements[this_element_name] = "Disabled"
+                            policy_disabled_elements = policy_disabled_elements + 1
+                            log.trace('element {0} is disabled'.format(child_item.attrib['id']))
+            if element_only_enabled_disabled:
+                if len(required_elements.keys()) > 0 \
+                    and len(configured_elements.keys()) == len(required_elements.keys()):
+                    if policy_disabled_elements == len(required_elements.keys()):
+                        log.trace('{0} is disabled by all enum elements'.format(this_policy_name))
+                        policy_vals.setdefault(this_policy_namespace, {})
+                        policy_vals[this_policy_namespace][this_policy_name] = 'Disabled'
+                    else:
+                        policy_vals.setdefault(this_policy_namespace, {})
+                        policy_vals[this_policy_namespace][this_policy_name] = configured_elements
+                        log.trace('{0} is enabled by enum elements'.format(this_policy_name))
+                else:
+                    policy_vals.setdefault(this_policy_namespace, {})
+                    policy_vals[this_policy_namespace][this_policy_name] = this_policy_setting
+            else:
+                if this_policy_setting == 'Enabled':
+                    policy_vals.setdefault(this_policy_namespace, {})
+                    policy_vals[this_policy_namespace][this_policy_name] = configured_elements
+        else:
+            policy_vals.setdefault(this_policy_namespace, {})
+            policy_vals[this_policy_namespace][this_policy_name] = this_policy_setting
+    else:
+        policy_vals.setdefault(this_policy_namespace, {})
+        policy_vals[this_policy_namespace][this_policy_name] = this_policy_setting
+
+    if return_full_policy_names and \
+            this_policy_namespace in policy_vals and \
+            this_policy_name in policy_vals[this_policy_namespace]:
+        full_names.setdefault(this_policy_namespace, {})
+        full_names[this_policy_namespace][this_policy_name] = _getFullPolicyName(
+            policy_item=admx_policy,
+            policy_name=admx_policy.attrib['name'],
+            return_full_policy_names=return_full_policy_names,
+            adml_language=adml_language)
+        # Make sure the we're passing the full policy name
+        # This issue was found when setting the `Allow Telemetry` setting
+        # All following states would show a change in this setting
+        # When the state does it's first `lgpo.get` it would return `AllowTelemetry`
+        # On the second run, it would return `Allow Telemetry`
+        # This makes sure we're always returning the full_name when required
+        if this_policy_name in policy_vals[this_policy_namespace][this_policy_name]:
+            full_name = full_names[this_policy_namespace][this_policy_name]
+            setting = policy_vals[this_policy_namespace][this_policy_name].pop(this_policy_name)
+            policy_vals[this_policy_namespace][this_policy_name][full_name] = setting
+    if this_policy_namespace in policy_vals and \
+            this_policy_name in policy_vals[this_policy_namespace]:
+        hierarchy.setdefault(this_policy_namespace, {})
+        hierarchy[this_policy_namespace][this_policy_name] = _build_parent_list(
+            policy_definition=admx_policy,
+            return_full_policy_names=return_full_policy_names,
+            adml_language=adml_language)
+
+    if policy_vals and return_full_policy_names and not hierarchical_return:
+        log.debug('Compiling non hierarchical return...')
+        unpathed_dict = {}
+        pathed_dict = {}
+        for policy_namespace in list(policy_vals):
+            for policy_item in list(policy_vals[policy_namespace]):
+                if full_names[policy_namespace][policy_item] in policy_vals[policy_namespace]:
+                    # add this item with the path'd full name
+                    full_path_list = hierarchy[policy_namespace][policy_item]
+                    full_path_list.reverse()
+                    full_path_list.append(full_names[policy_namespace][policy_item])
+                    policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(policy_item)
+                    pathed_dict[full_names[policy_namespace][policy_item]] = True
+                else:
+                    policy_vals[policy_namespace][full_names[policy_namespace][policy_item]] = \
+                        policy_vals[policy_namespace].pop(policy_item)
+                    if policy_namespace not in unpathed_dict:
+                        unpathed_dict[policy_namespace] = {}
+                    unpathed_dict[policy_namespace][full_names[policy_namespace][policy_item]] = policy_item
+            # go back and remove any "unpathed" policies that need a full path
+            for path_needed in unpathed_dict[policy_namespace]:
+                # remove the item with the same full name and re-add it w/a path'd version
+                full_path_list = hierarchy[policy_namespace][unpathed_dict[policy_namespace][path_needed]]
+                full_path_list.reverse()
+                full_path_list.append(path_needed)
+                log.trace('full_path_list == %s', full_path_list)
+                policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(path_needed)
+    for policy_namespace in list(policy_vals):
+        if policy_vals[policy_namespace] == {}:
+            policy_vals.pop(policy_namespace)
+    if policy_vals and hierarchical_return:
+        if hierarchy:
+            log.debug('Compiling hierarchical return...')
+            start_time = time.time()
+            for policy_namespace in hierarchy:
+                for hierarchy_item in hierarchy[policy_namespace]:
+                    if hierarchy_item in policy_vals[policy_namespace]:
+                        t_dict = {}
+                        first_item = True
+                        for item in hierarchy[policy_namespace][hierarchy_item]:
+                            new_dict = {}
+                            if first_item:
+                                h_policy_name = hierarchy_item
+                                if return_full_policy_names:
+                                    h_policy_name = full_names[policy_namespace][hierarchy_item]
+                                new_dict[item] = {h_policy_name: policy_vals[policy_namespace].pop(hierarchy_item)}
+                                first_item = False
+                            else:
+                                new_dict[item] = t_dict
+                            t_dict = new_dict
+                        if t_dict:
+                            policy_vals = dictupdate.update(policy_vals, t_dict)
+                if policy_namespace in policy_vals and policy_vals[policy_namespace] == {}:
+                    policy_vals.pop(policy_namespace)
+        policy_vals = {
+            policy_data.admx_registry_classes[policy_class]['lgpo_section']: {
+                'Administrative Templates': policy_vals}}
+
+    return policy_vals
+
+
+def get_policy(policy_name,
+               policy_class,
+               adml_language='en-US',
+               return_value_only=True,
+               return_full_policy_names=True,
+               hierarchical_return=False):
+    r'''
+    Get the current settings for a single policy on the machine
+
+    Args:
+        policy_name (str):
+            The name of the policy to retrieve. Can be the any of the names
+            or alieses returned by ``lgpo.get_policy_info``
+
+        policy_class (str):
+            The policy class. Must be one of ``machine`` or ``user``
+
+        adml_language (str):
+            The language code for the adml file to use for localization. The
+            default is ``en-US``
+
+        return_value_only (bool):
+            ``True`` will return only the value for the policy, without the
+            name of the policy. ``return_full_policy_names`` and
+            ``hierarchical_return`` will be ignored. Default is ``True``
+
+        return_full_policy_names (bool):
+            Returns the full policy name regardless of what was passed in
+            ``policy_name``
+
+        hierarchical_return (bool):
+            Returns a hierarchical view of the policy showing its parents
+
+    Returns:
+        dict: A dictionary containing the policy settings
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        # Using the policy id
+        salt * lgpo.get_policy LockoutDuration machine
+        salt * lgpo.get_policy AutoUpdateCfg machine
+
+        # Using the full name
+        salt * lgpo.get_policy "Account lockout duration" machine
+        salt * lgpo.get_policy "Configure Automatic Updates" machine
+
+        # Using full path and name
+        salt * lgpo.get_policy "Windows Components\Windows Update\Configure Automatic Updates" machine
+    '''
+    if not policy_name:
+        raise SaltInvocationError('policy_name must be defined')
+    if not policy_class:
+        raise SaltInvocationError('policy_class must be defined')
+    policy_class = policy_class.title()
+    policy_data = _policy_info()
+    if policy_class not in policy_data.policies.keys():
+        policy_classes = ', '.join(policy_data.policies.keys())
+        message = 'The requested policy class "{0}" is invalid, policy_class ' \
+                  'should be one of: {1}'.format(policy_class, policy_classes)
+        raise CommandExecutionError(message)
+
+    # Look in the _policy_data object first
+    policy_definition = None
+    if policy_name in policy_data.policies[policy_class]['policies']:
+        policy_definition = policy_data.policies[policy_class]['policies'][policy_name]
+    else:
+        for pol in policy_data.policies[policy_class]['policies']:
+            if policy_data.policies[policy_class]['policies'][pol]['Policy'].lower() == policy_name.lower():
+                policy_definition = policy_data.policies[policy_class]['policies'][pol]
+                break
+    if policy_definition:
+        if return_value_only:
+            return _get_policy_info_setting(policy_definition)
+        if return_full_policy_names:
+            key_name = policy_definition['Policy']
+        else:
+            key_name = policy_name
+        setting = {key_name: _get_policy_info_setting(policy_definition)}
+        if hierarchical_return:
+            if 'lgpo_section' in policy_definition:
+                first_item = True
+                t_dict = {}
+                for level in reversed(policy_definition['lgpo_section']):
+                    new_dict = {}
+                    if first_item:
+                        new_dict[level] = {
+                            key_name: setting.pop(key_name)}
+                        first_item = False
+                    else:
+                        new_dict[level] = t_dict
+                    t_dict = new_dict
+                if t_dict:
+                    setting = t_dict
+
+        return setting
+
+    success, policy_obj, _, _ = _lookup_admin_template(
+        policy_name=policy_name,
+        policy_class=policy_class,
+        adml_language=adml_language)
+    if success:
+        setting = _get_policy_adm_setting(
+            admx_policy=policy_obj,
+            policy_class=policy_class,
+            adml_language=adml_language,
+            return_full_policy_names=return_full_policy_names,
+            hierarchical_return=hierarchical_return
+        )
+        if return_value_only:
+            for key in setting:
+                return setting[key]
+        return setting
 
 
 def set_computer_policy(name,
