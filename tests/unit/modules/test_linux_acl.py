@@ -5,12 +5,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.modules.linux_acl as linux_acl
 from salt.exceptions import CommandExecutionError
+import salt.utils.platform
 
 
 class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
@@ -52,12 +53,21 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_getfacl_w_single_arg(self):
         linux_acl.getfacl(self.file)
-        self.cmdrun.assert_called_once_with('getfacl --absolute-names ' + self.quoted_file, python_shell=False)
+        if salt.utils.platform.is_linux():
+            cmd = 'getfacl --absolute-names '
+        else:
+            cmd = 'getfacl '
+        self.cmdrun.assert_called_once_with(cmd + self.quoted_file, python_shell=False)
 
     def test_getfacl_w_multiple_args(self):
         linux_acl.getfacl(*self.files)
-        self.cmdrun.assert_called_once_with('getfacl --absolute-names ' + ' '.join(self.quoted_files), python_shell=False)
+        if salt.utils.platform.is_linux():
+            cmd = 'getfacl --absolute-names '
+        else:
+            cmd = 'getfacl '
+        self.cmdrun.assert_called_once_with(cmd + ' '.join(self.quoted_files), python_shell=False)
 
+    @skipIf(not salt.utils.platform.is_linux(), 'Only Linux implements recursive getfacl')
     def test_getfacl__recursive_w_multiple_args(self):
         linux_acl.getfacl(*self.files, recursive=True)
         self.cmdrun.assert_called_once_with('getfacl --absolute-names -R ' + ' '.join(self.quoted_files), python_shell=False)
@@ -89,6 +99,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         linux_acl.wipefacls(*self.files)
         self.cmdrun.assert_called_once_with('setfacl -b ' + ' '.join(self.quoted_files), python_shell=False)
 
+    @skipIf(not salt.utils.platform.is_linux() and not salt.utils.platform.is_freebsd(),
+            'Only FreeBSD and Linux implement recursive setfacl')
     def test_wipefacls__recursive_w_multiple_args(self):
         linux_acl.wipefacls(*self.files, recursive=True)
         self.cmdrun.assert_called_once_with('setfacl -b -R ' + ' '.join(self.quoted_files), python_shell=False)
@@ -153,6 +165,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         linux_acl.modfacl(*(self.default_user_acl + self.files))
         self.cmdrun.assert_called_once_with('setfacl -m ' + ' '.join([self.default_user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
 
+    @skipIf(not salt.utils.platform.is_linux() and not salt.utils.platform.is_freebsd(),
+            'Only FreeBSD and Linux implement recursive setfacl')
     def test_modfacl__recursive_w_multiple_args(self):
         linux_acl.modfacl(*(self.user_acl + self.files), recursive=True)
         self.cmdrun.assert_called_once_with('setfacl -R -m ' + ' '.join([self.user_acl_cmd] + self.quoted_files), python_shell=False, raise_err=False)
@@ -224,6 +238,8 @@ class LinuxAclTestCase(TestCase, LoaderModuleMockMixin):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files))
         self.cmdrun.assert_called_once_with('setfacl -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.quoted_files), python_shell=False)
 
+    @skipIf(not salt.utils.platform.is_linux() and not salt.utils.platform.is_freebsd(),
+            'Only FreeBSD and Linux implement recursive setfacl')
     def test_delfacl__recursive_w_multiple_args(self):
         linux_acl.delfacl(*(self.default_user_acl[:-1] + self.files), recursive=True)
         self.cmdrun.assert_called_once_with('setfacl -R -x ' + ' '.join([self.default_user_acl_cmd.rpartition(':')[0]] + self.quoted_files), python_shell=False)

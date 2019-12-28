@@ -40,6 +40,30 @@ def version():
     return ret[1].strip()
 
 
+def _getfacl_dash_r(kwargs):
+    """ Append the -R flag if requested and supported """
+    recursive = kwargs.pop('recursive', False)
+    if recursive:
+        if salt.utils.platform.is_linux():
+            return ' -R'
+        else:
+            raise CommandExecutionError('recursive getfacl not available')
+    else:
+        return ''
+
+
+def _setfacl_dash_r(kwargs):
+    """ Append the -R flag if requested and supported """
+    recursive = kwargs.pop('recursive', False)
+    if recursive:
+        if salt.utils.platform.is_linux() or salt.utils.platform.is_freebsd():
+            return ' -R'
+        else:
+            raise CommandExecutionError('recursive setfacl not available')
+    else:
+        return ''
+
+
 def _raise_on_no_files(*args):
     if len(args) == 0:
         raise CommandExecutionError('You need to specify at least one file or directory to work with!')
@@ -57,8 +81,6 @@ def getfacl(*args, **kwargs):
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom
         salt '*' acl.getfacl /tmp/house/kitchen /tmp/house/livingroom recursive=True
     '''
-    recursive = kwargs.pop('recursive', False)
-
     _raise_on_no_files(*args)
 
     ret = {}
@@ -69,9 +91,8 @@ def getfacl(*args, **kwargs):
     else:
         # FreeBSD and Illumos return absolute paths by default
         cmd = 'getfacl'
+    cmd += _getfacl_dash_r(kwargs)
 
-    if recursive:
-        cmd += ' -R'
     for dentry in args:
         cmd += ' "{0}"'.format(dentry)
     out = __salt__['cmd.run'](cmd, python_shell=False).splitlines()
@@ -183,12 +204,9 @@ def wipefacls(*args, **kwargs):
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom
         salt '*' acl.wipefacls /tmp/house/kitchen /tmp/house/livingroom recursive=True
     '''
-    recursive = kwargs.pop('recursive', False)
-
     _raise_on_no_files(*args)
     cmd = 'setfacl -b'
-    if recursive:
-        cmd += ' -R'
+    cmd += _setfacl_dash_r(kwargs)
     for dentry in args:
         cmd += ' "{0}"'.format(dentry)
     __salt__['cmd.run'](cmd, python_shell=False)
@@ -225,14 +243,13 @@ def modfacl(acl_type, acl_name='', perms='', *args, **kwargs):
         salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen recursive=True
         salt '*' acl.modfacl user myuser rwx /tmp/house/kitchen raise_err=True
     '''
-    recursive = kwargs.pop('recursive', False)
     raise_err = kwargs.pop('raise_err', False)
 
     _raise_on_no_files(*args)
 
     cmd = 'setfacl'
-    if recursive:
-        cmd += ' -R'  # -R must come first as -m needs the acl_* arguments that come later
+    # -R must before -m as the latter needs the acl_* arguments that come later
+    cmd += _setfacl_dash_r(kwargs)
 
     cmd += ' -m'
 
@@ -258,13 +275,10 @@ def delfacl(acl_type, acl_name='', *args, **kwargs):
         salt '*' acl.delfacl g myuser /tmp/house/kitchen /tmp/house/livingroom
         salt '*' acl.delfacl user myuser /tmp/house/kitchen recursive=True
     '''
-    recursive = kwargs.pop('recursive', False)
-
     _raise_on_no_files(*args)
 
     cmd = 'setfacl'
-    if recursive:
-        cmd += ' -R'
+    cmd += _setfacl_dash_r(kwargs)
 
     cmd += ' -x'
 
