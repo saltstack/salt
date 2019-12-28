@@ -11,8 +11,6 @@ import datetime
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -28,7 +26,6 @@ except ImportError:
 
 class DateutilsTestCase(TestCase):
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_date_cast(self):
         now = datetime.datetime.now()
         with patch('datetime.datetime'):
