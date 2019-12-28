@@ -267,6 +267,9 @@ class NetworkTestCase(TestCase):
              'port': '1234',
              'mocked': [(2, 1, 6, '', ('127.0.0.1', 0))],
              'ret': '127.0.0.1'},
+            {'host': 'salt-master',
+             'mocked': [(2, 1, 6, '', ('127.0.0.1', 0))],
+             'ret': '127.0.0.1'},
         ]
         for host in hosts:
             with patch.object(socket, 'getaddrinfo', create_autospec(socket.getaddrinfo, return_value=host['mocked'])):
