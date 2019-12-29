@@ -672,7 +672,7 @@ def _set_network_adapter_mapping(adapter_specs):
     if 'ip' in list(adapter_specs.keys()):
         ip = six.text_type(adapter_specs['ip'])
         subnet_mask = six.text_type(adapter_specs['subnet_mask'])
-        adapter_mapping.adapter.ip = vim.vm.customization.FixedIp(ipAddress=ip)
+        adapter_mapping.adapter.ip.ipAddress = vim.vm.customization.FixedIp(ipAddress=ip)
         adapter_mapping.adapter.subnetMask = subnet_mask
     else:
         adapter_mapping.adapter.ip = vim.vm.customization.DhcpIpGenerator()
