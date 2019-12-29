@@ -52,7 +52,11 @@ class ScheduleTestCase(TestCase):
 
     def setUp(self):
         with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            self.schedule = Schedule(copy.deepcopy(self.default_config), {}, returners={})
+            self.schedule = Schedule(
+                copy.deepcopy(self.default_config),
+                {},
+                returners={},
+                new_instance=True)
         self.addCleanup(delattr, self, 'schedule')
 
     # delete_job tests
