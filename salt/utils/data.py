@@ -11,6 +11,7 @@ import copy
 import fnmatch
 import logging
 import re
+import functools
 
 try:
     from collections.abc import Mapping, MutableMapping, Sequence
@@ -29,6 +30,11 @@ from salt.utils.odict import OrderedDict
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+
+try:
+    import jmespath
+except ImportError:
+    jmespath = None
 
 log = logging.getLogger(__name__)
 
@@ -976,3 +982,82 @@ def stringify(data):
             item = six.text_type(item)
         ret.append(item)
     return ret
+
+
+@jinja_filter('json_query')
+def json_query(data, expr):
+    '''
+    Query data using JMESPath language (http://jmespath.org).
+
+    Requires the https://github.com/jmespath/jmespath.py library.
+
+    :param data: A complex data structure to query
+    :param expr: A JMESPath expression (query)
+    :returns: The query result
+
+    .. code-block:: jinja
+
+        {"services": [
+            {"name": "http", "host": "1.2.3.4", "port": 80},
+            {"name": "smtp", "host": "1.2.3.5", "port": 25},
+            {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+        ]} | json_query("services[].port") }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [80, 25, 22]
+    '''
+    if jmespath is None:
+        err = 'json_query requires jmespath module installed'
+        log.error(err)
+        raise RuntimeError(err)
+    return jmespath.search(expr, data)
+
+
+def _is_not_considered_falsey(value, ignore_types=()):
+    '''
+    Helper function for filter_falsey to determine if something is not to be
+    considered falsey.
+    :param any value: The value to consider
+    :param list ignore_types: The types to ignore when considering the value.
+    :return bool
+    '''
+    return isinstance(value, bool) or type(value) in ignore_types or value
+
+
+def filter_falsey(data, recurse_depth=None, ignore_types=()):
+    '''
+    Helper function to remove items from an iterable with falsey value.
+    Removes ``None``, ``{}`` and ``[]``, 0, '' (but does not remove ``False``).
+    Recurses into sub-iterables if ``recurse`` is set to ``True``.
+    :param dict/list data: Source iterable (dict, OrderedDict, list, set, ...) to process.
+    :param int recurse_depth: Recurse this many levels into values that are dicts
+        or lists to also process those. Default: 0 (do not recurse)
+    :param list ignore_types: Contains types that can be falsey but must not
+        be filtered. Default: Only booleans are not filtered.
+    :return type(data)
+    .. version-added:: Neon
+    '''
+    filter_element = (
+        functools.partial(filter_falsey,
+                          recurse_depth=recurse_depth-1,
+                          ignore_types=ignore_types)
+        if recurse_depth else lambda x: x
+    )
+
+    if isinstance(data, dict):
+        processed_elements = [(key, filter_element(value)) for key, value in six.iteritems(data)]
+        return type(data)([
+            (key, value)
+            for key, value in processed_elements
+            if _is_not_considered_falsey(value, ignore_types=ignore_types)
+        ])
+    if hasattr(data, '__iter__') and not isinstance(data, six.string_types):
+        processed_elements = (filter_element(value) for value in data)
+        return type(data)([
+            value for value in processed_elements
+            if _is_not_considered_falsey(value, ignore_types=ignore_types)
+        ])
+    return data

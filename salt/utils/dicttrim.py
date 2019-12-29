@@ -46,7 +46,7 @@ def trim_dict(
     to accurately return the items referenced in the structure.
 
     Ex:
-    >>> salt.utils.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
+    >>> salt.utils.dicttrim.trim_dict({'a': 'b', 'c': 'x' * 10000}, 100)
     {'a': 'b', 'c': 'VALUE_TRIMMED'}
 
     To improve performance, it is adviseable to pass in msgpacked

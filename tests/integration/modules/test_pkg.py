@@ -17,7 +17,7 @@ from tests.support.helpers import (
 from tests.support.unit import skipIf
 
 # Import Salt libs
-from salt.utils import six
+from salt.ext import six
 import salt.utils.path
 import salt.utils.pkg
 import salt.utils.platform
@@ -141,6 +141,16 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         func = 'pkg.owner'
         ret = self.run_function(func, ['/bin/ls'])
+        self.assertNotEqual(len(ret), 0)
+
+    # Similar to pkg.owner, but for FreeBSD's pkgng
+    @requires_salt_modules('pkg.which')
+    def test_which(self):
+        '''
+        test finding the package owning a file
+        '''
+        func = 'pkg.which'
+        ret = self.run_function(func, ['/usr/local/bin/salt-call'])
         self.assertNotEqual(len(ret), 0)
 
     @destructiveTest
@@ -352,6 +362,8 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cmd_pkg = self.run_function('cmd.run', ['apt list {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Arch':
             cmd_pkg = self.run_function('cmd.run', ['pacman -Si {0}'.format(self.pkg)])
+        elif grains['os_family'] == 'FreeBSD':
+            cmd_pkg = self.run_function('cmd.run', ['pkg search -S name -qQ version -e {0}'.format(self.pkg)])
         elif grains['os_family'] == 'Suse':
             cmd_pkg = self.run_function('cmd.run', ['zypper info {0}'.format(self.pkg)])
         elif grains['os_family'] == 'MacOS':
