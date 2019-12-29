@@ -2,53 +2,24 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import copy
 import logging
-import os
 
 import dateutil.parser as dateutil_parser
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase
-from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
-from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt libs
-import salt.utils.schedule
-
-from salt.modules.test import ping
-
-try:
-    import croniter  # pylint: disable=W0611
-    HAS_CRONITER = True
-except ImportError:
-    HAS_CRONITER = False
+from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
-SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
-DEFAULT_CONFIG['root_dir'] = ROOT_DIR
-DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
-DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
-DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
-class SchedulerMaxRunningTest(ModuleCase, SaltReturnAssertsMixin):
+class SchedulerMaxRunningTest(SchedulerTestsBase):
     '''
     Validate the pkg module
     '''
     def setUp(self):
-        with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            functions = {'test.ping': ping}
-            self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
+        super(SchedulerMaxRunningTest, self).setUp()
         self.schedule.opts['loop_interval'] = 1
-
-    def tearDown(self):
-        self.schedule.reset()
 
     def test_maxrunning_minion(self):
         '''

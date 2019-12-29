@@ -212,6 +212,8 @@ class BadTestModuleNamesTestCase(TestCase):
             if mod_name in ignore:
                 # Test module is being ignored, skip it
                 continue
+            if mod_name.startswith('unit.utils.scheduler'):
+                continue
 
             # Separate the test_foo away from the rest of the mod name, because
             # we'll need to remove the "test_" from the beginning and add .py

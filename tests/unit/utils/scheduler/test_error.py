@@ -2,23 +2,14 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import copy
 import logging
-import os
 
 import dateutil.parser as dateutil_parser
 
 # Import Salt Testing libs
-from tests.support.case import ModuleCase
-from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import skipIf
-from tests.support.runtests import RUNTIME_VARS
-
-# Import Salt libs
-import salt.utils.schedule
-
-from salt.modules.test import ping
+from tests.unit.utils.scheduler.base import SchedulerTestsBase
 
 try:
     import croniter  # pylint: disable=W0611
@@ -27,31 +18,15 @@ except ImportError:
     HAS_CRONITER = False
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
-SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
-
-DEFAULT_CONFIG = salt.config.minion_config(None)
-DEFAULT_CONFIG['conf_dir'] = ROOT_DIR
-DEFAULT_CONFIG['root_dir'] = ROOT_DIR
-DEFAULT_CONFIG['sock_dir'] = SOCK_DIR
-DEFAULT_CONFIG['pki_dir'] = os.path.join(ROOT_DIR, 'pki')
-DEFAULT_CONFIG['cachedir'] = os.path.join(ROOT_DIR, 'cache')
 
 
-class SchedulerErrorTest(ModuleCase, SaltReturnAssertsMixin):
-    '''
-    Validate the pkg module
-    '''
+class SchedulerErrorTest(SchedulerTestsBase):
+
     def setUp(self):
-        with patch('salt.utils.schedule.clean_proc_dir', MagicMock(return_value=None)):
-            functions = {'test.ping': ping}
-            self.schedule = salt.utils.schedule.Schedule(copy.deepcopy(DEFAULT_CONFIG), functions, returners={})
+        super(SchedulerErrorTest, self).setUp()
         self.schedule.opts['loop_interval'] = 1
 
         self.schedule.opts['grains']['whens'] = {'tea time': '11/29/2017 12:00pm'}
-
-    def tearDown(self):
-        self.schedule.reset()
 
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_invalid(self):
