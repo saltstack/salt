@@ -4523,6 +4523,164 @@ def network_set_autostart(name, state='on', **kwargs):
         conn.close()
 
 
+def _parse_pools_caps(doc):
+    '''
+    Parse libvirt pool capabilities XML
+    '''
+    def _parse_pool_caps(pool):
+        pool_caps = {
+            'name': pool.get('type'),
+            'supported': pool.get('supported', 'no') == 'yes'
+        }
+        for option_kind in ['pool', 'vol']:
+            options = {}
+            default_format_node = pool.find('{0}Options/defaultFormat'.format(option_kind))
+            if default_format_node is not None:
+                options['default_format'] = default_format_node.get('type')
+            options_enums = {enum.get('name'): [value.text for value in enum.findall('value')]
+                 for enum in pool.findall('{0}Options/enum'.format(option_kind))}
+            if options_enums:
+                options.update(options_enums)
+            if options:
+                if 'options' not in pool_caps:
+                    pool_caps['options'] = {}
+                kind = option_kind if option_kind is not 'vol' else 'volume'
+                pool_caps['options'][kind] = options
+        return pool_caps
+
+    return [_parse_pool_caps(pool) for pool in doc.findall('pool')]
+
+
+def pool_capabilities(**kwargs):
+    '''
+    Return the hypervisor connection storage pool capabilities.
+
+    The returned data are either directly extracted from libvirt or computed.
+    In the latter case some pool types could be listed as supported while they
+    are not. To distinguish between the two cases, check the value of the ``computed`` property.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_capabilities
+
+    '''
+    try:
+        conn = __get_conn(**kwargs)
+        has_pool_capabilities = bool(getattr(conn, 'getStoragePoolCapabilities', None))
+        if has_pool_capabilities:
+            caps = ElementTree.fromstring(conn.getStoragePoolCapabilities())
+            pool_types = _parse_pools_caps(caps)
+        else:
+            # Compute reasonable values
+            all_hypervisors = ['xen', 'kvm', 'bhyve']
+            images_formats = ['none', 'raw', 'dir', 'bochs', 'cloop', 'dmg', 'iso', 'vpc', 'vdi',
+                              'fat', 'vhd', 'ploop', 'cow', 'qcow', 'qcow2', 'qed', 'vmdk']
+            common_drivers = [
+                {
+                    'name': 'fs',
+                    'default_source_format': 'auto',
+                    'source_formats': ['auto', 'ext2', 'ext3', 'ext4', 'ufs', 'iso9660', 'udf', 'gfs', 'gfs2',
+                                       'vfat', 'hfs+', 'xfs', 'ocfs2'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {
+                    'name': 'dir',
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {'name': 'iscsi'},
+                {'name': 'scsi'},
+                {
+                    'name': 'logical',
+                    'default_source_format': 'lvm2',
+                    'source_formats': ['unknown', 'lvm2'],
+                },
+                {
+                    'name': 'netfs',
+                    'default_source_format': 'auto',
+                    'source_formats': ['auto', 'nfs', 'glusterfs', 'cifs'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {
+                    'name': 'disk',
+                    'default_source_format': 'unknown',
+                    'source_formats': ['unknown', 'dos', 'dvh', 'gpt', 'mac', 'bsd', 'pc98', 'sun', 'lvm2'],
+                    'default_target_format': 'none',
+                    'target_formats': ['none', 'linux', 'fat16', 'fat32', 'linux-swap', 'linux-lvm',
+                                       'linux-raid', 'extended']
+                },
+                {'name': 'mpath'},
+                {
+                    'name': 'rbd',
+                    'default_target_format': 'raw',
+                    'target_formats': []
+                },
+                {
+                    'name': 'sheepdog',
+                    'version': 10000,
+                    'hypervisors': ['kvm'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {
+                    'name': 'gluster',
+                    'version': 1002000,
+                    'hypervisors': ['kvm'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {'name': 'zfs', 'version': 1002008, 'hypervisors': ['bhyve']},
+                {'name': 'iscsi-direct', 'version': 4007000, 'hypervisors': ['kvm', 'xen']}
+            ]
+
+            libvirt_version = conn.getLibVersion()
+            hypervisor = get_hypervisor()
+
+            def _get_backend_output(backend):
+                output = {
+                    'name': backend['name'],
+                    'supported': (not backend.get('version') or libvirt_version >= backend['version']) and
+                        hypervisor in backend.get('hypervisors', all_hypervisors),
+                    'options': {
+                        'pool': {
+                            'default_format': backend.get('default_source_format'),
+                            'sourceFormatType': backend.get('source_formats')
+                        },
+                        'volume': {
+                            'default_format': backend.get('default_target_format'),
+                            'targetFormatType': backend.get('target_formats')
+                        }
+                    }
+                }
+
+                # Cleanup the empty members to match the libvirt output
+                for option_kind in ['pool', 'volume']:
+                    if not [value for value in output['options'][option_kind].values() if value is not None]:
+                        del output['options'][option_kind]
+                if not output['options']:
+                    del output['options']
+
+                return output
+            pool_types = [_get_backend_output(backend) for backend in common_drivers]
+    finally:
+        conn.close()
+
+    return {
+        'computed': not has_pool_capabilities,
+        'pool_types': pool_types,
+    }
+
+
 def pool_define(name,
                 ptype,
                 target=None,
@@ -5205,5 +5363,150 @@ def pool_list_volumes(name, **kwargs):
     try:
         pool = conn.storagePoolLookupByName(name)
         return pool.listVolumes()
+    finally:
+        conn.close()
+
+
+def _get_storage_vol(conn, pool, vol):
+    '''
+    Helper function getting a storage volume. Will throw a libvirtError
+    if the pool or the volume couldn't be found.
+
+    :param conn: libvirt connection object to use
+    :param pool: pool name
+    :param vol: volume name
+    '''
+    pool_obj = conn.storagePoolLookupByName(pool)
+    return pool_obj.storageVolLookupByName(vol)
+
+
+def _is_valid_volume(vol):
+    '''
+    Checks whether a volume is valid for further use since those may have disappeared since
+    the last pool refresh.
+    '''
+    try:
+        # Getting info on an invalid volume raises error and libvirt logs an error
+        def discarder(ctxt, error):  # pylint: disable=unused-argument
+            log.debug("Ignore libvirt error: %s", error[2])
+        # Disable the libvirt error logging
+        libvirt.registerErrorHandler(discarder, None)
+        vol.info()
+        # Reenable the libvirt error logging
+        libvirt.registerErrorHandler(None, None)
+        return True
+    except libvirt.libvirtError as err:
+        return False
+
+
+def _get_all_volumes_paths(conn):
+    '''
+    Extract the path and backing stores path of all volumes.
+
+    :param conn: libvirt connection to use
+    '''
+    volumes = [vol for l in
+                [obj.listAllVolumes() for obj in conn.listAllStoragePools()
+                    if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING] for vol in l]
+    return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
+            for vol in volumes if _is_valid_volume(vol)}
+
+
+def volume_infos(pool=None, volume=None, **kwargs):
+    '''
+    Provide details on a storage volume. If no volume name is provided, the infos
+    all the volumes contained in the pool are provided. If no pool is provided,
+    the infos of the volumes of all pools are output.
+
+    :param pool: libvirt storage pool name (default: ``None``)
+    :param volume: name of the volume to get infos from (default: ``None``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_infos <pool> <volume>
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        backing_stores = _get_all_volumes_paths(conn)
+        try:
+            domains = _get_domain(conn)
+            domains_list = domains if isinstance(domains, list) else [domains]
+        except CommandExecutionError:
+            # Having no VM is not an error here.
+            domains_list = []
+        disks = {domain.name():
+                 {node.get('file') for node
+                  in ElementTree.fromstring(domain.XMLDesc(0)).findall('.//disk/source/[@file]')}
+                 for domain in domains_list}
+
+        def _volume_extract_infos(vol):
+            '''
+            Format the volume info dictionary
+
+            :param vol: the libvirt storage volume object.
+            '''
+            types = ['file', 'block', 'dir', 'network', 'netdir', 'ploop']
+            infos = vol.info()
+
+            # If we have a path, check its use.
+            used_by = []
+            if vol.path():
+                as_backing_store = {path for (path, all_paths) in backing_stores.items() if vol.path() in all_paths}
+                used_by = [vm_name for (vm_name, vm_disks) in disks.items()
+                           if vm_disks & as_backing_store or vol.path() in vm_disks]
+
+            return {
+                'type': types[infos[0]] if infos[0] < len(types) else 'unknown',
+                'key': vol.key(),
+                'path': vol.path(),
+                'capacity': infos[1],
+                'allocation': infos[2],
+                'used_by': used_by,
+            }
+
+        pools = [obj for obj in conn.listAllStoragePools()
+                    if (pool is None or obj.name() == pool) and obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING]
+        vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
+                                  for vol in pool_obj.listAllVolumes()
+                                  if (volume is None or vol.name() == volume) and _is_valid_volume(vol)}
+                for pool_obj in pools}
+        return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
+def volume_delete(pool, volume, **kwargs):
+    '''
+    Delete a libvirt managed volume.
+
+    :param pool: libvirt storage pool name
+    :param volume: name of the volume to delete
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_delete <pool> <volume>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        vol = _get_storage_vol(conn, pool, volume)
+        return not bool(vol.delete())
     finally:
         conn.close()
