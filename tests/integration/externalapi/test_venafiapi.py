@@ -59,7 +59,6 @@ class VenafiTest(ShellCase):
 
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
-        print("cn in cert is"+cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME))
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
             x509.NameAttribute(
                 NameOID.COMMON_NAME, cn
