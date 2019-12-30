@@ -32,7 +32,7 @@ def minion_side_acl_denied(
         function as 2nd level key. Value of 2nd level is a list of minions that
         are allowed to retrieve the function from the mine of the minion.
     :param str mine_minion: The minion that the mine value originated from.
-    :param str mine_fucntion: The mine function that is requested.
+    :param str mine_function: The mine function that is requested.
     :param str req_minion: The minion that is requesting the mine data.
 
     :rtype: bool
