@@ -350,7 +350,7 @@ def thread_return(cls, minion_instance, opts, data):
     allow_missing_funcs = any([
         minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
         for executor in executors
-        if '{0}.allow_missing_func' in minion_instance.executors
+        if '{0}.allow_missing_func'.format(executor) in minion_instance.executors
     ])
     if function_name in minion_instance.functions or allow_missing_funcs is True:
         try:
