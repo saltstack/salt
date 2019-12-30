@@ -54,10 +54,12 @@ class VenafiTest(ShellCase):
                                 key_password='secretPassword',
                                 zone='fake')
         cert_output = ret['return'][0]
+        print("cert out is: "+cert_output)
         assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
         assert isinstance(cert, x509.Certificate)
+        print("cn in cert is"+cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME))
         assert cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME) == [
             x509.NameAttribute(
                 NameOID.COMMON_NAME, cn
