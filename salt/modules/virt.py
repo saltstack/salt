@@ -4584,6 +4584,30 @@ def network_info(name=None, **kwargs):
     return result
 
 
+def network_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual network
+
+    :param name: libvirt network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.networkLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
+
+
 def network_start(name, **kwargs):
     '''
     Start a defined virtual network.
