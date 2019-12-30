@@ -2760,6 +2760,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             }
         }, pool)
 
+    def test_pool_get_xml(self):
+        '''
+        Test virt.pool_get_xml
+        '''
+        pool_mock = MagicMock()
+        pool_mock.XMLDesc.return_value = '<pool>Raw XML</pool>'
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+
+        self.assertEqual('<pool>Raw XML</pool>', virt.pool_get_xml('default'))
+
     def test_pool_list_volumes(self):
         '''
         Test virt.pool_list_volumes
