@@ -1,0 +1,11 @@
+---
+# os: Ubuntu
+Ubuntu-18.04:
+  config: /etc/template.d/custom-ubuntu-18.04.conf
+
+# os: CentOS
+CentOS-6:
+  pkg:
+    name: template-centos-6
+  config: /etc/template.d/custom-centos-6.conf
+CentOS-7: {}

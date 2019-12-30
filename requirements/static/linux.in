@@ -42,3 +42,9 @@ tornado<5.0
 virtualenv
 watchdog
 vcert~=0.7.0
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+wempy; python_version <'3'
