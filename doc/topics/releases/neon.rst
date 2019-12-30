@@ -82,8 +82,11 @@ as well as managing keystore files.
             -----END CERTIFICATE-----
 
 
+Jinja enhancements
+==================
+
 Troubleshooting Jinja map files
-===============================
+-------------------------------
 
 A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
 has been added.
@@ -108,6 +111,18 @@ The module can be also used to test ``json`` and ``yaml`` maps:
 
   salt myminion jinja.import_json myformula/defaults.json
 
+
+json_query filter
+-----------------
+
+A port of Ansible :jinja_ref:`json_query` Jinja filter has been added. It allows
+making queries against JSON data using `JMESPath language`_. Could be used to
+filter ``pillar`` data, ``yaml`` maps, and also useful with :jinja_ref:`http_query`.
+
+Depends on the `jmespath`_ Python module.
+
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Slot Syntax Updates
 ===================
