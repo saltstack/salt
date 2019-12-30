@@ -86,10 +86,12 @@ collect_ignore = ['setup.py']
 
 # Patch PyTest logging handlers
 class LogCaptureHandler(salt.log.mixins.ExcInfoOnLogLevelFormatMixIn,
-                        _pytest.logging.LogCaptureHandler):
+                        logging.NullHandler):
     '''
     Subclassing PyTest's LogCaptureHandler in order to add the
-    exc_info_on_loglevel functionality.
+    exc_info_on_loglevel functionality and actually make it a NullHandler,
+    it's only used to print log messages emmited during tests, which we
+    have explicitly disabled in pytest.ini
     '''
 
 
@@ -450,22 +452,6 @@ def pytest_runtest_protocol(item, nextitem):
                 fixturedef.finish(request)
     del request
     del used_fixture_defs
-
-
-def pytest_runtest_teardown(item, nextitem):
-    '''
-    called after ``pytest_runtest_call``.
-
-    :arg nextitem: the scheduled-to-be-next test item (None if no further
-                   test item is scheduled).  This argument can be used to
-                   perform exact teardowns, i.e. calling just enough finalizers
-                   so that nextitem only needs to call setup-functions.
-    '''
-    # PyTest doesn't reset the capturing log handler when done with it.
-    # Reset it to free used memory and python objects
-    # We currently have PyTest's log_print setting set to false, if it was
-    # set to true, the call bellow would make PyTest not print any logs at all.
-    item.catch_log_handler.reset()
 # <---- PyTest Tweaks ------------------------------------------------------------------------------------------------
 
 
