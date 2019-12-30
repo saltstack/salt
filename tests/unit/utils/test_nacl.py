@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.helpers import with_tempfile
 
@@ -14,7 +14,15 @@ import salt.modules.config as config
 import salt.utils.files
 import salt.utils.nacl as nacl
 
+try:
+    import libnacl.secret  # pylint: disable=unused-import
+    import libnacl.sealed  # pylint: disable=unused-import
+    HAS_LIBNACL = True
+except ImportError:
+    HAS_LIBNACL = False
 
+
+@skipIf(not HAS_LIBNACL, 'skipping test_nacl, libnacl is unavailable')
 class NaclUtilsTests(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
