@@ -1142,25 +1142,30 @@ class AsyncReqMessageClient(object):
 
     # TODO: timeout all in-flight sessions, or error
     def close(self):
-        if self._closing:
+        try:
+            if self._closing:
+                return
+        except AttributeError:
+            # We must have been called from __del__
+            # The python interpreter has nuked most attributes already
             return
-
-        self._closing = True
-        if hasattr(self, 'stream') and self.stream is not None:
-            if ZMQ_VERSION_INFO < (14, 3, 0):
-                # stream.close() doesn't work properly on pyzmq < 14.3.0
-                if self.stream.socket:
-                    self.stream.socket.close()
-                self.stream.io_loop.remove_handler(self.stream.socket)
-                # set this to None, more hacks for messed up pyzmq
-                self.stream.socket = None
-                self.socket.close()
-            else:
-                self.stream.close()
-                self.socket = None
-            self.stream = None
-        if self.context.closed is False:
-            self.context.term()
+        else:
+            self._closing = True
+            if hasattr(self, 'stream') and self.stream is not None:
+                if ZMQ_VERSION_INFO < (14, 3, 0):
+                    # stream.close() doesn't work properly on pyzmq < 14.3.0
+                    if self.stream.socket:
+                        self.stream.socket.close()
+                    self.stream.io_loop.remove_handler(self.stream.socket)
+                    # set this to None, more hacks for messed up pyzmq
+                    self.stream.socket = None
+                    self.socket.close()
+                else:
+                    self.stream.close()
+                    self.socket = None
+                self.stream = None
+            if self.context.closed is False:
+                self.context.term()
 
     def destroy(self):
         # Bacwards compat
