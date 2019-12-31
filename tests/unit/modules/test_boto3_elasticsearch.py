@@ -13,7 +13,7 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (NO_MOCK, NO_MOCK_REASON, MagicMock, patch)
+from tests.support.mock import (MagicMock, patch)
 
 # Import Salt libs
 import salt.loader
@@ -136,7 +136,6 @@ DOMAIN_RET = {
 @skipIf(HAS_BOTO3 is False, 'The boto module must be installed.')
 @skipIf(LooseVersion(boto3.__version__) < LooseVersion(REQUIRED_BOTO3_VERSION),
         'The boto3 module must be greater or equal to version {}'.format(REQUIRED_BOTO3_VERSION))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class Boto3ElasticsearchTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.boto3_elasticsearch module
