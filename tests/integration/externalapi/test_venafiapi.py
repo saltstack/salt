@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import functools
 import random
 import string
+from six import text_type
 
 
 # Import Salt Testing libs
@@ -47,6 +48,11 @@ class VenafiTest(ShellCase):
     @with_random_name
     def test_request(self, name):
         cn = '{0}.example.com'.format(name)
+
+        # Provide python27 compatibility
+        if not isinstance(cn, text_type):
+            cn = cn.decode()
+
         print("requesting cn "+cn)
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
