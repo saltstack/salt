@@ -53,14 +53,12 @@ class VenafiTest(ShellCase):
         if not isinstance(cn, text_type):
             cn = cn.decode()
 
-        print("requesting cn "+cn)
         ret = self.run_run_plus(fun='venafi.request',
                                 minion_id=cn,
                                 dns_name=cn,
                                 key_password='secretPassword',
                                 zone='fake')
         cert_output = ret['return'][0]
-        print("cert out is: "+cert_output)
         assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
@@ -128,6 +126,11 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
             f.flush()
             csr_path = f.name
             cn = "test-csr-32313131.venafi.example.com"
+
+            # Provide python27 compatibility
+            if not isinstance(cn, text_type):
+                cn = cn.decode()
+
             ret = self.run_run_plus(fun='venafi.request',
                                     minion_id=cn,
                                     csr_path=csr_path,
