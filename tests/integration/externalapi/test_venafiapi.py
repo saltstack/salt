@@ -7,12 +7,12 @@ from __future__ import absolute_import
 import functools
 import random
 import string
-from six import text_type
 
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
 from salt.ext.six.moves import range
+from salt.ext.six import text_type
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509.oid import NameOID
