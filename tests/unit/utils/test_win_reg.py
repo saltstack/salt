@@ -2,7 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
-from salt.ext.six import PY3
+from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest, generate_random_name
@@ -12,7 +12,6 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt Libs
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
-
 
 UNICODE_KEY = 'Unicode Key \N{TRADE MARK SIGN}'
 UNICODE_VALUE = 'Unicode Value ' \
@@ -504,7 +503,7 @@ class WinFunctionsTestCase(TestCase):
         Test the ``_to_unicode`` function when it receives an integer value.
         Should return a unicode value, which is unicode in PY2 and str in PY3.
         '''
-        if PY3:
+        if six.PY3:
             self.assertTrue(isinstance(win_reg._to_unicode(1), str))
         else:
             self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))  # pylint: disable=incompatible-py3-code
