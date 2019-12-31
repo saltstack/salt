@@ -13,7 +13,7 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '',
     python_version: 'py2',
-    splits: ['unit', 'integration', 'multimaster'],
+    //splits: ['unit', 'integration', 'multimaster'],
     testrun_timeout: 6,
     use_spot_instances: false)
 
