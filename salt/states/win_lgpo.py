@@ -201,6 +201,11 @@ def set_(name,
            'changes': {},
            'comment': ''}
     policy_classes = ['machine', 'computer', 'user', 'both']
+    class_map = {
+        'computer': 'Computer Configuration',
+        'machine': 'Computer Configuration',
+        'user': 'User Configuration'
+    }
     if not setting and not computer_policy and not user_policy:
         msg = 'At least one of the parameters setting, computer_policy, or ' \
               'user_policy must be specified.'
@@ -272,8 +277,8 @@ def set_(name,
                     pol_data[p_class]['policy_lookup'][p_name] = lookup
                     # Since we found the policy, let's get the current setting
                     # as well
-                    current_policy.setdefault(p_class, {})
-                    current_policy[p_class][p_name] = __salt__['lgpo.get_policy'](
+                    current_policy.setdefault(class_map[p_class], {})
+                    current_policy[class_map[p_class]][p_name] = __salt__['lgpo.get_policy'](
                         policy_name=p_name,
                         policy_class=p_class,
                         adml_language=adml_language,
@@ -293,7 +298,7 @@ def set_(name,
         requested_policy = p_data.get('requested_policy')
         if requested_policy:
             for p_name, p_setting in six.iteritems(requested_policy):
-                if p_name in current_policy[p_class]:
+                if p_name in current_policy[class_map[p_class]]:
                     currently_set = True
                 if currently_set:
                     # compare
@@ -304,7 +309,7 @@ def set_(name,
                         p_data['requested_policy'][p_name],
                         sort_keys=True).lower()
                     current_policy_json = salt.utils.json.dumps(
-                        current_policy[p_class][p_name],
+                        current_policy[class_map[p_class]][p_name],
                         sort_keys=True).lower()
 
                     requested_policy_check = salt.utils.json.loads(requested_policy_json)
@@ -318,9 +323,9 @@ def set_(name,
                         additional_policy_comments = []
                         if p_data['policy_lookup'][p_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in p_data['requested_policy'][p_name]:
-                                if user not in current_policy[p_class][p_name]:
+                                if user not in current_policy[class_map[p_class]][p_name]:
                                     user = salt.utils.win_functions.get_sam_name(user)
-                                    if user not in current_policy[p_class][p_name]:
+                                    if user not in current_policy[class_map[p_class]][p_name]:
                                         changes = True
                                     else:
                                         additional_policy_comments.append('"{0}" is already granted the right'.format(user))
@@ -358,10 +363,11 @@ def set_(name,
             ret['comment'] = 'All specified policies are properly configured'
     else:
         if policy_changes:
-            _ret = __salt__['lgpo.set'](computer_policy=computer_policy,
-                                        user_policy=user_policy,
-                                        cumulative_rights_assignments=cumulative_rights_assignments,
-                                        adml_language=adml_language)
+            _ret = __salt__['lgpo.set'](
+                computer_policy=computer_policy,
+                user_policy=user_policy,
+                cumulative_rights_assignments=cumulative_rights_assignments,
+                adml_language=adml_language)
             if _ret:
                 ret['result'] = _ret
                 new_policy = {}
@@ -369,9 +375,8 @@ def set_(name,
                     if p_data['requested_policy']:
                         for p_name, p_setting in six.iteritems(
                             p_data['requested_policy']):
-                            new_policy.setdefault(p_class, {})
-                            new_policy[p_class][p_name] = __salt__[
-                                'lgpo.get_policy'](
+                            new_policy.setdefault(class_map[p_class], {})
+                            new_policy[class_map[p_class]][p_name] = __salt__['lgpo.get_policy'](
                                 policy_name=p_name,
                                 policy_class=p_class,
                                 adml_language=adml_language,
