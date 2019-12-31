@@ -11,7 +11,7 @@ runTestSuite(
     nox_env_name: 'pytest-zeromq',
     nox_passthrough_opts: '-k proxy',
     python_version: 'py2',
-    splits: ['unit', 'integration'],
+    //splits: ['unit', 'integration'],
     testrun_timeout: 6,
     use_spot_instances: true)
 
