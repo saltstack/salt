@@ -2,11 +2,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
-from six import PY3
+from salt.ext.six import PY3
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest, generate_random_name
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -19,7 +19,6 @@ UNICODE_VALUE = 'Unicode Value ' \
 FAKE_KEY = 'SOFTWARE\\{0}'.format(generate_random_name('SaltTesting-'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinFunctionsTestCase(TestCase):
     '''
