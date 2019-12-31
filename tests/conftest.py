@@ -1502,7 +1502,10 @@ def reap_stray_processes():
 
         _, alive = psutil.wait_procs(children, timeout=3, callback=on_terminate)
         for child in alive:
-            child.kill()
+            try:
+                child.kill()
+            except psutil.NoSuchProcess:
+                continue
 
         _, alive = psutil.wait_procs(alive, timeout=3, callback=on_terminate)
         if alive:
