@@ -227,12 +227,16 @@ To reduce pillar rendering times, it is possible to cache pillars on the
 master. To do this, see the set of master configuration options which
 are prefixed with `pillar_cache`.
 
+If many pillars are encrypted using :mod:`gpg <salt.renderers.gpg>` renderer, it
+is possible to cache GPG data. To do this, see the set of master configuration
+options which are prefixed with `gpg_cache`.
+
 .. note::
 
-    Caching pillars on the master may introduce security considerations.
-    Be certain to read caveats outlined in the master configuration file
-    to understand how pillar caching may affect a master's ability to
-    protect sensitive data!
+    Caching pillars or GPG data on the master may introduce security
+    considerations. Be certain to read caveats outlined in the master
+    configuration file to understand how pillar caching may affect a master's
+    ability to protect sensitive data!
 
 The Master is disk IO bound
 ---------------------------
