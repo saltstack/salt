@@ -13,6 +13,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.platform
 import salt.utils.win_reg as win_reg
 
+
 UNICODE_KEY = 'Unicode Key \N{TRADE MARK SIGN}'
 UNICODE_VALUE = 'Unicode Value ' \
                 '\N{COPYRIGHT SIGN},\N{TRADE MARK SIGN},\N{REGISTERED SIGN}'
@@ -506,4 +507,4 @@ class WinFunctionsTestCase(TestCase):
         if PY3:
             self.assertTrue(isinstance(win_reg._to_unicode(1), str))
         else:
-            self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))
+            self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))  # pylint: disable=incompatible-py3-code
