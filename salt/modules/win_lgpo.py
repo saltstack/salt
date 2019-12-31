@@ -4898,10 +4898,10 @@ def _parse_xml(adm_file):
 
     modified_xml = ''
     with salt.utils.files.fopen(adm_file, 'rb') as rfh:
-        file_hash = '%08X' % (zlib.crc32(rfh.read()) & 0xffffffff)
+        file_hash = '{0:X}'.format(zlib.crc32(rfh.read()) & 0xffffffff)
 
     name, ext = os.path.splitext(os.path.basename(adm_file))
-    hashed_filename = '%s-%s%s' % (name, file_hash, ext)
+    hashed_filename = '{0}-{1}{2}'.format(name, file_hash, ext)
 
     cache_dir = os.path.join(__opts__['cachedir'], 'lgpo', 'policy_defs')
     if not os.path.exists(cache_dir):
@@ -4910,10 +4910,11 @@ def _parse_xml(adm_file):
     out_file = os.path.join(cache_dir, hashed_filename)
 
     if not os.path.isfile(out_file):
-        log.debug('LGPO: Generating policy template cache for %s%s' % (name, ext))
+        log.debug('LGPO: Generating policy template cache for %s%s', name, ext)
 
         # Remove old files, keep the cache clean
-        file_list = glob.glob(os.path.join(cache_dir, '%s*%s' % (name, ext)))
+        file_list = glob.glob(
+            os.path.join(cache_dir, '{0}*{1}'.format(name, ext)))
         for file_path in file_list:
             os.remove(file_path)
 
@@ -7421,7 +7422,7 @@ def _lookup_admin_template(policy_name,
         hierarchy = []
         hierarchy_policy_name = policy_name
         if not adml_search_results:
-            log.warning('Trying another: %s' % policy_name)
+            log.warning('Trying another: %s', policy_name)
             if '\\' in policy_name:
                 hierarchy = policy_name.split('\\')
                 policy_name = hierarchy.pop()
@@ -7949,7 +7950,7 @@ def _get_policy_info_setting(policy_definition):
                   value, policy_definition['Policy'])
     else:
         message = 'Unknown or missing mechanism in policy_definition\n' \
-                  'r%'.format(policy_definition)
+                  '{0}'.format(policy_definition)
         raise CommandExecutionError(message)
     value = _transform_value(value=value,
                              policy=policy_definition,
@@ -8012,7 +8013,7 @@ def _get_policy_adm_setting(admx_policy,
     this_policy_name = admx_policy.attrib.get('name', None)
     if this_key is None or this_policy_name is None:
         msg = 'Policy is missing the required "key" or "name" attribute:\n' \
-              '%s' % admx_policy.attrib
+              '{0}'.format(admx_policy.attrib)
         raise CommandExecutionError(msg)
 
     # Get additional settings
@@ -8996,7 +8997,7 @@ def set_(computer_policy=None,
                         except Exception as exc:  # pylint: disable=broad-except
                             msg = 'An unhandled exception occurred while ' \
                                   'attempting to set policy via ' \
-                                  'NetUserModalSet\n%s' % exc
+                                  'NetUserModalSet\n{0}'.format(exc)
                             log.exception(msg)
                             raise CommandExecutionError(msg)
                 if _admTemplateData:
