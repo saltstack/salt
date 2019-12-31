@@ -12,10 +12,6 @@ from salt.modules import xml
 
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON
-)
 
 XML_STRING = '''
     <root xmlns:foo="http://www.foo.org/" xmlns:bar="http://www.bar.org">
@@ -33,7 +29,6 @@ XML_STRING = '''
     '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class XmlTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test cases for salt.modules.xml
