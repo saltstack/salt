@@ -39,10 +39,9 @@ Current known limitations
 '''
 # Import Python libs
 from __future__ import absolute_import, unicode_literals, print_function
-import chardet
 import csv
 import glob
-import hashlib
+import zlib
 import io
 import os
 import logging
@@ -3303,6 +3302,7 @@ class _policy_info(object):
                         'Policy': 'Access Credential Manager as a trusted '
                                   'caller',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTrustedCredManAccessPrivilege'
@@ -3315,6 +3315,7 @@ class _policy_info(object):
                     'SeNetworkLogonRight': {
                         'Policy': 'Access this computer from the network',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeNetworkLogonRight'
@@ -3327,6 +3328,7 @@ class _policy_info(object):
                     'SeTcbPrivilege': {
                         'Policy': 'Act as part of the operating system',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTcbPrivilege'
@@ -3339,6 +3341,7 @@ class _policy_info(object):
                     'SeMachineAccountPrivilege': {
                         'Policy': 'Add workstations to domain',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeMachineAccountPrivilege'
@@ -3351,6 +3354,7 @@ class _policy_info(object):
                     'SeIncreaseQuotaPrivilege': {
                         'Policy': 'Adjust memory quotas for a process',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseQuotaPrivilege'
@@ -3363,6 +3367,7 @@ class _policy_info(object):
                     'SeInteractiveLogonRight': {
                         'Policy': 'Allow log on locally',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeInteractiveLogonRight'
@@ -3375,6 +3380,7 @@ class _policy_info(object):
                     'SeRemoteInteractiveLogonRight': {
                         'Policy': 'Allow log on through Remote Desktop Services',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRemoteInteractiveLogonRight'
@@ -3387,6 +3393,7 @@ class _policy_info(object):
                     'SeBackupPrivilege': {
                         'Policy': 'Backup files and directories',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeBackupPrivilege'
@@ -3399,6 +3406,7 @@ class _policy_info(object):
                     'SeChangeNotifyPrivilege': {
                         'Policy': 'Bypass traverse checking',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeChangeNotifyPrivilege'
@@ -3411,6 +3419,7 @@ class _policy_info(object):
                     'SeSystemtimePrivilege': {
                         'Policy': 'Change the system time',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemtimePrivilege'
@@ -3423,6 +3432,7 @@ class _policy_info(object):
                     'SeTimeZonePrivilege': {
                         'Policy': 'Change the time zone',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTimeZonePrivilege'
@@ -3435,6 +3445,7 @@ class _policy_info(object):
                     'SeCreatePagefilePrivilege': {
                         'Policy': 'Create a pagefile',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreatePagefilePrivilege'
@@ -3447,6 +3458,7 @@ class _policy_info(object):
                     'SeCreateTokenPrivilege': {
                         'Policy': 'Create a token object',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateTokenPrivilege'
@@ -3459,6 +3471,7 @@ class _policy_info(object):
                     'SeCreateGlobalPrivilege': {
                         'Policy': 'Create global objects',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateGlobalPrivilege'
@@ -3471,6 +3484,7 @@ class _policy_info(object):
                     'SeCreatePermanentPrivilege': {
                         'Policy': 'Create permanent shared objects',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreatePermanentPrivilege'
@@ -3483,6 +3497,7 @@ class _policy_info(object):
                     'SeCreateSymbolicLinkPrivilege': {
                         'Policy': 'Create symbolic links',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeCreateSymbolicLinkPrivilege'
@@ -3495,6 +3510,7 @@ class _policy_info(object):
                     'SeDebugPrivilege': {
                         'Policy': 'Debug programs',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDebugPrivilege'
@@ -3508,6 +3524,7 @@ class _policy_info(object):
                         'Policy': 'Deny access to this computer from the '
                                   'network',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyNetworkLogonRight'
@@ -3520,6 +3537,7 @@ class _policy_info(object):
                     'SeDenyBatchLogonRight': {
                         'Policy': 'Deny log on as a batch job',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyBatchLogonRight'
@@ -3532,6 +3550,7 @@ class _policy_info(object):
                     'SeDenyServiceLogonRight': {
                         'Policy': 'Deny log on as a service',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyServiceLogonRight'
@@ -3544,6 +3563,7 @@ class _policy_info(object):
                     'SeDenyInteractiveLogonRight': {
                         'Policy': 'Deny log on locally',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyInteractiveLogonRight'
@@ -3556,6 +3576,7 @@ class _policy_info(object):
                     'SeDenyRemoteInteractiveLogonRight': {
                         'Policy': 'Deny log on through Remote Desktop Services',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeDenyRemoteInteractiveLogonRight'
@@ -3569,6 +3590,7 @@ class _policy_info(object):
                         'Policy': 'Enable computer and user accounts to be '
                                   'trusted for delegation',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeEnableDelegationPrivilege'
@@ -3581,6 +3603,7 @@ class _policy_info(object):
                     'SeRemoteShutdownPrivilege': {
                         'Policy': 'Force shutdown from a remote system',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRemoteShutdownPrivilege'
@@ -3593,6 +3616,7 @@ class _policy_info(object):
                     'SeAuditPrivilege': {
                         'Policy': 'Generate security audits',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeAuditPrivilege'
@@ -3605,6 +3629,7 @@ class _policy_info(object):
                     'SeImpersonatePrivilege': {
                         'Policy': 'Impersonate a client after authentication',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeImpersonatePrivilege'
@@ -3617,6 +3642,7 @@ class _policy_info(object):
                     'SeIncreaseWorkingSetPrivilege': {
                         'Policy': 'Increase a process working set',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeIncreaseWorkingSetPrivilege'
@@ -3628,6 +3654,7 @@ class _policy_info(object):
                     },
                     'SeIncreaseBasePriorityPrivilege': {
                         'Policy': 'Increase scheduling priority',
+                        'rights_assignment': True,
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
                         'Settings': None,
                         'LsaRights': {
@@ -3641,6 +3668,7 @@ class _policy_info(object):
                     'SeLoadDriverPrivilege': {
                         'Policy': 'Load and unload device drivers',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeLoadDriverPrivilege'
@@ -3653,6 +3681,7 @@ class _policy_info(object):
                     'SeLockMemoryPrivilege': {
                         'Policy': 'Lock pages in memory',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeLockMemoryPrivilege'
@@ -3665,6 +3694,7 @@ class _policy_info(object):
                     'SeBatchLogonRight': {
                         'Policy': 'Log on as a batch job',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeBatchLogonRight'
@@ -3677,6 +3707,7 @@ class _policy_info(object):
                     'SeServiceLogonRight': {
                         'Policy': 'Log on as a service',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeServiceLogonRight'
@@ -3689,6 +3720,7 @@ class _policy_info(object):
                     'SeSecurityPrivilege': {
                         'Policy': 'Manage auditing and security log',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSecurityPrivilege'
@@ -3701,6 +3733,7 @@ class _policy_info(object):
                     'SeRelabelPrivilege': {
                         'Policy': 'Modify an object label',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRelabelPrivilege'
@@ -3713,6 +3746,7 @@ class _policy_info(object):
                     'SeSystemEnvironmentPrivilege': {
                         'Policy': 'Modify firmware environment values',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemEnvironmentPrivilege'
@@ -3725,6 +3759,7 @@ class _policy_info(object):
                     'SeManageVolumePrivilege': {
                         'Policy': 'Perform volume maintenance tasks',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeManageVolumePrivilege'
@@ -3737,6 +3772,7 @@ class _policy_info(object):
                     'SeProfileSingleProcessPrivilege': {
                         'Policy': 'Profile single process',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeProfileSingleProcessPrivilege'
@@ -3749,6 +3785,7 @@ class _policy_info(object):
                     'SeSystemProfilePrivilege': {
                         'Policy': 'Profile system performance',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSystemProfilePrivilege'
@@ -3761,6 +3798,7 @@ class _policy_info(object):
                     'SeUndockPrivilege': {
                         'Policy': 'Remove computer from docking station',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeUndockPrivilege'
@@ -3773,6 +3811,7 @@ class _policy_info(object):
                     'SeAssignPrimaryTokenPrivilege': {
                         'Policy': 'Replace a process level token',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeAssignPrimaryTokenPrivilege'
@@ -3785,6 +3824,7 @@ class _policy_info(object):
                     'SeRestorePrivilege': {
                         'Policy': 'Restore files and directories',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeRestorePrivilege'
@@ -3797,6 +3837,7 @@ class _policy_info(object):
                     'SeShutdownPrivilege': {
                         'Policy': 'Shut down the system',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeShutdownPrivilege'
@@ -3809,6 +3850,7 @@ class _policy_info(object):
                     'SeSyncAgentPrivilege': {
                         'Policy': 'Synchronize directory service data',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeSyncAgentPrivilege'
@@ -3821,6 +3863,7 @@ class _policy_info(object):
                     'SeTakeOwnershipPrivilege': {
                         'Policy': 'Take ownership of files or other objects',
                         'lgpo_section': self.user_rights_assignment_gpedit_path,
+                        'rights_assignment': True,
                         'Settings': None,
                         'LsaRights': {
                             'Option': 'SeTakeOwnershipPrivilege'
@@ -4856,7 +4899,7 @@ def _parse_xml(adm_file):
 
     modified_xml = ''
     with salt.utils.files.fopen(adm_file, 'rb') as rfh:
-        file_hash = hashlib.md5(rfh.read()).hexdigest()
+        file_hash = '%08X' % (zlib.crc32(rfh.read()) & 0xffffffff)
 
     name, ext = os.path.splitext(os.path.basename(adm_file))
     hashed_filename = '%s-%s%s' % (name, file_hash, ext)
@@ -4884,7 +4927,7 @@ def _parse_xml(adm_file):
                 raw = raw.decode(encoding)
             except UnicodeDecodeError:
                 log.trace('LGPO: Detecting encoding')
-                encoding = chardet.detect(raw)['encoding']
+                encoding = 'utf-16'
                 raw = raw.decode(encoding)
             for line in raw.split('\r\n'):
                 if 'key="' in line:
@@ -7988,6 +8031,8 @@ def _get_policy_adm_setting(admx_policy,
         policy_data.admx_registry_classes[policy_class]['policy_path'])
     adml_policy_resources = _get_policy_resources(language=adml_language)
 
+    policy_vals = {}
+
     if ENABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
         # some policies have a disabled list but not an enabled list
         # added this to address those issues
@@ -8003,6 +8048,7 @@ def _get_policy_adm_setting(admx_policy,
                 log.trace('%s is enabled by detected ENABLED_VALUE_XPATH',
                           this_policy_name)
                 this_policy_setting = 'Enabled'
+                policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
     if DISABLED_VALUE_XPATH(admx_policy) and this_policy_setting == 'Not Configured':
         # some policies have a disabled list but not an enabled list
         # added this to address those issues
@@ -8018,6 +8064,7 @@ def _get_policy_adm_setting(admx_policy,
                 log.trace('%s is disabled by detected DISABLED_VALUE_XPATH',
                           this_policy_name)
                 this_policy_setting = 'Disabled'
+                policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
     if ENABLED_LIST_XPATH(admx_policy):
         if DISABLED_LIST_XPATH(admx_policy) or DISABLED_VALUE_XPATH(admx_policy):
             element_only_enabled_disabled = False
@@ -8030,6 +8077,7 @@ def _get_policy_adm_setting(admx_policy,
                 log.trace('%s is enabled by detected ENABLED_LIST_XPATH',
                           this_policy_name)
                 this_policy_setting = 'Enabled'
+                policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
     if DISABLED_LIST_XPATH(admx_policy):
         if ENABLED_LIST_XPATH(admx_policy) or ENABLED_VALUE_XPATH(admx_policy):
             element_only_enabled_disabled = False
@@ -8042,6 +8090,7 @@ def _get_policy_adm_setting(admx_policy,
                 log.trace('%s is disabled by detected DISABLED_LIST_XPATH',
                           this_policy_name)
                 this_policy_setting = 'Disabled'
+                policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
 
     if not explicit_enable_disable_value_setting and this_value_name:
         # the policy has a key/valuename but no explicit Enabled/Disabled
@@ -8056,6 +8105,7 @@ def _get_policy_adm_setting(admx_policy,
             log.trace('%s is enabled by no explicit enable/disable list or '
                       'value', this_policy_name)
             this_policy_setting = 'Enabled'
+            policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
         elif _regexSearchRegPolData(re.escape(_buildKnownDataSearchString(
                     reg_key=this_key,
                     reg_valueName=this_value_name,
@@ -8066,9 +8116,9 @@ def _get_policy_adm_setting(admx_policy,
             log.trace('%s is disabled by no explicit enable/disable list or '
                       'value', this_policy_name)
             this_policy_setting = 'Disabled'
+            policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
 
     full_names = {}
-    policy_vals = {}
     hierarchy = {}
     if ELEMENTS_XPATH(admx_policy):
         if element_only_enabled_disabled or this_policy_setting == 'Enabled':
@@ -8189,7 +8239,7 @@ def _get_policy_adm_setting(admx_policy,
                                     policy=admx_policy,
                                     parent_element=elements_item,
                                     check_deleted=False)),
-                                policy_file_data):
+                                policy_data=policy_file_data):
                             configured_value = _getDataFromRegPolData(
                                     _processValueItem(
                                         element=child_item,
@@ -8198,7 +8248,7 @@ def _get_policy_adm_setting(admx_policy,
                                         policy=admx_policy,
                                         parent_element=elements_item,
                                         check_deleted=False),
-                                    policy_file_data)
+                                    policy_data=policy_file_data)
                             configured_elements[this_element_name] = configured_value
                             log.trace('element %s is enabled, value == %s',
                                       child_item.attrib['id'],
@@ -8256,7 +8306,7 @@ def _get_policy_adm_setting(admx_policy,
                                     policy=admx_policy,
                                     parent_element=elements_item,
                                     check_deleted=False)) + salt.utils.stringutils.to_bytes(r'(?!\*\*delvals\.)'),
-                                policy_file_data):
+                                policy_data=policy_file_data):
                             configured_value = _getDataFromRegPolData(
                                 _processValueItem(
                                     element=child_item,
@@ -8265,7 +8315,7 @@ def _get_policy_adm_setting(admx_policy,
                                     policy=admx_policy,
                                     parent_element=elements_item,
                                     check_deleted=False),
-                                policy_file_data=policy_file_data,
+                                policy_data=policy_file_data,
                                 return_value_name=return_value_name)
                             configured_elements[this_element_name] = configured_value
                             log.trace('element %s is enabled values: %s',
@@ -8284,29 +8334,22 @@ def _get_policy_adm_setting(admx_policy,
                             policy_disabled_elements = policy_disabled_elements + 1
                             log.trace('element {0} is disabled'.format(child_item.attrib['id']))
             if element_only_enabled_disabled:
-                if len(required_elements.keys()) > 0 \
-                    and len(configured_elements.keys()) == len(required_elements.keys()):
+                if len(required_elements.keys()) > 0 and len(configured_elements.keys()) == len(required_elements.keys()):
                     if policy_disabled_elements == len(required_elements.keys()):
                         log.trace('{0} is disabled by all enum elements'.format(this_policy_name))
-                        policy_vals.setdefault(this_policy_namespace, {})
-                        policy_vals[this_policy_namespace][this_policy_name] = 'Disabled'
+                        policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = 'Disabled'
                     else:
-                        policy_vals.setdefault(this_policy_namespace, {})
-                        policy_vals[this_policy_namespace][this_policy_name] = configured_elements
                         log.trace('{0} is enabled by enum elements'.format(this_policy_name))
+                        policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = configured_elements
                 else:
-                    policy_vals.setdefault(this_policy_namespace, {})
-                    policy_vals[this_policy_namespace][this_policy_name] = this_policy_setting
+                    policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
             else:
                 if this_policy_setting == 'Enabled':
-                    policy_vals.setdefault(this_policy_namespace, {})
-                    policy_vals[this_policy_namespace][this_policy_name] = configured_elements
+                    policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = configured_elements
         else:
-            policy_vals.setdefault(this_policy_namespace, {})
-            policy_vals[this_policy_namespace][this_policy_name] = this_policy_setting
+            policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
     else:
-        policy_vals.setdefault(this_policy_namespace, {})
-        policy_vals[this_policy_namespace][this_policy_name] = this_policy_setting
+        policy_vals.setdefault(this_policy_namespace, {})[this_policy_name] = this_policy_setting
 
     if return_full_policy_names and \
             this_policy_namespace in policy_vals and \
@@ -8329,8 +8372,7 @@ def _get_policy_adm_setting(admx_policy,
             policy_vals[this_policy_namespace][this_policy_name][full_name] = setting
     if this_policy_namespace in policy_vals and \
             this_policy_name in policy_vals[this_policy_namespace]:
-        hierarchy.setdefault(this_policy_namespace, {})
-        hierarchy[this_policy_namespace][this_policy_name] = _build_parent_list(
+        hierarchy.setdefault(this_policy_namespace, {})[this_policy_name] = _build_parent_list(
             policy_definition=admx_policy,
             return_full_policy_names=return_full_policy_names,
             adml_language=adml_language)
@@ -8341,19 +8383,17 @@ def _get_policy_adm_setting(admx_policy,
         pathed_dict = {}
         for policy_namespace in list(policy_vals):
             for policy_item in list(policy_vals[policy_namespace]):
-                if full_names[policy_namespace][policy_item] in policy_vals[policy_namespace]:
+                full_name = full_names[policy_namespace][policy_item]
+                if full_name in policy_vals[policy_namespace]:
                     # add this item with the path'd full name
                     full_path_list = hierarchy[policy_namespace][policy_item]
                     full_path_list.reverse()
                     full_path_list.append(full_names[policy_namespace][policy_item])
                     policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(policy_item)
-                    pathed_dict[full_names[policy_namespace][policy_item]] = True
+                    pathed_dict[full_name] = True
                 else:
-                    policy_vals[policy_namespace][full_names[policy_namespace][policy_item]] = \
-                        policy_vals[policy_namespace].pop(policy_item)
-                    if policy_namespace not in unpathed_dict:
-                        unpathed_dict[policy_namespace] = {}
-                    unpathed_dict[policy_namespace][full_names[policy_namespace][policy_item]] = policy_item
+                    policy_vals[policy_namespace][full_name] = policy_vals[policy_namespace].pop(policy_item)
+                    unpathed_dict.setdefault(policy_namespace, {})[full_name] = policy_item
             # go back and remove any "unpathed" policies that need a full path
             for path_needed in unpathed_dict[policy_namespace]:
                 # remove the item with the same full name and re-add it w/a path'd version
@@ -8954,8 +8994,10 @@ def set_(computer_policy=None,
                             log.trace('NEW MODAL SET = %s', _newModalSetData)
                             _ret = win32net.NetUserModalsSet(None, _modal_set, _newModalSetData)
                         # TODO: This needs to be more specific
-                        except Exception:
-                            msg = 'An unhandled exception occurred while attempting to set policy via NetUserModalSet'
+                        except Exception as exc:
+                            msg = 'An unhandled exception occurred while ' \
+                                  'attempting to set policy via ' \
+                                  'NetUserModalSet\n%s' % exc
                             log.exception(msg)
                             raise CommandExecutionError(msg)
                 if _admTemplateData:

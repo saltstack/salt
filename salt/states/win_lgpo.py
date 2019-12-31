@@ -7,9 +7,11 @@ Manage Windows Local Group Policy
 
 This state allows configuring local Windows Group Policy
 
-The state can be used to ensure the setting of a single policy or multiple policies in one pass.
+The state can be used to ensure the setting of a single policy or multiple
+policies in one pass.
 
-Single policies must specify the policy name, the setting, and the policy class (Machine/User/Both)
+Single policies must specify the policy name, the setting, and the policy class
+(Machine/User/Both)
 
 Example single policy configuration
 
@@ -24,7 +26,7 @@ Example single policy configuration
 .. code-block:: yaml
 
     Account lockout duration:
-      gpo.set:
+      lgpo.set:
         - setting: 120
         - policy_class: Machine
 
@@ -35,10 +37,11 @@ Multiple policy configuration
     Company Local Group Policy:
         lgpo.set:
             - computer_policy:
-                Deny logon locally: Guest
+                Deny log on locally:
+                  - Guest
                 Account lockout duration: 120
                 Account lockout threshold: 10
-                Reset account lockout counter after: 1440
+                Reset account lockout counter after: 120
                 Enforce password history: 24
                 Maximum password age: 60
                 Minimum password age: 1
@@ -63,9 +66,9 @@ Multiple policy configuration
             Maximum password age: 60
             Minimum password age: 1
             Minimum password length: 14
-            Account lockout duration: 1440
+            Account lockout duration: 120
             Account lockout threshold: 10
-            Reset account lockout counter after: 1440
+            Reset account lockout counter after: 120
             Manage auditing and security log:
               - "BUILTIN\\Administrators"
             Replace a process level token:
@@ -100,9 +103,7 @@ Multiple policy configuration
                 "Set the intranet update service for detecting updates": http://mywsus
                 "Set the intranet statistics server": http://mywsus
         - cumulative_rights_assignments: True
-
 '''
-
 # Import python libs
 from __future__ import absolute_import, unicode_literals, print_function
 import logging
@@ -111,6 +112,7 @@ import logging
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.json
+import salt.utils.win_functions
 
 # Import 3rd party libs
 from salt.ext import six
@@ -147,6 +149,8 @@ def _compare_policies(new_policy, current_policy):
                                                  current_policy) == {}
         else:
             return False
+
+
 def set_(name,
          setting=None,
          policy_class=None,
@@ -155,33 +159,42 @@ def set_(name,
          cumulative_rights_assignments=True,
          adml_language='en-US'):
     '''
-    Ensure the specified policy is set
+    Ensure the specified policy is set.
 
-    name
-        the name of a single policy to configure
+    .. warning::
+        The ``setting`` argument cannot be used in conjunction with the
+        ``computer_policy`` or ``user_policy`` arguments
 
-    setting
-        the configuration setting for the single named policy
-        if this argument is used the computer_policy/user_policy arguments will be ignored
+    Args:
+        name (str): The name of a single policy to configure
 
-    policy_class
-        the policy class of the single named policy to configure
-        this can "machine", "user", or "both"
+        setting (str, dict, list):
+            The configuration setting for the single named policy. If this
+            argument is used the ``computer_policy`` / ``user_policy`` arguments
+            will be ignored
 
-    computer_policy
-        a dict of policyname: value pairs of a set of computer policies to configure
-        if this argument is used, the name/setting/policy_class arguments will be ignored
+        policy_class (str):
+            The policy class of the single named policy to configure. This can
+            ``machine``, ``user``, or ``both``
 
-    user_policy
-        a dict of policyname: value pairs of a set of user policies to configure
-        if this argument is used, the name/setting/policy_class arguments will be ignored
+        computer_policy (dict):
+            A dictionary of containing the policy name and key/value pairs of a
+            set of computer policies to configure. If this argument is used, the
+            ``name`` / ``policy_class`` arguments will be ignored
 
-    cumulative_rights_assignments
-        determine if any user right assignment policies specified will be cumulative
-        or explicit
+        user_policy (dict):
+            A dictionary of containing the policy name and key/value pairs of a
+            set of user policies to configure. If this argument is used, the
+            ``name`` / ``policy_class`` arguments will be ignored
 
-    adml_language
-        the adml language to use for AMDX policy data/display conversions
+        cumulative_rights_assignments (bool):
+            If user rights assignments are being configured, determines if any
+            user right assignment policies specified will be cumulative or
+            explicit
+
+        adml_language (str):
+            The adml language to use for AMDX policy data/display conversions.
+            Default is ``en-US``
     '''
     ret = {'name': name,
            'result': True,
@@ -247,52 +260,51 @@ def set_(name,
             'requested_policy': computer_policy,
             'policy_lookup': {}}}
 
+    current_policy = {}
     for p_class, p_data in six.iteritems(pol_data):
         if p_data['requested_policy']:
-            for policy_name, policy_setting in six.iteritems(p_data['requested_policy']):
-                lookup = __salt__['lgpo.get_policy_info'](policy_name,
-                                                          p_class,
-                                                          adml_language=adml_language)
+            for p_name, _ in six.iteritems(p_data['requested_policy']):
+                lookup = __salt__['lgpo.get_policy_info'](
+                    policy_name=p_name,
+                    policy_class=p_class,
+                    adml_language=adml_language)
                 if lookup['policy_found']:
-                    pol_data[p_class]['policy_lookup'][policy_name] = lookup
+                    pol_data[p_class]['policy_lookup'][p_name] = lookup
+                    # Since we found the policy, let's get the current setting
+                    # as well
+                    current_policy.setdefault(p_class, {})
+                    current_policy[p_class][p_name] = __salt__['lgpo.get_policy'](
+                        policy_name=p_name,
+                        policy_class=p_class,
+                        adml_language=adml_language,
+                        return_value_only=True)
                 else:
                     ret['comment'] = ' '.join([ret['comment'], lookup['message']])
                     ret['result'] = False
     if not ret['result']:
         return ret
 
-    current_policy = {}
-    for p_class, p_data in six.iteritems(pol_data):
-        if p_data['requested_policy']:
-            for p_name, p_setting in six.iteritems(p_data['requested_policy']):
-                current_policy.setdefault(p_class, {})
-                current_policy[p_class][p_name] = __salt__['lgpo.get_policy'](
-                    policy_name=p_name,
-                    policy_class=p_class,
-                    adml_language=adml_language,
-                    return_value_only=True)
+    log.debug('pol_data == %s', pol_data)
     log.debug('current policy == %s', current_policy)
 
     # compare policies
     policy_changes = []
     for p_class, p_data in six.iteritems(pol_data):
-        pol_id = None
         requested_policy = p_data.get('requested_policy')
         if requested_policy:
             for p_name, p_setting in six.iteritems(requested_policy):
-                if p_name in current_policy[policy_class]:
+                if p_name in current_policy[p_class]:
                     currently_set = True
-                    pol_id = p_name
                 if currently_set:
                     # compare
                     log.debug('need to compare %s from current/requested '
                               'policy', p_name)
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(
-                        p_data['requested_policy'][policy_name],
+                        p_data['requested_policy'][p_name],
                         sort_keys=True).lower()
                     current_policy_json = salt.utils.json.dumps(
-                        current_policy[p_class][pol_id],
+                        current_policy[p_class][p_name],
                         sort_keys=True).lower()
 
                     requested_policy_check = salt.utils.json.loads(requested_policy_json)
@@ -304,10 +316,14 @@ def set_(name,
 
                     if not policies_are_equal:
                         additional_policy_comments = []
-                        if p_data['policy_lookup'][policy_name]['rights_assignment'] and cumulative_rights_assignments:
+                        if p_data['policy_lookup'][p_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in p_data['requested_policy'][p_name]:
-                                if user not in current_policy[p_class][pol_id]:
-                                    changes = True
+                                if user not in current_policy[p_class][p_name]:
+                                    user = salt.utils.win_functions.get_sam_name(user)
+                                    if user not in current_policy[p_class][p_name]:
+                                        changes = True
+                                    else:
+                                        additional_policy_comments.append('"{0}" is already granted the right'.format(user))
                                 else:
                                     additional_policy_comments.append('"{0}" is already granted the right'.format(user))
                         else:
