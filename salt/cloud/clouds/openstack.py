@@ -58,6 +58,8 @@ clouds.yml file on each minion.abs
         username: 'demo'
         password: secret
         project_name: 'demo'
+        user_domain_name: default,
+        project_domain_name: default,
         auth_url: 'http://openstack/identity'
 
 Or if you need to use a profile to setup some extra stuff, it can be passed as a
