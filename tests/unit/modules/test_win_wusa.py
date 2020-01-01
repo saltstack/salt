@@ -8,7 +8,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.mock import patch, MagicMock
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -17,7 +17,6 @@ import salt.modules.win_wusa as win_wusa
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -83,7 +82,8 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test install function when KB already installed
         '''
-        mock_retcode = MagicMock(return_value=2359302)
+        retcode = 2359302
+        mock_retcode = MagicMock(return_value=retcode)
         path = 'C:\\KB123456.msu'
         name = 'KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
@@ -91,21 +91,39 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                 win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
-        self.assertEqual('{0} is already installed'.format(name),
+        self.assertEqual('{0} is already installed. Additional info follows:\n\n{1}'.format(name, retcode),
+                         excinfo.exception.strerror)
+
+    def test_install_reboot_needed(self):
+        '''
+        test install function when KB need a reboot
+        '''
+        retcode = 3010
+        mock_retcode = MagicMock(return_value=retcode)
+        path = 'C:\\KB123456.msu'
+        name = 'KB123456.msu'
+        with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
+            with self.assertRaises(CommandExecutionError) as excinfo:
+                win_wusa.install(path)
+        mock_retcode.assert_called_once_with(
+            ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
+        self.assertEqual('{0} correctly installed but server reboot is needed to complete installation. Additional info follows:\n\n{1}'.format(name, retcode),
                          excinfo.exception.strerror)
 
     def test_install_error_87(self):
         '''
         test install function when error 87 returned
         '''
-        mock_retcode = MagicMock(return_value=87)
+        retcode = 87
+        mock_retcode = MagicMock(return_value=retcode)
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
             with self.assertRaises(CommandExecutionError) as excinfo:
                 win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
-        self.assertEqual('Unknown error', excinfo.exception.strerror)
+        self.assertEqual('Unknown error. Additional info follows:\n\n{0}'.format(retcode),
+                         excinfo.exception.strerror)
 
     def test_install_error_other(self):
         '''
@@ -163,7 +181,8 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test uninstall function when KB already uninstalled
         '''
-        mock_retcode = MagicMock(return_value=2359303)
+        retcode = 2359303
+        mock_retcode = MagicMock(return_value=retcode)
         kb = 'KB123456'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
             with self.assertRaises(CommandExecutionError) as excinfo:
@@ -171,7 +190,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_retcode.assert_called_once_with(
             ['wusa.exe', '/uninstall', '/quiet', '/kb:{0}'.format(kb[2:]), '/norestart'],
             ignore_retcode=True)
-        self.assertEqual('{0} not installed'.format(kb),
+        self.assertEqual('{0} not installed. Additional info follows:\n\n{1}'.format(kb, retcode),
                          excinfo.exception.strerror)
 
     def test_uninstall_path_error_other(self):

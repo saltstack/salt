@@ -73,6 +73,9 @@ of the 2015.5 branch:
    example, cwd: 'C:\\salt\\bin\\scripts'. Sometimes python thinks the single
    back slash is an escape character.
 
+   There is a known incompatibility between Python2 pip>=10.* and Salt <=2018.3.0.
+   The issue is decribed here: https://github.com/saltstack/salt/issues/46163
+
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
@@ -431,8 +434,10 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             use_vt=False,
             trusted_host=None,
             no_cache_dir=False,
+            extra_args=None,
             cache_dir=None,
             no_binary=None,
+            disable_version_check=False,
             **kwargs):
     '''
     Install packages with pip
@@ -478,6 +483,11 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
         that the ``user:password@`` is optional and required only if you are
         behind an authenticated proxy. If you provide
         ``user@proxy.server:port`` then you will be prompted for a password.
+
+        .. note::
+            If the the Minion has a globaly configured proxy - it will be used
+            even if no proxy was set here. To explicitly disable proxy for pip
+            you should pass ``False`` as a value.
 
     timeout
         Set the socket timeout (default 15 seconds)
@@ -604,6 +614,29 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     no_cache_dir
         Disable the cache.
 
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            salt '*' pip.install pandas extra_args="[{'--latest-pip-kwarg':'param'}, '--latest-pip-arg']"
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
+    Will be translated into the following pip command:
+
+    .. code-block:: bash
+
+        pip install pandas --latest-pip-kwarg param --latest-pip-arg
+
+    disable_version_check
+        Pip may periodically check PyPI to determine whether a new version of
+        pip is available to download. Passing True for this option disables
+        that check.
+
     CLI Example:
 
     .. code-block:: bash
@@ -686,8 +719,16 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
 
         cmd.extend(['--log', log])
 
+    config = __opts__
     if proxy:
         cmd.extend(['--proxy', proxy])
+    # If proxy arg is set to False we won't use the global proxy even if it's set.
+    elif proxy is not False and config.get('proxy_host') and config.get('proxy_port'):
+        if config.get('proxy_username') and config.get('proxy_password'):
+            http_proxy_url = 'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'.format(**config)
+        else:
+            http_proxy_url = 'http://{proxy_host}:{proxy_port}'.format(**config)
+        cmd.extend(['--proxy', http_proxy_url])
 
     if timeout:
         try:
@@ -755,6 +796,9 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                     '\'{0}\' is not a valid URL'.format(mirror)
                 )
             cmd.extend(['--mirrors', mirror])
+
+    if disable_version_check:
+        cmd.extend(['--disable-pip-version-check'])
 
     if build:
         cmd.extend(['--build', build])
@@ -887,6 +931,24 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if trusted_host:
         cmd.extend(['--trusted-host', trusted_host])
 
+    if extra_args:
+        # These are arguments from the latest version of pip that
+        # have not yet been implemented in salt
+        for arg in extra_args:
+            # It is a keyword argument
+            if isinstance(arg, dict):
+                # There will only ever be one item in this dictionary
+                key, val = arg.popitem()
+                # Don't allow any recursion into keyword arg definitions
+                # Don't allow multiple definitions of a keyword
+                if isinstance(val, (dict, list)):
+                    raise TypeError("Too many levels in: {}".format(key))
+                # This is a a normal one-to-one keyword argument
+                cmd.extend([key, val])
+            # It is a positional argument, append it to the list
+            else:
+                cmd.append(arg)
+
     cmd_kwargs = dict(saltenv=saltenv, use_vt=use_vt, runas=user)
 
     if kwargs:
@@ -949,6 +1011,11 @@ def uninstall(pkgs=None,
         behind an authenticated proxy.  If you provide
         ``user@proxy.server:port`` then you will be prompted for a password.
 
+        .. note::
+            If the the Minion has a globaly configured proxy - it will be used
+            even if no proxy was set here. To explicitly disable proxy for pip
+            you should pass ``False`` as a value.
+
     timeout
         Set the socket timeout (default 15 seconds)
 
@@ -990,8 +1057,16 @@ def uninstall(pkgs=None,
 
         cmd.extend(['--log', log])
 
+    config = __opts__
     if proxy:
         cmd.extend(['--proxy', proxy])
+    # If proxy arg is set to False we won't use the global proxy even if it's set.
+    elif proxy is not False and config.get('proxy_host') and config.get('proxy_port'):
+        if config.get('proxy_username') and config.get('proxy_password'):
+            http_proxy_url = 'http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}'.format(**config)
+        else:
+            http_proxy_url = 'http://{proxy_host}:{proxy_port}'.format(**config)
+        cmd.extend(['--proxy', http_proxy_url])
 
     if timeout:
         try:

@@ -9,12 +9,10 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -63,7 +61,6 @@ timer2.timer                               disabled
 timer3.timer                               static'''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.modules.systemd
@@ -110,7 +107,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 'README'
             )
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
         with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
             with patch.object(os, 'listdir', listdir_mock):
@@ -146,7 +143,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 'README'
             )
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
         with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
             with patch.object(os, 'listdir', listdir_mock):
@@ -261,7 +258,6 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertDictEqual(systemd.execs(), {'a': 'c', 'b': 'c'})
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.systemd, for functions which use systemd
