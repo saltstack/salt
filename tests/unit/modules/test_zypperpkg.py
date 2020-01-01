@@ -10,14 +10,12 @@ from xml.dom import minidom
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     call,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -54,7 +52,6 @@ def get_test_data(filename):
         return rfh.read()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZypperTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.zypper
