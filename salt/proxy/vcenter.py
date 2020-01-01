@@ -202,6 +202,7 @@ try:
 except ImportError:
     HAS_JSONSCHEMA = False
 
+
 # Variables are scoped to this module so we can have persistent data
 # across calls to fns in here.
 DETAILS = {}
@@ -278,10 +279,11 @@ def init(opts):
                  'mehchanism \'userpass\'')
         try:
             username, password = find_credentials()
-            DETAILS['password'] = password
         except salt.exceptions.SaltSystemExit as err:
             log.critical('Error: %s', err)
             return False
+        else:
+            DETAILS['password'] = password
     return True
 
 

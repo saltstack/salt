@@ -13,11 +13,9 @@ import salt.utils.files
 import salt.utils.reactor as reactor
 import salt.utils.yaml
 
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch,
     MagicMock,
     Mock,
@@ -380,7 +378,6 @@ WRAPPER_CALLS = {
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     Tests for constructing the low chunks to be executed via the Reactor
@@ -462,7 +459,6 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                                     self.assertEqual(reactions, LOW_CHUNKS[tag])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):
     '''
     Tests that we are formulating the wrapper calls properly

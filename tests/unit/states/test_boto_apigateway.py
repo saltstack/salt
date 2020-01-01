@@ -11,7 +11,7 @@ import string
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.config
@@ -446,7 +446,6 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module
@@ -1025,7 +1024,6 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 @skipIf(_has_required_botocore() is False,
         'The botocore module must be greater than'
         ' or equal to version {0}'.format(required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module, usage_plans portion
@@ -1303,7 +1301,6 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
 @skipIf(_has_required_botocore() is False,
         'The botocore module must be greater than'
         ' or equal to version {0}'.format(required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module, usage_plans_association portion

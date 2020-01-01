@@ -136,9 +136,10 @@ def install(path, restart=False):
     # Check the ret_code
     file_name = os.path.basename(path)
     errors = {2359302: '{0} is already installed'.format(file_name),
+              3010: '{0} correctly installed but server reboot is needed to complete installation'.format(file_name),
               87: 'Unknown error'}
     if ret_code in errors:
-        raise CommandExecutionError(errors[ret_code])
+        raise CommandExecutionError(errors[ret_code], ret_code)
     elif ret_code:
         raise CommandExecutionError('Unknown error: {0}'.format(ret_code))
 
@@ -199,7 +200,7 @@ def uninstall(path, restart=False):
               2359303: '{0} not installed'.format(kb),
               87: 'Unknown error. Try specifying an .msu file'}
     if ret_code in errors:
-        raise CommandExecutionError(errors[ret_code])
+        raise CommandExecutionError(errors[ret_code], ret_code)
     elif ret_code:
         raise CommandExecutionError('Unknown error: {0}'.format(ret_code))
 

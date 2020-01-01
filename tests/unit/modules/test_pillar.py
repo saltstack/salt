@@ -5,12 +5,10 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -45,13 +43,11 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(pillarmod._obfuscate_inner((1, 2)),
                          ('<int>', '<int>'))
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_obfuscate(self):
         with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
             self.assertEqual(pillarmod.obfuscate(),
                              dict(a='<int>', b='<str>'))
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_ls(self):
         with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
             ls = sorted(pillarmod.ls())
@@ -60,7 +56,6 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             else:
                 self.assertEqual(ls, ['a', 'b'])
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_pillar_get_default_merge(self):
         defaults = {'int': 1,
                     'string': 'foo',

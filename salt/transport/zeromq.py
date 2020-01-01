@@ -246,6 +246,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if not loop_instance_map:
                 del self.__class__.instance_map[self._io_loop]
 
+    # pylint: disable=W1701
     def __del__(self):
         with self._refcount_lock:
             # Make sure we actually close no matter if something
@@ -257,6 +258,7 @@ class AsyncZeroMQReqChannel(salt.transport.client.ReqChannel):
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
+    # pylint: enable=W1701
 
     @property
     def master_uri(self):
@@ -497,15 +499,24 @@ class AsyncZeroMQPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.t
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     # TODO: this is the time to see if we are connected, maybe use the req channel to guess?
     @tornado.gen.coroutine
     def connect(self):
         if not self.auth.authenticated:
             yield self.auth.authenticate()
-        self.publish_port = self.auth.creds['publish_port']
+
+        # if this is changed from the default, we assume it was intentional
+        if int(self.opts.get('publish_port', 4506)) != 4506:
+            self.publish_port = self.opts.get('publish_port')
+        # else take the relayed publish_port master reports
+        else:
+            self.publish_port = self.auth.creds['publish_port']
+
         log.debug('Connecting the Minion to the Master publish port, using the URI: %s', self.master_pub)
         self._socket.connect(self.master_pub)
 
@@ -617,7 +628,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             except zmq.ZMQError as exc:
                 if exc.errno == errno.EINTR:
                     continue
-                raise exc
+                six.reraise(*sys.exc_info())
             except (KeyboardInterrupt, SystemExit):
                 break
 
@@ -942,7 +953,7 @@ class ZeroMQPubServerChannel(salt.transport.server.PubServerChannel):
                 except zmq.ZMQError as exc:
                     if exc.errno == errno.EINTR:
                         continue
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
         except KeyboardInterrupt:
             log.trace('Publish daemon caught Keyboard interupt, tearing down')
@@ -1082,8 +1093,10 @@ class AsyncReqMessageClientPool(salt.transport.MessageClientPool):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
 # TODO: unit tests!
@@ -1160,8 +1173,10 @@ class AsyncReqMessageClient(object):
         )
         self.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
     def _init_socket(self):
         if hasattr(self, 'stream'):
