@@ -9,7 +9,9 @@ import collections
 import datetime
 import logging
 import subprocess
+import platform
 import salt.utils.stringutils
+import salt.utils.path
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -19,7 +21,7 @@ log = logging.getLogger(__name__)
 # These arches compiled from the rpmUtils.arch python module source
 ARCHES_64 = ('x86_64', 'athlon', 'amd64', 'ia32e', 'ia64', 'geode')
 ARCHES_32 = ('i386', 'i486', 'i586', 'i686')
-ARCHES_PPC = ('ppc', 'ppc64', 'ppc64iseries', 'ppc64pseries')
+ARCHES_PPC = ('ppc', 'ppc64', 'ppc64le', 'ppc64iseries', 'ppc64pseries')
 ARCHES_S390 = ('s390', 's390x')
 ARCHES_SPARC = (
     'sparc', 'sparcv8', 'sparcv9', 'sparcv9v', 'sparc64', 'sparc64v'
@@ -42,12 +44,16 @@ def get_osarch():
     '''
     Get the os architecture using rpm --eval
     '''
-    ret = subprocess.Popen(
-        'rpm --eval "%{_host_cpu}"',
-        shell=True,
-        close_fds=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE).communicate()[0]
+    if salt.utils.path.which('rpm'):
+        ret = subprocess.Popen(
+            'rpm --eval "%{_host_cpu}"',
+            shell=True,
+            close_fds=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE).communicate()[0]
+    else:
+        ret = ''.join([x for x in platform.uname()[-2:] if x][-1:])
+
     return salt.utils.stringutils.to_str(ret).strip() or 'unknown'
 
 

@@ -5,8 +5,8 @@ Classes which provide the shared base for GitFS, git_pillar, and winrepo
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import copy
 import contextlib
+import copy
 import errno
 import fnmatch
 import glob
@@ -17,6 +17,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import sys
 import time
 import tornado.ioloop
 import weakref
@@ -158,8 +159,6 @@ def enforce_types(key, val):
         'ssl_verify': bool,
         'insecure_auth': bool,
         'disable_saltenv_mapping': bool,
-        'env_whitelist': 'stringlist',
-        'env_blacklist': 'stringlist',
         'saltenv_whitelist': 'stringlist',
         'saltenv_blacklist': 'stringlist',
         'refspecs': 'stringlist',
@@ -389,17 +388,6 @@ class GitProvider(object):
                 'configurable parameter. Falling back to %s for %s remote '
                 '\'%s\'.', default_refspecs, self.role, self.id
             )
-
-        for item in ('env_whitelist', 'env_blacklist'):
-            val = getattr(self, item, None)
-            if val:
-                salt.utils.versions.warn_until(
-                    'Neon',
-                    'The gitfs_{0} config option (and {0} per-remote config '
-                    'option) have been renamed to gitfs_salt{0} (and '
-                    'salt{0}). Please update your configuration.'.format(item)
-                )
-                setattr(self, 'salt{0}'.format(item), val)
 
         # Discard the conf dictionary since we have set all of the config
         # params as attributes
@@ -823,7 +811,7 @@ class GitProvider(object):
                                     'by another master.')
                     log.warning(msg)
                     if failhard:
-                        raise exc
+                        six.reraise(*sys.exc_info())
                     return
                 elif pid and pid_exists(pid):
                     log.warning('Process %d has a %s %s lock (%s)',
@@ -2819,7 +2807,7 @@ class GitFS(GitBase):
                         return _add_file_stat(fnd, blob_mode)
             except IOError as exc:
                 if exc.errno != errno.ENOENT:
-                    raise exc
+                    six.reraise(*sys.exc_info())
 
             with salt.utils.files.fopen(lk_fn, 'w'):
                 pass
@@ -2901,13 +2889,13 @@ class GitFS(GitBase):
             return ret
         except IOError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         try:
             os.makedirs(os.path.dirname(hashdest))
         except OSError as exc:
             if exc.errno != errno.EEXIST:
-                raise exc
+                six.reraise(*sys.exc_info())
 
         ret['hsum'] = salt.utils.hashutils.get_hash(path, self.opts['hash_type'])
         with salt.utils.files.fopen(hashdest, 'w+') as fp_:
@@ -2943,14 +2931,21 @@ class GitFS(GitBase):
         if cache_match is not None:
             return cache_match
         if refresh_cache:
+            log.trace('Start rebuilding gitfs file_list cache')
             ret = {'files': set(), 'symlinks': {}, 'dirs': set()}
             if salt.utils.stringutils.is_hex(load['saltenv']) \
                     or load['saltenv'] in self.envs():
                 for repo in self.remotes:
+                    start = time.time()
                     repo_files, repo_symlinks = repo.file_list(load['saltenv'])
                     ret['files'].update(repo_files)
                     ret['symlinks'].update(repo_symlinks)
                     ret['dirs'].update(repo.dir_list(load['saltenv']))
+                    log.profile(
+                      'gitfs file_name cache rebuild repo=%s duration=%s seconds',
+                      repo.id,
+                      time.time() - start
+                    )
             ret['files'] = sorted(ret['files'])
             ret['dirs'] = sorted(ret['dirs'])
 
@@ -2961,6 +2956,7 @@ class GitFS(GitBase):
             # NOTE: symlinks are organized in a dict instead of a list, however
             # the 'symlinks' key will be defined above so it will never get to
             # the default value in the call to ret.get() below.
+            log.trace('Finished rebuilding gitfs file_list cache')
             return ret.get(form, [])
         # Shouldn't get here, but if we do, this prevents a TypeError
         return {} if form == 'symlinks' else []

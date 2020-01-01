@@ -12,8 +12,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -22,7 +20,6 @@ import salt.modules.pam as pam
 MOCK_FILE = 'ok ok ignore '
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(sys.platform.startswith('openbsd'), 'OpenBSD does not use PAM')
 class PamTestCase(TestCase):
     '''

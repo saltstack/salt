@@ -11,7 +11,6 @@ import sys
 import copy
 
 # Import salt libs
-import salt.minion
 import salt.loader
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.ext import six
@@ -47,7 +46,7 @@ def compound(tgt, minion_id=None):
         opts = __opts__
     matchers = salt.loader.matchers(opts)
     try:
-        return matchers['compound_match.match'](tgt, opts=opts)
+        return matchers['compound_match.match'](tgt)
     except Exception as exc:
         log.exception(exc)
         return False

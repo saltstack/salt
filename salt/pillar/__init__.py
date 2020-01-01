@@ -197,8 +197,10 @@ class AsyncRemotePillar(RemotePillarMixin):
         self._closing = True
         self.channel.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class RemotePillar(RemotePillarMixin):
@@ -262,8 +264,10 @@ class RemotePillar(RemotePillarMixin):
         self._closing = True
         self.channel.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 class PillarCache(object):
@@ -1122,8 +1126,10 @@ class Pillar(object):
             return
         self._closing = True
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
