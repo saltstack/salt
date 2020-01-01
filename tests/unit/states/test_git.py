@@ -11,14 +11,12 @@ import os
 # Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
     DEFAULT,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 # Import Salt Libs
@@ -27,7 +25,6 @@ import salt.states.git as git_state  # Don't potentially shadow GitPython
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.git

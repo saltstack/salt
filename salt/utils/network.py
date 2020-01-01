@@ -47,8 +47,8 @@ log = logging.getLogger(__name__)
 try:
     import ctypes
     import ctypes.util
-    libc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
-    res_init = libc.__res_init
+    LIBC = ctypes.cdll.LoadLibrary(ctypes.util.find_library("c"))
+    RES_INIT = LIBC.__res_init
 except (ImportError, OSError, AttributeError, TypeError):
     pass
 
@@ -249,29 +249,29 @@ def is_reachable_host(entity_name):
     return ret
 
 
-def is_ip(ip):
+def is_ip(ip_addr):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
     '''
-    return is_ipv4(ip) or is_ipv6(ip)
+    return is_ipv4(ip_addr) or is_ipv6(ip_addr)
 
 
-def is_ipv4(ip):
+def is_ipv4(ip_addr):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address
     '''
     try:
-        return ipaddress.ip_address(ip).version == 4
+        return ipaddress.ip_address(ip_addr).version == 4
     except ValueError:
         return False
 
 
-def is_ipv6(ip):
+def is_ipv6(ip_addr):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address
     '''
     try:
-        return ipaddress.ip_address(ip).version == 6
+        return ipaddress.ip_address(ip_addr).version == 6
     except ValueError:
         return False
 
@@ -304,11 +304,11 @@ def is_ipv6_subnet(cidr):
 
 
 @jinja_filter('is_ip')
-def is_ip_filter(ip, options=None):
+def is_ip_filter(ip_addr, options=None):
     '''
     Returns a bool telling if the passed IP is a valid IPv4 or IPv6 address.
     '''
-    return is_ipv4_filter(ip, options=options) or is_ipv6_filter(ip, options=options)
+    return is_ipv4_filter(ip_addr, options=options) or is_ipv6_filter(ip_addr, options=options)
 
 
 def _ip_options_global(ip_obj, version):
@@ -381,7 +381,7 @@ def _ip_options(ip_obj, version, options=None):
     return six.text_type(ip_obj)
 
 
-def _is_ipv(ip, version, options=None):
+def _is_ipv(ip_addr, version, options=None):
 
     if not version:
         version = 4
@@ -390,11 +390,11 @@ def _is_ipv(ip, version, options=None):
         return None
 
     try:
-        ip_obj = ipaddress.ip_address(ip)
+        ip_obj = ipaddress.ip_address(ip_addr)
     except ValueError:
         # maybe it is an IP network
         try:
-            ip_obj = ipaddress.ip_interface(ip)
+            ip_obj = ipaddress.ip_interface(ip_addr)
         except ValueError:
             # nope, still not :(
             return None
@@ -407,7 +407,7 @@ def _is_ipv(ip, version, options=None):
 
 
 @jinja_filter('is_ipv4')
-def is_ipv4_filter(ip, options=None):
+def is_ipv4_filter(ip_addr, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv4 address.
 
@@ -420,12 +420,12 @@ def is_ipv4_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    _is_ipv4 = _is_ipv(ip, 4, options=options)
+    _is_ipv4 = _is_ipv(ip_addr, 4, options=options)
     return isinstance(_is_ipv4, six.string_types)
 
 
 @jinja_filter('is_ipv6')
-def is_ipv6_filter(ip, options=None):
+def is_ipv6_filter(ip_addr, options=None):
     '''
     Returns a bool telling if the value passed to it was a valid IPv6 address.
 
@@ -438,7 +438,7 @@ def is_ipv6_filter(ip, options=None):
     options
         CSV of options regarding the nature of the IP address. E.g.: loopback, multicast, private etc.
     '''
-    _is_ipv6 = _is_ipv(ip, 6, options=options)
+    _is_ipv6 = _is_ipv(ip_addr, 6, options=options)
     return isinstance(_is_ipv6, six.string_types)
 
 
@@ -569,11 +569,11 @@ def network_size(value, options=None, version=None):
     ]
 
 
-def natural_ipv4_netmask(ip, fmt='prefixlen'):
+def natural_ipv4_netmask(ip_addr, fmt='prefixlen'):
     '''
     Returns the "natural" mask of an IPv4 address
     '''
-    bits = _ipv4_to_bits(ip)
+    bits = _ipv4_to_bits(ip_addr)
 
     if bits.startswith('11'):
         mask = '24'
@@ -588,14 +588,14 @@ def natural_ipv4_netmask(ip, fmt='prefixlen'):
         return '/' + mask
 
 
-def rpad_ipv4_network(ip):
+def rpad_ipv4_network(ip_addr):
     '''
     Returns an IP network address padded with zeros.
 
     Ex: '192.168.3' -> '192.168.3.0'
         '10.209' -> '10.209.0.0'
     '''
-    return '.'.join(itertools.islice(itertools.chain(ip.split('.'), '0000'), 0,
+    return '.'.join(itertools.islice(itertools.chain(ip_addr.split('.'), '0000'), 0,
                                      4))
 
 
@@ -959,6 +959,7 @@ def _interfaces_ipconfig(out):
     '''
     ifaces = dict()
     iface = None
+    addr = None
     adapter_iface_regex = re.compile(r'adapter (\S.+):$')
 
     for line in out.splitlines():
@@ -1303,16 +1304,16 @@ def hex2ip(hex_ip, invert=False):
     returned. If 'invert=True' assume that ip from /proc/net/<proto>
     '''
     if len(hex_ip) == 32:  # ipv6
-        ip = []
+        ip_addr = []
         for i in range(0, 32, 8):
             ip_part = hex_ip[i:i + 8]
             ip_part = [ip_part[x:x + 2] for x in range(0, 8, 2)]
             if invert:
-                ip.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
+                ip_addr.append("{0[3]}{0[2]}:{0[1]}{0[0]}".format(ip_part))
             else:
-                ip.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
+                ip_addr.append("{0[0]}{0[1]}:{0[2]}{0[3]}".format(ip_part))
         try:
-            address = ipaddress.IPv6Address(":".join(ip))
+            address = ipaddress.IPv6Address(":".join(ip_addr))
             if address.ipv4_mapped:
                 return str(address.ipv4_mapped)
             else:
@@ -1363,17 +1364,18 @@ def active_tcp():
     '''
     ret = {}
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
-        if os.path.isfile(statf):
-            with salt.utils.files.fopen(statf, 'rb') as fp_:
-                for line in fp_:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if line.strip().startswith('sl'):
-                        continue
-                    iret = _parse_tcp_line(line)
-                    sl = next(iter(iret))
-                    if iret[sl]['state'] == 1:  # 1 is ESTABLISHED
-                        del iret[sl]['state']
-                        ret[len(ret)] = iret[sl]
+        if not os.path.isfile(statf):
+            continue
+        with salt.utils.files.fopen(statf, 'rb') as fp_:
+            for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
+                if line.strip().startswith('sl'):
+                    continue
+                iret = _parse_tcp_line(line)
+                slot = next(iter(iret))
+                if iret[slot]['state'] == 1:  # 1 is ESTABLISHED
+                    del iret[slot]['state']
+                    ret[len(ret)] = iret[slot]
     return ret
 
 
@@ -1406,17 +1408,18 @@ def _remotes_on(port, which_end):
     ret = set()
     proc_available = False
     for statf in ['/proc/net/tcp', '/proc/net/tcp6']:
-        if os.path.isfile(statf):
-            proc_available = True
-            with salt.utils.files.fopen(statf, 'r') as fp_:
-                for line in fp_:
-                    line = salt.utils.stringutils.to_unicode(line)
-                    if line.strip().startswith('sl'):
-                        continue
-                    iret = _parse_tcp_line(line)
-                    sl = next(iter(iret))
-                    if iret[sl][which_end] == port and iret[sl]['state'] == 1:  # 1 is ESTABLISHED
-                        ret.add(iret[sl]['remote_addr'])
+        if not os.path.isfile(statf):
+            continue
+        proc_available = True
+        with salt.utils.files.fopen(statf, 'r') as fp_:
+            for line in fp_:
+                line = salt.utils.stringutils.to_unicode(line)
+                if line.strip().startswith('sl'):
+                    continue
+                iret = _parse_tcp_line(line)
+                slot = next(iter(iret))
+                if iret[slot][which_end] == port and iret[slot]['state'] == 1:  # 1 is ESTABLISHED
+                    ret.add(iret[slot]['remote_addr'])
 
     if not proc_available:  # Fallback to use OS specific tools
         if salt.utils.platform.is_sunos():
@@ -1443,15 +1446,15 @@ def _parse_tcp_line(line):
     '''
     ret = {}
     comps = line.strip().split()
-    sl = comps[0].rstrip(':')
-    ret[sl] = {}
+    slot = comps[0].rstrip(':')
+    ret[slot] = {}
     l_addr, l_port = comps[1].split(':')
     r_addr, r_port = comps[2].split(':')
-    ret[sl]['local_addr'] = hex2ip(l_addr, True)
-    ret[sl]['local_port'] = int(l_port, 16)
-    ret[sl]['remote_addr'] = hex2ip(r_addr, True)
-    ret[sl]['remote_port'] = int(r_port, 16)
-    ret[sl]['state'] = int(comps[3], 16)
+    ret[slot]['local_addr'] = hex2ip(l_addr, True)
+    ret[slot]['local_port'] = int(l_port, 16)
+    ret[slot]['remote_addr'] = hex2ip(r_addr, True)
+    ret[slot]['remote_port'] = int(r_port, 16)
+    ret[slot]['state'] = int(comps[3], 16)
     return ret
 
 
@@ -1470,8 +1473,9 @@ def _netlink_tool_remote_on(port, which_end):
     '''
     remotes = set()
     valid = False
+    tcp_end = 'dst' if which_end == 'remote_port' else 'src'
     try:
-        data = subprocess.check_output(['ss', '-ant'])  # pylint: disable=minimum-python-version
+        data = subprocess.check_output(['ss', '-ant', tcp_end, ':{0}'.format(port)])  # pylint: disable=minimum-python-version
     except subprocess.CalledProcessError:
         log.error('Failed ss')
         raise
@@ -1486,13 +1490,8 @@ def _netlink_tool_remote_on(port, which_end):
         elif 'ESTAB' not in line:
             continue
         chunks = line.split()
-        local_host, local_port = chunks[3].rsplit(':', 1)
         remote_host, remote_port = chunks[4].rsplit(':', 1)
 
-        if which_end == 'remote_port' and int(remote_port) != port:
-            continue
-        if which_end == 'local_port' and int(local_port) != port:
-            continue
         remotes.add(remote_host)
 
     if valid is False:
@@ -1890,70 +1889,34 @@ def refresh_dns():
     issue #21397: force glibc to re-read resolv.conf
     '''
     try:
-        res_init()
+        RES_INIT()
     except NameError:
-        # Exception raised loading the library, thus res_init is not defined
+        # Exception raised loading the library, thus RES_INIT is not defined
         pass
 
 
 @jinja_filter('dns_check')
 def dns_check(addr, port, safe=False, ipv6=None):
     '''
-    Return the ip resolved by dns, but do not exit on failure, only raise an
-    exception. Obeys system preference for IPv4/6 address resolution - this
-    can be overridden by the ipv6 flag.
-    Tries to connect to the address before considering it useful. If no address
-    can be reached, the first one resolved is used as a fallback.
+    Return an ip address resolved by dns in a format usable in URLs (ipv6 in brackets).
+    Obeys system preference for IPv4/6 address resolution - this can be overridden by
+    the ipv6 flag. Tries to connect to the address before considering it useful. If no
+    address can be reached, the first one resolved is used as a fallback.
+    Does not exit on failure, raises an exception.
     '''
-    error = False
-    lookup = addr
-    seen_ipv6 = False
+    ip_addrs = []
     family = socket.AF_INET6 if ipv6 else socket.AF_INET if ipv6 is False else socket.AF_UNSPEC
     try:
         refresh_dns()
-        hostnames = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
-        if not hostnames:
-            error = True
-        else:
-            resolved = False
-            candidates = []
-            for h in hostnames:
-                # Input is IP address, passed through unchanged, just return it
-                if h[4][0] == addr:
-                    resolved = salt.utils.zeromq.ip_bracket(addr)
-                    break
-
-                if h[0] == socket.AF_INET and ipv6 is True:
-                    continue
-                if h[0] == socket.AF_INET6 and ipv6 is False:
-                    continue
-
-                candidate_addr = h[4][0]
-
-                if h[0] != socket.AF_INET6 or ipv6 is not None:
-                    candidates.append(candidate_addr)
-
-                try:
-                    s = socket.socket(h[0], socket.SOCK_STREAM)
-                    s.connect((candidate_addr, port))
-                    s.close()
-
-                    resolved = candidate_addr
-                    break
-                except socket.error:
-                    pass
-            if not resolved:
-                if len(candidates) > 0:
-                    resolved = candidates[0]
-                else:
-                    error = True
+        addrinfo = socket.getaddrinfo(addr, port, family, socket.SOCK_STREAM)
+        ip_addrs = _test_addrs(addrinfo, port)
     except TypeError:
-        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(lookup)
+        err = ('Attempt to resolve address \'{0}\' failed. Invalid or unresolveable address').format(addr)
         raise SaltSystemExit(code=42, msg=err)
     except socket.error:
-        error = True
+        pass
 
-    if error:
+    if not ip_addrs:
         err = ('DNS lookup or connection check of \'{0}\' failed.').format(addr)
         if safe:
             if salt.log.is_console_configured():
@@ -1963,7 +1926,34 @@ def dns_check(addr, port, safe=False, ipv6=None):
                 log.error(err)
             raise SaltClientError()
         raise SaltSystemExit(code=42, msg=err)
-    return resolved
+
+    return salt.utils.zeromq.ip_bracket(ip_addrs[0])
+
+
+def _test_addrs(addrinfo, port):
+    '''
+    Attempt to connect to all addresses, return one if it succeeds.
+    Otherwise, return all addrs.
+    '''
+    ip_addrs = []
+    # test for connectivity, short circuit on success
+    for a in addrinfo:
+        ip_family = a[0]
+        ip_addr = a[4][0]
+        if ip_addr in ip_addrs:
+            continue
+        ip_addrs.append(ip_addr)
+
+        try:
+            s = socket.socket(ip_family, socket.SOCK_STREAM)
+            s.connect((ip_addr, port))
+            s.close()
+
+            ip_addrs = [ip_addr]
+            break
+        except socket.error:
+            pass
+    return ip_addrs
 
 
 def parse_host_port(host_port):

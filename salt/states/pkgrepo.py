@@ -96,7 +96,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
-import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -230,7 +229,7 @@ def managed(name, ppa=None, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=False``.
+        ``enabled=False`` will assume ``disabled=True``.
 
     architectures
         On apt-based systems, architectures can restrict the available
@@ -299,8 +298,10 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+       This argument has been deprecated. Please use ``refresh`` instead.
+       The ``refresh_db`` argument will continue to work to ensure backwards
+       compatibility, but we recommend using the preferred ``refresh``
+       argument instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
@@ -308,12 +309,6 @@ def managed(name, ppa=None, **kwargs):
        packages. Setting a require in the pkg state will not work for this.
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         kwargs['refresh'] = kwargs.pop('refresh_db')
 
     ret = {'name': name,
