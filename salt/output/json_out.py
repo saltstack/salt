@@ -28,6 +28,13 @@ single-line output format and to parse each line individually. Example output
     {"mike": {"en0": {"hwaddr": "02:48:a2:4b:70:a0", ...}}}
     {"phill": {"en0": {"hwaddr": "02:1d:cc:a2:33:55", ...}}}
     {"stuart": {"en0": {"hwaddr": "02:9a:e0:ea:9e:3c", ...}}}
+
+
+CLI Example:
+
+.. code-block:: bash
+
+    salt '*' foo.bar --out=json
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
