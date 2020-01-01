@@ -763,57 +763,230 @@ def pool_running(name,
     '''
     ret = {'name': name,
            'changes': {},
-           'result': True,
+           'result': True if not __opts__['test'] else None,
            'comment': ''
            }
 
     try:
         info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
+        needs_autostart = False
         if info:
-            if info[name]['state'] == 'running':
-                ret['comment'] = 'Pool {0} exists and is running'.format(name)
+            needs_autostart = info[name]['autostart'] and not autostart or not info[name]['autostart'] and autostart
+
+            # Update can happen for both running and stopped pools
+            needs_update = __salt__['virt.pool_update'](name,
+                                                        ptype=ptype,
+                                                        target=target,
+                                                        permissions=permissions,
+                                                        source_devices=(source or {}).get('devices'),
+                                                        source_dir=(source or {}).get('dir'),
+                                                        source_initiator=(source or {}).get('initiator'),
+                                                        source_adapter=(source or {}).get('adapter'),
+                                                        source_hosts=(source or {}).get('hosts'),
+                                                        source_auth=(source or {}).get('auth'),
+                                                        source_name=(source or {}).get('name'),
+                                                        source_format=(source or {}).get('format'),
+                                                        test=True,
+                                                        connection=connection,
+                                                        username=username,
+                                                        password=password)
+            if needs_update:
+                if not __opts__['test']:
+                    __salt__['virt.pool_update'](name,
+                                                 ptype=ptype,
+                                                 target=target,
+                                                 permissions=permissions,
+                                                 source_devices=(source or {}).get('devices'),
+                                                 source_dir=(source or {}).get('dir'),
+                                                 source_initiator=(source or {}).get('initiator'),
+                                                 source_adapter=(source or {}).get('adapter'),
+                                                 source_hosts=(source or {}).get('hosts'),
+                                                 source_auth=(source or {}).get('auth'),
+                                                 source_name=(source or {}).get('name'),
+                                                 source_format=(source or {}).get('format'),
+                                                 connection=connection,
+                                                 username=username,
+                                                 password=password)
+
+                action = "started"
+                if info[name]['state'] == 'running':
+                    action = "restarted"
+                    if not __opts__['test']:
+                        __salt__['virt.pool_stop'](name, connection=connection, username=username, password=password)
+
+                if not __opts__['test']:
+                    __salt__['virt.pool_build'](name, connection=connection, username=username, password=password)
+                    __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
+
+                autostart_str = ', autostart flag changed' if needs_autostart else ''
+                ret['changes'][name] = 'Pool updated, built{0} and {1}'.format(autostart_str, action)
+                ret['comment'] = 'Pool {0} updated, built{1} and {2}'.format(name, autostart_str, action)
+
             else:
-                __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
-                ret['changes'][name] = 'Pool started'
-                ret['comment'] = 'Pool {0} started'.format(name)
+                if info[name]['state'] == 'running':
+                    ret['comment'] = 'Pool {0} unchanged and is running'.format(name)
+                    ret['result'] = True
+                else:
+                    ret['changes'][name] = 'Pool started'
+                    ret['comment'] = 'Pool {0} started'.format(name)
+                    if not __opts__['test']:
+                        __salt__['virt.pool_start'](name, connection=connection, username=username, password=password)
         else:
-            __salt__['virt.pool_define'](name,
-                                         ptype=ptype,
-                                         target=target,
-                                         permissions=permissions,
-                                         source_devices=(source or {}).get('devices', None),
-                                         source_dir=(source or {}).get('dir', None),
-                                         source_adapter=(source or {}).get('adapter', None),
-                                         source_hosts=(source or {}).get('hosts', None),
-                                         source_auth=(source or {}).get('auth', None),
-                                         source_name=(source or {}).get('name', None),
-                                         source_format=(source or {}).get('format', None),
-                                         transient=transient,
-                                         start=False,
-                                         connection=connection,
-                                         username=username,
-                                         password=password)
-            if autostart:
+            needs_autostart = autostart
+            if not __opts__['test']:
+                __salt__['virt.pool_define'](name,
+                                             ptype=ptype,
+                                             target=target,
+                                             permissions=permissions,
+                                             source_devices=(source or {}).get('devices'),
+                                             source_dir=(source or {}).get('dir'),
+                                             source_initiator=(source or {}).get('initiator'),
+                                             source_adapter=(source or {}).get('adapter'),
+                                             source_hosts=(source or {}).get('hosts'),
+                                             source_auth=(source or {}).get('auth'),
+                                             source_name=(source or {}).get('name'),
+                                             source_format=(source or {}).get('format'),
+                                             transient=transient,
+                                             start=False,
+                                             connection=connection,
+                                             username=username,
+                                             password=password)
+
+                __salt__['virt.pool_build'](name,
+                                            connection=connection,
+                                            username=username,
+                                            password=password)
+
+                __salt__['virt.pool_start'](name,
+                                            connection=connection,
+                                            username=username,
+                                            password=password)
+            if needs_autostart:
+                ret['changes'][name] = 'Pool defined, started and marked for autostart'
+                ret['comment'] = 'Pool {0} defined, started and marked for autostart'.format(name)
+            else:
+                ret['changes'][name] = 'Pool defined and started'
+                ret['comment'] = 'Pool {0} defined and started'.format(name)
+
+        if needs_autostart:
+            if not __opts__['test']:
                 __salt__['virt.pool_set_autostart'](name,
                                                     state='on' if autostart else 'off',
                                                     connection=connection,
                                                     username=username,
                                                     password=password)
-
-            __salt__['virt.pool_build'](name,
-                                        connection=connection,
-                                        username=username,
-                                        password=password)
-
-            __salt__['virt.pool_start'](name,
-                                        connection=connection,
-                                        username=username,
-                                        password=password)
-
-            ret['changes'][name] = 'Pool defined and started'
-            ret['comment'] = 'Pool {0} defined and started'.format(name)
     except libvirt.libvirtError as err:
         ret['comment'] = err.get_error_message()
+        ret['result'] = False
+
+    return ret
+
+
+def pool_deleted(name,
+                 purge=False,
+                 connection=None,
+                 username=None,
+                 password=None):
+    '''
+    Deletes a virtual storage pool.
+
+    :param name: the name of the pool to delete.
+    :param purge:
+        if ``True``, the volumes contained in the pool will be deleted as well as the pool itself.
+        Note that these will be lost for ever. If ``False`` the pool will simply be undefined.
+        (Default: ``False``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    In order to be purged a storage pool needs to be running to get the list of volumes to delete.
+
+    Some libvirt storage drivers may not implement deleting, those actions are implemented on a
+    best effort idea. In any case check the result's comment property to see if any of the action
+    was unsupported.
+
+    .. code-block::yaml
+
+        pool_name:
+          uyuni_virt.pool_deleted:
+            - purge: True
+
+    .. versionadded:: Neon
+    '''
+    ret = {'name': name, 'changes': {}, 'result': True, 'comment': ''}
+
+    try:
+        info = __salt__['virt.pool_info'](name, connection=connection, username=username, password=password)
+        if info:
+            ret['changes']['stopped'] = False
+            ret['changes']['deleted'] = False
+            ret['changes']['undefined'] = False
+            ret['changes']['deleted_volumes'] = []
+            unsupported = []
+
+            if info[name]['state'] == 'running':
+                if purge:
+                    unsupported_volume_delete = ['iscsi', 'iscsi-direct', 'mpath', 'scsi']
+                    if info[name]['type'] not in unsupported_volume_delete:
+                        __salt__['virt.pool_refresh'](name,
+                                                      connection=connection,
+                                                      username=username,
+                                                      password=password)
+                        volumes = __salt__['virt.pool_list_volumes'](name,
+                                                                     connection=connection,
+                                                                     username=username,
+                                                                     password=password)
+                        for volume in volumes:
+                            # Not supported for iSCSI and SCSI drivers
+                            deleted = __opts__['test']
+                            if not __opts__['test']:
+                                deleted = __salt__['virt.volume_delete'](name,
+                                                                         volume,
+                                                                         connection=connection,
+                                                                         username=username,
+                                                                         password=password)
+                            if deleted:
+                                ret['changes']['deleted_volumes'].append(volume)
+                    else:
+                        unsupported.append('deleting volume')
+
+                if not __opts__['test']:
+                    ret['changes']['stopped'] = __salt__['virt.pool_stop'](name,
+                                                                           connection=connection,
+                                                                           username=username,
+                                                                           password=password)
+                else:
+                    ret['changes']['stopped'] = True
+
+                if purge:
+                    supported_pool_delete = ['dir', 'fs', 'netfs', 'logical', 'vstorage', 'zfs']
+                    if info[name]['type'] in supported_pool_delete:
+                        if not __opts__['test']:
+                            ret['changes']['deleted'] = __salt__['virt.pool_delete'](name,
+                                                                                     connection=connection,
+                                                                                     username=username,
+                                                                                     password=password)
+                        else:
+                            ret['changes']['deleted'] = True
+                    else:
+                        unsupported.append('deleting pool')
+
+            if not __opts__['test']:
+                ret['changes']['undefined'] = __salt__['virt.pool_undefine'](name,
+                                                                             connection=connection,
+                                                                             username=username,
+                                                                             password=password)
+            else:
+                ret['changes']['undefined'] = True
+                ret['result'] = None
+
+            if unsupported:
+                ret['comment'] = 'Unsupported actions for pool of type "{0}": {1}'.format(info[name]['type'],
+                                                                                          ', '.join(unsupported))
+        else:
+            ret['comment'] = 'Storage pool could not be found: {0}'.format(name)
+    except libvirt.libvirtError as err:
+        ret['comment'] = 'Failed deleting pool: {0}'.format(err.get_error_message())
         ret['result'] = False
 
     return ret
