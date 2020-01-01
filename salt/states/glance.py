@@ -94,6 +94,13 @@ def image_present(name, visibility='public', protected=None,
       - disk_format ('raw' (default), 'vhd', 'vhdx', 'vmdk', 'vdi', 'iso',
         'qcow2', 'aki', 'ari' or 'ami')
     '''
+    __utils__['versions.warn_until'](
+        'Aluminium',
+        (
+            'The glance state module has been deprecated and will be removed in {version}.  '
+            'Please update to using the glance_image state module'
+        ),
+    )
     ret = {'name': name,
             'changes': {},
             'result': True,
