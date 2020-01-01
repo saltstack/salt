@@ -10,6 +10,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import re
 import datetime
+import shutil
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -23,13 +24,13 @@ import salt.modules.config as config
 from salt._compat import ElementTree as ET
 import salt.config
 import salt.syspaths
+import tempfile
 from salt.exceptions import CommandExecutionError
 
 # Import third party libs
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
-
 
 # pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
 
@@ -610,6 +611,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'xen',
                 'xen',
                 'x86_64',
+                boot=None
                 )
             root = ET.fromstring(xml_data)
             self.assertEqual(root.attrib['type'], 'xen')
@@ -1123,6 +1125,67 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertFalse('<interface' in definition)
                 self.assertFalse('<disk' in definition)
 
+                # Ensure the init() function allows creating VM without NIC and
+                # disk but with boot parameters.
+
+                defineMock.reset_mock()
+                mock_run.reset_mock()
+                boot = {
+                    'kernel': '/root/f8-i386-vmlinuz',
+                    'initrd': '/root/f8-i386-initrd',
+                    'cmdline':
+                        'console=ttyS0 ks=http://example.com/f8-i386/os/'
+                }
+                retval = virt.init('test vm boot params',
+                                   2,
+                                   1234,
+                                   nic=None,
+                                   disk=None,
+                                   seed=False,
+                                   start=False,
+                                   boot=boot)
+                definition = defineMock.call_args_list[0][0][0]
+                self.assertEqual('<kernel' in definition, True)
+                self.assertEqual('<initrd' in definition, True)
+                self.assertEqual('<cmdline' in definition, True)
+                self.assertEqual(retval, True)
+
+                # Verify that remote paths are downloaded and the xml has been
+                # modified
+                mock_response = MagicMock()
+                mock_response.read = MagicMock(return_value='filecontent')
+                cache_dir = tempfile.mkdtemp()
+
+                with patch.dict(virt.__dict__, {'CACHE_DIR': cache_dir}):
+                    with patch('salt.ext.six.moves.urllib.request.urlopen',
+                               MagicMock(return_value=mock_response)):
+                        with patch('salt.utils.files.fopen',
+                                   return_value=mock_response):
+
+                            defineMock.reset_mock()
+                            mock_run.reset_mock()
+                            boot = {
+                                'kernel':
+                                    'https://www.example.com/download/vmlinuz',
+                                'initrd': '',
+                                'cmdline':
+                                    'console=ttyS0 '
+                                    'ks=http://example.com/f8-i386/os/'
+                            }
+
+                            retval = virt.init('test remote vm boot params',
+                                               2,
+                                               1234,
+                                               nic=None,
+                                               disk=None,
+                                               seed=False,
+                                               start=False,
+                                               boot=boot)
+                            definition = defineMock.call_args_list[0][0][0]
+                            self.assertEqual(cache_dir in definition, True)
+
+                    shutil.rmtree(cache_dir)
+
                 # Test case creating disks
                 defineMock.reset_mock()
                 mock_run.reset_mock()
@@ -1221,6 +1284,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         setxml = ET.fromstring(define_mock.call_args[0][0])
         self.assertEqual(setxml.find('vcpu').text, '2')
         self.assertEqual(setvcpus_mock.call_args[0][0], 2)
+
+        boot = {
+            'kernel': '/root/f8-i386-vmlinuz',
+            'initrd': '/root/f8-i386-initrd',
+            'cmdline':
+                'console=ttyS0 ks=http://example.com/f8-i386/os/'
+        }
+
+        # Update with boot parameter case
+        self.assertEqual({
+                'definition': True,
+                'disk': {'attached': [], 'detached': []},
+                'interface': {'attached': [], 'detached': []}
+            }, virt.update('my vm', boot=boot))
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
