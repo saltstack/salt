@@ -1462,3 +1462,21 @@ def owner(*paths, **kwargs):  # pylint: disable=unused-argument
     if len(ret) == 1:
         return next(six.itervalues(ret))
     return ret
+
+
+def version_clean(version):
+    '''
+    Clean the version string removing extra data.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return the given version.
+    '''
+    return version
+
+
+def check_extra_requirements(pkgname, pkgver):
+    '''
+    Check if the installed package already has the given requirements.
+    There's nothing do to here for nipkg.py, therefore it will always
+    return True.
+    '''
+    return True
