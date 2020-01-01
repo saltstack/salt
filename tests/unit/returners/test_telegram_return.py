@@ -11,14 +11,13 @@ from __future__ import absolute_import
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.returners.telegram_return as telegram
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TelegramReturnerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test Telegram Returner
