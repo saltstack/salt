@@ -1385,11 +1385,11 @@ def create_certificate(
                 passphrase=kwargs['public_key_passphrase'])).replace('\n', '')
 
         # Remove system entries in kwargs
-        # Including listen_in and preqreuired because they are not included
+        # Including listen_in and prerequired because they are not included
         # in STATE_INTERNAL_KEYWORDS
         # for salt 2014.7.2
         for ignore in list(_STATE_INTERNAL_KEYWORDS) + \
-                ['listen_in', 'preqrequired', '__prerequired__']:
+                ['listen_in', 'prerequired', '__prerequired__']:
             kwargs.pop(ignore, None)
         # TODO: Make timeout configurable in Neon
         certs = __salt__['publish.publish'](
