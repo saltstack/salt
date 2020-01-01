@@ -107,6 +107,8 @@ import salt.utils.templates
 import salt.utils.validate.net
 import salt.utils.versions
 import salt.utils.yaml
+
+from salt.utils.virt import check_remote, download_remote
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
@@ -119,6 +121,8 @@ JINJA = jinja2.Environment(
         os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'virt')
     )
 )
+
+CACHE_DIR = '/var/lib/libvirt/saltinst'
 
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
@@ -533,6 +537,7 @@ def _gen_xml(name,
              os_type,
              arch,
              graphics=None,
+             boot=None,
              **kwargs):
     '''
     Generate the XML string to define a libvirt VM
@@ -569,11 +574,15 @@ def _gen_xml(name,
     else:
         context['boot_dev'] = ['hd']
 
+    context['boot'] = boot if boot else {}
+
     if os_type == 'xen':
         # Compute the Xen PV boot method
         if __grains__['os_family'] == 'Suse':
-            context['kernel'] = '/usr/lib/grub2/x86_64-xen/grub.xen'
-            context['boot_dev'] = []
+            if not boot or not boot.get('kernel', None):
+                context['boot']['kernel'] = \
+                        '/usr/lib/grub2/x86_64-xen/grub.xen'
+                context['boot_dev'] = []
 
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
@@ -1141,6 +1150,34 @@ def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
     return nicp
 
 
+def _handle_remote_boot_params(orig_boot):
+    """
+    Checks if the boot parameters contain a remote path. If so, it will copy
+    the parameters, download the files specified in the remote path, and return
+    a new dictionary with updated paths containing the canonical path to the
+    kernel and/or initrd
+
+    :param orig_boot: The original boot parameters passed to the init or update
+    functions.
+    """
+    saltinst_dir = None
+    new_boot = orig_boot.copy()
+
+    try:
+        for key in ['kernel', 'initrd']:
+            if check_remote(orig_boot.get(key)):
+                if saltinst_dir is None:
+                    os.makedirs(CACHE_DIR)
+                    saltinst_dir = CACHE_DIR
+
+                new_boot[key] = download_remote(orig_boot.get(key),
+                                                saltinst_dir)
+
+        return new_boot
+    except Exception as err:
+        raise err
+
+
 def init(name,
          cpu,
          mem,
@@ -1162,6 +1199,7 @@ def init(name,
          graphics=None,
          os_type=None,
          arch=None,
+         boot=None,
          **kwargs):
     '''
     Initialize a new vm
@@ -1292,6 +1330,22 @@ def init(name,
     :param password: password to connect with, overriding defaults
 
                      .. versionadded:: 2019.2.0
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+        .. versionadded:: neon
 
     .. _init-nic-def:
 
@@ -1539,7 +1593,11 @@ def init(name,
     if arch is None:
         arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, **kwargs)
+    if boot is not None:
+        boot = _handle_remote_boot_params(boot)
+
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch,
+                      graphics, boot, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)
@@ -1718,6 +1776,7 @@ def update(name,
            interfaces=None,
            graphics=None,
            live=True,
+           boot=None,
            **kwargs):
     '''
     Update the definition of an existing domain.
@@ -1752,6 +1811,23 @@ def update(name,
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+        .. versionadded:: neon
 
     :return:
 
@@ -1793,6 +1869,10 @@ def update(name,
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get('type')
     all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
+
+    if boot is not None:
+        boot = _handle_remote_boot_params(boot)
+
     new_desc = ElementTree.fromstring(_gen_xml(name,
                                                cpu,
                                                mem,
@@ -1802,6 +1882,7 @@ def update(name,
                                                domain.OSType(),
                                                desc.find('.//os/type').get('arch'),
                                                graphics,
+                                               boot,
                                                **kwargs))
 
     # Update the cpu
@@ -1810,6 +1891,48 @@ def update(name,
         cpu_node.text = six.text_type(cpu)
         cpu_node.set('current', six.text_type(cpu))
         need_update = True
+
+    # Update the kernel boot parameters
+    boot_tags = ['kernel', 'initrd', 'cmdline']
+    parent_tag = desc.find('os')
+
+    # We need to search for each possible subelement, and update it.
+    for tag in boot_tags:
+        # The Existing Tag...
+        found_tag = desc.find(tag)
+
+        # The new value
+        boot_tag_value = boot.get(tag, None) if boot else None
+
+        # Existing tag is found and values don't match
+        if found_tag and found_tag.text != boot_tag_value:
+
+            # If the existing tag is found, but the new value is None
+            # remove it. If the existing tag is found, and the new value
+            # doesn't match update it. In either case, mark for update.
+            if boot_tag_value is None \
+               and boot is not None   \
+               and parent_tag is not None:
+                ElementTree.remove(parent_tag, tag)
+            else:
+                found_tag.text = boot_tag_value
+
+            need_update = True
+
+        # Existing tag is not found, but value is not None
+        elif found_tag is None and boot_tag_value is not None:
+
+            # Need to check for parent tag, and add it if it does not exist.
+            # Add a subelement and set the value to the new value, and then
+            # mark for update.
+            if parent_tag is not None:
+                child_tag = ElementTree.SubElement(parent_tag, tag)
+            else:
+                new_parent_tag = ElementTree.Element('os')
+                child_tag = ElementTree.SubElement(new_parent_tag, tag)
+
+            child_tag.text = boot_tag_value
+            need_update = True
 
     # Update the memory, note that libvirt outputs all memory sizes in KiB
     for mem_node_name in ['memory', 'currentMemory']:
