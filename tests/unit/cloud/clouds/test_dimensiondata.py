@@ -23,7 +23,7 @@ from salt.utils.versions import LooseVersion
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch, __version__ as mock_version
+from tests.support.mock import MagicMock, patch, __version__ as mock_version
 from tests.unit.cloud.clouds import _preferred_ip
 
 VM_NAME = 'winterfell'
@@ -57,7 +57,6 @@ class ExtendedTestCase(TestCase):
             self.assertEqual(exc.message, exc_msg)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for salt.cloud.clouds.dimensiondata module.

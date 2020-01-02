@@ -45,19 +45,6 @@ def fire_master(data, tag, preload=None):
         #  We can't send an event if we're in masterless mode
         log.warning('Local mode detected. Event with tag %s will NOT be sent.', tag)
         return False
-    if __opts__['transport'] == 'raet':
-        channel = salt.transport.client.ReqChannel.factory(__opts__)
-        load = {'id': __opts__['id'],
-                'tag': tag,
-                'data': data,
-                'cmd': '_minion_event'}
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        finally:
-            channel.close()
-        return True
 
     if preload or __opts__.get('__cli') == 'salt-call':
         # If preload is specified, we must send a raw event (this is
@@ -85,16 +72,15 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
-            try:
-                channel.send(load)
-                # channel.send was successful.
-                # Ensure ret is True.
-                ret = True
-            except Exception:
-                ret = False
-            finally:
-                channel.close()
+            with salt.transport.client.ReqChannel.factory(__opts__,
+                                                          master_uri=master) as channel:
+                try:
+                    channel.send(load)
+                    # channel.send was successful.
+                    # Ensure ret is True.
+                    ret = True
+                except Exception:  # pylint: disable=bare-except
+                    ret = False
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster
@@ -120,13 +106,12 @@ def fire(data, tag):
         salt '*' event.fire '{"data":"my event data"}' 'tag'
     '''
     try:
-        event = salt.utils.event.get_event('minion',  # was __opts__['id']
+        with salt.utils.event.get_event('minion',  # was __opts__['id']
                                            sock_dir=__opts__['sock_dir'],
                                            transport=__opts__['transport'],
                                            opts=__opts__,
-                                           listen=False)
-
-        return event.fire_event(data, tag)
+                                           listen=False) as event:
+            return event.fire_event(data, tag)
     except Exception:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)

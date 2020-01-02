@@ -820,9 +820,11 @@ def cors_tool():
             resp_head['Connection'] = 'keep-alive'
             resp_head['Access-Control-Max-Age'] = '1400'
 
-        # CORS requests should short-circuit the other tools.
-        cherrypy.response.body = ''
+        # Note: CherryPy on Py3 uses binary objects for the response
+        # Python 2.6 also supports the byte prefix, so no need for conditionals
+        cherrypy.response.body = b''
         cherrypy.response.status = 200
+        # CORS requests should short-circuit the other tools.
         cherrypy.serving.request.handler = None
 
         # Needed to avoid the auth_tool check.

@@ -8,14 +8,14 @@ import pkg_resources
 import os.path
 import sys
 
-# imprt salt paths
-from tests.support.paths import TESTS_DIR
+# Import test support libs
+from tests.support.runtests import RUNTIME_VARS
 
 # import Python Third Party Libs
 # pylint: disable=import-error
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto.ec2.elb
     HAS_BOTO = True
 except ImportError:
@@ -60,7 +60,6 @@ import salt.utils.versions
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 log = logging.getLogger(__name__)
 
@@ -93,7 +92,6 @@ def _has_required_moto():
     return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_moto() is False, 'The moto module must be >= to {0} for '
@@ -104,7 +102,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MASTER_OPTS
+        opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['boto', 'args', 'systemd', 'path', 'platform'])
