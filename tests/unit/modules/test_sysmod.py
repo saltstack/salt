@@ -8,11 +8,9 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -80,7 +78,6 @@ class Mockloader(object):
         return sysmod.__salt__  # renderers do not have '.'s; but whatever. This is for convenience
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SysmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.sysmod

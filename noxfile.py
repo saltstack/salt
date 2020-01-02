@@ -349,7 +349,7 @@ def _install_requirements(session, transport, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install('--progress-bar=off', 'coverage==4.5.3', silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', 'coverage==5.0.1', silent=PIP_INSTALL_SILENT)
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
@@ -877,13 +877,22 @@ def _pytest(session, coverage, cmd_args):
         else:
             session.run('py.test', *cmd_args, env=env)
     except CommandFailed:
+        # Not rerunning failed tests for now
+        raise
+
+        # pylint: disable=unreachable
         # Re-run failed tests
         session.log('Re-running failed tests')
+
+        for idx, parg in enumerate(cmd_args):
+            if parg.startswith('--junitxml='):
+                cmd_args[idx] = parg.replace('.xml', '-rerun-failed.xml')
         cmd_args.append('--lf')
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
             session.run('py.test', *cmd_args, env=env)
+        # pylint: enable=unreachable
 
 
 def _lint(session, rcfile, flags, paths):

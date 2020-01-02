@@ -95,6 +95,11 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    .. note::
+        Since this is looking for the latest version available, a refresh_db
+        will be triggered by default. This can take some time. To avoid this set
+        ``refresh`` to ``False``.
+
     Args:
         names (str): A single or multiple names to lookup
 
@@ -1450,8 +1455,8 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
     elif len(pkg_params) == 1:
         # A dict of packages was passed, but it contains only 1 key, so we need
         # to add the 'extra_install_flags'
-        for pkg in pkg_params:
-            pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
+        pkg = next(iter(pkg_params))
+        pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
@@ -1517,7 +1522,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             continue
 
         # Is the installer in a location that requires caching
-        if installer.startswith(('salt:', 'http:', 'https:', 'ftp:')):
+        if __salt__['config.valid_fileproto'](installer):
 
             # Check for the 'cache_dir' parameter in the .sls file
             # If true, the entire directory will be cached instead of the
@@ -2154,6 +2159,13 @@ def _get_name_map(saltenv='base'):
     return u_name_map
 
 
+def get_package_info(name, saltenv='base'):
+    '''
+    Return package info. Returns empty map if package not available.
+    '''
+    return _get_package_info(name=name, saltenv=saltenv)
+
+
 def _get_package_info(name, saltenv='base'):
     '''
     Return package info. Returns empty map if package not available
@@ -2188,7 +2200,7 @@ def _get_latest_pkg_version(pkginfo):
 
 def compare_versions(ver1='', oper='==', ver2=''):
     '''
-    Compare software package versions
+    Compare software package versions. Made public for use with Jinja
 
     Args:
         ver1 (str): A software version to compare
