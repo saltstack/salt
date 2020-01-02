@@ -207,7 +207,7 @@ def verify_files(files, user):
             msg = 'No permissions to access "{0}", are you running as the correct user?'.format(fn_)
             raise SaltSystemExit(msg=msg)
 
-        except OSError as err:
+        except OSError as err:  # pylint: disable=duplicate-except
             msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
             raise SaltSystemExit(msg=msg)
 
