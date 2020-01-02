@@ -74,11 +74,10 @@ class TestSuite(_TestSuite):
 
         # Store a reference to all class attributes before running the setUpClass method
         initial_class_attributes = dir(test.__class__)
-        ret = super(TestSuite, self)._handleClassSetUp(test, result)
+        super(TestSuite, self)._handleClassSetUp(test, result)
         # Store the difference in in a variable in order to check later if they were deleted
         test.__class__._prerun_class_attributes = [
                 attr for attr in dir(test.__class__) if attr not in initial_class_attributes]
-        return ret
 
     def _tearDownPreviousClass(self, test, result):
         # Run any tearDownClass code defined
