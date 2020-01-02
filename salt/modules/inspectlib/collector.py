@@ -498,7 +498,7 @@ if __name__ == '__main__':
         print("This module is not intended to use directly!", file=sys.stderr)
         sys.exit(1)
 
-    pidfile, dbfile, mode = sys.argv[1:]
+    pidfile, dbfile, mode = sys.argv[1:]  # pylint: disable=unbalanced-tuple-unpacking
     if is_alive(pidfile):
         sys.exit(1)
 
