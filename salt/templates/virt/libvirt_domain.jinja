@@ -5,7 +5,17 @@
         <currentMemory unit='KiB'>{{ mem }}</currentMemory>
         <os>
                 <type arch='{{ arch }}'>{{ os_type }}</type>
-                {% if kernel %}<kernel>{{ kernel }}</kernel>{% endif %}
+                {% if boot %}
+                  {% if 'kernel' in boot %}
+                    <kernel>{{ boot.kernel }}</kernel>
+                  {% endif %}
+                  {% if 'initrd' in boot %}
+                    <initrd>{{ boot.initrd }}</initrd>
+                  {% endif %}
+                  {% if 'cmdline' in boot %}
+                    <cmdline>{{ boot.cmdline }}</cmdline>
+                  {% endif %}
+                {% endif %}
                 {% for dev in boot_dev %}
                 <boot dev='{{ dev }}' />
                 {% endfor %}
