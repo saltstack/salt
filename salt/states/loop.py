@@ -30,7 +30,7 @@ in the returned list and compares its value to the string `InService`.
     This state allows arbitrary python code to be executed through the condition
     parameter which is literally evaluated within the state. Please use caution.
 
-.. versionchanged:: Natrium
+.. versionchanged:: 3000
 
 A version that does not use eval is now available. It uses either the python ``operator``
 to compare the result of the function called in ``name``, which can be one of the
@@ -161,7 +161,7 @@ def until_no_eval(
     :param list args: args to pass to the salt module.function.
     :param dict kwargs: kwargs to pass to the salt module.function.
 
-    .. versionadded:: Natrium
+    .. versionadded:: 3000
 
     '''
     ret = {'name': name, 'comment': '', 'changes': {}, 'result': False}
