@@ -385,7 +385,7 @@ class Terminal(object):
                 raise ValueError('Unsupported signal: {0}'.format(sig))
             # pylint: enable=E1101
 
-        def terminate(self):
+        def terminate(self, force=False):
             '''
             Terminates the process
             '''
