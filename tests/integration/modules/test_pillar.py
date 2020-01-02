@@ -4,8 +4,8 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.paths import TMP_STATE_TREE
 
 
 class PillarModuleTest(ModuleCase):
@@ -33,7 +33,7 @@ class PillarModuleTest(ModuleCase):
         the pillar back to the minion.
         '''
         self.assertIn(
-            TMP_STATE_TREE,
+            RUNTIME_VARS.TMP_STATE_TREE,
             self.run_function('pillar.data')['master']['file_roots']['base']
         )
 
@@ -47,7 +47,7 @@ class PillarModuleTest(ModuleCase):
 
     def test_issue_5951_actual_file_roots_in_opts(self):
         self.assertIn(
-            TMP_STATE_TREE,
+            RUNTIME_VARS.TMP_STATE_TREE,
             self.run_function('pillar.data')['ext_pillar_opts']['file_roots']['base']
         )
 

@@ -138,7 +138,7 @@ class SMaster(object):
         return salt.daemons.masterapi.access_keys(self.opts)
 
 
-class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class Maintenance(salt.utils.process.SignalHandlingProcess):
     '''
     A generalized maintenance process which performs maintenance routines.
     '''
@@ -161,7 +161,6 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -225,7 +224,9 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
 
         # Make Start Times
         last = int(time.time())
+        last_git_pillar_update = last
 
+        git_pillar_update_interval = self.opts.get('git_pillar_update_interval', 0)
         old_present = set()
         while True:
             now = int(time.time())
@@ -233,7 +234,9 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 salt.daemons.masterapi.clean_old_jobs(self.opts)
                 salt.daemons.masterapi.clean_expired_tokens(self.opts)
                 salt.daemons.masterapi.clean_pub_auth(self.opts)
-            self.handle_git_pillar()
+            if (now - last_git_pillar_update) >= git_pillar_update_interval:
+                last_git_pillar_update = now
+                self.handle_git_pillar()
             self.handle_schedule()
             self.handle_key_cache()
             self.handle_presence(old_present)
@@ -353,7 +356,7 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             old_present.update(present)
 
 
-class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
     '''
     A process from which to update any dynamic fileserver backends
     '''
@@ -370,7 +373,6 @@ class FileserverUpdate(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -782,7 +784,7 @@ class Master(SMaster):
         sys.exit(0)
 
 
-class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class Halite(salt.utils.process.SignalHandlingProcess):
     '''
     Manage the Halite server
     '''
@@ -799,7 +801,6 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['hopts'],
             log_queue=state['log_queue'],
@@ -821,7 +822,7 @@ class Halite(salt.utils.process.SignalHandlingMultiprocessingProcess):
         halite.start(self.hopts)
 
 
-class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class ReqServer(salt.utils.process.SignalHandlingProcess):
     '''
     Starts up the master request server, minions send results to this
     interface.
@@ -848,7 +849,6 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             state['key'],
@@ -947,11 +947,13 @@ class ReqServer(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.process_manager.send_signal_to_processes(signum)
             self.process_manager.kill_children()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
 
-class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class MWorker(salt.utils.process.SignalHandlingProcess):
     '''
     The worker multiprocess instance to manage the backend operations for the
     salt master.
@@ -991,7 +993,6 @@ class MWorker(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self._is_child = True
         super(MWorker, self).__init__(
             log_queue=state['log_queue'],
             log_queue_level=state['log_queue_level']

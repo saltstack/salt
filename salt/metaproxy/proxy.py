@@ -59,7 +59,7 @@ from salt.minion import ProxyMinion
 
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess)
+                                SignalHandlingProcess)
 
 
 import tornado.gen  # pylint: disable=F0401
@@ -350,7 +350,7 @@ def thread_return(cls, minion_instance, opts, data):
     allow_missing_funcs = any([
         minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
         for executor in executors
-        if '{0}.allow_missing_func' in minion_instance.executors
+        if '{0}.allow_missing_func'.format(executor) in minion_instance.executors
     ])
     if function_name in minion_instance.functions or allow_missing_funcs is True:
         try:
@@ -725,8 +725,10 @@ def handle_decoded_payload(self, data):
             # running on windows
             instance = None
         with default_signals(signal.SIGINT, signal.SIGTERM):
-            process = SignalHandlingMultiprocessingProcess(
-                target=self._target, args=(instance, self.opts, data, self.connected)
+            process = SignalHandlingProcess(
+                target=self._target,
+                name='ProcessPayload',
+                args=(instance, self.opts, data, self.connected)
             )
     else:
         process = threading.Thread(

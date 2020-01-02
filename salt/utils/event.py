@@ -418,6 +418,17 @@ class SaltEvent(object):
             self.cpush = True
         return self.cpush
 
+    def close_pull(self):
+        '''
+        Close the pusher connection (if established)
+        '''
+        if not self.cpush:
+            return
+
+        self.pusher.close()
+        self.pusher = None
+        self.cpush = False
+
     @classmethod
     def unpack(cls, raw, serial=None):
         if serial is None:
@@ -756,9 +767,9 @@ class SaltEvent(object):
 
     def destroy(self):
         if self.subscriber is not None:
-            self.subscriber.close()
+            self.close_pub()
         if self.pusher is not None:
-            self.pusher.close()
+            self.close_pull()
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
@@ -857,6 +868,7 @@ class SaltEvent(object):
         # This will handle reconnects
         return self.subscriber.read_async(event_handler)
 
+    # pylint: disable=W1701
     def __del__(self):
         # skip exceptions in destroy-- since destroy() doesn't cover interpreter
         # shutdown-- where globals start going missing
@@ -864,6 +876,13 @@ class SaltEvent(object):
             self.destroy()
         except Exception:
             pass
+    # pylint: enable=W1701
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -912,6 +931,15 @@ class NamespacedEvent(object):
         self.event.fire_event(data, tagify(tag, base=self.base))
         if self.print_func is not None:
             self.print_func(tag, data)
+
+    def destroy(self):
+        self.event.destroy()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
 
 class MinionEvent(SaltEvent):
@@ -1031,11 +1059,13 @@ class AsyncEventPublisher(object):
         if hasattr(self, 'puller'):
             self.puller.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
-class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventPublisher(salt.utils.process.SignalHandlingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
@@ -1050,7 +1080,6 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -1140,11 +1169,13 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
         self.close()
         super(EventPublisher, self)._handle_signals(signum, sigframe)
 
+    # pylint: disable=W1701
     def __del__(self):
         self.close()
+    # pylint: enable=W1701
 
 
-class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventReturn(salt.utils.process.SignalHandlingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
@@ -1174,7 +1205,6 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
         self.__init__(
             state['opts'],
             log_queue=state['log_queue'],
@@ -1342,13 +1372,11 @@ class StateFire(object):
             'tok': self.auth.gen_token(b'salt'),
         })
 
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True
 
     def fire_running(self, running):
@@ -1374,11 +1402,9 @@ class StateFire(object):
                 'tag': tag,
                 'data': running[stag],
             })
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True
