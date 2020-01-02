@@ -14,13 +14,20 @@ Versions are `MAJOR.PATCH`.
 
 ### Deprecated
 - [#55552](https://github.com/saltstack/salt/pull/55552) - The config options `hgfs_env_whitelist`, `hgfs_env_blacklist`, `svnfs_env_whitelist`, and `svnfs_env_whitelist` have been deprecated in favor of `hgfs_saltenv_whitelist`, `hgfs_saltenv_blacklist`, `svnfs_saltenv_whitelist`, `svnfs_saltenv_blacklist`.
-
+- [#55569](https://github.com/saltstack/salt/pull/55569) - Deprecate nova cloud driver in favor of the openstack driver.
 - [#55609](https://github.com/saltstack/salt/pull/55609) - Remove smartos grains `hypervisor_uuid` and `datacenter` in favor of `mdata:sdc:server_uuid` and `mdata:sdc:datacenter_name`.
 - [#55539](https://github.com/saltstack/salt/pull/55539) - Deprecate salt.auth.Authorize class and the any_auth method
-
+- [#55573](https://github.com/saltstack/salt/pull/55573) - Deprecate `quiet` kwarg in cmd.run state module. Please set `output_loglevel` to `quiet` instead.
+- [#55641](https://github.com/saltstack/salt/pull/55641) - Deprecate `enviroment` kwarg from heat state and execution module. Please use correct spelling `environment`.
+- [#55682](https://github.com/saltstack/salt/pull/55682) - Deprecate `get_known_host` and `recv_known_host` functions from ssh module.
+- [#55683](https://github.com/saltstack/salt/pull/55683) - Deprecate `prune_services` in the firewall state module to be False by default. And update `force_masquerade` to be False by default in the firewall execution module.
+- [#55722](https://github.com/saltstack/salt/pull/55722) - Deprecate all functions in salt/utils/__init__.py.
+- [#55725](https://github.com/saltstack/salt/pull/55725) - Deprecate `gitfs_env_whitelist` and `gitfs_env_blacklist` in favor of `gitfs_saltenv_whitelist` and `gitfs_saltenv_blacklist`.
 
 ### Changed
 
+- [#54013](https://github.com/saltstack/salt/pull/54103) - Set `session_id`
+  cookie in the rest_tornado backend.
 - [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20) - Changed to numeric versions.
 - [SEP 1](https://github.com/saltstack/salt-enhancement-proposals/blob/master/accepted/0001-changelog-format.md), [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20) - Adopted keepachangelog format.
 
@@ -28,9 +35,11 @@ Versions are `MAJOR.PATCH`.
 
 ### Added
 
-- [#54917](https://github.com/saltstack/salt/pull/54917) - Added get_settings, put_settings and flush_synced methods for Elasticsearch module. - [@Oloremo](https://github.com/Oloremo)
+- [#54505](https://github.com/saltstack/salt/issues/54505) - Added cluster get_settings, put_settings and flush_synced methods for Elasticsearch module. - [@Oloremo](https://github.com/Oloremo)
+- [#53736](https://github.com/saltstack/salt/issues/53736) - Added index get_settings, put_settings methods for Elasticsearch module. - [@Oloremo](https://github.com/Oloremo)
 - [#55418](https://github.com/saltstack/salt/pull/55418) - Added clean_parent argument for the archive state. - [@Oloremo](https://github.com/Oloremo)
 - [#55593](https://github.com/saltstack/salt/issues/55593) - Added a support for a global proxy to pip module. - [@Oloremo](https://github.com/Oloremo)
+- [#55443](https://github.com/saltstack/salt/issues/55443) - Added a skip_files_list_verify argument to archive.extracted state. - [@Oloremo](https://github.com/Oloremo)
 
 ---
 

@@ -13,9 +13,9 @@ them onto a logstash endpoint.
 
         engines:
           - logstash:
-            host: log.my_network.com
-            port: 5959
-            proto: tcp
+              host: log.my_network.com
+              port: 5959
+              proto: tcp
 
 :depends: logstash
 '''
