@@ -406,7 +406,8 @@ def interfaces(device=None,
                             if best:
                                 # determine the global best match
                                 compare = [best_net_match]
-                                if not best_net_match: compare = []
+                                if not best_net_match:
+                                    compare = []
                                 compare.extend(list(map(_get_network_obj, inet_ips)))
                                 new_best_net_match = max(compare)
                                 if new_best_net_match != best_net_match:
