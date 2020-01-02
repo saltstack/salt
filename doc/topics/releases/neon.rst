@@ -164,8 +164,8 @@ State Changes
 Enhancements to Engines
 =======================
 
-  - A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been added to
-  export Salt events to fluentd.
+- A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been
+  added to export Salt events to fluentd.
 
   .. code-block:: yaml
 
@@ -174,7 +174,7 @@ Enhancements to Engines
           host: localhost
           port: 24224
 
-  .. code-block:: none
+  .. code-block::
 
     <source>
       @type forward
@@ -461,4 +461,3 @@ salt.auth.Authorize Class Removal
 - The salt.auth.Authorize Class inside of the `salt/auth/__init__.py` file has been removed and
   the `any_auth` method inside of the file `salt/utils/minions.py`. These method and classes were
   not being used inside of the salt code base.
-  
