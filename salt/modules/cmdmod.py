@@ -418,7 +418,13 @@ def _run(cmd,
 
         # Ensure environment is correct for a newly logged-in user by running
         # the command under bash as a login shell
-        cmd = '/bin/bash -l -c {cmd}'.format(cmd=_cmd_quote(cmd))
+        try:
+            user_shell = __salt__['user.info'](runas)['shell']
+            if re.search('bash$', user_shell):
+                cmd = '{shell} -l -c {cmd}'.format(shell=user_shell,
+                                                   cmd=_cmd_quote(cmd))
+        except KeyError:
+            pass
 
         # Ensure the login is simulated correctly (note: su runs sh, not bash,
         # which causes the environment to be initialised incorrectly, which is
