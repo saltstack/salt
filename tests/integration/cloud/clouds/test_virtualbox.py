@@ -349,8 +349,6 @@ class BaseVirtualboxTests(TestCase):
 
 
 class CreationDestructionVirtualboxTests(VirtualboxTestCase):
-    def setUp(self):
-        super(CreationDestructionVirtualboxTests, self).setUp()
 
     def test_vm_creation_and_destruction(self):
         vm_name = BASE_BOX_NAME
