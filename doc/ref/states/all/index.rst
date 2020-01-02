@@ -244,6 +244,7 @@ state modules
     rabbitmq_cluster
     rabbitmq_plugin
     rabbitmq_policy
+    rabbitmq_upstream
     rabbitmq_user
     rabbitmq_vhost
     rbac_solaris
