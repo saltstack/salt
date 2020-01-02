@@ -31,6 +31,7 @@ state modules
     bigip
     blockdev
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
