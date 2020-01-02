@@ -82,8 +82,11 @@ as well as managing keystore files.
             -----END CERTIFICATE-----
 
 
+Jinja enhancements
+==================
+
 Troubleshooting Jinja map files
-===============================
+-------------------------------
 
 A new :py:func:`execution module <salt.modules.jinja>` for ``map.jinja`` troubleshooting
 has been added.
@@ -108,6 +111,18 @@ The module can be also used to test ``json`` and ``yaml`` maps:
 
   salt myminion jinja.import_json myformula/defaults.json
 
+
+json_query filter
+-----------------
+
+A port of Ansible :jinja_ref:`json_query` Jinja filter has been added. It allows
+making queries against JSON data using `JMESPath language`_. Could be used to
+filter ``pillar`` data, ``yaml`` maps, and also useful with :jinja_ref:`http_query`.
+
+Depends on the `jmespath`_ Python module.
+
+.. _`JMESPath language`: http://jmespath.org/
+.. _`jmespath`: https://github.com/jmespath/jmespath.py
 
 Slot Syntax Updates
 ===================
@@ -134,6 +149,26 @@ The slot syntax has been updated to support parsing dictionary responses and to 
      Started: 09:59:58.623575
     Duration: 1.229 ms
      Changes:
+
+Also, slot parsing is now supported inside of nested state data structures (dicts, lists, unless/onlyif args):
+
+.. code-block:: yaml
+
+  demo slot parsing for nested elements:
+    file.managed:
+      - name: /tmp/slot.txt
+      - source: salt://slot.j2
+      - template: jinja
+      - context:
+          # Slot inside of the nested context dictionary
+          variable: __slot__:salt:test.echo(a_value)
+      - unless:
+        - fun: file.search
+          args:
+            # Slot as unless argument
+            - __slot__:salt:test.echo(/tmp/slot.txt)
+            - "DO NOT OVERRIDE"
+          ignore_if_missing: True
 
 
 State Changes

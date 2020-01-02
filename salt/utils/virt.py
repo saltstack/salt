@@ -6,14 +6,57 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import os
+import re
 import time
 import logging
+import hashlib
+
+# pylint: disable=E0611
+from salt.ext.six.moves.urllib.parse import urlparse
+from salt.ext.six.moves.urllib import request
 
 # Import salt libs
 import salt.utils.files
 
-
 log = logging.getLogger(__name__)
+
+
+def download_remote(url, dir):
+    """
+    Attempts to download a file specified by 'url'
+
+    :param url: The full remote path of the file which should be downloaded.
+    :param dir: The path the file should be downloaded to.
+    """
+
+    try:
+        rand = hashlib.md5(os.urandom(32)).hexdigest()
+        remote_filename = urlparse(url).path.split('/')[-1]
+        full_directory = \
+            os.path.join(dir, "{}-{}".format(rand, remote_filename))
+        with salt.utils.files.fopen(full_directory, 'wb') as file,\
+                request.urlopen(url) as response:
+            file.write(response.rease())
+
+        return full_directory
+
+    except Exception as err:
+        raise err
+
+
+def check_remote(cmdline_path):
+    """
+    Checks to see if the path provided contains ftp, http, or https. Returns
+    the full path if it is found.
+
+    :param cmdline_path: The path to the initrd image or the kernel
+    """
+    regex = re.compile('^(ht|f)tps?\\b')
+
+    if regex.match(urlparse(cmdline_path).scheme):
+        return True
+
+    return False
 
 
 class VirtKey(object):

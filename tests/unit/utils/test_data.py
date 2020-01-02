@@ -628,6 +628,27 @@ class DataTestCase(TestCase):
             ['one', 'two', 'three', '4', '5']
         )
 
+    def test_json_query(self):
+        # Raises exception if jmespath module is not found
+        with patch('salt.utils.data.jmespath', None):
+            self.assertRaisesRegex(
+                RuntimeError, 'requires jmespath',
+                salt.utils.data.json_query, {}, '@'
+            )
+
+        # Test search
+        user_groups = {
+            'user1': {'groups': ['group1', 'group2', 'group3']},
+            'user2': {'groups': ['group1', 'group2']},
+            'user3': {'groups': ['group3']},
+        }
+        expression = '*.groups[0]'
+        primary_groups = ['group1', 'group1', 'group3']
+        self.assertEqual(
+            sorted(salt.utils.data.json_query(user_groups, expression)),
+            primary_groups
+        )
+
 
 class FilterFalseyTestCase(TestCase):
     '''
