@@ -5,8 +5,8 @@ from __future__ import absolute_import
 import logging
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, mock_open
+from tests.support.unit import TestCase
+from tests.support.mock import patch, mock_open
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -38,7 +38,6 @@ seZBENjwjJA6zZmTXvYyzV5OBP4JyOhYuG9aqr7e6/yjPBEtZv0TJ9KMMbcywvE9
 '''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.cert_info
