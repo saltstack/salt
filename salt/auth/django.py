@@ -61,7 +61,7 @@ try:
     import django
     from django.db import connection  # pylint: disable=no-name-in-module
     HAS_DJANGO = True
-except Exception as exc:
+except Exception as exc:  # pylint: disable=broad-except
     # If Django is installed and is not detected, uncomment
     # the following line to display additional information
     #log.warning('Could not load Django auth module. Found exception: %s', exc)
@@ -84,7 +84,7 @@ def __virtual__():
 def is_connection_usable():
     try:
         connection.connection.ping()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
     else:
         return True

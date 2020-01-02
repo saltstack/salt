@@ -237,7 +237,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     except ImportError as e:
         log.error('Failed to import library: %s', e)
         return {}
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error('Failed on Error: %s', e)
         log.debug('django_orm traceback', exc_info=True)
         return {}

@@ -223,7 +223,7 @@ def get_ip(data):
     '''
     try:
         ip = data.public_ips[0]
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ip = data.private_ips[0]
     return ip
 
@@ -360,7 +360,7 @@ def create(vm_):
                         ex_blockdevicemapping['VolumeSize'],
                         ex_blockdevicemapping['VirtualName']
                     )
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Error creating volume %s on CLOUDSTACK\n\n'
                     'The following exception was thrown by libcloud when trying to '
@@ -374,7 +374,7 @@ def create(vm_):
         ex_blockdevicemapping = {}
     try:
         data = conn.create_node(**kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on CLOUDSTACK\n\n'
             'The following exception was thrown by libcloud when trying to '
@@ -388,7 +388,7 @@ def create(vm_):
     for device_name in six.iterkeys(volumes):
         try:
             conn.attach_volume(data, volumes[device_name], device_name)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Error attaching volume %s on CLOUDSTACK\n\n'
                 'The following exception was thrown by libcloud when trying to '

@@ -750,7 +750,7 @@ def set_public_lan(lan_id):
                             lan_id=lan_id,
                             public=True)
         return lan['id']
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         lan = conn.create_lan(datacenter_id,
                               LAN(public=True,
                                   name='Public LAN'))
@@ -898,7 +898,7 @@ def create(vm_):
                 'Loaded node data for %s:\nname: %s\nstate: %s',
                 vm_['name'], pprint.pformat(data['name']), data['state']
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled

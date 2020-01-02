@@ -37,7 +37,7 @@ def wollist(maclist, bcast='255.255.255.255', destport=9):
                 wol(mac, bcast, destport)
                 print('Waking up {0}'.format(mac))
                 ret.append(mac)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         __jid_event__.fire_event({'error': 'Failed to open the MAC file. Error: {0}'.format(err)}, 'progress')
         return []
     return ret

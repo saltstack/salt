@@ -58,7 +58,7 @@ def deserialize(stream_or_string, **options):
     except ConstructorError as error:
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
@@ -80,7 +80,7 @@ def serialize(obj, **options):
         if response.endswith('\n'):
             return response[:-1]
         return response
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while serializing')
         raise SerializationError(error)
 

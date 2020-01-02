@@ -480,7 +480,7 @@ def is_alive(pidfile):
         with salt.utils.files.fopen(pidfile) as fp_:
             os.kill(int(fp_.read().strip()), 0)
         return True
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         if os.access(pidfile, os.W_OK) and os.path.isfile(pidfile):
             os.unlink(pidfile)
         return False

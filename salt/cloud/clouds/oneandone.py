@@ -671,7 +671,7 @@ def create(vm_):
                 pprint.pformat(data['name']),
                 data['status']['state']
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled

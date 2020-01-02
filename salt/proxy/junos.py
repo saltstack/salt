@@ -117,19 +117,19 @@ def init(opts):
         timeout = int(opts['proxy']['timeout'])
         try:
             thisproxy['conn'].timeout = timeout
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             log.error('Not able to set timeout due to: %s', str(ex))
         else:
             log.debug('RPC timeout set to %d seconds', timeout)
 
     try:
         thisproxy['conn'].bind(cu=jnpr.junos.utils.config.Config)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error('Bind failed with Config class due to: {}'.format(str(ex)))
 
     try:
         thisproxy['conn'].bind(sw=jnpr.junos.utils.sw.SW)
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error('Bind failed with SW class due to: {}'.format(str(ex)))
     thisproxy['initialized'] = True
 
@@ -234,5 +234,5 @@ def shutdown(opts):
     try:
         thisproxy['conn'].close()
 
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass

@@ -954,7 +954,7 @@ class SSHCase(ShellCase):
 
         try:
             return salt.utils.json.loads(ret)['localhost']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return ret
 
 

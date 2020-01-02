@@ -182,7 +182,7 @@ def _salt(fun, *args, **kw):
                 if not ping:
                     raise ValueError('Unreachable')
                 break
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ping = False
                 ping_retries += 1
                 log.error('%s unreachable, retrying', target)

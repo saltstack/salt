@@ -109,7 +109,7 @@ class PlainTextSocketAppender(object):
             try:
                 self.open_connection()
                 return
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if self.verbose:
                     log.warning('Unable to connect to Logentries')
 

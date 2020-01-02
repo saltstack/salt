@@ -211,7 +211,7 @@ def _setup_conn(**kwargs):
                     'Use \'kubeconfig\' and \'context\' instead.')
             try:
                 return _setup_conn_old(**kwargs)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise CommandExecutionError('Old style kubernetes configuration is only supported up to python-kubernetes 2.0.0')
         else:
             raise CommandExecutionError('Invalid kubernetes configuration. Parameter \'kubeconfig\' and \'context\' are required.')
@@ -232,7 +232,7 @@ def _cleanup_old(**kwargs):
             salt.utils.files.safe_rm(key)
         if ca and os.path.exists(ca) and os.path.basename(ca).startswith('salt-kube-'):
             salt.utils.files.safe_rm(ca)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
