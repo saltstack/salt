@@ -409,7 +409,7 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                      'changes': {},
                      'result': False}
 
-        with patch.dict(schedule.__opts__, {'schedule': {'job1': job1}, 'sock_dir': SOCK_DIR}):
+        with patch.dict(schedule.__opts__, {'schedule': {'job1': job1}, 'sock_dir': self.sock_dir}):
             mock = MagicMock(return_value=True)
             with patch.dict(schedule.__salt__, {'event.fire': mock}):
                 _ret_value = {'complete': True, 'schedule': {'job1': job1}}
