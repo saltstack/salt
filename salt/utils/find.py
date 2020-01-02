@@ -576,7 +576,7 @@ class ExecOption(Option):
                     salt.utils.stringutils.to_str(err))
             return "{0}:\n{1}\n".format(command, salt.utils.stringutils.to_str(out))
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(
                 'Exception while executing command "%s":\n\n%s',
                 command,

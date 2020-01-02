@@ -262,7 +262,7 @@ def items(*args, **kwargs):
                 translate_newlines=True,
                 opts=__opts__,
                 valid_rend=__opts__['decrypt_pillar_renderers'])
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Failed to decrypt pillar override: {0}'.format(exc)
             )

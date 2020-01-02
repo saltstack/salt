@@ -624,7 +624,7 @@ def _run(name, **kwargs):
             mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         ret['comment'] = 'Module function {0} threw an exception. Exception: {1}'.format(name, e)
         ret['result'] = False
         return ret

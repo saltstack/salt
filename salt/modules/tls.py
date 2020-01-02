@@ -359,7 +359,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                     key = OpenSSL.crypto.load_privatekey(
                         OpenSSL.crypto.FILETYPE_PEM, fic2.read())
                     bits = key.bits()
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     bits = 2048
                 try:
                     days = (datetime.strptime(
@@ -554,7 +554,7 @@ def _read_cert(cert):
                     OpenSSL.crypto.FILETYPE_PEM,
                     rfh.read()
                 )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception('Failed to read cert from path %s', cert)
             return None
     else:
@@ -1498,7 +1498,7 @@ def create_ca_signed_cert(ca_name,
                     native_exts_obj,
                     i)
                 exts.append(ext)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.error('X509 extensions are unsupported in pyOpenSSL '
                       'versions prior to 0.14. Upgrade required to '
                       'use extensions. Current version: {0}'.format(

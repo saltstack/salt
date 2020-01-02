@@ -246,7 +246,7 @@ def _get_service_instance(host, username, password, protocol,
         if principal is not None and domain is not None:
             try:
                 token = get_gssapi_token(principal, host, domain)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise salt.exceptions.VMwareConnectionError(six.text_type(exc))
         else:
             err_msg = 'Login mechanism \'{0}\' was specified but the' \
@@ -310,7 +310,7 @@ def _get_service_instance(host, username, password, protocol,
                         b64token=token,
                         mechanism=mechanism
                     )
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception(exc)
                     err_msg = exc.msg if hasattr(exc, 'msg') else six.text_type(exc)
                     raise salt.exceptions.VMwareConnectionError(

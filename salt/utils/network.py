@@ -92,7 +92,7 @@ def host_to_ips(host):
             ips.append(ip)
         if not ips:
             ips = None
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ips = None
     return ips
 
@@ -225,7 +225,7 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
@@ -286,7 +286,7 @@ def is_ipv4_subnet(cidr):
     '''
     try:
         return '/' in cidr and bool(ipaddress.IPv4Network(cidr))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -296,7 +296,7 @@ def is_ipv6_subnet(cidr):
     '''
     try:
         return '/' in cidr and bool(ipaddress.IPv6Network(cidr))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -1348,7 +1348,7 @@ def mac2eui64(mac, prefix=None):
             net = ipaddress.ip_network(prefix, strict=False)
             euil = int('0x{0}'.format(eui64), 16)
             return '{0}/{1}'.format(net[euil], net.prefixlen)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return
 
 

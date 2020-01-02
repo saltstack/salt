@@ -1197,7 +1197,7 @@ def is_link(path):
 
     try:
         return salt.utils.path.islink(path)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
 
@@ -1232,7 +1232,7 @@ def readlink(path):
         if exc.errno == errno.EINVAL:
             raise CommandExecutionError('{0} is not a symbolic link'.format(path))
         raise CommandExecutionError(exc.__str__())
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc)
 
 

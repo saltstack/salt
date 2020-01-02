@@ -312,7 +312,7 @@ class _Zypper(object):
                         data['info'] = 'Blocking process created at {0}.'.format(
                             datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
                         data['success'] = True
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     data = {'info': 'Unable to retrieve information about blocking process: {0}'.format(err.message),
                             'success': False}
             else:

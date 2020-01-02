@@ -271,7 +271,7 @@ def _dmi_cast(key, val, clean=True):
         else:
             try:
                 val = int(val)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
     return val

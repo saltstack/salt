@@ -155,7 +155,7 @@ def render(input, saltenv='base', sls='', argline='', **kws):
             extract_state_confs(data)
         except SaltRenderError:
             raise
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.exception(
                 'Error found while pre-processing the salt file %s:\n%s',
                 sls, err

@@ -630,7 +630,7 @@ def subdict_match(data,
         if regex_match:
             try:
                 return re.match(pattern, target)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Invalid regex \'%s\' in match', pattern)
                 return False
         else:

@@ -178,7 +178,7 @@ def call(napalm_device, method, *args, **kwargs):
         out = getattr(napalm_device.get('DRIVER'), method)(*args, **kwargs)
         # calls the method with the specified parameters
         result = True
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         # either not connected
         # either unable to execute the command
         hostname = napalm_device.get('HOSTNAME', '[unspecified hostname]')

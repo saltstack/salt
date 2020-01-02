@@ -168,7 +168,7 @@ def deserialize(stream_or_string, **options):
     except ConstructorError as error:
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
@@ -190,7 +190,7 @@ def serialize(obj, **options):
         if response.endswith('\n'):
             return response[:-1]
         return response
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while serializing')
         raise SerializationError(error)
 
@@ -281,7 +281,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_aggregate(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise ConstructorError('unable to build reset')
 
         node = copy.copy(node)
@@ -298,7 +298,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_reset(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise ConstructorError('unable to build reset')
 
         node = copy.copy(node)

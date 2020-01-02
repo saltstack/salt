@@ -180,7 +180,7 @@ def wrap_tmpl_func(render_str):
             log.exception('Rendering exception occurred')
             #return dict(result=False, data=six.text_type(exc))
             raise
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return dict(result=False, data=traceback.format_exc())
         else:
             if to_str:  # then render as string
@@ -422,7 +422,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 exc, out),
             line,
             tmplstr)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
@@ -475,7 +475,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             uri=context['sls'].replace('.', '/') if 'sls' in context else None,
             lookup=lookup
         ).render(**context)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltRenderError(mako.exceptions.text_error_template().render())
 
 
@@ -592,7 +592,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             target.write(salt.utils.stringutils.to_str(data))
         return {'result': True,
                 'data': tgt}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}

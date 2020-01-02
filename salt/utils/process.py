@@ -367,7 +367,7 @@ class ThreadPool(object):
                     func, args, kwargs
                 )
                 func(*args, **kwargs)
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 log.debug(err, exc_info=True)
 
 

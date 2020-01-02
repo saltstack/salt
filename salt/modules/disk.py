@@ -618,7 +618,7 @@ def hdparms(disks, args=None):
                     try:
                         val = int(val)
                         rvals.append(val)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         if '=' in val:
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
@@ -685,7 +685,7 @@ def hpa(disks, size=None):
     for disk, data in hpa_data.items():
         try:
             size = data['total'] - int(size)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if '%' in size:
                 size = int(size.strip('%'))
                 size = (100 - size) * data['total']
@@ -750,17 +750,17 @@ def smart_attributes(dev, attributes=None, values=None):
         data = dict(zip(fields, line[1:]))
         try:
             del data['_']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         for field in data:
             val = data[field]
             try:
                 val = int(val)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 try:
                     val = [int(value) for value in val.split(' ')]
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
             data[field] = val
 

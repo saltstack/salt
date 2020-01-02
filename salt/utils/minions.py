@@ -400,11 +400,11 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}
@@ -623,7 +623,7 @@ class CkMinions(object):
             try:
                 minions = list(eval(results))  # pylint: disable=W0123
                 return {'minions': minions, 'missing': missing}
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Invalid compound target: %s', expr)
                 return {'minions': [], 'missing': []}
 
@@ -734,7 +734,7 @@ class CkMinions(object):
                 if ssh_minions:
                     _res['minions'].extend(ssh_minions)
                     _res['ssh_minions'] = True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception(
                     'Failed matching available minions with %s pattern: %s',
                     tgt_type, expr)
@@ -773,7 +773,7 @@ class CkMinions(object):
                     vals.append(True)
                 else:
                     vals.append(False)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Invalid regular expression: %s', regex)
         return vals and all(vals)
 

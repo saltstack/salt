@@ -39,7 +39,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
                 return ''
         except requests.exceptions.HTTPError as exc:
             return ''
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             pass
 
         log.warning(

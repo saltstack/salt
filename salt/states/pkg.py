@@ -3043,7 +3043,7 @@ def uptodate(name, refresh=False, pkgs=None, **kwargs):
             if isinstance(pkgs, list):
                 packages = [pkg for pkg in packages if pkg in pkgs]
                 expected = {pkgname: pkgver for pkgname, pkgver in six.iteritems(expected) if pkgname in pkgs}
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = six.text_type(exc)
             return ret
     else:

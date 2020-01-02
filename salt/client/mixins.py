@@ -382,7 +382,7 @@ class SyncClientMixin(object):
                     if isinstance(data['return'], dict) and 'data' in data['return']:
                         # some functions can return boolean values
                         data['success'] = salt.utils.state.check_result(data['return']['data'])
-            except (Exception, SystemExit) as ex:
+            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data['return'] = six.text_type(ex)
                 else:

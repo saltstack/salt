@@ -101,7 +101,7 @@ class SaltSwift(object):
         try:
             listing = self.conn.get_account()
             return listing
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)
@@ -115,7 +115,7 @@ class SaltSwift(object):
         try:
             listing = self.conn.get_container(cont)
             return listing
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)
@@ -129,7 +129,7 @@ class SaltSwift(object):
         try:
             self.conn.put_container(cont)
             return True
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)
@@ -143,7 +143,7 @@ class SaltSwift(object):
         try:
             self.conn.delete_container(cont)
             return True
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)
@@ -187,7 +187,7 @@ class SaltSwift(object):
 
         # ClientException
         # file/dir exceptions
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)
@@ -202,7 +202,7 @@ class SaltSwift(object):
             with salt.utils.files.fopen(local_file, 'rb') as fp_:
                 self.conn.put_object(cont, obj, fp_)
             return True
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)
@@ -216,7 +216,7 @@ class SaltSwift(object):
         try:
             self.conn.delete_object(cont, obj)
             return True
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('There was an error::')
             if hasattr(exc, 'code') and hasattr(exc, 'msg'):
                 log.error('    Code: %s: %s', exc.code, exc.msg)

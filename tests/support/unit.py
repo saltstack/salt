@@ -174,7 +174,7 @@ class TestCase(_TestCase):
                     for proc in psutil.process_iter():
                         if proc.status == psutil.STATUS_ZOMBIE:
                             found_zombies += 1
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
                 proc_info += '|Z:{0}'.format(found_zombies)
             proc_info += '] {short_desc}'.format(short_desc=desc if desc else '')

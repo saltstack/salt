@@ -544,7 +544,7 @@ def _archive_jobs(timestamp):
             log.error('mysql returner archiver was unable to copy contents of table \'jids\'')
             log.error(six.text_type(e))
             raise salt.exceptions.SaltRunnerError(six.text_type(e))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(e)
             raise
 

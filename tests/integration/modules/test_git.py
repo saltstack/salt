@@ -587,8 +587,6 @@ class GitModuleTest(ModuleCase):
                     **{'all': True, 'global': True}
                 )
             )
-        except Exception:
-            raise
         finally:
             _clear_config()
 

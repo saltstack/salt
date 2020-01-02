@@ -215,7 +215,7 @@ def yamlify_arg(arg):
         else:
             # we don't support this type
             return original_arg
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # In case anything goes wrong...
         return original_arg
 

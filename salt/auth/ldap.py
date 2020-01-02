@@ -131,7 +131,7 @@ class _LDAPConnection(object):
                 if self.starttls:
                     self.ldap.start_tls_s()
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
-        except Exception as ldap_error:
+        except Exception as ldap_error:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Failed to bind to LDAP server {0} as {1}: {2}'.format(
                     self.uri, self.binddn, ldap_error
@@ -283,7 +283,7 @@ def _bind(username, password, anonymous=False, opts=None):
         log.debug('Attempting LDAP bind with user dn: %s', connargs['binddn'])
     try:
         ldap_conn = _LDAPConnection(**connargs).ldap
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         connargs.pop('bindpw', None)  # Don't log the password
         log.error('Failed to authenticate user dn via LDAP: %s', connargs)
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
@@ -360,7 +360,7 @@ def groups(username, **kwargs):
                 user_dn_results = bind.search_s(_config('basedn'),
                                                 ldap.SCOPE_SUBTREE,
                                                 get_user_dn_search, [str('distinguishedName')])  # future lint: disable=blacklisted-function
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.error('Exception thrown while looking up user DN in AD: %s', e)
                 return group_list
             if not user_dn_results:
@@ -375,7 +375,7 @@ def groups(username, **kwargs):
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
                                                [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
             for _, entry in search_results:

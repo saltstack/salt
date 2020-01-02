@@ -80,7 +80,7 @@ def __virtual__():
     #     try:
     #         passed = subprocess.check_output(
     #             'lxc-version').split(':')[1].strip() >= '1.0'
-    #     except Exception:
+    #     except Exception:  # pylint: disable=broad-except
     #         pass
     #     if not passed:
     #         log.warning('Support for lxc < 1.0 may be incomplete.')
@@ -4369,7 +4369,7 @@ def edit_conf(conf_file,
 
     try:
         conf = read_conf(conf_file, out_format=out_format)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         conf = []
 
     if not lxc_config:

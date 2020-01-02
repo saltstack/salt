@@ -258,7 +258,7 @@ def get_fun(fun):
         ind_str = '{0}:{1}'.format(minion, fun)
         try:
             jid = serv.get(ind_str)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
         if not jid:
             continue

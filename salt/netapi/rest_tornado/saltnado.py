@@ -381,7 +381,7 @@ class EventListener(object):
         for (tag, matcher), futures in six.iteritems(self.tag_map):
             try:
                 is_matched = matcher(mtag, tag)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Failed to run a matcher.', exc_info=True)
                 is_matched = False
 
@@ -933,7 +933,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             except (AuthenticationError, AuthorizationError, EauthAuthenticationError):
                 ret.append('Failed to authenticate')
                 break
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-except
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 log.error('Unexpected exception while handling request:', exc_info=True)
 
@@ -977,7 +977,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             for future in events:
                 try:
                     future.set_result(None)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
             raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 

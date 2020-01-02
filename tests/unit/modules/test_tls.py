@@ -13,7 +13,7 @@ try:
     # it's installed.
     import OpenSSL  # pylint: disable=unused-import
     NO_PYOPENSSL = False
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_PYOPENSSL = True
 
 # Import Salt Testing Libs
