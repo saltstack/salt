@@ -11,8 +11,6 @@ from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -60,7 +58,6 @@ LIST_REPOS = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class YumTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.yumpkg
