@@ -1697,7 +1697,7 @@ class TestDotNotationLookup(ModuleCase):
         del self.jinja
 
     def render(self, tmpl_str, context=None):
-        return self.jinja(tmpl_str, context=context or {}, from_str=True).read()
+        return self.jinja(tmpl_str, context=context or {}, argline='-s').read()
 
     def test_normlookup(self):
         """
