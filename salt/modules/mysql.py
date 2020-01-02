@@ -1901,7 +1901,7 @@ def grant_exists(grant,
         target = __grant_generate(
             grant, database, user, host, grant_option, escape
         )
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Error during grant generation.')
         return False
 
@@ -1945,7 +1945,8 @@ def grant_exists(grant,
             else:
                 log.debug('grants mismatch \'%s\'<>\'%s\'', grant_tokens, target_tokens)
 
-        except Exception as exc:  # Fallback to strict parsing
+        except Exception as exc:  # pylint: disable=broad-except
+            # Fallback to strict parsing
             log.exception(exc)
             if grants is not False and target in grants:
                 log.debug('Grant exists.')
@@ -1984,7 +1985,7 @@ def grant_add(grant,
     grant = grant.strip()
     try:
         qry = __grant_generate(grant, database, user, host, grant_option, escape, ssl_option)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Error during grant generation')
         return False
     try:

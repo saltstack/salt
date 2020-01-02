@@ -139,7 +139,7 @@ def _erase_vm_info(name):
             except KeyError:
                 # no delete method found -- load a blank value
                 __utils__['sdb.sdb_set'](key, None, __opts__)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     uri = _build_sdb_uri(name)
@@ -149,7 +149,7 @@ def _erase_vm_info(name):
     except KeyError:
         # no delete method found -- load an empty dictionary
         __utils__['sdb.sdb_set'](uri, {}, __opts__)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
