@@ -435,7 +435,7 @@ repos:
         files: ^((setup|noxfile)|salt/.*)\.py$
         args:
           - -e
-          - lint-salt
+          - lint-salt-pre-commit
           - --
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
@@ -447,5 +447,5 @@ repos:
         files: ^tests/.*\.py$
         args:
           - -e
-          - lint-tests
+          - lint-tests-pre-commit
           - --

@@ -913,7 +913,7 @@ class Tee:
         return self._first.fileno()
 
 
-def _lint(session, rcfile, flags, paths):
+def _lint(session, rcfile, flags, paths, tee_output=True):
     _install_requirements(session, 'zeromq')
     requirements_file = 'requirements/static/lint.in'
     distro_constraints = [
@@ -927,39 +927,79 @@ def _lint(session, rcfile, flags, paths):
             '--constraint', distro_constraint
         ])
     session.install(*install_command, silent=PIP_INSTALL_SILENT)
-    session.run('pylint', '--version')
-    pylint_report_path = os.environ.get('PYLINT_REPORT')
+
+    if tee_output:
+        session.run('pylint', '--version')
+        pylint_report_path = os.environ.get('PYLINT_REPORT')
 
     cmd_args = [
         'pylint',
         '--rcfile={}'.format(rcfile)
     ] + list(flags) + list(paths)
 
-    stdout = tempfile.TemporaryFile(mode='w+b')
+    cmd_kwargs = {
+        'env': {'PYTHONUNBUFFERED': '1'}
+    }
+
+    if tee_output:
+        stdout = tempfile.TemporaryFile(mode='w+b')
+        cmd_kwargs['stdout'] = Tee(stdout, sys.__stdout__)
+
     lint_failed = False
     try:
-        session.run(*cmd_args,
-                    stdout=Tee(stdout, sys.__stdout__),
-                    env={'PYTHONUNBUFFERED': '1'})
+        session.run(*cmd_args, **cmd_kwargs)
     except CommandFailed:
         lint_failed = True
         raise
     finally:
-        stdout.seek(0)
-        contents = stdout.read()
-        if contents:
-            if IS_PY3:
-                contents = contents.decode('utf-8')
-            else:
-                contents = contents.encode('utf-8')
-            sys.stdout.write(contents)
-            sys.stdout.flush()
-            if pylint_report_path:
-                # Write report
-                with open(pylint_report_path, 'w') as wfh:
-                    wfh.write(contents)
-                session.log('Report file written to %r', pylint_report_path)
-        stdout.close()
+        if tee_output:
+            stdout.seek(0)
+            contents = stdout.read()
+            if contents:
+                if IS_PY3:
+                    contents = contents.decode('utf-8')
+                else:
+                    contents = contents.encode('utf-8')
+                sys.stdout.write(contents)
+                sys.stdout.flush()
+                if pylint_report_path:
+                    # Write report
+                    with open(pylint_report_path, 'w') as wfh:
+                        wfh.write(contents)
+                    session.log('Report file written to %r', pylint_report_path)
+            stdout.close()
+
+
+def _lint_pre_commit(session, rcfile, flags, paths):
+    if 'VIRTUAL_ENV' not in os.environ:
+        session.error(
+            'This should be running from within a virtualenv and '
+            '\'VIRTUAL_ENV\' was not found as an environment variable.'
+        )
+    if 'pre-commit' not in os.environ['VIRTUAL_ENV']:
+        session.error(
+            'This should be running from within a pre-commit virtualenv and '
+            '\'VIRTUAL_ENV\'({}) does not appear to be a pre-commit virtualenv.'.format(
+                os.environ['VIRTUAL_ENV']
+            )
+        )
+    from nox.virtualenv import VirtualEnv
+    # Let's patch nox to make it run inside the pre-commit virtualenv
+    try:
+        session._runner.venv = VirtualEnv(  # pylint: disable=unexpected-keyword-arg
+            os.environ['VIRTUAL_ENV'],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+            venv=True
+        )
+    except TypeError:
+        # This is still nox-py2
+        session._runner.venv = VirtualEnv(
+            os.environ['VIRTUAL_ENV'],
+            interpreter=session._runner.func.python,
+            reuse_existing=True,
+        )
+    _lint(session, rcfile, flags, paths, tee_output=False)
 
 
 @nox.session(python='3')
@@ -999,6 +1039,36 @@ def lint_tests(session):
     else:
         paths = ['tests/']
     _lint(session, '.pylintrc', flags, paths)
+
+
+@nox.session(python=False, name='lint-salt-pre-commit')
+def lint_salt_pre_commit(session):
+    '''
+    Run PyLint against Salt. Set PYLINT_REPORT to a path to capture output.
+    '''
+    flags = [
+        '--disable=I'
+    ]
+    if session.posargs:
+        paths = session.posargs
+    else:
+        paths = ['setup.py', 'noxfile.py', 'salt/']
+    _lint_pre_commit(session, '.pylintrc', flags, paths)
+
+
+@nox.session(python=False, name='lint-tests-pre-commit')
+def lint_tests_pre_commit(session):
+    '''
+    Run PyLint against Salt and it's test suite. Set PYLINT_REPORT to a path to capture output.
+    '''
+    flags = [
+        '--disable=I'
+    ]
+    if session.posargs:
+        paths = session.posargs
+    else:
+        paths = ['tests/']
+    _lint_pre_commit(session, '.pylintrc', flags, paths)
 
 
 @nox.session(python='3')
