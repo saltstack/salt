@@ -48,6 +48,7 @@ execution modules
     bigip
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -199,6 +200,7 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
     jira_mod
     junos
     k8s

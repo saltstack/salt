@@ -31,7 +31,6 @@ A more involved example involves pulling from a custom repository.
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: ppa:wolfnet/logstash
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -49,7 +48,6 @@ state module
 
     dotdeb.repo:
       pkgrepo.managed:
-        - humanname: Dotdeb
         - name: deb http://packages.dotdeb.org wheezy-php55 all
         - dist: wheezy-php55
         - file: /etc/apt/sources.list.d/dotbeb.list
@@ -135,10 +133,7 @@ if salt.utils.platform.is_windows():
     # The following imports are used by the namespaced win_pkg funcs
     # and need to be included in their globals.
     # pylint: disable=import-error,unused-import
-    try:
-        import msgpack
-    except ImportError:
-        import msgpack_pure as msgpack
+    import salt.utils.msgpack as msgpack
     from salt.utils.versions import LooseVersion
     # pylint: enable=import-error,unused-import
 # pylint: enable=invalid-name

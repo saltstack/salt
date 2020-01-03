@@ -1,0 +1,13 @@
+---
+template:
+  pkg:
+    name: template
+  rootgroup: root
+  config: '/etc/template'
+  service:
+    name: template
+  subcomponent:
+    config: '/etc/template-subcomponent-formula.conf'
+  # Just here for testing
+  added_in_defaults: defaults_value
+  winner: defaults

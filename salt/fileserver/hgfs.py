@@ -580,30 +580,10 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
-    if __opts__['hgfs_env_whitelist']:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The hgfs_env_whitelist config option has been renamed to '
-            'hgfs_saltenv_whitelist. Please update your configuration.'
-        )
-        whitelist = __opts__['hgfs_env_whitelist']
-    else:
-        whitelist = __opts__['hgfs_saltenv_whitelist']
-
-    if __opts__['hgfs_env_blacklist']:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The hgfs_env_blacklist config option has been renamed to '
-            'hgfs_saltenv_blacklist. Please update your configuration.'
-        )
-        blacklist = __opts__['hgfs_env_blacklist']
-    else:
-        blacklist = __opts__['hgfs_saltenv_blacklist']
-
     return salt.utils.stringutils.check_whitelist_blacklist(
         env,
-        whitelist=whitelist,
-        blacklist=blacklist,
+        whitelist=__opts__['hgfs_saltenv_whitelist'],
+        blacklist=__opts__['hgfs_saltenv_blacklist'],
     )
 
 
