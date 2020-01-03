@@ -17,7 +17,7 @@ import re
 from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.version import SaltStackVersion
+from salt.version import SaltStackVersion, versions_report
 
 
 class VersionTestCase(TestCase):
@@ -71,3 +71,15 @@ class VersionTestCase(TestCase):
 
         with self.assertRaises(ValueError):
             SaltStackVersion.parse('Drunk')
+
+    def test_version_report_lines(self):
+        '''
+        Validate padding in versions report is correct
+        '''
+        # Get a set of all version report name lenghts including padding
+        line_lengths = set([
+           len(line.split(':')[0]) for line in list(versions_report())[4:]
+           if line != ' ' and line != 'System Versions:'
+        ])
+        # Check that they are all the same size (only one element in the set)
+        assert len(line_lengths) == 1

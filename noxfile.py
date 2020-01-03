@@ -151,10 +151,16 @@ def _install_system_packages(session):
             '/usr/lib/python{py_version}/dist-packages/*apt*'
         ]
     }
-    for key in ('ubuntu-14.04', 'ubuntu-16.04', 'ubuntu-18.04', 'debian-8', 'debian-9'):
-        system_python_packages[key] = system_python_packages['__debian_based_distros__']
 
     distro = _get_distro_info(session)
+    if not distro['id'].startswith(('debian', 'ubuntu')):
+        # This only applies to debian based distributions
+        return
+
+    system_python_packages['{id}-{version}'.format(**distro)] = \
+            system_python_packages['{id}-{version_parts[major]}'.format(**distro)] = \
+            system_python_packages['__debian_based_distros__'][:]
+
     distro_keys = [
         '{id}'.format(**distro),
         '{id}-{version}'.format(**distro),
@@ -343,7 +349,7 @@ def _install_requirements(session, transport, *extra_requirements):
 
 
 def _run_with_coverage(session, *test_cmd):
-    session.install('--progress-bar=off', 'coverage==4.5.3', silent=PIP_INSTALL_SILENT)
+    session.install('--progress-bar=off', 'coverage==5.0.1', silent=PIP_INSTALL_SILENT)
     session.run('coverage', 'erase')
     python_path_env_var = os.environ.get('PYTHONPATH') or None
     if python_path_env_var is None:
@@ -871,13 +877,22 @@ def _pytest(session, coverage, cmd_args):
         else:
             session.run('py.test', *cmd_args, env=env)
     except CommandFailed:
+        # Not rerunning failed tests for now
+        raise
+
+        # pylint: disable=unreachable
         # Re-run failed tests
         session.log('Re-running failed tests')
+
+        for idx, parg in enumerate(cmd_args):
+            if parg.startswith('--junitxml='):
+                cmd_args[idx] = parg.replace('.xml', '-rerun-failed.xml')
         cmd_args.append('--lf')
         if coverage is True:
             _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
         else:
             session.run('py.test', *cmd_args, env=env)
+        # pylint: enable=unreachable
 
 
 def _lint(session, rcfile, flags, paths):
