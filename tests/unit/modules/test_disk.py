@@ -191,6 +191,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with('resize2fs {0}'.format(device), python_shell=False)
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    @skipIf(not salt.utils.path.which('mkfs'), 'mkfs not found')
     def test_format_(self):
         '''
         unit tests for disk.format_
@@ -203,6 +204,7 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                                  ignore_retcode=True)
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
+    @skipIf(not salt.utils.path.which('mkfs'), 'mkfs not found')
     def test_format__fat(self):
         '''
         unit tests for disk.format_ with FAT parameter
