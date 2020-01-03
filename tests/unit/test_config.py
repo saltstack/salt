@@ -1745,7 +1745,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         '''
         with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
             expected = '{0}/var/log/salt/api'.format(
-                salt.syspaths.ROOT_DIR if salt.syspaths.ROOT_DIR != '/' else '')
+                RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
                 expected = '{}\\var\\log\\salt\\api'.format(
                     RUNTIME_VARS.TMP_ROOT_DIR)
@@ -1761,7 +1761,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         '''
         with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
             expected = '{0}/var/run/salt-api.pid'.format(
-                salt.syspaths.ROOT_DIR if salt.syspaths.ROOT_DIR != '/' else '')
+                RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
                 expected = '{}\\var\\run\\salt-api.pid'.format(
                     RUNTIME_VARS.TMP_ROOT_DIR)
