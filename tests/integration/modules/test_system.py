@@ -71,6 +71,52 @@ class SystemModuleTest(ModuleCase):
         if self._systemd_timesyncd_available_:
             self.run_function('service.start', ['systemd-timesyncd'])
 
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=600, master_tgt=None, **kwargs):
+        '''
+        Run a single salt function and condition the return down to match the
+        behavior of the raw function call
+        '''
+        known_to_return_none = (
+            'data.get',
+            'file.chown',
+            'file.chgrp',
+            'pkg.refresh_db',
+            'ssh.recv_known_host_entries',
+            'time.sleep'
+        )
+        if minion_tgt == 'sub_minion':
+            known_to_return_none += ('mine.update',)
+        if 'f_arg' in kwargs:
+            kwargs['arg'] = kwargs.pop('f_arg')
+        if 'f_timeout' in kwargs:
+            kwargs['timeout'] = kwargs.pop('f_timeout')
+        client = self.client if master_tgt is None else self.clients[master_tgt]
+        orig = client.cmd(minion_tgt,
+                          function,
+                          arg,
+                          timeout=timeout,
+                          kwarg=kwargs)
+
+        if minion_tgt not in orig:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
+                'from the minion \'{0}\'. Command output: {1}'.format(
+                    minion_tgt, orig
+                )
+            )
+        elif orig[minion_tgt] is None and function not in known_to_return_none:
+            self.skipTest(
+                'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
+                'the minion \'{1}\'. Command output: {2}'.format(
+                    function, minion_tgt, orig
+                )
+            )
+
+        # Try to match stalled state functions
+        orig[minion_tgt] = self._check_state_return(orig[minion_tgt])
+
+        return orig[minion_tgt]
+
     def _save_time(self):
         self._orig_time = datetime.datetime.utcnow()
 
