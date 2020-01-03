@@ -210,7 +210,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             hold_ret = self.run_function('pkg.hold', [self.pkg])
             if versionlock_pkg and '-versionlock is not installed' in str(hold_ret):
-                self.skipTest(str(hold_ret) + '  `{}` is installed'.format(versionlock_pkg))
+                self.skipTest('{}  `{}` is installed'.format(hold_ret, versionlock_pkg))
             self.assertIn(self.pkg, hold_ret)
             self.assertTrue(hold_ret[self.pkg]['result'])
 

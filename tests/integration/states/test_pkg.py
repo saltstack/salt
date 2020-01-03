@@ -37,7 +37,6 @@ log = logging.getLogger(__name__)
 @destructiveTest
 class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     _PKG_EPOCH_TARGETS = []
-    _PKG_TARGETS = ['figlet', 'sl']
     _PKG_32_TARGETS = []
     _PKG_CAP_TARGETS = []
     _PKG_DOT_TARGETS = []
@@ -48,6 +47,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     @requires_system_grains
     def setUpClass(cls, grains=None):  # pylint:disable=W0221
         cls.ctx = {}
+        cls._PKG_TARGETS = ['figlet', 'sl']
         if grains['os'] == 'Windows':
             cls._PKG_TARGETS = ['7zip', 'putty']
         elif grains['os'] == 'freebsd':
@@ -563,7 +563,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         )
 
         if versionlock_pkg and '-versionlock is not installed' in str(ret):
-            self.skipTest(str(ret) + '  `{}` is installed'.format(versionlock_pkg))
+            self.skipTest('{}  `{}` is installed'.format(ret, versionlock_pkg))
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
