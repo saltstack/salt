@@ -112,6 +112,7 @@ from salt.utils.virt import check_remote, download_remote
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -663,7 +664,8 @@ def _gen_net_xml(name,
                  bridge,
                  forward,
                  vport,
-                 tag=None):
+                 tag=None,
+                 ip_configs=None):
     '''
     Generate the XML string to define a libvirt network
     '''
@@ -673,6 +675,10 @@ def _gen_net_xml(name,
         'forward': forward,
         'vport': vport,
         'tag': tag,
+        'ip_configs': [{
+            'address': ipaddress.ip_network(config['cidr']),
+            'dhcp_ranges': config.get('dhcp_ranges', []),
+        } for config in ip_configs or []],
     }
     fn_ = 'libvirt_network.jinja'
     try:
@@ -4402,7 +4408,12 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     return cpu.toxml()
 
 
-def network_define(name, bridge, forward, **kwargs):
+def network_define(name,
+                   bridge,
+                   forward,
+                   ipv4_config=None,
+                   ipv6_config=None,
+                   **kwargs):
     '''
     Create libvirt network.
 
@@ -4413,9 +4424,37 @@ def network_define(name, bridge, forward, **kwargs):
     :param tag: Vlan tag
     :param autostart: Network autostart (default True)
     :param start: Network start (default True)
+    :param ipv4_config: IP v4 configuration
+        Dictionary describing the IP v4 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+        ..versionadded:: Neon
+    :type ipv4_config: dict or None
+
+    :param ipv6_config: IP v6 configuration
+        Dictionary describing the IP v6 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+        ..versionadded:: Neon
+    :type ipv6_config: dict or None
+
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    .. _net-define-ip:
+
+    ** IP configuration definition
+
+    Both the IPv4 and IPv6 configuration dictionaries can contain the following properties:
+
+    cidr
+        CIDR notation for the network. For example '192.168.124.0/24'
+
+    dhcp_ranges
+        A list of dictionary with ``'start'`` and ``'end'`` properties.
 
     CLI Example:
 
@@ -4430,12 +4469,14 @@ def network_define(name, bridge, forward, **kwargs):
     tag = kwargs.get('tag', None)
     autostart = kwargs.get('autostart', True)
     starting = kwargs.get('start', True)
+
     net_xml = _gen_net_xml(
         name,
         bridge,
         forward,
         vport,
-        tag,
+        tag=tag,
+        ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
     )
     try:
         conn.networkDefineXML(net_xml)
