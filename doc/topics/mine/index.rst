@@ -52,8 +52,7 @@ range.
 .. versionchanged:: Sodium
 
 The format to define mine_functions has been changed to allow the same format
-as used for module.run. The old format (above) will still be supported until
-version Aluminium.
+as used for module.run. The old format (above) will still be supported.
 
 .. code-block:: yaml
 
