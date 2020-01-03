@@ -31,6 +31,11 @@ from salt.utils.odict import OrderedDict
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
 
+try:
+    import jmespath
+except ImportError:
+    jmespath = None
+
 log = logging.getLogger(__name__)
 
 
@@ -977,6 +982,38 @@ def stringify(data):
             item = six.text_type(item)
         ret.append(item)
     return ret
+
+
+@jinja_filter('json_query')
+def json_query(data, expr):
+    '''
+    Query data using JMESPath language (http://jmespath.org).
+
+    Requires the https://github.com/jmespath/jmespath.py library.
+
+    :param data: A complex data structure to query
+    :param expr: A JMESPath expression (query)
+    :returns: The query result
+
+    .. code-block:: jinja
+
+        {"services": [
+            {"name": "http", "host": "1.2.3.4", "port": 80},
+            {"name": "smtp", "host": "1.2.3.5", "port": 25},
+            {"name": "ssh",  "host": "1.2.3.6", "port": 22},
+        ]} | json_query("services[].port") }}
+
+    will be rendered as:
+
+    .. code-block:: text
+
+        [80, 25, 22]
+    '''
+    if jmespath is None:
+        err = 'json_query requires jmespath module installed'
+        log.error(err)
+        raise RuntimeError(err)
+    return jmespath.search(expr, data)
 
 
 def _is_not_considered_falsey(value, ignore_types=()):

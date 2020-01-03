@@ -1522,7 +1522,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             continue
 
         # Is the installer in a location that requires caching
-        if installer.startswith(('salt:', 'http:', 'https:', 'ftp:')):
+        if __salt__['config.valid_fileproto'](installer):
 
             # Check for the 'cache_dir' parameter in the .sls file
             # If true, the entire directory will be cached instead of the
