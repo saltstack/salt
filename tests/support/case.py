@@ -838,6 +838,8 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         if timeout is None:
             timeout = self.RUN_FUNCTION_TIMEOUT
 
+        timeout_at = datetime.utcnow() + timedelta(seconds=timeout)
+
         known_to_return_none = (
             'data.get',
             'file.chown',
@@ -874,7 +876,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                                   function,
                                   arg=arg,
                                   kwarg=kwargs,
-                                  timeout=timeout)
+                                  timeout=60)
         if not job_data.get('minions'):
             self.fail(
                 'The {} was not published to any minions after {}.'.format(
@@ -888,60 +890,68 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         get_return_start = datetime.utcnow()
         ret = running_job_info = None
         try:
-            for fn_ret in self.client.get_iter_returns(jid,
-                                                       minions,
-                                                       timeout=timeout + 60,
-                                                       tgt=minion_tgt):
-                if not fn_ret:
-                    continue
+            stop_checking_return = False
+            while True:
+                if stop_checking_return is True:
+                    # We have a return
+                    return ret
 
-                get_return_time = datetime.utcnow() - get_return_start
-                log.info(
-                    'The %s finished after %s. Return:\n%s',
-                    job_repr,
-                    format_timedelta(get_return_time),
-                    pprint.pformat(fn_ret)
-                )
-
-                if minion_tgt not in fn_ret:
-                    self.skipTest(
-                        'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
-                        'from the minion \'{0}\'. Command output: {1}'.format(
-                            minion_tgt, fn_ret
+                if datetime.utcnow() > timeout_at:
+                    get_return_time = datetime.utcnow() - get_return_start
+                    err_msg = 'Failed to get the return for the published {} after {}.'.format(
+                        job_repr,
+                        format_timedelta(get_return_time)
+                    )
+                    # Never leave a job running behind
+                    from tests.support.sminion import create_sminion
+                    sminion = create_sminion(minion_id='runtests-internal-sminion')
+                    running_job_info = sminion.functions.saltutil.find_job(jid)
+                    if running_job_info:
+                        err_msg += ' The job however was found still running. Details\n{}'.format(
+                            pprint.pformat(running_job_info)
                         )
+                    else:
+                        cached_job_info = sminion.functions.saltutil.find_cached_job(jid)
+                        if cached_job_info and 'jobs cache directory not found' not in cached_job_info:
+                            err_msg += ' The cached job details is:\n{}'.format(
+                                pprint.pformat(cached_job_info)
+                            )
+                    self.fail(err_msg)
+
+                for fn_ret in self.client.get_iter_returns(jid,
+                                                           minions,
+                                                           timeout=60,
+                                                           tgt=minion_tgt):
+                    if not fn_ret:
+                        continue
+
+                    stop_checking_return = True
+                    get_return_time = datetime.utcnow() - get_return_start
+                    log.info(
+                        'The %s finished after %s. Return:\n%s',
+                        job_repr,
+                        format_timedelta(get_return_time),
+                        pprint.pformat(fn_ret)
                     )
 
-                ret = fn_ret[minion_tgt]
-                ret = self._check_state_return(ret['ret'])
-                if ret is None and function not in known_to_return_none:
-                    self.skipTest(
-                        'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
-                        'the minion \'{1}\'. Command output: {2}'.format(
-                            function, minion_tgt, fn_ret
+                    if minion_tgt not in fn_ret:
+                        self.skipTest(
+                            'WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply '
+                            'from the minion \'{0}\'. Command output: {1}'.format(
+                                minion_tgt, fn_ret
+                            )
                         )
-                    )
-                break
-            else:
-                get_return_time = datetime.utcnow() - get_return_start
-                err_msg = 'Failed to get the return for the published {} after {}.'.format(
-                    job_repr,
-                    format_timedelta(get_return_time)
-                )
-                # Never leave a job running behind
-                from tests.support.sminion import create_sminion
-                sminion = create_sminion(minion_id='runtests-internal-sminion')
-                running_job_info = sminion.functions.saltutil.find_job(jid)
-                if running_job_info:
-                    err_msg += ' The job however was found still running. Details\n{}'.format(
-                        pprint.pformat(running_job_info)
-                    )
-                else:
-                    cached_job_info = sminion.functions.saltutil.find_cached_job(jid)
-                    if cached_job_info and 'jobs cache directory not found' not in cached_job_info:
-                        err_msg += ' The cached job details is:\n{}'.format(
-                            pprint.pformat(cached_job_info)
+
+                    ret = fn_ret[minion_tgt]
+                    ret = self._check_state_return(ret['ret'])
+                    if ret is None and function not in known_to_return_none:
+                        self.skipTest(
+                            'WARNING(SHOULD NOT HAPPEN #1935): Failed to get \'{0}\' from '
+                            'the minion \'{1}\'. Command output: {2}'.format(
+                                function, minion_tgt, fn_ret
+                            )
                         )
-                self.fail(err_msg)
+                    break
         finally:
             # Never leave a job running behind
             if running_job_info is None:
