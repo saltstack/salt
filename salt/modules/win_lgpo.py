@@ -8479,6 +8479,11 @@ def get_policy(policy_name,
             Returns the full policy name regardless of what was passed in
             ``policy_name``
 
+            .. note::
+                This setting applies to sub-elements of the policy if they
+                exist. The value passed in ``policy_name`` will always be used
+                as the policy name when this setting is ``False``
+
         hierarchical_return (bool):
             Returns a hierarchical view of the policy showing its parents
 

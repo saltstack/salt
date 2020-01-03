@@ -139,19 +139,25 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
             }
         }}
 
-    def test_get_policy_defaults_full_name(self):
+    def test_get_policy_name(self):
         result = win_lgpo.get_policy(policy_name='Allow Telemetry',
-                                     policy_class='machine')
+                                     policy_class='machine',
+                                     return_value_only=True,
+                                     return_full_policy_names=True,
+                                     hierarchical_return=False)
         expected = 'Not Configured'
         self.assertEqual(result, expected)
 
-    def test_get_policy_defaults_id(self):
+    def test_get_policy_id(self):
         result = win_lgpo.get_policy(policy_name='AllowTelemetry',
-                                     policy_class='machine')
+                                     policy_class='machine',
+                                     return_value_only=True,
+                                     return_full_policy_names=True,
+                                     hierarchical_return=False)
         expected = 'Not Configured'
         self.assertEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_full_name(self):
+    def test_get_policy_name_full_return_full_names(self):
         result = win_lgpo.get_policy(policy_name='Allow Telemetry',
                                      policy_class='machine',
                                      return_value_only=False,
@@ -162,16 +168,27 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
             'Allow Telemetry': 'Not Configured'}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_id(self):
+    def test_get_policy_id_full_return_full_names(self):
         result = win_lgpo.get_policy(policy_name='AllowTelemetry',
                                      policy_class='machine',
-                                     return_value_only=False)
+                                     return_value_only=False,
+                                     return_full_policy_names=True,
+                                     hierarchical_return=False)
         expected = {
             'Windows Components\\Data Collection and Preview Builds\\'
             'Allow Telemetry': 'Not Configured'}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_ids(self):
+    def test_get_policy_name_full_return_ids(self):
+        result = win_lgpo.get_policy(policy_name='Allow Telemetry',
+                                     policy_class='machine',
+                                     return_value_only=False,
+                                     return_full_policy_names=False,
+                                     hierarchical_return=False)
+        expected = {'AllowTelemetry': 'Not Configured'}
+        self.assertDictEqual(result, expected)
+
+    def test_get_policy_id_full_return_ids(self):
         result = win_lgpo.get_policy(policy_name='AllowTelemetry',
                                      policy_class='machine',
                                      return_value_only=False,
@@ -180,16 +197,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         expected = {'AllowTelemetry': 'Not Configured'}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_ids(self):
-        result = win_lgpo.get_policy(policy_name='AllowTelemetry',
-                                     policy_class='machine',
-                                     return_value_only=False,
-                                     return_full_policy_names=False,
-                                     hierarchical_return=False)
-        expected = {'AllowTelemetry': 'Not Configured'}
-        self.assertDictEqual(result, expected)
-
-    def test_get_policy_defaults_full_return_ids_hierarchical(self):
+    def test_get_policy_id_full_return_ids_hierarchical(self):
         result = win_lgpo.get_policy(policy_name='AllowTelemetry',
                                      policy_class='machine',
                                      return_value_only=False,
@@ -203,8 +211,8 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
                             'AllowTelemetry': 'Not Configured'}}}}}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_full_names_hierarchical(self):
-        result = win_lgpo.get_policy(policy_name='AllowTelemetry',
+    def test_get_policy_name_return_full_names_hierarchical(self):
+        result = win_lgpo.get_policy(policy_name='Allow Telemetry',
                                      policy_class='machine',
                                      return_value_only=False,
                                      return_full_policy_names=True,
@@ -218,27 +226,36 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
-class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase):
+class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test functions related to the ``get_policy`` function using _policy_info
     object
     '''
-    def test_get_policy_defaults_full_name(self):
+    def setup_loader_modules(self):
+        return {win_lgpo: {}}
+
+    def test_get_policy_name(self):
         result = win_lgpo.get_policy(
             policy_name='Network firewall: Public: Settings: Display a '
                         'notification',
-            policy_class='machine')
+            policy_class='machine',
+            return_value_only=True,
+            return_full_policy_names=True,
+            hierarchical_return=False)
         expected = 'Not configured'
         self.assertEqual(result, expected)
 
-    def test_get_policy_defaults_id(self):
+    def test_get_policy_id(self):
         result = win_lgpo.get_policy(
             policy_name='WfwPublicSettingsNotification',
-            policy_class='machine')
+            policy_class='machine',
+            return_value_only=True,
+            return_full_policy_names=True,
+            hierarchical_return=False)
         expected = 'Not configured'
         self.assertEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_full_name(self):
+    def test_get_policy_name_full_return(self):
         result = win_lgpo.get_policy(
             policy_name='Network firewall: Public: Settings: Display a '
                         'notification',
@@ -251,17 +268,32 @@ class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase):
                 'Not configured'}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_id(self):
+    def test_get_policy_id_full_return(self):
         result = win_lgpo.get_policy(
             policy_name='WfwPublicSettingsNotification',
             policy_class='machine',
-            return_value_only=False)
+            return_value_only=False,
+            return_full_policy_names=True,
+            hierarchical_return=False)
         expected = {
             'Network firewall: Public: Settings: Display a notification':
                 'Not configured'}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_ids(self):
+    def test_get_policy_name_full_return_ids(self):
+        result = win_lgpo.get_policy(
+            policy_name='Network firewall: Public: Settings: Display a '
+                        'notification',
+            policy_class='machine',
+            return_value_only=False,
+            return_full_policy_names=False,
+            hierarchical_return=False)
+        expected = {
+            'Network firewall: Public: Settings: Display a notification':
+                'Not configured'}
+        self.assertDictEqual(result, expected)
+
+    def test_get_policy_id_full_return_ids(self):
         result = win_lgpo.get_policy(
             policy_name='WfwPublicSettingsNotification',
             policy_class='machine',
@@ -271,17 +303,7 @@ class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase):
         expected = {'WfwPublicSettingsNotification': 'Not configured'}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_ids(self):
-        result = win_lgpo.get_policy(
-            policy_name='WfwPublicSettingsNotification',
-            policy_class='machine',
-            return_value_only=False,
-            return_full_policy_names=False,
-            hierarchical_return=False)
-        expected = {'WfwPublicSettingsNotification': 'Not configured'}
-        self.assertDictEqual(result, expected)
-
-    def test_get_policy_defaults_full_return_ids_hierarchical(self):
+    def test_get_policy_id_full_return_ids_hierarchical(self):
         result = win_lgpo.get_policy(
             policy_name='WfwPublicSettingsNotification',
             policy_class='machine',
@@ -299,7 +321,7 @@ class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase):
                                     'Not configured'}}}}}}
         self.assertDictEqual(result, expected)
 
-    def test_get_policy_defaults_full_return_full_names_hierarchical(self):
+    def test_get_policy_id_full_return_full_names_hierarchical(self):
         result = win_lgpo.get_policy(
             policy_name='WfwPublicSettingsNotification',
             policy_class='machine',
@@ -395,7 +417,7 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         policy_name = 'PasswordHistory'
         result = self._test_policy(policy_name=policy_name)
-        expected = 0L
+        expected = 0
         self.assertEqual(result, expected)
 
     def test_lsa_rights_mechanism(self):
