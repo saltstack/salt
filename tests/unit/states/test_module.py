@@ -13,10 +13,8 @@ import salt.states.module as module
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -107,7 +105,6 @@ def _mocked_none_return(ret=None):
     return ret
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ModuleStateTest(TestCase, LoaderModuleMockMixin):
     '''
     Tests module state (salt/states/module.py)
@@ -324,3 +321,30 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             self.assertIn(comment, ret['comment'])
             self.assertIn('world', ret['comment'])
             self.assertIn('hello', ret['comment'])
+
+    def test_call_function_named_args(self):
+        '''
+        Test _call_function routine when params are named. Their position ordering should not matter.
+
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
+    def test_call_function_ordered_args(self):
+        '''
+        Test _call_function routine when params are not named. Their position should matter.
+
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[1, 2, 3]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[3, 1, 2]) == (3, 1, 2, (), {})

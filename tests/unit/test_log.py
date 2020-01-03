@@ -16,7 +16,7 @@ from salt.ext.six.moves import StringIO
 
 # Import Salt Testing libs
 from tests.support.case import TestCase
-from tests.support.helpers import TestsLoggingHandler
+from tests.support.helpers import TstSuiteLoggingHandler
 
 # Import Salt libs
 from salt._logging.impl import SaltLoggingClass
@@ -35,10 +35,10 @@ class TestLog(TestCase):
 
         # Test for a format which includes digits in name formatting.
         log_format = '[%(name)-15s] %(message)s'
-        handler = TestsLoggingHandler(format=log_format)
+        handler = TstSuiteLoggingHandler(format=log_format)
         log.addHandler(handler)
 
-        # Trigger TestsLoggingHandler.__enter__
+        # Trigger TstSuiteLoggingHandler.__enter__
         with handler:
             # Let's create another log instance to trigger salt's logging class
             # calculations.
@@ -54,10 +54,10 @@ class TestLog(TestCase):
 
         # Test for a format which does not include digits in name formatting.
         log_format = '[%(name)s] %(message)s'
-        handler = TestsLoggingHandler(format=log_format)
+        handler = TstSuiteLoggingHandler(format=log_format)
         log.addHandler(handler)
 
-        # Trigger TestsLoggingHandler.__enter__
+        # Trigger TstSuiteLoggingHandler.__enter__
         with handler:
             # Let's create another log instance to trigger salt's logging class
             # calculations.
