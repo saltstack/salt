@@ -1016,17 +1016,17 @@ def _virtual(osdata):
             if maker.startswith('Bochs'):
                 grains['virtual'] = 'kvm'
         if sysctl:
-            hv_vendor = __salt__['cmd.run']('{0} hw.hv_vendor'.format(sysctl))
-            model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
+            hv_vendor = __salt__['cmd.run']('{0} -n hw.hv_vendor'.format(sysctl))
+            model = __salt__['cmd.run']('{0} -n hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](
                 '{0} -n security.jail.jailed'.format(sysctl)
             )
             if 'bhyve' in hv_vendor:
                 grains['virtual'] = 'bhyve'
+            elif 'QEMU Virtual CPU' in model:
+                grains['virtual'] = 'kvm'
             if jail == '1':
                 grains['virtual_subtype'] = 'jail'
-            if 'QEMU Virtual CPU' in model:
-                grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
         if 'manufacturer' in osdata:
             if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:

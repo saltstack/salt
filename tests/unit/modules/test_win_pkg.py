@@ -12,6 +12,7 @@ from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
+import salt.modules.config as config
 import salt.modules.pkg_resource as pkg_resource
 import salt.modules.win_pkg as win_pkg
 import salt.utils.data
@@ -54,6 +55,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                     'pkg_resource.parse_targets': pkg_resource.parse_targets,
                     'pkg_resource.sort_pkglist': pkg_resource.sort_pkglist,
                     'pkg_resource.stringify': pkg_resource.stringify,
+                    'config.valid_fileproto': config.valid_fileproto,
                 },
             },
             pkg_resource: {
