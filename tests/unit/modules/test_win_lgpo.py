@@ -7,16 +7,17 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase
 from tests.support.helpers import destructiveTest
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
-import salt.modules.win_lgpo as win_lgpo
 import salt.config
 import salt.modules.cmdmod
 import salt.modules.file
 import salt.modules.win_file
+import salt.modules.win_lgpo as win_lgpo
+import salt.utils.platform
 import salt.utils.win_reg
 
 
@@ -125,6 +126,7 @@ class WinLGPOTestCase(TestCase):
         self.assertEqual(value, "Invalid Value")
 
 
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test functions related to the ``get_policy`` function using policy templates
@@ -226,6 +228,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test functions related to the ``get_policy`` function using _policy_info
@@ -341,6 +344,7 @@ class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase, LoaderModuleMockMixin):
         self.assertDictEqual(result, expected)
 
 
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test getting local group policy settings defined in the _policy_info object
@@ -440,6 +444,7 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @destructiveTest
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test variations of the Point and Print Restrictions policy when Not
@@ -538,6 +543,7 @@ class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
 
 
 @destructiveTest
+@skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test variations of the Point and Print Restrictions policy when Enabled (EN)
