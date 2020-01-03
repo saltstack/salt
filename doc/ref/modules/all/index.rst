@@ -48,6 +48,7 @@ execution modules
     bigip
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
