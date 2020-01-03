@@ -88,9 +88,10 @@ def get_user_groups(name, sid=False):
         try:
             groups = win32net.NetUserGetLocalGroups(None, name)
         except win32net.error as exc:
-            if exc.winerror == 5:
+            # ERROR_ACCESS_DENIED, NERR_DCNotFound, RPC_S_SERVER_UNAVAILABLE
+            if exc.winerror in (5, 1722, 2453):
                 # Try without LG_INCLUDE_INDIRECT flag, because the user might
-                # not have permissions for it
+                # not have permissions for it or something is wrong with DC
                 groups = win32net.NetUserGetLocalGroups(None, name, 0)
             else:
                 raise
