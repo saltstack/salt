@@ -1067,6 +1067,111 @@ def requires_system_grains(func):
     return decorator
 
 
+@requires_system_grains
+def runs_on(grains=None, **kwargs):
+    '''
+    Skip the test if grains don't match the values passed into **kwargs
+    if a kwarg value is a list then skip if the grains don't match any item in the list
+    '''
+    def decorator(caller):
+        @functools.wraps(caller)
+        def wrapper(cls):
+            for kw, value in kwargs.items():
+                if isinstance(value, list):
+                    if not any(str(grains.get(kw)).lower() != str(v).lower() for v in value):
+                        cls.skipTest('This test does not run on {}={}'.format(kw, grains.get(kw)))
+                else:
+                    if str(grains.get(kw)).lower() != str(value).lower():
+                        cls.skipTest('This test runs on {}={}, not {}'.format(kw, value, grains.get(kw)))
+            return caller(cls)
+        return wrapper
+    return decorator
+
+
+@requires_system_grains
+def not_runs_on(grains=None, **kwargs):
+    '''
+    Reverse of `runs_on`.
+    Skip the test if any grains match the values passed into **kwargs
+    if a kwarg value is a list then skip if the grains match any item in the list
+    '''
+    def decorator(caller):
+        @functools.wraps(caller)
+        def wrapper(cls):
+            for kw, value in kwargs.items():
+                if isinstance(value, list):
+                    if any(str(grains.get(kw)).lower() == str(v).lower() for v in value):
+                        cls.skipTest('This test does not run on {}={}'.format(kw, grains.get(kw)))
+                else:
+                    if str(grains.get(kw)).lower() == str(value).lower():
+                        cls.skipTest('This test does not run on {}={}, got {}'.format(kw, value, grains.get(kw)))
+            return caller(cls)
+        return wrapper
+    return decorator
+
+
+def requires_salt_state_modules(*names):
+    '''
+    Makes sure the passed salt state module is available. Skips the test if not
+
+    .. versionadded:: 3000
+    '''
+
+    def _check_required_salt_state_modules(*required_salt_modules):
+        # Late import
+        from tests.support.sminion import create_sminion
+        required_salt_modules = set(required_salt_modules)
+        sminion = create_sminion(minion_id='runtests-internal-sminion')
+        available_modules = list(sminion.states)
+        not_available_modules = set()
+        try:
+            cached_not_available_modules = sminion.__not_availiable_modules__
+        except AttributeError:
+            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
+
+        if cached_not_available_modules:
+            for not_available_module in cached_not_available_modules:
+                if not_available_module in required_salt_modules:
+                    not_available_modules.add(not_available_module)
+                    required_salt_modules.remove(not_available_module)
+
+        for required_module_name in required_salt_modules:
+            search_name = required_module_name
+            if '.' not in search_name:
+                search_name += '.*'
+            if not fnmatch.filter(available_modules, search_name):
+                not_available_modules.add(required_module_name)
+                cached_not_available_modules.add(required_module_name)
+
+        if not_available_modules:
+            if len(not_available_modules) == 1:
+                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
+            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+
+    def decorator(caller):
+        if inspect.isclass(caller):
+            # We're decorating a class
+            old_setup = getattr(caller, 'setUp', None)
+
+            def setUp(self, *args, **kwargs):
+                _check_required_salt_state_modules(*names)
+                if old_setup is not None:
+                    old_setup(self, *args, **kwargs)
+
+            caller.setUp = setUp
+            return caller
+
+        # We're simply decorating functions
+        @functools.wraps(caller)
+        def wrapper(cls):
+            _check_required_salt_state_modules(*names)
+            return caller(cls)
+
+        return wrapper
+
+    return decorator
+
+
 def requires_salt_modules(*names):
     '''
     Makes sure the passed salt module is available. Skips the test if not
@@ -1219,7 +1324,7 @@ def repeat(caller=None, condition=True, times=5):
     @functools.wraps(caller)
     def wrap(cls):
         result = None
-        for attempt in range(1, times+1):
+        for attempt in range(1, times + 1):
             log.info('%s test run %d of %s times', cls, attempt, times)
             caller(cls)
         return cls
