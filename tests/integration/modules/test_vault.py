@@ -13,7 +13,7 @@ import time
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
 from tests.support.helpers import flaky
-from tests.support.paths import FILES
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
 import salt.utils.path
@@ -60,7 +60,7 @@ class VaultTestCase(ModuleCase):
                 self.skipTest('unable to login to vault')
             ret = self.run_function(
                 'cmd.retcode',
-                cmd='/usr/local/bin/vault policy write testpolicy {0}/vault.hcl'.format(FILES),
+                cmd='/usr/local/bin/vault policy write testpolicy {0}/vault.hcl'.format(RUNTIME_VARS.FILES),
                 env={'VAULT_ADDR': 'http://127.0.0.1:8200'},
             )
             if ret != 0:
