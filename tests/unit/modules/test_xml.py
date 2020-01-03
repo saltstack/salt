@@ -11,7 +11,7 @@ import tempfile
 from salt.modules import xml
 
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 
 XML_STRING = '''
     <root xmlns:foo="http://www.foo.org/" xmlns:bar="http://www.bar.org">
