@@ -86,8 +86,7 @@ def parse_function_definition(function_definition):
     Helper function to parse the mine_function definition as provided in config,
     or pillar.
 
-    :param function_definition: The function definition to parse. Note that the
-        dict format is deprecated in favor of the list-format used in module.run.
+    :param function_definition: The function definition to parse.
     :type function_definition: list or dict
 
     :rtype: tuple
@@ -98,23 +97,13 @@ def parse_function_definition(function_definition):
     function_kwargs = {}
     minion_acl = {}
     if isinstance(function_definition, dict):
-        salt.utils.versions.warn_until(
-            'Aluminium',
-            'The dictionary format for specifying mine functions has been '
-            'deprecated in favor of the format also used by module.run.'
-        )
+        # dictionary format for specifying mine function
         function_name = function_definition.pop('mine_function', None)
         function_kwargs = function_definition
     elif isinstance(function_definition, list):
         for item in function_definition:
             if isinstance(item, dict):
-                if len(item) > 1:
-                    salt.utils.versions.warn_until(
-                        'Aluminium',
-                        'Specifying multiple kwargs in a single list item '
-                        'has been deprecated in favor of the format also used '
-                        'in module.run.'
-                    )
+                # if len(item) > 1: # Multiple kwargs in a single list item
                 function_kwargs.update(item)
             else:
                 function_args.append(item)
