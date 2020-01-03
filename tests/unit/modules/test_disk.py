@@ -151,6 +151,19 @@ class DiskTestCase(TestCase, LoaderModuleMockMixin):
                patch('salt.utils.path.which', MagicMock(return_value=True)):
             self.assertEqual(disk.format_(device), True)
 
+    def test_fat_format(self):
+        '''
+        unit tests for disk.format when using fat argument
+        '''
+        device = '/dev/sdX1'
+        expected = ['mkfs', '-t', 'fat', '-F', 12, '/dev/sdX1']
+        mock = MagicMock(return_value=0)
+        with patch.dict(disk.__salt__, {'cmd.retcode': mock}),\
+               patch('salt.utils.path.which', MagicMock(return_value=True)):
+            self.assertEqual(disk.format_(device, fs_type='fat', fat=12), True)
+            args, kwargs = mock.call_args_list[0]
+            assert expected == args[0]
+
     @skipIf(not salt.utils.path.which('lsblk') and not salt.utils.path.which('df'),
             'lsblk or df not found')
     def test_fstype(self):

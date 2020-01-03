@@ -16,7 +16,7 @@ you can specify what ruby version and gemset to target.
 '''
 from __future__ import absolute_import, unicode_literals, print_function
 
-import salt.utils
+import salt.utils.versions
 
 import re
 import logging
@@ -99,7 +99,7 @@ def installed(name,          # pylint: disable=C0103
             # Clear out comparison from version and whitespace
             desired_version = re.sub(cmpr, '', version).strip()
 
-            if salt.utils.compare_versions(installed_version,
+            if salt.utils.versions.compare(installed_version,
                                            cmpr,
                                            desired_version):
                 ret['result'] = True

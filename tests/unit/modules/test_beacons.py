@@ -10,12 +10,10 @@ import os
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -23,7 +21,6 @@ import salt.modules.beacons as beacons
 from salt.utils.event import SaltEvent
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.beacons
@@ -85,7 +82,8 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
         Test saving beacons.
         '''
         comm1 = 'Beacons saved to {0}beacons.conf.'.format(RUNTIME_VARS.TMP + os.sep)
-        with patch.dict(beacons.__opts__, {'config_dir': '', 'beacons': {},
+        with patch.dict(beacons.__opts__, {'conf_file': os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'foo'),
+                                           'beacons': {},
                                            'default_include': RUNTIME_VARS.TMP + os.sep,
                                            'sock_dir': self.sock_dir}):
 
