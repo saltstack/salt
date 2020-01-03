@@ -5755,7 +5755,11 @@ def _getDataFromRegPolData(search_string, policy_data, return_value_name=False):
                 if len(pol_entry) >= 2:
                     valueName = pol_entry[1].decode('utf-16-le').rstrip(chr(0))
                 if len(pol_entry) >= 5:
-                    value = pol_entry[4]
+                    # Sometimes a semicolon-separated value gets split into
+                    # additional elements in the Registry.pol file. For example,
+                    # a value of test1;test2;test3 will be 'test1', 'test2', and
+                    # 'test3' at the end of the Registry.pol file entry
+                    value = encoded_semicolon.join(pol_entry[4:])
                     if vtype == 'REG_DWORD' or vtype == 'REG_QWORD':
                         if value:
                             if vtype == 'REG_DWORD':
@@ -7906,7 +7910,7 @@ def _get_policy_info_setting(policy_definition):
     '''
     if 'Registry' in policy_definition:
         # Get value using the Registry mechanism
-        value = __salt__['reg.read_value'](
+        value = __utils__['reg.read_value'](
             policy_definition['Registry']['Hive'],
             policy_definition['Registry']['Path'],
             policy_definition['Registry']['Value'])['vdata']
@@ -8370,6 +8374,7 @@ def _get_policy_adm_setting(admx_policy,
             full_name = full_names[this_policy_namespace][this_policy_name]
             setting = policy_vals[this_policy_namespace][this_policy_name].pop(this_policy_name)
             policy_vals[this_policy_namespace][this_policy_name][full_name] = setting
+
     if this_policy_namespace in policy_vals and \
             this_policy_name in policy_vals[this_policy_namespace]:
         hierarchy.setdefault(this_policy_namespace, {})[this_policy_name] = _build_parent_list(
@@ -8402,13 +8407,21 @@ def _get_policy_adm_setting(admx_policy,
                 full_path_list.append(path_needed)
                 log.trace('full_path_list == %s', full_path_list)
                 policy_vals['\\'.join(full_path_list)] = policy_vals[policy_namespace].pop(path_needed)
+
     for policy_namespace in list(policy_vals):
+        # Remove empty entries
         if policy_vals[policy_namespace] == {}:
             policy_vals.pop(policy_namespace)
+        # Remove namespace and keep the values
+        elif isinstance(policy_vals[policy_namespace], dict):
+            if this_policy_namespace == policy_namespace and \
+                    not hierarchical_return:
+                policy_vals.update(policy_vals[policy_namespace])
+                policy_vals.pop(policy_namespace)
+
     if policy_vals and hierarchical_return:
         if hierarchy:
             log.debug('Compiling hierarchical return...')
-            start_time = time.time()
             for policy_namespace in hierarchy:
                 for hierarchy_item in hierarchy[policy_namespace]:
                     if hierarchy_item in policy_vals[policy_namespace]:
