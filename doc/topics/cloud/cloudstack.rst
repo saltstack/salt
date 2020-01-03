@@ -22,7 +22,7 @@ Using Salt for CloudStack, requires an ``API key`` and a ``secret key`` along wi
 
     exoscale:
       driver: cloudstack
-      host: api.exoscale.ch
+      host: api.exoscale.com
       path: /compute
       apikey: EXOAPIKEY
       secretkey: EXOSECRETKEYINYOURACCOUNT
@@ -48,9 +48,10 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
 
     exoscale-ubuntu:
       provider: exoscale-config
-      image: Ubuntu 16.04 
+      image: Linux Ubuntu 18.04
       size: Small
       location: ch-gva-2
+      ssh_username: ubuntu
 
 Locations can be obtained using the ``--list-locations`` option for the ``salt-cloud``
 command:
