@@ -347,7 +347,7 @@ def _function_config_present(FunctionName, Role, Handler, Description, Timeout,
     func = __salt__['boto_lambda.describe_function'](
         FunctionName, region=region,
         key=key, keyid=keyid, profile=profile)['function']
-    role_arn = _get_role_arn(Role, region, key, keyid, profile)
+    role_arn = _get_role_arn(Role, region, key, keyid, profile)  # pylint: disable=possibly-unused-variable
     need_update = False
     options = {'Role': 'role_arn',
                'Handler': 'Handler',
