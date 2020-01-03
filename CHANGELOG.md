@@ -26,6 +26,8 @@ Versions are `MAJOR.PATCH`.
 
 ### Changed
 
+- [#54013](https://github.com/saltstack/salt/pull/54103) - Set `session_id`
+  cookie in the rest_tornado backend.
 - [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20) - Changed to numeric versions.
 - [SEP 1](https://github.com/saltstack/salt-enhancement-proposals/blob/master/accepted/0001-changelog-format.md), [SEP 14](https://github.com/saltstack/salt-enhancement-proposals/pull/20) - Adopted keepachangelog format.
 
