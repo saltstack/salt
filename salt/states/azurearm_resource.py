@@ -394,7 +394,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
     if policy_rule_json:
         try:
             temp_rule = json.loads(policy_rule_json)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Unable to load policy rule json! ({0})'.format(exc)
             return ret
     elif policy_rule_file:
@@ -415,7 +415,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
                 skip_verify=skip_verify,
                 **kwargs
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Unable to locate policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)
             return ret
 
@@ -426,7 +426,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
         try:
             with salt.utils.files.fopen(sfn, 'r') as prf:
                 temp_rule = json.load(prf)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Unable to load policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)
             return ret
 

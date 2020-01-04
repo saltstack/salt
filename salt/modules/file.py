@@ -440,7 +440,7 @@ def set_mode(path, mode):
         raise CommandExecutionError('{0}: File not found'.format(path))
     try:
         os.chmod(path, int(mode, 8))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
@@ -613,7 +613,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
@@ -1779,7 +1779,7 @@ def _regex_to_static(src, regex):
     try:
         compiled = re.compile(regex, re.DOTALL)
         src = [line for line in src if compiled.search(line) or line.count(regex)]
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
     return src and src or []
@@ -2465,7 +2465,7 @@ def replace(path,
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise CommandExecutionError(
                     "Unable create backup symlink '{0}'. "
                     "Target was '{1}'. "
@@ -2713,7 +2713,7 @@ def blockreplace(path,
             linesep = os.linesep
         try:
             fi_file.close()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     if in_block:
@@ -3353,9 +3353,27 @@ def link(src, path):
     try:
         os.link(src, path)
         return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+    except (OSError, IOError) as E:
+        raise CommandExecutionError('Could not create \'{0}\': {1}'.format(path, E))
     return False
+
+
+def is_hardlink(path):
+    '''
+    Check if the path is a hard link by verifying that the number of links
+    is larger than 1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_hardlink /path/to/link
+    '''
+
+    # Simply use lstat and count the st_nlink field to determine if this path
+    # is hardlinked to something.
+    res = lstat(os.path.expanduser(path))
+    return res and res['st_nlink'] > 1
 
 
 def is_link(path):
@@ -3518,7 +3536,7 @@ def lstat(path):
         lst = os.lstat(path)
         return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return {}
 
 
@@ -4227,7 +4245,7 @@ def get_managed(
                     source,
                     saltenv,
                     source_hash=source_sum.get('hsum'))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
                 # and return a comment that will fail the calling state.
                 _source = salt.utils.url.redact_http_basic_auth(source)
@@ -4835,7 +4853,7 @@ def check_managed_changes(
                     or source.startswith('/'):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, attrs, saltenv, contents)
@@ -5264,7 +5282,7 @@ def manage_file(name,
             if _urlparse(source).scheme in ('salt', 'file', ''):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.warning('Unable to stat %s: %s', sfn, exc)
 
     # Check changes if the target file exists
@@ -5336,11 +5354,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
@@ -6370,7 +6388,7 @@ def open_files(by_pid=False):
 
         #try:
         #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
-        #except Exception:
+        #except Exception:  # pylint: disable=broad-except
         #    pass
 
         for fpath in os.listdir('{0}/fd'.format(ppath)):

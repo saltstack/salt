@@ -85,10 +85,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             self.run_function('sysctl.persist', [ASSIGN_CMD, 10])
             line = '{0}={1}'.format(ASSIGN_CMD, 10)
             found = self.__check_string(CONFIG, line)
-            try:
-                self.assertTrue(found)
-            except AssertionError:
-                raise
+            self.assertTrue(found)
         except CommandExecutionError:
             os.remove(CONFIG)
             raise
@@ -103,10 +100,7 @@ class DarwinSysctlModuleTest(ModuleCase):
         try:
             self.run_function('sysctl.persist', [ASSIGN_CMD, 50])
             ret = self.run_function('sysctl.persist', [ASSIGN_CMD, 50])
-            try:
-                self.assertEqual(ret, 'Already set')
-            except AssertionError:
-                raise
+            self.assertEqual(ret, 'Already set')
         except CommandExecutionError:
             os.remove(CONFIG)
             raise
@@ -126,10 +120,7 @@ class DarwinSysctlModuleTest(ModuleCase):
                               [ASSIGN_CMD, rand],
                               apply_change=True)
             info = int(self.run_function('sysctl.get', [ASSIGN_CMD]))
-            try:
-                self.assertEqual(info, rand)
-            except AssertionError:
-                raise
+            self.assertEqual(info, rand)
         except CommandExecutionError:
             os.remove(CONFIG)
             raise

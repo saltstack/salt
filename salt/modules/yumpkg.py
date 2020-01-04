@@ -79,7 +79,7 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
     enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
@@ -1642,7 +1642,7 @@ def install(name=None,
                         # Failed to unhold package
                         errors.append(unheld_pkg)
                 yield
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 errors.append(
                     'Error encountered unholding packages {0}: {1}'
                     .format(', '.join(to_unhold), exc)

@@ -87,3 +87,19 @@ class TestInFormats(BaseToolsTest):
         ))
         self.assertEqual(response.status, '200 OK')
         self.assertDictEqual(request.unserialized_data, data)
+
+
+class TestCors(BaseToolsTest):
+    def __get_cp_config__(self):
+        return {
+            'tools.cors_tool.on': True,
+        }
+
+    def test_option_request(self):
+        request, response = self.request(
+            '/', method='OPTIONS', headers=(
+                ('Origin', 'https://domain.com'),
+            ))
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(response.headers.get(
+            'Access-Control-Allow-Origin'), 'https://domain.com')

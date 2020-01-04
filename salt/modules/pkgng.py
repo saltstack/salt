@@ -2470,7 +2470,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
         if ret['stdout'] in sym:
             return sym[ret['stdout']]
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(exc)
 
     return None

@@ -61,7 +61,7 @@ def version():
     pybluez_version = '<= 0.18 (Unknown, but installed)'
     try:
         pybluez_version = bluetooth.__version__
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         pass
     return {'Bluez': bluez_version, 'PyBluez': pybluez_version}
 
@@ -250,7 +250,7 @@ def pair(address, key):
 
     try:
         int(key)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'bluetooth.pair requires a numerical key to be used'
         )
