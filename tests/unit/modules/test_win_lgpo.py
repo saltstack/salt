@@ -15,11 +15,28 @@ from tests.support.unit import TestCase, skipIf
 import salt.config
 import salt.modules.cmdmod
 import salt.modules.file
-import salt.modules.win_file
+import salt.modules.win_file as win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.platform
+import salt.utils.win_dacl
 import salt.utils.win_lgpo_auditpol
 import salt.utils.win_reg
+
+LOADER_DICTS = {
+    win_lgpo: {
+        '__salt__': {
+            'file.file_exists': salt.modules.file.file_exists,
+            'file.makedirs': win_file.makedirs_,
+            'file.remove': win_file.remove,
+            'cmd.run': salt.modules.cmdmod.run},
+        '__opts__': salt.config.DEFAULT_MINION_OPTS.copy(),
+        '__utils__': {
+            'reg.read_value': salt.utils.win_reg.read_value,
+            'auditpol.get_auditpol_dump':
+                salt.utils.win_lgpo_auditpol.get_auditpol_dump}},
+    win_file: {
+        '__utils__': {
+            'dacl.set_perms': salt.utils.win_dacl.set_perms}}}
 
 
 class WinLGPOTestCase(TestCase):
@@ -134,13 +151,7 @@ class WinLGPOGetPolicyADMXTestCase(TestCase, LoaderModuleMockMixin):
     (admx/adml)
     '''
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        return {win_lgpo: {
-            '__opts__': opts,
-            '__salt__': {
-                'file.file_exists': salt.modules.file.file_exists
-            }
-        }}
+        return LOADER_DICTS
 
     def test_get_policy_name(self):
         result = win_lgpo.get_policy(policy_name='Allow Telemetry',
@@ -236,7 +247,7 @@ class WinLGPOGetPolicyFromPolicyInfoTestCase(TestCase, LoaderModuleMockMixin):
     object
     '''
     def setup_loader_modules(self):
-        return {win_lgpo: {}}
+        return LOADER_DICTS
 
     def test_get_policy_name(self):
         result = win_lgpo.get_policy(
@@ -352,20 +363,7 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
     Go through each mechanism
     '''
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        return {win_lgpo: {
-            '__salt__': {
-                'file.file_exists': salt.modules.file.file_exists,
-                'file.remove': salt.modules.win_file.remove,
-                'cmd.run': salt.modules.cmdmod.run
-            },
-            '__opts__': opts,
-            '__utils__': {
-                'reg.read_value': salt.utils.win_reg.read_value,
-                'auditpol.get_auditpol_dump':
-                    salt.utils.win_lgpo_auditpol.get_auditpol_dump,
-            },
-        }}
+        return LOADER_DICTS
 
     @classmethod
     def setUpClass(cls):
@@ -456,14 +454,7 @@ class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
     not_configured = False
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        return {win_lgpo: {
-            '__salt__': {
-                'file.file_exists': salt.modules.file.file_exists,
-                'file.makedirs': salt.modules.win_file.makedirs_,
-            },
-            '__opts__': opts,
-        }}
+        return LOADER_DICTS
 
     def setUp(self):
         if not self.not_configured:
@@ -555,14 +546,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
     configured = False
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS.copy()
-        return {win_lgpo: {
-            '__salt__': {
-                'file.file_exists': salt.modules.file.file_exists,
-                'file.makedirs': salt.modules.win_file.makedirs_,
-            },
-            '__opts__': opts,
-        }}
+        return LOADER_DICTS
 
     def setUp(self):
         if not self.configured:
