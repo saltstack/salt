@@ -118,7 +118,7 @@ def _get_blade():
                 raise CommandExecutionError('No Pure Storage FlashBlade credentials found.')
     try:
         blade.login(api_token)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError('Pure Storage FlashBlade authentication failed.')
     return blade
 

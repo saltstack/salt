@@ -100,7 +100,7 @@ def install_app(app, target='/Applications/'):
         salt '*' macpackage.install_app /tmp/tmp.app /Applications/
     '''
 
-    if not target[-4:] == '.app':
+    if target[-4:] != '.app':
         if app[-1:] == '/':
             base_app = os.path.basename(app[:-1])
         else:
@@ -238,7 +238,7 @@ def get_pkg_id(pkg):
             # Find our identifiers
             for f in files:
                 i = _get_pkg_id_from_pkginfo(os.path.join(temp_dir, f))
-                if len(i):
+                if i:
                     package_ids.extend(i)
         else:
             package_ids = _get_pkg_id_dir(pkg)

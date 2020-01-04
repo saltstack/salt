@@ -67,7 +67,7 @@ def __virtual__():
                 raise IOError('"rabbitmq_server-*" subdirectory not found in: {0}'.format(dir_path))
             RABBITMQCTL = os.path.join(subdir_match, 'sbin', 'rabbitmqctl.bat')
             RABBITMQ_PLUGINS = os.path.join(subdir_match, 'sbin', 'rabbitmq-plugins.bat')
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         finally:
             if key is not None:
@@ -383,7 +383,7 @@ def add_user(name, password=None, runas=None):
         # Now, Clear the random password from the account, if necessary
         try:
             clear_password(name, runas)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # Clearing the password failed. We should try to cleanup
             # and rerun and error.
             delete_user(name, runas)

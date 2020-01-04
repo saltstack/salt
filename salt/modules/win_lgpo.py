@@ -4587,7 +4587,7 @@ class _policy_info(object):
                 else:
                     userSid = '{0}'.format(userSid[0])
             # TODO: This needs to be more specific
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 userSid = win32security.ConvertSidToStringSid(_sid)
                 log.warning('Unable to convert SID "%s" to a friendly name.  The SID will be disaplayed instead of a user/group name.', userSid)
             usernames.append(userSid)
@@ -4608,7 +4608,7 @@ class _policy_info(object):
                 sid = win32security.LookupAccountName('', _user)[0]
                 sids.append(sid)
             # This needs to be more specific
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.exception('Handle this explicitly')
                 raise CommandExecutionError((
                     'There was an error obtaining the SID of user "{0}". Error '
@@ -4833,7 +4833,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     try:
                         xmltree = _remove_unicode_encoding(admfile)
                     # TODO: This needs to be more specific
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         log.exception('Handle this explicitly')
                         log.error('A error was found while processing admx '
                                   'file %s, all policies from this file will '
@@ -4929,7 +4929,7 @@ def _load_policy_definitions(path='c:\\Windows\\PolicyDefinitions',
                     try:
                         xmltree = _remove_unicode_encoding(adml_file)
                     # TODO: This needs to be more specific
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         log.exception('Handle this explicitly')
                         log.error('An error was found while processing '
                                   'adml file %s, all policy '
@@ -5476,7 +5476,7 @@ def _addAccountRights(sidObject, user_right):
             _ret = win32security.LsaAddAccountRights(_polHandle, sidObject, user_rights_list)
         return True
     # TODO: This needs to be more specific
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception('Error attempting to add account right, exception was %s',
                       e)
         return False
@@ -5491,7 +5491,7 @@ def _delAccountRights(sidObject, user_right):
         user_rights_list = [user_right]
         _ret = win32security.LsaRemoveAccountRights(_polHandle, sidObject, False, user_rights_list)
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception('Error attempting to delete account right')
         return False
 
@@ -6787,13 +6787,13 @@ def _write_regpol_data(data_to_write,
                 with salt.utils.files.fopen(gpt_ini_path, 'w') as gpt_file:
                     gpt_file.write(gpt_ini_data)
         # TODO: This needs to be more specific
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(
                     gpt_ini_path, e)
             log.exception(msg)
             raise CommandExecutionError(msg)
     # TODO: This needs to be more specific
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         msg = 'An error occurred attempting to write to {0}, the exception was {1}'.format(policy_file_path, e)
         log.exception(msg)
         raise CommandExecutionError(msg)
@@ -7188,7 +7188,7 @@ def _writeAdminTemplateRegPolFile(admtemplate_data,
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_location'],
                            policy_data.admx_registry_classes[registry_class]['gpt_extension_guid'])
     # TODO: This needs to be more specific or removed
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.exception('Unhandled exception %s occurred while attempting to write Adm Template Policy File', e)
         return False
     return True
@@ -7210,7 +7210,7 @@ def _getScriptSettingsFromIniFile(policy_info):
             try:
                 _existingData = deserialize(_existingData.decode('utf-16-le').lstrip('\ufeff'))
                 log.debug('Have deserialized data %s', _existingData)
-            except Exception as error:
+            except Exception as error:  # pylint: disable=broad-except
                 log.exception('An error occurred attempting to deserialize data for %s', policy_info['Policy'])
                 raise CommandExecutionError(error)
             if 'Section' in policy_info['ScriptIni'] and policy_info['ScriptIni']['Section'].lower() in [z.lower() for z in _existingData.keys()]:
@@ -7720,7 +7720,7 @@ def get(policy_class=None, return_full_policy_names=True,
 
     if policy_class is None or policy_class.lower() == 'both':
         policy_class = _policydata.policies.keys()
-    elif policy_class.lower() not in [z.lower() for z in _policydata.policies.keys()]:
+    elif policy_class.lower() not in [z.lower() for z in _policydata.policies]:
         msg = 'The policy_class {0} is not an available policy class, please ' \
               'use one of the following: {1}, Both'
         raise SaltInvocationError(
@@ -8251,7 +8251,7 @@ def set_(computer_policy=None,
                             log.debug('NEW MODAL SET = %s', _newModalSetData)
                             _ret = win32net.NetUserModalsSet(None, _modal_set, _newModalSetData)
                         # TODO: This needs to be more specific
-                        except Exception:
+                        except Exception:  # pylint: disable=broad-except
                             msg = 'An unhandled exception occurred while attempting to set policy via NetUserModalSet'
                             log.exception(msg)
                             raise CommandExecutionError(msg)

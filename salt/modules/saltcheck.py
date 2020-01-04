@@ -349,12 +349,9 @@ def _get_top_states():
     Equivalent to a salt cli: salt web state.show_top
     '''
     alt_states = []
-    try:
-        returned = __salt__['state.show_top']()
-        for i in returned['base']:
-            alt_states.append(i)
-    except Exception:
-        raise
+    returned = __salt__['state.show_top']()
+    for i in returned['base']:
+        alt_states.append(i)
     # log.info("top states: %s", alt_states)
     return alt_states
 
@@ -364,13 +361,10 @@ def _get_state_sls(state):
     Equivalent to a salt cli: salt web state.show_low_sls STATE
     '''
     sls_list_state = []
-    try:
-        returned = __salt__['state.show_low_sls'](state)
-        for i in returned:
-            if i['__sls__'] not in sls_list_state:
-                sls_list_state.append(i['__sls__'])
-    except Exception:
-        raise
+    returned = __salt__['state.show_low_sls'](state)
+    for i in returned:
+        if i['__sls__'] not in sls_list_state:
+            sls_list_state.append(i['__sls__'])
     return sls_list_state
 
 
@@ -394,7 +388,7 @@ class SaltCheck(object):
         self.auto_update_master_cache = _get_auto_update_cache_value
         # self.salt_lc = salt.client.Caller(mopts=__opts__)
         self.salt_lc = salt.client.Caller()
-        if self.auto_update_master_cache:
+        if self.auto_update_master_cache():
             update_master_cache()
 
     def __is_valid_test(self, test_dict):
@@ -438,19 +432,14 @@ class SaltCheck(object):
         Generic call of salt Caller command
         '''
         value = False
-        try:
-            if args and kwargs:
-                value = self.salt_lc.cmd(fun, *args, **kwargs)
-            elif args and not kwargs:
-                value = self.salt_lc.cmd(fun, *args)
-            elif not args and kwargs:
-                value = self.salt_lc.cmd(fun, **kwargs)
-            else:
-                value = self.salt_lc.cmd(fun)
-        except salt.exceptions.SaltException:
-            raise
-        except Exception:
-            raise
+        if args and kwargs:
+            value = self.salt_lc.cmd(fun, *args, **kwargs)
+        elif args and not kwargs:
+            value = self.salt_lc.cmd(fun, *args)
+        elif not args and kwargs:
+            value = self.salt_lc.cmd(fun, **kwargs)
+        else:
+            value = self.salt_lc.cmd(fun)
         return value
 
     def run_test(self, test_dict):
@@ -556,10 +545,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         if isinstance(returned, str):
-            try:
-                returned = bool(returned)
-            except ValueError:
-                raise
+            returned = bool(returned)
         try:
             assert (returned is False), "{0} not False".format(returned)
         except AssertionError as err:
@@ -681,15 +667,12 @@ class StateTestLoader(object):
         '''
         loads in one test file
         '''
-        try:
-            with __utils__['files.fopen'](filepath, 'r') as myfile:
-                # with salt.utils.files.fopen(filepath, 'r') as myfile:
-                # with open(filepath, 'r') as myfile:
-                contents_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(myfile))
-                for key, value in contents_yaml.items():
-                    self.test_dict[key] = value
-        except:
-            raise
+        with __utils__['files.fopen'](filepath, 'r') as myfile:
+            # with salt.utils.files.fopen(filepath, 'r') as myfile:
+            # with open(filepath, 'r') as myfile:
+            contents_yaml = salt.utils.data.decode(salt.utils.yaml.safe_load(myfile))
+            for key, value in contents_yaml.items():
+                self.test_dict[key] = value
         return
 
     def load_file_salt_rendered(self, filepath):

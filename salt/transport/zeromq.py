@@ -728,7 +728,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
         try:
             payload = self.serial.loads(payload[0])
             payload = self._decode_payload(payload)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             exc_type = type(exc).__name__
             if exc_type == 'AuthenticationError':
                 log.debug(
@@ -770,7 +770,7 @@ class ZeroMQReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin,
             # Take the payload_handler function that was registered when we created the channel
             # and call it, returning control to the caller until it completes
             ret, req_opts = yield self.payload_handler(payload)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             stream.send('Some exception handling minion payload')
             log.error('Some exception handling a payload from minion', exc_info=True)
@@ -1225,7 +1225,7 @@ class AsyncReqMessageClient(object):
 
             try:
                 ret = yield future
-            except Exception as err:  # pylint: disable=W0702
+            except Exception as err:  # pylint: disable=broad-except
                 log.debug('Re-init ZMQ socket: %s', err)
                 self._init_socket()  # re-init the zmq socket (no other way in zmq)
                 del self.send_queue[0]
