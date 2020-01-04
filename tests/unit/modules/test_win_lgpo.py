@@ -18,6 +18,7 @@ import salt.modules.file
 import salt.modules.win_file
 import salt.modules.win_lgpo as win_lgpo
 import salt.utils.platform
+import salt.utils.win_lgpo_auditpol
 import salt.utils.win_reg
 
 
@@ -360,7 +361,9 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
             },
             '__opts__': opts,
             '__utils__': {
-                'reg.read_value': salt.utils.win_reg.read_value
+                'reg.read_value': salt.utils.win_reg.read_value,
+                'auditpol.get_auditpol_dump':
+                    salt.utils.win_lgpo_auditpol.get_auditpol_dump,
             },
         }}
 
@@ -457,6 +460,7 @@ class WinLGPOGetPointAndPrintNCTestCase(TestCase, LoaderModuleMockMixin):
         return {win_lgpo: {
             '__salt__': {
                 'file.file_exists': salt.modules.file.file_exists,
+                'file.makedirs': salt.modules.win_file.makedirs_,
             },
             '__opts__': opts,
         }}
@@ -555,6 +559,7 @@ class WinLGPOGetPointAndPrintENTestCase(TestCase, LoaderModuleMockMixin):
         return {win_lgpo: {
             '__salt__': {
                 'file.file_exists': salt.modules.file.file_exists,
+                'file.makedirs': salt.modules.win_file.makedirs_,
             },
             '__opts__': opts,
         }}
