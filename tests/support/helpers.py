@@ -1110,43 +1110,48 @@ def not_runs_on(grains=None, **kwargs):
     return decorator
 
 
-def requires_salt_state_modules(*names):
+def check_required_sminion_attributes(sminion_attr, *required_items):
     '''
-    Makes sure the passed salt state module is available. Skips the test if not
+    :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
+    :param required_items: The items that must be part of the designated sminion attribute for the decorated test
+    :return The packages that are not available
+    '''
+    # Late import
+    from tests.support.sminion import create_sminion
+    required_salt_items = set(required_items)
+    sminion = create_sminion(minion_id='runtests-internal-sminion')
+    available_items = list(getattr(sminion, sminion_attr))
+    not_available_items = set()
+
+    name = '__not_available_{items}s__'.format(items=sminion_attr)
+    if not hasattr(sminion, name):
+        setattr(sminion, name, set())
+
+    cached_not_available_items = getattr(sminion, name)
+
+    for not_available_item in cached_not_available_items:
+        if not_available_item in required_salt_items:
+            not_available_items.add(not_available_item)
+            required_salt_items.remove(not_available_item)
+
+    for required_item_name in required_salt_items:
+        search_name = required_item_name
+        if '.' not in search_name:
+            search_name += '.*'
+        if not fnmatch.filter(available_items, search_name):
+            not_available_items.add(required_item_name)
+            cached_not_available_items.add(required_item_name)
+
+    return not_available_items
+
+
+def requires_salt_states(*names):
+    '''
+    Makes sure the passed salt state is available. Skips the test if not
 
     .. versionadded:: 3000
     '''
-
-    def _check_required_salt_state_modules(*required_salt_modules):
-        # Late import
-        from tests.support.sminion import create_sminion
-        required_salt_modules = set(required_salt_modules)
-        sminion = create_sminion(minion_id='runtests-internal-sminion')
-        available_modules = list(sminion.states)
-        not_available_modules = set()
-        try:
-            cached_not_available_modules = sminion.__not_availiable_modules__
-        except AttributeError:
-            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
-
-        if cached_not_available_modules:
-            for not_available_module in cached_not_available_modules:
-                if not_available_module in required_salt_modules:
-                    not_available_modules.add(not_available_module)
-                    required_salt_modules.remove(not_available_module)
-
-        for required_module_name in required_salt_modules:
-            search_name = required_module_name
-            if '.' not in search_name:
-                search_name += '.*'
-            if not fnmatch.filter(available_modules, search_name):
-                not_available_modules.add(required_module_name)
-                cached_not_available_modules.add(required_module_name)
-
-        if not_available_modules:
-            if len(not_available_modules) == 1:
-                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
-            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+    not_available = check_required_sminion_attributes('states', *names)
 
     def decorator(caller):
         if inspect.isclass(caller):
@@ -1154,7 +1159,9 @@ def requires_salt_state_modules(*names):
             old_setup = getattr(caller, 'setUp', None)
 
             def setUp(self, *args, **kwargs):
-                _check_required_salt_state_modules(*names)
+                if not_available:
+                    raise SkipTest('Unavailable salt states: {}'.format(*not_available))
+
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
@@ -1164,7 +1171,8 @@ def requires_salt_state_modules(*names):
         # We're simply decorating functions
         @functools.wraps(caller)
         def wrapper(cls):
-            _check_required_salt_state_modules(*names)
+            if not_available:
+                raise SkipTest('Unavailable salt states: {}'.format(*not_available))
             return caller(cls)
 
         return wrapper
@@ -1178,36 +1186,7 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     '''
-    def _check_required_salt_modules(*required_salt_modules):
-        # Late import
-        from tests.support.sminion import create_sminion
-        required_salt_modules = set(required_salt_modules)
-        sminion = create_sminion(minion_id='runtests-internal-sminion')
-        available_modules = list(sminion.functions)
-        not_available_modules = set()
-        try:
-            cached_not_available_modules = sminion.__not_availiable_modules__
-        except AttributeError:
-            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
-
-        if cached_not_available_modules:
-            for not_available_module in cached_not_available_modules:
-                if not_available_module in required_salt_modules:
-                    not_available_modules.add(not_available_module)
-                    required_salt_modules.remove(not_available_module)
-
-        for required_module_name in required_salt_modules:
-            search_name = required_module_name
-            if '.' not in search_name:
-                search_name += '.*'
-            if not fnmatch.filter(available_modules, search_name):
-                not_available_modules.add(required_module_name)
-                cached_not_available_modules.add(required_module_name)
-
-        if not_available_modules:
-            if len(not_available_modules) == 1:
-                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
-            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+    not_available = check_required_sminion_attributes('functions', *names)
 
     def decorator(caller):
         if inspect.isclass(caller):
@@ -1215,7 +1194,8 @@ def requires_salt_modules(*names):
             old_setup = getattr(caller, 'setUp', None)
 
             def setUp(self, *args, **kwargs):
-                _check_required_salt_modules(*names)
+                if not_available:
+                    raise SkipTest('Unavailable salt modules: {}'.format(*not_available))
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
@@ -1225,7 +1205,8 @@ def requires_salt_modules(*names):
         # We're simply decorating functions
         @functools.wraps(caller)
         def wrapper(cls):
-            _check_required_salt_modules(*names)
+            if not_available:
+                raise SkipTest('Unavailable salt modules: {}'.format(*not_available))
             return caller(cls)
 
         return wrapper

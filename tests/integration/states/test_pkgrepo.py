@@ -14,7 +14,7 @@ from tests.support.unit import skipIf
 from tests.support.helpers import (
     destructiveTest,
     requires_salt_modules,
-    requires_salt_state_modules,
+    requires_salt_states,
     requires_system_grains,
 )
 
@@ -78,7 +78,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         for state_id, state_result in six.iteritems(ret):
             self.assertSaltTrueReturn(dict([(state_id, state_result)]))
 
-    @requires_salt_state_modules('pkgrepo.absent', 'pkgrepo.managed')
+    @requires_salt_states('pkgrepo.absent', 'pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_03_with_comments(self, grains):
         '''
@@ -128,7 +128,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             # Clean up
             self.run_state('pkgrepo.absent', name=kwargs['name'])
 
-    @requires_salt_state_modules('pkgrepo.managed')
+    @requires_salt_states('pkgrepo.managed')
     @requires_system_grains
     def test_pkgrepo_04_apt_with_architectures(self, grains):
         '''
