@@ -8,8 +8,6 @@ from __future__ import absolute_import
 # Import Salt Testing libraries
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
-        NO_MOCK,
-        NO_MOCK_REASON,
         MagicMock,
         patch)
 
@@ -21,7 +19,6 @@ except (ImportError, OSError) as e:
     HAS_CLUSTERSHELL = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_CLUSTERSHELL is False, 'Install Python Clustershell bindings before running these tests.')
 class ClusterShellTestCase(TestCase):
     '''
@@ -37,8 +34,10 @@ class ClusterShellTestCase(TestCase):
             with patch.dict(salt.roster.clustershell.__opts__, {'ssh_scan_ports': [1, 2, 3],
                 'ssh_scan_timeout': 30}):
                 # Reimports are necessary to re-init the namespace.
+                # pylint: disable=unused-import
                 import socket
                 from ClusterShell.NodeSet import NodeSet
+                # pylint: enable=unused-import
                 ret = salt.roster.clustershell.targets('foo')
                 mock_socket.gethostbyname.assert_any_call('foo')
                 self.assertTrue('foo' in ret)

@@ -15,10 +15,11 @@ try:
     yaml.Dumper = yaml.CDumper
     yaml.SafeLoader = yaml.CSafeLoader
     yaml.SafeDumper = yaml.CSafeDumper
-except Exception:
+except Exception:  # pylint: disable=broad-except
     pass
 
 import salt.utils.stringutils
+
 
 __all__ = ['SaltYamlSafeLoader', 'load', 'safe_load']
 

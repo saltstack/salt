@@ -78,7 +78,7 @@ def find_file(path, saltenv='base', **kwargs):
         '''
         try:
             fnd['stat'] = list(os.stat(fnd['path']))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         return fnd
 
@@ -203,14 +203,15 @@ def update():
 
     if __opts__.get('fileserver_events', False):
         # if there is a change, fire an event
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data,
-                         salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(
+                data,
+                salt.utils.event.tagify(['roots', 'update'], prefix='fileserver'))
 
 
 def file_hash(load, fnd):
@@ -359,7 +360,7 @@ def _file_lists(load, form):
                 try:
                     if not os.listdir(abs_path):
                         ret['empty_dirs'].add(rel_path)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Generic exception because running os.listdir() on a
                     # non-directory path raises an OSError on *NIX and a
                     # WindowsError on Windows.

@@ -9,8 +9,8 @@ import copy
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_not_root
 # Import salt libs
@@ -23,7 +23,6 @@ import tornado.testing
 from salt.ext.six.moves import range
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def setUp(self):
@@ -210,7 +209,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
                 class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
-                    pass
+
                 tornado.gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally
@@ -341,7 +340,6 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion.destroy()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
 
     def setUp(self):

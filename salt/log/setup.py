@@ -785,7 +785,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warning(
                 'An exception occurred in the multiprocessing logging '
-                'queue thread: %s', exc, exc_info_on_loglevel=logging.DEBUG
+                'queue thread: %r', exc, exc_info_on_loglevel=logging.DEBUG
             )
 
 
