@@ -145,7 +145,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         # This needs to be str and not six.string_types, since if the string is
         # already a unicode type, it does not need to be decoded (and doing so
         # will raise an exception).
-        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code
+        if isinstance(s, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             return _normalize(s)
         elif isinstance(s, (str, bytearray)):
             for enc in encoding:
@@ -161,7 +161,7 @@ def to_unicode(s, encoding=None, errors='strict', normalize=False):
         raise TypeError('expected str, bytes, or bytearray not {}'.format(type(s)))
 
 
-@jinja_filter('str_to_num')  # Remove this for Neon
+@jinja_filter('str_to_num')
 @jinja_filter('to_num')
 def to_num(text):
     '''
@@ -569,3 +569,39 @@ def get_diff(a, b, *args, **kwargs):
             *args, **kwargs
         )
     )
+
+
+@jinja_filter('to_snake_case')
+def camel_to_snake_case(camel_input):
+    '''
+    Converts camelCase (or CamelCase) to snake_case.
+    From https://codereview.stackexchange.com/questions/185966/functions-to-convert-camelcase-strings-to-snake-case
+
+    :param str camel_input: The camelcase or CamelCase string to convert to snake_case
+
+    :return str
+    '''
+    res = camel_input[0].lower()
+    for i, letter in enumerate(camel_input[1:], 1):
+        if letter.isupper():
+            if camel_input[i-1].islower() or (i != len(camel_input)-1 and camel_input[i+1].islower()):
+                res += '_'
+        res += letter.lower()
+    return res
+
+
+@jinja_filter('to_camelcase')
+def snake_to_camel_case(snake_input, uppercamel=False):
+    '''
+    Converts snake_case to camelCase (or CamelCase if uppercamel is ``True``).
+    Inspired by https://codereview.stackexchange.com/questions/85311/transform-snake-case-to-camelcase
+
+    :param str snake_input: The input snake_case string to convert to camelCase
+    :param bool uppercamel: Whether or not to convert to CamelCase instead
+
+    :return str
+    '''
+    words = snake_input.split('_')
+    if uppercamel:
+        words[0] = words[0].capitalize()
+    return words[0] + ''.join(word.capitalize() for word in words[1:])

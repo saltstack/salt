@@ -659,6 +659,7 @@ VALID_OPTS = immutabletypes.freeze({
     'roots_update_interval': int,
     'azurefs_update_interval': int,
     'gitfs_update_interval': int,
+    'git_pillar_update_interval': int,
     'hgfs_update_interval': int,
     'minionfs_update_interval': int,
     's3fs_update_interval': int,
@@ -689,8 +690,6 @@ VALID_OPTS = immutabletypes.freeze({
     'gitfs_privkey': six.string_types,
     'gitfs_pubkey': six.string_types,
     'gitfs_passphrase': six.string_types,
-    'gitfs_env_whitelist': list,
-    'gitfs_env_blacklist': list,
     'gitfs_saltenv_whitelist': list,
     'gitfs_saltenv_blacklist': list,
     'gitfs_ssl_verify': bool,
@@ -1289,6 +1288,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1318,8 +1318,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'gitfs_privkey': '',
     'gitfs_pubkey': '',
     'gitfs_passphrase': '',
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
     'gitfs_saltenv_whitelist': [],
     'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
@@ -1533,6 +1531,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'roots_update_interval': DEFAULT_INTERVAL,
     'azurefs_update_interval': DEFAULT_INTERVAL,
     'gitfs_update_interval': DEFAULT_INTERVAL,
+    'git_pillar_update_interval': DEFAULT_INTERVAL,
     'hgfs_update_interval': DEFAULT_INTERVAL,
     'minionfs_update_interval': DEFAULT_INTERVAL,
     's3fs_update_interval': DEFAULT_INTERVAL,
@@ -1563,8 +1562,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'gitfs_privkey': '',
     'gitfs_pubkey': '',
     'gitfs_passphrase': '',
-    'gitfs_env_whitelist': [],
-    'gitfs_env_blacklist': [],
     'gitfs_saltenv_whitelist': [],
     'gitfs_saltenv_blacklist': [],
     'gitfs_global_lock': True,
@@ -1957,7 +1954,7 @@ def _expand_glob_path(file_roots):
                 unglobbed_path.extend(glob.glob(path))
             else:
                 unglobbed_path.append(path)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -4013,7 +4010,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: %s',
                     regex

@@ -1283,7 +1283,7 @@ def list_pkgs(versions_as_list=False,
             osarch = __grains__.get('osarch', '')
             if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
-        if len(cols):
+        if cols:
             if ('install' in linetype or 'hold' in linetype) and \
                     'installed' in status:
                 __salt__['pkg_resource.add_pkg'](ret['installed'],
@@ -1445,7 +1445,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
             except TypeError:
                 ret = apt_pkg.version_compare(six.text_type(pkg1), six.text_type(pkg2))
             return 1 if ret > 0 else -1 if ret < 0 else 0
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # Try to use shell version in case of errors w/python bindings
             pass
     try:
@@ -1457,7 +1457,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                               ignore_retcode=True)
             if retcode == 0:
                 return ret
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(exc)
     return None
 
@@ -2054,6 +2054,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         .. versionadded:: 2015.8.9
 
+    refresh : True
+        Enable or disable (True or False) refreshing of the apt package
+        database. The previous ``refresh_db`` argument was deprecated in
+        favor of ``refresh```. The ``refresh_db`` argument will still
+        continue to work to ensure backwards compatibility, but please
+        change to using the preferred ``refresh``.
+
     .. note::
         Due to the way keys are stored for APT, there is a known issue where
         the key won't be updated unless another change is made at the same
@@ -2067,12 +2074,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         refresh = kwargs['refresh_db']
     else:
         refresh = kwargs.get('refresh', True)

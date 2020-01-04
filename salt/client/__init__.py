@@ -342,7 +342,7 @@ class LocalClient(object):
             six.reraise(*sys.exc_info())
         except AuthorizationError as err:
             six.reraise(*sys.exc_info())
-        except Exception as general_exception:
+        except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
@@ -403,7 +403,7 @@ class LocalClient(object):
             raise AuthenticationError(err)
         except AuthorizationError as err:
             raise AuthorizationError(err)
-        except Exception as general_exception:
+        except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
@@ -1074,7 +1074,7 @@ class LocalClient(object):
                 yield {}
                 # stop the iteration, since the jid is invalid
                 raise StopIteration()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.warning('Returner unavailable: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         # Wait for the hosts to check in
         last_time = False
@@ -1290,7 +1290,7 @@ class LocalClient(object):
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
                 log.warning('jid does not exist')
                 return ret
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Master job cache returner [{0}] failed to verify jid. '
                                   'Exception details: {1}'.format(self.opts['master_job_cache'], exc))
 
@@ -1335,7 +1335,7 @@ class LocalClient(object):
 
         try:
             data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Returner {0} could not fetch jid data. '
                                   'Exception details: {1}'.format(
                                       self.opts['master_job_cache'],
@@ -1384,7 +1384,7 @@ class LocalClient(object):
 
         try:
             data = self.returners['{0}.get_jid'.format(self.opts['master_job_cache'])](jid)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Could not examine master job cache. '
                                   'Error occurred in {0} returner. '
                                   'Exception details: {1}'.format(self.opts['master_job_cache'],
@@ -1438,7 +1438,7 @@ class LocalClient(object):
             if self.returners['{0}.get_load'.format(self.opts['master_job_cache'])](jid) == {}:
                 log.warning('jid does not exist')
                 return ret
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise SaltClientError('Load could not be retrieved from '
                                   'returner {0}. Exception details: {1}'.format(
                                       self.opts['master_job_cache'],
@@ -1589,8 +1589,12 @@ class LocalClient(object):
             if 'minions' in raw.get('data', {}):
                 continue
             try:
-                found.add(raw['id'])
-                ret = {raw['id']: {'ret': raw['return']}}
+                # There might be two jobs for the same minion, so we have to check for the jid
+                if jid == raw['jid']:
+                    found.add(raw['id'])
+                    ret = {raw['id']: {'ret': raw['return']}}
+                else:
+                    continue
             except KeyError:
                 # Ignore other erroneous messages
                 continue
@@ -1934,7 +1938,7 @@ class FunctionWrapper(dict):
             Run a remote call
             '''
             args = list(args)
-            for _key, _val in kwargs:
+            for _key, _val in kwargs.items():
                 args.append('{0}={1}'.format(_key, _val))
             return self.local.cmd(self.minion, key, args)
         return func

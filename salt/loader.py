@@ -179,7 +179,7 @@ def _module_dirs(
                     loaded_entry_point = entry_point.load()
                     for path in loaded_entry_point():
                         ext_type_types.append(path)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error("Error getting module directories from %s: %s", _format_entrypoint_target(entry_point), exc)
                     log.debug("Full backtrace for module directories error", exc_info=True)
 
@@ -674,7 +674,7 @@ def grain_funcs(opts, proxy=None):
           __opts__ = salt.config.minion_config('/etc/salt/minion')
           grainfuncs = salt.loader.grain_funcs(__opts__)
     '''
-    return LazyLoader(
+    ret = LazyLoader(
         _module_dirs(
             opts,
             'grains',
@@ -684,6 +684,8 @@ def grain_funcs(opts, proxy=None):
         opts,
         tag='grains',
     )
+    ret.pack['__utils__'] = utils(opts, proxy=proxy)
+    return ret
 
 
 def _load_cached_grains(opts, cfn):
@@ -827,7 +829,7 @@ def grains(opts, force_refresh=False, proxy=None):
             if 'grains' in parameters:
                 kwargs['grains'] = grains_data
             ret = funcs[key](**kwargs)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if salt.utils.platform.is_proxy():
                 log.info('The following CRITICAL message may not be an error; the proxy may not be completely established yet.')
             log.critical(
@@ -863,7 +865,7 @@ def grains(opts, force_refresh=False, proxy=None):
                             salt.utils.dictupdate.update(grains_data, ret)
                         else:
                             grains_data.update(ret)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         log.critical('Failed to run proxy\'s grains function!',
                             exc_info=True
                         )
@@ -887,7 +889,7 @@ def grains(opts, force_refresh=False, proxy=None):
                     except TypeError as e:
                         log.error('Failed to serialize grains cache: %s', e)
                         raise  # re-throw for cleanup
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.error('Unable to write to grains cache file %s: %s', cfn, e)
                 # Based on the original exception, the file may or may not have been
                 # created. If it was, we will remove it now, as the exception means
@@ -1605,7 +1607,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             )
             self.missing_modules[name] = exc
             return False
-        except Exception as error:
+        except Exception as error:  # pylint: disable=broad-except
             log.error(
                 'Failed to import %s %s, this is due most likely to a '
                 'syntax error:\n', self.tag, name, exc_info=True
@@ -1615,7 +1617,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         except SystemExit as error:
             try:
                 fn_, _, caller, _ = traceback.extract_tb(sys.exc_info()[2])[-1]
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             else:
                 tgt_fn = os.path.join('salt', 'utils', 'process.py')
@@ -1651,7 +1653,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 module_init(self.opts)
             except TypeError as e:
                 log.error(e)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 err_string = '__init__ failed'
                 log.debug(
                     'Error loading %s.%s: %s',
@@ -1876,7 +1878,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                         msg = 'Virtual function took {0} seconds for {1}'.format(
                                 end, module_name)
                         log.warning(msg)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     error_reason = (
                         'Exception raised when processing __virtual__ function'
                         ' for {0}. Module will not be loaded: {1}'.format(
@@ -1937,7 +1939,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # help debugging.
             log.debug('KeyError when loading %s', module_name, exc_info=True)
 
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # If the module throws an exception during __virtual__()
             # then log the information and continue to the next.
             log.error(

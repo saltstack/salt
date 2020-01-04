@@ -472,7 +472,7 @@ class MinionBase(object):
                 log.debug(
                     'Overriding loop_interval because of scheduled jobs.'
                 )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception %s occurred in scheduled job', exc)
         return loop_interval
 
@@ -781,7 +781,7 @@ class MinionBase(object):
                         time.sleep(self.opts['discovery'].get('pause', 5))
                     else:
                         break
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     log.error('SSDP discovery failure: %s', err)
                     break
 
@@ -1051,7 +1051,7 @@ class MinionManager(MinionBase):
                       'Set \'master\' value in minion config.'.format(minion.opts['master'])
                 log.error(err)
                 break
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 failed = True
                 log.critical(
                     'Unexpected error while connecting to %s',
@@ -1455,7 +1455,7 @@ class Minion(MinionBase):
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
                 return False
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.info('fire_master failed: %s', traceback.format_exc())
                 return False
         else:
@@ -1621,7 +1621,7 @@ class Minion(MinionBase):
         allow_missing_funcs = any([
             minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
             for executor in executors
-            if '{0}.allow_missing_func' in minion_instance.executors
+            if '{0}.allow_missing_func'.format(executor) in minion_instance.executors
         ])
         if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
@@ -1697,7 +1697,7 @@ class Minion(MinionBase):
                     try:
                         func_result = all(return_data.get(x, True)
                                           for x in ('result', 'success'))
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         # return data is not a dict
                         func_result = True
                     if not func_result:
@@ -1741,7 +1741,7 @@ class Minion(MinionBase):
                 ret['return'] = msg
                 ret['out'] = 'nested'
                 ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 msg = 'The minion function caused an exception'
                 log.warning(msg, exc_info_on_loglevel=True)
                 salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
@@ -1807,7 +1807,7 @@ class Minion(MinionBase):
                             'Returner %s could not be loaded: %s',
                             returner_str, returner_err
                         )
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception(
                         'The return failed for job %s: %s', data['jid'], exc
                     )
@@ -1882,7 +1882,7 @@ class Minion(MinionBase):
                     try:
                         func_result = all(ret['return'][key].get(x, True)
                                           for x in ('result', 'success'))
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         # return data is not a dict
                         func_result = True
                     if not func_result:
@@ -1890,7 +1890,7 @@ class Minion(MinionBase):
 
                 ret['retcode'][key] = retcode
                 ret['success'][key] = retcode == 0
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 trb = traceback.format_exc()
                 log.warning('The minion function caused an exception: %s', exc)
                 if multifunc_ordered:
@@ -1918,7 +1918,7 @@ class Minion(MinionBase):
                     minion_instance.returners['{0}.returner'.format(
                         returner
                     )](ret)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.error(
                         'The return failed for job %s: %s',
                         data['jid'], exc
@@ -2281,7 +2281,8 @@ class Minion(MinionBase):
         elif func == 'disable_beacon':
             self.beacons.disable_beacon(name)
         elif func == 'list':
-            self.beacons.list_beacons(include_opts, include_pillar)
+            self.beacons.list_beacons(include_opts=include_opts,
+                                      include_pillar=include_pillar)
         elif func == 'list_available':
             self.beacons.list_available_beacons()
         elif func == 'validate_beacon':
@@ -2327,7 +2328,7 @@ class Minion(MinionBase):
                 '%s is starting as user \'%s\'',
                 self.__class__.__name__, salt.utils.user.get_user()
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             # Only windows is allowed to fail here. See #3189. Log as debug in
             # that case. Else, error.
             log.log(
@@ -2595,7 +2596,7 @@ class Minion(MinionBase):
                 beacons = None
                 try:
                     beacons = self.process_beacons(self.functions)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.critical('The beacon errored: ', exc_info=True)
                 if beacons:
                     event = salt.utils.event.get_event('minion',
@@ -2637,7 +2638,7 @@ class Minion(MinionBase):
                         self.opts['grains_refresh_every']
                     )
                     self._refresh_grains_watcher(abs(self.opts['grains_refresh_every']))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Exception occurred in attempt to initialize grain refresh '
                     'routine during minion tune-in: %s', exc
@@ -2734,7 +2735,7 @@ class Minion(MinionBase):
                                 )
 
                     self._fire_master('ping', 'minion_ping', sync=False, timeout_handler=ping_timeout_handler)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.warning('Attempt to ping master failed.', exc_on_loglevel=logging.DEBUG)
             self.remove_periodic_callback('ping')
             self.add_periodic_callback('ping', ping_master, ping_interval)
@@ -3066,9 +3067,9 @@ class SyndicManager(MinionBase):
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
                 yield tornado.gen.sleep(auth_wait)  # TODO: log?
-            except (KeyboardInterrupt, SystemExit):
+            except (KeyboardInterrupt, SystemExit):  # pylint: disable=try-except-raise
                 raise
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 failed = True
                 log.critical(
                     'Unexpected error while connecting to %s',

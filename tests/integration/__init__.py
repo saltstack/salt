@@ -67,7 +67,7 @@ from salt.exceptions import SaltClientError
 from salt.ext import six
 
 try:
-    import salt.ext.six.moves.socketserver as socketserver
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
 except ImportError:
     import socketserver
 
@@ -165,7 +165,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     # We're not on windows
                     pass
                 log.exception(exc)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
 
 
@@ -744,7 +744,7 @@ class TestDaemon(object):
         try:
             real_prefix = sys.real_prefix
             # The above attribute exists, this is a virtualenv
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
             else:
                 # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
@@ -756,7 +756,7 @@ class TestDaemon(object):
                         if item.startswith(sys.base_prefix):
                             path_items.remove(item)
                     os.environ['PATH'] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.which('virtualenv')
+                virtualenv_binary = salt.utils.path.which('virtualenv')
                 if path is not None:
                     # Restore previous environ PATH
                     os.environ['PATH'] = path
@@ -809,6 +809,14 @@ class TestDaemon(object):
         syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
         syndic_opts['cachedir'] = 'cache'
         syndic_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(syndic_master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
@@ -1161,7 +1169,7 @@ class TestDaemon(object):
             if os.path.isdir(dirname):
                 try:
                     shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):

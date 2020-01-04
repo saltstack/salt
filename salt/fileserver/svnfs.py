@@ -609,7 +609,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 # 8 => st_mtime=1456338235
                 # 9 => st_ctime=1456338235
                 fnd['stat'] = list(os.stat(full))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             return fnd
     return fnd

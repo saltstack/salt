@@ -217,7 +217,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 try:
                     ret = module.run(**{CMD: ['foo', 'bar']})
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception('test_run_none_return: raised exception')
                     self.fail('module.run raised exception: {0}'.format(exc))
                 if not ret['result']:
@@ -236,7 +236,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 try:
                     ret = module.run(**{CMD: None})
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception('test_run_none_return: raised exception')
                     self.fail('module.run raised exception: {0}'.format(exc))
                 if not ret['result']:
@@ -257,7 +257,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                     log.debug('test_run_typed_return: trying %s', val)
                     try:
                         ret = module.run(**{CMD: [{'ret': val}]})
-                    except Exception as exc:
+                    except Exception as exc:  # pylint: disable=broad-except
                         log.exception('test_run_typed_return: raised exception')
                         self.fail('module.run raised exception: {0}'.format(exc))
                     if not ret['result']:
@@ -281,7 +281,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                     log.debug('test_run_batch_call: trying %s', f_name)
                     try:
                         ret = module.run(**{f_name: None})
-                    except Exception as exc:
+                    except Exception as exc:  # pylint: disable=broad-except
                         log.exception('test_run_batch_call: raised exception')
                         self.fail('module.run raised exception: {0}'.format(exc))
                     if not ret['result']:
@@ -321,3 +321,30 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             self.assertIn(comment, ret['comment'])
             self.assertIn('world', ret['comment'])
             self.assertIn('hello', ret['comment'])
+
+    def test_call_function_named_args(self):
+        '''
+        Test _call_function routine when params are named. Their position ordering should not matter.
+
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+
+    def test_call_function_ordered_args(self):
+        '''
+        Test _call_function routine when params are not named. Their position should matter.
+
+        :return:
+        '''
+        with patch.dict(module.__salt__,
+                        {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
+            assert module._call_function('testfunc', func_args=[1, 2, 3]) == (1, 2, 3, (), {})
+            assert module._call_function('testfunc', func_args=[3, 1, 2]) == (3, 1, 2, (), {})

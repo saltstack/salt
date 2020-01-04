@@ -115,7 +115,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             if self.selected_query_option == 'list_providers':
                 try:
                     ret = mapper.provider_list()
-                except (SaltCloudException, Exception) as exc:
+                except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                     msg = 'There was an error listing providers: {0}'
                     self.handle_exception(msg, exc)
 
@@ -123,7 +123,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 provider = self.options.list_profiles
                 try:
                     ret = mapper.profile_list(provider)
-                except(SaltCloudException, Exception) as exc:
+                except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                     msg = 'There was an error listing profiles: {0}'
                     self.handle_exception(msg, exc)
 
@@ -133,7 +133,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     ret = mapper.interpolated_map(
                         query=self.selected_query_option
                     )
-                except (SaltCloudException, Exception) as exc:
+                except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                     msg = 'There was an error with a custom map: {0}'
                     self.handle_exception(msg, exc)
             else:
@@ -141,7 +141,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     ret = mapper.map_providers_parallel(
                         query=self.selected_query_option
                     )
-                except (SaltCloudException, Exception) as exc:
+                except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                     msg = 'There was an error with a map: {0}'
                     self.handle_exception(msg, exc)
 
@@ -150,7 +150,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 ret = mapper.location_list(
                     self.options.list_locations
                 )
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error listing locations: {0}'
                 self.handle_exception(msg, exc)
 
@@ -159,7 +159,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 ret = mapper.image_list(
                     self.options.list_images
                 )
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error listing images: {0}'
                 self.handle_exception(msg, exc)
 
@@ -168,7 +168,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 ret = mapper.size_list(
                     self.options.list_sizes
                 )
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error listing sizes: {0}'
                 self.handle_exception(msg, exc)
 
@@ -208,7 +208,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             try:
                 if self.print_confirm(msg):
                     ret = mapper.destroy(names, cached=True)
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error destroying machines: {0}'
                 self.handle_exception(msg, exc)
 
@@ -245,7 +245,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
             try:
                 if self.print_confirm(msg):
                     ret = mapper.do_action(names, kwargs)
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error actioning machines: {0}'
                 self.handle_exception(msg, exc)
 
@@ -268,7 +268,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                 ret = mapper.do_function(
                     self.function_provider, self.function_name, kwargs
                 )
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error running the function: {0}'
                 self.handle_exception(msg, exc)
 
@@ -278,7 +278,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                     self.options.profile,
                     self.config.get('names')
                 )
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was a profile error: {0}'
                 self.handle_exception(msg, exc)
 
@@ -351,7 +351,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
                             msg = 'Already running.'
                         ret[name] = {'Message': msg}
 
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was a query error: {0}'
                 self.handle_exception(msg, exc)
 
@@ -382,7 +382,7 @@ class SaltCloud(salt.utils.parsers.SaltCloudParser):
 
             try:
                 ret = salt.utils.cloud.bootstrap(vm_, self.config)
-            except (SaltCloudException, Exception) as exc:
+            except (SaltCloudException, Exception) as exc:  # pylint: disable=broad-except
                 msg = 'There was an error bootstrapping the minion: {0}'
                 self.handle_exception(msg, exc)
 

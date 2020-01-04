@@ -39,7 +39,7 @@ def _retry_get_url(url, num_retries=10, timeout=5):
                 return ''
         except requests.exceptions.HTTPError as exc:
             return ''
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             pass
 
         log.warning(
@@ -60,8 +60,8 @@ def _convert_key_to_str(key):
     # IMPORTANT: on PY2, the secret key must be str and not unicode to work
     # properly with hmac.new (see http://bugs.python.org/issue5285)
     #
-    # pylint: disable=incompatible-py3-code
+    # pylint: disable=incompatible-py3-code,undefined-variable
     return salt.utils.data.encode(key) \
         if six.PY2 and isinstance(key, unicode) \
         else key
-    # pylint: enable=incompatible-py3-code
+    # pylint: enable=incompatible-py3-code,undefined-variable
