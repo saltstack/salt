@@ -135,7 +135,7 @@ def create(vm_):
 
     try:
         data = _query('grid', 'server/add', args=create_kwargs)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on GOGRID\n\n'
             'The following exception was thrown when trying to '

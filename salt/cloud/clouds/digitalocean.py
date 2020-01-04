@@ -404,7 +404,7 @@ def create(vm_):
                 kwargs['user_data'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, salt.utils.stringutils.to_unicode(fp_.read())
                 )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(
                 'Failed to read userdata from %s: %s', userdata_file, exc)
 
@@ -456,7 +456,7 @@ def create(vm_):
 
     try:
         ret = create_node(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on DIGITALOCEAN\n\n'
             'The following exception was thrown when trying to '
