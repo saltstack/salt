@@ -495,13 +495,18 @@ class NetworkTestCase(TestCase):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
 
-    def test_netlink_tool_remote_on(self):
+    def test_netlink_tool_remote_on_a(self):
         with patch('salt.utils.platform.is_sunos', lambda: False):
             with patch('salt.utils.platform.is_linux', lambda: True):
                 with patch('subprocess.check_output',
                            return_value=LINUX_NETLINK_SS_OUTPUT):
                     remotes = network._netlink_tool_remote_on('4506', 'local')
                     self.assertEqual(remotes, set(['192.168.122.177', '::ffff:127.0.0.1']))
+
+    def test_netlink_tool_remote_on_b(self):
+        with patch('subprocess.check_output', return_value=NETLINK_SS):
+            remotes = network._netlink_tool_remote_on('4505', 'remote_port')
+            self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))
 
     def test_generate_minion_id_distinct(self):
         '''
@@ -687,8 +692,3 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != '', minion_id
-
-    def test_netlink_tool_remote_on(self):
-        with patch('subprocess.check_output', return_value=NETLINK_SS):
-            remotes = network._netlink_tool_remote_on('4505', 'remote_port')
-            self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))
