@@ -298,7 +298,7 @@ class _Zypper(object):
             if self.__systemd_scope:
                 cmd.extend(['systemd-run', '--scope'])
             cmd.extend(self.__cmd)
-            log.debug("Calling Zypper: " + ' '.join(cmd))
+            log.debug("Calling Zypper: %s", ' '.join(cmd))
             self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
@@ -312,7 +312,7 @@ class _Zypper(object):
                         data['info'] = 'Blocking process created at {0}.'.format(
                             datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
                         data['success'] = True
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     data = {'info': 'Unable to retrieve information about blocking process: {0}'.format(err.message),
                             'success': False}
             else:
@@ -331,7 +331,7 @@ class _Zypper(object):
                 was_blocked = True
 
         if was_blocked:
-            __salt__['event.fire_master']({'success': not len(self.error_msg),
+            __salt__['event.fire_master']({'success': not self.error_msg,
                                            'info': self.error_msg or 'Zypper has been released'},
                                           self.TAG_RELEASED)
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
@@ -628,7 +628,7 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
 
     # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
+    if len(names) == 1 and ret:
         return ret[names[0]]
 
     return ret
