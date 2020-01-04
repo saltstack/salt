@@ -92,7 +92,7 @@ def downloaded(name, artifact, target_dir='/tmp', target_file=None, use_literal_
     else:
         try:
             fetch_result = __fetch_from_artifactory(artifact, target_dir, target_file, use_literal_group_id)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['result'] = False
             ret['comment'] = six.text_type(exc)
             return ret

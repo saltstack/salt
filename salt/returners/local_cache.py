@@ -74,7 +74,7 @@ def _walk_through(job_dir):
             with salt.utils.files.fopen(load_path, 'rb') as rfh:
                 try:
                     job = serial.load(rfh)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to deserialize %s', load_path)
                     continue
                 if not job:
@@ -306,7 +306,7 @@ def get_load(jid):
             try:
                 ret = serial.load(rfh)
                 break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 if index == num_tries:
                     time.sleep(0.25)
     else:
@@ -365,7 +365,7 @@ def get_jid(jid):
                     if os.path.isfile(outp):
                         with salt.utils.files.fopen(outp, 'rb') as rfh:
                             ret[fn_]['out'] = serial.load(rfh)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     if 'Permission denied:' in six.text_type(exc):
                         raise
     return ret
@@ -450,7 +450,7 @@ def clean_old_jobs():
                         try:
                             shutil.rmtree(f_path)
                         except OSError as err:
-                            log.error('Unable to remove %s: %s', t_path, err)
+                            log.error('Unable to remove %s: %s', f_path, err)
 
         # Remove empty JID dirs from job cache, if they're old enough.
         # JID dirs may be empty either from a previous cache-clean with the bug
@@ -521,7 +521,7 @@ def save_reg(data):
     try:
         with salt.utils.files.fopen(regfile, 'a') as fh_:
             salt.utils.msgpack.dump(data, fh_)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise
 
@@ -535,6 +535,6 @@ def load_reg():
     try:
         with salt.utils.files.fopen(regfile, 'r') as fh_:
             return salt.utils.msgpack.load(fh_)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Could not write to msgpack file %s', __opts__['outdir'])
         raise

@@ -389,7 +389,7 @@ def run(**kwargs):
         'result': None,
     }
 
-    functions = [func for func in kwargs.keys() if '.' in func]
+    functions = [func for func in kwargs if '.' in func]
     missing = []
     tests = []
     for func in functions:
@@ -452,7 +452,7 @@ def _call_function(name, returner=None, **kwargs):
 
     # func_args is initialized to a list of positional arguments that the function to be run accepts
     func_args = argspec.args[:len(argspec.args or []) - len(argspec.defaults or [])]
-    arg_type, na_type, kw_type = [], {}, False
+    arg_type, kw_to_arg_type, na_type, kw_type = [], {}, {}, False
     for funcset in reversed(kwargs.get('func_args') or []):
         if not isinstance(funcset, dict):
             # We are just receiving a list of args to the function to be run, so just append
@@ -463,13 +463,16 @@ def _call_function(name, returner=None, **kwargs):
                 # We are going to pass in a keyword argument. The trick here is to make certain
                 # that if we find that in the *args* list that we pass it there and not as a kwarg
                 if kwarg_key in func_args:
-                    arg_type.append(funcset[kwarg_key])
+                    kw_to_arg_type[kwarg_key] = funcset[kwarg_key]
                     continue
                 else:
                     # Otherwise, we're good and just go ahead and pass the keyword/value pair into
                     # the kwargs list to be run.
                     func_kw.update(funcset)
     arg_type.reverse()
+    for arg in func_args:
+        if arg in kw_to_arg_type:
+            arg_type.append(kw_to_arg_type[arg])
     _exp_prm = len(argspec.args or []) - len(argspec.defaults or [])
     _passed_prm = len(arg_type)
     missing = []
@@ -621,7 +624,7 @@ def _run(name, **kwargs):
             mret = __salt__[name](*args, **nkwargs)
         else:
             mret = __salt__[name](*args)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         ret['comment'] = 'Module function {0} threw an exception. Exception: {1}'.format(name, e)
         ret['result'] = False
         return ret

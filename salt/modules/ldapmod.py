@@ -53,7 +53,7 @@ from salt.exceptions import CommandExecutionError
 # Import third party libs
 try:
     import ldap
-    import ldap.modlist
+    import ldap.modlist  # pylint: disable=no-name-in-module
     HAS_LDAP = True
 except ImportError:
     HAS_LDAP = False
@@ -199,7 +199,7 @@ class _LDAPConnection(object):
 
             if not anonymous:
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
-        except Exception as ldap_error:
+        except Exception as ldap_error:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Failed to bind to LDAP server {0} as {1}: {2}'.format(
                     self.uri, self.binddn, ldap_error
