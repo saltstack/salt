@@ -1110,7 +1110,7 @@ def not_runs_on(grains=None, **kwargs):
     return decorator
 
 
-def check_required_sminion_attributes(sminion_attr, *required_items):
+def _check_required_sminion_attributes(sminion_attr, *required_items):
     '''
     :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
     :param required_items: The items that must be part of the designated sminion attribute for the decorated test
@@ -1151,7 +1151,7 @@ def requires_salt_states(*names):
 
     .. versionadded:: 3000
     '''
-    not_available = check_required_sminion_attributes('states', *names)
+    not_available = _check_required_sminion_attributes('states', *names)
 
     def decorator(caller):
         if inspect.isclass(caller):
@@ -1186,7 +1186,7 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     '''
-    not_available = check_required_sminion_attributes('functions', *names)
+    not_available = _check_required_sminion_attributes('functions', *names)
 
     def decorator(caller):
         if inspect.isclass(caller):

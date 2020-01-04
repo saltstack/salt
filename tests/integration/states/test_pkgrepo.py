@@ -20,6 +20,7 @@ from tests.support.helpers import (
 
 # Import Salt libs
 import salt.utils.platform
+import salt.utils.files
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -84,15 +85,16 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         Test adding a repo with comments
         '''
-        if grains['os_family'] in ('redhat',):
+        kwargs = {}
+        if grains['os_family'] == 'RedHat':
             kwargs = {
                 'name': 'examplerepo',
                 'baseurl': 'http://example.com/repo',
                 'enabled': False,
                 'comments': ['This is a comment']
             }
-        elif grains['os_family'] in ('debian',):
-            self.skipTest('Debian/Ubuntu test case needed')
+        else:
+            self.skipTest('{}/{} test case needed'.format(grains['os_family'], grains['os']))
 
         try:
             # Run the state to add the repo
