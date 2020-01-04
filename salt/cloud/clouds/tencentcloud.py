@@ -4,7 +4,7 @@
 Tencent Cloud Cloud Module
 =============================
 
-.. versionadded:: 2019.09.01
+.. versionadded:: 3000
 
 The Tencent Cloud Cloud Module is used to control access to the Tencent Cloud instance.
 https://intl.cloud.tencent.com/
