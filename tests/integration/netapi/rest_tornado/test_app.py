@@ -2,6 +2,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import time
 import threading
 
@@ -36,6 +37,11 @@ class _SaltnadoIntegrationTestCase(SaltnadoTestCase):  # pylint: disable=abstrac
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
 @skipIf(StrictVersion(zmq.__version__) < StrictVersion('14.0.1'), 'PyZMQ must be >= 14.0.1 to run these tests.')
 class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
+
+    def setUp(self):
+        super(TestSaltAPIHandler, self).setUp()
+        os.environ['ASYNC_TEST_TIMEOUT'] = '300'
+
     def get_app(self):
         urls = [('/', saltnado.SaltAPIHandler)]
 
@@ -335,7 +341,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               connect_timeout=30,
-                              request_timeout=30,
+                              request_timeout=300,
                               )
         response_obj = salt.utils.json.loads(response.body)
         self.assertEqual(len(response_obj['return']), 1)

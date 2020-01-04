@@ -1023,8 +1023,9 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         Skip refreshing the package database if refresh has already occurred within
         <value> seconds
 
-    download_only
-        Only download the packages, don't unpack or install them
+    download_only (or downloadonly)
+        Only download the packages, don't unpack or install them. Use
+        downloadonly to be in line with yum and zypper module.
 
         .. versionadded:: 2018.3.0
 
@@ -1055,7 +1056,7 @@ def upgrade(refresh=True, dist_upgrade=False, **kwargs):
         cmd.append('--force-yes')
     if kwargs.get('skip_verify', False):
         cmd.append('--allow-unauthenticated')
-    if kwargs.get('download_only', False):
+    if kwargs.get('download_only', False) or kwargs.get('downloadonly', False):
         cmd.append('--download-only')
 
     cmd.append('dist-upgrade' if dist_upgrade else 'upgrade')
@@ -1163,7 +1164,7 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             salt '*' pkg.unhold <package name>
 
     pkgs
-        A list of packages to hold. Must be passed as a python list.
+        A list of packages to unhold. Must be passed as a python list.
 
         CLI Example:
 
@@ -2060,6 +2061,13 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
         .. versionadded:: 2015.8.9
 
+    refresh : True
+        Enable or disable (True or False) refreshing of the apt package
+        database. The previous ``refresh_db`` argument was deprecated in
+        favor of ``refresh```. The ``refresh_db`` argument will still
+        continue to work to ensure backwards compatibility, but please
+        change to using the preferred ``refresh``.
+
     .. note::
         Due to the way keys are stored for APT, there is a known issue where
         the key won't be updated unless another change is made at the same
@@ -2073,12 +2081,6 @@ def mod_repo(repo, saltenv='base', **kwargs):
         salt '*' pkg.mod_repo 'myrepo definition' comps=main,universe
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         refresh = kwargs['refresh_db']
     else:
         refresh = kwargs.get('refresh', True)
@@ -2798,6 +2800,8 @@ def info_installed(*names, **kwargs):
     ret = dict()
     for pkg_name, pkg_nfo in __salt__['lowpkg.info'](*names, failhard=failhard).items():
         t_nfo = dict()
+        if pkg_nfo.get('status', 'ii')[1] != 'i':
+            continue    # return only packages that are really installed
         # Translate dpkg-specific keys to a common structure
         for key, value in pkg_nfo.items():
             if key == 'package':
@@ -2810,6 +2814,8 @@ def info_installed(*names, **kwargs):
                 t_nfo['packager'] = value
             elif key == 'homepage':
                 t_nfo['url'] = value
+            elif key == 'status':
+                continue    # only installed pkgs are returned, no need for status
             else:
                 t_nfo[key] = value
 
