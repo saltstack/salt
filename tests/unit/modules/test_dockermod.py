@@ -928,7 +928,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
-            ret = docker_mod.compare_container('container1', 'container2')
+            ret = docker_mod.compare_container('container1', 'container2')  # pylint: disable=not-callable
             self.assertEqual(ret, {})
 
     def test_compare_container_env_order(self):
@@ -957,7 +957,7 @@ class DockerTestCase(TestCase, LoaderModuleMockMixin):
         inspect_container_mock = MagicMock(side_effect=_inspect_container_effect)
 
         with patch.object(docker_mod, 'inspect_container', inspect_container_mock):
-            ret = docker_mod.compare_container('container1', 'container2')
+            ret = docker_mod.compare_container('container1', 'container2')  # pylint: disable=not-callable
             self.assertEqual(ret, {})
 
     def test_resolve_tag(self):
