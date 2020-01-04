@@ -9,8 +9,8 @@ import copy
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_not_root
 # Import salt libs
@@ -23,14 +23,15 @@ import tornado.testing
 from salt.ext.six.moves import range
 
 
-__opts__ = {}
-
-
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
+
+    def setUp(self):
+        self.opts = {}
+        self.addCleanup(delattr, self, 'opts')
+
     def test_invalid_master_address(self):
-        with patch.dict(__opts__, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
-            self.assertRaises(SaltSystemExit, salt.minion.resolve_dns, __opts__)
+        with patch.dict(self.opts, {'ipv6': False, 'master': float('127.0'), 'master_port': '4555', 'retry_dns': False}):
+            self.assertRaises(SaltSystemExit, salt.minion.resolve_dns, self.opts)
 
     def test_source_int_name_local(self):
         '''
@@ -43,14 +44,14 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                      'netmask': '111.1.0.0',
                                      'label': 'bond0',
                                      'address': '111.1.0.1'}]}}
-        with patch.dict(__opts__, {'ipv6': False, 'master': '127.0.0.1',
+        with patch.dict(self.opts, {'ipv6': False, 'master': '127.0.0.1',
                                    'master_port': '4555', 'file_client': 'local',
                                    'source_interface_name': 'bond0.1234',
                                    'source_ret_port': 49017,
                                    'source_publish_port': 49018}), \
             patch('salt.utils.network.interfaces',
                   MagicMock(return_value=interfaces)):
-            assert salt.minion.resolve_dns(__opts__) == {'master_ip': '127.0.0.1',
+            assert salt.minion.resolve_dns(self.opts) == {'master_ip': '127.0.0.1',
                                                          'source_ip': '111.1.0.1',
                                                          'source_ret_port': 49017,
                                                          'source_publish_port': 49018,
@@ -68,14 +69,14 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                      'netmask': '111.1.0.0',
                                      'label': 'bond0',
                                      'address': '111.1.0.1'}]}}
-        with patch.dict(__opts__, {'ipv6': False, 'master': '127.0.0.1',
+        with patch.dict(self.opts, {'ipv6': False, 'master': '127.0.0.1',
                                    'master_port': '4555', 'file_client': 'remote',
                                    'source_interface_name': 'bond0.1234',
                                    'source_ret_port': 49017,
                                    'source_publish_port': 49018}), \
             patch('salt.utils.network.interfaces',
                   MagicMock(return_value=interfaces)):
-            assert salt.minion.resolve_dns(__opts__) == {'master_ip': '127.0.0.1',
+            assert salt.minion.resolve_dns(self.opts) == {'master_ip': '127.0.0.1',
                                                          'source_ret_port': 49017,
                                                          'source_publish_port': 49018,
                                                          'master_uri': 'tcp://127.0.0.1:4555'}
@@ -90,7 +91,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                      'netmask': '111.1.0.0',
                                      'label': 'bond0',
                                      'address': '111.1.0.1'}]}}
-        with patch.dict(__opts__, {'ipv6': False, 'master': '127.0.0.1',
+        with patch.dict(self.opts, {'ipv6': False, 'master': '127.0.0.1',
                                    'master_port': '4555', 'file_client': 'local',
                                    'source_interface_name': '',
                                    'source_address': '111.1.0.1',
@@ -98,7 +99,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                                    'source_publish_port': 49018}), \
             patch('salt.utils.network.interfaces',
                   MagicMock(return_value=interfaces)):
-            assert salt.minion.resolve_dns(__opts__) == {'source_publish_port': 49018,
+            assert salt.minion.resolve_dns(self.opts) == {'source_publish_port': 49018,
                                                          'source_ret_port': 49017,
                                                          'master_uri': 'tcp://127.0.0.1:4555',
                                                          'source_ip': '111.1.0.1',
@@ -208,7 +209,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
                 class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
-                    pass
+
                 tornado.gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally
@@ -311,11 +312,11 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests that the resolve_dns will retry dns look ups for a maximum of
         3 times before raising a SaltMasterUnresolvableError exception.
         '''
-        with patch.dict(__opts__, {'ipv6': False, 'master': 'dummy',
+        with patch.dict(self.opts, {'ipv6': False, 'master': 'dummy',
                                    'master_port': '4555',
                                    'retry_dns': 1, 'retry_dns_count': 3}):
             self.assertRaises(SaltMasterUnresolvableError,
-                              salt.minion.resolve_dns, __opts__)
+                              salt.minion.resolve_dns, self.opts)
 
     def test_gen_modules_executors(self):
         '''
@@ -339,8 +340,12 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion.destroy()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
+
+    def setUp(self):
+        super(MinionAsyncTestCase, self).setUp()
+        self.opts = {}
+        self.addCleanup(delattr, self, 'opts')
 
     @skip_if_not_root
     def test_sock_path_len(self):
@@ -357,9 +362,9 @@ class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.t
             'sock_dir': os.path.join(salt.syspaths.SOCK_DIR, 'minion'),
             'extension_modules': ''
         }
-        with patch.dict(__opts__, opts):
+        with patch.dict(self.opts, opts):
             try:
-                event_publisher = event.AsyncEventPublisher(__opts__)
+                event_publisher = event.AsyncEventPublisher(self.opts)
                 result = True
             except ValueError:
                 #  There are rare cases where we operate a closed socket, especially in containers.

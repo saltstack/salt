@@ -5,28 +5,16 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import os.path
 
-try:
-    import salt.modules.saltcheck as saltcheck
-    import salt.config
-    import salt.syspaths as syspaths
-except:
-    raise
+import salt.config
+import salt.modules.saltcheck as saltcheck
+import salt.syspaths as syspaths
 
 # Import Salt Testing Libs
-try:
-    from tests.support.mixins import LoaderModuleMockMixin
-    from tests.support.unit import skipIf, TestCase
-    from tests.support.mock import (
-        MagicMock,
-        patch,
-        NO_MOCK,
-        NO_MOCK_REASON
-    )
-except:
-    raise
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.saltcheck module

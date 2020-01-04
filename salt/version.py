@@ -108,8 +108,8 @@ class SaltStackVersion(object):
         'Neon'          : (MAX_SIZE - 99, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
+        'Aluminium'     : (MAX_SIZE - 96, 0),
         # pylint: disable=E8265
-        #'Aluminium'    : (MAX_SIZE - 96, 0),
         #'Silicon'      : (MAX_SIZE - 95, 0),
         #'Phosphorus'   : (MAX_SIZE - 94, 0),
         #'Sulfur'       : (MAX_SIZE - 93, 0),
@@ -620,7 +620,7 @@ def dependency_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             yield name, None
 
 
@@ -684,8 +684,8 @@ def system_information():
                     version = item
             release = version
 
-        _, ver, sp, extra = platform.win32_ver()
-        version = ' '.join([release, ver, sp, extra])
+        _, ver, _sp, extra = platform.win32_ver()
+        version = ' '.join([release, ver, _sp, extra])
     else:
         version = system_version()
         release = platform.release()
@@ -722,10 +722,11 @@ def versions_report(include_salt_cloud=False):
     Yield each version properly formatted for console output.
     '''
     ver_info = versions_information(include_salt_cloud)
-
+    not_installed = 'Not Installed'
+    ns_pad = len(not_installed)
     lib_pad = max(len(name) for name in ver_info['Dependency Versions'])
     sys_pad = max(len(name) for name in ver_info['System Versions'])
-    padding = max(lib_pad, sys_pad) + 1
+    padding = max(lib_pad, sys_pad, ns_pad) + 1
 
     fmt = '{0:>{pad}}: {1}'
     info = []
@@ -734,7 +735,7 @@ def versions_report(include_salt_cloud=False):
         # List dependencies in alphabetical, case insensitive order
         for name in sorted(ver_info[ver_type], key=lambda x: x.lower()):
             ver = fmt.format(name,
-                             ver_info[ver_type][name] or 'Not Installed',
+                             ver_info[ver_type][name] or not_installed,
                              pad=padding)
             info.append(ver)
         info.append(' ')
