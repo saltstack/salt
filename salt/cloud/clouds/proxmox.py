@@ -185,7 +185,7 @@ def query(conn_type, option, post_data=None):
         if 'data' not in returned_data:
             raise SaltCloudExecutionFailure
         return returned_data['data']
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Error in trying to process JSON')
         log.error(response)
 
@@ -539,7 +539,7 @@ def create(vm_):
     try:
         newid = _get_next_vmid()
         data = create_node(vm_, newid)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on PROXMOX\n\n'
             'The following exception was thrown when trying to '
