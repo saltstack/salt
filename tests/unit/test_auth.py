@@ -326,7 +326,6 @@ class MasterACLTestCase(ModuleCase):
                 'test.*'
         '''
         # Unimplemented
-        pass
 
     @skipIf(salt.utils.platform.is_windows(), 'PAM eauth not available on Windows')
     def test_args_empty_spec(self):

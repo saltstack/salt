@@ -1450,7 +1450,7 @@ def hardlink(
     if user is None:
         user = __opts__['user']
 
-    if salt.utils.is_windows():
+    if salt.utils.platform.is_windows():
         if group is not None:
             log.warning(
                 'The group argument for {0} has been ignored as this '
@@ -1866,7 +1866,7 @@ def symlink(
                     __salt__['file.remove'](backupname)
             try:
                 __salt__['file.move'](name, backupname)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 ret['changes'] = {}
                 log.debug(
                     'Encountered error renaming %s to %s',
@@ -3093,7 +3093,7 @@ def managed(name,
             skip_verify,
             **kwargs
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['changes'] = {}
         log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
@@ -3107,7 +3107,7 @@ def managed(name,
         if __salt__['file.file_exists'](name):
             try:
                 __salt__['file.copy'](name, tmp_filename)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 return _error(
                     ret,
                     'Unable to copy file {0} to {1}: {2}'.format(
@@ -3144,7 +3144,7 @@ def managed(name,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
                 **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
@@ -3221,7 +3221,7 @@ def managed(name,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
                 **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
@@ -5108,7 +5108,7 @@ def blockreplace(
             dry_run=__opts__['test'],
             show_changes=show_changes,
             append_newline=append_newline)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception('Encountered error managing block')
         ret['comment'] = (
             'Encountered error managing block: {0}. '
@@ -6078,7 +6078,7 @@ def patch(name,
     else:
         try:
             name = os.path.expanduser(name)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['comment'] = 'Invalid path \'{0}\''.format(name)
             return ret
         else:
@@ -6101,7 +6101,7 @@ def patch(name,
     if reject_file is not None:
         try:
             reject_file_parent = os.path.dirname(reject_file)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['comment'] = 'Invalid path \'{0}\' for reject_file'.format(
                 reject_file
             )
@@ -6144,7 +6144,7 @@ def patch(name,
         if option.startswith('-p'):
             try:
                 strip = int(option[2:])
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ret['comment'] = (
                     'Invalid format for \'-p\' CLI option. Consider using '
                     'the \'strip\' option for this state.'
@@ -6155,7 +6155,7 @@ def patch(name,
                 # Assume --strip=N
                 try:
                     strip = int(option.rsplit('=', 1)[-1])
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     ret['comment'] = (
                         'Invalid format for \'-strip\' CLI option. Consider '
                         'using the \'strip\' option for this state.'
@@ -6165,7 +6165,7 @@ def patch(name,
                 # Assume --strip N and grab the next option in the list
                 try:
                     strip = int(options[index + 1])
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     ret['comment'] = (
                         'Invalid format for \'-strip\' CLI option. Consider '
                         'using the \'strip\' option for this state.'
@@ -6236,7 +6236,7 @@ def patch(name,
                              template=template,
                              context=context,
                              defaults=defaults)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             msg = 'Failed to cache patch file {0}: {1}'.format(
                 salt.utils.url.redact_http_basic_auth(source_match),
                 exc
@@ -7902,7 +7902,7 @@ def cached(name,
 
     try:
         parsed = _urlparse(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ret['comment'] = 'Only URLs or local file paths are valid input'
         return ret
 
@@ -8045,7 +8045,7 @@ def cached(name,
                 name,
                 saltenv=saltenv,
                 source_hash=source_sum.get('hsum'))
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = salt.utils.url.redact_http_basic_auth(exc.__str__())
             return ret
 
@@ -8119,7 +8119,7 @@ def not_cached(name, saltenv='base'):
 
     try:
         parsed = _urlparse(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ret['comment'] = 'Only URLs or local file paths are valid input'
         return ret
     else:
@@ -8138,7 +8138,7 @@ def not_cached(name, saltenv='base'):
     if local_copy:
         try:
             os.remove(local_copy)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Failed to delete {0}: {1}'.format(
                 local_copy, exc.__str__()
             )

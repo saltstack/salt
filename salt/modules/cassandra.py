@@ -196,6 +196,6 @@ def column_family_definition(keyspace, column_family):
 
     try:
         return vars(sys.get_keyspace_column_families(keyspace)[column_family])
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.debug('Invalid Keyspace/CF combination')
         return None

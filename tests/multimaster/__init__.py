@@ -39,6 +39,8 @@ from tests.integration import (
         )
 import salt.config
 import salt.log.setup as salt_log_setup
+import salt.utils.path
+import salt.utils.platform
 from salt.utils.immutabletypes import freeze
 from salt.utils.verify import verify_env
 
@@ -425,7 +427,7 @@ class MultimasterTestDaemon(TestDaemon):
         try:
             real_prefix = sys.real_prefix
             # The above attribute exists, this is a virtualenv
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
             else:
                 # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
@@ -437,7 +439,7 @@ class MultimasterTestDaemon(TestDaemon):
                         if item.startswith(sys.base_prefix):
                             path_items.remove(item)
                     os.environ['PATH'] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.which('virtualenv')
+                virtualenv_binary = salt.utils.path.which('virtualenv')
                 if path is not None:
                     # Restore previous environ PATH
                     os.environ['PATH'] = path
