@@ -426,7 +426,7 @@ def is_required_version(required_version='0.0.0'):
 
         # We have an exact match
         return True
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return False
 
 
@@ -448,7 +448,7 @@ def grains():
         try:
             query = {'type': 'op', 'cmd': '<show><system><info></info></system></show>'}
             DETAILS['grains_cache'] = call(query)['result']['system']
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             pass
     return DETAILS['grains_cache']
 
@@ -471,7 +471,7 @@ def ping():
             return True
         else:
             return False
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return False
 
 

@@ -313,8 +313,6 @@ def _run(name,
             ignore_retcode=ignore_retcode,
             use_vt=use_vt,
             keep_env=keep_env)
-    except Exception:
-        raise
     finally:
         # Make sure we stop the container if necessary, even if an exception
         # was raised.

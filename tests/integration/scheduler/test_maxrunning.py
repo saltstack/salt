@@ -17,7 +17,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.utils.schedule
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 try:
     import croniter  # pylint: disable=W0611

@@ -191,10 +191,7 @@ import inspect
 # Import Salt libs
 from salt.ext import six
 from salt.exceptions import CommandExecutionError
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 # Import third party libs
 try:

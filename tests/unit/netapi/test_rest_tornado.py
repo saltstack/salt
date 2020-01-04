@@ -156,7 +156,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
             def get(self, *args, **kwargs):
                 return self.echo_stuff()
 
-            def post(self):
+            def post(self):  # pylint: disable=arguments-differ
                 return self.echo_stuff()
 
             def echo_stuff(self):

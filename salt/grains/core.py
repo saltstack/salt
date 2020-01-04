@@ -2149,7 +2149,7 @@ def locale_info():
             grains['locale_info']['defaultlanguage'],
             grains['locale_info']['defaultencoding']
         ) = locale.getdefaultlocale()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
@@ -2869,6 +2869,6 @@ def default_gateway():
                         if via == 'via':
                             grains['ip{0}_gw'.format(ip_version)] = gw_ip
                     break
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
     return grains

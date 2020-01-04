@@ -42,11 +42,12 @@ import salt.utils.http
 # Import third party libs
 HAS_LIBS = False
 try:
+    # pylint: disable=no-name-in-module
     import github
     import github.PaginatedList
     import github.NamedUser
     from github.GithubException import UnknownObjectException
-
+    # pylint: enable=no-name-in-module
     HAS_LIBS = True
 except ImportError:
     pass

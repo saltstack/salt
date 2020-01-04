@@ -307,7 +307,7 @@ def set_max_open_files_limits(min_soft=3072, min_hard=4096):
                 win32file._setmaxstdio(hard)
             else:
                 resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to raise the max open files settings -> %s. Please issue the following command '
                 'on your console: \'ulimit -u %s\'',

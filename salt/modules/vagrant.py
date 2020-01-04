@@ -139,7 +139,7 @@ def _erase_vm_info(name):
             except KeyError:
                 # no delete method found -- load a blank value
                 __utils__['sdb.sdb_set'](key, None, __opts__)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
     uri = _build_sdb_uri(name)
@@ -149,7 +149,7 @@ def _erase_vm_info(name):
     except KeyError:
         # no delete method found -- load an empty dictionary
         __utils__['sdb.sdb_set'](uri, {}, __opts__)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
@@ -208,7 +208,7 @@ def list_domains():
     vms = []
     cmd = 'vagrant global-status'
     reply = __salt__['cmd.shell'](cmd)
-    log.info('--->\n' + reply)
+    log.debug('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         try:
@@ -237,7 +237,7 @@ def list_active_vms(cwd=None):
     vms = []
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1:
@@ -261,7 +261,7 @@ def list_inactive_vms(cwd=None):
     vms = []
     cmd = 'vagrant status'
     reply = __salt__['cmd.shell'](cmd, cwd=cwd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
@@ -314,7 +314,7 @@ def vm_state(name='', cwd=None):
     info = []
     cmd = 'vagrant status {}'.format(machine)
     reply = __salt__['cmd.shell'](cmd, cwd)
-    log.info('--->\n' + reply)
+    log.info('--->\n%s', reply)
     for line in reply.split('\n'):  # build a list of the text reply
         tokens = line.strip().split()
         if len(tokens) > 1 and tokens[-1].endswith(')'):
@@ -594,7 +594,7 @@ def get_ssh_config(name, network_mask='', get_private_key=False):
 
         log.info('Trying ssh -p {Port} {User}@{HostName} ifconfig'.format(**ssh_config))
         reply = __salt__['cmd.shell'](command)
-        log.info('--->\n' + reply)
+        log.info('--->\n%s', reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
         for line in reply.split('\n'):

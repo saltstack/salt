@@ -163,7 +163,7 @@ def update(clear=False, mine_functions=None):
                 if not _mine_function_available(func):
                     continue
                 data[func] = __salt__[func]()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc()
             log.error('Function %s in mine_functions failed to execute', func)
             log.debug('Error: %s', trace)
@@ -220,7 +220,7 @@ def send(func, *args, **kwargs):
             data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
         else:
             data[func] = __salt__[mine_func](*f_call['args'])
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('Function %s in mine.send failed to execute: %s',
                   mine_func, exc)
         return False
