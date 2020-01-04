@@ -52,12 +52,12 @@ from salt.ext.six.moves import range
 
 try:
     # Try import tencentcloud sdk
-    from tencentcloud.common import credential
-    from tencentcloud.common.profile.client_profile import ClientProfile
-    from tencentcloud.cvm.v20170312 import cvm_client
-    from tencentcloud.cvm.v20170312 import models as cvm_models
-    from tencentcloud.vpc.v20170312 import vpc_client
-    from tencentcloud.vpc.v20170312 import models as vpc_models
+    from tencentcloud.common import credential  # pylint: disable=no-name-in-module
+    from tencentcloud.common.profile.client_profile import ClientProfile  # pylint: disable=no-name-in-module
+    from tencentcloud.cvm.v20170312 import cvm_client  # pylint: disable=no-name-in-module
+    from tencentcloud.cvm.v20170312 import models as cvm_models  # pylint: disable=no-name-in-module
+    from tencentcloud.vpc.v20170312 import vpc_client  # pylint: disable=no-name-in-module
+    from tencentcloud.vpc.v20170312 import models as vpc_models  # pylint: disable=no-name-in-module
     HAS_TENCENTCLOUD_SDK = True
 except ImportError:
     HAS_TENCENTCLOUD_SDK = False
