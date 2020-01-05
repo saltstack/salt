@@ -3795,6 +3795,10 @@ Default:
 Set the environments and directories used to hold pillar sls data. This
 configuration is the same as :conf_master:`file_roots`:
 
+As of 2017.7.5 and 2018.3.1, it is possible to have `__env__` as a catch-all environment.
+
+Example:
+
 .. code-block:: yaml
 
     pillar_roots:
@@ -3804,6 +3808,8 @@ configuration is the same as :conf_master:`file_roots`:
         - /srv/pillar/dev
       prod:
         - /srv/pillar/prod
+      __env__:
+        - /srv/pillar/others
 
 .. conf_master:: on_demand_ext_pillar
 
