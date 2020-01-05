@@ -122,8 +122,6 @@ def wrap_tmpl_func(render_str):
             slspath = context['sls'].replace('.', '/')
             if tmplpath is not None:
                 context['tplpath'] = tmplpath
-                if not tmplpath.lower().replace('\\', '/').endswith('/init.sls'):
-                    slspath = os.path.dirname(slspath)
                 template = tmplpath.replace('\\', '/')
                 i = template.rfind(slspath.replace('.', '/'))
                 if i != -1:
