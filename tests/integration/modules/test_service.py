@@ -7,7 +7,6 @@ import pytest
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -67,7 +66,7 @@ class ServiceModuleTest(ModuleCase):
                 self.run_function('service.disable', [self.service_name])
         del self.service_name
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_service_status_running(self):
         '''
         test service.status execution module

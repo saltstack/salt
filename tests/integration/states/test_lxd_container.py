@@ -5,14 +5,13 @@ Integration tests for the lxd states
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
 
-# Import Salt Testing libs
-from tests.support.helpers import flaky
+import pytest
 
 # Import Lxd Test Case
 import tests.integration.states.test_lxd
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 class LxdContainerTestCase(tests.integration.states.test_lxd.LxdTestCase):
 
     def setUp(self):
