@@ -228,7 +228,7 @@ class ShadowModuleTest(ModuleCase):
 
         def restore_shadow_file(contents):
             # restore shadow file
-            with salt.utils.fopen('/etc/shadow', 'w') as wfh:
+            with salt.utils.files.fopen('/etc/shadow', 'w') as wfh:
                 wfh.write(contents)
 
         with salt.utils.files.fopen('/etc/shadow', 'r') as rfh:

@@ -13,16 +13,14 @@ import textwrap
 import time
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP, TMP_CONF_DIR
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -66,7 +64,6 @@ class MockState(object):
             '''
                 Mock verify_data method
             '''
-            data = data
             if self.flag:
                 return True
             else:
@@ -77,7 +74,6 @@ class MockState(object):
             '''
                 Mock call method
             '''
-            data = data
             return list
 
         @staticmethod
@@ -85,7 +81,6 @@ class MockState(object):
             '''
                 Mock call_high method
             '''
-            data = data
             return True
 
         @staticmethod
@@ -93,7 +88,6 @@ class MockState(object):
             '''
                 Mock call_template_str method
             '''
-            data = data
             return True
 
         @staticmethod
@@ -101,14 +95,12 @@ class MockState(object):
             '''
                 Mock _mod_init method
             '''
-            data = data
             return True
 
         def verify_high(self, data):
             '''
                 Mock verify_high method
             '''
-            data = data
             if self.flag:
                 return True
             else:
@@ -119,7 +111,6 @@ class MockState(object):
             '''
                 Mock compile_high_data
             '''
-            data = data
             return [{"__id__": "ABC"}]
 
         @staticmethod
@@ -127,9 +118,6 @@ class MockState(object):
             '''
                 Mock call_chunk method
             '''
-            data = data
-            data1 = data1
-            data2 = data2
             return {'': 'ABC'}
 
         @staticmethod
@@ -137,7 +125,6 @@ class MockState(object):
             '''
                 Mock call_chunks method
             '''
-            data = data
             return True
 
         @staticmethod
@@ -145,8 +132,6 @@ class MockState(object):
             '''
                 Mock call_listen method
             '''
-            data = data
-            ret = ret
             return True
 
         def requisite_in(self, data):  # pylint: disable=unused-argument
@@ -169,11 +154,6 @@ class MockState(object):
             '''
                 Mock render_state method
             '''
-            sls = sls
-            saltenv = saltenv
-            mods = mods
-            matches = matches
-            local = local
             if self.flag:
                 return {}, True
             else:
@@ -190,7 +170,6 @@ class MockState(object):
             '''
                 Mock verify_tops method
             '''
-            data = data
             if self.flag:
                 return ["a", "b"]
             else:
@@ -201,7 +180,6 @@ class MockState(object):
             '''
                 Mock top_matches method
             '''
-            data = data
             return ["a", "b", "c"]
 
         @staticmethod
@@ -237,13 +215,12 @@ class MockState(object):
             '''
                 Mock compile_low_chunks method
             '''
-            return True
+            return [{"__id__": "ABC", "__sls__": "abc"}]
 
         def render_highstate(self, data):
             '''
                 Mock render_highstate method
             '''
-            data = data
             if self.flag:
                 return ["a", "b"], True
             else:
@@ -255,11 +232,6 @@ class MockState(object):
             '''
                 Mock call_highstate method
             '''
-            exclude = exclude
-            cache = cache
-            cache_name = cache_name
-            force = force
-            whitelist = whitelist
             return True
 
 
@@ -275,14 +247,13 @@ class MockSerial(object):
             Mock Serial class
         '''
         def __init__(self, data):
-            data = data
+            pass
 
         @staticmethod
         def load(data):
             '''
                 Mock load method
             '''
-            data = data
             return {"A": "B"}
 
         @staticmethod
@@ -290,8 +261,6 @@ class MockSerial(object):
             '''
                 Mock dump method
             '''
-            data = data
-            data1 = data1
             return True
 
 
@@ -309,8 +278,6 @@ class MockTarFile(object):
         '''
             Mock open method
         '''
-        data = data
-        data1 = data1
         return MockTarFile
 
     @staticmethod
@@ -325,7 +292,6 @@ class MockTarFile(object):
         '''
             Mock extractall method
         '''
-        data = data
         return True
 
     @staticmethod
@@ -336,7 +302,6 @@ class MockTarFile(object):
         return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class StateTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.state
@@ -344,7 +309,7 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['state', 'args', 'systemd', 'path', 'platform']
         )
         utils.keys()
@@ -622,6 +587,29 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
 
             self.assertEqual(state.show_state_usage(), "A")
 
+    def test_show_states(self):
+        '''
+            Test to display the low data from a specific sls
+        '''
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock):
+
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), ['abc'])
+
+    def test_show_states_missing_sls(self):
+        '''
+        Test state.show_states when a sls file defined
+        in a top.sls file is missing
+        '''
+        msg = ["No matching sls found for 'cloud' in evn 'base'"]
+        chunks_mock = MagicMock(side_effect=[msg])
+        mock = MagicMock(side_effect=["A", None])
+        with patch.object(state, '_check_queue', mock),\
+            patch('salt.state.HighState.compile_low_chunks', chunks_mock):
+            self.assertEqual(state.show_low_sls("foo"), "A")
+            self.assertListEqual(state.show_states("foo"), [msg[0]])
+
     def test_sls_id(self):
         '''
             Test to call a single ID from the
@@ -699,6 +687,49 @@ class StateTestCase(TestCase, LoaderModuleMockMixin):
                         MockState.State.flag = False
                         self.assertListEqual(state.show_sls("foo"),
                                              ['a', 'b'])
+
+    def test_sls_exists(self):
+        '''
+            Test of sls_exists
+        '''
+        test_state = {}
+        test_missing_state = []
+
+        mock = MagicMock(return_value=test_state)
+        with patch.object(state, 'show_sls', mock):
+            self.assertTrue(state.sls_exists("state_name"))
+        mock = MagicMock(return_value=test_missing_state)
+        with patch.object(state, 'show_sls', mock):
+            self.assertFalse(state.sls_exists("missing_state"))
+
+    def test_id_exists(self):
+        '''
+            Test of id_exists
+        '''
+        test_state = [{
+                        "key1": "value1",
+                        "name": "value1",
+                        "state": "file",
+                        "fun": "test",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10000,
+                        "__id__": "state_id1"
+                    },
+                    {
+                        "key2": "value2",
+                        "name": "value2",
+                        "state": "file",
+                        "fun": "directory",
+                        "__env__": "base",
+                        "__sls__": "test-sls",
+                        "order": 10001,
+                        "__id__": "state_id2"
+                    }]
+        mock = MagicMock(return_value=test_state)
+        with patch.object(state, 'show_low_sls', mock):
+            self.assertTrue(state.id_exists("state_id1,state_id2", "test-sls"))
+            self.assertFalse(state.id_exists("invalid", "state_name"))
 
     def test_top(self):
         '''
@@ -1255,7 +1286,7 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         return {
             state: {
                 '__opts__': salt.config.minion_config(
-                    os.path.join(TMP_CONF_DIR, 'minion')
+                    os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'minion')
                 ),
                 '__salt__': {
                     'saltutil.is_running': MagicMock(return_value=[]),
@@ -1264,8 +1295,8 @@ class TopFileMergingCase(TestCase, LoaderModuleMockMixin):
         }
 
     def setUp(self):
-        self.cachedir = tempfile.mkdtemp(dir=TMP)
-        self.fileserver_root = tempfile.mkdtemp(dir=TMP)
+        self.cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.fileserver_root = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         self.addCleanup(shutil.rmtree, self.cachedir, ignore_errors=True)
         self.addCleanup(shutil.rmtree, self.fileserver_root, ignore_errors=True)
 

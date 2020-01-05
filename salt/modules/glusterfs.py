@@ -218,7 +218,7 @@ def peer(name):
 
 
 def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
-           transport='tcp', start=False, force=False):
+                  transport='tcp', start=False, force=False, arbiter=False):
     '''
     Create a glusterfs volume
 
@@ -237,6 +237,14 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
     replica
         Replica count, the number of bricks should be a multiple of the \
         replica count for a distributed replicated volume
+
+    arbiter
+        If true, specifies volume should use arbiter brick(s). \
+        Valid configuration limited to "replica 3 arbiter 1" per \
+        Gluster documentation. Every third brick in the brick list \
+        is used as an arbiter brick.
+
+        .. versionadded:: 2019.2.0
 
     device_vg
         If true, specifies volume should use block backend instead of regular \
@@ -281,12 +289,19 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
             raise SaltInvocationError(
                 'Brick syntax is <peer>:<path> got {0}'.format(brick))
 
+    # Validate arbiter config
+    if arbiter and replica != 3:
+        raise SaltInvocationError('Arbiter configuration only valid ' +
+                                  'in replica 3 volume')
+
     # Format creation call
     cmd = 'volume create {0} '.format(name)
     if stripe:
         cmd += 'stripe {0} '.format(stripe)
     if replica:
         cmd += 'replica {0} '.format(replica)
+    if arbiter:
+        cmd += 'arbiter 1 '
     if device_vg:
         cmd += 'device vg '
     if transport != 'tcp':
@@ -338,7 +353,7 @@ def status(name):
     root = _gluster_xml('volume status {0}'.format(name))
     if not _gluster_ok(root):
         # Most probably non-existing volume, the error output is logged
-        # Tiis return value is easy to test and intuitive
+        # This return value is easy to test and intuitive
         return None
 
     ret = {'bricks': {}, 'nfs': {}, 'healers': {}}
@@ -699,3 +714,111 @@ def list_quota_volume(name):
         ret[path] = _etree_to_dict(limit)
 
     return ret
+
+
+def get_op_version(name):
+    '''
+    .. versionadded:: 2019.2.0
+
+    Returns the glusterfs volume op-version
+
+    name
+        Name of the glusterfs volume
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_op_version <volume>
+    '''
+
+    cmd = 'volume get {0} cluster.op-version'.format(name)
+    root = _gluster_xml(cmd)
+
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
+
+    result = {}
+    for op_version in _iter(root, 'volGetopts'):
+        for item in op_version:
+            if item.tag == 'Value':
+                result = item.text
+            elif item.tag == 'Opt':
+                for child in item:
+                    if child.tag == 'Value':
+                        result = child.text
+
+    return result
+
+
+def get_max_op_version():
+    '''
+    .. versionadded:: 2019.2.0
+
+    Returns the glusterfs volume's max op-version value
+    Requires Glusterfs version > 3.9
+
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_max_op_version
+    '''
+    if _get_version() < (3, 10,):
+        return False, 'Glusterfs version must be 3.10+.  Your version is {0}.'.format(str('.'.join(str(i) for i in _get_version())))
+
+    cmd = 'volume get all cluster.max-op-version'
+    root = _gluster_xml(cmd)
+
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
+
+    result = {}
+    for max_op_version in _iter(root, 'volGetopts'):
+        for item in max_op_version:
+            if item.tag == 'Value':
+                result = item.text
+            elif item.tag == 'Opt':
+                for child in item:
+                    if child.tag == 'Value':
+                        result = child.text
+
+    return result
+
+
+def set_op_version(version):
+    '''
+    .. versionadded:: 2019.2.0
+
+    Set the glusterfs volume op-version
+
+    version
+        Version to set the glusterfs volume op-version
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' glusterfs.set_op_version <volume>
+    '''
+
+    cmd = 'volume set all cluster.op-version {0}'.format(version)
+    root = _gluster_xml(cmd)
+
+    if not _gluster_ok(root):
+        return False, root.find('opErrstr').text
+
+    return root.find('output').text
+
+
+def get_version():
+    '''
+    .. versionadded:: 2019.2.0
+
+    Returns the version of glusterfs.
+    CLI Example:
+    .. code-block:: bash
+
+        salt '*' glusterfs.get_version
+    '''
+
+    return '.'.join(_get_version())

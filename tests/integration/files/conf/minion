@@ -110,3 +110,5 @@ autosign_grains:
 
 # disable discovery for test suite saltstack/salt-jenkins#683
 discovery: false
+sdbvault:
+  driver: vault

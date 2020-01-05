@@ -12,8 +12,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -102,7 +100,6 @@ if _has_required_boto():
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoCloudTrailStateTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
@@ -110,7 +107,7 @@ class BotoCloudTrailStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         ctx = {}
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform', 'reg'],
             context=ctx)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = funcs = salt.loader.minion_mods(self.opts, context=ctx, utils=utils, whitelist=['boto_cloudtrail'])
@@ -128,7 +125,7 @@ class BotoCloudTrailStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod

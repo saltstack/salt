@@ -15,7 +15,7 @@ import shlex
 # Import salt libs
 from salt.exceptions import SaltInvocationError
 from salt.ext import six
-from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves import map, zip  # pylint: disable=import-error,redefined-builtin
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
@@ -37,6 +37,12 @@ def clean_kwargs(**kwargs):
     functions. These keys are useful for tracking what was used to invoke
     the function call, but they may not be desirable to have if passing the
     kwargs forward wholesale.
+
+    Usage example:
+
+    .. code-block:: python
+
+        kwargs = __utils__['args.clean_kwargs'](**kwargs)
     '''
     ret = {}
     for key, val in six.iteritems(kwargs):
@@ -73,7 +79,7 @@ def condition_input(args, kwargs):
     ret = []
     for arg in args:
         if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
-        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code,undefined-variable
             ret.append(six.text_type(arg))
         else:
             ret.append(arg)
@@ -194,19 +200,22 @@ def yamlify_arg(arg):
 
         elif arg is None \
                 or isinstance(arg, (list, float, six.integer_types, six.string_types)):
-            # yaml.safe_load will load '|' as '', don't let it do that.
-            if arg == '' and original_arg in ('|',):
+            # yaml.safe_load will load '|' and '!' as '', don't let it do that.
+            if arg == '' and original_arg in ('|', '!'):
                 return original_arg
             # yaml.safe_load will treat '#' as a comment, so a value of '#'
             # will become None. Keep this value from being stomped as well.
             elif arg is None and original_arg.strip().startswith('#'):
+                return original_arg
+            # Other times, yaml.safe_load will load '!' as None. Prevent that.
+            elif arg is None and original_arg == '!':
                 return original_arg
             else:
                 return arg
         else:
             # we don't support this type
             return original_arg
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # In case anything goes wrong...
         return original_arg
 
@@ -265,7 +274,7 @@ def get_function_argspec(func, is_class_method=None):
             aspec = _getargspec(func)
             del aspec.args[0]  # self
         elif inspect.isfunction(func):
-            aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
+            aspec = _getargspec(func)
         elif inspect.ismethod(func):
             aspec = _getargspec(func)
             del aspec.args[0]  # self
@@ -354,16 +363,18 @@ def argspec_report(functions, module=''):
     return ret
 
 
-def split_input(val):
+def split_input(val, mapper=None):
     '''
     Take an input value and split it into a list, returning the resulting list
     '''
+    if mapper is None:
+        mapper = lambda x: x
     if isinstance(val, list):
-        return val
+        return list(map(mapper, val))
     try:
-        return [x.strip() for x in val.split(',')]
+        return list(map(mapper, [x.strip() for x in val.split(',')]))
     except AttributeError:
-        return [x.strip() for x in six.text_type(val).split(',')]
+        return list(map(mapper, [x.strip() for x in six.text_type(val).split(',')]))
 
 
 def test_mode(**kwargs):
@@ -473,17 +484,6 @@ def format_call(fun,
             continue
         extra[key] = copy.deepcopy(value)
 
-    # We'll be showing errors to the users until Salt Fluorine comes out, after
-    # which, errors will be raised instead.
-    salt.utils.versions.warn_until(
-        'Fluorine',
-        'It\'s time to start raising `SaltInvocationError` instead of '
-        'returning warnings',
-        # Let's not show the deprecation warning on the console, there's no
-        # need.
-        _dont_call_warnings=True
-    )
-
     if extra:
         # Found unexpected keyword arguments, raise an error to the user
         if len(extra) == 1:
@@ -508,19 +508,7 @@ def format_call(fun,
                 )
             )
 
-        # Return a warning to the user explaining what's going on
-        ret.setdefault('warnings', []).append(
-            '{0}. If you were trying to pass additional data to be used '
-            'in a template context, please populate \'context\' with '
-            '\'key: value\' pairs. Your approach will work until Salt '
-            'Fluorine is out.{1}'.format(
-                msg,
-                '' if 'full' not in ret else ' Please update your state files.'
-            )
-        )
-
-        # Lets pack the current extra kwargs as template context
-        ret.setdefault('context', {}).update(extra)
+        raise SaltInvocationError(msg)
     return ret
 
 
@@ -581,3 +569,26 @@ def parse_function(s):
         return fname, args, kwargs
     else:
         return None, None, None
+
+
+def prepare_kwargs(all_kwargs, class_init_kwargs):
+    '''
+    Filter out the kwargs used for the init of the class and the kwargs used to
+    invoke the command required.
+
+    all_kwargs
+        All the kwargs the Execution Function has been invoked.
+
+    class_init_kwargs
+        The kwargs of the ``__init__`` of the class.
+    '''
+    fun_kwargs = {}
+    init_kwargs = {}
+    for karg, warg in six.iteritems(all_kwargs):
+        if karg not in class_init_kwargs:
+            if warg is not None:
+                fun_kwargs[karg] = warg
+            continue
+        if warg is not None:
+            init_kwargs[karg] = warg
+    return init_kwargs, fun_kwargs

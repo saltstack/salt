@@ -382,6 +382,15 @@ def create(vm_):
             raise SaltCloudConfigError("'ipv6' should be a boolean value.")
         kwargs['ipv6'] = ipv6
 
+    monitoring = config.get_cloud_config_value(
+        'monitoring', vm_, __opts__, search_global=False, default=None,
+    )
+
+    if monitoring is not None:
+        if not isinstance(monitoring, bool):
+            raise SaltCloudConfigError("'monitoring' should be a boolean value.")
+        kwargs['monitoring'] = monitoring
+
     kwargs['tags'] = config.get_cloud_config_value(
         'tags', vm_, __opts__, search_global=False, default=False
     )
@@ -395,7 +404,7 @@ def create(vm_):
                 kwargs['user_data'] = salt.utils.cloud.userdata_template(
                     __opts__, vm_, salt.utils.stringutils.to_unicode(fp_.read())
                 )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(
                 'Failed to read userdata from %s: %s', userdata_file, exc)
 
@@ -447,7 +456,7 @@ def create(vm_):
 
     try:
         ret = create_node(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on DIGITALOCEAN\n\n'
             'The following exception was thrown when trying to '

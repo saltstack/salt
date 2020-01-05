@@ -10,6 +10,7 @@ import salt.utils.stringutils
 
 # Import test support libs
 import tests.support.cherrypy_testclasses as cptc
+from tests.support.helpers import flaky
 
 # Import 3rd-party libs
 from salt.ext.six.moves.urllib.parse import urlencode  # pylint: disable=no-name-in-module,import-error
@@ -190,6 +191,20 @@ class TestRun(cptc.BaseRestCherryPyTest):
         })
         assert response.status == '401 Unauthorized'
 
+    def test_run_extra_parameters(self):
+        '''
+        Test the run URL with good auth credentials
+        '''
+        cmd = dict(self.low, **dict(self.auth_creds))
+        cmd['id_'] = 'someminionname'
+        body = urlencode(cmd)
+
+        request, response = self.request('/run', method='POST', body=body,
+            headers={
+                'content-type': 'application/x-www-form-urlencoded'
+        })
+        self.assertEqual(response.status, '200 OK')
+
 
 class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
 
@@ -307,6 +322,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         })
         self.assertEqual(response.status, '200 OK')
 
+    @flaky
     def test_all_jobs(self):
         '''
         test query to /jobs returns job data

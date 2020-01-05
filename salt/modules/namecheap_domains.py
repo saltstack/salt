@@ -27,6 +27,7 @@ file, or in the Pillar data.
     #namecheap.url: https://api.sandbox.namecheap.xml.response
 '''
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 CAN_USE_NAMECHEAP = True
 
@@ -37,6 +38,8 @@ except ImportError:
 
 # Import 3rd-party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -143,118 +146,14 @@ def create(domain_name, years, **kwargs):
 
         salt 'my-minion' namecheap_domains.create my-domain-name 2
     '''
-    idn_codes = set(['afr',
-                     'alb',
-                     'ara',
-                     'arg',
-                     'arm',
-                     'asm',
-                     'ast',
-                     'ave',
-                     'awa',
-                     'aze',
-                     'bak',
-                     'bal',
-                     'ban',
-                     'baq',
-                     'bas',
-                     'bel',
-                     'ben',
-                     'bho',
-                     'bos',
-                     'bul',
-                     'bur',
-                     'car',
-                     'cat',
-                     'che',
-                     'chi',
-                     'chv',
-                     'cop',
-                     'cos',
-                     'cze',
-                     'dan',
-                     'div',
-                     'doi',
-                     'dut',
-                     'eng',
-                     'est',
-                     'fao',
-                     'fij',
-                     'fin',
-                     'fre',
-                     'fry',
-                     'geo',
-                     'ger',
-                     'gla',
-                     'gle',
-                     'gon',
-                     'gre',
-                     'guj',
-                     'heb',
-                     'hin',
-                     'hun',
-                     'inc',
-                     'ind',
-                     'inh',
-                     'isl',
-                     'ita',
-                     'jav',
-                     'jpn',
-                     'kas',
-                     'kaz',
-                     'khm',
-                     'kir',
-                     'kor',
-                     'kur',
-                     'lao',
-                     'lav',
-                     'lit',
-                     'ltz',
-                     'mal',
-                     'mkd',
-                     'mlt',
-                     'mol',
-                     'mon',
-                     'mri',
-                     'msa',
-                     'nep',
-                     'nor',
-                     'ori',
-                     'oss',
-                     'pan',
-                     'per',
-                     'pol',
-                     'por',
-                     'pus',
-                     'raj',
-                     'rum',
-                     'rus',
-                     'san',
-                     'scr',
-                     'sin',
-                     'slo',
-                     'slv',
-                     'smo',
-                     'snd',
-                     'som',
-                     'spa',
-                     'srd',
-                     'srp',
-                     'swa',
-                     'swe',
-                     'syr',
-                     'tam',
-                     'tel',
-                     'tgk',
-                     'tha',
-                     'tib',
-                     'tur',
-                     'ukr',
-                     'urd',
-                     'uzb',
-                     'vie',
-                     'wel',
-                     'yid'])
+    idn_codes = ('afr', 'alb', 'ara', 'arg', 'arm', 'asm', 'ast', 'ave', 'awa', 'aze', 'bak', 'bal', 'ban', 'baq',
+                 'bas', 'bel', 'ben', 'bho', 'bos', 'bul', 'bur', 'car', 'cat', 'che', 'chi', 'chv', 'cop', 'cos',
+                 'cze', 'dan', 'div', 'doi', 'dut', 'eng', 'est', 'fao', 'fij', 'fin', 'fre', 'fry', 'geo', 'ger',
+                 'gla', 'gle', 'gon', 'gre', 'guj', 'heb', 'hin', 'hun', 'inc', 'ind', 'inh', 'isl', 'ita', 'jav',
+                 'jpn', 'kas', 'kaz', 'khm', 'kir', 'kor', 'kur', 'lao', 'lav', 'lit', 'ltz', 'mal', 'mkd', 'mlt',
+                 'mol', 'mon', 'mri', 'msa', 'nep', 'nor', 'ori', 'oss', 'pan', 'per', 'pol', 'por', 'pus', 'raj',
+                 'rum', 'rus', 'san', 'scr', 'sin', 'slo', 'slv', 'smo', 'snd', 'som', 'spa', 'srd', 'srp', 'swa',
+                 'swe', 'syr', 'tam', 'tel', 'tgk', 'tha', 'tib', 'tur', 'ukr', 'urd', 'uzb', 'vie', 'wel', 'yid')
 
     require_opts = ['AdminAddress1', 'AdminCity', 'AdminCountry', 'AdminEmailAddress', 'AdminFirstName',
                     'AdminLastName', 'AdminPhone', 'AdminPostalCode', 'AdminStateProvince', 'AuxBillingAddress1',
@@ -291,14 +190,14 @@ def create(domain_name, years, **kwargs):
             add_to_opts(opts, kwargs, value, key[7:], ['Registrant', 'Tech', 'Admin', 'AuxBilling'])
 
         if key == 'IdnCode' and key not in idn_codes:
-            salt.utils.namecheap.log.error('Invalid IdnCode')
+            log.error('Invalid IdnCode')
             raise Exception('Invalid IdnCode')
 
         opts[key] = value
 
     for requiredkey in require_opts:
         if requiredkey not in opts:
-            salt.utils.namecheap.log.error("Missing required parameter '" + requiredkey + "'")
+            log.error("Missing required parameter '%s'", requiredkey)
             raise Exception("Missing required parameter '" + requiredkey + "'")
 
     response_xml = salt.utils.namecheap.post_request(opts)
@@ -438,13 +337,13 @@ def get_list(list_type=None,
 
     if list_type is not None:
         if list_type not in ['ALL', 'EXPIRING', 'EXPIRED']:
-            salt.utils.namecheap.log.error('Invalid option for list_type')
+            log.error('Invalid option for list_type')
             raise Exception('Invalid option for list_type')
         opts['ListType'] = list_type
 
     if search_term is not None:
         if len(search_term) > 70:
-            salt.utils.namecheap.log.warning('search_term trimmed to first 70 characters')
+            log.warning('search_term trimmed to first 70 characters')
             search_term = search_term[0:70]
         opts['SearchTerm'] = search_term
 
@@ -453,13 +352,13 @@ def get_list(list_type=None,
 
     if page_size is not None:
         if page_size > 100 or page_size < 10:
-            salt.utils.namecheap.log.error('Invalid option for page')
+            log.error('Invalid option for page')
             raise Exception('Invalid option for page')
         opts['PageSize'] = page_size
 
     if sort_by is not None:
         if sort_by not in ['NAME', 'NAME_DESC', 'EXPIREDATE', 'EXPIREDATE_DESC', 'CREATEDATE', 'CREATEDATE_DESC']:
-            salt.utils.namecheap.log.error('Invalid option for sort_by')
+            log.error('Invalid option for sort_by')
             raise Exception('Invalid option for sort_by')
         opts['SortBy'] = sort_by
 

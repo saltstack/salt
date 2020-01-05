@@ -8,19 +8,16 @@ import inspect
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.modules.defaults as defaults
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.defaults
@@ -172,3 +169,37 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertFalse(src == dist)
         self.assertTrue(dist == result)
+
+    def test_update_in_place(self):
+        '''
+        Test update with defaults values in place.
+        '''
+
+        group01 = {
+            'defaults': {
+                'enabled': True,
+                'extra': [
+                    'test',
+                    'stage'
+                ]
+            },
+            'nodes': {
+                'host01': {
+                    'index': 'foo',
+                    'upstream': 'bar'
+                }
+            }
+        }
+
+        host01 = {
+            'enabled': True,
+            'index': 'foo',
+            'upstream': 'bar',
+            'extra': [
+                'test',
+                'stage'
+            ],
+        }
+
+        defaults.update(group01['nodes'], group01['defaults'])
+        self.assertEqual(group01['nodes']['host01'], host01)

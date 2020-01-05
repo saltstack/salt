@@ -59,7 +59,6 @@ import fnmatch
 import hashlib
 import logging
 import datetime
-import sys
 
 try:
     from collections.abc import MutableMapping
@@ -88,15 +87,13 @@ import salt.utils.zeromq
 import salt.log.setup
 import salt.defaults.exitcodes
 import salt.transport.ipc
+import salt.transport.client
 
 log = logging.getLogger(__name__)
 
 # The SUB_EVENT set is for functions that require events fired based on
 # component executions, like the state system
-SUB_EVENT = set([
-    'state.highstate',
-    'state.sls',
-])
+SUB_EVENT = ('state.highstate', 'state.sls')
 
 TAGEND = str('\n\n')  # long tag delimiter
 TAGPARTER = str('/')  # name spaced tag delimiter
@@ -131,27 +128,20 @@ def get_event(
     '''
     sock_dir = sock_dir or opts['sock_dir']
     # TODO: AIO core is separate from transport
-    if transport in ('zeromq', 'tcp'):
-        if node == 'master':
-            return MasterEvent(sock_dir,
-                               opts,
-                               listen=listen,
-                               io_loop=io_loop,
-                               keep_loop=keep_loop,
-                               raise_errors=raise_errors)
-        return SaltEvent(node,
-                         sock_dir,
-                         opts,
-                         listen=listen,
-                         io_loop=io_loop,
-                         keep_loop=keep_loop,
-                         raise_errors=raise_errors)
-    elif transport == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.RAETEvent(node,
-                                              sock_dir=sock_dir,
-                                              listen=listen,
-                                              opts=opts)
+    if node == 'master':
+        return MasterEvent(sock_dir,
+                           opts,
+                           listen=listen,
+                           io_loop=io_loop,
+                           keep_loop=keep_loop,
+                           raise_errors=raise_errors)
+    return SaltEvent(node,
+                     sock_dir,
+                     opts,
+                     listen=listen,
+                     io_loop=io_loop,
+                     keep_loop=keep_loop,
+                     raise_errors=raise_errors)
 
 
 def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=False):
@@ -161,11 +151,6 @@ def get_master_event(opts, sock_dir, listen=True, io_loop=None, raise_errors=Fal
     # TODO: AIO core is separate from transport
     if opts['transport'] in ('zeromq', 'tcp', 'detect'):
         return MasterEvent(sock_dir, opts, listen=listen, io_loop=io_loop, raise_errors=raise_errors)
-    elif opts['transport'] == 'raet':
-        import salt.utils.raetevent
-        return salt.utils.raetevent.MasterEvent(
-            opts=opts, sock_dir=sock_dir, listen=listen
-        )
 
 
 def fire_args(opts, jid, tag_data, prefix=''):
@@ -181,7 +166,7 @@ def fire_args(opts, jid, tag_data, prefix=''):
         try:
             _event = get_master_event(opts, opts['sock_dir'], listen=False)
             _event.fire_event(tag_data, tag=tag)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # Don't let a problem here hold up the rest of the orchestration
             log.warning(
                 'Failed to fire args event %s with data %s: %s',
@@ -375,7 +360,7 @@ class SaltEvent(object):
                     self.io_loop.run_sync(
                         lambda: self.subscriber.connect(timeout=timeout))
                     self.cpub = True
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
         else:
             if self.subscriber is None:
@@ -420,7 +405,7 @@ class SaltEvent(object):
                     self.io_loop.run_sync(
                         lambda: self.pusher.connect(timeout=timeout))
                     self.cpush = True
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
         else:
             if self.pusher is None:
@@ -432,6 +417,17 @@ class SaltEvent(object):
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
+
+    def close_pull(self):
+        '''
+        Close the pusher connection (if established)
+        '''
+        if not self.cpush:
+            return
+
+        self.pusher.close()
+        self.pusher = None
+        self.cpush = False
 
     @classmethod
     def unpack(cls, raw, serial=None):
@@ -545,7 +541,6 @@ class SaltEvent(object):
                 # IPCMessageSubscriber.read_sync() uses this type of timeout.
                 if not self.cpub and not self.connect_pub(timeout=wait):
                     break
-
                 raw = self.subscriber.read_sync(timeout=wait)
                 if raw is None:
                     break
@@ -627,6 +622,7 @@ class SaltEvent(object):
         request, it MUST subscribe the result to ensure the response is not lost
         should other regions of code call get_event for other purposes.
         '''
+        log.trace("Get event. tag: %s", tag)
         assert self._run_io_loop_sync
 
         match_func = self._get_match_func(match_type)
@@ -747,7 +743,7 @@ class SaltEvent(object):
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.send(msg))
-                except Exception as ex:
+                except Exception as ex:  # pylint: disable=broad-except
                     log.debug(ex)
                     raise
         else:
@@ -771,9 +767,9 @@ class SaltEvent(object):
 
     def destroy(self):
         if self.subscriber is not None:
-            self.subscriber.close()
+            self.close_pub()
         if self.pusher is not None:
-            self.pusher.close()
+            self.close_pull()
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
@@ -828,7 +824,7 @@ class SaltEvent(object):
                                 'error',
                                 fun],
                                'job'))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     def fire_ret_load(self, load):
@@ -878,7 +874,7 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
     # pylint: enable=W1701
 
@@ -1049,7 +1045,7 @@ class AsyncEventPublisher(object):
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical('Unexpected error while polling minion events',
                          exc_info=True)
             return None
@@ -1069,13 +1065,13 @@ class AsyncEventPublisher(object):
     # pylint: enable=W1701
 
 
-class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventPublisher(salt.utils.process.SignalHandlingProcess):
     '''
     The interface that takes master events and republishes them out to anyone
     who wants to listen
     '''
-    def __init__(self, opts, log_queue=None):
-        super(EventPublisher, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(EventPublisher, self).__init__(**kwargs)
         self.opts = salt.config.DEFAULT_MASTER_OPTS.copy()
         self.opts.update(opts)
         self._closing = False
@@ -1084,12 +1080,18 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -1147,7 +1149,7 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical('Unexpected error while polling master events',
                          exc_info=True)
             return None
@@ -1173,28 +1175,22 @@ class EventPublisher(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # pylint: enable=W1701
 
 
-class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
+class EventReturn(salt.utils.process.SignalHandlingProcess):
     '''
     A dedicated process which listens to the master event bus and queues
     and forwards events to the specified returner.
     '''
-    def __new__(cls, *args, **kwargs):
-        if sys.platform.startswith('win'):
-            # This is required for Windows.  On Linux, when a process is
-            # forked, the module namespace is copied and the current process
-            # gets all of sys.modules from where the fork happens.  This is not
-            # the case for Windows.
-            import salt.minion
-        instance = super(EventReturn, cls).__new__(cls, *args, **kwargs)
-        return instance
-
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Initialize the EventReturn system
 
         Return an EventReturn instance
         '''
-        super(EventReturn, self).__init__(log_queue=log_queue)
+        # This is required because the process is forked and the module no
+        # longer exists in the global namespace.
+        import salt.minion
+
+        super(EventReturn, self).__init__(**kwargs)
 
         self.opts = opts
         self.event_return_queue = self.opts['event_return_queue']
@@ -1209,12 +1205,18 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def _handle_signals(self, signum, sigframe):
         # Flush and terminate
@@ -1244,7 +1246,7 @@ class EventReturn(salt.utils.process.SignalHandlingMultiprocessingProcess):
         if event_return in self.minion.returners:
             try:
                 self.minion.returners[event_return](self.event_queue)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Could not store events - returner \'%s\' raised '
                           'exception: %s', event_return, exc)
                 # don't waste processing power unnecessarily on converting a
@@ -1370,11 +1372,11 @@ class StateFire(object):
             'tok': self.auth.gen_token(b'salt'),
         })
 
-        channel = salt.transport.Channel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True
 
     def fire_running(self, running):
@@ -1400,9 +1402,9 @@ class StateFire(object):
                 'tag': tag,
                 'data': running[stag],
             })
-        channel = salt.transport.Channel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True

@@ -6,40 +6,32 @@
     tests.integration.shell.call
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
+# pylint: disable=invalid-name
 
 # Import python libs
 from __future__ import absolute_import
-import getpass
+import logging
 import os
-import sys
 import re
 import shutil
-from datetime import datetime
-import logging
+import sys
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import FILES, TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import destructiveTest, flaky
+from tests.support.helpers import flaky, with_tempfile
 from tests.integration.utils import testprogram
 
 # Import salt libs
 import salt.utils.files
+import salt.utils.json
+import salt.utils.platform
 import salt.utils.yaml
 from salt.ext import six
 
 log = logging.getLogger(__name__)
-
-_PKG_TARGETS = {
-    'Arch': ['python2-django', 'libpng'],
-    'Debian': ['python-plist', 'apg'],
-    'RedHat': ['xz-devel', 'zsh-html'],
-    'FreeBSD': ['aalib', 'pth'],
-    'SUSE': ['aalib', 'python-pssh']
-}
-_PKGS_INSTALLED = set()
 
 
 class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin):
@@ -73,37 +65,35 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         self.assertIn('"local": true', ''.join(out))
 
     def test_local_sls_call(self):
-        fileroot = os.path.join(FILES, 'file', 'base')
-        out = self.run_call('--file-root {0} --local state.sls saltcalllocal'.format(fileroot))
+        fileroot = os.path.join(RUNTIME_VARS.FILES, 'file', 'base')
+        out = self.run_call('--file-root {0} state.sls saltcalllocal'.format(fileroot), local=True)
         self.assertIn('Name: test.echo', ''.join(out))
         self.assertIn('Result: True', ''.join(out))
         self.assertIn('hello', ''.join(out))
         self.assertIn('Succeeded: 1', ''.join(out))
 
-    @destructiveTest
-    @skipIf(True, 'Skipping due to off the wall failures and hangs on most os\'s. Will re-enable when fixed.')
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @skipIf(getpass.getuser() == 'root', 'Requires root to test pkg.install')
-    def test_local_pkg_install(self):
+    @with_tempfile()
+    def test_local_salt_call(self, name):
         '''
-        Test to ensure correct output when installing package
+        This tests to make sure that salt-call does not execute the
+        function twice, see https://github.com/saltstack/salt/pull/49552
         '''
-        get_os_family = self.run_call('--local grains.get os_family')
-        pkg_targets = _PKG_TARGETS.get(get_os_family[1].strip(), [])
-        check_pkg = self.run_call('--local pkg.list_pkgs')
-        for pkg in pkg_targets:
-            if pkg not in str(check_pkg):
-                out = self.run_call('--local pkg.install {0}'.format(pkg))
-                self.assertIn('local:    ----------', ''.join(out))
-                self.assertIn('{0}:        ----------'.format(pkg), ''.join(out))
-                self.assertIn('new:', ''.join(out))
-                self.assertIn('old:', ''.join(out))
-                _PKGS_INSTALLED.add(pkg)
-            else:
-                log.debug('The pkg: {0} is already installed on the machine'.format(pkg))
+        def _run_call(cmd):
+            cmd = '--out=json ' + cmd
+            return salt.utils.json.loads(''.join(self.run_call(cmd, local=True)))['local']
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @flaky
+        ret = _run_call('state.single file.append name={0} text="foo"'.format(name))
+        ret = ret[next(iter(ret))]
+
+        # Make sure we made changes
+        assert ret['changes']
+
+        # 2nd sanity check: make sure that "foo" only exists once in the file
+        with salt.utils.files.fopen(name) as fp_:
+            contents = fp_.read()
+        assert contents.count('foo') == 1, contents
+
+    @skipIf(salt.utils.platform.is_windows() or salt.utils.platform.is_darwin(), 'This test requires a supported master')
     def test_user_delete_kw_output(self):
         ret = self.run_call('-l quiet -d user.delete')
         assert 'salt \'*\' user.delete name remove=True force=True' in ''.join(ret)
@@ -121,8 +111,8 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         for this minion, salt-call should exit non-zero if invoked with
         option --retcode-passthrough
         '''
-        src = os.path.join(FILES, 'file/base/top.sls')
-        dst = os.path.join(FILES, 'file/base/top.sls.bak')
+        src = os.path.join(RUNTIME_VARS.BASE_FILES, 'top.sls')
+        dst = os.path.join(RUNTIME_VARS.BASE_FILES, 'top.sls.bak')
         shutil.move(src, dst)
         expected_comment = 'No states found for this minion'
         try:
@@ -160,142 +150,13 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         ]
         self.assertTrue(True in ['returnTOmaster' in a for a in master_out])
 
-    @skipIf(sys.platform.startswith('win'), 'This test does not apply on Win')
-    @flaky
-    def test_issue_2731_masterless(self):
-        root_dir = os.path.join(TMP, 'issue-2731')
-        config_dir = os.path.join(root_dir, 'conf')
-        minion_config_file = os.path.join(config_dir, 'minion')
-        logfile = os.path.join(root_dir, 'minion_test_issue_2731')
-
-        if not os.path.isdir(config_dir):
-            os.makedirs(config_dir)
-
-        with salt.utils.files.fopen(self.get_config_file_path('master')) as fhr:
-            master_config = salt.utils.yaml.safe_load(fhr)
-
-        master_root_dir = master_config['root_dir']
-        this_minion_key = os.path.join(
-            master_root_dir, 'pki', 'master', 'minions', 'minion_test_issue_2731'
-        )
-
-        minion_config = {
-            'id': 'minion_test_issue_2731',
-            'master': 'localhost',
-            'master_port': 64506,
-            'root_dir': master_root_dir,
-            'pki_dir': 'pki',
-            'cachedir': 'cachedir',
-            'sock_dir': 'minion_sock',
-            'open_mode': True,
-            'log_file': logfile,
-            'log_level': 'quiet',
-            'log_level_logfile': 'info',
-            'transport': self.master_opts['transport'],
-        }
-        try:
-            # Remove existing logfile
-            if os.path.isfile(logfile):
-                os.unlink(logfile)
-
-            start = datetime.now()
-            # Let's first test with a master running
-
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-            ret = self.run_script(
-                'salt-call',
-                '--config-dir {0} cmd.run "echo foo"'.format(
-                    config_dir
-                )
-            )
-            try:
-                self.assertIn('local:', ret)
-            except AssertionError:
-                if os.path.isfile(minion_config_file):
-                    os.unlink(minion_config_file)
-                # Let's remove our key from the master
-                if os.path.isfile(this_minion_key):
-                    os.unlink(this_minion_key)
-
-                raise
-
-            # Calculate the required timeout, since next will fail.
-            # I needed this because after many attempts, I was unable to catch:
-            #   WARNING: Master hostname: salt not found. Retrying in 30 seconds
-            ellapsed = datetime.now() - start
-            timeout = ellapsed.seconds + 3
-
-            # Now let's remove the master configuration
-            minion_config.pop('master')
-            minion_config.pop('master_port')
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-
-            _, timed_out = self.run_script(
-                'salt-call',
-                '--config-dir {0} cmd.run "echo foo"'.format(
-                    config_dir
-                ),
-                timeout=timeout,
-                catch_timeout=True,
-            )
-
-            try:
-                self.assertTrue(timed_out)
-            except AssertionError:
-                if os.path.isfile(minion_config_file):
-                    os.unlink(minion_config_file)
-                # Let's remove our key from the master
-                if os.path.isfile(this_minion_key):
-                    os.unlink(this_minion_key)
-
-                raise
-
-            # Should work with --local
-            ret = self.run_script(
-                'salt-call',
-                '--config-dir {0} --local cmd.run "echo foo"'.format(
-                    config_dir
-                ),
-                timeout=60
-            )
-            try:
-                self.assertIn('local:', ret)
-            except AssertionError:
-                if os.path.isfile(minion_config_file):
-                    os.unlink(minion_config_file)
-                # Let's remove our key from the master
-                if os.path.isfile(this_minion_key):
-                    os.unlink(this_minion_key)
-                raise
-
-            # Should work with local file client
-            minion_config['file_client'] = 'local'
-            with salt.utils.files.fopen(minion_config_file, 'w') as fh_:
-                salt.utils.yaml.safe_dump(minion_config, fh_, default_flow_style=False)
-            ret = self.run_script(
-                'salt-call',
-                '--config-dir {0} cmd.run "echo foo"'.format(
-                    config_dir
-                ),
-                timeout=60
-            )
-            self.assertIn('local:', ret)
-        finally:
-            if os.path.isfile(minion_config_file):
-                os.unlink(minion_config_file)
-            # Let's remove our key from the master
-            if os.path.isfile(this_minion_key):
-                os.unlink(this_minion_key)
-
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows')
     def test_syslog_file_not_found(self):
         '''
         test when log_file is set to a syslog file that does not exist
         '''
         old_cwd = os.getcwd()
-        config_dir = os.path.join(TMP, 'log_file_incorrect')
+        config_dir = os.path.join(RUNTIME_VARS.TMP, 'log_file_incorrect')
         if not os.path.isdir(config_dir):
             os.makedirs(config_dir)
 
@@ -313,7 +174,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             '--config-dir {0} cmd.run "echo foo"'.format(
                 config_dir
             ),
-            timeout=60,
+            timeout=120,
             catch_stderr=True,
             with_retcode=True
         )
@@ -335,13 +196,13 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_15074_output_file_append(self):
-        output_file_append = os.path.join(TMP, 'issue-15074')
+        output_file_append = os.path.join(RUNTIME_VARS.TMP, 'issue-15074')
         try:
             # Let's create an initial output file with some data
             _ = self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -354,7 +215,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             self.run_script(
                 'salt-call',
                 '-c {0} --output-file={1} --output-file-append test.versions'.format(
-                    self.get_config_dir(),
+                    self.config_dir,
                     output_file_append
                 ),
                 catch_stderr=True,
@@ -369,7 +230,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
     @flaky
     def test_issue_14979_output_file_permissions(self):
-        output_file = os.path.join(TMP, 'issue-14979')
+        output_file = os.path.join(RUNTIME_VARS.TMP, 'issue-14979')
         with salt.utils.files.set_umask(0o077):
             try:
                 # Let's create an initial output file with some data
@@ -393,7 +254,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} --output-file-append -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
@@ -414,7 +275,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 self.run_script(
                     'salt-call',
                     '-c {0} --output-file={1} -g'.format(
-                        self.get_config_dir(),
+                        self.config_dir,
                         output_file
                     ),
                     catch_stderr=True,
@@ -461,15 +322,11 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         Teardown method to remove installed packages
         '''
         user = ''
-        user_info = self.run_call('--local grains.get username')
+        user_info = self.run_call(' grains.get username', local=True)
         if user_info and isinstance(user_info, (list, tuple)) and isinstance(user_info[-1], six.string_types):
             user = user_info[-1].strip()
-        if user == 'root':
-            for pkg in _PKGS_INSTALLED:
-                _ = self.run_call('--local pkg.remove {0}'.format(pkg))
         super(CallTest, self).tearDown()
 
-    # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-call.
@@ -498,7 +355,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
         '''
         ret = self.run_call('state.highstate', local=True)
 
-        destpath = os.path.join(TMP, 'testfile')
+        destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         exp_out = ['    Function: file.managed', '      Result: True',
                    '          ID: {0}'.format(destpath)]
 

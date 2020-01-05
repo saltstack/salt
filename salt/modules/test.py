@@ -13,14 +13,15 @@ import traceback
 import random
 
 # Import Salt libs
+import salt.exceptions
 import salt.utils.args
 import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.platform
-import salt.utils.versions
 import salt.version
 import salt.loader
 from salt.ext import six
+from salt.ext.six.moves import builtins
 from salt.utils.decorators import depends
 
 __proxyenabled__ = ['*']
@@ -495,10 +496,12 @@ def opts_pkg():
 
 
 def rand_str(size=9999999999, hash_type=None):
-    salt.utils.versions.warn_until(
-        'Neon',
-        'test.rand_str has been renamed to test.random_hash'
-    )
+    '''
+    This function has been renamed to
+    random_hash. This function will stay to
+    ensure backwards compatibility, but please
+    switch to using the prefered name random_hash.
+    '''
     return random_hash(size=size, hash_type=hash_type)
 
 
@@ -585,7 +588,7 @@ def try_(module, return_try_exception=False, **kwargs):
     '''
     try:
         return __salt__[module](**kwargs)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         if return_try_exception:
             return e
     return None
@@ -628,3 +631,44 @@ def false_():
         salt '*' test.false
     '''
     return False
+
+
+def raise_exception(name, *args, **kwargs):
+    '''
+    Raise an exception. Built-in exceptions and those in ``salt.exceptions``
+    can be raised by this test function. If no matching exception is found,
+    then no exception will be raised and this function will return ``False``.
+
+    This function is designed to test Salt's exception and return code
+    handling.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.raise_exception TypeError "An integer is required"
+        salt '*' test.raise_exception salt.exceptions.CommandExecutionError "Something went wrong"
+    '''
+    def _is_exc(cls):
+        for base in cls.__bases__:
+            if base is BaseException:
+                break
+            else:
+                return _is_exc(base)
+        else:
+            return False
+        return True
+
+    try:
+        if name.startswith('salt.exceptions.'):
+            exc = getattr(salt.exceptions, name[16:])
+        else:
+            exc = getattr(builtins, name)
+        if _is_exc(exc):
+            raise exc(*args, **salt.utils.args.clean_kwargs(**kwargs))
+        else:
+            log.error('%s is not an exception', name)
+            return False
+    except AttributeError:
+        log.error('No such exception: %s', name)
+        return False

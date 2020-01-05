@@ -19,9 +19,9 @@ import logging
 import tests.integration.utils
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
-from tests.support.paths import CODE_DIR
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.integration.utils import testprogram
+from tests.support.runtests import RUNTIME_VARS
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -40,6 +40,8 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
     '''
     Various integration tests for the salt-minion executable.
     '''
+
+    _call_binary_ = 'salt-minion'
 
     _test_minions = (
         'minion',
@@ -165,7 +167,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         init_script = testprogram.TestProgram(
             name='init:salt-minion',
-            program=os.path.join(CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
+            program=os.path.join(RUNTIME_VARS.CODE_DIR, 'pkg', 'rpm', 'salt-minion'),
             env=cmd_env,
         )
 
@@ -257,10 +259,9 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             minion.shutdown()
 
-    # pylint: disable=invalid-name
 #    @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_exit_status_unknown_argument(self):
         '''
@@ -288,7 +289,7 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
         finally:
             # Although the start-up should fail, call shutdown() to set the
             # internal _shutdown flag and avoid the registered atexit calls to
-            # cause timeout exeptions and respective traceback
+            # cause timeout exceptions and respective traceback
             minion.shutdown()
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')

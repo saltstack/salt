@@ -45,6 +45,8 @@ class ThorState(salt.state.HighState):
         self.pillar = pillar
         self.pillar_keys = pillar_keys
         opts['file_roots'] = opts['thorium_roots']
+        opts['saltenv'] = opts['thoriumenv']
+        opts['state_top'] = opts['thorium_top']
         opts['file_client'] = 'local'
         self.opts = opts
         if opts.get('minion_data_cache'):
@@ -57,7 +59,7 @@ class ThorState(salt.state.HighState):
         if self.reg_ret is not None:
             try:
                 regdata = self.returners['{0}.load_reg'.format(self.reg_ret)]()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(exc)
 
         self.state.inject_globals = {'__reg__': regdata}
@@ -106,7 +108,7 @@ class ThorState(salt.state.HighState):
         while True:
             try:
                 self.call_runtime()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Exception in Thorium: ', exc_info=True)
                 time.sleep(self.opts['thorium_interval'])
 
@@ -121,7 +123,7 @@ class ThorState(salt.state.HighState):
             top = self.get_top()
         except SaltRenderError as err:
             return ret
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             trb = traceback.format_exc()
             err.append(trb)
             return err

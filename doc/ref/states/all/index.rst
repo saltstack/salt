@@ -24,10 +24,14 @@ state modules
     at
     augeas
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     beacon
     bigip
     blockdev
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -64,6 +68,7 @@ state modules
     chef
     chocolatey
     chronos_job
+    cimc
     cisconso
     cloud
     cmd
@@ -75,7 +80,6 @@ state modules
     debconfmod
     dellchassis
     disk
-    docker
     docker_container
     docker_image
     docker_network
@@ -112,7 +116,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -135,7 +138,6 @@ state modules
     jboss7
     jenkins
     junos
-    k8s
     kapacitor
     kernelpkg
     keyboard
@@ -148,6 +150,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -210,6 +213,7 @@ state modules
     pagerduty_schedule
     pagerduty_service
     pagerduty_user
+    panos
     pcs
     pecl
     pdbedit
@@ -241,6 +245,7 @@ state modules
     rabbitmq_cluster
     rabbitmq_plugin
     rabbitmq_policy
+    rabbitmq_upstream
     rabbitmq_user
     rabbitmq_vhost
     rbac_solaris
@@ -252,6 +257,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
@@ -307,16 +313,19 @@ state modules
     win_smtp_server
     win_snmp
     win_system
-    win_update
     win_wua
+    win_wusa
     winrepo
     x509
     xmpp
+    zabbix_action
     zabbix_host
     zabbix_hostgroup
     zabbix_mediatype
+    zabbix_template
     zabbix_user
     zabbix_usergroup
+    zabbix_valuemap
     zcbuildout
     zenoss
     zk_concurrency

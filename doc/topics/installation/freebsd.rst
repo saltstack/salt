@@ -5,42 +5,52 @@ FreeBSD
 Installation
 ============
 
-Salt is available in the FreeBSD ports at `sysutils/py-salt. <https://www.freshports.org/sysutils/py-salt/>`__
+Salt is available in the FreeBSD ports tree at `sysutils/py-salt
+<https://www.freshports.org/sysutils/py-salt/>`_.
 
 
 FreeBSD binary repo
 ===================
 
+
+For Python 2.7 use:
+
+Install Salt via the official package repository. Salt is packaged both as a Python 2.7 or 3.6 version.
+
+
 .. code-block:: bash
 
     pkg install py27-salt
 
+
+For Python 3.6 use:
+
+
+.. code-block:: bash
+
+    pkg install py36-salt
+
+
 FreeBSD ports
 =============
 
-By default salt is packaged using python 2.7, but if you build your own packages from FreeBSD ports either by hand or with poudriere you can instead package it with your choice of python. Add a line to /etc/make.conf to choose your python flavour:
-
-.. code-block:: shell
-
-    echo "DEFAULT_VERSIONS+= python=3.6" >> /etc/make.conf
-
-Then build the port and install:
+Installation from ports:
 
 .. code-block:: bash
 
     cd /usr/ports/sysutils/py-salt
     make install
 
+Python 3.6 can be used by setting default Python version to 3.6:  
+    
+.. code-block:: text
+
+    echo "DEFAULT_VERSIONS+= python=3.6" >> /etc/make.conf
+
+
 Post-installation tasks
 =======================
 
-**Master**
-
-Copy the sample configuration file:
-
-.. code-block:: bash
-
-   cp /usr/local/etc/salt/master.sample /usr/local/etc/salt/master
 
 **rc.conf**
 
@@ -57,14 +67,6 @@ Start the Salt Master as follows:
 .. code-block:: bash
 
    service salt_master start
-
-**Minion**
-
-Copy the sample configuration file:
-
-.. code-block:: bash
-
-   cp /usr/local/etc/salt/minion.sample /usr/local/etc/salt/minion
 
 **rc.conf**
 

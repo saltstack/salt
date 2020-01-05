@@ -33,7 +33,6 @@ import salt.utils.http
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yamlencoding
-import salt.utils.locales
 import salt.utils.hashutils
 import salt.utils.stringutils
 from salt.exceptions import (
@@ -181,7 +180,7 @@ def wrap_tmpl_func(render_str):
             log.exception('Rendering exception occurred')
             #return dict(result=False, data=six.text_type(exc))
             raise
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return dict(result=False, data=traceback.format_exc())
         else:
             if to_str:  # then render as string
@@ -299,7 +298,9 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
         tmplstr = tmplstr.decode(SLS_ENCODING)
 
     if tmplstr.endswith(os.linesep):
-        newline = True
+        newline = os.linesep
+    elif tmplstr.endswith('\n'):
+        newline = '\n'
 
     if not saltenv:
         if tmplpath:
@@ -385,7 +386,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 "Failed to decode using default encoding (%s), trying system encoding",
                 SLS_ENCODING,
             )
-            decoded_context[key] = salt.utils.locales.sdecode(value)
+            decoded_context[key] = salt.utils.data.decode(value)
 
     try:
         template = jinja_env.from_string(tmplstr)
@@ -421,7 +422,7 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 exc, out),
             line,
             tmplstr)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         tracestr = traceback.format_exc()
         trace = traceback.extract_tb(sys.exc_info()[2])
         line, out = _get_jinja_error(trace, context=decoded_context)
@@ -444,15 +445,15 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
     # Workaround a bug in Jinja that removes the final newline
     # (https://github.com/mitsuhiko/jinja2/issues/75)
     if newline:
-        output += os.linesep
+        output += newline
 
     return output
 
 
 # pylint: disable=3rd-party-module-not-gated
 def render_mako_tmpl(tmplstr, context, tmplpath=None):
-    import mako.exceptions
-    from mako.template import Template
+    import mako.exceptions  # pylint: disable=no-name-in-module
+    from mako.template import Template  # pylint: disable=no-name-in-module
     from salt.utils.mako import SaltMakoTemplateLookup
 
     saltenv = context['saltenv']
@@ -460,7 +461,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
     if not saltenv:
         if tmplpath:
             # i.e., the template is from a file outside the state tree
-            from mako.lookup import TemplateLookup
+            from mako.lookup import TemplateLookup  # pylint: disable=no-name-in-module
             lookup = TemplateLookup(directories=[os.path.dirname(tmplpath)])
     else:
         lookup = SaltMakoTemplateLookup(
@@ -474,7 +475,7 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             uri=context['sls'].replace('.', '/') if 'sls' in context else None,
             lookup=lookup
         ).render(**context)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltRenderError(mako.exceptions.text_error_template().render())
 
 
@@ -502,13 +503,13 @@ def render_genshi_tmpl(tmplstr, context, tmplpath=None):
     '''
     method = context.get('method', 'xml')
     if method == 'text' or method == 'newtext':
-        from genshi.template import NewTextTemplate
+        from genshi.template import NewTextTemplate  # pylint: disable=no-name-in-module
         tmpl = NewTextTemplate(tmplstr)
     elif method == 'oldtext':
-        from genshi.template import OldTextTemplate
+        from genshi.template import OldTextTemplate  # pylint: disable=no-name-in-module
         tmpl = OldTextTemplate(tmplstr)
     else:
-        from genshi.template import MarkupTemplate
+        from genshi.template import MarkupTemplate  # pylint: disable=no-name-in-module
         tmpl = MarkupTemplate(tmplstr)
 
     return tmpl.generate(**context).render(method)
@@ -519,7 +520,26 @@ def render_cheetah_tmpl(tmplstr, context, tmplpath=None):
     Render a Cheetah template.
     '''
     from Cheetah.Template import Template
-    return salt.utils.data.decode(Template(tmplstr, searchList=[context]))
+
+    # Compile the template and render it into the class
+    tclass = Template.compile(tmplstr)
+    data = tclass(namespaces=[context])
+
+    # Figure out which method to call based on the type of tmplstr
+    if six.PY3 and isinstance(tmplstr, six.string_types):
+        # This should call .__unicode__()
+        res = str(data)
+    elif six.PY2 and isinstance(tmplstr, six.text_type):
+        # Expicitly call .__unicode__()
+        res = data.__unicode__()
+    elif isinstance(tmplstr, six.binary_type):
+        # This should call .__str()
+        res = str(data)
+    else:
+        raise SaltRenderError('Unknown type {!s} for Cheetah template while trying to render.'.format(type(tmplstr)))
+
+    # Now we can decode it to the correct encoding
+    return salt.utils.data.decode(res)
 # pylint: enable=3rd-party-module-not-gated
 
 
@@ -572,7 +592,7 @@ def py(sfn, string=False, **kwargs):  # pylint: disable=C0103
             target.write(salt.utils.stringutils.to_str(data))
         return {'result': True,
                 'data': tgt}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         trb = traceback.format_exc()
         return {'result': False,
                 'data': trb}

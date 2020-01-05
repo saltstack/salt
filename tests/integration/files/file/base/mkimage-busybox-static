@@ -88,13 +88,13 @@ cp "$busybox" "$rootfsDir/bin/busybox"
 		mkdir -p "$(dirname "$module")"
 		ln -sf /bin/busybox "$module"
 	done
-        # Make sure the image has the needed files to make users work
-        mkdir etc
-        echo "$etc_passwd" >etc/passwd
-        echo "$etc_group" >etc/group
-        echo "$etc_shadow" >etc/shadow
-        # Import the image
-        tar --numeric-owner -cf- . | docker import --change "CMD sleep 300" - "$imageName"
-        docker run --rm -i "$imageName" /bin/true
-        exit $?
+	# Make sure the image has the needed files to make users work
+	mkdir etc
+	echo "$etc_passwd" >etc/passwd
+	echo "$etc_group" >etc/group
+	echo "$etc_shadow" >etc/shadow
+	# Import the image
+	tar --numeric-owner -cf- . | docker import --change "CMD sleep 300" - "$imageName"
+	docker run --rm -i "$imageName" /bin/true
+	exit $?
 )

@@ -20,6 +20,10 @@ from salt.ext import six
 log = logging.getLogger(__name__)
 
 
+# One to one mappings
+JSONEncoder = json.JSONEncoder
+
+
 def __split(raw):
     '''
     Performs a splitlines on the string. This function exists to make mocking
@@ -94,7 +98,7 @@ def loads(s, **kwargs):
     except TypeError as exc:
         # json.loads cannot load bytestrings in Python < 3.6
         if six.PY3 and isinstance(s, bytes):
-            return json_module.loads(s.decode(__salt_system_encoding__), **kwargs)
+            return json_module.loads(salt.utils.stringutils.to_unicode(s), **kwargs)
         else:
             six.reraise(*sys.exc_info())
 
@@ -137,7 +141,6 @@ def dumps(obj, **kwargs):
     You can pass an alternate json module (loaded via import_json() above)
     using the _json_module argument)
     '''
-    import sys
     json_module = kwargs.pop('_json_module', json)
     if 'ensure_ascii' not in kwargs:
         kwargs['ensure_ascii'] = False

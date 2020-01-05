@@ -6,7 +6,6 @@ import os
 
 # Import Salt Testing libs
 from tests.support.helpers import requires_network
-from tests.support.paths import FILES
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf
 
@@ -16,8 +15,6 @@ from tests.unit.modules.test_zcbuildout import Base, KNOWN_VIRTUALENV_BINARY_NAM
 import salt.modules.zcbuildout as modbuildout
 import salt.states.zcbuildout as buildout
 import salt.modules.cmdmod as cmd
-
-ROOT = os.path.join(FILES, 'file/base/buildout')
 
 
 @skipIf(salt.utils.path.which_bin(KNOWN_VIRTUALENV_BINARY_NAMES) is None,
@@ -69,14 +66,14 @@ class BuildoutTestCase(Base):
                                  onlyif=RUNTIME_VARS.SHELL_FALSE_PATH)
         self.assertEqual(ret['comment'], '\nonlyif condition is false')
         self.assertEqual(ret['result'], True)
-        self.assertTrue('/b' in ret['name'])
+        self.assertTrue(os.sep + 'b' in ret['name'])
         b_dir = os.path.join(self.tdir, 'b')
         ret = buildout.installed(b_dir,
                                  python=self.py_st,
                                  unless=RUNTIME_VARS.SHELL_TRUE_PATH)
         self.assertEqual(ret['comment'], '\nunless condition is true')
         self.assertEqual(ret['result'], True)
-        self.assertTrue('/b' in ret['name'])
+        self.assertTrue(os.sep + 'b' in ret['name'])
         ret = buildout.installed(b_dir, python=self.py_st)
         self.assertEqual(ret['result'], True)
         self.assertTrue('OUTPUT:' in ret['comment'])

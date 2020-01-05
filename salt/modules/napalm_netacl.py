@@ -54,7 +54,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 # ------------------------------------------------------------------------------
 
 __virtualname__ = 'netacl'
-__proxyenabled__ = ['napalm']
+__proxyenabled__ = ['*']
 # allow napalm proxy only
 
 # ------------------------------------------------------------------------------

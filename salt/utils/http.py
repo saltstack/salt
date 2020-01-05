@@ -24,6 +24,7 @@ try:
     from ssl import match_hostname  # pylint: disable=E0611
     HAS_MATCHHOSTNAME = True
 except ImportError:
+    # pylint: disable=no-name-in-module
     try:
         from backports.ssl_match_hostname import CertificateError
         from backports.ssl_match_hostname import match_hostname
@@ -35,6 +36,7 @@ except ImportError:
             HAS_MATCHHOSTNAME = True
         except ImportError:
             HAS_MATCHHOSTNAME = False
+    # pylint: enable=no-name-in-module
 
 # Import salt libs
 import salt.config
@@ -44,6 +46,7 @@ import salt.utils.args
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.stringutils
@@ -60,8 +63,9 @@ from salt.ext import six
 import salt.ext.six.moves.http_client
 import salt.ext.six.moves.http_cookiejar
 import salt.ext.six.moves.urllib.request as urllib_request
+from salt.ext.six.moves import StringIO
 from salt.ext.six.moves.urllib.error import URLError
-from salt.ext.six.moves.urllib.parse import splitquery
+from salt.ext.six.moves.urllib.parse import splitquery, urlparse
 from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 # pylint: enable=import-error,no-name-in-module
 
@@ -81,12 +85,6 @@ try:
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
-
-try:
-    import msgpack
-    HAS_MSGPACK = True
-except ImportError:
-    HAS_MSGPACK = False
 
 try:
     import certifi
@@ -174,6 +172,9 @@ def query(url,
           agent=USERAGENT,
           hide_fields=None,
           raise_error=True,
+          formdata=False,
+          formdata_fieldname=None,
+          formdata_filename=None,
           **kwargs):
     '''
     Query a resource, and decode the return data
@@ -266,19 +267,19 @@ def query(url,
     if session_cookie_jar is None:
         session_cookie_jar = os.path.join(opts.get('cachedir', salt.syspaths.CACHE_DIR), 'cookies.session.p')
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: This is hackish; it will overwrite the session cookie jar with
         # all cookies from this one connection, rather than behaving like a
         # proper cookie jar. Unfortunately, since session cookies do not
         # contain expirations, they can't be stored in a proper cookie jar.
         if os.path.isfile(session_cookie_jar):
             with salt.utils.files.fopen(session_cookie_jar, 'rb') as fh_:
-                session_cookies = msgpack.load(fh_)
+                session_cookies = salt.utils.msgpack.load(fh_)
             if isinstance(session_cookies, dict):
                 header_dict.update(session_cookies)
         else:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
-                msgpack.dump('', fh_)
+                salt.utils.msgpack.dump('', fh_)
 
     for header in header_list:
         comps = header.split(':')
@@ -344,9 +345,22 @@ def query(url,
                 log.error('The client-side certificate path that'
                           ' was passed is not valid: %s', cert)
 
-        result = sess.request(
-            method, url, params=params, data=data, **req_kwargs
-        )
+        if formdata:
+            if not formdata_fieldname:
+                ret['error'] = ('formdata_fieldname is required when formdata=True')
+                log.error(ret['error'])
+                return ret
+            result = sess.request(
+                method,
+                url,
+                params=params,
+                files={formdata_fieldname: (formdata_filename, StringIO(data))},
+                **req_kwargs
+            )
+        else:
+            result = sess.request(
+                method, url, params=params, data=data, **req_kwargs
+            )
         result.raise_for_status()
         if stream is True:
             # fake a HTTP response header
@@ -490,6 +504,7 @@ def query(url,
             req_kwargs['ca_certs'] = ca_bundle
 
         max_body = opts.get('http_max_body', salt.config.DEFAULT_MINION_OPTS['http_max_body'])
+        connect_timeout = opts.get('http_connect_timeout', salt.config.DEFAULT_MINION_OPTS['http_connect_timeout'])
         timeout = opts.get('http_request_timeout', salt.config.DEFAULT_MINION_OPTS['http_request_timeout'])
 
         client_argspec = None
@@ -507,6 +522,13 @@ def query(url,
         if proxy_password:
             # tornado requires a str, cannot be unicode str in py2
             proxy_password = salt.utils.stringutils.to_str(proxy_password)
+        no_proxy = opts.get('no_proxy', [])
+
+        # Since tornado doesnt support no_proxy, we'll always hand it empty proxies or valid ones
+        # except we remove the valid ones if a url has a no_proxy hostname in it
+        if urlparse(url_full).hostname in no_proxy:
+            proxy_host = None
+            proxy_port = None
 
         # We want to use curl_http if we have a proxy defined
         if proxy_host and proxy_port:
@@ -535,6 +557,7 @@ def query(url,
             'allow_nonstandard_methods': True,
             'streaming_callback': streaming_callback,
             'header_callback': header_callback,
+            'connect_timeout': connect_timeout,
             'request_timeout': timeout,
             'proxy_host': proxy_host,
             'proxy_port': proxy_port,
@@ -624,15 +647,15 @@ def query(url,
     if cookies is not None:
         sess_cookies.save()
 
-    if persist_session is True and HAS_MSGPACK:
+    if persist_session is True and salt.utils.msgpack.HAS_MSGPACK:
         # TODO: See persist_session above
         if 'set-cookie' in result_headers:
             with salt.utils.files.fopen(session_cookie_jar, 'wb') as fh_:
                 session_cookies = result_headers.get('set-cookie', None)
                 if session_cookies is not None:
-                    msgpack.dump({'Cookie': session_cookies}, fh_)
+                    salt.utils.msgpack.dump({'Cookie': session_cookies}, fh_)
                 else:
-                    msgpack.dump('', fh_)
+                    salt.utils.msgpack.dump('', fh_)
 
     if status is True:
         ret['status'] = result_status_code
@@ -831,7 +854,7 @@ def _render(template, render, renderer, template_dict, opts):
         if template_dict is None:
             template_dict = {}
         if not renderer:
-            renderer = opts.get('renderer', 'yaml_jinja')
+            renderer = opts.get('renderer', 'jinja|yaml')
         rend = salt.loader.render(opts, {})
         blacklist = opts.get('renderer_blacklist')
         whitelist = opts.get('renderer_whitelist')
@@ -915,6 +938,7 @@ def parse_cookie_header(header):
         for item in list(cookie):
             if item in attribs:
                 continue
+            name = item
             value = cookie.pop(item)
 
         # cookielib.Cookie() requires an epoch

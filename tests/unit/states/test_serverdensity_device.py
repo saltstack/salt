@@ -7,10 +7,8 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -19,7 +17,6 @@ from tests.support.mock import (
 import salt.states.serverdensity_device as serverdensity_device
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.serverdensity_device
@@ -44,12 +41,14 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(side_effect=[True, {'agentKey': True},
                                         [{'agentKey': True}]])
         mock_sd = MagicMock(side_effect=[['sd-agent'], [], True])
-        with patch.dict(serverdensity_device.__salt__,
-                        {'status.all_status': mock_dict,
-                         'grains.items': mock_dict,
-                         'serverdensity_device.ls': mock_t,
-                         'pkg.list_pkgs': mock_sd,
-                         'serverdensity_device.install_agent': mock_sd}):
+        with patch.multiple(serverdensity_device,
+            __salt__={'status.all_status': mock_dict,
+                      'grains.items': mock_dict,
+                      'serverdensity_device.ls': mock_t,
+                      'pkg.list_pkgs': mock_sd,
+                      'serverdensity_device.install_agent': mock_sd},
+            __opts__={'test': False},
+        ):
             comt = ('Such server name already exists in this'
                     ' Server Density account. And sd-agent is installed')
             ret.update({'comment': comt})

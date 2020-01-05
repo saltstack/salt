@@ -14,6 +14,14 @@ import difflib
 import logging
 import os
 
+try:
+    import dateutil.parser as dateutil_parser
+    _WHEN_SUPPORTED = True
+    _RANGE_SUPPORTED = True
+except ImportError:
+    _WHEN_SUPPORTED = False
+    _RANGE_SUPPORTED = False
+
 # Import salt libs
 import salt.utils.event
 import salt.utils.files
@@ -122,6 +130,9 @@ def list_(show_all=False,
 
         for item in pycopy.copy(schedule[job]):
             if item not in SCHEDULE_CONF:
+                del schedule[job][item]
+                continue
+            if schedule[job][item] is None:
                 del schedule[job][item]
                 continue
             if schedule[job][item] == 'true':
@@ -359,6 +370,23 @@ def build_schedule_item(name, **kwargs):
         else:
             schedule[name]['splay'] = kwargs['splay']
 
+    if 'when' in kwargs:
+        if not _WHEN_SUPPORTED:
+            ret['result'] = False
+            ret['comment'] = 'Missing dateutil.parser, "when" is unavailable.'
+            return ret
+        else:
+            validate_when = kwargs['when']
+            if not isinstance(validate_when, list):
+                validate_when = [validate_when]
+            for _when in validate_when:
+                try:
+                    dateutil_parser.parse(_when)
+                except ValueError:
+                    ret['result'] = False
+                    ret['comment'] = 'Schedule item {0} for "when" in invalid.'.format(_when)
+                    return ret
+
     for item in ['range', 'when', 'once', 'once_fmt', 'cron',
                  'returner', 'after', 'return_config', 'return_kwargs',
                  'until', 'run_on_start', 'skip_during_range']:
@@ -413,6 +441,8 @@ def add(name, **kwargs):
         persist = kwargs['persist']
 
     _new = build_schedule_item(name, **kwargs)
+    if 'result' in _new and not _new['result']:
+        return _new
 
     schedule_data = {}
     schedule_data[name] = _new
@@ -485,11 +515,18 @@ def modify(name, **kwargs):
         return ret
 
     _current = current_schedule[name]
+
+    if 'function' not in kwargs:
+        kwargs['function'] = _current.get('function')
+
     if '_seconds' in _current:
         _current['seconds'] = _current['_seconds']
         del _current['_seconds']
 
     _new = build_schedule_item(name, **kwargs)
+    if 'result' in _new and not _new['result']:
+        return _new
+
     if _new == _current:
         ret['comment'] = 'Job {0} in correct state'.format(name)
         return ret

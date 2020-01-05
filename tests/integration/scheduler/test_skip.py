@@ -11,18 +11,16 @@ import dateutil.parser as dateutil_parser
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-import tests.integration as integration
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.schedule
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
+ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
 
 DEFAULT_CONFIG = salt.config.minion_config(None)
@@ -93,7 +91,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
               'skip_during_range': {
                   'start': '11/29/2017 2pm',
                   'end': '11/29/2017 3pm'
-              }
+              },
             }
           }
         }
@@ -120,6 +118,71 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.schedule.job_status(job_name)
         self.assertEqual(ret['_last_run'], run_time)
 
+    def test_skip_during_range_invalid_datestring(self):
+        '''
+        verify that scheduled job is not not and returns the right error string
+        '''
+        run_time = dateutil_parser.parse('11/29/2017 2:30pm')
+
+        job_name1 = 'skip_during_range_invalid_datestring1'
+        job1 = {
+          'schedule': {
+            job_name1: {
+              'function': 'test.ping',
+              'hours': '1',
+              '_next_fire_time': run_time,
+              'skip_during_range': {
+                  'start': '25pm',
+                  'end': '3pm'
+              },
+            }
+          }
+        }
+
+        job_name2 = 'skip_during_range_invalid_datestring2'
+        job2 = {
+          'schedule': {
+            job_name2: {
+              'function': 'test.ping',
+              'hours': '1',
+              '_next_fire_time': run_time,
+              'skip_during_range': {
+                  'start': '2pm',
+                  'end': '25pm'
+              },
+            }
+          }
+        }
+
+        # Add job1 to schedule
+        self.schedule.opts.update(job1)
+
+        # Eval
+        self.schedule.eval(now=run_time)
+
+        # Check the first job
+        ret = self.schedule.job_status(job_name1)
+        _expected = ('Invalid date string for start in '
+                     'skip_during_range. Ignoring '
+                     'job {0}.').format(job_name1)
+        self.assertEqual(ret['_error'], _expected)
+
+        # Clear out schedule
+        self.schedule.opts['schedule'] = {}
+
+        # Add job2 to schedule
+        self.schedule.opts.update(job2)
+
+        # Eval
+        self.schedule.eval(now=run_time)
+
+        # Check the second job
+        ret = self.schedule.job_status(job_name2)
+        _expected = ('Invalid date string for end in '
+                     'skip_during_range. Ignoring '
+                     'job {0}.').format(job_name2)
+        self.assertEqual(ret['_error'], _expected)
+
     def test_skip_during_range_global(self):
         '''
         verify that scheduled job is skipped during the specified range
@@ -128,8 +191,8 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
         job = {
           'schedule': {
             'skip_during_range': {
-              'start': '11/29/2017 2pm',
-              'end': '11/29/2017 3pm'
+              'start': '11/29/2017 2:00pm',
+              'end': '11/29/2017 3:00pm'
             },
             job_name: {
               'function': 'test.ping',
@@ -174,7 +237,7 @@ class SchedulerSkipTest(ModuleCase, SaltReturnAssertsMixin):
               'skip_during_range': {
                   'start': '11/29/2017 2pm',
                   'end': '11/29/2017 3pm'
-              }
+              },
             }
           }
         }

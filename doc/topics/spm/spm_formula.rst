@@ -242,7 +242,7 @@ You may also declare your own variables inside the ``FORMULA``. If SPM doesn't
 recognize them then it will ignore them, so there are no restrictions on
 variable names, outside of avoiding reserved words.
 
-By default the renderer is set to ``yaml_jinja``. You may change this by
+By default the renderer is set to ``jinja|yaml``. You may change this by
 changing the ``renderer`` setting in the ``FORMULA`` itself.
 
 Building a Package

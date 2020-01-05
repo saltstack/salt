@@ -63,6 +63,67 @@ Example ``thorium_roots`` configuration:
       base:
         - /etc/salt/thorium
 
+It is also possible to use gitfs with Thorium,
+using the ``thoriumenv`` or ``thorium_top`` settings.
+
+Example using ``thorium_top``:
+
+.. code-block:: yaml
+
+    thorium_top: salt://thorium/top.sls
+    gitfs_provider: pygit2
+
+    gitfs_remotes:
+      - git@github.com:user/repo.git:
+        - name: salt-backend
+        - root: salt
+        - base: master
+      - git@github.com:user/repo.git:
+        - name: thorium-backend
+        - root: thorium
+        - base: master
+        - mountpoint: salt://thorium
+
+.. note::
+
+    When using this method don't forget to prepend the mountpoint to files served by this repo,
+    for example ``top.sls``:
+
+    .. code-block:: yaml
+
+        base:
+          '*':
+            - thorium.key_clean
+
+Example using ``thoriumenv``:
+
+.. code-block:: yaml
+
+    thoriumenv: thorium
+    gitfs_provider: pygit2
+
+    gitfs_remotes:
+      - git@github.com:user/repo.git:
+        - name: salt-backend
+        - root: salt
+        - base: master
+      - git@github.com:user/repo.git:
+        - name: thorium-backend
+        - root: thorium
+        - saltenv:
+          - thorium:
+            - ref: master
+
+.. note::
+
+    When using this method all state will run under the defined environment,
+    for example ``top.sls``:
+
+    .. code-block:: yaml
+
+        thorium:
+          '*':
+            - key_clean
 
 The Thorium top.sls File
 ------------------------

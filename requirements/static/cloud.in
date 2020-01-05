@@ -3,4 +3,5 @@ azure
 impacket; python_version < '3.0'
 netaddr
 profitbricks
+pypsexec
 pywinrm

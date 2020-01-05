@@ -1441,21 +1441,55 @@ def w():  # pylint: disable=C0103
 
         salt '*' status.w
     '''
-    user_list = []
-    users = __salt__['cmd.run']('w -h').splitlines()
-    for row in users:
-        if not row:
-            continue
-        comps = row.split()
-        rec = {'idle': comps[3],
-               'jcpu': comps[4],
-               'login': comps[2],
-               'pcpu': comps[5],
-               'tty': comps[1],
-               'user': comps[0],
-               'what': ' '.join(comps[6:])}
-        user_list.append(rec)
-    return user_list
+    def linux_w():
+        '''
+        Linux specific implementation for w
+        '''
+        user_list = []
+        users = __salt__['cmd.run']('w -fh').splitlines()
+        for row in users:
+            if not row:
+                continue
+            comps = row.split()
+            rec = {'idle': comps[3],
+                   'jcpu': comps[4],
+                   'login': comps[2],
+                   'pcpu': comps[5],
+                   'tty': comps[1],
+                   'user': comps[0],
+                   'what': ' '.join(comps[6:])}
+            user_list.append(rec)
+        return user_list
+
+    def bsd_w():
+        '''
+        Generic BSD implementation for w
+        '''
+        user_list = []
+        users = __salt__['cmd.run']('w -h').splitlines()
+        for row in users:
+            if not row:
+                continue
+            comps = row.split()
+            rec = {'from': comps[2],
+                   'idle': comps[4],
+                   'login': comps[3],
+                   'tty': comps[1],
+                   'user': comps[0],
+                   'what': ' '.join(comps[5:])}
+            user_list.append(rec)
+        return user_list
+
+    # dict that returns a function that does the right thing per platform
+    get_version = {
+        'Darwin': bsd_w,
+        'FreeBSD': bsd_w,
+        'Linux': linux_w,
+        'OpenBSD': bsd_w,
+    }
+
+    errmsg = 'This method is unsupported on the current operating system!'
+    return get_version.get(__grains__['kernel'], lambda: errmsg)()
 
 
 def all_status():
@@ -1628,25 +1662,25 @@ def ping_master(master):
     opts.update(salt.minion.prep_ip_port(opts))
     try:
         opts.update(salt.minion.resolve_dns(opts, fallback=False))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
     timeout = opts.get('auth_timeout', 60)
     load = {'cmd': 'ping'}
 
     result = False
-    channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
-    try:
-        payload = channel.send(load, tries=0, timeout=timeout)
-        result = True
-    except Exception as e:
-        pass
+    with salt.transport.client.ReqChannel.factory(opts, crypt='clear') as channel:
+        try:
+            payload = channel.send(load, tries=0, timeout=timeout)
+            result = True
+        except Exception as e:  # pylint: disable=broad-except
+            pass
 
-    if result:
-        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
-            event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
+        if result:
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+                event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
-    return result
+        return result
 
 
 def proxy_reconnect(proxy_name, opts=None):

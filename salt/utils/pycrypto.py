@@ -25,6 +25,7 @@ except ImportError:
 
 try:
     # Windows does not have the crypt module
+    # consider using passlib.hash instead
     import crypt
     HAS_CRYPT = True
 except ImportError:
@@ -61,7 +62,7 @@ def secure_password(length=20, use_random=True):
             else:
                 pw += random.SystemRandom().choice(string.ascii_letters + string.digits)
         return pw
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception('Failed to generate secure passsword')
         raise CommandExecutionError(six.text_type(exc))
 

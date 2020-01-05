@@ -4,7 +4,8 @@
 =======================
 
 The 1&1 SaltStack cloud module allows a 1&1 server to be automatically deployed
-and bootstrapped with Salt.
+and bootstrapped with Salt. It also has functions to create block storages and
+ssh keys.
 
 :depends: 1and1 >= 1.2.0
 
@@ -74,6 +75,20 @@ Set ``deploy`` to False if Salt should not be installed on the node.
 
     my-oneandone-profile:
       deploy: False
+
+Create an SSH key
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_ssh_key my-oneandone-config name='SaltTest' description='SaltTestDescription'
+
+Create a block storage
+
+.. code-block:: bash
+
+    sudo salt-cloud -f create_block_storage my-oneandone-config name='SaltTest2'
+    description='SaltTestDescription' size=50 datacenter_id='5091F6D8CBFEF9C26ACE957C652D5D49'
+
 '''
 
 # Import python libs
@@ -100,9 +115,7 @@ import salt.utils.stringutils
 from salt.ext import six
 
 try:
-    from oneandone.client import (
-        OneAndOneService, Server, Hdd
-    )
+    from oneandone.client import OneAndOneService, Server, Hdd, BlockStorage, SshKey  # pylint: disable=no-name-in-module
     HAS_ONEANDONE = True
 except ImportError:
     HAS_ONEANDONE = False
@@ -224,6 +237,90 @@ def avail_locations(conn=None, call=None):
     return {'Locations': datacenters}
 
 
+def create_block_storage(kwargs=None, call=None):
+    '''
+    Create a block storage
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
+    conn = get_conn()
+
+    # Assemble the composite block storage object.
+    block_storage = _get_block_storage(kwargs)
+
+    data = conn.create_block_storage(block_storage=block_storage)
+
+    return {'BlockStorage': data}
+
+
+def _get_block_storage(kwargs):
+    '''
+    Construct a block storage instance from passed arguments
+    '''
+    if kwargs is None:
+        kwargs = {}
+
+    block_storage_name = kwargs.get('name', None)
+    block_storage_size = kwargs.get('size', None)
+    block_storage_description = kwargs.get('description', None)
+    datacenter_id = kwargs.get('datacenter_id', None)
+    server_id = kwargs.get('server_id', None)
+
+    block_storage = BlockStorage(
+        name=block_storage_name,
+        size=block_storage_size)
+
+    if block_storage_description:
+        block_storage.description = block_storage_description
+
+    if datacenter_id:
+        block_storage.datacenter_id = datacenter_id
+
+    if server_id:
+        block_storage.server_id = server_id
+
+    return block_storage
+
+
+def _get_ssh_key(kwargs):
+    '''
+    Construct an SshKey instance from passed arguments
+    '''
+    ssh_key_name = kwargs.get('name', None)
+    ssh_key_description = kwargs.get('description', None)
+    public_key = kwargs.get('public_key', None)
+
+    return SshKey(
+        name=ssh_key_name,
+        description=ssh_key_description,
+        public_key=public_key
+    )
+
+
+def create_ssh_key(kwargs=None, call=None):
+    '''
+    Create an ssh key
+    '''
+    if call == 'action':
+        raise SaltCloudSystemExit(
+            'The avail_locations function must be called with '
+            '-f or --function, or with the --list-locations option'
+        )
+
+    conn = get_conn()
+
+    # Assemble the composite SshKey object.
+    ssh_key = _get_ssh_key(kwargs)
+
+    data = conn.create_ssh_key(ssh_key=ssh_key)
+
+    return {'SshKey': data}
+
+
 def avail_images(conn=None, call=None):
     '''
     Return a list of the server appliances that are on the provider
@@ -299,11 +396,11 @@ def list_nodes(conn=None, call=None):
 
         size = node.get('hardware').get('fixed_instance_size_id', 'Custom size')
 
-        if node.get('private_networks') and len(node['private_networks']) > 0:
+        if node.get('private_networks'):
             for private_ip in node['private_networks']:
                 private_ips.append(private_ip)
 
-        if node.get('ips') and len(node['ips']) > 0:
+        if node.get('ips'):
             for public_ip in node['ips']:
                 public_ips.append(public_ip['ip'])
 
@@ -457,6 +554,11 @@ def _get_server(vm_):
         search_global=False
     )
 
+    public_key = config.get_cloud_config_value(
+        'public_key_ids', vm_, __opts__, default=True,
+        search_global=False
+    )
+
     # Contruct server object
     return Server(
         name=vm_['name'],
@@ -474,7 +576,8 @@ def _get_server(vm_):
         monitoring_policy_id=monitoring_policy_id,
         datacenter_id=datacenter_id,
         rsa_key=ssh_key,
-        private_network_id=private_network_id
+        private_network_id=private_network_id,
+        public_key=public_key
     )
 
 
@@ -568,7 +671,7 @@ def create(vm_):
                 pprint.pformat(data['name']),
                 data['status']['state']
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled

@@ -14,14 +14,14 @@ import fnmatch
 # Import salt libs
 import salt.minion
 import salt.fileclient
+import salt.utils.data
 import salt.utils.files
 import salt.utils.gzip_util
-import salt.utils.locales
 import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
 import salt.crypt
-import salt.transport
+import salt.transport.client
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves.urllib.parse import urlparse as _urlparse  # pylint: disable=import-error,no-name-in-module
 
@@ -423,6 +423,8 @@ def get_url(path, dest='', saltenv='base', makedirs=False, source_hash=None):
         log.error('Unable to fetch file %s from saltenv %s.',
                   salt.utils.url.redact_http_basic_auth(path),
                   saltenv)
+    if result:
+        return salt.utils.stringutils.to_unicode(result)
     return result
 
 
@@ -443,7 +445,7 @@ def get_file_str(path, saltenv='base'):
     if isinstance(fn_, six.string_types):
         try:
             with salt.utils.files.fopen(fn_, 'r') as fp_:
-                return fp_.read()
+                return salt.utils.stringutils.to_unicode(fp_.read())
         except IOError:
             return False
     return fn_
@@ -485,12 +487,12 @@ def cache_file(path, saltenv='base', source_hash=None):
         It may be necessary to quote the URL when using the querystring method,
         depending on the shell being used to run the command.
     '''
-    path = salt.utils.locales.sdecode(path)
-    saltenv = salt.utils.locales.sdecode(saltenv)
+    path = salt.utils.data.decode(path)
+    saltenv = salt.utils.data.decode(saltenv)
 
     contextkey = '{0}_|-{1}_|-{2}'.format('cp.cache_file', path, saltenv)
 
-    path_is_remote = _urlparse(path).scheme in ('http', 'https', 'ftp')
+    path_is_remote = _urlparse(path).scheme in salt.utils.files.REMOTE_PROTOS
     try:
         if path_is_remote and contextkey in __context__:
             # Prevent multiple caches in the same salt run. Affects remote URLs
@@ -709,8 +711,8 @@ def list_minion(saltenv='base'):
 
 def is_cached(path, saltenv='base'):
     '''
-    Return a boolean if the given path on the master has been cached on the
-    minion
+    Returns the full path to a file if it is cached locally on the minion
+    otherwise returns a blank string
 
     CLI Example:
 
@@ -827,30 +829,32 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
     load = {'cmd': '_file_recv',
             'id': __opts__['id'],
             'path': load_path_list,
+            'size': os.path.getsize(path),
             'tok': auth.gen_token(b'salt')}
-    channel = salt.transport.Channel.factory(__opts__)
-    with salt.utils.files.fopen(path, 'rb') as fp_:
-        init_send = False
-        while True:
-            load['loc'] = fp_.tell()
-            load['data'] = fp_.read(__opts__['file_buffer_size'])
-            if not load['data'] and init_send:
-                if remove_source:
-                    try:
-                        salt.utils.files.rm_rf(path)
-                        log.debug('Removing source file \'%s\'', path)
-                    except IOError:
-                        log.error('cp.push failed to remove file \'%s\'', path)
-                        return False
-                return True
-            ret = channel.send(load)
-            if not ret:
-                log.error('cp.push Failed transfer failed. Ensure master has '
-                          '\'file_recv\' set to \'True\' and that the file '
-                          'is not larger than the \'file_recv_size_max\' '
-                          'setting on the master.')
-                return ret
-            init_send = True
+
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+        with salt.utils.files.fopen(path, 'rb') as fp_:
+            init_send = False
+            while True:
+                load['loc'] = fp_.tell()
+                load['data'] = fp_.read(__opts__['file_buffer_size'])
+                if not load['data'] and init_send:
+                    if remove_source:
+                        try:
+                            salt.utils.files.rm_rf(path)
+                            log.debug('Removing source file \'%s\'', path)
+                        except IOError:
+                            log.error('cp.push failed to remove file \'%s\'', path)
+                            return False
+                    return True
+                ret = channel.send(load)
+                if not ret:
+                    log.error('cp.push Failed transfer failed. Ensure master has '
+                              '\'file_recv\' set to \'True\' and that the file '
+                              'is not larger than the \'file_recv_size_max\' '
+                              'setting on the master.')
+                    return ret
+                init_send = True
 
 
 def push_dir(path, glob=None, upload_path=None):

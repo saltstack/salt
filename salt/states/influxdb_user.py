@@ -20,7 +20,7 @@ def __virtual__():
 
 
 def present(name,
-            password,
+            passwd,
             admin=False,
             grants=None,
             **client_args):
@@ -30,7 +30,7 @@ def present(name,
     name
         Name of the user to manage
 
-    password
+    passwd
         Password of the user
 
     admin : False
@@ -52,7 +52,7 @@ def present(name,
         example user present in influxdb:
           influxdb_user.present:
             - name: example
-            - password: somepassword
+            - passwd: somepassword
             - admin: False
             - grants:
                 foo_db: read
@@ -72,7 +72,7 @@ def present(name,
             return ret
         else:
             if not __salt__['influxdb.create_user'](
-                    name, password, admin=admin, **client_args):
+                    name, passwd, admin=admin, **client_args):
                 ret['comment'] = 'Failed to create user {0}'.format(name)
                 ret['result'] = False
                 return ret

@@ -10,11 +10,11 @@ External Modules Setuptools Entry-Points Support
 The salt loader was enhanced to look for external modules by looking at the
 `salt.loader` entry-point:
 
- https://pythonhosted.org/setuptools/setuptools.html#dynamic-discovery-of-services-and-plugins
-
+ https://setuptools.readthedocs.io/en/latest/pkg_resources.html#entry-points
+ 
 `pkg_resources` should be installed, which is normally included in setuptools.
 
- https://pythonhosted.org/setuptools/pkg_resources.html
+ https://setuptools.readthedocs.io/en/latest/pkg_resources.html
 
 The package which has custom engines, minion modules, outputters, etc, should
 require setuptools and should define the following entry points in its setup

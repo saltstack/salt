@@ -68,10 +68,9 @@ def __virtual__():
     '''
     Provides zfs state
     '''
-    if __grains__['zfs_support']:
-        return __virtualname__
-    else:
-        return (False, "The zfs state cannot be loaded: zfs not supported")
+    if not __grains__.get('zfs_support'):
+        return False, 'The zfs state cannot be loaded: zfs not supported'
+    return __virtualname__
 
 
 def _absent(name, dataset_type, force=False, recursive=False):
@@ -440,7 +439,7 @@ def _dataset_present(dataset_type, name, volume_size=None, sparse=False, create_
     ## check we have valid filesystem name/volume name/clone snapshot
     if not __utils__['zfs.is_dataset'](name):
         ret['result'] = False
-        ret['comment'] = 'invalid dataset name: {1}'.format(name)
+        ret['comment'] = 'invalid dataset name: {0}'.format(name)
         return ret
 
     if cloned_from and not __utils__['zfs.is_snapshot'](cloned_from):

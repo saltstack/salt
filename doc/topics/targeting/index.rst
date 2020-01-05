@@ -111,3 +111,19 @@ There are many ways to target individual minions or groups of minions in Salt:
     nodegroups
     batch
     range
+
+
+Loadable Matchers
+=================
+
+.. versionadded:: 2019.2.0
+
+Internally targeting is implemented with chunks of code called Matchers.  As of
+the 2019.2.0 release, matchers can be loaded dynamically.  Currently new matchers
+cannot be created, but existing matchers can have their functionality altered or
+extended.  For more information on Matchers see
+
+.. toctree::
+    :maxdepth: 2
+
+    Loadable Matchers <../matchers/index.rst>

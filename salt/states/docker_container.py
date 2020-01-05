@@ -200,7 +200,7 @@ def _resolve_image(ret, image, client_timeout):
                     image,
                     client_timeout=client_timeout,
                 )
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise CommandExecutionError(
                     'Failed to pull {0}: {1}'.format(image, exc)
                 )
@@ -384,11 +384,15 @@ def running(name,
     **NETWORK MANAGEMENT**
 
     .. versionadded:: 2018.3.0
+    .. versionchanged:: 2019.2.0
+        If the ``networks`` option is used, any networks (including the default
+        ``bridge`` network) which are not specified will be disconnected.
 
     The ``networks`` argument can be used to ensure that a container is
     attached to one or more networks. Optionally, arguments can be passed to
     the networks. In the example below, ``net1`` is being configured with
-    arguments, while ``net2`` is being configured *without* arguments:
+    arguments, while ``net2`` and ``bridge`` are being configured *without*
+    arguments:
 
     .. code-block:: yaml
 
@@ -402,6 +406,7 @@ def running(name,
                   - baz
                 - ipv4_address: 10.0.20.50
               - net2
+              - bridge
             - require:
               - docker_network: net1
               - docker_network: net2
@@ -417,6 +422,17 @@ def running(name,
         documentation for the correct type/format of data to pass.
 
     .. _`connect_container_to_network`: https://docker-py.readthedocs.io/en/stable/api.html#docker.api.network.NetworkApiMixin.connect_container_to_network
+
+    To start a container with no network connectivity (only possible in
+    2019.2.0 and later) pass this option as an empty list. For example:
+
+    .. code-block:: yaml
+
+        foo:
+          docker_container.running:
+            - image: myuser/myimage:foo
+            - networks: []
+
 
     **CONTAINER CONFIGURATION PARAMETERS**
 
@@ -1221,8 +1237,6 @@ def running(name,
           ``--net=none``). Not to be confused with Python's ``None``.
         - ``container:<name_or_id>`` - Reuses another container's network stack
         - ``host`` - Use the host's network stack inside the container
-        - Any name that identifies an existing network that might be created
-          with ``docker.network_present``.
 
           .. warning::
 
@@ -1672,6 +1686,9 @@ def running(name,
         image = six.text_type(image)
 
     try:
+        # Since we're rewriting the "networks" value below, save the original
+        # value here.
+        configured_networks = networks
         networks = _parse_networks(networks)
         if networks:
             kwargs['networks'] = networks
@@ -1747,7 +1764,7 @@ def running(name,
             .format(exc)
         )
         return _format_comments(ret, comments)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         msg = exc.__str__()
         if isinstance(exc, CommandExecutionError) \
@@ -1804,8 +1821,31 @@ def running(name,
                 ret['result'] = False
                 comments.append(exc.__str__())
                 return _format_comments(ret, comments)
+
         post_net_connect = __salt__['docker.inspect_container'](
             temp_container_name)
+
+        if configured_networks is not None:
+            # Use set arithmetic to determine the networks which are connected
+            # but not explicitly defined. They will be disconnected below. Note
+            # that we check configured_networks because it represents the
+            # original (unparsed) network configuration. When no networks
+            # argument is used, the parsed networks will be an empty list, so
+            # it's not sufficient to do a boolean check on the "networks"
+            # variable.
+            extra_nets = set(
+                post_net_connect.get('NetworkSettings', {}).get('Networks', {})
+            ) - set(networks)
+
+            if extra_nets:
+                for extra_net in extra_nets:
+                    __salt__['docker.disconnect_container_from_network'](
+                        temp_container_name,
+                        extra_net)
+
+                # We've made changes, so we need to inspect the container again
+                post_net_connect = __salt__['docker.inspect_container'](
+                    temp_container_name)
 
         net_changes = __salt__['docker.compare_container_networks'](
             pre_net_connect, post_net_connect)
@@ -1995,7 +2035,7 @@ def running(name,
         else:
             try:
                 post_state = __salt__['docker.start'](name)['state']['new']
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 ret['result'] = False
                 comments.append(
                     'Failed to start container \'{0}\': \'{1}\''.format(name, exc)
@@ -2020,7 +2060,8 @@ def running(name,
                 __context__[contextkey] = new_container_info.get(
                     'NetworkSettings', {}).get('Networks', {})
             return __context__[contextkey]
-        autoip_keys = __opts__['docker.compare_container_networks'].get('automatic', [])
+        autoip_keys = __salt__['config.option'](
+            'docker.compare_container_networks').get('automatic', [])
         for net_name, net_changes in six.iteritems(
                 ret['changes'].get('container', {}).get('Networks', {})):
             if 'IPConfiguration' in net_changes \
@@ -2187,7 +2228,7 @@ def run(name,
         return ret
 
     try:
-        if 'networks' in kwargs:
+        if 'networks' in kwargs and kwargs['networks'] is not None:
             kwargs['networks'] = _parse_networks(kwargs['networks'])
         _resolve_image(ret, image, client_timeout)
     except CommandExecutionError as exc:
@@ -2256,7 +2297,7 @@ def run(name,
             replace=replace,
             force=force,
             **kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception('Encountered error running container')
         ret['result'] = False
         ret['comment'] = 'Encountered error running container: {0}'.format(exc)
@@ -2490,7 +2531,7 @@ def absent(name, force=False):
 
     try:
         ret['changes']['removed'] = __salt__['docker.rm'](name, force=force)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['comment'] = ('Failed to remove container \'{0}\': {1}'
                           .format(name, exc))
         return ret

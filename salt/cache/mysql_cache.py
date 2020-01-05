@@ -46,11 +46,24 @@ value to ``mysql``:
 from __future__ import absolute_import, print_function, unicode_literals
 from time import sleep
 import logging
+
 try:
+    # Trying to import MySQLdb
     import MySQLdb
-    HAS_MYSQL = True
+    import MySQLdb.cursors
+    import MySQLdb.converters
+    from MySQLdb.connections import OperationalError
 except ImportError:
-    HAS_MYSQL = False
+    try:
+        # MySQLdb import failed, try to import PyMySQL
+        import pymysql
+        pymysql.install_as_MySQLdb()
+        import MySQLdb
+        import MySQLdb.cursors
+        import MySQLdb.converters
+        from MySQLdb.err import OperationalError
+    except ImportError:
+        MySQLdb = None
 
 from salt.exceptions import SaltCacheError
 
@@ -71,12 +84,9 @@ __func_alias__ = {'ls': 'list'}
 
 def __virtual__():
     '''
-    Confirm that python-mysql package is installed.
+    Confirm that a python mysql client is installed.
     '''
-    if not HAS_MYSQL:
-        return (False, "Please install python-mysql package to use mysql data "
-                "cache driver")
-    return __virtualname__
+    return bool(MySQLdb), 'No python mysql client installed.' if MySQLdb is None else ''
 
 
 def run_query(conn, query, retries=3):
@@ -84,13 +94,13 @@ def run_query(conn, query, retries=3):
     Get a cursor and run a query. Reconnect up to `retries` times if
     needed.
     Returns: cursor, affected rows counter
-    Raises: SaltCacheError, AttributeError, MySQLdb.OperationalError
+    Raises: SaltCacheError, AttributeError, OperationalError
     '''
     try:
         cur = conn.cursor()
         out = cur.execute(query)
         return cur, out
-    except (AttributeError, MySQLdb.OperationalError) as e:
+    except (AttributeError, OperationalError) as e:
         if retries == 0:
             raise
         # reconnect creating new client
@@ -102,7 +112,7 @@ def run_query(conn, query, retries=3):
         global client
         client = MySQLdb.connect(**_mysql_kwargs)
         return run_query(client, query, retries - 1)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         if len(query) > 150:
             query = query[:150] + "<...>"
         raise SaltCacheError("Error running {0}: {1}".format(query, e))

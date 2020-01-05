@@ -74,7 +74,7 @@ class SSHHighState(salt.state.BaseHighState):
         self.client = fsclient
         salt.state.BaseHighState.__init__(self, opts)
         self.state = SSHState(opts, pillar, wrapper)
-        self.matcher = salt.minion.Matcher(self.opts)
+        self.matchers = salt.loader.matchers(self.opts)
         self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
@@ -110,7 +110,7 @@ class SSHHighState(salt.state.BaseHighState):
                 continue
             try:
                 ret.update(self.tops[fun](opts=self.opts, grains=grains))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # If anything happens in the top generation, log it and move on
                 log.error(
                     'Top function %s failed with error %s for minion %s',

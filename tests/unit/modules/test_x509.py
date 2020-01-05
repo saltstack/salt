@@ -30,8 +30,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 from salt.modules import x509
@@ -45,7 +43,6 @@ except ImportError:
     HAS_M2CRYPTO = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
 
@@ -218,7 +215,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
-            ca_cert_file.write(ca_cert)
+            ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_crl_file:
@@ -300,11 +297,11 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
             ca_key_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as ca_cert_file:
-            ca_cert_file.write(ca_cert)
+            ca_cert_file.write(salt.utils.stringutils.to_str(ca_cert))
             ca_cert_file.flush()
 
         with tempfile.NamedTemporaryFile('w+', delete=False) as server_cert_file:
-            server_cert_file.write(server_cert)
+            server_cert_file.write(salt.utils.stringutils.to_str(server_cert))
             server_cert_file.flush()
 
         # Revoke server CRL

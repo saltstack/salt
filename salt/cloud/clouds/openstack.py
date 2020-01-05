@@ -58,6 +58,8 @@ clouds.yml file on each minion.abs
         username: 'demo'
         password: secret
         project_name: 'demo'
+        user_domain_name: default,
+        project_domain_name: default,
         auth_url: 'http://openstack/identity'
 
 Or if you need to use a profile to setup some extra stuff, it can be passed as a
@@ -260,10 +262,14 @@ def get_configured_provider():
     '''
     Return the first configured instance.
     '''
-    return config.is_provider_configured(
+    provider = config.is_provider_configured(
         __opts__, __active_provider_name__ or __virtualname__,
-        ('auth', 'region_name'), log_message=False,
-    ) or config.is_provider_configured(
+        ('auth', 'region_name')
+    )
+    if provider:
+        return provider
+
+    return config.is_provider_configured(
         __opts__, __active_provider_name__ or __virtualname__,
         ('cloud', 'region_name')
     )
@@ -273,9 +279,15 @@ def get_dependencies():
     '''
     Warn if dependencies aren't met.
     '''
+    if not HAS_SHADE:
+        log.warning('"shade" not found')
+        return False
+    elif hasattr(HAS_SHADE, '__len__') and not HAS_SHADE[0]:
+        log.warning(HAS_SHADE[1])
+        return False
     deps = {
-        'shade': shade[0],
-        'os_client_config': shade[0],
+        'shade': HAS_SHADE[0],
+        'os_client_config': HAS_SHADE[0],
     }
     return config.check_driver_dependencies(
         __virtualname__,
@@ -298,7 +310,7 @@ def preferred_ip(vm_, ips):
         try:
             socket.inet_pton(family, ip)
             return ip
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
     return False
 
@@ -414,7 +426,10 @@ def list_nodes_full(conn=None, call=None):
         ret[node.name]['public_ips'] = _get_ips(node, 'public')
         ret[node.name]['floating_ips'] = _get_ips(node, 'floating')
         ret[node.name]['fixed_ips'] = _get_ips(node, 'fixed')
-        ret[node.name]['image'] = node.image.name
+        if isinstance(node.image, six.string_types):
+            ret[node.name]['image'] = node.image
+        else:
+            ret[node.name]['image'] = getattr(conn.get_image(node.image.id), 'name', node.image.id)
     return ret
 
 
@@ -473,7 +488,7 @@ def show_instance(name, conn=None, call=None):
     if isinstance(node.image, six.string_types):
         ret['image'] = node.image
     else:
-        ret['image'] = conn.get_image(node.image.id).name
+        ret['image'] = getattr(conn.get_image(node.image.id), 'name', node.image.id)
     return ret
 
 
@@ -639,7 +654,7 @@ def request_instance(vm_, conn=None, call=None):
                 kwargs['userdata'] = __utils__['cloud.userdata_template'](
                     __opts__, vm_, fp_.read()
                 )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(
                 'Failed to read userdata from %s: %s', userdata, exc)
     if 'size' in kwargs:
@@ -708,9 +723,9 @@ def create(vm_):
         data = show_instance(vm_['name'], conn=conn, call='action')
         if 'wait_for_metadata' in vm_:
             for key, value in six.iteritems(vm_.get('wait_for_metadata', {})):
-                log.debug('Waiting for metadata: {0}={1}'.format(key, value))
+                log.debug('Waiting for metadata: %s=%s', key, value)
                 if data['metadata'].get(key, None) != value:
-                    log.debug('Metadata is not ready: {0}={1}'.format(key, data['metadata'].get(key, None)))
+                    log.debug('Metadata is not ready: %s=%s', key, data['metadata'].get(key))
                     return False
         return preferred_ip(vm_, data[ssh_interface(vm_)])
     try:

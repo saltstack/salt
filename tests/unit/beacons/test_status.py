@@ -12,7 +12,6 @@
 
 # Python libs
 from __future__ import absolute_import
-import sys
 
 # Salt libs
 import salt.config
@@ -31,12 +30,13 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        opts = salt.config.DEFAULT_MINION_OPTS
+        opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        opts['grains'] = salt.loader.grains(opts)
         module_globals = {
             '__opts__': opts,
             '__salt__': 'autoload',
             '__context__': {},
-            '__grains__': {'kernel': 'Linux'}
+            '__grains__': opts['grains']
         }
         return {
             status: module_globals,
@@ -50,11 +50,7 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = status.beacon(config)
-
-        if sys.platform.startswith('win'):
-            expected = []
-        else:
-            expected = sorted(['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time'])
+        expected = sorted(['loadavg', 'meminfo', 'cpustats', 'vmstats', 'time'])
 
         self.assertEqual(sorted(list(ret[0]['data'])), expected)
 
@@ -71,10 +67,6 @@ class StatusBeaconTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
         ret = status.beacon(config)
-
-        if sys.platform.startswith('win'):
-            expected = []
-        else:
-            expected = ['time']
+        expected = ['time']
 
         self.assertEqual(list(ret[0]['data']), expected)

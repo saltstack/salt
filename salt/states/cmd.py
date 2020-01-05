@@ -33,7 +33,8 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files do not exist:
 
 .. code-block:: yaml
 
@@ -196,7 +197,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
+``cmd.wait`` itself do not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
 The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
@@ -402,6 +403,7 @@ def wait(name,
          unless=None,
          creates=None,
          cwd=None,
+         root=None,
          runas=None,
          shell=None,
          env=(),
@@ -410,6 +412,7 @@ def wait(name,
          output_loglevel='debug',
          hide_output=False,
          use_vt=False,
+         success_retcodes=None,
          **kwargs):
     '''
     Run the given command only if the watch statement calls it.
@@ -434,6 +437,10 @@ def wait(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -489,7 +496,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -514,6 +523,13 @@ def wait(name,
         Use VT utils (saltstack) to stream the command output more
         interactively to the console and the logs.
         This is experimental.
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 2019.2.0
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -646,6 +662,13 @@ def wait_script(name,
             Salt logs to the minion log.
 
         .. versionadded:: 2018.3.0
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 2019.2.0
     '''
     # Ignoring our arguments is intentional.
     return {'name': name,
@@ -659,6 +682,7 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
+        root=None,
         runas=None,
         shell=None,
         env=None,
@@ -670,6 +694,7 @@ def run(name,
         timeout=None,
         ignore_timeout=False,
         use_vt=False,
+        success_retcodes=None,
         **kwargs):
     '''
     Run a command if certain circumstances are met.  Use ``cmd.wait`` if you
@@ -690,6 +715,10 @@ def run(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -767,13 +796,6 @@ def run(name,
 
         .. versionadded:: 2018.3.0
 
-    quiet
-        This option no longer has any functionality and will be removed, please
-        set ``output_loglevel`` to ``quiet`` to suppress logging of the
-        command.
-
-        .. deprecated:: 2014.1.0
-
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
@@ -785,7 +807,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -799,6 +823,13 @@ def run(name,
         results.
 
         .. versionadded:: 2016.3.6
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 2019.2.0
 
     .. note::
 
@@ -830,18 +861,6 @@ def run(name,
            'result': False,
            'comment': ''}
 
-    if 'quiet' in kwargs:
-        quiet = kwargs.pop('quiet')
-        msg = (
-            'The \'quiet\' argument for cmd.run has been deprecated since '
-            '2014.1.0 and will be removed as of the Neon release. Please set '
-            '\'output_loglevel\' to \'quiet\' instead.'
-        )
-        salt.utils.versions.warn_until('Neon', msg)
-        ret.setdefault('warnings', []).append(msg)
-    else:
-        quiet = False
-
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True
@@ -859,6 +878,7 @@ def run(name,
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
+                       'root': root,
                        'runas': runas,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
@@ -867,7 +887,7 @@ def run(name,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
                        'hide_output': hide_output,
-                       'quiet': quiet})
+                       'success_retcodes': success_retcodes})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
     if isinstance(cret, dict):
@@ -888,10 +908,11 @@ def run(name,
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](
-            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        run_cmd = 'cmd.run_all' if not root else 'cmd.run_chroot'
+        cmd_all = __salt__[run_cmd](
+            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except CommandExecutionError as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['comment'] = six.text_type(err)
         return ret
 
@@ -931,6 +952,7 @@ def script(name,
            hide_output=False,
            defaults=None,
            context=None,
+           success_retcodes=None,
            **kwargs):
     '''
     Download a script and execute it with specified arguments.
@@ -1028,7 +1050,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -1063,6 +1087,14 @@ def script(name,
             Salt logs to the minion log.
 
         .. versionadded:: 2018.3.0
+
+    success_retcodes: This parameter will be allow a list of
+        non-zero return codes that should be considered a success.  If the
+        return code returned from the run matches any in the provided list,
+        the return code will be overridden with zero.
+
+      .. versionadded:: 2019.2.0
+
     '''
     test_name = None
     if not isinstance(stateful, list):
@@ -1111,7 +1143,8 @@ def script(name,
                        'hide_output': hide_output,
                        'use_vt': use_vt,
                        'context': tmpctx,
-                       'saltenv': __env__})
+                       'saltenv': __env__,
+                       'success_retcodes': success_retcodes})
 
     run_check_cmd_kwargs = {
         'cwd': cwd,

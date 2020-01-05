@@ -23,6 +23,7 @@ execution modules
 
     acme
     aix_group
+    aixpkg
     aliases
     alternatives
     ansiblegate
@@ -32,17 +33,22 @@ execution modules
     apkpkg
     aptpkg
     archive
+    arista_pyeapi
     artifactory
     at
     at_solaris
     augeas_cfg
     aws_sqs
+    azurearm_compute
+    azurearm_network
+    azurearm_resource
     bamboohr
     bcache
     beacons
     bigip
     bluez_bluetooth
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -86,6 +92,8 @@ execution modules
     chef
     chocolatey
     chronos
+    cimc
+    ciscoconfparse_mod
     cisconso
     cloud
     cmdmod
@@ -152,6 +160,7 @@ execution modules
     glanceng
     glusterfs
     gnomedesktop
+    google_chat
     gpg
     grafana4
     grains
@@ -163,7 +172,6 @@ execution modules
     hashutil
     heat
     hg
-    hipchat
     hosts
     http
     ifttt
@@ -184,6 +192,7 @@ execution modules
     inspectlib.query
     inspector
     introspect
+    iosconfig
     ipmi
     ipset
     iptables
@@ -191,6 +200,8 @@ execution modules
     jboss7
     jboss7_cli
     jenkinsmod
+    jinja
+    jira_mod
     junos
     k8s
     kapacitor
@@ -201,6 +212,7 @@ execution modules
     keyboard
     keystone
     keystoneng
+    keystore
     kmod
     kubernetesmod
     launchctl_service
@@ -222,6 +234,7 @@ execution modules
     logrotate
     lvs
     lxc
+    lxd
     mac_assistive
     mac_brew_pkg
     macdefaults
@@ -268,9 +281,11 @@ execution modules
     namecheap_domains_ns
     namecheap_ssl
     namecheap_users
-    napalm
+    napalm_mod
     napalm_netacl
     napalm_bgp
+    napalm_formula
+    napalm_mod
     napalm_network
     napalm_ntp
     napalm_probes
@@ -282,6 +297,7 @@ execution modules
     netbox
     netbsd_sysctl
     netbsdservice
+    netmiko_mod
     netscaler
     network
     neutron
@@ -295,6 +311,7 @@ execution modules
     npm
     nspawn
     nxos
+    nxos_api
     omapi
     openbsd_sysctl
     openbsdpkg
@@ -313,11 +330,14 @@ execution modules
     pagerduty
     pagerduty_util
     pam
+    panos
     parallels
     parted_partition
     pcs
     pdbedit
     pecl
+    peeringdb
+    pf
     philips_hue
     pillar
     pip
@@ -335,6 +355,7 @@ execution modules
     publish
     puppet
     purefa
+    purefb
     pushbullet
     pushover_notify
     pw_group
@@ -344,7 +365,6 @@ execution modules
     qemu_nbd
     quota
     rabbitmq
-    raet_publish
     rallydev
     random_org
     rbac_solaris
@@ -372,6 +392,7 @@ execution modules
     saltcloudmod
     saltutil
     schedule
+    scp_mod
     scsi
     sdb
     seed
@@ -450,6 +471,7 @@ execution modules
     victorops
     virt
     virtualenv_mod
+    vmctl
     vsphere
     webutil
     win_autoruns
@@ -483,9 +505,9 @@ execution modules
     win_system
     win_task
     win_timezone
-    win_update
     win_useradd
     win_wua
+    win_wusa
     x509
     xapi_virt
     xbpspkg

@@ -11,9 +11,8 @@ import logging
 # Import salt libs
 import salt.crypt
 import salt.payload
-import salt.transport
 import salt.utils.args
-import salt.utils.versions
+import salt.transport.client
 from salt.exceptions import SaltReqTimeoutError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -121,60 +120,60 @@ def _publish(
             'id': __opts__['id'],
             'no_parse': __opts__.get('no_parse', [])}
 
-    channel = salt.transport.Channel.factory(__opts__, master_uri=master_uri)
-    try:
-        peer_data = channel.send(load)
-    except SaltReqTimeoutError:
-        return '\'{0}\' publish timed out'.format(fun)
-    if not peer_data:
-        return {}
-    # CLI args are passed as strings, re-cast to keep time.sleep happy
-    if wait:
-        loop_interval = 0.3
-        matched_minions = set(peer_data['minions'])
-        returned_minions = set()
-        loop_counter = 0
-        while len(returned_minions ^ matched_minions) > 0:
+    with salt.transport.client.ReqChannel.factory(__opts__, master_uri=master_uri) as channel:
+        try:
+            peer_data = channel.send(load)
+        except SaltReqTimeoutError:
+            return '\'{0}\' publish timed out'.format(fun)
+        if not peer_data:
+            return {}
+        # CLI args are passed as strings, re-cast to keep time.sleep happy
+        if wait:
+            loop_interval = 0.3
+            matched_minions = set(peer_data['minions'])
+            returned_minions = set()
+            loop_counter = 0
+            while len(returned_minions ^ matched_minions) > 0:
+                load = {'cmd': 'pub_ret',
+                        'id': __opts__['id'],
+                        'tok': tok,
+                        'jid': peer_data['jid']}
+                ret = channel.send(load)
+                returned_minions = set(ret.keys())
+
+                end_loop = False
+                if returned_minions >= matched_minions:
+                    end_loop = True
+                elif (loop_interval * loop_counter) > timeout:
+                    # This may be unnecessary, but I am paranoid
+                    if len(returned_minions) < 1:
+                        return {}
+                    end_loop = True
+
+                if end_loop:
+                    if form == 'clean':
+                        cret = {}
+                        for host in ret:
+                            cret[host] = ret[host]['ret']
+                        return cret
+                    else:
+                        return ret
+                loop_counter = loop_counter + 1
+                time.sleep(loop_interval)
+        else:
+            time.sleep(float(timeout))
             load = {'cmd': 'pub_ret',
                     'id': __opts__['id'],
                     'tok': tok,
                     'jid': peer_data['jid']}
             ret = channel.send(load)
-            returned_minions = set(ret.keys())
-
-            end_loop = False
-            if returned_minions >= matched_minions:
-                end_loop = True
-            elif (loop_interval * loop_counter) > timeout:
-                # This may be unnecessary, but I am paranoid
-                if len(returned_minions) < 1:
-                    return {}
-                end_loop = True
-
-            if end_loop:
-                if form == 'clean':
-                    cret = {}
-                    for host in ret:
-                        cret[host] = ret[host]['ret']
-                    return cret
-                else:
-                    return ret
-            loop_counter = loop_counter + 1
-            time.sleep(loop_interval)
-    else:
-        time.sleep(float(timeout))
-        load = {'cmd': 'pub_ret',
-                'id': __opts__['id'],
-                'tok': tok,
-                'jid': peer_data['jid']}
-        ret = channel.send(load)
-        if form == 'clean':
-            cret = {}
-            for host in ret:
-                cret[host] = ret[host]['ret']
-            return cret
-        else:
-            return ret
+            if form == 'clean':
+                cret = {}
+                for host in ret:
+                    cret[host] = ret[host]['ret']
+                return cret
+            else:
+                return ret
 
 
 def publish(tgt,
@@ -183,8 +182,7 @@ def publish(tgt,
             tgt_type='glob',
             returner='',
             timeout=5,
-            via_master=None,
-            expr_form=None):
+            via_master=None):
     '''
     Publish a command from the minion out to other minions.
 
@@ -251,17 +249,6 @@ def publish(tgt,
     master the publication should be sent to. Only one master may be specified. If
     unset, the publication will be sent only to the first master in minion configuration.
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _publish(tgt,
                     fun,
                     arg=arg,
@@ -278,8 +265,7 @@ def full_data(tgt,
               arg=None,
               tgt_type='glob',
               returner='',
-              timeout=5,
-              expr_form=None):
+              timeout=5):
     '''
     Return the full data about the publication, this is invoked in the same
     way as the publish function
@@ -301,17 +287,6 @@ def full_data(tgt,
             salt '*' publish.full_data test.kwarg arg='cheese=spam'
 
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     return _publish(tgt,
                     fun,
                     arg=arg,
@@ -348,8 +323,8 @@ def runner(fun, arg=None, timeout=5):
             'id': __opts__['id'],
             'no_parse': __opts__.get('no_parse', [])}
 
-    channel = salt.transport.Channel.factory(__opts__)
-    try:
-        return channel.send(load)
-    except SaltReqTimeoutError:
-        return '\'{0}\' runner publish timed out'.format(fun)
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+        try:
+            return channel.send(load)
+        except SaltReqTimeoutError:
+            return '\'{0}\' runner publish timed out'.format(fun)

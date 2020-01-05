@@ -782,7 +782,7 @@ def get_template_image(kwargs=None, call=None):
         ret = list_templates()[name]['template']['disk']['image']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The image for template \'{1}\' could not be found.'.format(name)
+            'The image for template \'{0}\' could not be found.'.format(name)
         )
 
     return ret
@@ -1076,7 +1076,7 @@ def create(vm_):
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on OpenNebula\n\n'
             'The following exception was thrown when trying to '
@@ -2369,6 +2369,9 @@ def template_clone(call=None, kwargs=None):
     template_name
         The name of the template to be cloned. Can be used instead of ``template_id``.
 
+    clone_images
+        Optional, defaults to False. Indicates if the images attached to the template should be cloned as well.
+
     CLI Example:
 
     .. code-block:: bash
@@ -2387,6 +2390,7 @@ def template_clone(call=None, kwargs=None):
     name = kwargs.get('name', None)
     template_id = kwargs.get('template_id', None)
     template_name = kwargs.get('template_name', None)
+    clone_images = kwargs.get('clone_images', False)
 
     if name is None:
         raise SaltCloudSystemExit(
@@ -2410,7 +2414,7 @@ def template_clone(call=None, kwargs=None):
     server, user, password = _get_xml_rpc()
     auth = ':'.join([user, password])
 
-    response = server.one.template.clone(auth, int(template_id), name)
+    response = server.one.template.clone(auth, int(template_id), name, clone_images)
 
     data = {
         'action': 'template.clone',
@@ -4562,7 +4566,7 @@ def _list_nodes(full=False):
         for nic in vm.find('TEMPLATE').findall('NIC'):
             try:
                 private_ips.append(nic.find('IP').text)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         vms[name]['id'] = vm.find('ID').text

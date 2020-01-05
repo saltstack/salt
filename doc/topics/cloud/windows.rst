@@ -9,6 +9,13 @@ Windows images.
 
 Requirements
 ============
+
+.. note::
+   Support ``winexe`` and ``impacket`` has been deprecated and will be removed in
+   Sodium. These dependencies are replaced by ``pypsexec`` and ``smbprotocol``
+   respectivly. These are pure python alternatives that are compatible with all
+   supported python versions.
+
 Salt Cloud makes use of `impacket` and `winexe` to set up the Windows Salt
 Minion installer.
 
@@ -31,6 +38,15 @@ channels:
 * `openSUSE Build Service`__
 
 .. __: http://software.opensuse.org/package/winexe
+
+* `pypsexec project home`__
+
+.. __: https://github.com/jborean93/pypsexec
+
+* `smbprotocol project home`__
+
+.. __: https://github.com/jborean93/smbprotocol
+
 
 Optionally WinRM can be used instead of `winexe` if the python module `pywinrm`
 is available and WinRM is supported on the target Windows version. Information

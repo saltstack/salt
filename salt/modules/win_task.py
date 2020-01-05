@@ -10,16 +10,16 @@ You can add and clear triggers and actions.
 You can list all tasks, folders, triggers, and actions.
 '''
 # Import Python libs
-from __future__ import absolute_import, unicode_literals, print_function
+from __future__ import absolute_import, print_function, unicode_literals
+from datetime import datetime
 import logging
 import time
-from datetime import datetime
 
 # Import Salt libs
 import salt.utils.platform
 import salt.utils.winapi
 
-# Import 3rd-party libraries
+# Import 3rd Party Libraries
 try:
     import pythoncom
     import win32com.client
@@ -170,7 +170,7 @@ def __virtual__():
         if not HAS_DEPENDENCIES:
             log.warning('Could not load dependencies for %s', __virtualname__)
         return __virtualname__
-    return False, "Module win_task: module only works on Windows systems"
+    return False, 'Module win_task: module only works on Windows systems'
 
 
 def _get_date_time_format(dt_string):
@@ -1552,10 +1552,10 @@ def add_action(name=None,
         Execute a command or an executable
 
             cmd (str):
-                (required) The command / executable to run.
+                (required) The command or executable to run.
 
             arguments (str):
-                (optional) Arguments to be passed to the command / executable.
+                (optional) Arguments to be passed to the command or executable.
                 To launch a script the first command will need to be the
                 interpreter for the script. For example, to run a vbscript you
                 would pass ``cscript.exe`` in the ``cmd`` parameter and pass the
@@ -1844,7 +1844,7 @@ def add_trigger(name=None,
                 - %Y/%m/%d
 
         end_time (str):
-            The time when the trigger is deactivated. If the this is not passed
+            The time when the trigger is deactivated. If this is not passed
             with ``end_date`` it will be set to midnight. Can be one of the
             following formats:
 
@@ -1999,7 +1999,7 @@ def add_trigger(name=None,
 
                     You can set the task to run on the last day of the month by
                     either including the word 'Last' in the list of days, or
-                    setting the parameter 'last_day_of_month' equal to True.
+                    setting the parameter 'last_day_of_month' equal to ``True``.
 
     *MonthlyDay*
 

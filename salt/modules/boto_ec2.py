@@ -657,40 +657,40 @@ def find_images(ami_name=None, executable_by=None, owners=None, image_ids=None, 
         salt myminion boto_ec2.find_images tags='{"mytag": "value"}'
 
     '''
+    retries = 30
     conn = _get_conn(region=region, key=key, keyid=keyid, profile=profile)
-
-    try:
-        filter_parameters = {'filters': {}}
-
-        if image_ids:
-            filter_parameters['image_ids'] = [image_ids]
-
-        if executable_by:
-            filter_parameters['executable_by'] = [executable_by]
-
-        if owners:
-            filter_parameters['owners'] = [owners]
-
-        if ami_name:
-            filter_parameters['filters']['name'] = ami_name
-
-        if tags:
-            for tag_name, tag_value in six.iteritems(tags):
-                filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
-
-        images = conn.get_all_images(**filter_parameters)
-        log.debug('The filters criteria %s matched the following '
-                  'images:%s', filter_parameters, images)
-
-        if images:
-            if return_objs:
-                return images
-            return [image.id for image in images]
-        else:
+    while retries:
+        try:
+            filter_parameters = {'filters': {}}
+            if image_ids:
+                filter_parameters['image_ids'] = [image_ids]
+            if executable_by:
+                filter_parameters['executable_by'] = [executable_by]
+            if owners:
+                filter_parameters['owners'] = [owners]
+            if ami_name:
+                filter_parameters['filters']['name'] = ami_name
+            if tags:
+                for tag_name, tag_value in six.iteritems(tags):
+                    filter_parameters['filters']['tag:{0}'.format(tag_name)] = tag_value
+            images = conn.get_all_images(**filter_parameters)
+            log.debug('The filters criteria %s matched the following '
+                      'images:%s', filter_parameters, images)
+            if images:
+                if return_objs:
+                    return images
+                return [image.id for image in images]
+            else:
+                return False
+        except boto.exception.BotoServerError as exc:
+            if exc.error_code == 'Throttling':
+                log.debug("Throttled by AWS API, will retry in 5 seconds...")
+                time.sleep(5)
+                retries -= 1
+                continue
+            log.error('Failed to convert AMI name `%s` to an AMI ID: %s', ami_name, exc)
             return False
-    except boto.exception.BotoServerError as exc:
-        log.error(exc)
-        return False
+    return False
 
 
 def terminate(instance_id=None, name=None, region=None,
@@ -1854,10 +1854,10 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
             changes['new'][vol.id] = tags
         else:
             log.debug('No changes needed for vol.id %s', vol.id)
-        if len(add):
+        if add:
             d = dict((k, tags[k]) for k in add)
             log.debug('New tags for vol.id %s: %s', vol.id, d)
-        if len(update):
+        if update:
             d = dict((k, tags[k]) for k in update)
             log.debug('Updated tags for vol.id %s: %s', vol.id, d)
         if not dry_run:
@@ -1866,7 +1866,7 @@ def set_volumes_tags(tag_maps, authoritative=False, dry_run=False,
                 ret['comment'] = "Failed to set tags on vol.id {0}: {1}".format(vol.id, tags)
                 return ret
             if authoritative:
-                if len(remove):
+                if remove:
                     log.debug('Removed tags for vol.id %s: %s', vol.id, remove)
                     if not delete_tags(vol.id, remove, region=region, key=key, keyid=keyid, profile=profile):
                         ret['success'] = False

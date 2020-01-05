@@ -86,10 +86,6 @@ class NonBlockingPopen(subprocess.Popen):
                 self._stderr_logger_name_.format(pid=self.pid)
             )
 
-        self._stderr_logger = logging.getLogger(
-            self._stderr_logger_name_.format(pid=self.pid)
-        )
-
         log.info(
             'Running command under pid %s: \'%s\'',
             self.pid,
@@ -233,7 +229,7 @@ class NonBlockingPopen(subprocess.Popen):
                     log.error(stderrdata)
             time.sleep(interval)
 
-    def communicate(self, input=None):
+    def communicate(self, input=None):  # pylint: disable=arguments-differ
         super(NonBlockingPopen, self).communicate(input)
         self.stdout_buff.flush()
         self.stdout_buff.seek(0)

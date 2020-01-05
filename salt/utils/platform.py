@@ -8,6 +8,18 @@ import os
 import subprocess
 import sys
 
+import warnings
+# linux_distribution deprecated in py3.7
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
+
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+except ImportError:
+    from distro import linux_distribution
+
 # Import Salt libs
 from salt.utils.decorators import memoize as real_memoize
 
@@ -37,7 +49,10 @@ def is_proxy():
     try:
         # Changed this from 'salt-proxy in main...' to 'proxy in main...'
         # to support the testsuite's temp script that is called 'cli_salt_proxy'
-        if 'proxy' in main.__file__:
+        #
+        # Add '--proxyid' in sys.argv so that salt-call --proxyid
+        # is seen as a proxy minion
+        if 'proxy' in main.__file__ or '--proxyid' in sys.argv:
             ret = True
     except AttributeError:
         pass
@@ -156,3 +171,13 @@ def is_aix():
     Simple function to return if host is AIX or not
     '''
     return sys.platform.startswith('aix')
+
+
+@real_memoize
+def is_fedora():
+    '''
+    Simple function to return if host is Fedora or not
+    '''
+    (osname, osrelease, oscodename) = \
+        [x.strip('"').strip("'") for x in linux_distribution()]
+    return osname == 'Fedora'

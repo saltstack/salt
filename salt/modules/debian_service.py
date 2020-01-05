@@ -41,7 +41,7 @@ def __virtual__():
     '''
     Only work on Debian and when systemd isn't running
     '''
-    if __grains__['os'] in ('Debian', 'Raspbian', 'Devuan') and not salt.utils.systemd.booted(__context__):
+    if __grains__['os'] in ('Debian', 'Raspbian', 'Devuan', 'NILinuxRT') and not salt.utils.systemd.booted(__context__):
         return __virtualname__
     else:
         return (False, 'The debian_service module could not be loaded: '
@@ -328,7 +328,7 @@ def enabled(name, **kwargs):
 
 def disabled(name):
     '''
-    Return True if the named service is enabled, false otherwise
+    Return True if the named service is disabled, false otherwise
 
     CLI Example:
 

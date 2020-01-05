@@ -127,6 +127,28 @@ def __virtual__():
     return __virtualname__ if 'lgpo.set' in __salt__ else False
 
 
+def _compare_policies(new_policy, current_policy):
+    '''
+    Helper function that returns ``True`` if the policies are the same,
+    otherwise ``False``
+    '''
+    # Compared dicts, lists, and strings
+    if isinstance(new_policy, six.string_types):
+        return new_policy == current_policy
+    elif isinstance(new_policy, list):
+        if isinstance(current_policy, list):
+            return salt.utils.data.compare_lists(new_policy,
+                                                 current_policy) == {}
+        else:
+            return False
+    elif isinstance(new_policy, dict):
+        if isinstance(current_policy, dict):
+            return salt.utils.data.compare_dicts(new_policy,
+                                                 current_policy) == {}
+        else:
+            return False
+
+
 def set_(name,
          setting=None,
          policy_class=None,
@@ -278,24 +300,13 @@ def set_(name,
                     changes = False
                     requested_policy_json = salt.utils.json.dumps(policy_data['requested_policy'][policy_name], sort_keys=True).lower()
                     current_policy_json = salt.utils.json.dumps(current_policy[policy_data['output_section']][pol_id], sort_keys=True).lower()
-                    policies_are_equal = False
 
                     requested_policy_check = salt.utils.json.loads(requested_policy_json)
                     current_policy_check = salt.utils.json.loads(current_policy_json)
 
-                    # Compared dicts, lists, and strings
-                    if isinstance(requested_policy_check, six.string_types):
-                        policies_are_equal = requested_policy_check == current_policy_check
-                    elif isinstance(requested_policy_check, list):
-                        policies_are_equal = salt.utils.data.compare_lists(
-                            requested_policy_check,
-                            current_policy_check
-                        ) == {}
-                    elif isinstance(requested_policy_check, dict):
-                        policies_are_equal = salt.utils.data.compare_dicts(
-                            requested_policy_check,
-                            current_policy_check
-                        ) == {}
+                    # Are the requested and current policies identical
+                    policies_are_equal = _compare_policies(
+                        requested_policy_check, current_policy_check)
 
                     if not policies_are_equal:
                         additional_policy_comments = []

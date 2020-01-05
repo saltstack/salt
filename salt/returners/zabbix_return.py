@@ -53,6 +53,12 @@ def zabbix_send(key, output):
     __salt__['cmd.shell'](cmd)
 
 
+def save_load(jid, load, minions=None):
+    '''
+    Included for API consistency
+    '''
+
+
 def returner(ret):
     changes = False
     errors = False

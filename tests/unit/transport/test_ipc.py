@@ -26,8 +26,8 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
             self.socket_path,
@@ -102,13 +102,26 @@ class IPCMessageClient(BaseIPCReqCase):
     def tearDown(self):
         super(IPCMessageClient, self).tearDown()
         try:
-            self.channel.close()
+            # Make sure we close no matter what we've done in the tests
+            del self.channel
         except socket.error as exc:
             if exc.errno != errno.EBADF:
                 # If its not a bad file descriptor error, raise
                 raise
         finally:
             self.channel = None
+
+    def test_singleton(self):
+        channel = self._get_channel()
+        assert self.channel is channel
+        # Delete the local channel. Since there's still one more refefence
+        # __del__ wasn't called
+        del channel
+        assert self.channel
+        msg = {'foo': 'bar', 'stop': True}
+        self.channel.send(msg)
+        self.wait()
+        self.assertEqual(self.payloads[0], msg)
 
     def test_basic_send(self):
         msg = {'foo': 'bar', 'stop': True}
@@ -168,7 +181,7 @@ class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
     def setUp(self):
         super(IPCMessagePubSubCase, self).setUp()
         self.opts = {'ipc_write_buffer': 0}
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
         self.pub_channel = self._get_pub_channel()
         self.sub_channel = self._get_sub_channel()
 

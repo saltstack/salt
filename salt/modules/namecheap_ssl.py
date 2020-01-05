@@ -28,6 +28,7 @@ file, or in the Pillar data.
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt libs
 import salt.utils.files
@@ -41,6 +42,8 @@ except ImportError:
 
 # Import 3rd-party libs
 from salt.ext import six
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -207,45 +210,46 @@ def __get_certificates(command,
                        http_dc_validation,
                        kwargs):
 
-    web_server_types = set(['apacheopenssl',
-                            'apachessl',
-                            'apacheraven',
-                            'apachessleay',
-                            'c2net',
-                            'ibmhttp',
-                            'iplanet',
-                            'domino',
-                            'dominogo4625',
-                            'dominogo4626',
-                            'netscape',
-                            'zeusv3',
-                            'apache2',
-                            'apacheapachessl',
-                            'cobaltseries',
-                            'cpanel',
-                            'ensim',
-                            'hsphere',
-                            'ipswitch',
-                            'plesk',
-                            'tomcat',
-                            'weblogic',
-                            'website',
-                            'webstar',
-                            'iis',
-                            'other',
-                            'iis4',
-                            'iis5'])
+    web_server_types = ('apacheopenssl',
+                        'apachessl',
+                        'apacheraven',
+                        'apachessleay',
+                        'c2net',
+                        'ibmhttp',
+                        'iplanet',
+                        'domino',
+                        'dominogo4625',
+                        'dominogo4626',
+                        'netscape',
+                        'zeusv3',
+                        'apache2',
+                        'apacheapachessl',
+                        'cobaltseries',
+                        'cpanel',
+                        'ensim',
+                        'hsphere',
+                        'ipswitch',
+                        'plesk',
+                        'tomcat',
+                        'weblogic',
+                        'website',
+                        'webstar',
+                        'iis',
+                        'other',
+                        'iis4',
+                        'iis5',
+                        )
 
     if web_server_type not in web_server_types:
-        salt.utils.namecheap.log.error('Invalid option for web_server_type=' + web_server_type)
+        log.error('Invalid option for web_server_type=%s', web_server_type)
         raise Exception('Invalid option for web_server_type=' + web_server_type)
 
     if approver_email is not None and http_dc_validation:
-        salt.utils.namecheap.log.error('approver_email and http_dc_validation cannot both have values')
+        log.error('approver_email and http_dc_validation cannot both have values')
         raise Exception('approver_email and http_dc_validation cannot both have values')
 
     if approver_email is None and not http_dc_validation:
-        salt.utils.namecheap.log.error('approver_email or http_dc_validation must have a value')
+        log.error('approver_email or http_dc_validation must have a value')
         raise Exception('approver_email or http_dc_validation must have a value')
 
     opts = salt.utils.namecheap.get_opts(command)
@@ -348,43 +352,44 @@ def renew(years, certificate_id, certificate_type, promotion_code=None):
         salt 'my-minion' namecheap_ssl.renew 1 my-cert-id RapidSSL
     '''
 
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain',
-                       'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        log.error('Invalid option for years=%s', six.text_type(years))
         raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.renew')
@@ -474,23 +479,23 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
     |          |                |                      |                   | parameter      |
     +----------+----------------+----------------------+-------------------+----------------+
     | Comodo   | PositiveSSL    | 3                    | 100               | 97             |
-    |          | Multi-Domain   |		       |                   |                |
+    |          | Multi-Domain   |                      |                   |                |
     +----------+----------------+----------------------+-------------------+----------------+
-    | Comodo   | Multi-Domain   | 3                    | 100               | 97   	    |
-    |          | SSL            |		       |                   |		    |
+    | Comodo   | Multi-Domain   | 3                    | 100               | 97             |
+    |          | SSL            |                      |                   |                |
     +----------+----------------+----------------------+-------------------+----------------+
     | Comodo   | EV Multi-      | 3                    | 100               | 97             |
-    |          | Domain SSL     |		       |                   |                |
+    |          | Domain SSL     |                      |                   |                |
     +----------+----------------+----------------------+-------------------+----------------+
     | Comodo   | Unified        | 3                    | 100               | 97             |
-    |          | Communications |                      |  		   |                |
+    |          | Communications |                      |                   |                |
     +----------+----------------+----------------------+-------------------+----------------+
     | GeoTrust | QuickSSL       | 1                    | 1 domain +        | The only       |
     |          | Premium        |                      | 4 subdomains      | supported      |
     |          |                |                      |                   | value is 4     |
     +----------+----------------+----------------------+-------------------+----------------+
     | GeoTrust | True           | 5                    | 25                | 20             |
-    |          | BusinessID     |                      |		   |                |
+    |          | BusinessID     |                      |                   |                |
     |          | with EV        |                      |                   |                |
     |          | Multi-Domain   |                      |                   |                |
     +----------+----------------+----------------------+-------------------+----------------+
@@ -525,43 +530,44 @@ def create(years, certificate_type, promotion_code=None, sans_to_add=None):
 
         salt 'my-minion' namecheap_ssl.create 2 RapidSSL
     '''
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain',
-                       'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     if years < 1 or years > 5:
-        salt.utils.namecheap.log.error('Invalid option for years=' + six.text_type(years))
+        log.error('Invalid option for years=%s', six.text_type(years))
         raise Exception('Invalid option for years=' + six.text_type(years))
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.create')
@@ -636,38 +642,40 @@ def parse_csr(csr_file, certificate_type, http_dc_validation=False):
 
         salt 'my-minion' namecheap_ssl.parse_csr my-csr-file PremiumSSL
     '''
-    valid_certs = set(['QuickSSL Premium',
-                       'RapidSSL',
-                       'RapidSSL Wildcard',
-                       'PremiumSSL',
-                       'InstantSSL',
-                       'PositiveSSL',
-                       'PositiveSSL Wildcard',
-                       'True BusinessID with EV',
-                       'True BusinessID',
-                       'True BusinessID Wildcard',
-                       'True BusinessID Multi Domain',
-                       'True BusinessID with EV Multi Domain', 'Secure Site',
-                       'Secure Site Pro',
-                       'Secure Site with EV',
-                       'Secure Site Pro with EV',
-                       'EssentialSSL',
-                       'EssentialSSL Wildcard',
-                       'InstantSSL Pro',
-                       'PremiumSSL Wildcard',
-                       'EV SSL',
-                       'EV SSL SGC',
-                       'SSL123',
-                       'SSL Web Server',
-                       'SGC Supercert',
-                       'SSL Webserver EV',
-                       'EV Multi Domain SSL',
-                       'Multi Domain SSL',
-                       'PositiveSSL Multi Domain',
-                       'Unified Communications'])
+    valid_certs = ('QuickSSL Premium',
+                   'RapidSSL',
+                   'RapidSSL Wildcard',
+                   'PremiumSSL',
+                   'InstantSSL',
+                   'PositiveSSL',
+                   'PositiveSSL Wildcard',
+                   'True BusinessID with EV',
+                   'True BusinessID',
+                   'True BusinessID Wildcard',
+                   'True BusinessID Multi Domain',
+                   'True BusinessID with EV Multi Domain',
+                   'Secure Site',
+                   'Secure Site Pro',
+                   'Secure Site with EV',
+                   'Secure Site Pro with EV',
+                   'EssentialSSL',
+                   'EssentialSSL Wildcard',
+                   'InstantSSL Pro',
+                   'PremiumSSL Wildcard',
+                   'EV SSL',
+                   'EV SSL SGC',
+                   'SSL123',
+                   'SSL Web Server',
+                   'SGC Supercert',
+                   'SSL Webserver EV',
+                   'EV Multi Domain SSL',
+                   'Multi Domain SSL',
+                   'PositiveSSL Multi Domain',
+                   'Unified Communications',
+                   )
 
     if certificate_type not in valid_certs:
-        salt.utils.namecheap.log.error('Invalid option for certificate_type=' + certificate_type)
+        log.error('Invalid option for certificate_type=%s', certificate_type)
         raise Exception('Invalid option for certificate_type=' + certificate_type)
 
     opts = salt.utils.namecheap.get_opts('namecheap.ssl.parseCSR')
@@ -781,10 +789,10 @@ def get_info(certificate_id, returncertificate=False, returntype=None):
     if returncertificate:
         opts['returncertificate'] = "true"
         if returntype is None:
-            salt.utils.namecheap.log.error('returntype must be specified when returncertificate is set to True')
+            log.error('returntype must be specified when returncertificate is set to True')
             raise Exception('returntype must be specified when returncertificate is set to True')
         if returntype not in ["Individual", "PKCS7"]:
-            salt.utils.namecheap.log.error('returntype must be specified as Individual or PKCS7, not ' + returntype)
+            log.error('returntype must be specified as Individual or PKCS7, not %s', returntype)
             raise Exception('returntype must be specified as Individual or PKCS7, not ' + returntype)
         opts['returntype'] = returntype
 

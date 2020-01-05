@@ -24,6 +24,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import re
 import types
 import logging
+import sys
 try:
     import pkg_resources
     HAS_PKG_RESOURCES = True
@@ -37,13 +38,59 @@ from salt.version import SaltStackVersion as _SaltStackVersion
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
-from salt.ext import six
-try:
-    import pkg_resources
-    HAS_PKG_RESOURCES = True
-except ImportError:
-    HAS_PKG_RESOURCES = False
+import salt.ext.six as six
 # pylint: disable=import-error
+
+
+def purge_pip():
+    '''
+    Purge pip and it's sub-modules
+    '''
+    # Remove references to the loaded pip module above so reloading works
+    if 'pip' not in sys.modules:
+        return
+    pip_related_entries = [
+        (k, v) for (k, v) in sys.modules.items()
+        or getattr(v, '__module__', '').startswith('pip.')
+        or (isinstance(v, types.ModuleType) and v.__name__.startswith('pip.'))
+    ]
+    for name, entry in pip_related_entries:
+        sys.modules.pop(name)
+        del entry
+
+    if 'pip' in globals():
+        del globals()['pip']
+    if 'pip' in locals():
+        del locals()['pip']
+    sys_modules_pip = sys.modules.pop('pip', None)
+    if sys_modules_pip is not None:
+        del sys_modules_pip
+
+
+def pip_has_internal_exceptions_mod(ver):
+    '''
+    True when the pip version has the `pip._internal.exceptions` module
+    '''
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper='>=',
+        ver2='10.0',
+    )
+
+
+def pip_has_exceptions_mod(ver):
+    '''
+    True when the pip version has the `pip.exceptions` module
+    '''
+    if pip_has_internal_exceptions_mod(ver):
+        return False
+    return salt.utils.versions.compare(
+        ver1=ver,
+        oper='>=',
+        ver2='1.0'
+    )
+
+
 try:
     import pip
     HAS_PIP = True
@@ -66,6 +113,12 @@ except ImportError:
         del sys_modules_pip
 
 if HAS_PIP is True:
+    if not hasattr(purge_pip, '__pip_ver__'):
+        purge_pip.__pip_ver__ = pip.__version__
+    elif purge_pip.__pip_ver__ != pip.__version__:
+        purge_pip()
+        import pip
+        purge_pip.__pip_ver__ = pip.__version__
     if salt.utils.versions.compare(ver1=pip.__version__,
                                    oper='>=',
                                    ver2='18.1'):
@@ -195,7 +248,7 @@ def _check_pkg_version_format(pkg):
         try:
             ret['prefix'] = install_req.req.project_name
             ret['version_spec'] = install_req.req.specs
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['prefix'] = re.sub('[^A-Za-z0-9.]+', '-', install_req.name)
             if hasattr(install_req, "specifier"):
                 specifier = install_req.specifier
@@ -206,9 +259,20 @@ def _check_pkg_version_format(pkg):
     return ret
 
 
-def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
-                        force_reinstall, upgrade, user, cwd, bin_env, env_vars,
-                        pip_list=False, **kwargs):
+def _check_if_installed(prefix,
+                        state_pkg_name,
+                        version_spec,
+                        ignore_installed,
+                        force_reinstall,
+                        upgrade,
+                        user,
+                        cwd,
+                        bin_env,
+                        env_vars,
+                        index_url,
+                        extra_index_url,
+                        pip_list=False,
+                        **kwargs):
     '''
     Takes a package name and version specification (if any) and checks it is
     installed
@@ -262,7 +326,7 @@ def _check_if_installed(prefix, state_pkg_name, version_spec, ignore_installed,
             available_versions = __salt__['pip.list_all_versions'](
                 prefix, bin_env=bin_env, include_alpha=include_alpha,
                 include_beta=include_beta, include_rc=include_rc, user=user,
-                cwd=cwd)
+                cwd=cwd, index_url=index_url, extra_index_url=extra_index_url)
             desired_version = ''
             if any(version_spec):
                 for version in reversed(available_versions):
@@ -308,7 +372,7 @@ def _pep440_version_cmp(pkg1, pkg2, ignore_epoch=False):
             return 0
         if pkg_resources.parse_version(pkg1) > pkg_resources.parse_version(pkg2):
             return 1
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
     return None
 
@@ -358,6 +422,7 @@ def installed(name,
               no_cache_dir=False,
               cache_dir=None,
               no_binary=None,
+              extra_args=None,
               **kwargs):
     '''
     Make sure the package is installed
@@ -619,16 +684,26 @@ def installed(name,
                 - reload_modules: True
                 - exists_action: i
 
+    extra_args
+        pip keyword and positional arguments not yet implemented in salt
+
+        .. code-block:: yaml
+
+            pandas:
+              pip.installed:
+                - name: pandas
+                - extra_args:
+                  - --latest-pip-kwarg: param
+                  - --latest-pip-arg
+
+        .. warning::
+
+            If unsupported options are passed here that are not supported in a
+            minion's version of pip, a `No such option error` will be thrown.
+
 
     .. _`virtualenv`: http://www.virtualenv.org/en/latest/
     '''
-    if 'no_chown' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The no_chown argument has been deprecated and is no longer used. '
-            'Its functionality was removed in Boron.')
-        kwargs.pop('no_chown')
-
     if pip_bin and not bin_env:
         bin_env = pip_bin
 
@@ -757,19 +832,18 @@ def installed(name,
         try:
             pip_list = __salt__['pip.list'](bin_env=bin_env, user=user, cwd=cwd)
         # If we fail, then just send False, and we'll try again in the next function call
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)
             pip_list = False
 
         for prefix, state_pkg_name, version_spec in pkgs_details:
 
             if prefix:
-                state_pkg_name = state_pkg_name
-                version_spec = version_spec
                 out = _check_if_installed(prefix, state_pkg_name, version_spec,
                                           ignore_installed, force_reinstall,
                                           upgrade, user, cwd, bin_env, env_vars,
-                                          pip_list, **kwargs)
+                                          index_url, extra_index_url, pip_list,
+                                          **kwargs)
                 # If _check_if_installed result is None, something went wrong with
                 # the command running. This way we keep stateful output.
                 if out['result'] is None:
@@ -861,6 +935,8 @@ def installed(name,
         use_vt=use_vt,
         trusted_host=trusted_host,
         no_cache_dir=no_cache_dir,
+        extra_args=extra_args,
+        disable_version_check=True,
         **kwargs
     )
 
@@ -1063,7 +1139,7 @@ def uptodate(name,
 
     try:
         packages = __salt__['pip.list_upgrades'](bin_env=bin_env, user=user, cwd=cwd)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         ret['comment'] = six.text_type(e)
         return ret
 

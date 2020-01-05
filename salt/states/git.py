@@ -152,8 +152,10 @@ def _strip_exc(exc):
 def _uptodate(ret, target, comments=None, local_changes=False):
     ret['comment'] = 'Repository {0} is up-to-date'.format(target)
     if local_changes:
-        ret['comment'] += ', but with local changes. Set \'force_reset\' to ' \
-                          'True to purge local changes.'
+        ret['comment'] += (
+            ', but with uncommitted changes. Set \'force_reset\' to True to '
+            'purge uncommitted changes.'
+        )
     if comments:
         # Shouldn't be making any changes if the repo was up to date, but
         # report on them so we are alerted to potential problems with our
@@ -243,7 +245,7 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
     return _fail(
         ret,
         'Repository would be updated {0}{1}, but {2}. Set \'force_reset\' to '
-        'True to force this update{3}.{4}'.format(
+        'True{3} to force this update{4}.{5}'.format(
             'from {0} to {1}'.format(pre, post)
                 if local_changes and pre != post
                 else 'to {0}'.format(post),
@@ -253,6 +255,7 @@ def _not_fast_forward(ret, rev, pre, post, branch, local_branch,
             'this is not a fast-forward merge'
                 if not local_changes
                 else 'there are uncommitted changes',
+            ' (or \'remote-changes\')' if local_changes else '',
             ' and discard these changes' if local_changes else '',
             branch_msg,
         ),
@@ -442,6 +445,11 @@ def latest(name,
         argument to ``True`` to force a hard-reset to the remote revision in
         these cases.
 
+        .. versionchanged:: 2019.2.0
+            This option can now be set to ``remote-changes``, which will
+            instruct Salt not to discard local changes if the repo is
+            up-to-date with the remote repository.
+
     submodules : False
         Update submodules on clone or branch change
 
@@ -478,8 +486,12 @@ def latest(name,
     depth
         Defines depth in history when git a clone is needed in order to ensure
         latest. E.g. ``depth: 1`` is useful when deploying from a repository
-        with a long history. Use rev to specify branch. This is not compatible
-        with tags or revision IDs.
+        with a long history. Use rev to specify branch or tag. This is not
+        compatible with revision IDs.
+
+        .. versionchanged:: 2019.2.0
+            This option now supports tags as well as branches, on Git 1.8.0 and
+            newer.
 
     identity
         Path to a private key to use for ssh URLs. This can be either a single
@@ -637,6 +649,12 @@ def latest(name,
             '\'{0}\' is not a valid value for the \'rev\' argument'.format(rev)
         )
 
+    if force_reset not in (True, False, 'remote-changes'):
+        return _fail(
+            ret,
+            '\'force_reset\' must be one of True, False, or \'remote-changes\''
+        )
+
     # Ensure that certain arguments are strings to ensure that comparisons work
     if not isinstance(rev, six.string_types):
         rev = six.text_type(rev)
@@ -661,6 +679,7 @@ def latest(name,
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
@@ -846,11 +865,11 @@ def latest(name,
             )
             remote_loc = None
 
-    if depth is not None and remote_rev_type != 'branch':
+    if depth is not None and remote_rev_type not in ('branch', 'tag'):
         return _fail(
             ret,
             'When \'depth\' is used, \'rev\' must be set to the name of a '
-            'branch on the remote repository'
+            'branch or tag on the remote repository'
         )
 
     if remote_rev is None and not bare:
@@ -969,11 +988,13 @@ def latest(name,
                 local_changes = False
 
             if local_changes and revs_match:
-                if force_reset:
+                if force_reset is True:
                     msg = (
-                        '{0} is up-to-date, but with local changes. Since '
-                        '\'force_reset\' is enabled, these local changes '
-                        'would be reset.'.format(target)
+                        '{0} is up-to-date, but with uncommitted changes. '
+                        'Since \'force_reset\' is set to True, these local '
+                        'changes would be reset. To only reset when there are '
+                        'changes in the remote repository, set '
+                        '\'force_reset\' to \'remote-changes\'.'.format(target)
                     )
                     if __opts__['test']:
                         ret['changes']['forced update'] = True
@@ -983,9 +1004,9 @@ def latest(name,
                     log.debug(msg.replace('would', 'will'))
                 else:
                     log.debug(
-                        '%s up-to-date, but with local changes. Since '
-                        '\'force_reset\' is disabled, no changes will be '
-                        'made.', target
+                        '%s up-to-date, but with uncommitted changes. Since '
+                        '\'force_reset\' is set to %s, no changes will be '
+                        'made.', target, force_reset
                     )
                     return _uptodate(ret,
                                      target,
@@ -1087,20 +1108,23 @@ def latest(name,
                         elif remote_rev_type == 'sha1':
                             has_remote_rev = True
 
-            # If fast_forward is not boolean, then we don't know if this will
-            # be a fast forward or not, because a fetch is required.
-            fast_forward = None if not local_changes else False
+            # If fast_forward is not boolean, then we don't yet know if this
+            # will be a fast forward or not, because a fetch is required.
+            fast_forward = False \
+                if (local_changes and force_reset != 'remote-changes') \
+                else None
 
             if has_remote_rev:
                 if (not revs_match and not update_head) \
                         and (branch is None or branch == local_branch):
-                    ret['comment'] = remote_loc.capitalize() \
-                        if rev == 'HEAD' \
-                        else remote_loc
-                    ret['comment'] += (
-                        ' is already present and local HEAD ({0}) does not '
+                    ret['comment'] = (
+                        '{0} is already present and local HEAD ({1}) does not '
                         'match, but update_head=False. HEAD has not been '
-                        'updated locally.'.format(local_rev[:7])
+                        'updated locally.'.format(
+                            remote_loc.capitalize() if rev == 'HEAD'
+                                else remote_loc,
+                            local_rev[:7]
+                        )
                     )
                     return ret
 
@@ -1114,9 +1138,8 @@ def latest(name,
                         # existed there and a remote was added and fetched, but
                         # the repository was not fast-forwarded. Regardless,
                         # going from no HEAD to a locally-present rev is
-                        # considered a fast-forward update, unless there are
-                        # local changes.
-                        fast_forward = not bool(local_changes)
+                        # considered a fast-forward update.
+                        fast_forward = True
                     else:
                         fast_forward = __salt__['git.merge_base'](
                             target,
@@ -1128,7 +1151,7 @@ def latest(name,
                             output_encoding=output_encoding)
 
             if fast_forward is False:
-                if not force_reset:
+                if force_reset is False:
                     return _not_fast_forward(
                         ret,
                         rev,
@@ -1504,7 +1527,10 @@ def latest(name,
                             password=password,
                             output_encoding=output_encoding)
 
-                    if fast_forward is False and not force_reset:
+                    if fast_forward is force_reset is False \
+                            or (fast_forward is True
+                                and local_changes
+                                and force_reset is False):
                         return _not_fast_forward(
                             ret,
                             rev,
@@ -1560,9 +1586,6 @@ def latest(name,
                             '\'{0}\' was checked out'.format(checkout_rev)
                         )
 
-                if local_changes:
-                    comments.append('Local changes were discarded')
-
                 if fast_forward is False:
                     __salt__['git.reset'](
                         target,
@@ -1572,9 +1595,20 @@ def latest(name,
                         output_encoding=output_encoding,
                         **lfs_opts)
                     ret['changes']['forced update'] = True
+                    if local_changes:
+                        comments.append('Uncommitted changes were discarded')
                     comments.append(
                         'Repository was hard-reset to {0}'.format(remote_loc)
                     )
+                elif fast_forward is True \
+                        and local_changes \
+                        and force_reset is not False:
+                    __salt__['git.discard_local_changes'](
+                        target,
+                        user=user,
+                        password=password,
+                        output_encoding=output_encoding)
+                    comments.append('Uncommitted changes were discarded')
 
                 if branch_opts is not None:
                     __salt__['git.branch'](
@@ -1708,7 +1742,7 @@ def latest(name,
             except CommandExecutionError:
                 new_rev = None
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.latest state',
                 exc_info=True
@@ -2007,7 +2041,7 @@ def latest(name,
             except CommandExecutionError:
                 new_rev = None
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.latest state',
                 exc_info=True
@@ -2233,10 +2267,6 @@ def detached(name,
         If a branch or tag is specified it will be resolved to a commit ID
         and checked out.
 
-    ref
-        .. deprecated:: 2017.7.0
-            Use ``rev`` instead.
-
     target
         Name of the target directory where repository is about to be cloned.
 
@@ -2315,22 +2345,12 @@ def detached(name,
 
     ret = {'name': name, 'result': True, 'comment': '', 'changes': {}}
 
-    ref = kwargs.pop('ref', None)
     kwargs = salt.utils.args.clean_kwargs(**kwargs)
     if kwargs:
         return _fail(
             ret,
             salt.utils.args.invalid_kwargs(kwargs, raise_exc=False)
         )
-
-    if ref is not None:
-        rev = ref
-        deprecation_msg = (
-            'The \'ref\' argument has been renamed to \'rev\' for '
-            'consistency. Please update your SLS to reflect this.'
-        )
-        ret.setdefault('warnings', []).append(deprecation_msg)
-        salt.utils.versions.warn_until('Fluorine', deprecation_msg)
 
     if not rev:
         return _fail(
@@ -2364,6 +2384,7 @@ def detached(name,
             identity = [identity]
         elif not isinstance(identity, list):
             return _fail(ret, 'Identity must be either a list or a string')
+        identity = [os.path.expanduser(x) for x in identity]
         for ident_path in identity:
             if 'salt://' in ident_path:
                 try:
@@ -2573,7 +2594,7 @@ def detached(name,
                                   output_encoding=output_encoding)
             comments.append('{0} cloned to {1}'.format(name, target))
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Unexpected exception in git.detached state',
                 exc_info=True
@@ -2620,7 +2641,7 @@ def detached(name,
                     'refs'.format(remote)
                 )
 
-    #get refs and checkout
+    # get refs and checkout
     checkout_commit_id = ''
     if remote_rev_type is 'hash':
         if __salt__['git.describe'](
@@ -2750,7 +2771,7 @@ def cloned(name,
            https_pass=None,
            output_encoding=None):
     '''
-    .. versionadded:: 2018.3.3,Fluorine
+    .. versionadded:: 2018.3.3,2019.2.0
 
     Ensure that a repository has been cloned to the specified target directory.
     If not, clone that repository. No fetches will be performed once cloned.
@@ -2829,7 +2850,7 @@ def cloned(name,
                                    user=user,
                                    password=password,
                                    output_encoding=output_encoding)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = six.text_type(exc)
             return ret
         else:
@@ -3446,7 +3467,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
                 if __salt__['cmd.retcode'](command, **cmd_kwargs) == 0:
                     # Command exited with a zero retcode
                     continue
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The following onlyif command raised an error: %s',
                     command
@@ -3473,7 +3494,7 @@ def mod_run_check(cmd_kwargs, onlyif, unless):
                 if __salt__['cmd.retcode'](command, **cmd_kwargs) != 0:
                     # Command exited with a non-zero retcode
                     break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The following unless command raised an error: %s',
                     command

@@ -10,8 +10,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch,
     mock_open
 )
@@ -24,10 +22,9 @@ import salt.utils.platform
 import salt.utils.stringutils
 
 GET_ZONE_FILE = 'salt.modules.timezone._get_zone_file'
-GET_ETC_LOCALTIME_PATH = 'salt.modules.timezone._get_etc_localtime_path'
+GET_LOCALTIME_PATH = 'salt.modules.timezone._get_localtime_path'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -49,7 +46,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         zone_path = self.create_tempfile_with_contents('a')
 
         with patch(GET_ZONE_FILE, lambda p: zone_path.name):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: etc_localtime.name):
+            with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
                 self.assertTrue(timezone.zone_compare('foo'))
 
@@ -57,7 +54,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         etc_localtime = self.create_tempfile_with_contents('a')
 
         with patch(GET_ZONE_FILE, lambda p: '/foopath/nonexistent'):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: etc_localtime.name):
+            with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
                 self.assertRaises(SaltInvocationError, timezone.zone_compare, 'foo')
 
@@ -66,13 +63,13 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         zone_path = self.create_tempfile_with_contents('b')
 
         with patch(GET_ZONE_FILE, lambda p: zone_path.name):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: etc_localtime.name):
+            with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
                 self.assertFalse(timezone.zone_compare('foo'))
 
     def test_missing_localtime(self):
         with patch(GET_ZONE_FILE, lambda p: '/nonexisting'):
-            with patch(GET_ETC_LOCALTIME_PATH, lambda: '/also-missing'):
+            with patch(GET_LOCALTIME_PATH, lambda: '/also-missing'):
                 self.assertRaises(CommandExecutionError, timezone.zone_compare, 'foo')
 
     def create_tempfile_with_contents(self, contents):
@@ -86,7 +83,6 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         return temp
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Timezone test case

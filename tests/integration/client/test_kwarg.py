@@ -8,15 +8,16 @@ from tests.support.case import ModuleCase
 
 # Import 3rd-party libs
 from salt.ext import six
-
-
-TIMEOUT = 600
+import salt.utils.platform
 
 
 class StdTest(ModuleCase):
     '''
     Test standard client calls
     '''
+    def setUp(self):
+        self.TIMEOUT = 600 if salt.utils.platform.is_windows() else 10
+
     def test_cli(self):
         '''
         Test cli function
@@ -72,6 +73,7 @@ class StdTest(ModuleCase):
                 'minion',
                 'test.arg',
                 ['foo', 'bar', 'baz'],
+                timeout=self.TIMEOUT,
                 kwarg={'qux': 'quux'}
                 )
         data = ret['minion']['ret']
@@ -91,7 +93,7 @@ class StdTest(ModuleCase):
                 'outer': {'a': terrible_yaml_string},
                 'inner': 'value'
             },
-            timeout=TIMEOUT,
+            timeout=self.TIMEOUT,
         )
         data = ret['minion']['ret']
         self.assertIn(six.text_type.__name__, data['args'][0])
@@ -101,7 +103,7 @@ class StdTest(ModuleCase):
 
     def test_full_return_kwarg(self):
         ret = self.client.cmd(
-            'minion', 'test.ping', full_return=True, timeout=TIMEOUT,
+            'minion', 'test.ping', full_return=True, timeout=self.TIMEOUT,
         )
         for mid, data in ret.items():
             self.assertIn('retcode', data)
@@ -116,9 +118,8 @@ class StdTest(ModuleCase):
             kwarg={
                 'quux': 'Quux',
             },
-            timeout=TIMEOUT,
+            timeout=self.TIMEOUT,
         )
-
         self.assertEqual(ret['minion'], {
             'args': ['foo'],
             'kwargs': {

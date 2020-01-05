@@ -28,7 +28,7 @@ import salt.utils.process
 import salt.utils.state
 import salt.utils.user
 import salt.utils.versions
-import salt.transport
+import salt.transport.client
 import salt.log.setup
 from salt.ext import six
 
@@ -49,7 +49,9 @@ CLIENT_INTERNAL_KEYWORDS = frozenset([
     '__tag__',
     '__user__',
     'username',
-    'password'
+    'password',
+    'full_return',
+    'print_event'
 ])
 
 
@@ -134,14 +136,15 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-        channel = salt.transport.Channel.factory(self.opts,
-                                                 crypt='clear',
-                                                 usage='master_call')
-        ret = channel.send(load)
-        if isinstance(ret, collections.Mapping):
-            if 'error' in ret:
-                salt.utils.error.raise_error(**ret['error'])
-        return ret
+
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      usage='master_call') as channel:
+            ret = channel.send(load)
+            if isinstance(ret, collections.Mapping):
+                if 'error' in ret:
+                    salt.utils.error.raise_error(**ret['error'])
+            return ret
 
     def cmd_sync(self, low, timeout=None, full_return=False):
         '''
@@ -243,23 +246,6 @@ class SyncClientMixin(object):
             self._mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
         return self._mminion
 
-    def low(self, fun, low, print_event=True, full_return=False):
-        '''
-        Check for deprecated usage and allow until Salt Fluorine.
-        '''
-        msg = []
-        if 'args' in low:
-            msg.append('call with arg instead')
-            low['arg'] = low.pop('args')
-        if 'kwargs' in low:
-            msg.append('call with kwarg instead')
-            low['kwarg'] = low.pop('kwargs')
-
-        if msg:
-            salt.utils.versions.warn_until('Fluorine', ' '.join(msg))
-
-        return self._low(fun, low, print_event=print_event, full_return=full_return)
-
     @property
     def store_job(self):
         '''
@@ -282,7 +268,7 @@ class SyncClientMixin(object):
             # just return True.
             return True
 
-    def _low(self, fun, low, print_event=True, full_return=False):
+    def low(self, fun, low, print_event=True, full_return=False):
         '''
         Execute a function from low data
         Low data includes:
@@ -396,7 +382,7 @@ class SyncClientMixin(object):
                     if isinstance(data['return'], dict) and 'data' in data['return']:
                         # some functions can return boolean values
                         data['success'] = salt.utils.state.check_result(data['return']['data'])
-            except (Exception, SystemExit) as ex:
+            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data['return'] = six.text_type(ex)
                 else:
@@ -517,9 +503,9 @@ class AsyncClientMixin(object):
         to watch for the return
         '''
         async_pub = pub if pub is not None else self._gen_async_pub()
-
-        proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
+        proc = salt.utils.process.SignalHandlingProcess(
                 target=self._proc_function,
+                name='ProcessFunc',
                 args=(fun, low, user, async_pub['tag'], async_pub['jid']))
         with salt.utils.process.default_signals(signal.SIGINT, signal.SIGTERM):
             # Reset current signals before starting the process in

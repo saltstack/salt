@@ -163,15 +163,17 @@ def _render_template(config_file):
     return template.render(__grains__)
 
 
-def _config(name, conf):
+def _config(name, conf, default=None):
     '''
-    Return a value for 'name' from  the config file options.
+    Return a value for 'name' from the config file options. If the 'name' is
+    not in the config, the 'default' value is returned. This method converts
+    unicode values to str type under python 2.
     '''
     try:
-        value = salt.utils.data.decode(conf[name], to_str=True)
+        value = conf[name]
     except KeyError:
-        value = None
-    return value
+        value = default
+    return salt.utils.data.decode(value, to_str=True)
 
 
 def _result_to_dict(data, result, conf, source):
@@ -203,6 +205,7 @@ def _result_to_dict(data, result, conf, source):
     '''
     attrs = _config('attrs', conf) or []
     lists = _config('lists', conf) or []
+    dict_key_attr = _config('dict_key_attr', conf) or 'dn'
     # TODO:
     # deprecate the default 'mode: split' and make the more
     # straightforward 'mode: map' the new default
@@ -211,6 +214,9 @@ def _result_to_dict(data, result, conf, source):
         data[source] = []
         for record in result:
             ret = {}
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                log.debug('dn: %s', record[0])
+                ret['dn'] = record[0]
             record = record[1]
             log.debug('record: %s', record)
             for key in record:
@@ -220,6 +226,30 @@ def _result_to_dict(data, result, conf, source):
                 if key in lists:
                     ret[key] = record.get(key)
             data[source].append(ret)
+    elif mode == 'dict':
+        data[source] = {}
+        for record in result:
+            ret = {}
+            distinguished_name = record[0]
+            log.debug('dn: %s', distinguished_name)
+            if 'dn' in attrs or 'distinguishedName' in attrs:
+                ret['dn'] = distinguished_name
+            record = record[1]
+            log.debug('record: %s', record)
+            for key in record:
+                if key in attrs:
+                    for item in record.get(key):
+                        ret[key] = item
+                if key in lists:
+                    ret[key] = record.get(key)
+            if dict_key_attr in ['dn', 'distinguishedName']:
+                dict_key = distinguished_name
+            else:
+                dict_key = ','.join(sorted(record.get(dict_key_attr, [])))
+            try:
+                data[source][dict_key].append(ret)
+            except KeyError:
+                data[source][dict_key] = [ret]
     elif mode == 'split':
         for key in result[0][1]:
             if key in attrs:
@@ -257,7 +287,8 @@ def _do_search(conf):
     scope = _config('scope', conf)
     _lists = _config('lists', conf) or []
     _attrs = _config('attrs', conf) or []
-    attrs = _lists + _attrs
+    _dict_key_attr = _config('dict_key_attr', conf, 'dn')
+    attrs = _lists + _attrs + [_dict_key_attr]
     if not attrs:
         attrs = None
     # Perform the search
@@ -267,7 +298,7 @@ def _do_search(conf):
     except IndexError:  # we got no results for this search
         log.debug('LDAP search returned no results for filter %s', _filter)
         result = {}
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.critical(
             'Failed to retrieve pillar data from LDAP:\n', exc_info=True
         )
@@ -286,7 +317,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         config_template = _render_template(config_file)
     except jinja2.exceptions.TemplateNotFound:
         log.debug('pillar_ldap: missing configuration file %s', config_file)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.debug('pillar_ldap: failed to render template for %s',
                   config_file, exc_info=True)
 
@@ -298,7 +329,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     try:
         opts = salt.utils.yaml.safe_load(config_template) or {}
         opts['conf_file'] = config_file
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         import salt.log
         msg = 'pillar_ldap: error parsing configuration file: {0} - {1}'
         if salt.log.is_console_configured():

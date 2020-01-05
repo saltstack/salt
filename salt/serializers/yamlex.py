@@ -128,9 +128,18 @@ log = logging.getLogger(__name__)
 available = True
 
 # prefer C bindings over python when available
-# CSafeDumper causes test failures under python3
 BaseLoader = getattr(yaml, 'CSafeLoader', yaml.SafeLoader)
-BaseDumper = yaml.SafeDumper if six.PY3 else getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
+if six.PY3:
+    # CSafeDumper causes repr errors in python3, so use the pure Python one
+    try:
+        # Depending on how PyYAML was built, yaml.SafeDumper may actually be
+        # yaml.cyaml.CSafeDumper (i.e. the C dumper instead of pure Python).
+        BaseDumper = yaml.dumper.SafeDumper
+    except AttributeError:
+        # Here just in case, but yaml.dumper.SafeDumper should always exist
+        BaseDumper = yaml.SafeDumper
+else:
+    BaseDumper = getattr(yaml, 'CSafeDumper', yaml.SafeDumper)
 
 ERROR_MAP = {
     ("found character '\\t' "
@@ -159,7 +168,7 @@ def deserialize(stream_or_string, **options):
     except ConstructorError as error:
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while deserializing')
         raise DeserializationError(error)
 
@@ -173,6 +182,7 @@ def serialize(obj, **options):
     '''
 
     options.setdefault('Dumper', Dumper)
+    options.setdefault('default_flow_style', None)
     try:
         response = yaml.dump(obj, **options)
         if response.endswith('\n...\n'):
@@ -180,7 +190,7 @@ def serialize(obj, **options):
         if response.endswith('\n'):
             return response[:-1]
         return response
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.exception('Error encountered while serializing')
         raise SerializationError(error)
 
@@ -271,7 +281,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_aggregate(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise ConstructorError('unable to build reset')
 
         node = copy.copy(node)
@@ -288,7 +298,7 @@ class Loader(BaseLoader):  # pylint: disable=W0232
     def construct_sls_reset(self, node):
         try:
             tag, deep = self.resolve_sls_tag(node)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise ConstructorError('unable to build reset')
 
         node = copy.copy(node)
@@ -394,7 +404,7 @@ Dumper.add_multi_representer(type(None), Dumper.represent_none)
 if six.PY2:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_str)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_unicode)
-    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code
+    Dumper.add_multi_representer(long, Dumper.represent_long)  # pylint: disable=incompatible-py3-code,undefined-variable
 else:
     Dumper.add_multi_representer(six.binary_type, Dumper.represent_binary)
     Dumper.add_multi_representer(six.text_type, Dumper.represent_str)

@@ -24,6 +24,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
 # Import 3rd-party libs
+import re
 from salt.ext import six
 
 
@@ -138,8 +139,14 @@ def installed(name,
                     pass
         return False
     for pkg in pkg_list:
-        pkg_name, _, pkg_ver = pkg.partition('@')
-        pkg_name = pkg_name.strip()
+        # Valid:
+        #
+        # @google-cloud/bigquery@^0.9.6
+        # @foobar
+        # buffer-equal-constant-time@1.0.1
+        # coffee-script
+        matches = re.search(r'^(@?[^@\s]+)(?:@(\S+))?', pkg)
+        pkg_name, pkg_ver = matches.group(1), matches.group(2) or None
 
         if force_reinstall is True:
             pkgs_to_install.append(pkg)

@@ -86,7 +86,8 @@ tests/unit/templates/roots
 # Pycharm
 .idea
 
-.vscode/
+# VS Code
+.vscode
 
 # Ignore the log directory created by tests
 /logs

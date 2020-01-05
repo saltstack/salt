@@ -16,7 +16,7 @@ import salt.payload
 import salt.utils.args
 import salt.utils.event
 import salt.utils.network
-import salt.utils.versions
+import salt.transport.client
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
@@ -75,9 +75,8 @@ def _mine_get(load, opts):
                       'Mine could not be retrieved.'
                       )
             return False
-    channel = salt.transport.Channel.factory(opts)
-    ret = channel.send(load)
-    return ret
+    with salt.transport.client.ReqChannel.factory(opts) as channel:
+        return channel.send(load)
 
 
 def update(clear=False, mine_functions=None):
@@ -164,7 +163,7 @@ def update(clear=False, mine_functions=None):
                 if not _mine_function_available(func):
                     continue
                 data[func] = __salt__[func]()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc()
             log.error('Function %s in mine_functions failed to execute', func)
             log.debug('Error: %s', trace)
@@ -221,7 +220,7 @@ def send(func, *args, **kwargs):
             data[func] = __salt__[mine_func](*f_call['args'], **f_call['kwargs'])
         else:
             data[func] = __salt__[mine_func](*f_call['args'])
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error('Function %s in mine.send failed to execute: %s',
                   mine_func, exc)
         return False
@@ -242,8 +241,7 @@ def send(func, *args, **kwargs):
 def get(tgt,
         fun,
         tgt_type='glob',
-        exclude_minion=False,
-        expr_form=None):
+        exclude_minion=False):
     '''
     Get data from the mine based on the target, function and tgt_type
 
@@ -288,17 +286,6 @@ def get(tgt,
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
     '''
-    # remember to remove the expr_form argument from this function when
-    # performing the cleanup on this deprecation.
-    if expr_form is not None:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'the target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = expr_form
-
     if __opts__['file_client'] == 'local':
         ret = {}
         is_target = {'glob': __salt__['match.glob'],
@@ -378,7 +365,7 @@ def get_docker(interfaces=None, cidrs=None, with_container_id=False):
         When :conf_minion:`docker.update_mine` is set to ``False`` for a given
         minion, no mine data will be populated for that minion, and thus none
         will be returned for it.
-    .. versionchanged:: Fluorine
+    .. versionchanged:: 2019.2.0
         :conf_minion:`docker.update_mine` now defaults to ``False``
 
     Get all mine data for :py:func:`docker.ps <salt.modules.dockermod.ps_>` and

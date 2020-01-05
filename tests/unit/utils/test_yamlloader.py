@@ -15,14 +15,13 @@ import salt.utils.files
 from salt.ext import six
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON, mock_open
+from tests.support.unit import TestCase
+from tests.support.mock import patch, mock_open
 
 # Import 3rd-party libs
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class YamlLoaderTestCase(TestCase):
     '''
     TestCase for salt.utils.yamlloader module
@@ -137,29 +136,6 @@ class YamlLoaderTestCase(TestCase):
                   <<: *p1
                   v2: beta
                   v2: betabeta'''))
-
-    def test_yaml_with_unicode_literals(self):
-        '''
-        Test proper loading of unicode literals
-        '''
-        self.assert_matches(
-            self.render_yaml(textwrap.dedent('''\
-                foo:
-                  a: Д
-                  b: {'a': u'\\u0414'}''')),
-            {'foo': {'a': u'\u0414', 'b': {'a': u'\u0414'}}}
-        )
-
-    def test_yaml_with_colon_in_inline_dict(self):
-        '''
-        Test proper loading of unicode literal strings in inline dicts
-        '''
-        self.assert_matches(
-            self.render_yaml(textwrap.dedent('''\
-                foo:
-                  b: {u'c': u'https://foo.com'}''')),
-            {'foo': {'b': {'c': 'https://foo.com'}}}
-        )
 
     def test_yaml_with_plain_scalars(self):
         '''

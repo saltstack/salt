@@ -10,6 +10,8 @@ But the situation may exist, where you would want all state execution to stop
 if a single state execution fails. The capability to do this is called
 ``failing hard``.
 
+.. _state-level-failhard:
+
 State Level Failhard
 ====================
 
@@ -33,6 +35,10 @@ A good example of this would be setting up a package manager early on:
 In this situation, the yum repo is going to be configured before other states,
 and if it fails to lay down the config file, than no other states will be
 executed.
+It is possible to override a Global Failhard (see below) by explicitly setting
+it to ``False`` in the state.
+
+.. _global-failhard:
 
 Global Failhard
 ===============
@@ -50,5 +56,5 @@ in states not being executed or even checked. It can also be confusing to
 see states failhard if an admin is not actively aware that the failhard has
 been set.
 
-To use the global failhard set failhard: True in the master configuration
-file.
+To use the global failhard set :conf_master:`failhard` to ``True`` in the
+master configuration file.

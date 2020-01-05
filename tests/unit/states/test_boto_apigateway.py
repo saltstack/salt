@@ -11,7 +11,7 @@ import string
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.config
@@ -229,7 +229,7 @@ deployment1_ret = dict(createdDate=datetime.datetime(2015, 11, 17, 16, 33, 50),
                        description=('{\n'
                                     '    "api_name": "unit test api",\n'
                                     '    "swagger_file": "temp-swagger-sample.yaml",\n'
-                                    '    "swagger_file_md5sum": "693c57997a12a2446bb5c08c793d943c",\n'
+                                    '    "swagger_file_md5sum": "55a948ff90ad80ff747ec91657c7a299",\n'
                                     '    "swagger_info_object": {\n'
                                     '        "description": "salt boto apigateway unit test service",\n'
                                     '        "title": "salt boto apigateway unit test service",\n'
@@ -371,7 +371,7 @@ class TempSwaggerFile(object):
     def __enter__(self):
         self.swaggerfile = 'temp-swagger-sample.yaml'
         with salt.utils.files.fopen(self.swaggerfile, 'w') as fp_:
-            salt.utils.yaml.safe_dump(self.swaggerdict, fp_)
+            salt.utils.yaml.safe_dump(self.swaggerdict, fp_, default_flow_style=False)
         return self.swaggerfile
 
     def __exit__(self, objtype, value, traceback):
@@ -397,7 +397,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.DEFAULT_MINION_OPTS
+        cls.opts = salt.config.DEFAULT_MINION_OPTS.copy()
         cls.opts['grains'] = salt.loader.grains(cls.opts)
 
     @classmethod
@@ -408,7 +408,7 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         context = {}
         utils = salt.loader.utils(
             self.opts,
-            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform'],
+            whitelist=['boto', 'boto3', 'args', 'systemd', 'path', 'platform', 'reg'],
             context=context)
         serializers = salt.loader.serializers(self.opts)
         self.funcs = salt.loader.minion_mods(self.opts, context=context, utils=utils, whitelist=['boto_apigateway'])
@@ -446,7 +446,6 @@ class BotoApiGatewayStateTestCaseBase(TestCase, LoaderModuleMockMixin):
 @skipIf(_has_required_boto() is False, 'The boto3 module must be greater than'
                                        ' or equal to version {0}'
         .format(required_boto3_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module
@@ -1025,7 +1024,6 @@ class BotoApiGatewayTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTest
 @skipIf(_has_required_botocore() is False,
         'The botocore module must be greater than'
         ' or equal to version {0}'.format(required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module, usage_plans portion
@@ -1303,7 +1301,6 @@ class BotoApiGatewayUsagePlanTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGa
 @skipIf(_has_required_botocore() is False,
         'The botocore module must be greater than'
         ' or equal to version {0}'.format(required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayUsagePlanAssociationTestCase(BotoApiGatewayStateTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway state.module, usage_plans_association portion

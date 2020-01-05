@@ -8,6 +8,7 @@ Provide authentication using simple LDAP binds
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import itertools
 from salt.ext import six
 
 # Import salt libs
@@ -19,10 +20,12 @@ log = logging.getLogger(__name__)
 # Import third party libs
 from jinja2 import Environment
 try:
+    # pylint: disable=no-name-in-module
     import ldap
     import ldap.modlist
     import ldap.filter
     HAS_LDAP = True
+    # pylint: enable=no-name-in-module
 except ImportError:
     HAS_LDAP = False
 
@@ -31,6 +34,7 @@ __defopts__ = {'auth.ldap.basedn': '',
                'auth.ldap.uri': '',
                'auth.ldap.server': 'localhost',
                'auth.ldap.port': '389',
+               'auth.ldap.starttls': False,
                'auth.ldap.tls': False,
                'auth.ldap.no_verify': False,
                'auth.ldap.anonymous': False,
@@ -81,7 +85,9 @@ class _LDAPConnection(object):
     Setup an LDAP connection.
     '''
 
-    def __init__(self, uri, server, port, tls, no_verify, binddn, bindpw,
+    def __init__(self, uri, server, port,
+                 starttls, tls, no_verify,
+                 binddn, bindpw,
                  anonymous, accountattributename, activedirectory=False):
         '''
         Bind to an LDAP directory using passed credentials.
@@ -89,8 +95,8 @@ class _LDAPConnection(object):
         self.uri = uri
         self.server = server
         self.port = port
+        self.starttls = starttls
         self.tls = tls
-        schema = 'ldaps' if tls else 'ldap'
         self.binddn = binddn
         self.bindpw = bindpw
         if not HAS_LDAP:
@@ -98,6 +104,13 @@ class _LDAPConnection(object):
                 'LDAP connection could not be made, the python-ldap module is '
                 'not installed. Install python-ldap to use LDAP external auth.'
             )
+        if self.starttls and self.tls:
+            raise CommandExecutionError(
+                'Cannot bind with both starttls and tls enabled.'
+                'Please enable only one of the protocols'
+            )
+
+        schema = 'ldaps' if tls else 'ldap'
         if self.uri == '':
             self.uri = '{0}://{1}:{2}'.format(schema, self.server, self.port)
 
@@ -115,8 +128,10 @@ class _LDAPConnection(object):
                     raise CommandExecutionError(
                         'LDAP bind password is not set: password cannot be empty if auth.ldap.anonymous is False'
                     )
+                if self.starttls:
+                    self.ldap.start_tls_s()
                 self.ldap.simple_bind_s(self.binddn, self.bindpw)
-        except Exception as ldap_error:
+        except Exception as ldap_error:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Failed to bind to LDAP server {0} as {1}: {2}'.format(
                     self.uri, self.binddn, ldap_error
@@ -135,7 +150,8 @@ def _bind_for_search(anonymous=False, opts=None):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+        'mandatory': ['uri', 'server', 'port', 'starttls', 'tls',
+                      'no_verify', 'anonymous',
                       'accountattributename', 'activedirectory'],
         'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
                        'auth_by_group_membership_only'],
@@ -179,7 +195,8 @@ def _bind(username, password, anonymous=False, opts=None):
     connargs = {}
     # config params (auth.ldap.*)
     params = {
-        'mandatory': ['uri', 'server', 'port', 'tls', 'no_verify', 'anonymous',
+        'mandatory': ['uri', 'server', 'port', 'starttls', 'tls',
+                      'no_verify', 'anonymous',
                       'accountattributename', 'activedirectory'],
         'additional': ['binddn', 'bindpw', 'filter', 'groupclass',
                        'auth_by_group_membership_only'],
@@ -266,7 +283,7 @@ def _bind(username, password, anonymous=False, opts=None):
         log.debug('Attempting LDAP bind with user dn: %s', connargs['binddn'])
     try:
         ldap_conn = _LDAPConnection(**connargs).ldap
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         connargs.pop('bindpw', None)  # Don't log the password
         log.error('Failed to authenticate user dn via LDAP: %s', connargs)
         log.debug('Error authenticating user dn via LDAP:', exc_info=True)
@@ -343,7 +360,7 @@ def groups(username, **kwargs):
                 user_dn_results = bind.search_s(_config('basedn'),
                                                 ldap.SCOPE_SUBTREE,
                                                 get_user_dn_search, [str('distinguishedName')])  # future lint: disable=blacklisted-function
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.error('Exception thrown while looking up user DN in AD: %s', e)
                 return group_list
             if not user_dn_results:
@@ -358,7 +375,7 @@ def groups(username, **kwargs):
                                                ldap.SCOPE_SUBTREE,
                                                ldap_search_string,
                                                [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.error('Exception thrown while retrieving group membership in AD: %s', e)
                 return group_list
             for _, entry in search_results:
@@ -373,10 +390,11 @@ def groups(username, **kwargs):
             search_results = bind.search_s(search_base,
                                            ldap.SCOPE_SUBTREE,
                                            search_string,
-                                           [salt.utils.stringutils.to_str(_config('accountattributename')), str('cn')])  # future lint: disable=blacklisted-function
+                                           [salt.utils.stringutils.to_str(_config('accountattributename')), salt.utils.stringutils.to_str(_config('groupattribute')), str('cn')])  # future lint: disable=blacklisted-function
 
             for entry, result in search_results:
-                for user in result[_config('accountattributename')]:
+                for user in itertools.chain(result.get(_config('accountattributename'), []),
+                                            result.get(_config('groupattribute'), [])):
                     if username == salt.utils.stringutils.to_unicode(user).split(',')[0].split('=')[-1]:
                         group_list.append(entry.split(',')[0].split('=')[-1])
 

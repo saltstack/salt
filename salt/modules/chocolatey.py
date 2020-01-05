@@ -87,7 +87,7 @@ def _no_progress():
         log.warning('--no-progress unsupported in choco < 0.10.4')
         answer = []
     __context__['chocolatey._no_progress'] = answer
-    return answer
+    return __context__['chocolatey._no_progress']
 
 
 def _find_chocolatey():
@@ -229,9 +229,8 @@ def bootstrap(force=False):
     result = __salt__['cmd.run_all'](cmd, python_shell=True)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
-        )
+        err = 'Bootstrapping Chocolatey failed: {0}'.format(result['stderr'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -307,9 +306,8 @@ def list_(narrow=None,
     # moves more functions to this new paradigm
     # https://github.com/chocolatey/choco/issues/1758
     if result['retcode'] not in [0, 2]:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     ret = CaseInsensitiveDict({})
     pkg_re = re.compile(r'(\S+)\|(\S+)')
@@ -345,9 +343,8 @@ def list_webpi():
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -371,9 +368,8 @@ def list_windowsfeatures():
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -496,9 +492,8 @@ def install(name,
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     if name == 'chocolatey':
         _clear_context()
@@ -616,9 +611,8 @@ def install_missing(name, version=None, source=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -748,9 +742,8 @@ def uninstall(name, version=None, uninstall_args=None, override_args=False):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1605, 1614, 1641]:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -842,9 +835,8 @@ def upgrade(name,
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -888,9 +880,8 @@ def update(name, source=None, pre_versions=False):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] not in [0, 1641, 3010]:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -928,7 +919,6 @@ def version(name, check_remote=False, source=None, pre_versions=False):
         salt "*" chocolatey.version <package name> check_remote=True
     '''
     installed = list_(narrow=name, local_only=True)
-    installed = {k.lower(): v for k, v in installed.items()}
 
     packages = {}
     lower_name = name.lower()
@@ -938,7 +928,6 @@ def version(name, check_remote=False, source=None, pre_versions=False):
 
     if check_remote:
         available = list_(narrow=name, pre_versions=pre_versions, source=source)
-        available = {k.lower(): v for k, v in available.items()}
 
         for pkg in packages:
             packages[pkg] = {'installed': installed[pkg],
@@ -981,9 +970,8 @@ def add_source(name, source_location, username=None, password=None):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 
@@ -1003,9 +991,8 @@ def _change_source_state(name, state):
     result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if result['retcode'] != 0:
-        raise CommandExecutionError(
-            'Running chocolatey failed: {0}'.format(result['stdout'])
-        )
+        err = 'Running chocolatey failed: {0}'.format(result['stdout'])
+        raise CommandExecutionError(err)
 
     return result['stdout']
 

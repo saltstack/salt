@@ -59,6 +59,7 @@ class VirtualenvTest(ModuleCase, SaltReturnAssertsMixin):
                 shutil.rmtree(venv_dir)
             self.assertSaltTrueReturn(self.run_state('user.absent', name=user, purge=True))
 
+    @skipIf(salt.utils.platform.is_darwin(), 'Test is flaky on macosx')
     def test_issue_2594_non_invalidated_cache(self):
         # Testing virtualenv directory
         venv_path = os.path.join(RUNTIME_VARS.TMP, 'issue-2594-ve')

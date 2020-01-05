@@ -70,6 +70,10 @@ class GrainsTargetingTest(ShellCase):
         log = logging.getLogger(__name__)
         # ping disconnected minion and ensure it times out and returns with correct message
         try:
+            if salt.utils.platform.is_windows():
+                cmd_str = '-t 1 -G "id:disconnected" test.ping'
+            else:
+                cmd_str = '-t 1 -G \'id:disconnected\' test.ping'
             ret = ''
             for item in self.run_salt('-t 1 -G "id:disconnected" test.ping', timeout=40):
                 if item != 'disconnected:':

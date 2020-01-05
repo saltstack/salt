@@ -39,7 +39,7 @@ REACTOR_INTERNAL_KEYWORDS = frozenset([
 ])
 
 
-class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.state.Compiler):
+class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
     '''
     Read in the reactor configuration variable and compare it to events
     processed on the master.
@@ -50,8 +50,8 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
         'cmd': 'local',
     }
 
-    def __init__(self, opts, log_queue=None):
-        super(Reactor, self).__init__(log_queue=log_queue)
+    def __init__(self, opts, **kwargs):
+        super(Reactor, self).__init__(**kwargs)
         local_minion_opts = opts.copy()
         local_minion_opts['file_client'] = 'local'
         self.minion = salt.minion.MasterMinion(local_minion_opts)
@@ -63,14 +63,18 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
     def __setstate__(self, state):
-        self._is_child = True
         Reactor.__init__(
             self, state['opts'],
-            log_queue=state['log_queue'])
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def render_reaction(self, glob_ref, tag, data):
         '''
@@ -97,7 +101,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     res[name]['__sls__'] = fn_
 
                 react.update(res)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.exception('Failed to render "%s": ', fn_)
         return react
 
@@ -114,7 +118,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
                 log.error('Failed to read reactor map: "%s"', self.opts['reactor'])
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Failed to parse YAML in reactor map: "%s"', self.opts['reactor'])
         else:
             react_map = self.opts['reactor']
@@ -143,7 +147,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     react_map = salt.utils.yaml.safe_load(fp_)
             except (OSError, IOError):
                 log.error('Failed to read reactor map: "%s"', self.opts['reactor'])
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     'Failed to parse YAML in reactor map: "%s"',
                     self.opts['reactor']
@@ -209,7 +213,7 @@ class Reactor(salt.utils.process.SignalHandlingMultiprocessingProcess, salt.stat
                     )
                     return []  # We'll return nothing since there was an error
                 chunks = self.order_chunks(self.compile_high_data(high))
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception encountered while compiling reactions')
 
         self.resolve_aliases(chunks)
@@ -417,7 +421,7 @@ class ReactWrap(object):
             log.warning(
                 'Reactor \'%s\' attempted to exit. Ignored.', low['__id__']
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.error(
                 'Reactor \'%s\' failed to execute %s \'%s\'',
                 low['__id__'], low['state'], low['fun'], exc_info=True

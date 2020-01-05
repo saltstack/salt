@@ -392,7 +392,7 @@ def create(vm_):
             result = clone(kwargs={'linode_id': linode_id,
                                    'datacenter_id': datacenter_id,
                                    'plan_id': plan_id})
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Error cloning \'%s\' on Linode.\n\n'
                 'The following exception was thrown by Linode when trying to '
@@ -409,7 +409,7 @@ def create(vm_):
                 'PLANID': plan_id,
                 'DATACENTERID': datacenter_id
             })
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Error creating %s on Linode\n\n'
                 'The following exception was thrown by Linode when trying to '
@@ -1037,9 +1037,12 @@ def _decode_linode_plan_label(label):
                     'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
                 )
 
-            log.warning('An outdated Linode plan label was detected in your Cloud Profile ({}).'
-                        ' Please update the profile to use'
-                        ' the new label format ({}) for the requested Linode plan size.'.format(label, new_label))
+            log.warning(
+                'An outdated Linode plan label was detected in your Cloud '
+                'Profile (%s). Please update the profile to use the new '
+                'label format (%s) for the requested Linode plan size.',
+                label, new_label
+            )
 
             label = new_label
 
@@ -1555,6 +1558,24 @@ def _query(action=None,
         hide_fields=['api_key', 'rootPass'],
         opts=__opts__,
     )
+
+    if 'ERRORARRAY' in result['dict']:
+        if result['dict']['ERRORARRAY']:
+            error_list = []
+
+            for error in result['dict']['ERRORARRAY']:
+                msg = error['ERRORMESSAGE']
+
+                if msg == "Authentication failed":
+                    raise SaltCloudSystemExit(
+                        'Linode API Key is expired or invalid'
+                    )
+                else:
+                    error_list.append(msg)
+            raise SaltCloudException(
+                'Linode API reported error(s): {}'.format(", ".join(error_list))
+            )
+
     LASTCALL = int(time.mktime(datetime.datetime.now().timetuple()))
     log.debug('Linode Response Status Code: %s', result['status'])
 

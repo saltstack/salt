@@ -51,7 +51,7 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return (False, 'The rpm execution module failed to load: failed to detect os or os_family grains.')
 
     enabled = ('amazon', 'xcp', 'xenserver', 'VirtuozzoLinux')
@@ -425,13 +425,13 @@ def owner(*paths):
 @salt.utils.decorators.path.which('rpm2cpio')
 @salt.utils.decorators.path.which('cpio')
 @salt.utils.decorators.path.which('diff')
-def diff(package, path):
+def diff(package_path, path):
     '''
     Return a formatted diff between current file and original in a package.
     NOTE: this function includes all files (configuration and not), but does
     not work on binary content.
 
-    :param package: The name of the package
+    :param package: Full pack of the RPM file
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
 
@@ -439,13 +439,13 @@ def diff(package, path):
 
     .. code-block:: bash
 
-        salt '*' lowpkg.diff apache2 /etc/apache2/httpd.conf
+        salt '*' lowpkg.diff /path/to/apache2.rpm /etc/apache2/httpd.conf
     '''
 
     cmd = "rpm2cpio {0} " \
           "| cpio -i --quiet --to-stdout .{1} " \
           "| diff -u --label 'A {1}' --from-file=- --label 'B {1}' {1}"
-    res = __salt__['cmd.shell'](cmd.format(package, path),
+    res = __salt__['cmd.shell'](cmd.format(package_path, path),
                                 output_loglevel='trace')
     if res and res.startswith('Binary file'):
         return 'File \'{0}\' is binary and its content has been ' \
@@ -454,7 +454,7 @@ def diff(package, path):
     return res
 
 
-def info(*packages, **attr):
+def info(*packages, **kwargs):
     '''
     Return a detailed package(s) summary information.
     If no packages specified, all packages will be returned.
@@ -468,6 +468,9 @@ def info(*packages, **attr):
             version, vendor, release, build_date, build_date_time_t, install_date, install_date_time_t,
             build_host, group, source_rpm, arch, epoch, size, license, signature, packager, url, summary, description.
 
+    :param all_versions:
+        Return information for all installed versions of the packages
+
     :return:
 
     CLI example:
@@ -477,7 +480,9 @@ def info(*packages, **attr):
         salt '*' lowpkg.info apache2 bash
         salt '*' lowpkg.info apache2 bash attr=version
         salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size
+        salt '*' lowpkg.info apache2 bash attr=version,build_date_iso,size all_versions=True
     '''
+    all_versions = kwargs.get('all_versions', False)
     # LONGSIZE is not a valid tag for all versions of rpm. If LONGSIZE isn't
     # available, then we can just use SIZE for older versions. See Issue #31366.
     rpm_tags = __salt__['cmd.run_stdout'](
@@ -517,7 +522,7 @@ def info(*packages, **attr):
         "edition": "edition: %|EPOCH?{%{EPOCH}:}|%{VERSION}-%{RELEASE}\\n",
     }
 
-    attr = attr.get('attr', None) and attr['attr'].split(",") or None
+    attr = kwargs.get('attr', None) and kwargs['attr'].split(",") or None
     query = list()
     if attr:
         for attr_k in attr:
@@ -611,8 +616,13 @@ def info(*packages, **attr):
         if pkg_name.startswith('gpg-pubkey'):
             continue
         if pkg_name not in ret:
-            ret[pkg_name] = pkg_data.copy()
-            del ret[pkg_name]['edition']
+            if all_versions:
+                ret[pkg_name] = [pkg_data.copy()]
+            else:
+                ret[pkg_name] = pkg_data.copy()
+                del ret[pkg_name]['edition']
+        elif all_versions:
+            ret[pkg_name].append(pkg_data.copy())
 
     return ret
 
@@ -722,7 +732,7 @@ def version_cmp(ver1, ver2, ignore_epoch=False):
                 )
             return cmp_result
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.warning(
             'Failed to compare version \'%s\' to \'%s\' using RPM: %s',
             ver1, ver2, exc

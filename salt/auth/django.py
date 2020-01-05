@@ -28,9 +28,9 @@ The relevant entry in the ``models.py`` file would look like this:
 .. code-block:: python
 
     class SaltExternalAuthModel(models.Model):
-        user_fk = models.ForeignKey(auth.User)
-        minion_matcher = models.CharField()
-        minion_fn = models.CharField()
+        user_fk = models.ForeignKey(User, on_delete=models.CASCADE)
+        minion_or_fn_matcher = models.CharField(max_length=255)
+        minion_fn = models.CharField(max_length=255)
 
 The :conf_master:`external_auth` clause in the master config would then look
 like this:
@@ -59,9 +59,9 @@ from salt.ext import six
 # pylint: disable=import-error
 try:
     import django
-    from django.db import connection
+    from django.db import connection  # pylint: disable=no-name-in-module
     HAS_DJANGO = True
-except Exception as exc:
+except Exception as exc:  # pylint: disable=broad-except
     # If Django is installed and is not detected, uncomment
     # the following line to display additional information
     #log.warning('Could not load Django auth module. Found exception: %s', exc)
@@ -84,7 +84,7 @@ def __virtual__():
 def is_connection_usable():
     try:
         connection.connection.ping()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
     else:
         return True
@@ -130,7 +130,7 @@ def auth(username, password):
     if not is_connection_usable():
         connection.close()
 
-    import django.contrib.auth  # pylint: disable=import-error,3rd-party-module-not-gated
+    import django.contrib.auth  # pylint: disable=import-error,3rd-party-module-not-gated,no-name-in-module
     user = django.contrib.auth.authenticate(username=username, password=password)
     if user is not None:
         if user.is_active:

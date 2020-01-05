@@ -10,8 +10,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -20,14 +18,13 @@ import salt.modules.pkg_resource as pkg_resource
 import salt.utils.data
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(sys.platform != 'solaris', 'Skip when not running on Solaris')
 class IpsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.solarisips
     '''
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['pkg', 'path', 'platform'])
@@ -172,7 +169,7 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a package that is already installed
         '''
         result = None
-        expected_result = 'Package already installed.'
+        expected_result = {}
         with patch.object(solarisips, 'is_installed', return_value=True):
             result = solarisips.install(name='less')
         self.assertEqual(result, expected_result)

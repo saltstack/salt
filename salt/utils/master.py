@@ -25,12 +25,11 @@ import salt.utils.minions
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.verify
-import salt.utils.versions
 import salt.payload
 from salt.exceptions import SaltException
 import salt.config
 from salt.utils.cache import CacheCli as cache_cli
-from salt.utils.process import MultiprocessingProcess
+from salt.utils.process import Process
 
 # Import third party libs
 from salt.ext import six
@@ -164,19 +163,7 @@ class MasterPillarUtil(object):
                  use_cached_pillar=True,
                  grains_fallback=True,
                  pillar_fallback=True,
-                 opts=None,
-                 expr_form=None):
-
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
+                 opts=None):
 
         log.debug('New instance of %s created.',
                   self.__class__.__name__)
@@ -437,7 +424,7 @@ class MasterPillarUtil(object):
             clear_what.append('mine')
         if clear_mine_func is not None:
             clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
-        if not len(clear_what):
+        if not clear_what:
             log.debug('No cached data types specified for clearing.')
             return False
 
@@ -523,30 +510,36 @@ class CacheTimer(Thread):
                 count = 0
 
 
-class CacheWorker(MultiprocessingProcess):
+class CacheWorker(Process):
     '''
     Worker for ConnectedCache which runs in its
     own process to prevent blocking of ConnectedCache
     main-loop when refreshing minion-list
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         Sets up the zmq-connection to the ConCache
         '''
-        super(CacheWorker, self).__init__(log_queue=log_queue)
+        super(CacheWorker, self).__init__(**kwargs)
         self.opts = opts
 
     # __setstate__ and __getstate__ are only used on Windows.
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def run(self):
         '''
@@ -559,7 +552,7 @@ class CacheWorker(MultiprocessingProcess):
         log.debug('ConCache CacheWorker update finished')
 
 
-class ConnectedCache(MultiprocessingProcess):
+class ConnectedCache(Process):
     '''
     Provides access to all minions ids that the master has
     successfully authenticated. The cache is cleaned up regularly by
@@ -567,11 +560,11 @@ class ConnectedCache(MultiprocessingProcess):
     the master publisher port.
     '''
 
-    def __init__(self, opts, log_queue=None):
+    def __init__(self, opts, **kwargs):
         '''
         starts the timer and inits the cache itself
         '''
-        super(ConnectedCache, self).__init__(log_queue=log_queue)
+        super(ConnectedCache, self).__init__(**kwargs)
         log.debug('ConCache initializing...')
 
         # the possible settings for the cache
@@ -597,12 +590,18 @@ class ConnectedCache(MultiprocessingProcess):
     # We do this so that __init__ will be invoked on Windows in the child
     # process so that a register_after_fork() equivalent will work on Windows.
     def __setstate__(self, state):
-        self._is_child = True
-        self.__init__(state['opts'], log_queue=state['log_queue'])
+        self.__init__(
+            state['opts'],
+            log_queue=state['log_queue'],
+            log_queue_level=state['log_queue_level']
+        )
 
     def __getstate__(self):
-        return {'opts': self.opts,
-                'log_queue': self.log_queue}
+        return {
+            'opts': self.opts,
+            'log_queue': self.log_queue,
+            'log_queue_level': self.log_queue_level
+        }
 
     def signal_handler(self, sig, frame):
         '''

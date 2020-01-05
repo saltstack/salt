@@ -8,8 +8,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import MagicMock, NO_MOCK, NO_MOCK_REASON, patch, ANY
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch, ANY
 
 
 # Import Salt Libs
@@ -32,7 +32,6 @@ TEST_PROFILES = {
 TEST_PROFILE_NAMES = ['testprofile1', 'testprofile2', 'testprofile3']
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.cloud.clouds.saltify
@@ -112,7 +111,9 @@ class SaltifyTestCase(TestCase, LoaderModuleMockMixin):
                     result = saltify.create(vm_)
                     mock_cmd.assert_called_once_with(vm_, ANY)
                     mm_cmd.assert_called_with('friend1', 'network.wol', ['aa-bb-cc-dd-ee-ff'])
-                    mock_sleep.assert_called_with(0.01)
+                    # The test suite might call time.sleep, look for any call
+                    # that has the expected wait time.
+                    mock_sleep.assert_any_call(0.01)
                     self.assertTrue(result)
 
     def test_avail_locations(self):

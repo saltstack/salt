@@ -31,6 +31,9 @@ class ServiceModuleTest(ModuleCase):
         elif os_family == 'Arch':
             self.service_name = 'sshd'
             cmd_name = 'systemctl'
+        elif os_family == 'NILinuxRT':
+            self.service_name = 'syslog'
+            cmd_name = 'syslog-ng'
         elif os_family == 'MacOS':
             self.service_name = 'org.ntp.ntpd'
             if int(os_release.split('.')[1]) >= 13:
@@ -131,8 +134,8 @@ class ServiceModuleTest(ModuleCase):
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         elif self.run_function('grains.item', ['os'])['os'] == 'Debian' and \
              self.run_function('grains.item', ['osmajorrelease'])['osmajorrelease'] < 9 and systemd:
-             # currently disabling a service via systemd that does not exist
-             # on Debian 8 results in a True return code
+            # currently disabling a service via systemd that does not exist
+            # on Debian 8 results in a True return code
             self.assertTrue(self.run_function('service.disable', [srv_name]))
         else:
             try:

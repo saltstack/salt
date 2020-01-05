@@ -357,6 +357,27 @@ def create(vm_):
             }
         }
 
+    public_security_groups = config.get_cloud_config_value(
+        'public_security_groups', vm_, __opts__, default=False
+    )
+    if public_security_groups:
+        secgroups = [{'securityGroup': {'id': int(sg)}}
+                     for sg in public_security_groups]
+        pnc = kwargs.get('primaryNetworkComponent', {})
+        pnc['securityGroupBindings'] = secgroups
+        kwargs.update({'primaryNetworkComponent': pnc})
+
+    private_security_groups = config.get_cloud_config_value(
+        'private_security_groups', vm_, __opts__, default=False
+    )
+
+    if private_security_groups:
+        secgroups = [{'securityGroup': {'id': int(sg)}}
+                     for sg in private_security_groups]
+        pbnc = kwargs.get('primaryBackendNetworkComponent', {})
+        pbnc['securityGroupBindings'] = secgroups
+        kwargs.update({'primaryBackendNetworkComponent': pbnc})
+
     max_net_speed = config.get_cloud_config_value(
         'max_net_speed', vm_, __opts__, default=10
     )
@@ -390,7 +411,7 @@ def create(vm_):
 
     try:
         response = conn.createObject(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on SoftLayer\n\n'
             'The following exception was thrown when trying to '
@@ -466,7 +487,7 @@ def create(vm_):
         for node in node_info:
             if node['id'] == response['id'] and \
                             'passwords' in node['operatingSystem'] and \
-                            len(node['operatingSystem']['passwords']) > 0:
+                            node['operatingSystem']['passwords']:
                 return node['operatingSystem']['passwords'][0]['username'], node['operatingSystem']['passwords'][0]['password']
         time.sleep(5)
         return False

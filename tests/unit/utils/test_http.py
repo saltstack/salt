@@ -3,24 +3,33 @@
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
 '''
 
-# Import Salt Libs
+# Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 import socket
 from contextlib import closing
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
+from tests.support.unit import TestCase
+from tests.support.helpers import MirrorPostHandler, Webserver
 
 # Import Salt Libs
 import salt.utils.http as http
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class HTTPTestCase(TestCase):
     '''
     Unit TestCase for the salt.utils.http module.
     '''
+    @classmethod
+    def setUpClass(cls):
+        cls.post_webserver = Webserver(handler=MirrorPostHandler)
+        cls.post_webserver.start()
+        cls.post_web_root = cls.post_webserver.web_root
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.post_webserver.stop()
+        del cls.post_webserver
 
     # sanitize_url tests
 
@@ -108,3 +117,20 @@ class HTTPTestCase(TestCase):
         url = 'http://{host}:{port}/'.format(host=host, port=port)
         result = http.query(url, raise_error=False)
         assert result == {'body': None}, result
+
+    def test_requests_multipart_formdata_post(self):
+        '''
+        Test handling of a multipart/form-data POST using the requests backend
+        '''
+        match_this = '{0}\r\nContent-Disposition: form-data; name="fieldname_here"\r\n\r\nmydatahere\r\n{0}--\r\n'
+        ret = http.query(
+            self.post_web_root,
+            method='POST',
+            data='mydatahere',
+            formdata=True,
+            formdata_fieldname='fieldname_here',
+            backend='requests'
+        )
+        body = ret.get('body', '')
+        boundary = body[:body.find('\r')]
+        self.assertEqual(body, match_this.format(boundary))

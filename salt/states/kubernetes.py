@@ -8,7 +8,7 @@ salt.modules.kubernetesmod for more information.
 
 .. warning::
 
-    Configuration options will change in Fluorine.
+    Configuration options will change in 2019.2.0.
 
 The kubernetes module is used to manage different kubernetes resources.
 

@@ -14,6 +14,7 @@ import os
 import random
 
 # Import salt libs
+import salt.utils.data
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.path
@@ -21,7 +22,6 @@ import salt.utils.stringutils
 
 from salt.ext import six
 from salt.ext.six.moves import range
-from salt.utils.locales import sdecode
 
 TAG = '# Lines below here are managed by Salt, do not edit\n'
 SALT_CRON_IDENTIFIER = 'SALT_CRON_IDENTIFIER'
@@ -310,7 +310,7 @@ def raw_cron(user):
     if __grains__.get('os_family') in ('Solaris', 'AIX'):
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
+        lines = salt.utils.data.decode(__salt__['cmd.run_stdout'](cmd,
                                            runas=user,
                                            ignore_retcode=True,
                                            rstrip=False,
@@ -319,7 +319,7 @@ def raw_cron(user):
     elif _check_instance_uid_match(user):
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
+        lines = salt.utils.data.decode(__salt__['cmd.run_stdout'](cmd,
                                            ignore_retcode=True,
                                            rstrip=False,
                                            python_shell=False)).splitlines(True)
@@ -327,7 +327,7 @@ def raw_cron(user):
     elif _check_instance_uid_match('root'):
         cmd = 'crontab -u {0} -l'.format(user)
         # Preserve line endings
-        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
+        lines = salt.utils.data.decode(__salt__['cmd.run_stdout'](cmd,
                                            ignore_retcode=True,
                                            rstrip=False,
                                            python_shell=False)).splitlines(True)
@@ -335,7 +335,7 @@ def raw_cron(user):
     else:
         cmd = 'crontab -l'
         # Preserve line endings
-        lines = sdecode(__salt__['cmd.run_stdout'](cmd,
+        lines = salt.utils.data.decode(__salt__['cmd.run_stdout'](cmd,
                                            runas=user,
                                            ignore_retcode=True,
                                            rstrip=False,

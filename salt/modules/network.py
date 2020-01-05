@@ -28,7 +28,6 @@ from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt._compat import ipaddress
 
-
 log = logging.getLogger(__name__)
 
 
@@ -543,7 +542,7 @@ def _ip_route_linux():
 
             ret.append({
                 'addr_family': 'inet6',
-                'destination': '::',
+                'destination': '::/0',
                 'gateway': comps[2],
                 'netmask': '',
                 'flags': 'UG',
@@ -824,6 +823,7 @@ def active_tcp():
         return {}
 
 
+@salt.utils.decorators.path.which('traceroute')
 def traceroute(host):
     '''
     Performs a traceroute to a 3rd party host
@@ -841,29 +841,23 @@ def traceroute(host):
         salt '*' network.traceroute archlinux.org
     '''
     ret = []
-    if not salt.utils.path.which('traceroute'):
-        log.info('This minion does not have traceroute installed')
-        return ret
-
     cmd = 'traceroute {0}'.format(salt.utils.network.sanitize_host(host))
-
     out = __salt__['cmd.run'](cmd)
 
     # Parse version of traceroute
     if salt.utils.platform.is_sunos() or salt.utils.platform.is_aix():
         traceroute_version = [0, 0, 0]
     else:
-        cmd2 = 'traceroute --version'
-        out2 = __salt__['cmd.run'](cmd2)
+        version_out = __salt__['cmd.run']('traceroute --version')
         try:
             # Linux traceroute version looks like:
             #   Modern traceroute for Linux, version 2.0.19, Dec 10 2012
             # Darwin and FreeBSD traceroute version looks like: Version 1.4a12+[FreeBSD|Darwin]
 
-            traceroute_version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', out2)[0]
-            log.debug('traceroute_version_raw: %s', traceroute_version_raw)
+            version_raw = re.findall(r'.*[Vv]ersion (\d+)\.([\w\+]+)\.*(\w*)', version_out)[0]
+            log.debug('traceroute_version_raw: %s', version_raw)
             traceroute_version = []
-            for t in traceroute_version_raw:
+            for t in version_raw:
                 try:
                     traceroute_version.append(int(t))
                 except ValueError:
@@ -878,26 +872,28 @@ def traceroute(host):
             traceroute_version = [0, 0, 0]
 
     for line in out.splitlines():
+        # Pre requirements for line parsing
+        skip_line = False
         if ' ' not in line:
-            continue
+            skip_line = True
         if line.startswith('traceroute'):
-            continue
-
+            skip_line = True
         if salt.utils.platform.is_aix():
             if line.startswith('trying to get source for'):
-                continue
-
+                skip_line = True
             if line.startswith('source should be'):
-                continue
-
+                skip_line = True
             if line.startswith('outgoing MTU'):
-                continue
-
+                skip_line = True
             if line.startswith('fragmentation required'):
-                continue
+                skip_line = True
+        if skip_line:
+            log.debug('Skipping traceroute output line: %s', line)
+            continue
 
+        # Parse output from unix variants
         if 'Darwin' in six.text_type(traceroute_version[1]) or \
-            'FreeBSD' in six.text_type(traceroute_version[1]) or \
+                'FreeBSD' in six.text_type(traceroute_version[1]) or \
                 __grains__['kernel'] in ('SunOS', 'AIX'):
             try:
                 traceline = re.findall(r'\s*(\d*)\s+(.*)\s+\((.*)\)\s+(.*)$', line)[0]
@@ -924,14 +920,15 @@ def traceroute(host):
             except IndexError:
                 result = {}
 
+        # Parse output from specific version ranges
         elif (traceroute_version[0] >= 2 and traceroute_version[2] >= 14
                 or traceroute_version[0] >= 2 and traceroute_version[1] > 0):
             comps = line.split('  ')
-            if comps[1] == '* * *':
+            if len(comps) >= 2 and comps[1] == '* * *':
                 result = {
                     'count': int(comps[0]),
                     'hostname': '*'}
-            else:
+            elif len(comps) >= 5:
                 result = {
                     'count': int(comps[0]),
                     'hostname': comps[1].split()[0],
@@ -939,21 +936,29 @@ def traceroute(host):
                     'ms1': float(comps[2].split()[0]),
                     'ms2': float(comps[3].split()[0]),
                     'ms3': float(comps[4].split()[0])}
+            else:
+                result = {}
+
+        # Parse anything else
         else:
             comps = line.split()
-            result = {
-                'count': comps[0],
-                'hostname': comps[1],
-                'ip': comps[2],
-                'ms1': comps[4],
-                'ms2': comps[6],
-                'ms3': comps[8],
-                'ping1': comps[3],
-                'ping2': comps[5],
-                'ping3': comps[7]}
+            if len(comps) >= 8:
+                result = {
+                    'count': comps[0],
+                    'hostname': comps[1],
+                    'ip': comps[2],
+                    'ms1': comps[4],
+                    'ms2': comps[6],
+                    'ms3': comps[8],
+                    'ping1': comps[3],
+                    'ping2': comps[5],
+                    'ping3': comps[7]}
+            else:
+                result = {}
 
         ret.append(result)
-
+        if not result:
+            log.warn('Cannot parse traceroute output line: %s', line)
     return ret
 
 
@@ -1279,11 +1284,16 @@ def mod_hostname(hostname):
     # Grab the old hostname so we know which hostname to change and then
     # change the hostname using the hostname command
     if hostname_cmd.endswith('hostnamectl'):
-        out = __salt__['cmd.run']('{0} status'.format(hostname_cmd))
-        for line in out.splitlines():
-            line = line.split(':')
-            if 'Static hostname' in line[0]:
-                o_hostname = line[1].strip()
+        result = __salt__['cmd.run_all']('{0} status'.format(hostname_cmd))
+        if 0 == result['retcode']:
+            out = result['stdout']
+            for line in out.splitlines():
+                line = line.split(':')
+                if 'Static hostname' in line[0]:
+                    o_hostname = line[1].strip()
+        else:
+            log.debug('{0} was unable to get hostname'.format(hostname_cmd))
+            o_hostname = __salt__['network.get_hostname']()
     elif not salt.utils.platform.is_sunos():
         # don't run hostname -f because -f is not supported on all platforms
         o_hostname = socket.getfqdn()
@@ -1292,7 +1302,16 @@ def mod_hostname(hostname):
         o_hostname = __salt__['cmd.run'](check_hostname_cmd).split(' ')[-1]
 
     if hostname_cmd.endswith('hostnamectl'):
-        __salt__['cmd.run']('{0} set-hostname {1}'.format(hostname_cmd, hostname))
+        result = __salt__['cmd.run_all']('{0} set-hostname {1}'.format(
+            hostname_cmd,
+            hostname,
+            ))
+        if result['retcode'] != 0:
+            log.debug('{0} was unable to set hostname. Error: {1}'.format(
+                hostname_cmd,
+                result['stderr'],
+                ))
+            return False
     elif not salt.utils.platform.is_sunos():
         __salt__['cmd.run']('{0} {1}'.format(hostname_cmd, hostname))
     else:
@@ -1339,6 +1358,12 @@ def mod_hostname(hostname):
     elif __grains__['os_family'] in ('Debian', 'NILinuxRT'):
         with salt.utils.files.fopen('/etc/hostname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
+        if __grains__['lsb_distrib_id'] == 'nilrt':
+            str_hostname = salt.utils.stringutils.to_str(hostname)
+            nirtcfg_cmd = '/usr/local/natinst/bin/nirtcfg'
+            nirtcfg_cmd += ' --set section=SystemSettings,token=\'Host_Name\',value=\'{0}\''.format(str_hostname)
+            if __salt__['cmd.run_all'](nirtcfg_cmd)['retcode'] != 0:
+                raise CommandExecutionError('Couldn\'t set hostname to: {0}\n'.format(str_hostname))
     elif __grains__['os_family'] == 'OpenBSD':
         with salt.utils.files.fopen('/etc/myname', 'w') as fh_:
             fh_.write(salt.utils.stringutils.to_str(hostname + '\n'))
@@ -1442,7 +1467,7 @@ def connect(host, port=None, **kwargs):
         else:
             skt.connect(_address)
             skt.shutdown(2)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = 'Unable to connect to {0} ({1}) on {2} port {3}'.format(host, _address[0], proto, port)
         return ret

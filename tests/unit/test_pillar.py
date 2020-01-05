@@ -9,20 +9,43 @@
 
 # Import python libs
 from __future__ import absolute_import
+import shutil
 import tempfile
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
-from tests.support.paths import TMP
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.helpers import with_tempdir
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
+import salt.fileclient
 import salt.pillar
 import salt.utils.stringutils
 import salt.exceptions
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+class MockFileclient(object):
+    def __init__(self, cache_file=None, get_state=None, list_states=None):
+        if cache_file is not None:
+            self.cache_file = lambda *x, **y: cache_file
+        if get_state is not None:
+            self.get_state = lambda sls, env: get_state[sls]
+        if list_states is not None:
+            self.list_states = lambda *x, **y: list_states
+
+    # pylint: disable=unused-argument,no-method-argument,method-hidden
+    def cache_file(*args, **kwargs):
+        raise NotImplementedError()
+
+    def get_state(*args, **kwargs):
+        raise NotImplementedError()
+
+    def list_states(*args, **kwargs):
+        raise NotImplementedError()
+    # pylint: enable=unused-argument,no-method-argument,method-hidden
+
+
 class PillarTestCase(TestCase):
 
     def tearDown(self):
@@ -302,6 +325,51 @@ class PillarTestCase(TestCase):
             'mocked-minion', 'fake_pillar', 'bar',
             extra_minion_data={'fake_key': 'foo'})
 
+    def test_ext_pillar_first(self):
+        '''
+        test when using ext_pillar and ext_pillar_first
+        '''
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+            'ext_pillar_first': True,
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
+
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        try:
+            sls_files = self._setup_test_topfile_sls_pillar_match(
+                tempdir,)
+            fc_mock = MockFileclient(
+                cache_file=sls_files['top']['dest'],
+                list_states=['top', 'ssh', 'ssh.minion',
+                             'generic', 'generic.minion'],
+                get_state=sls_files)
+            with patch.object(salt.fileclient, 'get_file_client',
+                              MagicMock(return_value=fc_mock)), \
+                    patch('salt.pillar.Pillar.ext_pillar',
+                          MagicMock(return_value=({'id': 'minion',
+                                                  'phase': 'alpha', 'role':
+                                                  'database'}, []))):
+                pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+                self.assertEqual(pillar.compile_pillar()['generic']['key1'], 'value1')
+        finally:
+            shutil.rmtree(tempdir, ignore_errors=True)
+
     def test_dynamic_pillarenv(self):
         opts = {
             'optimization_order': [0, 1, 2],
@@ -331,7 +399,8 @@ class PillarTestCase(TestCase):
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
         self.assertEqual(pillar.opts['pillar_roots'], {'base': ['/srv/pillar/base']})
 
-    def test_malformed_pillar_sls(self):
+    @patch('salt.fileclient.Client.list_states')
+    def test_malformed_pillar_sls(self, mock_list_states):
         with patch('salt.pillar.compile_template') as compile_template:
             opts = {
                 'optimization_order': [0, 1, 2],
@@ -351,6 +420,8 @@ class PillarTestCase(TestCase):
                 'osrelease': '13.04',
                 'kernel': 'Linux'
             }
+
+            mock_list_states.return_value = ['foo', 'blah']
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
             # Mock getting the proper template files
             pillar.client.get_state = MagicMock(
@@ -461,7 +532,9 @@ class PillarTestCase(TestCase):
             'osrelease': '13.04',
             'kernel': 'Linux'
         }
-        with patch('salt.pillar.compile_template') as compile_template:
+        with patch('salt.pillar.compile_template') as compile_template, \
+                patch.object(salt.pillar.Pillar, '_Pillar__gather_avail',
+                             MagicMock(return_value={'base': ['blah', 'foo']})):
 
             # Test with option set to True
             opts['pillar_includes_override_sls'] = True
@@ -504,40 +577,79 @@ class PillarTestCase(TestCase):
             )
 
     def test_topfile_order(self):
-        with patch('salt.pillar.salt.fileclient.get_file_client', autospec=True) as get_file_client, \
-                patch('salt.pillar.salt.minion.Matcher') as Matcher:  # autospec=True disabled due to py3 mock bug
-            opts = {
-                'optimization_order': [0, 1, 2],
-                'renderer': 'yaml',
-                'renderer_blacklist': [],
-                'renderer_whitelist': [],
-                'state_top': '',
-                'pillar_roots': [],
-                'extension_modules': '',
-                'saltenv': 'base',
-                'file_roots': [],
-            }
-            grains = {
-                'os': 'Ubuntu',
-                'os_family': 'Debian',
-                'oscodename': 'raring',
-                'osfullname': 'Ubuntu',
-                'osrelease': '13.04',
-                'kernel': 'Linux'
-            }
-            # glob match takes precedence
-            self._setup_test_topfile_mocks(Matcher, get_file_client, 1, 2)
-            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
-            self.assertEqual(pillar.compile_pillar()['ssh'], 'bar')
-            # nodegroup match takes precedence
-            self._setup_test_topfile_mocks(Matcher, get_file_client, 2, 1)
-            pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
-            self.assertEqual(pillar.compile_pillar()['ssh'], 'foo')
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux'
+        }
 
-    def _setup_test_topfile_mocks(self, Matcher, get_file_client,
-                                  nodegroup_order, glob_order):
+        def _run_test(nodegroup_order, glob_order, expected):
+            tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+            try:
+                sls_files = self._setup_test_topfile_sls(
+                    tempdir,
+                    nodegroup_order,
+                    glob_order)
+                fc_mock = MockFileclient(
+                    cache_file=sls_files['top']['dest'],
+                    list_states=['top', 'ssh', 'ssh.minion',
+                                 'generic', 'generic.minion'],
+                    get_state=sls_files)
+                with patch.object(salt.fileclient, 'get_file_client',
+                                  MagicMock(return_value=fc_mock)):
+                    pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
+                    # Make sure that confirm_top.confirm_top returns True
+                    pillar.matchers['confirm_top.confirm_top'] = lambda *x, **y: True
+                    self.assertEqual(pillar.compile_pillar()['ssh'], expected)
+            finally:
+                shutil.rmtree(tempdir, ignore_errors=True)
+
+        # test case where glob match happens second and therefore takes
+        # precedence over nodegroup match.
+        _run_test(nodegroup_order=1, glob_order=2, expected='bar')
+        # test case where nodegroup match happens second and therefore takes
+        # precedence over glob match.
+        _run_test(nodegroup_order=2, glob_order=1, expected='foo')
+
+    def _setup_test_topfile_sls_pillar_match(self, tempdir):
         # Write a simple topfile and two pillar state files
-        self.top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
+        top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        s = '''
+base:
+  'phase:alpha':
+    - match: pillar
+    - generic
+'''
+        top_file.write(salt.utils.stringutils.to_bytes(s))
+        top_file.flush()
+        generic_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        generic_file.write(b'''
+generic:
+    key1: value1
+''')
+        generic_file.flush()
+        return {
+            'top': {'path': '', 'dest': top_file.name},
+            'generic': {'path': '', 'dest': generic_file.name},
+        }
+
+    def _setup_test_topfile_sls(self, tempdir, nodegroup_order, glob_order):
+        # Write a simple topfile and two pillar state files
+        top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
         s = '''
 base:
     group:
@@ -552,22 +664,22 @@ base:
         - ssh.minion
         - generic.minion
 '''.format(nodegroup_order=nodegroup_order, glob_order=glob_order)
-        self.top_file.write(salt.utils.stringutils.to_bytes(s))
-        self.top_file.flush()
-        self.ssh_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
-        self.ssh_file.write(b'''
+        top_file.write(salt.utils.stringutils.to_bytes(s))
+        top_file.flush()
+        ssh_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        ssh_file.write(b'''
 ssh:
     foo
 ''')
-        self.ssh_file.flush()
-        self.ssh_minion_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
-        self.ssh_minion_file.write(b'''
+        ssh_file.flush()
+        ssh_minion_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        ssh_minion_file.write(b'''
 ssh:
     bar
 ''')
-        self.ssh_minion_file.flush()
-        self.generic_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
-        self.generic_file.write(b'''
+        ssh_minion_file.flush()
+        generic_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        generic_file.write(b'''
 generic:
     key1:
       - value1
@@ -575,37 +687,74 @@ generic:
     key2:
         sub_key1: []
 ''')
-        self.generic_file.flush()
-        self.generic_minion_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
-        self.generic_minion_file.write(b'''
+        generic_file.flush()
+        generic_minion_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        generic_minion_file.write(b'''
 generic:
     key1:
       - value3
     key2:
         sub_key2: []
 ''')
-        self.generic_minion_file.flush()
+        generic_minion_file.flush()
 
-        # Setup Matcher mock
-        matcher = Matcher.return_value
-        matcher.confirm_top.return_value = True
+        return {
+            'top': {'path': '', 'dest': top_file.name},
+            'ssh': {'path': '', 'dest': ssh_file.name},
+            'ssh.minion': {'path': '', 'dest': ssh_minion_file.name},
+            'generic': {'path': '', 'dest': generic_file.name},
+            'generic.minion': {'path': '', 'dest': generic_minion_file.name},
+        }
 
-        # Setup fileclient mock
-        client = get_file_client.return_value
-        client.cache_file.return_value = self.top_file.name
+    @with_tempdir()
+    def test_include(self, tempdir):
+        opts = {
+            'optimization_order': [0, 1, 2],
+            'renderer': 'yaml',
+            'renderer_blacklist': [],
+            'renderer_whitelist': [],
+            'state_top': '',
+            'pillar_roots': [],
+            'extension_modules': '',
+            'saltenv': 'base',
+            'file_roots': [],
+        }
+        grains = {
+            'os': 'Ubuntu',
+            'os_family': 'Debian',
+            'oscodename': 'raring',
+            'osfullname': 'Ubuntu',
+            'osrelease': '13.04',
+            'kernel': 'Linux',
+        }
+        sls_files = self._setup_test_include_sls(tempdir)
+        fc_mock = MockFileclient(
+            cache_file=sls_files['top']['dest'],
+            get_state=sls_files,
+            list_states=[
+                'top',
+                'test.init',
+                'test.sub1',
+                'test.sub2',
+                'test.sub_wildcard_1',
+                'test.sub_with_init_dot',
+                'test.sub.with.slashes',
+            ],
+        )
+        with patch.object(salt.fileclient, 'get_file_client',
+                          MagicMock(return_value=fc_mock)):
+            pillar = salt.pillar.Pillar(opts, grains, 'minion', 'base')
+            # Make sure that confirm_top.confirm_top returns True
+            pillar.matchers['confirm_top.confirm_top'] = lambda *x, **y: True
+            compiled_pillar = pillar.compile_pillar()
+            self.assertEqual(compiled_pillar['foo_wildcard'], 'bar_wildcard')
+            self.assertEqual(compiled_pillar['foo1'], 'bar1')
+            self.assertEqual(compiled_pillar['foo2'], 'bar2')
+            self.assertEqual(compiled_pillar['sub_with_slashes'], 'sub_slashes_worked')
+            self.assertEqual(compiled_pillar['sub_init_dot'], 'sub_with_init_dot_worked')
 
-        def get_state(sls, env):
-            return {
-                'ssh': {'path': '', 'dest': self.ssh_file.name},
-                'ssh.minion': {'path': '', 'dest': self.ssh_minion_file.name},
-                'generic': {'path': '', 'dest': self.generic_file.name},
-                'generic.minion': {'path': '', 'dest': self.generic_minion_file.name},
-            }[sls]
-
-        client.get_state.side_effect = get_state
-
-    def _setup_test_include_mocks(self, Matcher, get_file_client):
-        self.top_file = top_file = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
+    def _setup_test_include_sls(self, tempdir):
+        top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
         top_file.write(b'''
 base:
     '*':
@@ -616,50 +765,61 @@ base:
         - test
 ''')
         top_file.flush()
-        self.init_sls = init_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
+        init_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
         init_sls.write(b'''
 include:
    - test.sub1
-   - test.sub2
+   - test.sub_wildcard*
+   - .test.sub_with_init_dot
+   - test/sub/with/slashes
 ''')
         init_sls.flush()
-        self.sub1_sls = sub1_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
+        sub1_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
         sub1_sls.write(b'''
-p1:
-   - value1_1
-   - value1_2
+foo1:
+  bar1
 ''')
         sub1_sls.flush()
-        self.sub2_sls = sub2_sls = tempfile.NamedTemporaryFile(dir=TMP, delete=False)
+        sub2_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
         sub2_sls.write(b'''
-p1:
-   - value1_3
-p2:
-   - value2_1
-   - value2_2
+foo2:
+  bar2
 ''')
         sub2_sls.flush()
 
-        # Setup Matcher mock
-        matcher = Matcher.return_value
-        matcher.confirm_top.return_value = True
+        sub_wildcard_1_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_wildcard_1_sls.write(b'''
+foo_wildcard:
+   bar_wildcard
+''')
+        sub_wildcard_1_sls.flush()
 
-        # Setup fileclient mock
-        client = get_file_client.return_value
-        client.cache_file.return_value = self.top_file.name
+        sub_with_init_dot_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_with_init_dot_sls.write(b'''
+sub_init_dot:
+  sub_with_init_dot_worked
+''')
+        sub_with_init_dot_sls.flush()
 
-        def get_state(sls, env):
-            return {
-                'test': {'path': '', 'dest': init_sls.name},
-                'test.sub1': {'path': '', 'dest': sub1_sls.name},
-                'test.sub2': {'path': '', 'dest': sub2_sls.name},
-            }[sls]
+        sub_with_slashes_sls = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
+        sub_with_slashes_sls.write(b'''
+sub_with_slashes:
+  sub_slashes_worked
+''')
+        sub_with_slashes_sls.flush()
 
-        client.get_state.side_effect = get_state
+        return {
+            'top': {'path': '', 'dest': top_file.name},
+            'test': {'path': '', 'dest': init_sls.name},
+            'test.sub1': {'path': '', 'dest': sub1_sls.name},
+            'test.sub2': {'path': '', 'dest': sub2_sls.name},
+            'test.sub_wildcard_1': {'path': '', 'dest': sub_wildcard_1_sls.name},
+            'test.sub_with_init_dot': {'path': '', 'dest': sub_with_init_dot_sls.name},
+            'test.sub.with.slashes': {'path': '', 'dest': sub_with_slashes_sls.name},
+        }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
-@patch('salt.transport.Channel.factory', MagicMock())
+@patch('salt.transport.client.ReqChannel.factory', MagicMock())
 class RemotePillarTestCase(TestCase):
     '''
     Tests for instantiating a RemotePillar in salt.pillar
@@ -758,7 +918,7 @@ class RemotePillarTestCase(TestCase):
             'pass_to_ext_pillars': ['path_to_add']}
         mock_channel = MagicMock(
             crypted_transfer_decode_dictentry=MagicMock(return_value={}))
-        with patch('salt.transport.Channel.factory',
+        with patch('salt.transport.client.ReqChannel.factory',
                    MagicMock(return_value=mock_channel)):
             pillar = salt.pillar.RemotePillar(opts, self.grains,
                                               'mocked_minion', 'fake_env')
@@ -776,7 +936,6 @@ class RemotePillarTestCase(TestCase):
             dictkey='pillar')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.transport.client.AsyncReqChannel.factory', MagicMock())
 class AsyncRemotePillarTestCase(TestCase):
     '''

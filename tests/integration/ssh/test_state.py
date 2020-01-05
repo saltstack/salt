@@ -9,9 +9,9 @@ import time
 import logging
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import SSHCase
 from tests.support.helpers import flaky
-from tests.support.paths import TMP
 
 # Import Salt Libs
 from salt.ext import six
@@ -62,7 +62,7 @@ class SSHStateTest(SSHCase):
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS,
                                                  'test=True'])
         self._check_dict_ret(ret=ret, val='comment',
-                             exp_ret='The file /tmp/test is set to be changed')
+                             exp_ret='The file /tmp/test is set to be changed\nNote: No changes made, actual changes may\nbe different due to other states.')
 
         # check state.sls_id without test=True
         ret = self.run_function('state.sls_id', ['ssh-file-test', SSH_SLS])
@@ -123,7 +123,7 @@ class SSHStateTest(SSHCase):
         state.show_highstate with salt-ssh
         '''
         high = self.run_function('state.show_highstate')
-        destpath = os.path.join(TMP, 'testfile')
+        destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
         self.assertIsInstance(high, dict)
         self.assertIn(destpath, high)
         self.assertEqual(high[destpath]['__env__'], 'base')

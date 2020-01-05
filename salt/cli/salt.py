@@ -7,6 +7,7 @@ sys.modules['pkg_resources'] = None
 import os
 
 # Import Salt libs
+import salt.defaults.exitcodes
 import salt.utils.job
 import salt.utils.parsers
 import salt.utils.stringutils
@@ -210,9 +211,9 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # returned 'ok' with a retcode of 0.
             # This is the final point before the 'salt' cmd returns,
             # which is why we set the retcode here.
-            if retcodes.count(0) < len(retcodes):
+            if not all(exit_code == salt.defaults.exitcodes.EX_OK for exit_code in retcodes):
                 sys.stderr.write('ERROR: Minions returned with non-zero exit code\n')
-                sys.exit(11)
+                sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
         except (AuthenticationError,
                 AuthorizationError,
@@ -355,7 +356,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         if not hasattr(self, 'progress_bar'):
             try:
                 self.progress_bar = salt.output.get_progress(self.config, out, progress)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise LoaderError('\nWARNING: Install the `progressbar` python package. '
                                   'Requested job was still run but output cannot be displayed.\n')
         salt.output.update_progress(self.config, progress, self.progress_bar, out)
@@ -401,6 +402,8 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         retcode = 0
         # if there is a dict with retcode, use that
         if isinstance(ret, dict) and ret.get('retcode', 0) != 0:
+            if isinstance(ret.get('retcode', 0), dict):
+                return max(six.itervalues(ret.get('retcode', {0: 0})))
             return ret['retcode']
         # if its a boolean, False means 1
         elif isinstance(ret, bool) and not ret:

@@ -45,7 +45,6 @@ import salt.client.ssh.client
 import salt.payload
 import salt.runner
 import salt.state
-import salt.transport
 import salt.utils.args
 import salt.utils.event
 import salt.utils.extmods
@@ -55,8 +54,8 @@ import salt.utils.minion
 import salt.utils.path
 import salt.utils.process
 import salt.utils.url
-import salt.utils.versions
 import salt.wheel
+import salt.transport.client
 
 HAS_PSUTIL = True
 try:
@@ -177,7 +176,7 @@ def update(version=None):
         return ret
     try:
         app.cleanup()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['_error'] = 'Unable to cleanup. Error: {0}'.format(exc)
     restarted = {}
     for service in __opts__['update_restart_services']:
@@ -384,9 +383,11 @@ def refresh_grains(**kwargs):
     # Modules and pillar need to be refreshed in case grains changes affected
     # them, and the module refresh process reloads the grains and assigns the
     # newly-reloaded grains to each execution module's __grains__ dunder.
-    refresh_modules()
     if _refresh_pillar:
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
+    else:
+        refresh_modules()
     return True
 
 
@@ -426,7 +427,7 @@ def sync_grains(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
     '''
     ret = _sync('grains', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 
@@ -543,6 +544,44 @@ def sync_proxymodules(saltenv=None, refresh=False, extmod_whitelist=None, extmod
         salt '*' saltutil.sync_proxymodules saltenv=base,dev
     '''
     ret = _sync('proxy', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
+def sync_matchers(saltenv=None, refresh=False, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: 2019.2.0
+
+    Sync engine modules from ``salt://_matchers`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for engines to sync. If no top files are
+        found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new matcher modules are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-separated list of modules to sync
+
+    extmod_blacklist : None
+        comma-separated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_matchers
+        salt '*' saltutil.sync_matchers saltenv=base,dev
+    '''
+    ret = _sync('matchers', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
         refresh_modules()
     return ret
@@ -738,6 +777,45 @@ def sync_utils(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackli
     return ret
 
 
+def sync_serializers(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: 2019.2.0
+
+    Sync serializers from ``salt://_serializers`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for serializer modules to sync. If no top
+        files are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new serializer modules are
+        synced. Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_serializers
+        salt '*' saltutil.sync_serializers saltenv=dev
+        salt '*' saltutil.sync_serializers saltenv=base,dev
+    '''
+    ret = _sync('serializers', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
+    return ret
+
+
 def list_extmods():
     '''
     .. versionadded:: 2017.7.0
@@ -837,8 +915,47 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
         )
     ret = _sync('pillar', saltenv, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
+    return ret
+
+
+def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
+    '''
+    .. versionadded:: Neon
+
+    Sync executors from ``salt://_executors`` to the minion
+
+    saltenv
+        The fileserver environment from which to sync. To sync from more than
+        one environment, pass a comma-separated list.
+
+        If not passed, then all environments configured in the :ref:`top files
+        <states-top>` will be checked for log handlers to sync. If no top files
+        are found, then the ``base`` environment will be synced.
+
+    refresh : True
+        If ``True``, refresh the available execution modules on the minion.
+        This refresh will be performed even if no new log handlers are synced.
+        Set to ``False`` to prevent this refresh.
+
+    extmod_whitelist : None
+        comma-seperated list of modules to sync
+
+    extmod_blacklist : None
+        comma-seperated list of modules to blacklist based on type
+
+    CLI Examples:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.sync_executors
+        salt '*' saltutil.sync_executors saltenv=dev
+        salt '*' saltutil.sync_executors saltenv=base,dev
+    '''
+    ret = _sync('executors', saltenv, extmod_whitelist, extmod_blacklist)
+    if refresh:
+        refresh_modules()
     return ret
 
 
@@ -902,13 +1019,16 @@ def sync_all(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist
     ret['output'] = sync_output(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['utils'] = sync_utils(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['log_handlers'] = sync_log_handlers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['executors'] = sync_executors(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['proxymodules'] = sync_proxymodules(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['engines'] = sync_engines(saltenv, False, extmod_whitelist, extmod_blacklist)
     ret['thorium'] = sync_thorium(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['serializers'] = sync_serializers(saltenv, False, extmod_whitelist, extmod_blacklist)
+    ret['matchers'] = sync_matchers(saltenv, False, extmod_whitelist, extmod_blacklist)
     if __opts__['file_client'] == 'local':
         ret['pillar'] = sync_pillar(saltenv, False, extmod_whitelist, extmod_blacklist)
     if refresh:
-        refresh_modules()
+        # we don't need to call refresh_modules here because it's done by refresh_pillar
         refresh_pillar()
     return ret
 
@@ -931,9 +1051,33 @@ def refresh_beacons():
     return ret
 
 
-def refresh_pillar():
+def refresh_matchers():
+    '''
+    Signal the minion to refresh its matchers.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' saltutil.refresh_matchers
+    '''
+    try:
+        ret = __salt__['event.fire']({}, 'matchers_refresh')
+    except KeyError:
+        log.error('Event module not available. Matcher refresh failed.')
+        ret = False  # Effectively a no-op, since we can't really return without an event system
+    return ret
+
+
+def refresh_pillar(wait=False, timeout=30):
     '''
     Signal the minion to refresh the pillar data.
+
+    :param wait:            Wait for pillar refresh to complete, defaults to False.
+    :type wait:             bool, optional
+    :param timeout:         How long to wait in seconds, only used when wait is True, defaults to 30.
+    :type timeout:          int, optional
+    :return:                Boolean status, True when the pillar_refresh event was fired successfully.
 
     CLI Example:
 
@@ -946,6 +1090,13 @@ def refresh_pillar():
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
+    if wait:
+        eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
+        event_ret = eventer.get_event(
+            tag='/salt/minion/minion_pillar_refresh_complete',
+            wait=timeout)
+        if not event_ret or event_ret['complete'] is False:
+            log.warn("Pillar refresh did not complete within timeout %s", timeout)
     return ret
 
 
@@ -1280,7 +1431,8 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    channel = salt.transport.Channel.factory(__opts__)
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+        log.debug('Recreating channel to force key regen')
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1307,16 +1459,16 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__['master_uri'])
 
     for master in masters:
-        channel = salt.transport.Channel.factory(__opts__, master_uri=master)
-        tok = channel.auth.gen_token(b'salt')
-        load = {'cmd': 'revoke_auth',
-                'id': __opts__['id'],
-                'tok': tok,
-                'preserve_minion_cache': preserve_minion_cache}
-        try:
-            channel.send(load)
-        except SaltReqTimeoutError:
-            ret = False
+        with salt.transport.client.ReqChannel.factory(__opts__, master_uri=master) as channel:
+            tok = channel.auth.gen_token(b'salt')
+            load = {'cmd': 'revoke_auth',
+                    'id': __opts__['id'],
+                    'tok': tok,
+                    'preserve_minion_cache': preserve_minion_cache}
+            try:
+                channel.send(load)
+            except SaltReqTimeoutError:
+                ret = False
     return ret
 
 
@@ -1329,15 +1481,6 @@ def _get_ssh_or_api_client(cfgfile, ssh=False):
 
 
 def _exec(client, tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
-    if 'expr_form' in kwargs:
-        salt.utils.versions.warn_until(
-            'Fluorine',
-            'The target type should be passed using the \'tgt_type\' '
-            'argument instead of \'expr_form\'. Support for using '
-            '\'expr_form\' will be removed in Salt Fluorine.'
-        )
-        tgt_type = kwargs.pop('expr_form')
-
     fcn_ret = {}
     seen = 0
     if 'batch' in kwargs:

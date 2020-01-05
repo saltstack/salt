@@ -213,6 +213,7 @@ YAML contents:
 
     salt-ssh:
       config_dir: path/to/config/dir
+      ssh_log_file: salt-ssh.log
       ssh_max_procs: 30
       ssh_wipe: True
 

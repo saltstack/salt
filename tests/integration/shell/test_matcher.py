@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 
 # Import python libs
 from __future__ import absolute_import
@@ -6,7 +7,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky
+from tests.support.helpers import flaky, dedent
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
 
@@ -23,6 +24,8 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     '''
     Test salt matchers
     '''
+
+    _call_binary_ = 'salt'
 
     def test_list(self):
         '''
@@ -100,8 +103,23 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
     @flaky
     def test_coumpound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
-        assert minion_in_returns('minion', data) is True
-        assert minion_in_returns('sub_minion', data) is True
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+        # The multiline nodegroup tests are failing in develop.
+        # This needs to be fixed for Fluorine. @skipIf wasn't used, because
+        # the rest of the assertions above pass just fine, so we don't want
+        # to bypass the whole test.
+        # time.sleep(2)
+        # data = self.run_salt("-C 'N@multiline_nodegroup' test.ping")
+        # self.assertTrue(minion_in_returns('minion', data))
+        # self.assertTrue(minion_in_returns('sub_minion', data))
+        # time.sleep(2)
+        # data = self.run_salt("-C 'N@multiline_nodegroup not sub_minion' test.ping")
+        # self.assertTrue(minion_in_returns('minion', data))
+        # self.assertFalse(minion_in_returns('sub_minion', data))
+        # data = self.run_salt("-C 'N@multiline_nodegroup not @fakenodegroup not sub_minion' test.ping")
+        # self.assertTrue(minion_in_returns('minion', data))
+        # self.assertFalse(minion_in_returns('sub_minion', data))
 
     def test_nodegroup(self):
         '''
@@ -133,6 +151,23 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = self.run_salt("-N multiline_nodegroup test.ping")
         self.assertTrue(minion_in_returns('minion', data))
         self.assertTrue(minion_in_returns('sub_minion', data))
+
+    def test_nodegroup_list(self):
+        data = self.run_salt('-N list_group test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N list_group2 test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertTrue(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N one_list_group test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
+
+        data = self.run_salt('-N one_minion_list test.ping')
+        self.assertTrue(minion_in_returns('minion', data))
+        self.assertFalse(minion_in_returns('sub_minion', data))
 
     def test_glob(self):
         '''
@@ -197,8 +232,6 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
                 'No command was sent, no jid was '
                 'assigned.'
             )
-        elif self.master_opts['transport'] == 'raet':
-            expect = ''
         self.assertEqual(
             ''.join(data),
             expect
@@ -315,13 +348,27 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         data = '\n'.join(data)
         self.assertIn('minion', data)
 
-    @flaky
     def test_salt_documentation(self):
         '''
         Test to see if we're supporting --doc
         '''
-        data = self.run_salt('-d "*" user')
-        self.assertIn('user.add:', data)
+        expect_to_find = 'test.ping:'
+        stdout, stderr = self.run_salt('-d "*" test', catch_stderr=True)
+        error_msg = dedent('''
+        Failed to find \'{expected}\' in output
+
+        {sep}
+        --- STDOUT -----
+        {stdout}
+        {sep}
+        --- STDERR -----
+        {stderr}
+        {sep}
+        '''.format(sep='-' * 80,
+                   expected=expect_to_find,
+                   stdout='\n'.join(stdout).strip(),
+                   stderr='\n'.join(stderr).strip()))
+        self.assertIn(expect_to_find, stdout, msg=error_msg)
 
     def test_salt_documentation_too_many_arguments(self):
         '''

@@ -487,9 +487,10 @@ def present(
                 iargs = {'ami_name': image_name, 'region': region, 'key': key,
                          'keyid': keyid, 'profile': profile}
                 image_ids = __salt__['boto_ec2.find_images'](**iargs)
-                if len(image_ids):
+                if image_ids:  # find_images() returns False on failure
                     launch_config[index]['image_id'] = image_ids[0]
                 else:
+                    log.warning("Couldn't find AMI named `%s`, passing literally.", image_name)
                     launch_config[index]['image_id'] = image_name
                 del launch_config[index]['image_name']
                 break

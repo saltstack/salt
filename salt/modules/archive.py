@@ -374,7 +374,7 @@ def list_(name,
             )
         except CommandExecutionError as exc:
             raise
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Uncaught exception \'{0}\' when listing contents of {1}'
                 .format(exc, name)
@@ -700,7 +700,7 @@ def cmd_zip(zip_file, sources, template=None, cwd=None, runas=None):
 
 
 @salt.utils.decorators.depends('zipfile', fallback_function=cmd_zip)
-def zip_(zip_file, sources, template=None, cwd=None, runas=None):
+def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
     '''
     Uses the ``zipfile`` Python module to create zip files
 
@@ -745,6 +745,14 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         Create the zip file as the specified user. Defaults to the user under
         which the minion is running.
 
+    zip64 : False
+        Used to enable ZIP64 support, necessary to create archives larger than
+        4 GByte in size.
+        If true, will create ZIP file with the ZIPp64 extension when the zipfile
+        is larger than 2 GB.
+        ZIP64 extension is disabled by default in the Python native zip support
+        because the default zip and unzip commands on Unix (the InfoZIP utilities)
+        don't support these extensions.
 
     CLI Example:
 
@@ -789,7 +797,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
     try:
         exc = None
         archived_files = []
-        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)) as zfile:
+        with contextlib.closing(zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED, zip64)) as zfile:
             for src in sources:
                 if cwd:
                     src = os.path.join(cwd, src)
@@ -819,7 +827,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
                             arc_name = os.path.relpath(src, rel_root)
                         archived_files.append(arc_name)
                         zfile.write(src, arc_name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         pass
     finally:
         # Restore the euid/egid
@@ -829,9 +837,15 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None):
         if exc is not None:
             # Wait to raise the exception until euid/egid are restored to avoid
             # permission errors in writing to minion log.
-            raise CommandExecutionError(
-                'Exception encountered creating zipfile: {0}'.format(exc)
-            )
+            if exc == zipfile.LargeZipFile:
+                raise CommandExecutionError(
+                    'Resulting zip file too large, would require ZIP64 support'
+                    'which has not been enabled. Rerun command with zip64=True'
+                )
+            else:
+                raise CommandExecutionError(
+                    'Exception encountered creating zipfile: {0}'.format(exc)
+                )
 
     return archived_files
 
@@ -875,7 +889,7 @@ def cmd_unzip(zip_file,
 
     options
         Optional when using ``zip`` archives, ignored when usign other archives
-        files. This is mostly used to overwrite exsiting files with ``o``.
+        files. This is mostly used to overwrite existing files with ``o``.
         This options are only used when ``unzip`` binary is used.
 
         .. versionadded:: 2016.3.1
@@ -1087,7 +1101,7 @@ def unzip(zip_file,
                         else:
                             win32_attr = zfile.getinfo(target).external_attr & 0xFF
                             win32file.SetFileAttributes(os.path.join(dest, target), win32_attr)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         if runas:
             os.seteuid(euid)
             os.setegid(egid)
@@ -1163,7 +1177,7 @@ def is_encrypted(name, clean=False, saltenv='base', source_hash=None):
             '{0} is not a ZIP file'.format(name),
             info=archive_info
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc.__str__(), info=archive_info)
     else:
         ret = False

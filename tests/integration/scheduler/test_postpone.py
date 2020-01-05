@@ -12,18 +12,16 @@ import dateutil.parser as dateutil_parser
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.mixins import SaltReturnAssertsMixin
-
-# Import Salt Testing Libs
 from tests.support.mock import MagicMock, patch
-import tests.integration as integration
+from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
 import salt.utils.schedule
 
-from salt.modules.test import ping as ping
+from salt.modules.test import ping
 
 log = logging.getLogger(__name__)
-ROOT_DIR = os.path.join(integration.TMP, 'schedule-unit-tests')
+ROOT_DIR = os.path.join(RUNTIME_VARS.TMP, 'schedule-unit-tests')
 SOCK_DIR = os.path.join(ROOT_DIR, 'test-socks')
 
 DEFAULT_CONFIG = salt.config.minion_config(None)
@@ -72,7 +70,6 @@ class SchedulerPostponeTest(ModuleCase, SaltReturnAssertsMixin):
         # Postpone the job by 5 minutes
         self.schedule.postpone_job('job1', {'time': run_time.strftime('%Y-%m-%dT%H:%M:%S'),
                                             'new_time': (run_time + datetime.timedelta(seconds=delay)).strftime('%Y-%m-%dT%H:%M:%S')})
-
         # Run at the original time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')

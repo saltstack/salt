@@ -7,19 +7,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.modules.djangomod as djangomod
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
@@ -50,6 +47,16 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
             self.assertTrue(djangomod.syncdb('DJANGO_SETTINGS_MODULE'))
+
+    # 'migrate' function tests: 1
+
+    def test_migrate(self):
+        '''
+        Test if it runs the Django-Admin migrate command
+        '''
+        mock = MagicMock(return_value=True)
+        with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
+            self.assertTrue(djangomod.migrate('DJANGO_SETTINGS_MODULE'))
 
     # 'createsuperuser' function tests: 1
 
@@ -86,7 +93,6 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(djangomod.collectstatic('DJANGO_SETTINGS_MODULE'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
@@ -105,7 +111,8 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
             )
 
     def test_django_admin_cli_command_with_args(self):
@@ -118,6 +125,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 None,
                 None,
                 None,
+                None,
                 'noinput',
                 'somethingelse'
             )
@@ -125,7 +133,8 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 'django-admin.py runserver --settings=settings.py '
                 '--noinput --somethingelse',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
             )
 
     def test_django_admin_cli_command_with_kwargs(self):
@@ -137,13 +146,15 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 'runserver',
                 None,
                 None,
+                None,
                 database='something'
             )
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py '
                 '--database=something',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
             )
 
     def test_django_admin_cli_command_with_kwargs_ignore_dunder(self):
@@ -151,12 +162,13 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(djangomod.__salt__,
                         {'cmd.run': mock}):
             djangomod.command(
-                'settings.py', 'runserver', None, None, __ignore='something'
+                'settings.py', 'runserver', None, None, None, __ignore='something'
             )
             mock.assert_called_once_with(
                 'django-admin.py runserver --settings=settings.py',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
             )
 
     def test_django_admin_cli_syncdb(self):
@@ -167,7 +179,8 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(
                 'django-admin.py syncdb --settings=settings.py --noinput',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
             )
 
     def test_django_admin_cli_syncdb_migrate(self):
@@ -179,7 +192,20 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 'django-admin.py syncdb --settings=settings.py --migrate '
                 '--noinput',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
+            )
+
+    def test_django_admin_cli_migrate(self):
+        mock = MagicMock()
+        with patch.dict(djangomod.__salt__,
+                        {'cmd.run': mock}):
+            djangomod.migrate('settings.py')
+            mock.assert_called_once_with(
+                'django-admin.py migrate --settings=settings.py --noinput',
+                python_shell=False,
+                env=None,
+                runas=None
             )
 
     def test_django_admin_cli_createsuperuser(self):
@@ -197,7 +223,7 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(set(args[0].split()),
                              set('django-admin.py createsuperuser --settings=settings.py --noinput '
                                                    '--username=testuser --email=user@example.com'.split()))
-            self.assertDictEqual(kwargs, {'python_shell': False, 'env': None})
+            self.assertDictEqual(kwargs, {'python_shell': False, 'env': None, 'runas': None})
 
     def no_test_loaddata(self):
         mock = MagicMock()
@@ -220,5 +246,6 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
                 '--noinput --no-post-process --dry-run --clear --link '
                 '--no-default-ignore --ignore=something',
                 python_shell=False,
-                env=None
+                env=None,
+                runas=None
             )

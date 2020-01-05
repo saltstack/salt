@@ -415,7 +415,7 @@ def read_file(name):
     try:
         with salt.utils.files.fopen(name, 'r') as f:
             out = salt.utils.stringutils.to_unicode(f.read())
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error(ex)
         return None
     return out
@@ -542,7 +542,7 @@ def _format_markdown_system_file(filename, config):
             file_type = __salt__['cmd.shell']('\\file -i \'{0}\''.format(filename))
             if 'charset=binary' not in file_type:
                 is_binary = False
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             # likely on a windows system, set as not binary for now.
             is_binary = False
         if is_binary:

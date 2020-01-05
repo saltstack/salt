@@ -1637,8 +1637,8 @@ def config_unset(key,
     elif retcode == 1:
         raise CommandExecutionError('Section or key is invalid')
     elif retcode == 5:
-        if config_get(cwd,
-                      key,
+        if config_get(key,
+                      cwd=cwd,
                       user=user,
                       password=password,
                       ignore_retcode=ignore_retcode,
@@ -1953,6 +1953,64 @@ def diff(cwd,
                     password=password,
                     ignore_retcode=ignore_retcode,
                     failhard=failhard,
+                    redirect_stderr=True,
+                    output_encoding=output_encoding)['stdout']
+
+
+def discard_local_changes(cwd,
+                          path='.',
+                          user=None,
+                          password=None,
+                          ignore_retcode=False,
+                          output_encoding=None):
+    '''
+    .. versionadded:: 2019.2.0
+
+    Runs a ``git checkout -- <path>`` from the directory specified by ``cwd``.
+
+    cwd
+        The path to the git checkout
+
+    path
+        path relative to cwd (defaults to ``.``)
+
+    user
+        User under which to run the git command. By default, the command is run
+        by the user under which the minion is running.
+
+    password
+        Windows only. Required when specifying ``user``. This parameter will be
+        ignored on non-Windows platforms.
+
+    ignore_retcode : False
+        If ``True``, do not log an error to the minion log if the git command
+        returns a nonzero exit status.
+
+    output_encoding
+        Use this option to specify which encoding to use to decode the output
+        from any git commands which are run. This should not be needed in most
+        cases.
+
+        .. note::
+            This should only be needed if the files in the repository were
+            created with filenames using an encoding other than UTF-8 to handle
+            Unicode characters.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt myminion git.discard_local_changes /path/to/repo
+        salt myminion git.discard_local_changes /path/to/repo path=foo
+    '''
+    cwd = _expand_path(cwd, user)
+    command = ['git', 'checkout', '--', path]
+    # Checkout message goes to stderr
+    return _git_run(command,
+                    cwd=cwd,
+                    user=user,
+                    password=password,
+                    ignore_retcode=ignore_retcode,
                     redirect_stderr=True,
                     output_encoding=output_encoding)['stdout']
 
@@ -3775,14 +3833,22 @@ def remote_refs(url,
                 https_pass=None,
                 ignore_retcode=False,
                 output_encoding=None,
-                saltenv='base'):
+                saltenv='base',
+                **kwargs):
     '''
     .. versionadded:: 2015.8.0
 
-    Return the remote refs for the specified URL
+    Return the remote refs for the specified URL by running ``git ls-remote``.
 
     url
         URL of the remote repository
+
+    filter
+        Optionally provide a ref name to ``git ls-remote``. This can be useful
+        to make this function run faster on repositories with many
+        branches/tags.
+
+        .. versionadded:: 2019.2.0
 
     heads : False
         Restrict output to heads. Can be combined with ``tags``.
@@ -3855,7 +3921,13 @@ def remote_refs(url,
     .. code-block:: bash
 
         salt myminion git.remote_refs https://github.com/saltstack/salt.git
+        salt myminion git.remote_refs https://github.com/saltstack/salt.git filter=develop
     '''
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
+    filter_ = kwargs.pop('filter', None)
+    if kwargs:
+        salt.utils.args.invalid_kwargs(kwargs)
+
     command = ['git', 'ls-remote']
     if heads:
         command.append('--heads')
@@ -3868,6 +3940,8 @@ def remote_refs(url,
                                                           https_only=True))
     except ValueError as exc:
         raise SaltInvocationError(exc.__str__())
+    if filter_:
+        command.append(filter_)
     output = _git_run(command,
                       user=user,
                       password=password,
@@ -5357,7 +5431,7 @@ def worktree_rm(cwd, user=None, output_encoding=None):
         raise CommandExecutionError(cwd + ' is not a git worktree')
     try:
         salt.utils.files.rm_rf(cwd)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Unable to remove {0}: {1}'.format(cwd, exc)
         )

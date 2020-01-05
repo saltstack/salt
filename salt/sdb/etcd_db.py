@@ -21,7 +21,7 @@ requires very little. In the example:
     myetcd:
       driver: etcd
       etcd.host: 127.0.0.1
-      etcd.port: 4001
+      etcd.port: 2379
 
 The ``driver`` refers to the etcd module, ``etcd.host`` refers to the host that
 is hosting the etcd database and ``etcd.port`` refers to the port on that host.
@@ -86,7 +86,7 @@ def delete(key, service=None, profile=None):  # pylint: disable=W0613
     try:
         client.delete(key)
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

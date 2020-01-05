@@ -7,7 +7,9 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
+import socket
 import textwrap
+import platform
 
 # Import Salt Testing Libs
 try:
@@ -18,17 +20,20 @@ except ImportError as import_error:
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
+import salt.utils.dns
 import salt.utils.files
+import salt.utils.network
 import salt.utils.platform
 import salt.utils.path
+import salt.modules.cmdmod
+import salt.modules.smbios
 import salt.grains.core as core
 
 # Import 3rd-party libs
@@ -51,7 +56,6 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -601,6 +605,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         }
         self._run_os_grains_tests("ubuntu-17.10", _os_release_map, expectation)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_platform_data(self):
+        '''
+        Test the _windows_platform_data function
+        '''
+        grains = ['biosversion', 'kernelrelease', 'kernelversion',
+                  'manufacturer', 'motherboard', 'osfullname', 'osmanufacturer',
+                  'osrelease', 'osservicepack', 'osversion', 'productname',
+                  'serialnumber', 'timezone', 'virtual', 'windowsdomain',
+                  'windowsdomaintype']
+        returned_grains = core._windows_platform_data()
+        for grain in grains:
+            self.assertIn(grain, returned_grains)
+
+        valid_types = ['Unknown', 'Unjoined', 'Workgroup', 'Domain']
+        self.assertIn(returned_grains['windowsdomaintype'], valid_types)
+        valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
+                          '2008ServerR2', '2012Server', '2012ServerR2',
+                          '2016Server', '2019Server']
+        self.assertIn(returned_grains['osrelease'], valid_releases)
+
     def test__windows_os_release_grain(self):
         versions = {
             'Windows 10 Home': '10',
@@ -842,7 +867,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                             'container',
                         )
 
-    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_xen_virtual(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
@@ -1004,6 +1029,58 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                        'options': []}}
         with patch.object(salt.utils.dns, 'parse_resolv', MagicMock(return_value=resolv_mock)):
             assert core.dns() == ret
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
+    @patch('salt.utils.network.ip_addrs6',
+           MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
+    @patch('salt.utils.network.socket.getfqdn', MagicMock(side_effect=lambda v: v))  # Just pass-through
+    def test_fqdns_return(self):
+        '''
+        test the return for a dns grain. test for issue:
+        https://github.com/saltstack/salt/issues/41230
+        '''
+        reverse_resolv_mock = [('foo.bar.baz', [], ['1.2.3.4']),
+                               ('rinzler.evil-corp.com', [], ['5.6.7.8']),
+                               ('foo.bar.baz', [], ['fe80::a8b2:93ff:fe00:0']),
+                               ('bluesniff.foo.bar', [], ['fe80::a8b2:93ff:dead:beef'])]
+        ret = {'fqdns': ['bluesniff.foo.bar', 'foo.bar.baz', 'rinzler.evil-corp.com']}
+        with patch.object(socket, 'gethostbyaddr', side_effect=reverse_resolv_mock):
+            fqdns = core.fqdns()
+            self.assertIn('fqdns', fqdns)
+            self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
+            self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
+    @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
+    def test_fqdns_socket_error(self):
+        '''
+        test the behavior on non-critical socket errors of the dns grain
+        '''
+        def _gen_gethostbyaddr(errno):
+            def _gethostbyaddr(_):
+                herror = socket.herror()
+                herror.errno = errno
+                raise herror
+            return _gethostbyaddr
+
+        for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
+            mock_log = MagicMock()
+            with patch.object(socket, 'gethostbyaddr',
+                              side_effect=_gen_gethostbyaddr(errno)):
+                with patch('salt.grains.core.log', mock_log):
+                    self.assertEqual(core.fqdns(), {'fqdns': []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_not_called()
+
+        mock_log = MagicMock()
+        with patch.object(socket, 'gethostbyaddr',
+                          side_effect=_gen_gethostbyaddr(-1)):
+            with patch('salt.grains.core.log', mock_log):
+                self.assertEqual(core.fqdns(), {'fqdns': []})
+                mock_log.debug.assert_not_called()
+                mock_log.error.assert_called_once()
 
     def test_core_virtual(self):
         '''
@@ -1178,3 +1255,178 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = core._osx_memdata()
             assert ret['swap_total'] == 0
             assert ret['mem_total'] == 4096
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_tzname(self):
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', return_value=object) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    ret = core.locale_info()
+
+                    tzname.assert_called_once_with()
+                    self.assertEqual(len(now_ret_object.method_calls), 1)
+                    now.assert_called_once_with(object)
+                    self.assertEqual(len(datetime.method_calls), 1)
+                    self.assertEqual(len(datetime_module.method_calls), 1)
+                    tzlocal.assert_called_once_with()
+                    is_proxy.assert_called_once_with()
+
+                    self.assertEqual(ret['locale_info']['timezone'], 'MDT_FAKE')
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_unicode_error_tzname(self):
+        # UnicodeDecodeError most have the default string encoding
+        unicode_error = UnicodeDecodeError(str('fake'), b'\x00\x00', 1, 2, str('fake'))
+
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        # mock tzname[0].decode()
+        decode = Mock(return_value='CST_FAKE')
+        tzname2 = (Mock(decode=decode,),)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', side_effect=unicode_error) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                        with patch.object(core, 'time', tzname=tzname2):
+                            ret = core.locale_info()
+
+                            tzname.assert_not_called()
+                            self.assertEqual(len(now_ret_object.method_calls), 0)
+                            now.assert_not_called()
+                            self.assertEqual(len(datetime.method_calls), 0)
+                            decode.assert_called_once_with('mbcs')
+                            self.assertEqual(len(tzname2[0].method_calls), 1)
+                            self.assertEqual(len(datetime_module.method_calls), 0)
+                            tzlocal.assert_called_once_with()
+                            is_proxy.assert_called_once_with()
+                            is_windows.assert_called_once_with()
+
+                            self.assertEqual(ret['locale_info']['timezone'], 'CST_FAKE')
+
+    @skipIf(core._DATEUTIL_TZ, 'Not Missing dateutil.tz')
+    def test_locale_info_no_tz_tzname(self):
+        with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+            with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                ret = core.locale_info()
+                is_proxy.assert_called_once_with()
+                is_windows.assert_not_called()
+                self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+
+    def test_cwd_exists(self):
+        cwd_grain = core.cwd()
+
+        self.assertIsInstance(cwd_grain, dict)
+        self.assertTrue('cwd' in cwd_grain)
+        self.assertEqual(cwd_grain['cwd'], os.getcwd())
+
+    def test_cwd_is_cwd(self):
+        cwd = os.getcwd()
+
+        try:
+            # change directory
+            new_dir = os.path.split(cwd)[0]
+            os.chdir(new_dir)
+
+            cwd_grain = core.cwd()
+
+            self.assertEqual(cwd_grain['cwd'], new_dir)
+        finally:
+            # change back to original directory
+            os.chdir(cwd)
+
+    def test_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    def test_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_osdata_virtual_key_win(self):
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            _windows_platform_data_ret = core.os_data()
+            _windows_platform_data_ret['virtual'] = 'something'
+
+            with patch.object(core,
+                              '_windows_platform_data',
+                              return_value=_windows_platform_data_ret) as _windows_platform_data:
+
+                osdata_grains = core.os_data()
+                _windows_platform_data.assert_called_once()
+
+            self.assertIn('virtual', osdata_grains)
+            self.assertNotEqual(osdata_grains['virtual'], 'physical')

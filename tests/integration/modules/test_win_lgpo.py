@@ -36,7 +36,7 @@ class WinLgpoTest(ModuleCase):
                             registry_value_vname,
                             expected_value_data):
         '''
-        Takes a registry based policy name and config and validates taht the
+        Takes a registry based policy name and config and validates that the
         expected registry value exists and has the correct data
 
         policy_name
@@ -161,7 +161,6 @@ class WinLgpoTest(ModuleCase):
         '''
         runTest method
         '''
-        pass
 
     @classmethod
     def setUpClass(cls):
@@ -195,40 +194,44 @@ class WinLgpoTest(ModuleCase):
         Test setting/unsetting/changing the PointAndPrint_Restrictions user policy
         '''
         # Disable Point and Print Restrictions
-        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
-                             'Disabled',
-                             [
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:0',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DELETE',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*DELETE',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DELETE',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DELETE',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DELETE',
-                             ],
-                             policy_class='User')
+        self._testAdmxPolicy(
+            r'Control Panel\Printers\Point and Print Restrictions',
+            'Disabled',
+            [
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:0',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DELETE',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*DELETE',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DELETE',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DELETE',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DELETE',
+            ],
+            policy_class='User')
         # Enable Point and Print Restrictions
-        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
-                             {
-                                 'Users can only point and print to these servers': True,
-                                 'Enter fully qualified server names separated by semicolons': 'fakeserver1;fakeserver2',
-                                 'Users can only point and print to machines in their forest': True,
-                                 'Security Prompts: When installing drivers for a new connection': 'Show warning and elevation prompt',
-                                 'When updating drivers for an existing connection': 'Do not show warning or elevation prompt',
-                             },
-                             [
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:1',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:1',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*SZ:fakeserver1;fakeserver2',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DWORD:1',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DWORD:0',
-                                 r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DWORD:2',
-                             ],
-                             policy_class='User')
+        self._testAdmxPolicy(
+            r'Control Panel\Printers\Point and Print Restrictions',
+            {
+                'Users can only point and print to these servers': True,
+                'Enter fully qualified server names separated by semicolons': 'fakeserver1;fakeserver2',
+                'Users can only point and print to machines in their forest': True,
+                'Security Prompts: When installing drivers for a new connection': 'Show warning and elevation prompt',
+                'When updating drivers for an existing connection': 'Do not show warning or elevation prompt',
+            },
+            [
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*Restricted[\s]*DWORD:1',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*TrustedServers[\s]*DWORD:1',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*ServerList[\s]*SZ:fakeserver1;fakeserver2',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*InForest[\s]*DWORD:1',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*NoWarningNoElevationOnInstall[\s]*DWORD:0',
+                r'User[\s]*Software\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint[\s]*UpdatePromptSettings[\s]*DWORD:2',
+            ],
+            policy_class='User')
         # set Point and Print Restrictions to 'Not Configured'
-        self._testAdmxPolicy(r'Control Panel\Printers\Point and Print Restrictions',
-                             'Not Configured',
-                             [r'; Source file:  c:\\windows\\system32\\grouppolicy\\user\\registry.pol[\s]*; PARSING COMPLETED.'],
-                             policy_class='User')
+        self._testAdmxPolicy(
+            r'Control Panel\Printers\Point and Print Restrictions',
+            'Not Configured',
+            [
+                r'; Source file:  c:\\windows\\system32\\grouppolicy\\user\\registry.pol[\s]*; PARSING COMPLETED.'],
+            policy_class='User')
 
     @destructiveTest
     def test_set_computer_policy_NTP_Client(self):
@@ -634,11 +637,45 @@ class WinLgpoTest(ModuleCase):
                                  'Not Configured',
                                  [r'; Source file:  c:\\windows\\system32\\grouppolicy\\machine\\registry.pol[\s]*; PARSING COMPLETED.'])
 
+    @destructiveTest
+    def test_set_computer_policy_AllowTelemetry(self):
+        '''
+        Tests that a the AllowTelemetry policy is applied correctly and that it
+        doesn't appear in subsequent group policy states as having changed
+        '''
+        valid_osreleases = ['10', '2016Server', '2019Server']
+        if self.osrelease not in valid_osreleases:
+            self.skipTest('Allow Telemetry policy is only applicable if the '
+                          'osrelease grain is {0}'.format(' or '.join(valid_osreleases)))
+        else:
+            self._testAdmxPolicy(
+                'Allow Telemetry',
+                {'AllowTelemetry': '1 - Basic'},
+                [r'Software\\Policies\\Microsoft\\Windows\\DataCollection[\s]*AllowTelemetry[\s]*DWORD:1'],
+                assert_true=True)
+            result = self.run_function(
+                'state.single',
+                ['lgpo.set'],
+                name='state',
+                computer_policy={
+                    'Disable pre-release features or settings': 'Disabled'
+                }
+            )
+            name = 'lgpo_|-state_|-state_|-set'
+            expected = {
+                'new': {
+                    'Computer Configuration': {
+                        'Windows Components\\Data Collection and Preview Builds\\Disable pre-release features or settings': 'Disabled'}},
+                'old': {'Computer Configuration': {}}}
+            self.assertDictEqual(result[name]['changes'], expected)
+
     def tearDown(self):
         '''
         tearDown method, runs after each test
         '''
-        ret = self.run_function('state.single',
-                                ('file.absent', 'c:\\windows\\system32\\grouppolicy\\machine\\registry.pol'))
-        ret = self.run_function('state.single',
-                                ('file.absent', 'c:\\windows\\system32\\grouppolicy\\user\\registry.pol'))
+        self.run_state(
+            'file.absent',
+            name='c:\\windows\\system32\\grouppolicy\\machine\\registry.pol')
+        self.run_state(
+            'file.absent',
+            name='c:\\windows\\system32\\grouppolicy\\user\\registry.pol')

@@ -147,7 +147,7 @@ must implement the following functions:
 ``prep_jid``
     Ensures that job ids (jid) don't collide, unless passed_jid is provided.
 
-    ``nochache`` is an optional boolean that indicates if return data
+    ``nocache`` is an optional boolean that indicates if return data
     should be cached. ``passed_jid`` is a caller provided jid which should be
     returned unconditionally.
 
@@ -383,4 +383,4 @@ Full List of Returners
 .. toctree::
     all/index
 
-.. _`redis`: https://github.com/saltstack/salt/tree/develop/salt/returners/redis_return.py
+.. _`redis`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/returners/redis_return.py

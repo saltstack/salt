@@ -56,7 +56,11 @@ def _check(delete, force, update, passwordfile, exclude, excludefrom, dryrun, rs
         if exclude:
             exclude = False
     if exclude:
-        options.extend(['--exclude', exclude])
+        if isinstance(exclude, list):
+            for ex_ in exclude:
+                options.extend(['--exclude', ex_])
+        else:
+            options.extend(['--exclude', exclude])
     if dryrun:
         options.append('--dry-run')
     return options
@@ -133,10 +137,9 @@ def rsync(src,
 
     .. code-block:: bash
 
-        salt '*' rsync.rsync {src} {dst} {delete=True} {update=True} {passwordfile=/etc/pass.crt} {exclude=xx} {rsh}
-        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} {rsh}
-
-        salt '*' rsync.rsync {src} {dst} {delete=True} {excludefrom=/xx.ini} additional_opts='["--partial", "--bwlimit=5000"]'
+        salt '*' rsync.rsync /path/to/src /path/to/dest delete=True update=True passwordfile=/etc/pass.crt exclude=exclude/dir
+        salt '*' rsync.rsync /path/to/src delete=True excludefrom=/xx.ini
+        salt '*' rsync.rsync /path/to/src delete=True exclude='[exclude1/dir,exclude2/dir]' additional_opts='["--partial", "--bwlimit=5000"]'
     '''
     if not src:
         src = __salt__['config.option']('rsync.src')

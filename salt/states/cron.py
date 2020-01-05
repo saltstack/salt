@@ -267,6 +267,8 @@ def present(name,
             special=None):
     '''
     Verifies that the specified cron job is present for the specified user.
+    It is recommended to use `identifier`. Otherwise the cron job is installed
+    twice if you change the name.
     For more advanced information about what exactly can be set in the cron
     timing parameters, check your cron system's documentation. Most Unix-like
     systems' cron documentation can be found via the crontab man page:
@@ -542,7 +544,7 @@ def file(name,
 
     try:
         group = __salt__['user.info'](user)['groups'][0]
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ret = {'changes': {},
                'comment': "Could not identify group for user {0}".format(user),
                'name': name,
@@ -613,7 +615,7 @@ def file(name,
             skip_verify=False,        # skip_verify
             **kwargs
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['changes'] = {}
         ret['comment'] = 'Unable to manage file: {0}'.format(exc)
@@ -639,7 +641,7 @@ def file(name,
             saltenv=__env__,
             backup=backup
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['changes'] = {}
         ret['comment'] = 'Unable to manage file: {0}'.format(exc)

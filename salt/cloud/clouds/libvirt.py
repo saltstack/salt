@@ -150,7 +150,7 @@ def __get_conn(url):
     # support all vm layers supported by libvirt
     try:
         conn = libvirt.open(url)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltCloudExecutionFailure(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
@@ -282,12 +282,12 @@ def create(vm_):
     '''
     clone_strategy = vm_.get('clone_strategy') or 'full'
 
-    if clone_strategy not in set(['quick', 'full']):
+    if clone_strategy not in ('quick', 'full'):
         raise SaltCloudSystemExit("'clone_strategy' must be one of quick or full. Got '{0}'".format(clone_strategy))
 
     ip_source = vm_.get('ip_source') or 'ip-learning'
 
-    if ip_source not in set(['ip-learning', 'qemu-agent']):
+    if ip_source not in ('ip-learning', 'qemu-agent'):
         raise SaltCloudSystemExit("'ip_source' must be one of qemu-agent or ip-learning. Got '{0}'".format(ip_source))
 
     validate_xml = vm_.get('validate_xml') if vm_.get('validate_xml') is not None else True

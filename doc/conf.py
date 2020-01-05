@@ -5,6 +5,7 @@ Sphinx documentation for Salt
 '''
 import sys
 import os
+import re
 import types
 import time
 
@@ -145,52 +146,55 @@ MOCK_MODULES = [
     # modules, renderers, states, returners, et al
     'ClusterShell',
     'ClusterShell.NodeSet',
-    'django',
-    'libvirt',
     'MySQLdb',
     'MySQLdb.cursors',
-    'nagios_json',
-    'psutil',
-    'pycassa',
-    'pymongo',
-    'rabbitmq_server',
-    'redis',
-    #'requests',
-    #'requests.exceptions',
-    'rpm',
-    'rpmUtils',
-    'rpmUtils.arch',
-    'yum',
     'OpenSSL',
-    'zfs',
-    'salt.ext.six.moves.winreg',
-    'win32security',
-    'ntsecuritycon',
-    'napalm',
+    'avahi',
+    'boto.regioninfo',
+    'concurrent',
+    'dbus',
+    'django',
+    'dns',
+    'dns.resolver',
     'dson',
+    'hjson',
     'jnpr',
-    'lxml',
-    'lxml.etree',
     'jnpr.junos',
     'jnpr.junos.utils',
     'jnpr.junos.utils.config',
     'jnpr.junos.utils.sw',
-    'dns',
-    'dns.resolver',
     'keyring',
+    'libvirt',
+    'lxml',
+    'lxml.etree',
+    'msgpack',
+    'nagios_json',
+    'napalm',
     'netaddr',
     'netaddr.IPAddress',
     'netaddr.core',
     'netaddr.core.AddrFormatError',
+    'ntsecuritycon',
+    'psutil',
+    'pycassa',
+    'pyconnman',
+    'pyiface',
+    'pymongo',
     'pyroute2',
     'pyroute2.ipdb',
-    'avahi',
-    'dbus',
+    'rabbitmq_server',
+    'redis',
+    'rpm',
+    'rpmUtils',
+    'rpmUtils.arch',
+    'salt.ext.six.moves.winreg',
     'twisted',
     'twisted.internet',
     'twisted.internet.protocol',
     'twisted.internet.protocol.DatagramProtocol',
-    'msgpack',
+    'win32security',
+    'yum',
+    'zfs',
 ]
 
 MOCK_MODULES_MAPPING = {
@@ -211,6 +215,7 @@ sys.modules['msgpack'].version = (1, 0, 0)
 sys.modules['psutil'].version_info = (3, 0, 0)
 sys.modules['pymongo'].version = '0.0.0'
 sys.modules['tornado'].version_info = (0, 0, 0)
+sys.modules['boto.regioninfo']._load_json_file = {'endpoints': None}
 
 
 # -- Add paths to PYTHONPATH ---------------------------------------------------
@@ -248,7 +253,7 @@ intersphinx_mapping = {
 on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 
 project = 'Salt'
-
+repo_primary_branch = 'master'  # This is the default branch on GitHub for the Salt project
 version = salt.version.__version__
 latest_release = '2019.2.2'  # latest release
 previous_release = '2018.3.4'  # latest release from previous branch
@@ -263,12 +268,12 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = 'previous'  # latest, previous, master, next
+build_type = repo_primary_branch # latest, previous, master, next
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
 
-if build_type == 'master':
+if build_type == repo_primary_branch:
     release = latest_release
     search_cx = '011515552685726825874:v1had6i279q' # master
     #search_cx = '011515552685726825874:x17j5zl74g8' # develop
@@ -310,6 +315,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'httpdomain',
     'youtube',
+    'saltrepo'
     #'saltautodoc', # Must be AFTER autodoc
     #'shorturls',
 ]
@@ -324,6 +330,9 @@ else:
 modindex_common_prefix = ['salt.']
 
 autosummary_generate = True
+
+# strip git rev as there won't necessarily be a release based on it
+stripped_release = re.sub(r'-\d+-g[0-9a-f]+$', '', release)
 
 # Define a substitution for linking to the latest release tarball
 rst_prolog = """\
@@ -361,11 +370,11 @@ rst_prolog = """\
      <p>x86_64: <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg"><strong>salt-{release}-py3-x86_64.pkg</strong></a>
       | <a href="https://repo.saltstack.com/osx/salt-{release}-py3-x86_64.pkg.md5"><strong>md5</strong></a></p>
 
-""".format(release=release)
+""".format(release=stripped_release)
 
 # A shortcut for linking to tickets on the GitHub issue tracker
 extlinks = {
-    'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % 'master', None),
+    'blob': ('https://github.com/saltstack/salt/blob/%s/%%s' % repo_primary_branch, None),
     'issue': ('https://github.com/saltstack/salt/issues/%s', 'issue #'),
     'pull': ('https://github.com/saltstack/salt/pull/%s', 'PR #'),
     'formula_url': ('https://github.com/saltstack-formulas/%s', ''),
@@ -437,6 +446,7 @@ html_context = {
     'build_type': build_type,
     'today': today,
     'copyright': copyright,
+    'repo_primary_branch': repo_primary_branch
 }
 
 html_use_index = True

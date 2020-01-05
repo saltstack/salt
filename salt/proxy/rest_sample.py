@@ -63,7 +63,7 @@ def alive(opts):
     log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
     log.debug('proxys alive() fn called')
     log.debug('=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
-    return False
+    return ping()
 
 
 def id(opts):
@@ -198,7 +198,7 @@ def ping():
     r = salt.utils.http.query(DETAILS['url']+'ping', decode_type='json', decode=True)
     try:
         return r['dict'].get('ret', False)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

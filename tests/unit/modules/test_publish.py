@@ -8,12 +8,10 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -62,8 +60,16 @@ class Channel(object):
             raise SaltReqTimeoutError
         return True
 
+    def close(self):
+        pass
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+
 class PublishTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.publish
@@ -73,7 +79,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
 
     @classmethod
     def setUpClass(cls):
-        cls.channel_patcher = patch('salt.transport.Channel', Channel())
+        cls.channel_patcher = patch('salt.transport.client.ReqChannel', Channel())
         cls.channel_patcher.start()
 
     @classmethod

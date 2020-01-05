@@ -198,7 +198,7 @@ def list_nodes():
         if not record['is_a_template'] and not record['is_control_domain']:
             try:
                 base_template_name = record['other_config']['base_template_name']
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 base_template_name = None
                 log.debug(
                     'VM %s, doesnt have base_template_name attribute',
@@ -238,7 +238,7 @@ def get_vm_ip(name=None, session=None, call=None):
     vifs = session.xenapi.VM.get_VIFs(vm)
     if vifs is not None:
         for vif in vifs:
-            if len(session.xenapi.VIF.get_ipv4_addresses(vif)) != 0:
+            if session.xenapi.VIF.get_ipv4_addresses(vif):
                 cidr = session.xenapi.VIF.get_ipv4_addresses(vif).pop()
                 ret, subnet = cidr.split('/')
                 log.debug(
@@ -254,7 +254,7 @@ def get_vm_ip(name=None, session=None, call=None):
                 name, net["0/ip"]
             )
             ret = net["0/ip"]
-    # except Exception as ex:
+    # except Exception as ex:  # pylint: disable=broad-except
     except XenAPI.Failure:
         log.info('Could not get vm metrics at this time')
     return ret
@@ -322,7 +322,7 @@ def list_nodes_full(session=None):
             # deal with cases where the VM doesn't have 'base_template_name' attribute
             try:
                 base_template_name = record['other_config']['base_template_name']
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 base_template_name = None
                 log.debug(
                     'VM %s, doesnt have base_template_name attribute',
@@ -430,7 +430,7 @@ def avail_locations(session=None, call=None):
 
 def avail_sizes(session=None, call=None):
     '''
-    Return a list of Xen templat definitions
+    Return a list of Xen template definitions
 
     .. code-block:: bash
 
@@ -489,7 +489,7 @@ def show_instance(name, session=None, call=None):
     if not record['is_a_template'] and not record['is_control_domain']:
         try:
             base_template_name = record['other_config']['base_template_name']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             base_template_name = None
             log.debug(
                 'VM %s, doesnt have base_template_name attribute',
@@ -520,7 +520,7 @@ def _determine_resource_pool(session, vm_):
         resource_pool = _get_pool(vm_['resource_pool'], session)
     else:
         pool = session.xenapi.pool.get_all()
-        if len(pool) <= 0:
+        if not pool:
             resource_pool = None
         else:
             first_pool = session.xenapi.pool.get_all()[0]
@@ -713,7 +713,7 @@ def _wait_for_ip(name, session):
             delta.seconds, name
         )
         if delta.seconds > 180:
-            log.warn('Timeout getting IP address')
+            log.warning('Timeout getting IP address')
             break
         time.sleep(5)
 
@@ -1023,7 +1023,7 @@ def destroy(name=None, call=None):
     if vm:
         # get vm
         record = session.xenapi.VM.get_record(vm)
-        log.debug('power_state: ' + record['power_state'])
+        log.debug('power_state: %s', record['power_state'])
         # shut down
         if record['power_state'] != 'Halted':
             task = session.xenapi.Async.VM.hard_shutdown(vm)
@@ -1287,3 +1287,55 @@ def destroy_template(name=None, call=None, kwargs=None):
     if not found:
         ret[name] = {'status': 'not found'}
     return ret
+
+
+def get_pv_args(name, session=None, call=None):
+    '''
+    Get PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a get_pv_args xenvm01
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    pv_args = session.xenapi.VM.get_PV_args(vm)
+    if pv_args:
+        return pv_args
+    return None
+
+
+def set_pv_args(name, kwargs=None, session=None, call=None):
+    '''
+    Set PV arguments for a VM
+
+    .. code-block:: bash
+
+        salt-cloud -a set_pv_args xenvm01 pv_args="utf-8 graphical"
+
+    '''
+    if call == 'function':
+        raise SaltCloudException(
+            'This function must be called with -a or --action.'
+        )
+    if session is None:
+        log.debug('New session being created')
+        session = _get_session()
+    vm = _get_vm(name, session=session)
+    try:
+        log.debug('Setting PV Args: %s', kwargs['pv_args'])
+        session.xenapi.VM.set_PV_args(vm, str(kwargs['pv_args']))
+    except KeyError:
+        log.error('No pv_args parameter found.')
+        return False
+    except XenAPI.Failure:
+        log.info('Setting PV Args failed.')
+        return False
+    return True

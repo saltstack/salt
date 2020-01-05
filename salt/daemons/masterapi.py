@@ -44,7 +44,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 
@@ -263,7 +262,7 @@ def fileserver_update(fileserver):
             )
             raise salt.exceptions.SaltMasterError('No fileserver backends available')
         fileserver.update()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Exception %s occurred in file server update', exc,
             exc_info_on_loglevel=logging.DEBUG
@@ -275,6 +274,7 @@ class AutoKey(object):
     Implement the methods to run auto key acceptance and rejection
     '''
     def __init__(self, opts):
+        self.signing_files = {}
         self.opts = opts
 
     def check_permissions(self, filename):
@@ -314,15 +314,15 @@ class AutoKey(object):
             log.warning('Wrong permissions for %s, ignoring content', signing_file)
             return False
 
-        with salt.utils.files.fopen(signing_file, 'r') as fp_:
-            for line in fp_:
-                line = line.strip()
-                if line.startswith('#'):
-                    continue
-                else:
-                    if salt.utils.stringutils.expr_match(keyid, line):
-                        return True
-        return False
+        mtime = os.path.getmtime(signing_file)
+        if self.signing_files.get(signing_file, {}).get('mtime') != mtime:
+            self.signing_files.setdefault(signing_file, {})['mtime'] = mtime
+            with salt.utils.files.fopen(signing_file, 'r') as fp_:
+                self.signing_files[signing_file]['data'] = [
+                    entry for entry in [line.strip() for line in fp_] if not entry.strip().startswith('#')
+                ]
+        return any(salt.utils.stringutils.expr_match(keyid, line) for line
+                   in self.signing_files[signing_file].get('data', []))
 
     def check_autosign_dir(self, keyid):
         '''
@@ -533,7 +533,7 @@ class RemoteFuncs(object):
                 continue
             try:
                 ret = salt.utils.dictupdate.merge(ret, self.tops[fun](opts=opts, grains=grains), merge_lists=True)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # If anything happens in the top generation, log it and move on
                 log.error(
                     'Top function %s failed with error %s for minion %s',
@@ -563,14 +563,9 @@ class RemoteFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
         expr_form = load.get('expr_form')
+        # keep both expr_form and tgt_type to ensure
+        # comptability between old versions of salt
         if expr_form is not None and 'tgt_type' not in load:
-            salt.utils.versions.warn_until(
-                'Neon',
-                '_mine_get: minion {0} uses pre-Nitrogen API key '
-                '"expr_form". Accepting for backwards compatibility '
-                'but this is not guaranteed '
-                'after the Neon release'.format(load['id'])
-            )
             match_type = expr_form
         else:
             match_type = load.get('tgt_type', 'glob')
@@ -659,6 +654,13 @@ class RemoteFuncs(object):
 
         if 'loc' in load and load['loc'] < 0:
             log.error('Invalid file pointer: load[loc] < 0')
+            return False
+
+        if load.get('size', 0) > file_recv_max_size:
+            log.error(
+                'Exceeding file_recv_max_size limit: %s',
+                file_recv_max_size
+            )
             return False
 
         if len(load['data']) + load.get('loc', 0) > file_recv_max_size:
@@ -1071,7 +1073,7 @@ class LocalFuncs(object):
             return runner_client.asynchronous(fun,
                                               load.get('kwarg', {}),
                                               username)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception occurred while introspecting %s')
             return {'error': {'name': exc.__class__.__name__,
                               'args': exc.args,
@@ -1129,7 +1131,7 @@ class LocalFuncs(object):
             self.event.fire_event(data, salt.utils.event.tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception occurred while introspecting %s', fun)
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                         fun,
@@ -1280,7 +1282,7 @@ class LocalFuncs(object):
                     '"%s" does not have a save_load function!',
                     self.opts['ext_job_cache']
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.critical(
                     'The specified returner threw a stack trace:',
                     exc_info=True
@@ -1296,7 +1298,7 @@ class LocalFuncs(object):
                 '"%s" does not have a save_load function!',
                 self.opts['master_job_cache']
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical(
                 'The specified returner threw a stack trace:',
                 exc_info=True

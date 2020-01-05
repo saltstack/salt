@@ -2,7 +2,7 @@
 '''
 Manage transport commands via ssh
 '''
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
 import re
@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 
 SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')
+SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE = re.compile(r'Enter passphrase for key', re.M)
 
 # Keep these in sync with ./__init__.py
 RSTR = '_edbc7885e4f9aac9b83b35999b68d015148caf467b78fa39c05f669c0ff89878'
@@ -76,6 +77,7 @@ class Shell(object):
             port=None,
             passwd=None,
             priv=None,
+            priv_passwd=None,
             timeout=None,
             sudo=False,
             tty=False,
@@ -92,6 +94,7 @@ class Shell(object):
         self.port = port
         self.passwd = six.text_type(passwd) if passwd else passwd
         self.priv = priv
+        self.priv_passwd = priv_passwd
         self.timeout = timeout
         self.sudo = sudo
         self.tty = tty
@@ -277,7 +280,7 @@ class Shell(object):
 
             data = proc.communicate()
             return data[0], data[1], proc.returncode
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return ('local', 'Unknown Error', None)
 
     def _run_nb_cmd(self, cmd):
@@ -301,7 +304,7 @@ class Shell(object):
                 if err:
                     err = self.get_error(err)
                 yield out, err, rcode
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             yield ('', 'Unknown Error', None)
 
     def exec_nb_cmd(self, cmd):
@@ -371,6 +374,9 @@ class Shell(object):
         Execute a shell command via VT. This is blocking and assumes that ssh
         is being run
         '''
+        if not cmd:
+            return '', 'No command or passphrase', 245
+
         term = salt.utils.vt.Terminal(
                 cmd,
                 shell=True,
@@ -399,6 +405,11 @@ class Shell(object):
                 if buff and RSTR_RE.search(buff):
                     # We're getting results back, don't try to send passwords
                     send_password = False
+                if buff and SSH_PRIVATE_KEY_PASSWORD_PROMPT_RE.search(buff):
+                    if not self.priv_passwd:
+                        return '', 'Private key file need passphrase', 254
+                    term.sendline(self.priv_passwd)
+                    continue
                 if buff and SSH_PASSWORD_PROMPT_RE.search(buff) and send_password:
                     if not self.passwd:
                         return '', 'Permission denied, no authentication information', 254

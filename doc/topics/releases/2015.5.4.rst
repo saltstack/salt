@@ -2347,7 +2347,7 @@ Changelog for v2015.5.3..v2015.5.4
 
   * 9a1351eada Change print to logger, so we can set a level and log exc_info
 
-* **PR** `#25120`_: (`d--j`_) add missing continue for exeption case
+* **PR** `#25120`_: (`d--j`_) add missing continue for exception case
   @ *2015-07-02 19:38:45 UTC*
 
   * a723af0f10 Merge pull request `#25120`_ from d--j/patch-2

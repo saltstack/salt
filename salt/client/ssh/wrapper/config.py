@@ -49,8 +49,8 @@ DEFAULTS = {'mongo.db': 'salt',
             'ldap.bindpw': '',
             'hosts.file': '/etc/hosts',
             'aliases.file': '/etc/aliases',
-            'virt.images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images'),
-            'virt.tunnel': False,
+            'virt': {'tunnel': False,
+                     'images': os.path.join(syspaths.SRV_ROOT_DIR, 'salt-images')},
             }
 
 
@@ -98,7 +98,7 @@ def valid_fileproto(uri):
     '''
     try:
         return bool(re.match('^(?:salt|https?|ftp)://', uri))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

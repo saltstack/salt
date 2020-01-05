@@ -5,6 +5,7 @@ Jinja loading utils to enable a more powerful backend for jinja templates
 
 # Import python libs
 from __future__ import absolute_import, unicode_literals
+import atexit
 import collections
 import logging
 import os.path
@@ -54,8 +55,22 @@ class SaltCacheLoader(BaseLoader):
     Templates are cached like regular salt states
     and only loaded once per loader instance.
     '''
+
+    _cached_pillar_client = None
+    _cached_client = None
+
+    @classmethod
+    def shutdown(cls):
+        for attr in ('_cached_client', '_cached_pillar_client'):
+            client = getattr(cls, attr, None)
+            if client is not None:
+                # PillarClient and LocalClient objects do not have a destroy method
+                if hasattr(client, 'destroy'):
+                    client.destroy()
+                setattr(cls, attr, None)
+
     def __init__(self, opts, saltenv='base', encoding='utf-8',
-                 pillar_rend=False):
+                 pillar_rend=False, _file_client=None):
         self.opts = opts
         self.saltenv = saltenv
         self.encoding = encoding
@@ -69,7 +84,7 @@ class SaltCacheLoader(BaseLoader):
             self.searchpath = [os.path.join(opts['cachedir'], 'files', saltenv)]
         log.debug('Jinja search path: %s', self.searchpath)
         self.cached = []
-        self._file_client = None
+        self._file_client = _file_client
         # Instantiate the fileclient
         self.file_client()
 
@@ -77,9 +92,16 @@ class SaltCacheLoader(BaseLoader):
         '''
         Return a file client. Instantiates on first call.
         '''
-        if not self._file_client:
-            self._file_client = salt.fileclient.get_file_client(
-                self.opts, self.pillar_rend)
+        # If there was no file_client passed to the class, create a cache_client
+        # and use that. This avoids opening a new file_client every time this
+        # class is instantiated
+        if self._file_client is None:
+            attr = '_cached_pillar_client' if self.pillar_rend else '_cached_client'
+            cached_client = getattr(self, attr, None)
+            if cached_client is None:
+                cached_client = salt.fileclient.get_file_client(self.opts, self.pillar_rend)
+                setattr(SaltCacheLoader, attr, cached_client)
+            self._file_client = cached_client
         return self._file_client
 
     def cache_file(self, template):
@@ -98,20 +120,51 @@ class SaltCacheLoader(BaseLoader):
             self.cached.append(template)
 
     def get_source(self, environment, template):
-        # checks for relative '..' paths
-        if '..' in template:
-            log.warning(
-                'Discarded template path \'%s\', relative paths are '
-                'prohibited', template
-            )
-            raise TemplateNotFound(template)
+        '''
+        Salt-specific loader to find imported jinja files.
 
-        self.check_cache(template)
+        Jinja imports will be interpreted as originating from the top
+        of each of the directories in the searchpath when the template
+        name does not begin with './' or '../'.  When a template name
+        begins with './' or '../' then the import will be relative to
+        the importing file.
+
+        '''
+        # FIXME: somewhere do seprataor replacement: '\\' => '/'
+        _template = template
+        if template.split('/', 1)[0] in ('..', '.'):
+            is_relative = True
+        else:
+            is_relative = False
+        # checks for relative '..' paths that step-out of file_roots
+        if is_relative:
+            # Starts with a relative path indicator
+
+            if not environment or 'tpldir' not in environment.globals:
+                log.warning(
+                    'Relative path "%s" cannot be resolved without an environment',
+                    template
+                )
+                raise TemplateNotFound
+            base_path = environment.globals['tpldir']
+            _template = os.path.normpath('/'.join((base_path, _template)))
+            if _template.split('/', 1)[0] == '..':
+                log.warning(
+                    'Discarded template path "%s": attempts to'
+                    ' ascend outside of salt://', template
+                )
+                raise TemplateNotFound(template)
+
+        self.check_cache(_template)
 
         if environment and template:
-            tpldir = os.path.dirname(template).replace('\\', '/')
+            tpldir = os.path.dirname(_template).replace('\\', '/')
+            tplfile = _template
+            if is_relative:
+                tpldir = environment.globals.get('tpldir', tpldir)
+                tplfile = template
             tpldata = {
-                'tplfile': template,
+                'tplfile': tplfile,
                 'tpldir': '.' if tpldir == '' else tpldir,
                 'tpldot': tpldir.replace('/', '.'),
             }
@@ -119,7 +172,7 @@ class SaltCacheLoader(BaseLoader):
 
         # pylint: disable=cell-var-from-loop
         for spath in self.searchpath:
-            filepath = os.path.join(spath, template)
+            filepath = os.path.join(spath, _template)
             try:
                 with salt.utils.files.fopen(filepath, 'rb') as ifile:
                     contents = ifile.read().decode(self.encoding)
@@ -138,6 +191,9 @@ class SaltCacheLoader(BaseLoader):
 
         # there is no template file within searchpaths
         raise TemplateNotFound(template)
+
+
+atexit.register(SaltCacheLoader.shutdown)
 
 
 class PrintableDict(OrderedDict):
@@ -205,7 +261,7 @@ def skip_filter(data):
     '''
     Suppress data output
 
-    .. code-balock:: yaml
+    .. code-block:: yaml
 
         {% my_string = "foo" %}
 
@@ -508,14 +564,6 @@ def lst_avg(lst):
 
         2.5
     '''
-    salt.utils.versions.warn_until(
-        'Neon',
-        'This results of this function are currently being rounded.'
-        'Beginning in the Salt Neon release, results will no longer be '
-        'rounded and this warning will be removed.',
-        stacklevel=3
-    )
-
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)
@@ -777,8 +825,7 @@ class SerializerExtension(Extension, object):
     .. _`import tag`: http://jinja.pocoo.org/docs/templates/#import
     '''
 
-    tags = set(['load_yaml', 'load_json', 'import_yaml', 'import_json',
-                'load_text', 'import_text'])
+    tags = {'load_yaml', 'load_json', 'import_yaml', 'import_json', 'load_text', 'import_text'}
 
     def __init__(self, environment):
         super(SerializerExtension, self).__init__(environment)
@@ -924,7 +971,7 @@ class SerializerExtension(Extension, object):
 
         return value
 
-    _load_parsers = set(['load_yaml', 'load_json', 'load_text'])
+    _load_parsers = {'load_yaml', 'load_json', 'load_text'}
 
     def parse(self, parser):
         if parser.stream.current.value == 'import_yaml':

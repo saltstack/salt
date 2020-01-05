@@ -523,7 +523,7 @@ class AsyncAuth(object):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
         memo[id(self)] = result
         for key in self.__dict__:
             if key in ('io_loop',):
@@ -594,64 +594,65 @@ class AsyncAuth(object):
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                io_loop=self.io_loop)
-        error = None
-        while True:
-            try:
-                creds = yield self.sign_in(channel=channel)
-            except SaltClientError as exc:
-                error = exc
-                break
-            if creds == 'retry':
-                if self.opts.get('detect_mode') is True:
-                    error = SaltClientError('Detect mode is on')
+
+        with salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           io_loop=self.io_loop) as channel:
+            error = None
+            while True:
+                try:
+                    creds = yield self.sign_in(channel=channel)
+                except SaltClientError as exc:
+                    error = exc
                     break
-                if self.opts.get('caller'):
-                    # We have a list of masters, so we should break
-                    # and try the next one in the list.
-                    if self.opts.get('local_masters', None):
-                        error = SaltClientError('Minion failed to authenticate'
-                                                ' with the master, has the '
-                                                'minion key been accepted?')
+                if creds == 'retry':
+                    if self.opts.get('detect_mode') is True:
+                        error = SaltClientError('Detect mode is on')
                         break
-                    else:
-                        print('Minion failed to authenticate with the master, '
-                              'has the minion key been accepted?')
-                        sys.exit(2)
-                if acceptance_wait_time:
-                    log.info(
-                        'Waiting %s seconds before retry.', acceptance_wait_time
-                    )
-                    yield tornado.gen.sleep(acceptance_wait_time)
-                if acceptance_wait_time < acceptance_wait_time_max:
-                    acceptance_wait_time += acceptance_wait_time
-                    log.debug(
-                        'Authentication wait time is %s', acceptance_wait_time
-                    )
-                continue
-            break
-        if not isinstance(creds, dict) or 'aes' not in creds:
-            if self.opts.get('detect_mode') is True:
-                error = SaltClientError('-|RETRY|-')
-            try:
-                del AsyncAuth.creds_map[self.__key(self.opts)]
-            except KeyError:
-                pass
-            if not error:
-                error = SaltClientError('Attempt to authenticate with the salt master failed')
-            self._authenticate_future.set_exception(error)
-        else:
-            key = self.__key(self.opts)
-            AsyncAuth.creds_map[key] = creds
-            self._creds = creds
-            self._crypticle = Crypticle(self.opts, creds['aes'])
-            self._authenticate_future.set_result(True)  # mark the sign-in as complete
-            # Notify the bus about creds change
-            if self.opts.get('auth_events') is True:
-                with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
-                    event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
+                    if self.opts.get('caller'):
+                        # We have a list of masters, so we should break
+                        # and try the next one in the list.
+                        if self.opts.get('local_masters', None):
+                            error = SaltClientError('Minion failed to authenticate'
+                                                    ' with the master, has the '
+                                                    'minion key been accepted?')
+                            break
+                        else:
+                            print('Minion failed to authenticate with the master, '
+                                  'has the minion key been accepted?')
+                            sys.exit(2)
+                    if acceptance_wait_time:
+                        log.info(
+                            'Waiting %s seconds before retry.', acceptance_wait_time
+                        )
+                        yield tornado.gen.sleep(acceptance_wait_time)
+                    if acceptance_wait_time < acceptance_wait_time_max:
+                        acceptance_wait_time += acceptance_wait_time
+                        log.debug(
+                            'Authentication wait time is %s', acceptance_wait_time
+                        )
+                    continue
+                break
+            if not isinstance(creds, dict) or 'aes' not in creds:
+                if self.opts.get('detect_mode') is True:
+                    error = SaltClientError('-|RETRY|-')
+                try:
+                    del AsyncAuth.creds_map[self.__key(self.opts)]
+                except KeyError:
+                    pass
+                if not error:
+                    error = SaltClientError('Attempt to authenticate with the salt master failed')
+                self._authenticate_future.set_exception(error)
+            else:
+                key = self.__key(self.opts)
+                AsyncAuth.creds_map[key] = creds
+                self._creds = creds
+                self._crypticle = Crypticle(self.opts, creds['aes'])
+                self._authenticate_future.set_result(True)  # mark the sign-in as complete
+                # Notify the bus about creds change
+                if self.opts.get('auth_events') is True:
+                    with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
+                        event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -686,10 +687,12 @@ class AsyncAuth(object):
 
         auth['master_uri'] = self.opts['master_uri']
 
+        close_channel = False
         if not channel:
+            close_channel = True
             channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                io_loop=self.io_loop)
+                                                                    crypt='clear',
+                                                                    io_loop=self.io_loop)
 
         sign_in_payload = self.minion_sign_in_payload()
         try:
@@ -706,6 +709,10 @@ class AsyncAuth(object):
                 raise tornado.gen.Return('retry')
             else:
                 raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
+        finally:
+            if close_channel:
+                channel.close()
+
         if not isinstance(payload, dict):
             log.error('Sign-in attempt failed: %s', payload)
             raise tornado.gen.Return(False)
@@ -825,7 +832,7 @@ class AsyncAuth(object):
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload['token'] = cipher.encrypt(self.token)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
             payload['pub'] = f.read()
@@ -870,7 +877,7 @@ class AsyncAuth(object):
             if os.path.exists(m_path):
                 try:
                     mkey = get_rsa_pub_key(m_path)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 if six.PY3:
@@ -961,7 +968,7 @@ class AsyncAuth(object):
                     'verification failed!', self.opts['master']
                 )
                 return False
-        except Exception as sign_exc:
+        except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
                 'There was an error while verifying the masters public-key '
                 'signature'
@@ -1025,7 +1032,7 @@ class AsyncAuth(object):
                         'The master failed to decrypt the random minion token'
                     )
                     return ''
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     'The master failed to decrypt the random minion token'
                 )
@@ -1210,34 +1217,34 @@ class SAuth(AsyncAuth):
         '''
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
-        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        while True:
-            creds = self.sign_in(channel=channel)
-            if creds == 'retry':
-                if self.opts.get('caller'):
-                    # We have a list of masters, so we should break
-                    # and try the next one in the list.
-                    if self.opts.get('local_masters', None):
-                        error = SaltClientError('Minion failed to authenticate'
-                                                ' with the master, has the '
-                                                'minion key been accepted?')
-                        break
-                    else:
-                        print('Minion failed to authenticate with the master, '
-                              'has the minion key been accepted?')
-                        sys.exit(2)
-                if acceptance_wait_time:
-                    log.info('Waiting %s seconds before retry.', acceptance_wait_time)
-                    time.sleep(acceptance_wait_time)
-                if acceptance_wait_time < acceptance_wait_time_max:
-                    acceptance_wait_time += acceptance_wait_time
-                    log.debug('Authentication wait time is %s', acceptance_wait_time)
-                continue
-            break
-        self._creds = creds
-        self._crypticle = Crypticle(self.opts, creds['aes'])
+        with salt.transport.client.ReqChannel.factory(self.opts, crypt='clear') as channel:
+            while True:
+                creds = self.sign_in(channel=channel)
+                if creds == 'retry':
+                    if self.opts.get('caller'):
+                        # We have a list of masters, so we should break
+                        # and try the next one in the list.
+                        if self.opts.get('local_masters', None):
+                            error = SaltClientError('Minion failed to authenticate'
+                                                    ' with the master, has the '
+                                                    'minion key been accepted?')
+                            break
+                        else:
+                            print('Minion failed to authenticate with the master, '
+                                  'has the minion key been accepted?')
+                            sys.exit(2)
+                    if acceptance_wait_time:
+                        log.info('Waiting %s seconds before retry.', acceptance_wait_time)
+                        time.sleep(acceptance_wait_time)
+                    if acceptance_wait_time < acceptance_wait_time_max:
+                        acceptance_wait_time += acceptance_wait_time
+                        log.debug('Authentication wait time is %s', acceptance_wait_time)
+                    continue
+                break
+            self._creds = creds
+            self._crypticle = Crypticle(self.opts, creds['aes'])
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''
@@ -1271,7 +1278,9 @@ class SAuth(AsyncAuth):
 
         auth['master_uri'] = self.opts['master_uri']
 
+        close_channel = False
         if not channel:
+            close_channel = True
             channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
 
         sign_in_payload = self.minion_sign_in_payload()
@@ -1286,6 +1295,9 @@ class SAuth(AsyncAuth):
                 log.warning('SaltReqTimeoutError: %s', e)
                 return 'retry'
             raise SaltClientError('Attempt to authenticate with the salt master failed with timeout error')
+        finally:
+            if close_channel:
+                channel.close()
 
         if 'load' in payload:
             if 'ret' in payload['load']:

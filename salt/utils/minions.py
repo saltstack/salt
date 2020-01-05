@@ -47,6 +47,37 @@ TARGET_REX = re.compile(
     )
 
 
+def _nodegroup_regex(nodegroup, words, opers):
+    opers_set = set(opers)
+    ret = words
+    if (set(ret) - opers_set) == set(ret):
+        # No compound operators found in nodegroup definition. Check for
+        # group type specifiers
+        group_type_re = re.compile('^[A-Z]@')
+        regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
+        if not [x for x in ret if '*' in x or group_type_re.match(x)]:
+            # No group type specifiers and no wildcards.
+            # Treat this as an expression.
+            if [x for x in ret if x in [x for y in regex_chars if y in x]]:
+                joined = 'E@' + ','.join(ret)
+                log.debug(
+                    'Nodegroup \'%s\' (%s) detected as an expression. '
+                    'Assuming compound matching syntax of \'%s\'',
+                    nodegroup, ret, joined
+                )
+            else:
+                # Treat this as a list of nodenames.
+                joined = 'L@' + ','.join(ret)
+                log.debug(
+                    'Nodegroup \'%s\' (%s) detected as list of nodenames. '
+                    'Assuming compound matching syntax of \'%s\'',
+                    nodegroup, ret, joined
+                )
+            # Return data must be a list of compound matching components
+            # to be fed into compound matcher. Enclose return data in list.
+            return [joined]
+
+
 def parse_target(target_expression):
     '''Parse `target_expressing` splitting it into `engine`, `delimiter`,
      `pattern` - returns a dict'''
@@ -141,36 +172,16 @@ def nodegroup_comp(nodegroup, nodegroups, skip=None, first_call=True):
     # Only return list form if a nodegroup was expanded. Otherwise return
     # the original string to conserve backwards compat
     if expanded_nodegroup or not first_call:
+        if not first_call:
+            joined = _nodegroup_regex(nodegroup, words, opers)
+            if joined:
+                return joined
         return ret
     else:
-        opers_set = set(opers)
         ret = words
-        if (set(ret) - opers_set) == set(ret):
-            # No compound operators found in nodegroup definition. Check for
-            # group type specifiers
-            group_type_re = re.compile('^[A-Z]@')
-            regex_chars = ['(', '[', '{', '\\', '?', '}', ']', ')']
-            if not [x for x in ret if '*' in x or group_type_re.match(x)]:
-                # No group type specifiers and no wildcards.
-                # Treat this as an expression.
-                if [x for x in ret if x in [x for y in regex_chars if y in x]]:
-                    joined = 'E@' + ','.join(ret)
-                    log.debug(
-                        'Nodegroup \'%s\' (%s) detected as an expression. '
-                        'Assuming compound matching syntax of \'%s\'',
-                        nodegroup, ret, joined
-                    )
-                else:
-                    # Treat this as a list of nodenames.
-                    joined = 'L@' + ','.join(ret)
-                    log.debug(
-                        'Nodegroup \'%s\' (%s) detected as list of nodenames. '
-                        'Assuming compound matching syntax of \'%s\'',
-                        nodegroup, ret, joined
-                    )
-                # Return data must be a list of compound matching components
-                # to be fed into compound matcher. Enclose return data in list.
-                return [joined]
+        joined = _nodegroup_regex(nodegroup, ret, opers)
+        if joined:
+            return joined
 
         log.debug(
             'No nested nodegroups detected. Using original nodegroup '
@@ -389,11 +400,11 @@ class CkMinions(object):
             try:
                 # Target is an address?
                 tgt = ipaddress.ip_address(tgt)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 try:
                     # Target is a network?
                     tgt = ipaddress.ip_network(tgt)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.error('Invalid IP/CIDR target: %s', tgt)
                     return {'minions': [],
                             'missing': []}
@@ -477,6 +488,8 @@ class CkMinions(object):
         minions = set(self._pki_minions())
         log.debug('minions: %s', minions)
 
+        nodegroups = self.opts.get('nodegroups', {})
+
         if self.opts.get('minion_data_cache', False):
             ref = {'G': self._check_grain_minions,
                    'P': self._check_grain_pcre_minions,
@@ -499,9 +512,11 @@ class CkMinions(object):
             if isinstance(expr, six.string_types):
                 words = expr.split()
             else:
-                words = expr
+                # we make a shallow copy in order to not affect the passed in arg
+                words = expr[:]
 
-            for word in words:
+            while words:
+                word = words.pop(0)
                 target_info = parse_target(word)
 
                 # Easy check first
@@ -558,9 +573,12 @@ class CkMinions(object):
 
                 elif target_info and target_info['engine']:
                     if 'N' == target_info['engine']:
-                        # Nodegroups should already be expanded/resolved to other engines
-                        log.error('Detected nodegroup expansion failure of "%s"', word)
-                        return {'minions': [], 'missing': []}
+                        # if we encounter a node group, just evaluate it in-place
+                        decomposed = nodegroup_comp(target_info['pattern'], nodegroups)
+                        if decomposed:
+                            words = decomposed + words
+                        continue
+
                     engine = ref.get(target_info['engine'])
                     if not engine:
                         # If an unknown engine is called at any time, fail out
@@ -605,17 +623,30 @@ class CkMinions(object):
             try:
                 minions = list(eval(results))  # pylint: disable=W0123
                 return {'minions': minions, 'missing': missing}
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Invalid compound target: %s', expr)
                 return {'minions': [], 'missing': []}
 
         return {'minions': list(minions),
                 'missing': []}
 
-    def connected_ids(self, subset=None, show_ipv4=False, include_localhost=False):
+    def connected_ids(self, subset=None, show_ip=False, show_ipv4=None, include_localhost=None):
         '''
         Return a set of all connected minion ids, optionally within a subset
         '''
+        if include_localhost is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'include_localhost\' argument is no longer required; any'
+                'connected localhost minion will always be included.'
+            )
+        if show_ipv4 is not None:
+            salt.utils.versions.warn_until(
+                'Sodium',
+                'The \'show_ipv4\' argument has been renamed to \'show_ip\' as'
+                'it now also includes IPv6 addresses for IPv6-connected'
+                'minions.'
+            )
         minions = set()
         if self.opts.get('minion_data_cache', False):
             search = self.cache.list('minions')
@@ -625,7 +656,11 @@ class CkMinions(object):
             if '127.0.0.1' in addrs:
                 # Add in the address of a possible locally-connected minion.
                 addrs.discard('127.0.0.1')
-                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=include_localhost)))
+                addrs.update(set(salt.utils.network.ip_addrs(include_loopback=False)))
+            if '::1' in addrs:
+                # Add in the address of a possible locally-connected minion.
+                addrs.discard('::1')
+                addrs.update(set(salt.utils.network.ip_addrs6(include_loopback=False)))
             if subset:
                 search = subset
             for id_ in search:
@@ -641,13 +676,16 @@ class CkMinions(object):
                     continue
                 grains = mdata.get('grains', {})
                 for ipv4 in grains.get('ipv4', []):
-                    if ipv4 == '127.0.0.1' and not include_localhost:
-                        continue
-                    if ipv4 == '0.0.0.0':
-                        continue
                     if ipv4 in addrs:
-                        if show_ipv4:
+                        if show_ip:
                             minions.add((id_, ipv4))
+                        else:
+                            minions.add(id_)
+                        break
+                for ipv6 in grains.get('ipv6', []):
+                    if ipv6 in addrs:
+                        if show_ip:
+                            minions.add((id_, ipv6))
                         else:
                             minions.add(id_)
                         break
@@ -686,9 +724,9 @@ class CkMinions(object):
                              'pillar_exact',
                              'compound',
                              'compound_pillar_exact'):
-                _res = check_func(expr, delimiter, greedy)
+                _res = check_func(expr, delimiter, greedy)  # pylint: disable=not-callable
             else:
-                _res = check_func(expr, greedy)
+                _res = check_func(expr, greedy)  # pylint: disable=not-callable
             _res['ssh_minions'] = False
             if self.opts.get('enable_ssh_minions', False) is True and isinstance('tgt', six.string_types):
                 roster = salt.roster.Roster(self.opts, self.opts.get('roster', 'flat'))
@@ -696,7 +734,7 @@ class CkMinions(object):
                 if ssh_minions:
                     _res['minions'].extend(ssh_minions)
                     _res['ssh_minions'] = True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception(
                     'Failed matching available minions with %s pattern: %s',
                     tgt_type, expr)
@@ -708,16 +746,6 @@ class CkMinions(object):
         Return a Bool. This function returns if the expression sent in is
         within the scope of the valid expression
         '''
-        # remember to remove the expr_form argument from this function when
-        # performing the cleanup on this deprecation.
-        if expr_form is not None:
-            salt.utils.versions.warn_until(
-                'Fluorine',
-                'the target type should be passed using the \'tgt_type\' '
-                'argument instead of \'expr_form\'. Support for using '
-                '\'expr_form\' will be removed in Salt Fluorine.'
-            )
-            tgt_type = expr_form
 
         v_minions = set(self.check_minions(valid, 'compound').get('minions', []))
         if minions is None:
@@ -745,33 +773,9 @@ class CkMinions(object):
                     vals.append(True)
                 else:
                     vals.append(False)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Invalid regular expression: %s', regex)
         return vals and all(vals)
-
-    def any_auth(self, form, auth_list, fun, arg, tgt=None, tgt_type='glob'):
-        '''
-        Read in the form and determine which auth check routine to execute
-        '''
-        # This function is only called from salt.auth.Authorize(), which is also
-        # deprecated and will be removed in Neon.
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'any_auth\' function has been deprecated. Support for this '
-            'function will be removed in Salt {version}.'
-        )
-        if form == 'publish':
-            return self.auth_check(
-                    auth_list,
-                    fun,
-                    arg,
-                    tgt,
-                    tgt_type)
-        return self.spec_check(
-                auth_list,
-                fun,
-                arg,
-                form)
 
     def auth_check_expanded(self,
                             auth_list,

@@ -706,8 +706,8 @@ Salt will sync all custom types (by running a :mod:`saltutil.sync_all
 <running-highstate>`. However, there is a chicken-and-egg issue where, on the
 initial :ref:`highstate <running-highstate>`, a minion will not yet have these
 custom types synced when the top file is first compiled. This can be worked
-around with a simple reactor which watches for ``minion_start`` events, which
-each minion fires when it first starts up and connects to the master.
+around with a simple reactor which watches for ``salt/minion/*/start`` events,
+which each minion fires when it first starts up and connects to the master.
 
 On the master, create **/srv/reactor/sync_grains.sls** with the following
 contents:

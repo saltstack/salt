@@ -148,7 +148,10 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                 else:
                     # if filelist does not exists yet, mark it as expired
                     age = opts.get('fileserver_list_cache_time', 20) + 1
-                if age < opts.get('fileserver_list_cache_time', 20):
+                if age < 0:
+                    # Cache is from the future! Warn and mark cache invalid.
+                    log.warning('The file list_cache was created in the future!')
+                if 0 <= age < opts.get('fileserver_list_cache_time', 20):
                     # Young enough! Load this sucker up!
                     with salt.utils.files.fopen(list_cache, 'rb') as fp_:
                         log.debug(
@@ -160,7 +163,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     # Set the w_lock and go
                     refresh_cache = True
                     break
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 time.sleep(0.2)
                 attempt += 1
                 continue
@@ -256,7 +259,7 @@ def reap_fileserver_cache_dir(cache_base, find_func):
             # if we have an empty directory, lets cleanup
             # This will only remove the directory on the second time
             # "_reap_cache" is called (which is intentional)
-            if len(dirs) == 0 and len(files) == 0:
+            if not dirs and not files:
                 # only remove if empty directory is older than 60s
                 if time.time() - os.path.getctime(root) > 60:
                     os.rmdir(root)
@@ -901,3 +904,6 @@ class FSChan(object):
             log.error('Malformed request, invalid cmd: %s', load)
             return {}
         return getattr(self.fs, cmd)(load)
+
+    def close(self):
+        pass

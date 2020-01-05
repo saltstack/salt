@@ -35,6 +35,7 @@ from salt.utils.napalm import proxy_napalm_wrap
 __virtualname__ = 'bgp'
 __proxyenabled__ = ['napalm']
 # uses NAPALM-based proxy to interact with network devices
+__virtual_aliases__ = ('napalm_bgp',)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # property functions

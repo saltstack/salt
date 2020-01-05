@@ -14,4 +14,3 @@ in the listen queue is older than `event_listen_queue_max_seconds`, the queue wi
 returners regardless of how many events are in the queue.
 
 .. _`#53411`: https://github.com/saltstack/salt/issues/53411
-

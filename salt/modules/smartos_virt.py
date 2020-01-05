@@ -57,8 +57,7 @@ def list_domains():
         salt '*' virt.list_domains
     '''
     data = __salt__['vmadm.list'](keyed=True)
-    vms = []
-    vms.append("UUID                                  TYPE  RAM      STATE             ALIAS")
+    vms = ["UUID                                  TYPE  RAM      STATE             ALIAS"]
     for vm in data:
         vms.append("{vmuuid}{vmtype}{vmram}{vmstate}{vmalias}".format(
             vmuuid=vm.ljust(38),

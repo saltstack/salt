@@ -320,8 +320,8 @@ with YAML. Salt defaults to YAML because it is very straightforward and easy
 to learn and use. But the SLS files can be rendered from almost any imaginable
 medium, so long as a renderer module is provided.
 
-The default rendering system is the ``yaml_jinja`` renderer. The
-``yaml_jinja`` renderer will first pass the template through the `Jinja2`_
+The default rendering system is the ``jinja|yaml`` renderer. The
+``jinja|yaml`` renderer will first pass the template through the `Jinja2`_
 templating system, and then through the YAML parser. The benefit here is that
 full programming constructs are available when creating SLS files.
 
@@ -351,10 +351,10 @@ gives you a `"Pythonic"`_ interface to building state data.
     :ref:`MooseFS example<jinja-example-moosefs>` below.
 
 
-Getting to Know the Default - yaml_jinja
+Getting to Know the Default - jinja|yaml
 ----------------------------------------
 
-The default renderer - ``yaml_jinja``, allows for use of the jinja
+The default renderer - ``jinja|yaml``, allows for use of the jinja
 templating system. A guide to the Jinja templating system can be found here:
 http://jinja.pocoo.org/docs
 

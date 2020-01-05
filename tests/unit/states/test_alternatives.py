@@ -7,10 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -19,7 +17,6 @@ from tests.support.mock import (
 import salt.states.alternatives as alternatives
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.alternatives
@@ -49,16 +46,18 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
         bad_link = '/bin/pager'
         err = 'the primary link for {0} must be {1}'.format(name, link)
 
-        mock = MagicMock(side_effect=[True, False, False, False])
-        mock_out = MagicMock(side_effect=['', err])
+        mock_cinst = MagicMock(side_effect=[True, False])
+        mock_cexist = MagicMock(side_effect=[True, False, False, True, False, False, False, True])
+        mock_out = MagicMock(side_effect=['', err, ''])
         mock_path = MagicMock(return_value=path)
         mock_link = MagicMock(return_value=link)
         with patch.dict(alternatives.__salt__,
-                        {'alternatives.check_installed': mock,
+                        {'alternatives.check_installed': mock_cinst,
+                         'alternatives.check_exists': mock_cexist,
                          'alternatives.install': mock_out,
                          'alternatives.show_current': mock_path,
                          'alternatives.show_link': mock_link}):
-            comt = 'Alternatives for {0} is already set to {1}'.format(name, path)
+            comt = 'Alternative {0} for {1} is already registered'.format(path, name)
             ret.update({'comment': comt, 'result': True})
             self.assertDictEqual(alternatives.install(name, link, path,
                                                       priority), ret)
@@ -82,6 +81,14 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                         'changes': {}, 'link': bad_link})
             with patch.dict(alternatives.__opts__, {'test': False}):
                 self.assertDictEqual(alternatives.install(name, bad_link, path,
+                                                          priority), ret)
+
+            comt = 'Alternative {0} for {1} registered with priority {2} and not set to default'.format(path, name, priority)
+            ret.update({'comment': comt, 'result': True,
+                'changes': {'name': name, 'link': link, 'path': path,
+                            'priority': priority}, 'link': link})
+            with patch.dict(alternatives.__opts__, {'test': False}):
+                self.assertDictEqual(alternatives.install(name, link, path,
                                                           priority), ret)
 
     # 'remove' function tests: 1
