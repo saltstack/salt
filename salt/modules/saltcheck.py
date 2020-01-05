@@ -559,7 +559,6 @@ class SaltCheck(object):
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty'''.split()
 
-
     def __is_valid_test(self, test_dict):
         '''
         Determine if a test contains:
@@ -665,7 +664,6 @@ class SaltCheck(object):
             return return_value
         else:
             return value
-
 
     def run_test(self, test_dict):
         '''
