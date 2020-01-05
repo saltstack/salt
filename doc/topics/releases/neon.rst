@@ -375,6 +375,30 @@ State Changes
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
 
+Enhancements to Engines
+=======================
+
+- A new :py:func:`fluent engine <salt.engines.salt.engines.fluent>` has been
+  added to export Salt events to fluentd.
+
+  .. code-block:: yaml
+
+    engines:
+      - fluent
+          host: localhost
+          port: 24224
+
+  .. code-block::
+
+    <source>
+      @type forward
+      port 24224
+    </source>
+    <match saltstack.**>
+      @type file
+      path /var/log/td-agent/saltstack
+    </match>
+
 Module Changes
 ==============
 

@@ -42,7 +42,7 @@ class CPModuleTest(ModuleCase):
     '''
     Validate the cp module
     '''
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         '''
         Ensure that results are decoded
 

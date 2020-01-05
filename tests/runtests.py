@@ -59,7 +59,7 @@ except ImportError as exc:
     pprint.pprint(sys.path)
     six.reraise(*sys.exc_info())
 
-from tests.integration import TestDaemon, TestDaemonStartFailed  # pylint: disable=W0403
+from tests.integration import TestDaemon, TestDaemonStartFailed
 from tests.multimaster import MultimasterTestDaemon
 import salt.utils.platform
 
@@ -797,7 +797,7 @@ class SaltTestsuiteParser(SaltCoverageTestingParser):
                     win32file._setmaxstdio(hard)
                 else:
                     resource.setrlimit(resource.RLIMIT_NOFILE, (soft, hard))
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 print(
                     'ERROR: Failed to raise the max open files settings -> '
                     '{0}'.format(err)

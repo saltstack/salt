@@ -274,7 +274,7 @@ def get_hostname():
 
     try:
         return ret['outConfigs']['mgmtIf'][0]['hostname']
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return "Unable to retrieve hostname"
 
 
@@ -658,7 +658,7 @@ def set_hostname(hostname=None):
             return True
         else:
             return False
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return False
 
 

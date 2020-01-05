@@ -3622,7 +3622,7 @@ def powershell(cmd,
 
     try:
         return salt.utils.json.loads(response)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
 
@@ -3947,7 +3947,7 @@ def powershell_all(cmd,
     # If we fail to parse stdoutput we will raise an exception
     try:
         result = salt.utils.json.loads(stdoutput)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
         response["cmd"] = cmd

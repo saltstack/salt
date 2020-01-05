@@ -232,7 +232,7 @@ def enc_file(name, out=None, **kwargs):
     '''
     try:
         data = __salt__['cp.get_file_str'](name)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, 'rb') as f:
             data = salt.utils.stringutils.to_unicode(f.read())
@@ -299,7 +299,7 @@ def dec_file(name, out=None, **kwargs):
     '''
     try:
         data = __salt__['cp.get_file_str'](name)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, 'rb') as f:
             data = salt.utils.stringutils.to_unicode(f.read())

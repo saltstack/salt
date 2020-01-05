@@ -49,7 +49,7 @@ from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
 
 
 try:
-    from pyVmomi import pbm, vim, vmodl
+    from pyVmomi import pbm, vim, vmodl  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False

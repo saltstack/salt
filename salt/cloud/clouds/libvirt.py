@@ -150,7 +150,7 @@ def __get_conn(url):
     # support all vm layers supported by libvirt
     try:
         conn = libvirt.open(url)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise SaltCloudExecutionFailure(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(

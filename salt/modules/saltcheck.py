@@ -538,7 +538,7 @@ def _get_top_states(saltenv='base'):
     top_states = __salt__['state.show_top']()[saltenv]
     log.debug('saltcheck for saltenv: %s found top states: %s', saltenv, top_states)
     return top_states
-
+  
 
 class SaltCheck(object):
     '''
@@ -558,6 +558,7 @@ class SaltCheck(object):
                                   assertGreaterEqual
                                   assertLess assertLessEqual
                                   assertEmpty assertNotEmpty'''.split()
+
 
     def __is_valid_test(self, test_dict):
         '''
@@ -664,6 +665,7 @@ class SaltCheck(object):
             return return_value
         else:
             return value
+
 
     def run_test(self, test_dict):
         '''
@@ -844,10 +846,7 @@ class SaltCheck(object):
         '''
         result = "Pass"
         if isinstance(returned, str):
-            try:
-                returned = bool(returned)
-            except ValueError:
-                raise
+            returned = bool(returned)
         try:
             assert (returned is False), "{0} not False".format(returned)
         except AssertionError as err:
