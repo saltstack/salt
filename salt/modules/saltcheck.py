@@ -538,7 +538,7 @@ def _get_top_states(saltenv='base'):
     top_states = __salt__['state.show_top']()[saltenv]
     log.debug('saltcheck for saltenv: %s found top states: %s', saltenv, top_states)
     return top_states
-  
+
 
 class SaltCheck(object):
     '''
