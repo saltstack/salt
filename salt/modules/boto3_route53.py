@@ -747,7 +747,7 @@ def aws_encode(x):
                       _hexReplace, x.encode('unicode_escape'))
     except UnicodeEncodeError:
         ret = x.encode('idna')
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("Couldn't encode %s using either 'unicode_escape' or 'idna' codecs", x)
         raise CommandExecutionError(e)
     log.debug('AWS-encoded result for %s: %s', x, ret)

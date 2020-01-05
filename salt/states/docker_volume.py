@@ -145,7 +145,7 @@ def present(name, driver=None, driver_opts=None, force=False):
         try:
             ret['changes']['created'] = __salt__['docker.create_volume'](
                 name, driver=driver, driver_opts=driver_opts)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = ('Failed to create volume \'{0}\': {1}'
                               .format(name, exc))
             return ret
@@ -170,7 +170,7 @@ def present(name, driver=None, driver_opts=None, force=False):
             return ret
         try:
             ret['changes']['removed'] = __salt__['docker.remove_volume'](name)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
                               .format(name, exc))
             return ret
@@ -178,7 +178,7 @@ def present(name, driver=None, driver_opts=None, force=False):
             try:
                 ret['changes']['created'] = __salt__['docker.create_volume'](
                     name, driver=driver, driver_opts=driver_opts)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 ret['comment'] = ('Failed to create volume \'{0}\': {1}'
                                   .format(name, exc))
                 return ret
@@ -225,7 +225,7 @@ def absent(name, driver=None):
     try:
         ret['changes']['removed'] = __salt__['docker.remove_volume'](name)
         ret['result'] = True
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['comment'] = ('Failed to remove volume \'{0}\': {1}'
                           .format(name, exc))
     return ret
