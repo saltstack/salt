@@ -44,7 +44,7 @@ def deserialize(stream_or_string, **options):
             stream_or_string = stream_or_string.decode('utf-8')
 
         return salt.utils.json.loads(stream_or_string, _json_module=_json)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         raise DeserializationError(error)
 
 
@@ -61,5 +61,5 @@ def serialize(obj, **options):
             return salt.utils.json.dump(obj, _json_module=_json, **options)
         else:
             return salt.utils.json.dumps(obj, _json_module=_json, **options)
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         raise SerializationError(error)

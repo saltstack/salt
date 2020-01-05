@@ -719,7 +719,7 @@ class SPMCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def run_spm(self, cmd, config, arg=None):
         client = self._spm_client(config)
-        spm_cmd = client.run([cmd, arg])
+        client.run([cmd, arg])
         client._close()
         return self.ui._status
 
@@ -966,7 +966,7 @@ class SSHCase(ShellCase):
 
         try:
             return salt.utils.json.loads(ret)['localhost']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return ret
 
 
