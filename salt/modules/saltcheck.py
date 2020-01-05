@@ -642,19 +642,14 @@ class SaltCheck(object):
         mlocal_opts = copy.deepcopy(local_opts)
         mlocal_opts['file_client'] = 'local'
         value = False
-        try:
-            if args and kwargs:
-                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args, **kwargs)
-            elif args and not kwargs:
-                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args)
-            elif not args and kwargs:
-                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, **kwargs)
-            else:
-                value = salt.client.Caller(mopts=mlocal_opts).cmd(fun)
-        except salt.exceptions.SaltException:
-            raise
-        except Exception:
-            raise
+        if args and kwargs:
+            value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args, **kwargs)
+        elif args and not kwargs:
+            value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, *args)
+        elif not args and kwargs:
+            value = salt.client.Caller(mopts=mlocal_opts).cmd(fun, **kwargs)
+        else:
+            value = salt.client.Caller(mopts=mlocal_opts).cmd(fun)
         __opts__['file_client'] = orig_file_client
         if isinstance(value, dict) and assertion_section:
             return_value = salt.utils.data.traverse_dict_and_list(value,
