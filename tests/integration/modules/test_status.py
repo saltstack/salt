@@ -6,7 +6,6 @@ import random
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import Salt libs
@@ -22,7 +21,7 @@ class StatusModuleTest(ModuleCase):
     Test the status module
     '''
     @skipIf(salt.utils.platform.is_windows(), 'minion is windows')
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_status_pid(self):
         '''
         status.pid

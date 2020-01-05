@@ -21,7 +21,7 @@ from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
 from tests.support.unit import skipIf
 from tests.support.mixins import ShellCaseCommonTestsMixin
-from tests.support.helpers import flaky, with_tempfile
+from tests.support.helpers import with_tempfile
 from tests.integration.utils import testprogram
 
 # Import salt libs
@@ -197,7 +197,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 shutil.rmtree(config_dir)
 
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_issue_15074_output_file_append(self):
         output_file_append = os.path.join(RUNTIME_VARS.TMP, 'issue-15074')
         try:
@@ -231,7 +231,7 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
                 os.unlink(output_file_append)
 
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_issue_14979_output_file_permissions(self):
         output_file = os.path.join(RUNTIME_VARS.TMP, 'issue-14979')
         with salt.utils.files.set_umask(0o077):

@@ -12,7 +12,6 @@ import textwrap
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 # Import Salt Libs
@@ -203,7 +202,7 @@ class SaltUtilSyncPillarTest(ModuleCase):
     Testcase for the saltutil sync pillar module
     '''
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_pillar_refresh(self):
         '''
         test pillar refresh module

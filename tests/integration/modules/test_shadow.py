@@ -14,7 +14,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import flaky
 
 # Import Salt libs
 import salt.utils.files
@@ -147,7 +146,7 @@ class ShadowModuleTest(ModuleCase):
         # User does not exist (set_inactdays return None is user does not exist)
         self.assertFalse(self.run_function('shadow.set_mindays', [self._no_user, 12]))
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     @pytest.mark.destructive_test
     def test_lock_password(self):
         '''

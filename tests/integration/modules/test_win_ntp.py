@@ -8,13 +8,12 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import flaky
 
 # Import Salt Libs
 import salt.utils.platform
 
 
-@flaky
+@pytest.mark.flaky(max_runs=4)
 @skipIf(not salt.utils.platform.is_windows(), 'Tests for only Windows')
 @pytest.mark.windows_whitelisted
 class NTPTest(ModuleCase):
