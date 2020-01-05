@@ -529,7 +529,7 @@ class Client(object):
                                        path_style=s3_opt('path_style', False),
                                        https_enable=s3_opt('https_enable', True))
                 return dest
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise MinionError(
                     'Could not fetch from {0}. Exception: {1}'.format(url, exc)
                 )
@@ -543,7 +543,7 @@ class Client(object):
                     ftp.retrbinary('RETR {0}'.format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
 
         if url_data.scheme == 'swift':
@@ -568,7 +568,7 @@ class Client(object):
                                       url_data.path[1:],
                                       dest)
                 return dest
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         get_kwargs = {}
@@ -956,7 +956,7 @@ class PillarClient(Client):
             fnd_path = fnd
             try:
                 fnd_stat = list(os.stat(fnd_path))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 fnd_stat = None
 
         hash_type = self.opts.get('hash_type', 'md5')
@@ -1328,7 +1328,7 @@ class RemoteClient(Client):
             else:
                 try:
                     return hash_result, list(os.stat(path))
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     return hash_result, None
         load = {'path': path,
                 'saltenv': saltenv,
