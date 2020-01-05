@@ -59,6 +59,7 @@ class VenafiTest(ShellCase):
                                 key_password='secretPassword',
                                 zone='fake')
         cert_output = ret['return'][0]
+        print("cert out is: " + cert_output)
         assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
         cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
@@ -136,6 +137,7 @@ xlAKgaU6i03jOm5+sww5L2YVMi1eeBN+kx7o94ogpRemC/EUidvl1PUJ6+e7an9V
                                     csr_path=csr_path,
                                     zone='fake')
             cert_output = ret['return'][0]
+            print("cert out is: " + cert_output)
             assert cert_output is not None, 'venafi_certificate not found in `output_value`'
 
             cert = x509.load_pem_x509_certificate(cert_output.encode(), default_backend())
