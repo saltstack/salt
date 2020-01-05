@@ -506,4 +506,4 @@ class WinFunctionsTestCase(TestCase):
         if six.PY3:
             self.assertTrue(isinstance(win_reg._to_unicode(1), str))
         else:
-            self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))  # pylint: disable=incompatible-py3-code
+            self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))  # pylint: disable=incompatible-py3-code,undefined-variable
