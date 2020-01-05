@@ -32,6 +32,7 @@ docker-pycreds==0.4.0     # via docker
 docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
+flaky==3.6.1
 future==0.17.1            # via python-jose
 genshi==0.7.3
 gitdb2==2.0.5             # via gitpython

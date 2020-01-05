@@ -39,6 +39,7 @@ docker==3.7.2
 docutils==0.14            # via botocore
 ecdsa==0.13.3             # via python-jose
 enum34==1.1.6
+flaky==3.6.1
 funcsigs==1.0.2           # via mock, pytest
 functools32==3.2.3.post2  # via jsonschema
 future==0.17.1            # via python-jose
