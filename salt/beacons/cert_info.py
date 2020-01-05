@@ -16,8 +16,8 @@ import logging
 
 # Import salt libs
 # pylint: disable=import-error,no-name-in-module,redefined-builtin,3rd-party-module-not-gated
-from salt.six.moves import map as _map
-from salt.six.moves import range as _range
+from salt.ext.six.moves import map as _map
+from salt.ext.six.moves import range as _range
 # pylint: enable=import-error,no-name-in-module,redefined-builtin,3rd-party-module-not-gated
 import salt.utils.files
 
