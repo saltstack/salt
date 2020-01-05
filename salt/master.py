@@ -1625,7 +1625,7 @@ class AESFuncs(object):
                 log.info('Failed to verify event signature from minion %s.', load['id'])
                 if self.opts['drop_messages_signature_fail']:
                     log.critical(
-                        'Drop_messages_signature_fail is enabled, dropping '
+                        'drop_messages_signature_fail is enabled, dropping '
                         'message from %s', load['id']
                     )
                     return False

@@ -31,6 +31,7 @@ state modules
     bigip
     blockdev
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -244,6 +245,7 @@ state modules
     rabbitmq_cluster
     rabbitmq_plugin
     rabbitmq_policy
+    rabbitmq_upstream
     rabbitmq_user
     rabbitmq_vhost
     rbac_solaris

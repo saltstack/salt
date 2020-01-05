@@ -24,7 +24,7 @@ except:
     raise
 
 
-class LinuxSysctlTestCase(TestCase, LoaderModuleMockMixin):
+class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
     '''
     TestCase for salt.modules.saltcheck module
     '''
