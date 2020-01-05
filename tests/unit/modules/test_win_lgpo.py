@@ -5,6 +5,7 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+import os
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
@@ -27,6 +28,7 @@ LOADER_DICTS = {
         '__salt__': {
             'file.file_exists': salt.modules.file.file_exists,
             'file.makedirs': win_file.makedirs_,
+            'file.write': salt.modules.file.write,
             'file.remove': win_file.remove,
             'cmd.run': salt.modules.cmdmod.run},
         '__opts__': salt.config.DEFAULT_MINION_OPTS.copy(),
@@ -407,13 +409,23 @@ class WinLGPOPolicyInfoMechanismsTestCase(TestCase, LoaderModuleMockMixin):
         expected = 'Not configured'
         self.assertEqual(result, expected)
 
+    @destructiveTest
     def test_adv_audit_mechanism(self):
         '''
         Test getting the policy value using the AdvAudit mechanism
         '''
+        system_root = os.environ.get('SystemRoot', 'C:\\Windows')
+        f_audit = os.path.join(system_root, 'security', 'audit', 'audit.csv')
+        f_audit_gpo = os.path.join(system_root, 'System32', 'GroupPolicy',
+                                   'Machine', 'Microsoft', 'Windows NT',
+                                   'Audit', 'audit.csv')
+        if os.path.exists(f_audit):
+            os.remove(f_audit)
+        if os.path.exists(f_audit_gpo):
+            os.remove(f_audit_gpo)
         policy_name = 'AuditCredentialValidation'
         result = self._test_policy(policy_name=policy_name)
-        expected = 'No Auditing'
+        expected = 'Not Configured'
         self.assertEqual(result, expected)
 
     def test_net_user_modal_mechanism(self):
