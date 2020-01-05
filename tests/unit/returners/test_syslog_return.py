@@ -40,5 +40,5 @@ class SyslogReturnerTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=opts)):
             try:
                 syslog.returner(ret)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.fail('syslog.returner() failed with exception: {0}'.format(e))

@@ -40,7 +40,7 @@ def download_remote(url, dir):
 
         return full_directory
 
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise err
 
 

@@ -229,7 +229,7 @@ class NonBlockingPopen(subprocess.Popen):
                     log.error(stderrdata)
             time.sleep(interval)
 
-    def communicate(self, input=None):
+    def communicate(self, input=None):  # pylint: disable=arguments-differ
         super(NonBlockingPopen, self).communicate(input)
         self.stdout_buff.flush()
         self.stdout_buff.seek(0)

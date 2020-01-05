@@ -64,7 +64,6 @@ class MockState(object):
             '''
                 Mock verify_data method
             '''
-            data = data
             if self.flag:
                 return True
             else:
@@ -75,7 +74,6 @@ class MockState(object):
             '''
                 Mock call method
             '''
-            data = data
             return list
 
         @staticmethod
@@ -83,7 +81,6 @@ class MockState(object):
             '''
                 Mock call_high method
             '''
-            data = data
             return True
 
         @staticmethod
@@ -91,7 +88,6 @@ class MockState(object):
             '''
                 Mock call_template_str method
             '''
-            data = data
             return True
 
         @staticmethod
@@ -99,14 +95,12 @@ class MockState(object):
             '''
                 Mock _mod_init method
             '''
-            data = data
             return True
 
         def verify_high(self, data):
             '''
                 Mock verify_high method
             '''
-            data = data
             if self.flag:
                 return True
             else:
@@ -117,7 +111,6 @@ class MockState(object):
             '''
                 Mock compile_high_data
             '''
-            data = data
             return [{"__id__": "ABC"}]
 
         @staticmethod
@@ -125,9 +118,6 @@ class MockState(object):
             '''
                 Mock call_chunk method
             '''
-            data = data
-            data1 = data1
-            data2 = data2
             return {'': 'ABC'}
 
         @staticmethod
@@ -135,7 +125,6 @@ class MockState(object):
             '''
                 Mock call_chunks method
             '''
-            data = data
             return True
 
         @staticmethod
@@ -143,8 +132,6 @@ class MockState(object):
             '''
                 Mock call_listen method
             '''
-            data = data
-            ret = ret
             return True
 
         def requisite_in(self, data):  # pylint: disable=unused-argument
@@ -167,11 +154,6 @@ class MockState(object):
             '''
                 Mock render_state method
             '''
-            sls = sls
-            saltenv = saltenv
-            mods = mods
-            matches = matches
-            local = local
             if self.flag:
                 return {}, True
             else:
@@ -188,7 +170,6 @@ class MockState(object):
             '''
                 Mock verify_tops method
             '''
-            data = data
             if self.flag:
                 return ["a", "b"]
             else:
@@ -199,7 +180,6 @@ class MockState(object):
             '''
                 Mock top_matches method
             '''
-            data = data
             return ["a", "b", "c"]
 
         @staticmethod
@@ -241,7 +221,6 @@ class MockState(object):
             '''
                 Mock render_highstate method
             '''
-            data = data
             if self.flag:
                 return ["a", "b"], True
             else:
@@ -253,11 +232,6 @@ class MockState(object):
             '''
                 Mock call_highstate method
             '''
-            exclude = exclude
-            cache = cache
-            cache_name = cache_name
-            force = force
-            whitelist = whitelist
             return True
 
 
@@ -273,14 +247,13 @@ class MockSerial(object):
             Mock Serial class
         '''
         def __init__(self, data):
-            data = data
+            pass
 
         @staticmethod
         def load(data):
             '''
                 Mock load method
             '''
-            data = data
             return {"A": "B"}
 
         @staticmethod
@@ -288,8 +261,6 @@ class MockSerial(object):
             '''
                 Mock dump method
             '''
-            data = data
-            data1 = data1
             return True
 
 
@@ -307,8 +278,6 @@ class MockTarFile(object):
         '''
             Mock open method
         '''
-        data = data
-        data1 = data1
         return MockTarFile
 
     @staticmethod
@@ -323,7 +292,6 @@ class MockTarFile(object):
         '''
             Mock extractall method
         '''
-        data = data
         return True
 
     @staticmethod

@@ -77,7 +77,7 @@ class FutureWithTimeout(tornado.concurrent.Future):
                 self._timeout_handle = None
 
             self.set_result(future.result())
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             self.set_exception(exc)
 
 
@@ -192,7 +192,7 @@ class IPCServer(object):
                 else:
                     log.error('Exception occurred while '
                               'handling stream: %s', exc)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Exception occurred while '
                           'handling stream: %s', exc)
 
@@ -205,7 +205,7 @@ class IPCServer(object):
                     connection,
                 )
             self.io_loop.spawn_callback(self.handle_stream, stream)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('IPC streaming error: %s', exc)
 
     def close(self):
@@ -326,7 +326,7 @@ class IPCClient(object):
                 yield self.stream.connect(sock_addr)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 if self.stream.closed():
                     self.stream = None
 
@@ -517,7 +517,7 @@ class IPCMessagePublisher(object):
         except StreamClosedError:
             log.trace('Client disconnected from IPC %s', self.socket_path)
             self.streams.discard(stream)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception occurred while handling stream: %s', exc)
             if not stream.closed():
                 stream.close()
@@ -527,7 +527,7 @@ class IPCMessagePublisher(object):
         '''
         Send message to all connected sockets
         '''
-        if not len(self.streams):
+        if not self.streams:
             return
 
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
@@ -553,7 +553,7 @@ class IPCMessagePublisher(object):
                 self.streams.discard(stream)
 
             stream.set_close_callback(discard_after_closed)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('IPC streaming error: %s', exc)
 
     def close(self):
@@ -670,7 +670,7 @@ class IPCMessageSubscriber(IPCClient):
             log.trace('Subscriber disconnected from IPC %s', self.socket_path)
             self._read_stream_future = None
             exc_to_raise = exc
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error('Exception occurred in Subscriber while handling stream: %s', exc)
             self._read_stream_future = None
             exc_to_raise = exc
@@ -708,7 +708,7 @@ class IPCMessageSubscriber(IPCClient):
             except StreamClosedError:
                 log.trace('Subscriber closed stream on IPC %s before connect', self.socket_path)
                 yield tornado.gen.sleep(1)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Exception occurred while Subscriber connecting: %s', exc)
                 yield tornado.gen.sleep(1)
         yield self._read(None, callback)

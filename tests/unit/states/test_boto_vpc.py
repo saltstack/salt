@@ -224,7 +224,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
-        resource = self._create_resource(vpc_id=vpc.id, name='test')
+        self._create_resource(vpc_id=vpc.id, name='test')
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
                     name='test', vpc_name='test', **self.extra_kwargs)
