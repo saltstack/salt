@@ -404,7 +404,7 @@ class StateModuleTest(ModuleCase, SaltReturnAssertsMixin):
             with salt.utils.files.fopen(testfile, 'r') as fp_:
                 contents = salt.utils.stringutils.to_unicode(fp_.read())
             self.assertMultiLineEqual(expected, contents)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if os.path.exists(testfile):
                 shutil.copy(testfile, testfile + '.bak')
             raise

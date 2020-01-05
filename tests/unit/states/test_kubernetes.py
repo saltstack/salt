@@ -700,7 +700,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         node_data = self.make_node()
         labels = node_data['metadata']['labels'].copy()
 
-        del node_data['metadata']['labels']['failure-domain.beta.kubernetes.io/region']
+        node_data['metadata']['labels'].pop('failure-domain.beta.kubernetes.io/region')
 
         with self.mock_func('node_labels', return_value=labels):
             with self.mock_func('node_remove_label', return_value=node_data):

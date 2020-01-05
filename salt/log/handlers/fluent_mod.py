@@ -416,7 +416,7 @@ class FluentSender(object):
 
         try:
             self._reconnect()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # will be retried in emit()
             self._close()
 
@@ -460,7 +460,7 @@ class FluentSender(object):
 
             # send finished
             self.pendings = None
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # close socket
             self._close()
             # clear buffer if it exceeds max bufer size

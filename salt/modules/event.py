@@ -79,7 +79,7 @@ def fire_master(data, tag, preload=None):
                     # channel.send was successful.
                     # Ensure ret is True.
                     ret = True
-                except Exception:  # pylint: disable=bare-except
+                except Exception:  # pylint: disable=broad-except
                     ret = False
         return ret
     else:
@@ -88,7 +88,7 @@ def fire_master(data, tag, preload=None):
         try:
             return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
                 {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
             log.debug(lines)
@@ -112,7 +112,7 @@ def fire(data, tag):
                                            opts=__opts__,
                                            listen=False) as event:
             return event.fire_event(data, tag)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         log.debug(lines)

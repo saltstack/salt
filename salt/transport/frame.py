@@ -50,7 +50,7 @@ def _decode_embedded_list(src):
         if isinstance(elem, dict):
             elem = _decode_embedded_dict(elem)
         elif isinstance(elem, list):
-            elem = _decode_embedded_list(elem)  # pylint: disable=redefined-variable-type
+            elem = _decode_embedded_list(elem)
         elif isinstance(elem, bytes):
             try:
                 elem = elem.decode()
@@ -70,7 +70,7 @@ def _decode_embedded_dict(src):
         if isinstance(val, dict):
             val = _decode_embedded_dict(val)
         elif isinstance(val, list):
-            val = _decode_embedded_list(val)  # pylint: disable=redefined-variable-type
+            val = _decode_embedded_list(val)
         elif isinstance(val, bytes):
             try:
                 val = val.decode()
@@ -105,7 +105,7 @@ def decode_embedded_strs(src):
         return _decode_embedded_list(src)
     elif isinstance(src, bytes):
         try:
-            return src.decode()  # pylint: disable=redefined-variable-type
+            return src.decode()
         except UnicodeError:
             return src
     else:

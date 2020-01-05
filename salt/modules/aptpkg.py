@@ -1283,7 +1283,7 @@ def list_pkgs(versions_as_list=False,
             osarch = __grains__.get('osarch', '')
             if arch != 'all' and osarch == 'amd64' and osarch != arch:
                 name += ':{0}'.format(arch)
-        if len(cols):
+        if cols:
             if ('install' in linetype or 'hold' in linetype) and \
                     'installed' in status:
                 __salt__['pkg_resource.add_pkg'](ret['installed'],
@@ -1445,7 +1445,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
             except TypeError:
                 ret = apt_pkg.version_compare(six.text_type(pkg1), six.text_type(pkg2))
             return 1 if ret > 0 else -1 if ret < 0 else 0
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # Try to use shell version in case of errors w/python bindings
             pass
     try:
@@ -1457,7 +1457,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
                                               ignore_retcode=True)
             if retcode == 0:
                 return ret
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(exc)
     return None
 

@@ -164,9 +164,12 @@ def _auth(profile=None, api_version=1, **connection_args):
     except KeyError:
         heat_endpoint = __salt__['keystone.endpoint_get']('heat', profile)['publicurl']
     heat_endpoint = heat_endpoint % token
-    log.debug('Calling heatclient.client.Client(' +
-              '{0}, {1}, **{2})'.format(api_version, heat_endpoint,
-                                        kwargs))
+    log.debug(
+        'Calling heatclient.client.Client(%s, %s, **%s)',
+        api_version,
+        heat_endpoint,
+        kwargs
+    )
     # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
     # but we deal with those elsewhere
     return heatclient.client.Client(api_version, endpoint=heat_endpoint, **kwargs)
