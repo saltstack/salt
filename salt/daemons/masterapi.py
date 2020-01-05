@@ -263,7 +263,7 @@ def fileserver_update(fileserver):
             )
             raise salt.exceptions.SaltMasterError('No fileserver backends available')
         fileserver.update()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Exception %s occurred in file server update', exc,
             exc_info_on_loglevel=logging.DEBUG
@@ -534,7 +534,7 @@ class RemoteFuncs(object):
                 continue
             try:
                 ret = salt.utils.dictupdate.merge(ret, self.tops[fun](opts=opts, grains=grains), merge_lists=True)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # If anything happens in the top generation, log it and move on
                 log.error(
                     'Top function %s failed with error %s for minion %s',
@@ -1118,7 +1118,7 @@ class LocalFuncs(object):
             return runner_client.asynchronous(fun,
                                               load.get('kwarg', {}),
                                               username)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception occurred while introspecting %s')
             return {'error': {'name': exc.__class__.__name__,
                               'args': exc.args,
@@ -1176,7 +1176,7 @@ class LocalFuncs(object):
             self.event.fire_event(data, salt.utils.event.tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception occurred while introspecting %s', fun)
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                         fun,
@@ -1327,7 +1327,7 @@ class LocalFuncs(object):
                     '"%s" does not have a save_load function!',
                     self.opts['ext_job_cache']
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.critical(
                     'The specified returner threw a stack trace:',
                     exc_info=True
@@ -1343,7 +1343,7 @@ class LocalFuncs(object):
                 '"%s" does not have a save_load function!',
                 self.opts['master_job_cache']
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical(
                 'The specified returner threw a stack trace:',
                 exc_info=True

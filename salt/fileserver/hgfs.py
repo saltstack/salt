@@ -283,7 +283,7 @@ def init():
                 'hgfs remote.', rp_, repo_url
             )
             _failhard()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Exception \'%s\' encountered while initializing hgfs '
                 'remote %s', exc, repo_url
@@ -533,7 +533,7 @@ def update():
         curtip = repo['repo'].tip()
         try:
             repo['repo'].pull()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 'Exception %s caught while updating hgfs remote %s',
                 exc, repo['url'], exc_info_on_loglevel=logging.DEBUG
@@ -691,7 +691,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
         for filename in glob.glob(hashes_glob):
             try:
                 os.remove(filename)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
         with salt.utils.files.fopen(blobshadest, 'w+') as fp_:
             fp_.write(ref[2])
@@ -715,7 +715,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
             # 8 => st_mtime=1456338235
             # 9 => st_ctime=1456338235
             fnd['stat'] = list(os.stat(dest))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         repo['repo'].close()
         return fnd

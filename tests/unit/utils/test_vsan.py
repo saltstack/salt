@@ -21,7 +21,7 @@ from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
 from salt.utils import vsan
 
 try:
-    from pyVmomi import vim, vmodl
+    from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False

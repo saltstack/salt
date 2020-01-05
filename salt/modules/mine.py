@@ -189,7 +189,7 @@ def update(clear=False, mine_functions=None):
                 *function_args,
                 **function_kwargs
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc()
             log.error('Function %s in mine.update failed to execute', function_name or function_alias)
             log.debug('Error: %s', trace)
@@ -247,7 +247,7 @@ def send(name, *args, **kwargs):
             *args,
             **kwargs
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         trace = traceback.format_exc()
         log.error('Function %s in mine.send failed to execute', mine_function or name)
         log.debug('Error: %s', trace)
