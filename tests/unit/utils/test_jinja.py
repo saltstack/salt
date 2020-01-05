@@ -17,7 +17,6 @@ import tempfile
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.unit import skipIf, TestCase
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.mock import patch, MagicMock, Mock
 
 # Import Salt libs
@@ -46,6 +45,7 @@ import salt.utils.stringutils
 import salt.utils.yaml
 
 # Import 3rd party libs
+import pytest
 try:
     import timelib  # pylint: disable=W0611
     HAS_TIMELIB = True
@@ -1268,7 +1268,7 @@ class TestCustomExtensions(TestCase):
                                      dict(opts=self.local_opts, saltenv='test', salt=self.local_salt))
         self.assertEqual(rendered, '16777216')
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_http_query(self):
         '''
         Test the `http_query` Jinja filter.

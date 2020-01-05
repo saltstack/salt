@@ -14,7 +14,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import flaky
 
 # Import salt libs
 import salt.utils.path
@@ -40,7 +39,7 @@ SET_SUBNET_NAME = __random_string()
 
 
 @pytest.mark.skip_if_not_root
-@flaky(attempts=10)
+@pytest.mark.flaky(max_runs=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacSystemModuleTest(ModuleCase):

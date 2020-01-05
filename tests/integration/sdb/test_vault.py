@@ -13,7 +13,6 @@ import pytest
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase, ShellCase
-from tests.support.helpers import flaky
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
@@ -101,17 +100,17 @@ class VaultTestCase(ModuleCase, ShellCase):
             self.run_state('docker_container.absent', name='vault')
             self.run_state('docker_image.absent', name='vault', force=True)
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_sdb(self):
         assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_sdb/foo', value='bar') is True
         assert self.run_function('sdb.get', arg=['sdb://sdbvault/secret/test/test_sdb/foo']) == 'bar'
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_sdb_runner(self):
         assert self.run_run('sdb.set sdb://sdbvault/secret/test/test_sdb_runner/foo bar') == ['True']
         assert self.run_run('sdb.get sdb://sdbvault/secret/test/test_sdb_runner/foo') == ['bar']
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_config(self):
         assert self.run_function('sdb.set', uri='sdb://sdbvault/secret/test/test_pillar_sdb/foo', value='bar') is True
         assert self.run_function('config.get', arg=['test_vault_pillar_sdb']) == 'bar'

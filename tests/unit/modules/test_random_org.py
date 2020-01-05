@@ -7,7 +7,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
-from tests.support.helpers import flaky
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 
@@ -15,6 +14,7 @@ from tests.support.unit import skipIf, TestCase
 import salt.modules.random_org as random_org
 
 # Import 3rd-party libs
+import pytest
 from tornado.httpclient import HTTPClient
 
 
@@ -184,7 +184,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateDecimalFractions' function tests: 1
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_generatedecimalfractions(self):
         '''
         Test if it generates true random decimal fractions.
@@ -217,7 +217,7 @@ class RandomOrgTestCase(TestCase, LoaderModuleMockMixin):
 
     # 'generateGaussians' function tests: 1
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_generategaussians(self):
         '''
         Test if it generates true random numbers from a

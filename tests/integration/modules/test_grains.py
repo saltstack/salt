@@ -15,7 +15,6 @@ from salt.ext.six.moves import range
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.unit import skipIf
 
 import pytest
@@ -201,7 +200,7 @@ class GrainsAppendTestCase(ModuleCase):
 
         assert msg == ret
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_grains_append_val_is_list(self):
         '''
         Tests the return of a grains.append call when val is passed in as a list.

@@ -12,7 +12,6 @@ import time
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
 from tests.support.case import ModuleCase
-from tests.support.helpers import flaky
 from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt Libs
@@ -79,24 +78,24 @@ class VaultTestCase(ModuleCase):
             self.run_state('docker_container.absent', name='vault')
             self.run_state('docker_image.absent', name='vault', force=True)
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_write_read_secret(self):
         assert self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar') is True
         assert self.run_function('vault.read_secret', arg=['secret/my/secret']) == {'password': 'bar', 'user': 'foo'}
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_write_raw_read_secret(self):
         assert self.run_function('vault.write_raw',
                                  path='secret/my/secret',
                                  raw={"user": "foo", "password": "bar"}) is True
         assert self.run_function('vault.read_secret', arg=['secret/my/secret']) == {'password': 'bar', 'user': 'foo'}
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_delete_secret(self):
         assert self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar') is True
         assert self.run_function('vault.delete_secret', arg=['secret/my/secret']) is True
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_list_secrets(self):
         assert self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar') is True
         assert self.run_function('vault.list_secrets', arg=['secret/my/']) == {'keys': ['secret']}

@@ -11,7 +11,6 @@ import pytest
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import flaky
 
 # Import Salt libs
 import salt.utils.path
@@ -19,7 +18,7 @@ import salt.utils.platform
 
 
 @pytest.mark.skip_if_not_root
-@flaky(attempts=10)
+@pytest.mark.flaky(max_runs=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTest(ModuleCase):
@@ -144,7 +143,7 @@ class MacPowerModuleTest(ModuleCase):
 
 
 @pytest.mark.skip_if_not_root
-@flaky(attempts=10)
+@pytest.mark.flaky(max_runs=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
@@ -195,7 +194,7 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
 
 
 @pytest.mark.skip_if_not_root
-@flaky(attempts=10)
+@pytest.mark.flaky(max_runs=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestRestartPowerFailure(ModuleCase):
@@ -245,7 +244,7 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
 
 
 @pytest.mark.skip_if_not_root
-@flaky(attempts=10)
+@pytest.mark.flaky(max_runs=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestWakeOnNet(ModuleCase):
@@ -292,7 +291,7 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
 
 
 @pytest.mark.skip_if_not_root
-@flaky(attempts=10)
+@pytest.mark.flaky(max_runs=10)
 @skipIf(not salt.utils.platform.is_darwin(), 'Test only available on macOS')
 @skipIf(not salt.utils.path.which('systemsetup'), '\'systemsetup\' binary not found in $PATH')
 class MacPowerModuleTestWakeOnModem(ModuleCase):

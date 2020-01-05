@@ -9,6 +9,7 @@ import threading
 import socket
 import logging
 
+import pytest
 import tornado.gen
 import tornado.ioloop
 import tornado.concurrent
@@ -26,7 +27,7 @@ from salt.transport.tcp import SaltMessageClientPool, SaltMessageClient, TCPPubS
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.helpers import get_unused_localhost_port, flaky
+from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.mock import MagicMock, patch
 from tests.unit.transport.mixins import PubChannelMixin, ReqChannelMixin, run_loop_in_thread
@@ -138,7 +139,7 @@ class AESReqTestCases(BaseTCPReqCase, ReqChannelMixin):
 
     # TODO: make failed returns have a specific framing so we can raise the same exception
     # on encrypted channels
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_badload(self):
         '''
         Test a variety of bad requests, make sure that we get some sort of error

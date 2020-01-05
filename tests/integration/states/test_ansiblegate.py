@@ -18,10 +18,7 @@ import salt.utils.path
 
 # Import testing libraries
 from tests.support.case import ModuleCase
-from tests.support.helpers import (
-    requires_sshd_server,
-    flaky
-)
+from tests.support.helpers import requires_sshd_server
 from tests.support.mixins import SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
 
@@ -64,7 +61,7 @@ class AnsiblePlaybooksTestCase(ModuleCase, SaltReturnAssertsMixin):
         delattr(self, 'tempdir')
         delattr(self, 'inventory')
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_ansible_playbook(self):
         ret = self.run_state(
             'ansible.playbooks',

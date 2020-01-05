@@ -7,7 +7,7 @@ import time
 
 # Import Salt Testing libs
 from tests.support.case import ShellCase
-from tests.support.helpers import flaky, dedent
+from tests.support.helpers import dedent
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.unit import skipIf
 
@@ -96,14 +96,14 @@ class MatchTest(ShellCase, ShellCaseCommonTestsMixin):
         assert minion_in_returns('sub_minion', data) is True
 
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_compound_pillar(self):
         data = self.run_salt("-C 'I%@companions%three%sarah*' test.ping")
         assert minion_in_returns('minion', data) is True
         assert minion_in_returns('sub_minion', data) is True
 
     @skipIf(True, 'This test is unreliable. Need to investigate why more deeply.')
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_coumpound_pillar_pcre(self):
         data = self.run_salt("-C 'J%@knights%^(Lancelot|Galahad)$' test.ping")
         self.assertTrue(minion_in_returns('minion', data))

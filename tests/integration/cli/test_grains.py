@@ -21,7 +21,6 @@ import salt.utils.files
 
 # Import Salt Testing Libs
 from tests.support.case import ShellCase, SSHCase
-from tests.support.helpers import flaky
 
 import pytest
 
@@ -56,7 +55,7 @@ class GrainsTargetingTest(ShellCase):
         sub_minion = self.run_salt('-G "id:sub_minion" test.ping')
         self.assertEqual(sorted(sub_minion), sorted(['sub_minion:', '    True']))
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_grains_targeting_disconnected(self):
         '''
         Tests return of minion using grains targeting on a disconnected minion.

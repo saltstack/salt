@@ -2,14 +2,15 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
 from tests.support.unit import skipIf
-from tests.support.helpers import TstSuiteLoggingHandler, flaky
+from tests.support.helpers import TstSuiteLoggingHandler
 
-import logging
 import salt.ext.six as six
+import pytest
 
 
 @skipIf(six.PY3, 'Runtest Log Hander Disabled for PY3, #41836')
@@ -25,7 +26,7 @@ class LoggingJIDsTest(ModuleCase):
         self.handler = TstSuiteLoggingHandler(format=log_format,
                                               level=logging.DEBUG)
 
-    @flaky
+    @pytest.mark.flaky(max_runs=4)
     def test_jid_in_logs(self):
         '''
         Test JID in log_format

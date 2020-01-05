@@ -8,6 +8,7 @@ from textwrap import dedent
 from tests.support.unit import skipIf, TestCase
 
 # Import 3rd party libs
+import pytest
 import jinja2
 import yaml as _yaml  # future lint: disable=blacklisted-import
 from salt.ext import six
@@ -24,13 +25,10 @@ from salt.serializers.yaml import EncryptedString
 from salt.serializers import SerializationError
 from salt.utils.odict import OrderedDict
 
-# Import test support libs
-from tests.support.helpers import flaky
-
 SKIP_MESSAGE = '%s is unavailable, have prerequisites been met?'
 
 
-@flaky(condition=six.PY3)
+@pytest.mark.flaky(max_runs=4, rerun_filter=lambda *args: six.PY3)
 class TestSerializers(TestCase):
     @skipIf(not json.available, SKIP_MESSAGE % 'json')
     def test_serialize_json(self):
