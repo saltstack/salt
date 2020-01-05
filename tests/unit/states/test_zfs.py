@@ -12,16 +12,12 @@ Tests for salt.states.zfs
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
+from tests.support.zfs import ZFSMockData
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
-
-# Import test data from salt.utils.zfs test
-from tests.unit.utils.test_zfs import utils_patch
 
 # Import Salt Execution module to test
 import salt.utils.zfs
@@ -32,13 +28,15 @@ import salt.loader
 from salt.utils.odict import OrderedDict
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZfsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.zfs
     '''
     def setup_loader_modules(self):
         self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
+        self.utils_patch = ZFSMockData().get_patched_utils()
+        for key in ('opts', 'utils_patch'):
+            self.addCleanup(delattr, self, key)
         utils = salt.loader.utils(opts, whitelist=['zfs'])
         zfs_obj = {
             zfs: {
@@ -61,7 +59,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=False)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_absent('myzpool/filesystem'))
 
     def test_filesystem_absent_removed(self):
@@ -77,7 +75,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_destroy = MagicMock(return_value=OrderedDict([('destroyed', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_absent('myzpool/filesystem'))
 
     def test_filesystem_absent_fail(self):
@@ -104,7 +102,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_absent('myzpool/filesystem'))
 
     def test_volume_absent_novol(self):
@@ -118,7 +116,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=False)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_absent('myzpool/volume'))
 
     def test_volume_absent_removed(self):
@@ -134,7 +132,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_destroy = MagicMock(return_value=OrderedDict([('destroyed', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_absent('myzpool/volume'))
 
     def test_volume_absent_fail(self):
@@ -161,7 +159,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_absent('myzpool/volume'))
 
     def test_snapshot_absent_nosnap(self):
@@ -175,7 +173,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=False)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_absent('myzpool/filesystem@snap'))
 
     def test_snapshot_absent_removed(self):
@@ -191,7 +189,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_destroy = MagicMock(return_value=OrderedDict([('destroyed', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_absent('myzpool/filesystem@snap'))
 
     def test_snapshot_absent_fail(self):
@@ -210,7 +208,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_absent('myzpool/filesystem@snap'))
 
     def test_bookmark_absent_nobook(self):
@@ -224,7 +222,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=False)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.bookmark_absent('myzpool/filesystem#book'))
 
     def test_bookmark_absent_removed(self):
@@ -240,7 +238,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_destroy = MagicMock(return_value=OrderedDict([('destroyed', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.destroy': mock_destroy}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.bookmark_absent('myzpool/filesystem#book'))
 
     def test_hold_absent_nohold(self):
@@ -254,7 +252,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_holds = MagicMock(return_value=OrderedDict([]))
         with patch.dict(zfs.__salt__, {'zfs.holds': mock_holds}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_absent('myhold', 'myzpool/filesystem@snap'))
 
     def test_hold_absent_removed(self):
@@ -274,7 +272,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_release = MagicMock(return_value=OrderedDict([('released', True)]))
         with patch.dict(zfs.__salt__, {'zfs.holds': mock_holds}), \
              patch.dict(zfs.__salt__, {'zfs.release': mock_release}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_absent('myhold', 'myzpool/filesystem@snap'))
 
     def test_hold_absent_fail(self):
@@ -290,7 +288,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
             ('error', "cannot open 'myzpool/filesystem@snap': dataset does not exist"),
         ]))
         with patch.dict(zfs.__salt__, {'zfs.holds': mock_holds}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_absent('myhold', 'myzpool/filesystem@snap'))
 
     def test_hold_present(self):
@@ -304,7 +302,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_holds = MagicMock(return_value=OrderedDict([('myhold', 'Thu Feb 15 16:24 2018')]))
         with patch.dict(zfs.__salt__, {'zfs.holds': mock_holds}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_present('myhold', 'myzpool/filesystem@snap'))
 
     def test_hold_present_new(self):
@@ -320,7 +318,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_hold = MagicMock(return_value=OrderedDict([('held', True)]))
         with patch.dict(zfs.__salt__, {'zfs.holds': mock_holds}), \
              patch.dict(zfs.__salt__, {'zfs.hold': mock_hold}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_present('myhold', 'myzpool/filesystem@snap'))
 
     def test_hold_present_fail(self):
@@ -339,7 +337,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.holds': mock_holds}), \
              patch.dict(zfs.__salt__, {'zfs.hold': mock_hold}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.hold_present('myhold', 'myzpool/filesystem@snap'))
 
     def test_filesystem_present(self):
@@ -364,7 +362,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.get': mock_get}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_present('myzpool/filesystem'))
 
     def test_filesystem_present_new(self):
@@ -380,7 +378,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_create = MagicMock(return_value=OrderedDict([('created', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.create': mock_create}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_present('myzpool/filesystem'))
 
     def test_filesystem_present_update(self):
@@ -407,7 +405,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.get': mock_get}), \
              patch.dict(zfs.__salt__, {'zfs.set': mock_set}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_present(
                 name='myzpool/filesystem',
                 properties={'compression': 'lz4'},
@@ -429,7 +427,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.create': mock_create}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.filesystem_present('myzpool/filesystem'))
 
     def test_volume_present(self):
@@ -454,7 +452,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.get': mock_get}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_present('myzpool/volume', volume_size='1G'))
 
     def test_volume_present_new(self):
@@ -470,7 +468,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_create = MagicMock(return_value=OrderedDict([('created', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.create': mock_create}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_present('myzpool/volume', volume_size='1G'))
 
     def test_volume_present_update(self):
@@ -497,7 +495,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.get': mock_get}), \
              patch.dict(zfs.__salt__, {'zfs.set': mock_set}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_present(
                 name='myzpool/volume',
                 volume_size='1G',
@@ -520,7 +518,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.create': mock_create}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.volume_present('myzpool/volume', volume_size='1G'))
 
     def test_bookmark_present(self):
@@ -534,7 +532,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=True)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.bookmark_present('mybookmark', 'myzpool/filesystem@snap'))
 
     def test_bookmark_present_new(self):
@@ -550,7 +548,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_bookmark = MagicMock(return_value=OrderedDict([('bookmarked', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.bookmark': mock_bookmark}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.bookmark_present('mybookmark', 'myzpool/filesystem@snap'))
 
     def test_bookmark_present_fail(self):
@@ -569,7 +567,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.bookmark': mock_bookmark}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.bookmark_present('mybookmark', 'myzpool/filesystem@snap'))
 
     def test_snapshot_present(self):
@@ -583,7 +581,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=True)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_present('myzpool/filesystem@snap'))
 
     def test_snapshot_present_new(self):
@@ -599,7 +597,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_snapshot = MagicMock(return_value=OrderedDict([('snapshotted', True)]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.snapshot': mock_snapshot}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_present('myzpool/filesystem@snap'))
 
     def test_snapshot_present_fail(self):
@@ -618,7 +616,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.snapshot': mock_snapshot}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.snapshot_present('myzpool/filesystem@snap'))
 
     def test_propmoted(self):
@@ -640,7 +638,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         ]))
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.get': mock_get}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.promoted('myzpool/filesystem'))
 
     def test_propmoted_clone(self):
@@ -664,7 +662,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
              patch.dict(zfs.__salt__, {'zfs.get': mock_get}), \
              patch.dict(zfs.__salt__, {'zfs.promote': mock_promote}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.promoted('myzpool/filesystem'))
 
     def test_propmoted_fail(self):
@@ -678,7 +676,7 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=False)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.promoted('myzpool/filesystem'))
 
     def test_scheduled_snapshot_fail(self):
@@ -692,5 +690,5 @@ class ZfsTestCase(TestCase, LoaderModuleMockMixin):
 
         mock_exists = MagicMock(return_value=False)
         with patch.dict(zfs.__salt__, {'zfs.exists': mock_exists}), \
-             patch.dict(zfs.__utils__, utils_patch):
+             patch.dict(zfs.__utils__, self.utils_patch):
             self.assertEqual(ret, zfs.scheduled_snapshot('myzpool/filesystem', 'shadow', schedule={'hour': 6}))

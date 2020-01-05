@@ -164,6 +164,39 @@ Example with setup state including pillar
         - vim
       assertion: assertNotEmpty
 
+Example with jinja
+------------------
+
+.. code-block:: jinja
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
+Example with setup state including pillar
+-----------------------------------------
+
+.. code-block:: yaml
+
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    verify_vim:
+      module_and_function: pkg.version
+      args:
+        - vim
+      assertion: assertNotEmpty
+
 Example with skip
 -----------------
 

@@ -40,6 +40,7 @@ import salt.utils.event
 import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.immutabletypes as immutabletypes
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.url
@@ -56,7 +57,6 @@ from salt.utils.odict import OrderedDict, DefaultOrderedDict
 import salt.utils.yamlloader as yamlloader
 
 # Import third party libs
-import msgpack
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import map, range, reload_module
@@ -870,6 +870,17 @@ class State(object):
 
         return ret
 
+    def _run_check_function(self, entry):
+        """Format slot args and run unless/onlyif function."""
+        fun = entry.pop('fun')
+        args = entry.pop('args') if 'args' in entry else []
+        cdata = {
+            'args': args,
+            'kwargs': entry
+        }
+        self.format_slots(cdata)
+        return self.functions[fun](*cdata['args'], **cdata['kwargs'])
+
     def _run_check_onlyif(self, low_data, cmd_opts):
         '''
         Check that unless doesn't return 0, and that onlyif returns a 0.
@@ -880,20 +891,40 @@ class State(object):
             low_data_onlyif = [low_data['onlyif']]
         else:
             low_data_onlyif = low_data['onlyif']
-        for entry in low_data_onlyif:
-            if not isinstance(entry, six.string_types):
-                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
+
+        def _check_cmd(cmd):
             if cmd != 0 and ret['result'] is False:
                 ret.update({'comment': 'onlyif condition is false',
                             'skip_watch': True,
                             'result': True})
-                return ret
             elif cmd == 0:
                 ret.update({'comment': 'onlyif condition is true', 'result': False})
+
+        for entry in low_data_onlyif:
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](
+                    entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                _check_cmd(cmd)
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in onlyif: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+
+                result = self._run_check_function(entry)
+                if self.state_con.get('retcode', 0):
+                    _check_cmd(self.state_con['retcode'])
+                elif not result:
+                    ret.update({'comment': 'onlyif condition is false',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'onlyif condition is true',
+                                'result': False})
+
+            else:
+                ret.update({'comment': 'onlyif execution failed, bad type passed', 'result': False})
         return ret
 
     def _run_check_unless(self, low_data, cmd_opts):
@@ -906,20 +937,38 @@ class State(object):
             low_data_unless = [low_data['unless']]
         else:
             low_data_unless = low_data['unless']
-        for entry in low_data_unless:
-            if not isinstance(entry, six.string_types):
-                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
-                return ret
-            cmd = self.functions['cmd.retcode'](
-                entry, ignore_retcode=True, python_shell=True, **cmd_opts)
-            log.debug('Last command return code: %s', cmd)
+
+        def _check_cmd(cmd):
             if cmd == 0 and ret['result'] is False:
                 ret.update({'comment': 'unless condition is true',
                             'skip_watch': True,
                             'result': True})
             elif cmd != 0:
                 ret.update({'comment': 'unless condition is false', 'result': False})
-                return ret
+
+        for entry in low_data_unless:
+            if isinstance(entry, six.string_types):
+                cmd = self.functions['cmd.retcode'](entry, ignore_retcode=True, python_shell=True, **cmd_opts)
+                log.debug('Last command return code: %s', cmd)
+                _check_cmd(cmd)
+            elif isinstance(entry, dict):
+                if 'fun' not in entry:
+                    ret['comment'] = 'no `fun` argument in unless: {0}'.format(entry)
+                    log.warning(ret['comment'])
+                    return ret
+
+                result = self._run_check_function(entry)
+                if self.state_con.get('retcode', 0):
+                    _check_cmd(self.state_con['retcode'])
+                elif result:
+                    ret.update({'comment': 'unless condition is true',
+                                'skip_watch': True,
+                                'result': True})
+                else:
+                    ret.update({'comment': 'unless condition is false',
+                                'result': False})
+            else:
+                ret.update({'comment': 'unless condition is false, bad type passed', 'result': False})
 
         # No reason to stop, return ret
         return ret
@@ -957,7 +1006,7 @@ class State(object):
             self.states = salt.loader.thorium(self.opts, self.functions, {})  # TODO: Add runners, proxy?
         else:
             self.states = salt.loader.states(self.opts, self.functions, self.utils,
-                                             self.serializers, proxy=self.proxy)
+                                             self.serializers, context=self.state_con, proxy=self.proxy)
 
     def load_modules(self, data=None, proxy=None):
         '''
@@ -991,7 +1040,7 @@ class State(object):
         self.serializers = salt.loader.serializers(self.opts)
         self._load_states()
         self.rend = salt.loader.render(self.opts, self.functions,
-                                       states=self.states, proxy=self.proxy)
+                                       states=self.states, proxy=self.proxy, context=self.state_con)
 
     def module_refresh(self):
         '''
@@ -2260,7 +2309,7 @@ class State(object):
                     with salt.utils.files.fopen(pause_path, 'rb') as fp_:
                         try:
                             pdat = msgpack_deserialize(fp_.read())
-                        except msgpack.UnpackValueError:
+                        except salt.utils.msgpack.exceptions.UnpackValueError:
                             # Reading race condition
                             if tries > 10:
                                 # Break out if there are a ton of read errors
@@ -4210,7 +4259,7 @@ class MasterState(State):
         self.utils = salt.loader.utils(self.opts)
         self.serializers = salt.loader.serializers(self.opts)
         self.states = salt.loader.states(self.opts, self.functions, self.utils, self.serializers)
-        self.rend = salt.loader.render(self.opts, self.functions, states=self.states)
+        self.rend = salt.loader.render(self.opts, self.functions, states=self.states, context=self.state_con)
 
 
 class MasterHighState(HighState):
@@ -4262,5 +4311,7 @@ class RemoteHighState(object):
         self._closing = True
         self.channel.close()
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701

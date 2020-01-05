@@ -149,6 +149,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -314,6 +315,7 @@ state modules
     win_wusa
     winrepo
     x509
+    xml
     xmpp
     zabbix_action
     zabbix_host

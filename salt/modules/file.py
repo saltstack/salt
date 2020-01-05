@@ -613,7 +613,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
@@ -3353,9 +3353,27 @@ def link(src, path):
     try:
         os.link(src, path)
         return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+    except (OSError, IOError) as E:
+        raise CommandExecutionError('Could not create \'{0}\': {1}'.format(path, E))
     return False
+
+
+def is_hardlink(path):
+    '''
+    Check if the path is a hard link by verifying that the number of links
+    is larger than 1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_hardlink /path/to/link
+    '''
+
+    # Simply use lstat and count the st_nlink field to determine if this path
+    # is hardlinked to something.
+    res = lstat(os.path.expanduser(path))
+    return res and res['st_nlink'] > 1
 
 
 def is_link(path):
