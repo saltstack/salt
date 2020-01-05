@@ -109,7 +109,7 @@ def beacon(config):
             log.error('Unable to load certificate %s (%s)', cert_path, exc)
             continue
 
-        cert_date = datetime.strptime(cert.get_notAfter(), "%Y%m%d%H%M%SZ")
+        cert_date = datetime.strptime(cert.get_notAfter().decode(encoding='UTF-8'), "%Y%m%d%H%M%SZ")
         date_diff = (cert_date - datetime.today()).days
         log.debug('Certificate %s expires in %s days.', cert_path, date_diff)
 
@@ -134,7 +134,8 @@ def beacon(config):
                     'notAfter': cert_date.strftime("%Y-%m-%d %H:%M:%SZ"),
                     'notBefore_raw': cert.get_notBefore(),
                     'notBefore': datetime.strptime(
-                                     cert.get_notBefore(), "%Y%m%d%H%M%SZ").strftime("%Y-%m-%d %H:%M:%SZ"),
+                                     cert.get_notBefore().decode(encoding='UTF-8'), "%Y%m%d%H%M%SZ"
+                                 ).strftime("%Y-%m-%d %H:%M:%SZ"),
                     'serial_number': cert.get_serial_number(),
                     'signature_algorithm': cert.get_signature_algorithm(),
                     'subject': ','.join(['{0}="{1}"'.format(t[0], t[1]) for t in cert.get_subject().get_components()]),
