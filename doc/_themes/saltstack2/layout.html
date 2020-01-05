@@ -184,6 +184,7 @@
                             <nav id="localnav">
                                 <ul class="nav navbar-nav">
                                     {%- block relbar_small %}{{ relbar() }}{% endblock %}
+
                                     {% if not (build_type == repo_primary_branch or build_type == "next") and on_saltstack %}
                                     <li><a class="icon-dl" href="/en/pdf/Salt-{{ release }}.pdf"><img height="25" width="25" class="nolightbox" src="{{ pathto('_static/images/pdf_icon.svg', 1) }}"></a></li>
                                     <li><a class="icon-dl" href="/en/epub/Salt-{{ release }}.epub"><img height="25" width="18" class="nolightbox" src="{{ pathto('_static/images/epub_icon.svg', 1) }}"></a></li>
@@ -247,7 +248,6 @@
                             <p><i>{{ today }}</i></p>
 
                                 {% if build_type == "latest" %}
-                              
                                 <p>You are viewing docs for the latest stable release, {{ latest_release }}. Switch to docs for the previous stable release, <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Docs for the previous stable release" href="/en/{{ previous_release_dir }}/">{{ previous_release }}</a>, or to a recent doc build from the <a data-container="body" data-toggle="tooltip" data-placement="bottom" title="Latest docs from the {{ repo_primary_branch }} branch" href="/en/{{ repo_primary_branch }}/">{{ repo_primary_branch }}</a> branch.</p>
 
                                 {% elif build_type == "previous" %}
