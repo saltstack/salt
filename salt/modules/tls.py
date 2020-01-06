@@ -359,7 +359,7 @@ def maybe_fix_ssl_version(ca_name, cacert_path=None, ca_filename=None):
                     key = OpenSSL.crypto.load_privatekey(
                         OpenSSL.crypto.FILETYPE_PEM, fic2.read())
                     bits = key.bits()
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     bits = 2048
                 try:
                     days = (datetime.strptime(
@@ -440,9 +440,8 @@ def get_ca(ca_name, as_text=False, cacert_path=None):
         salt '*' tls.get_ca test_ca as_text=False cacert_path=/etc/certs
     '''
     set_ca_path(cacert_path)
-    certp = '{0}/{1}/{2}_ca_cert.crt'.format(
+    certp = '{0}/{1}/{1}_ca_cert.crt'.format(
             cert_base_path(),
-            ca_name,
             ca_name)
     if not os.path.exists(certp):
         raise ValueError('Certificate does not exist for {0}'.format(ca_name))
@@ -555,7 +554,7 @@ def _read_cert(cert):
                     OpenSSL.crypto.FILETYPE_PEM,
                     rfh.read()
                 )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception('Failed to read cert from path %s', cert)
             return None
     else:
@@ -821,8 +820,8 @@ def create_ca(ca_name,
 
     ret = ('Created Private Key: "{0}/{1}/{2}.key." ').format(
         cert_base_path(), ca_name, ca_filename)
-    ret += ('Created CA "{0}": "{1}/{2}/{3}.crt."').format(
-        ca_name, cert_base_path(), ca_name, ca_filename)
+    ret += ('Created CA "{0}": "{1}/{0}/{2}.crt."').format(
+        ca_name, cert_base_path(), ca_filename)
 
     return ret
 
@@ -1499,7 +1498,7 @@ def create_ca_signed_cert(ca_name,
                     native_exts_obj,
                     i)
                 exts.append(ext)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.error('X509 extensions are unsupported in pyOpenSSL '
                       'versions prior to 0.14. Upgrade required to '
                       'use extensions. Current version: {0}'.format(
@@ -1581,9 +1580,8 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
         return 'Certificate "{0}" already exists'.format(CN)
 
     try:
-        with salt.utils.files.fopen('{0}/{1}/{2}_ca_cert.crt'.format(cert_base_path(),
-                                                               ca_name,
-                                                               ca_name)) as fhr:
+        with salt.utils.files.fopen('{0}/{1}/{1}_ca_cert.crt'.format(cert_base_path(),
+                                                                     ca_name)) as fhr:
             ca_cert = OpenSSL.crypto.load_certificate(
                 OpenSSL.crypto.FILETYPE_PEM,
                 fhr.read()
@@ -1625,11 +1623,10 @@ def create_pkcs12(ca_name, CN, passphrase='', cacert_path=None, replace=False):
         )
 
     return ('Created PKCS#12 Certificate for "{0}": '
-            '"{1}/{2}/certs/{3}.p12"').format(
+            '"{1}/{2}/certs/{0}.p12"').format(
         CN,
         cert_base_path(),
         ca_name,
-        CN
     )
 
 

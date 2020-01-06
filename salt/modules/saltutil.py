@@ -176,7 +176,7 @@ def update(version=None):
         return ret
     try:
         app.cleanup()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['_error'] = 'Unable to cleanup. Error: {0}'.format(exc)
     restarted = {}
     for service in __opts__['update_restart_services']:
