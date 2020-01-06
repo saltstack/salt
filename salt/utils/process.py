@@ -686,15 +686,23 @@ class ProcessManager(object):
 
 class Process(multiprocessing.Process, NewStyleClassMixIn):
 
+    def __new__(cls, *args, **kwargs):
+        # We implement __new__ because we want to capture the passed in *args and **kwargs
+        # in order to remove the need for each class to implement __getstate__ and __setstate__
+        # which is required on windows
+        instance = super(Process, cls).__new__(cls)
+
+        if salt.utils.platform.is_windows():
+            # On Windows, subclasses should call super if they define
+            # __setstate__ and/or __getstate__
+            instance._args_for_getstate = copy.copy(args)
+            instance._kwargs_for_getstate = copy.copy(kwargs)
+        return instance
+
     def __init__(self, *args, **kwargs):
         log_queue = kwargs.pop('log_queue', None)
         log_queue_level = kwargs.pop('log_queue_level', None)
         super(Process, self).__init__(*args, **kwargs)
-        if salt.utils.platform.is_windows():
-            # On Windows, subclasses should call super if they define
-            # __setstate__ and/or __getstate__
-            self._args_for_getstate = copy.copy(args)
-            self._kwargs_for_getstate = copy.copy(kwargs)
         self.log_queue = log_queue
         if self.log_queue is None:
             self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
@@ -731,8 +739,6 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         kwargs = state['kwargs']
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
-        self._after_fork_methods = self._after_fork_methods
-        self._finalize_methods = self._finalize_methods
 
     def __getstate__(self):
         args = self._args_for_getstate
@@ -742,10 +748,7 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         if 'log_queue_level' not in kwargs:
             kwargs['log_queue_level'] = self.log_queue_level
         return {'args': args,
-                'kwargs': kwargs,
-                '_after_fork_methods': self._after_fork_methods,
-                '_finalize_methods': self._finalize_methods,
-                }
+                'kwargs': kwargs}
 
     def _setup_process_logging(self):
         salt.log.setup.setup_multiprocessing_logging(self.log_queue)
