@@ -90,7 +90,6 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                             'has_expired': False,
                             'issuer': 'CN="salttest-01.example.local"',
                             'issuer_dict': {'CN': 'salttest-01.example.local'},
-                            'issuer_raw': [('CN', 'salttest-01.example.local')],
                             'notAfter': '2029-05-31 20:59:22Z',
                             'notAfter_raw': '20290531205922Z',
                             'notBefore': '2019-06-03 20:59:22Z',
@@ -99,7 +98,6 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                             'signature_algorithm': 'sha256WithRSAEncryption',
                             'subject': 'CN="salttest-01.example.local"',
                             'subject_dict': {'CN': 'salttest-01.example.local'},
-                            'subject_raw': [('CN', 'salttest-01.example.local')],
                             'version': 2
                         }
                     ]

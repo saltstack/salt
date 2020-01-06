@@ -119,7 +119,7 @@ def beacon(config):
             for ext in _range(0, cert.get_extension_count()):
                 extensions.append(
                     {
-                        'ext_name': cert.get_extension(ext).get_short_name(),
+                        'ext_name': cert.get_extension(ext).get_short_name().decode(encoding='UTF-8'),
                         'ext_data': str(cert.get_extension(ext))
                     }
                 )
@@ -127,20 +127,26 @@ def beacon(config):
             certificates.append(
                 {
                     'cert_path': cert_path,
-                    'issuer': ','.join(['{0}="{1}"'.format(t[0], t[1]) for t in cert.get_issuer().get_components()]),
-                    'issuer_raw': cert.get_issuer().get_components(),
-                    'issuer_dict': dict(cert.get_issuer().get_components()),
-                    'notAfter_raw': cert.get_notAfter(),
+                    'issuer': ','.join(
+                        ['{0}="{1}"'.format(
+                            t[0].decode(encoding='UTF-8'),
+                            t[1].decode(encoding='UTF-8')
+                        ) for t in cert.get_issuer().get_components()]),
+                    'issuer_dict': { k.decode('UTF-8'): v.decode('UTF-8') for k, v in cert.get_issuer().get_components() },
+                    'notAfter_raw': cert.get_notAfter().decode(encoding='UTF-8'),
                     'notAfter': cert_date.strftime("%Y-%m-%d %H:%M:%SZ"),
-                    'notBefore_raw': cert.get_notBefore(),
+                    'notBefore_raw': cert.get_notBefore().decode(encoding='UTF-8'),
                     'notBefore': datetime.strptime(
                                      cert.get_notBefore().decode(encoding='UTF-8'), "%Y%m%d%H%M%SZ"
                                  ).strftime("%Y-%m-%d %H:%M:%SZ"),
                     'serial_number': cert.get_serial_number(),
-                    'signature_algorithm': cert.get_signature_algorithm(),
-                    'subject': ','.join(['{0}="{1}"'.format(t[0], t[1]) for t in cert.get_subject().get_components()]),
-                    'subject_raw': cert.get_subject().get_components(),
-                    'subject_dict': dict(cert.get_subject().get_components()),
+                    'signature_algorithm': cert.get_signature_algorithm().decode(encoding='UTF-8'),
+                    'subject': ','.join(
+                        ['{0}="{1}"'.format(
+                            t[0].decode(encoding='UTF-8'),
+                            t[1].decode(encoding='UTF-8')
+                        ) for t in cert.get_subject().get_components()]),
+                    'subject_dict': { k.decode('UTF-8'): v.decode('UTF-8') for k, v in cert.get_subject().get_components() },
                     'version': cert.get_version(),
                     'extensions': extensions,
                     'has_expired': cert.has_expired()
