@@ -64,7 +64,7 @@ def _arg2opt(arg):
     '''
     res = [o for o, a in option_toggles.items() if a == arg]
     res += [o for o, a in option_flags.items() if a == arg]
-    return res[0] if len(res) else None
+    return res[0] if res else None
 
 
 def _parse_conf(conf_file=default_conf):

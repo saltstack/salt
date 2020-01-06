@@ -1954,7 +1954,7 @@ def _expand_glob_path(file_roots):
                 unglobbed_path.extend(glob.glob(path))
             else:
                 unglobbed_path.append(path)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             unglobbed_path.append(path)
     return unglobbed_path
 
@@ -4010,7 +4010,7 @@ def apply_master_config(overrides=None, defaults=None):
                 # serialization)
                 re.compile(regex)
                 opts['file_ignore_regex'].append(regex)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.warning(
                     'Unable to parse file_ignore_regex. Skipping: %s',
                     regex

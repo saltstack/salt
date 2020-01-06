@@ -20,19 +20,19 @@ log = logging.getLogger(__name__)
 try:
     # Python >2.5
     import xml.etree.cElementTree as ElementTree
-except Exception:
+except Exception:  # pylint: disable=broad-except
     try:
         # Python >2.5
         import xml.etree.ElementTree as ElementTree
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         try:
             # normal cElementTree install
             import elementtree.cElementTree as ElementTree
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 # normal ElementTree install
                 import elementtree.ElementTree as ElementTree
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ElementTree = None
 
 
