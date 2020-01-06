@@ -47,7 +47,7 @@ _VERSION_SPEC_SUPPORTED = True
 
 if salt.utils.platform.is_windows():
     _PKG_TARGETS = ['7zip', 'putty']
-elif salt.utils.platform.is_freebsd:
+elif salt.utils.platform.is_freebsd():
     _VERSION_SPEC_SUPPORTED = False
 elif pre_grains:
     if any(arch in pre_grains.like() for arch in ('arch', 'archlinux')):

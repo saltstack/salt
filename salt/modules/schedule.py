@@ -515,6 +515,10 @@ def modify(name, **kwargs):
         return ret
 
     _current = current_schedule[name]
+
+    if 'function' not in kwargs:
+        kwargs['function'] = _current.get('function')
+
     if '_seconds' in _current:
         _current['seconds'] = _current['_seconds']
         del _current['_seconds']

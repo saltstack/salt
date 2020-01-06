@@ -105,6 +105,7 @@ tests/integration/cloud/providers/pki/minions
 
 # Kitchen tests files
 .kitchen.local.yml
+kitchen.local.yml
 .kitchen/
 .bundle/
 Gemfile.lock

@@ -155,7 +155,7 @@ def bootstrap(
         if not __salt__['file.directory_exists'](root):
             try:
                 __salt__['file.mkdir'](root)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
     elif img_format == 'sparse':
         if not img_size:
@@ -623,7 +623,7 @@ def _tar(name, root, path=None, compress='bzip2'):
     if not __salt__['file.directory_exists'](path):
         try:
             __salt__['file.mkdir'](path)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
 
     compression, ext = _compress(compress)
@@ -650,7 +650,7 @@ def _untar(name, dest=None, path=None, compress='bz2'):
     if not __salt__['file.directory_exists'](dest):
         try:
             __salt__['file.mkdir'](dest)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             return {'Error': salt.utils.stringutils.to_unicode(pprint.pformat(exc))}
 
     compression, ext = _compress(compress)
