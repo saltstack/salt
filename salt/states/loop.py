@@ -200,7 +200,7 @@ def until_no_eval(
         current_attempt += 1
         try:
             res = __salt__[name](*args, **kwargs)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             (exc_type, exc_value, _) = sys.exc_info()
             ret['comment'] = 'Exception occurred while executing {}: {}:{}'.format(name, exc_type, exc_value)
             break
