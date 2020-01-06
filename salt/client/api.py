@@ -273,7 +273,7 @@ class APIClient(object):
         '''
         try:
             tokenage = self.resolver.mk_token(creds)
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             raise EauthAuthenticationError(
                 "Authentication failed with {0}.".format(repr(ex)))
 
@@ -299,7 +299,7 @@ class APIClient(object):
         '''
         try:
             result = self.resolver.get_token(token)
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             raise EauthAuthenticationError(
                 "Token validation failed with {0}.".format(repr(ex)))
 

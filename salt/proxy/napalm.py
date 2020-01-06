@@ -287,7 +287,7 @@ def shutdown(opts):
         if not NETWORK_DEVICE.get('UP', False):
             raise Exception('not connected!')
         NETWORK_DEVICE.get('DRIVER').close()
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         port = NETWORK_DEVICE.get('OPTIONAL_ARGS', {}).get('port')
         log.error(
             'Cannot close connection with %s%s! Please check error: %s',

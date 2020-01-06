@@ -209,7 +209,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
                 class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
-                    pass
+
                 tornado.gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally

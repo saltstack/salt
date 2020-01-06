@@ -164,7 +164,7 @@ class assert_bool(Assert):
     '''
     Test a boolean value
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -220,7 +220,7 @@ class assert_int(Assert):
     '''
     Test an integer value
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -269,7 +269,7 @@ class assert_string(Assert):
     '''
     Test that item is a string or is converted to one
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -324,7 +324,7 @@ class assert_int_or_string(Assert):
     '''
     Test an integer or string value
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -371,7 +371,7 @@ class assert_stringlist(Assert):
     '''
     Test a comma-separated or Python list of strings
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         self.test_stringlist(testcase, name)
@@ -383,7 +383,7 @@ class assert_dict(Assert):
     Dictionaries should be untouched, dictlists should be repacked and end up
     as a single dictionary.
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -442,7 +442,7 @@ class assert_cmd(Assert):
     different from a stringlist in that we do not do any splitting. This
     decorator is used both by the "command" and "entrypoint" arguments.
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -504,7 +504,7 @@ class assert_key_colon_value(Assert):
     '''
     Test a key/value pair with parameters passed as key:value pairs
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         self.test_key_value(testcase, name, ':')
@@ -515,7 +515,7 @@ class assert_key_equals_value(Assert):
     '''
     Test a key/value pair with parameters passed as key=value pairs
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         self.test_key_value(testcase, name, '=')
@@ -525,7 +525,7 @@ class assert_key_equals_value(Assert):
 
 
 class assert_labels(Assert):
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -560,7 +560,7 @@ class assert_device_rates(Assert):
     value expressed in bytes/kb/mb/gb, while the iops values have a "Rate"
     expressed as a simple integer.
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -697,7 +697,7 @@ class assert_subnet(Assert):
     '''
     Test an IPv4 or IPv6 subnet
     '''
-    def wrap(self, testcase, *args, **kwargs):
+    def wrap(self, testcase, *args, **kwargs):  # pylint: disable=arguments-differ
         # Strip off the "test_" from the function name
         name = self.func.__name__[5:]
         alias = self.translator.ALIASES_REVMAP.get(name)
@@ -849,7 +849,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     def test_binds(self):
         '''
@@ -886,7 +885,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     def test_blkio_weight_device(self):
         '''
@@ -932,63 +930,54 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_stringlist(salt.utils.docker.translate.container)
     def test_cap_drop(self):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_cmd(salt.utils.docker.translate.container)
     def test_command(self):
         '''
         Can either be a string or a comma-separated or Python list of strings.
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_cpuset_cpus(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_cpuset_mems(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_cpu_group(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_cpu_period(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_cpu_shares(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_detach(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_device_rates(salt.utils.docker.translate.container)
     def test_device_read_bps(self):
@@ -996,7 +985,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         '''
-        pass
 
     @assert_device_rates(salt.utils.docker.translate.container)
     def test_device_read_iops(self):
@@ -1004,7 +992,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         '''
-        pass
 
     @assert_device_rates(salt.utils.docker.translate.container)
     def test_device_write_bps(self):
@@ -1012,7 +999,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         '''
-        pass
 
     @assert_device_rates(salt.utils.docker.translate.container)
     def test_device_write_iops(self):
@@ -1020,28 +1006,24 @@ class TranslateContainerInputTestCase(TranslateBase):
         CLI input is a list of PATH:RATE pairs, but the API expects a list of
         dictionaries in the format [{'Path': path, 'Rate': rate}]
         '''
-        pass
 
     @assert_stringlist(salt.utils.docker.translate.container)
     def test_devices(self):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_stringlist(salt.utils.docker.translate.container)
     def test_dns_opt(self):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_stringlist(salt.utils.docker.translate.container)
     def test_dns_search(self):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     def test_dns(self):
         '''
@@ -1088,14 +1070,12 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_cmd(salt.utils.docker.translate.container)
     def test_entrypoint(self):
         '''
         Can either be a string or a comma-separated or Python list of strings.
         '''
-        pass
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
     def test_environment(self):
@@ -1103,7 +1083,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         '''
-        pass
 
     def test_extra_hosts(self):
         '''
@@ -1151,28 +1130,24 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_hostname(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_ipc_mode(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_isolation(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_labels(salt.utils.docker.translate.container)
     def test_labels(self):
@@ -1180,7 +1155,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed as a list of key=value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         '''
-        pass
 
     @assert_key_colon_value(salt.utils.docker.translate.container)
     def test_links(self):
@@ -1188,7 +1162,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed as a list of key:value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         '''
-        pass
 
     def test_log_config(self):
         '''
@@ -1240,84 +1213,72 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed as a list of key=value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_mac_address(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_int_or_string(salt.utils.docker.translate.container)
     def test_mem_limit(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_mem_swappiness(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     @assert_int_or_string(salt.utils.docker.translate.container)
     def test_memswap_limit(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_name(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_network_disabled(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_network_mode(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_oom_kill_disable(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_oom_score_adj(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_pid_mode(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_pids_limit(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     def test_port_bindings(self):
         '''
@@ -1600,21 +1561,18 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_publish_all_ports(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_read_only(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     def test_restart_policy(self):
         '''
@@ -1673,35 +1631,30 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_int_or_string(salt.utils.docker.translate.container)
     def test_shm_size(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_stdin_open(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_stop_signal(self):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_int(salt.utils.docker.translate.container)
     def test_stop_timeout(self):
         '''
         Should be an int or converted to one
         '''
-        pass
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
     def test_storage_opt(self):
@@ -1709,7 +1662,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         '''
-        pass
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
     def test_sysctls(self):
@@ -1717,7 +1669,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         '''
-        pass
 
     @assert_dict(salt.utils.docker.translate.container)
     def test_tmpfs(self):
@@ -1725,14 +1676,12 @@ class TranslateContainerInputTestCase(TranslateBase):
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.container)
     def test_tty(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     def test_ulimits(self):
         '''
@@ -1816,14 +1765,12 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_volume_driver(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_stringlist(salt.utils.docker.translate.container)
     def test_volumes(self):
@@ -1845,7 +1792,6 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         Should be a list of strings or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.container)
     def test_working_dir(self):
@@ -1880,7 +1826,6 @@ class TranslateNetworkInputTestCase(TranslateBase):
         '''
         Should be a string or converted to one
         '''
-        pass
 
     @assert_key_equals_value(salt.utils.docker.translate.network)
     def test_options(self):
@@ -1888,28 +1833,24 @@ class TranslateNetworkInputTestCase(TranslateBase):
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         '''
-        pass
 
     @assert_dict(salt.utils.docker.translate.network)
     def test_ipam(self):
         '''
         Must be a dict
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.network)
     def test_check_duplicate(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.network)
     def test_internal(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_labels(salt.utils.docker.translate.network)
     def test_labels(self):
@@ -1917,35 +1858,30 @@ class TranslateNetworkInputTestCase(TranslateBase):
         Can be passed as a list of key=value pairs or a dictionary, and must
         ultimately end up as a dictionary.
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.network)
     def test_enable_ipv6(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.network)
     def test_attachable(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_bool(salt.utils.docker.translate.network)
     def test_ingress(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_string(salt.utils.docker.translate.network)
     def test_ipam_driver(self):
         '''
         Should be a bool or converted to one
         '''
-        pass
 
     @assert_key_equals_value(salt.utils.docker.translate.network)
     def test_ipam_opts(self):
@@ -1953,7 +1889,6 @@ class TranslateNetworkInputTestCase(TranslateBase):
         Can be passed in several formats but must end up as a dictionary
         mapping keys to values
         '''
-        pass
 
     def ipam_pools(self):
         '''
@@ -2007,14 +1942,12 @@ class TranslateNetworkInputTestCase(TranslateBase):
         '''
         Must be an IPv4 or IPv6 subnet
         '''
-        pass
 
     @assert_subnet(salt.utils.docker.translate.network)
     def test_iprange(self):
         '''
         Must be an IPv4 or IPv6 subnet
         '''
-        pass
 
     def test_gateway(self):
         '''

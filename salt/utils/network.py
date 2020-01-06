@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 '''
 Define some generic socket functions for network modules
 '''
@@ -52,8 +53,6 @@ try:
 except (ImportError, OSError, AttributeError, TypeError):
     pass
 
-# pylint: disable=C0103
-
 
 def sanitize_host(host):
     '''
@@ -93,7 +92,7 @@ def host_to_ips(host):
             ips.append(ip)
         if not ips:
             ips = None
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ips = None
     return ips
 
@@ -120,7 +119,7 @@ def _generate_minion_id():
 
         def append(self, p_object):
             if p_object and p_object not in self and not self.filter(p_object):
-                super(self.__class__, self).append(p_object)
+                super(DistinctList, self).append(p_object)
             return self
 
         def extend(self, iterable):
@@ -226,12 +225,10 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
-
-# pylint: enable=C0103
 
 
 def is_reachable_host(entity_name):
@@ -289,7 +286,7 @@ def is_ipv4_subnet(cidr):
     '''
     try:
         return '/' in cidr and bool(ipaddress.IPv4Network(cidr))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -299,7 +296,7 @@ def is_ipv6_subnet(cidr):
     '''
     try:
         return '/' in cidr and bool(ipaddress.IPv6Network(cidr))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -623,7 +620,7 @@ def cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
-def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
+def _number_of_set_bits_to_ipv4_netmask(set_bits):
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
 
@@ -632,7 +629,6 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     return cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
 
-# pylint: disable=C0103
 def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
@@ -644,8 +640,6 @@ def _number_of_set_bits(x):
     x += x >> 8
     x += x >> 16
     return x & 0x0000003f
-
-# pylint: enable=C0103
 
 
 def _interfaces_ip(out):
@@ -663,9 +657,9 @@ def _interfaces_ip(out):
         brd = None
         scope = None
         if '/' in value:  # we have a CIDR in this address
-            ip, cidr = value.split('/')  # pylint: disable=C0103
+            ip, cidr = value.split('/')
         else:
-            ip = value  # pylint: disable=C0103
+            ip = value
             cidr = 32
 
         if type_ == 'inet':
@@ -969,7 +963,7 @@ def _interfaces_ipconfig(out):
         if line.startswith('Ethernet'):
             iface = ifaces[adapter_iface_regex.search(line).group(1)]
             iface['up'] = True
-            addr = None
+            addr = {}
             continue
         if iface:
             key, val = line.split(',', 1)
@@ -1354,7 +1348,7 @@ def mac2eui64(mac, prefix=None):
             net = ipaddress.ip_network(prefix, strict=False)
             euil = int('0x{0}'.format(eui64), 16)
             return '{0}/{1}'.format(net[euil], net.prefixlen)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return
 
 

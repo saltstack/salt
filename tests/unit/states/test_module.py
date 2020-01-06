@@ -217,7 +217,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 try:
                     ret = module.run(**{CMD: ['foo', 'bar']})
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception('test_run_none_return: raised exception')
                     self.fail('module.run raised exception: {0}'.format(exc))
                 if not ret['result']:
@@ -236,7 +236,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
             with patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 try:
                     ret = module.run(**{CMD: None})
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.exception('test_run_none_return: raised exception')
                     self.fail('module.run raised exception: {0}'.format(exc))
                 if not ret['result']:
@@ -257,7 +257,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                     log.debug('test_run_typed_return: trying %s', val)
                     try:
                         ret = module.run(**{CMD: [{'ret': val}]})
-                    except Exception as exc:
+                    except Exception as exc:  # pylint: disable=broad-except
                         log.exception('test_run_typed_return: raised exception')
                         self.fail('module.run raised exception: {0}'.format(exc))
                     if not ret['result']:
@@ -281,7 +281,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                     log.debug('test_run_batch_call: trying %s', f_name)
                     try:
                         ret = module.run(**{f_name: None})
-                    except Exception as exc:
+                    except Exception as exc:  # pylint: disable=broad-except
                         log.exception('test_run_batch_call: raised exception')
                         self.fail('module.run raised exception: {0}'.format(exc))
                     if not ret['result']:

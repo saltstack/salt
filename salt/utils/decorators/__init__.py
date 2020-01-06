@@ -106,7 +106,7 @@ class Depends(object):
             fun_name = function.__name__
             for dep in self.dependencies:
                 self.dependency_dict[kind][dep][(mod_name, fun_name)] = (frame, self.params)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(
                 'Exception encountered when attempting to inspect frame in '
                 'dependency decorator'
@@ -345,7 +345,7 @@ class _DeprecationDecorator(object):
                     self._orig_f_name, error
                 )
                 return self._function.__doc__
-            except Exception as error:
+            except Exception as error:  # pylint: disable=broad-except
                 log.error(
                     'Unhandled exception occurred in function "%s: %s',
                     self._function.__name__, error
