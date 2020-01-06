@@ -125,8 +125,6 @@ def _test_managed_file_mode_keep_helper(testcase, local=False):
         testcase.assertSaltTrueReturn(ret)
         managed_mode = stat.S_IMODE(os.stat(name).st_mode)
         testcase.assertEqual(oct(managed_mode), oct(new_mode_2))
-    except Exception:
-        raise
     finally:
         # Set the mode of the file in the file_roots back to what it
         # originally was.
@@ -572,6 +570,68 @@ class FileTest(ModuleCase, SaltReturnAssertsMixin):
             for typ in managed_files:
                 if os.path.exists(managed_files[typ]):
                     os.remove(managed_files[typ])
+
+    def test_managed_contents_with_contents_newline(self):
+        '''
+        test file.managed with contents by using the default content_newline
+        flag.
+        '''
+        contents = 'test_managed_contents_with_newline_one'
+        name = os.path.join(RUNTIME_VARS.TMP, 'foo')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=True)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual((contents + os.linesep), last_line)
+
+    def test_managed_contents_with_contents_newline_false(self):
+        '''
+        test file.managed with contents by using the non default content_newline
+        flag.
+        '''
+        contents = 'test_managed_contents_with_newline_one'
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=False)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual(contents, last_line)
+
+    def test_managed_multiline_contents_with_contents_newline(self):
+        '''
+        test file.managed with contents by using the non default content_newline
+        flag.
+        '''
+        contents = ('this is a cookie{}this is another cookie'.
+                    format(os.linesep))
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=True)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual((contents + os.linesep), last_line)
+
+    def test_managed_multiline_contents_with_contents_newline_false(self):
+        '''
+        test file.managed with contents by using the non default content_newline
+        flag.
+        '''
+        contents = ('this is a cookie{}this is another cookie'.
+                    format(os.linesep))
+        name = os.path.join(RUNTIME_VARS.TMP, 'bar')
+
+        # Create a file named foo with contents as above but with a \n at EOF
+        self.run_state('file.managed', name=name, contents=contents,
+                       contents_newline=False)
+        with salt.utils.files.fopen(name, 'r') as fp_:
+            last_line = fp_.read()
+            self.assertEqual(contents, last_line)
 
     @skip_if_not_root
     @skipIf(IS_WINDOWS, 'Windows does not support "mode" kwarg. Skipping.')
@@ -4063,9 +4123,9 @@ class RemoteFileTest(ModuleCase, SaltReturnAssertsMixin):
             os.remove(self.name)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise exc
+                six.reraise(*sys.exc_info())
 
-    def run_state(self, *args, **kwargs):
+    def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(RemoteFileTest, self).run_state(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret
@@ -4370,9 +4430,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
-        self.assertIn(
-            'saving rejects to file {0}'.format(reject_file),
-            ret['comment']
+        self.assertRegex(
+            ret['comment'],
+            'saving rejects to (file )?{0}'.format(reject_file)
         )
 
     def test_patch_directory_failure(self):
@@ -4407,9 +4467,9 @@ class PatchTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltFalseReturn(ret)
         ret = ret[next(iter(ret))]
         self.assertIn('Patch would not apply cleanly', ret['comment'])
-        self.assertIn(
-            'saving rejects to file {0}'.format(reject_file),
-            ret['comment']
+        self.assertRegex(
+            ret['comment'],
+            'saving rejects to (file )?{0}'.format(reject_file)
         )
 
     def test_patch_single_file_remote_source(self):

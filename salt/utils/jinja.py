@@ -564,14 +564,6 @@ def lst_avg(lst):
 
         2.5
     '''
-    salt.utils.versions.warn_until(
-        'Neon',
-        'This results of this function are currently being rounded.'
-        'Beginning in the Salt Neon release, results will no longer be '
-        'rounded and this warning will be removed.',
-        stacklevel=3
-    )
-
     if not isinstance(lst, collections.Hashable):
         return float(sum(lst)/len(lst))
     return float(lst)

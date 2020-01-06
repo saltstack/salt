@@ -523,7 +523,7 @@ class AsyncAuth(object):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
         memo[id(self)] = result
         for key in self.__dict__:
             if key in ('io_loop',):
@@ -595,10 +595,9 @@ class AsyncAuth(object):
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        channel = salt.transport.client.AsyncReqChannel.factory(self.opts,
-                                                                crypt='clear',
-                                                                io_loop=self.io_loop)
-        try:
+        with salt.transport.client.AsyncReqChannel.factory(self.opts,
+                                                           crypt='clear',
+                                                           io_loop=self.io_loop) as channel:
             error = None
             while True:
                 try:
@@ -652,13 +651,8 @@ class AsyncAuth(object):
                 self._authenticate_future.set_result(True)  # mark the sign-in as complete
                 # Notify the bus about creds change
                 if self.opts.get('auth_events') is True:
-                    event = salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False)
-                    event.fire_event(
-                        {'key': key, 'creds': creds},
-                        salt.utils.event.tagify(prefix='auth', suffix='creds')
-                    )
-        finally:
-            channel.close()
+                    with salt.utils.event.get_event(self.opts.get('__role'), opts=self.opts, listen=False) as event:
+                        event.fire_event({'key': key, 'creds': creds}, salt.utils.event.tagify(prefix='auth', suffix='creds'))
 
     @tornado.gen.coroutine
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
@@ -838,7 +832,7 @@ class AsyncAuth(object):
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload['token'] = cipher.encrypt(self.token)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
             payload['pub'] = f.read()
@@ -883,7 +877,7 @@ class AsyncAuth(object):
             if os.path.exists(m_path):
                 try:
                     mkey = get_rsa_pub_key(m_path)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 if six.PY3:
@@ -974,7 +968,7 @@ class AsyncAuth(object):
                     'verification failed!', self.opts['master']
                 )
                 return False
-        except Exception as sign_exc:
+        except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
                 'There was an error while verifying the masters public-key '
                 'signature'
@@ -1038,7 +1032,7 @@ class AsyncAuth(object):
                         'The master failed to decrypt the random minion token'
                     )
                     return ''
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     'The master failed to decrypt the random minion token'
                 )
@@ -1223,10 +1217,9 @@ class SAuth(AsyncAuth):
         '''
         acceptance_wait_time = self.opts['acceptance_wait_time']
         acceptance_wait_time_max = self.opts['acceptance_wait_time_max']
-        channel = salt.transport.client.ReqChannel.factory(self.opts, crypt='clear')
         if not acceptance_wait_time_max:
             acceptance_wait_time_max = acceptance_wait_time
-        try:
+        with salt.transport.client.ReqChannel.factory(self.opts, crypt='clear') as channel:
             while True:
                 creds = self.sign_in(channel=channel)
                 if creds == 'retry':
@@ -1252,8 +1245,6 @@ class SAuth(AsyncAuth):
                 break
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds['aes'])
-        finally:
-            channel.close()
 
     def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         '''

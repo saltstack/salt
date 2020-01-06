@@ -15,7 +15,6 @@ from __future__ import absolute_import
 import logging
 
 # Import pytest-salt libs
-from pytestsalt.utils import SaltRunEventListener as PytestSaltRunEventListener
 from pytestsalt.utils import collect_child_processes, terminate_process, terminate_process_list  # pylint: disable=unused-import
 from pytestsalt.fixtures.daemons import Salt as PytestSalt
 from pytestsalt.fixtures.daemons import SaltKey as PytestSaltKey
@@ -27,16 +26,9 @@ from pytestsalt.fixtures.daemons import SaltSyndic as PytestSaltSyndic
 from pytestsalt.fixtures.daemons import SaltProxy as PytestSaltProxy
 
 # Import tests support libs
-from tests.support.paths import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin
 
 log = logging.getLogger(__name__)
-
-
-class SaltRunEventListener(ScriptPathMixin, PytestSaltRunEventListener):
-    '''
-    Override this class's __init__ because there's no request argument since we're still
-    not running under pytest
-    '''
 
 
 class GetSaltRunFixtureMixin(ScriptPathMixin):
@@ -46,14 +38,6 @@ class GetSaltRunFixtureMixin(ScriptPathMixin):
 
     def get_salt_run_fixture(self):
         pass
-
-    def get_salt_run_event_listener(self):
-        return SaltRunEventListener(None,
-                                    self.config,
-                                    self.config_dir,
-                                    self.bin_dir_path,
-                                    self.log_prefix,
-                                    cli_script_name='run')
 
 
 class Salt(ScriptPathMixin, PytestSalt):
@@ -124,11 +108,15 @@ def start_daemon(daemon_name=None,
                  start_timeout=10,
                  slow_stop=False,
                  environ=None,
-                 cwd=None):
+                 cwd=None,
+                 event_listener_config_dir=None):
     '''
     Returns a running salt daemon
     '''
+    # Old config name
     daemon_config['pytest_port'] = daemon_config['runtests_conn_check_port']
+    # New config name
+    daemon_config['pytest_engine_port'] = daemon_config['runtests_conn_check_port']
     request = None
     if fail_hard:
         fail_method = RuntimeError
@@ -139,15 +127,27 @@ def start_daemon(daemon_name=None,
     process = None
     while attempts <= 3:  # pylint: disable=too-many-nested-blocks
         attempts += 1
-        process = daemon_class(request,
-                               daemon_config,
-                               daemon_config_dir,
-                               bin_dir_path,
-                               daemon_log_prefix,
-                               cli_script_name=daemon_cli_script_name,
-                               slow_stop=slow_stop,
-                               environ=environ,
-                               cwd=cwd)
+        try:
+            process = daemon_class(request=request,
+                                   config=daemon_config,
+                                   config_dir=daemon_config_dir,
+                                   bin_dir_path=bin_dir_path,
+                                   log_prefix=daemon_log_prefix,
+                                   cli_script_name=daemon_cli_script_name,
+                                   slow_stop=slow_stop,
+                                   environ=environ,
+                                   cwd=cwd,
+                                   event_listener_config_dir=event_listener_config_dir)
+        except TypeError:
+            process = daemon_class(request=request,
+                                   config=daemon_config,
+                                   config_dir=daemon_config_dir,
+                                   bin_dir_path=bin_dir_path,
+                                   log_prefix=daemon_log_prefix,
+                                   cli_script_name=daemon_cli_script_name,
+                                   slow_stop=slow_stop,
+                                   environ=environ,
+                                   cwd=cwd)
         process.start()
         if process.is_alive():
             try:
@@ -176,12 +176,6 @@ def start_daemon(daemon_name=None,
                 attempts
             )
 
-            def stop_daemon():
-                log.info('[%s] Stopping pytest %s(%s)', daemon_log_prefix, daemon_name, daemon_id)
-                terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)
-                log.info('[%s] pytest %s(%s) stopped', daemon_log_prefix, daemon_name, daemon_id)
-
-            # request.addfinalizer(stop_daemon)
             break
         else:
             terminate_process(process.pid, kill_children=True, slow_stop=slow_stop)

@@ -7,13 +7,8 @@ Unit tests for salt/modules/salt_version.py
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 from salt.ext import six
@@ -21,7 +16,6 @@ import salt.modules.salt_version as salt_version
 import salt.version
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltVersionTestCase(TestCase):
     '''
     Test cases for salt.modules.salt_version
