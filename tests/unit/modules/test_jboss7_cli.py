@@ -13,14 +13,7 @@ from salt.ext import six
 import salt.modules.jboss7_cli as jboss7_cli
 from salt.exceptions import CommandExecutionError
 
-from tests.support.mock import (
-    Mock,
-    MagicMock,
-    patch,
-    mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
-)
+from tests.support.mock import patch
 
 
 class CmdMock(object):
