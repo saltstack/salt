@@ -292,7 +292,7 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with pytest.raises(CommandExecutionError) as exc_info:
             localemod.get_locale()
-        assert '"DrunkDragon" is unsupported' in six.text_type(exc_info.value)
+        assert '"BSD" is unsupported' in six.text_type(exc_info.value)
 
     @patch('salt.utils.path.which', MagicMock(return_value="/usr/bin/localctl"))
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Ubuntu', 'osmajorrelease': 42})
