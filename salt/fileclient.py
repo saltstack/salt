@@ -536,7 +536,10 @@ class Client(object):
         if url_data.scheme == 'ftp':
             try:
                 ftp = ftplib.FTP()
-                ftp.connect(url_data.hostname, url_data.port)
+                ftp_port = url_data.port
+                if not ftp_port:
+                    ftp_port = 21
+                ftp.connect(url_data.hostname, ftp_port)
                 ftp.login(url_data.username, url_data.password)
                 remote_file_path = url_data.path.lstrip('/')
                 with salt.utils.files.fopen(dest, 'wb') as fp_:
