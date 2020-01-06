@@ -2382,14 +2382,16 @@ def script(source,
             For Window's users, specifically Server users, it may be necessary
             to specify your runas user using the User Logon Name instead of the
             legacy logon name. Traditionally, logons would be in the following
-            format:
-                Domain\User
+            format.
+
+                ``Domain/user``
 
             In the event this causes issues when executing scripts, use the UPN
-            format which looks like the following:
-                User@domain.local
+            format which looks like the following.
 
-            More information on this can be found in github issue #55080
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
 
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
