@@ -476,7 +476,7 @@ class AESReqServerMixin(object):
                     else:
                         mtoken = mcipher.decrypt(load['token'])
                     aes = '{0}_|-{1}'.format(salt.master.SMaster.secrets['aes']['secret'].value, mtoken)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass
@@ -497,7 +497,7 @@ class AESReqServerMixin(object):
                     else:
                         mtoken = mcipher.decrypt(load['token'])
                         ret['token'] = cipher.encrypt(mtoken)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Token failed to decrypt, send back the salty bacon to
                     # support older minions
                     pass

@@ -58,7 +58,7 @@ def ext_pillar(minion_id,
         if user:
             server.login(user, password)
         result = server.get_blended_data(None, minion_id)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.exception(
             'Could not connect to cobbler.'
         )

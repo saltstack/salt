@@ -12,10 +12,7 @@ import logging
 import salt.utils.http
 from salt.ext import six
 from salt.exceptions import SaltException
-try:
-    from salt.utils.args import clean_kwargs
-except ImportError:
-    from salt.utils import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 log = logging.getLogger(__name__)
 

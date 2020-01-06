@@ -156,7 +156,7 @@ class TestBaseSaltAPIHandler(SaltnadoTestCase):
             def get(self, *args, **kwargs):
                 return self.echo_stuff()
 
-            def post(self):
+            def post(self):  # pylint: disable=arguments-differ
                 return self.echo_stuff()
 
             def echo_stuff(self):
@@ -526,15 +526,17 @@ class TestSaltAuthHandler(SaltnadoTestCase):
         '''
         Test valid logins
         '''
-
         # Test in form encoded
         response = self.fetch('/login',
                                method='POST',
                                body=urlencode(self.auth_creds),
                                headers={'Content-Type': self.content_type_map['form']})
 
+        cookies = response.headers['Set-Cookie']
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
+        token = response_obj['token']
+        self.assertIn('session_id={0}'.format(token), cookies)
         self.assertEqual(sorted(response_obj['perms']), sorted(self.opts['external_auth']['auto'][self.auth_creds_dict['username']]))
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
@@ -546,8 +548,11 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                body=salt.utils.json.dumps(self.auth_creds_dict),
                                headers={'Content-Type': self.content_type_map['json']})
 
+        cookies = response.headers['Set-Cookie']
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
+        token = response_obj['token']
+        self.assertIn('session_id={0}'.format(token), cookies)
         self.assertEqual(sorted(response_obj['perms']), sorted(self.opts['external_auth']['auto'][self.auth_creds_dict['username']]))
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])
@@ -559,8 +564,11 @@ class TestSaltAuthHandler(SaltnadoTestCase):
                                body=salt.utils.yaml.safe_dump(self.auth_creds_dict),
                                headers={'Content-Type': self.content_type_map['yaml']})
 
+        cookies = response.headers['Set-Cookie']
         self.assertEqual(response.code, 200)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
+        token = response_obj['token']
+        self.assertIn('session_id={0}'.format(token), cookies)
         self.assertEqual(sorted(response_obj['perms']), sorted(self.opts['external_auth']['auto'][self.auth_creds_dict['username']]))
         self.assertIn('token', response_obj)  # TODO: verify that its valid?
         self.assertEqual(response_obj['user'], self.auth_creds_dict['username'])

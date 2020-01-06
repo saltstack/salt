@@ -34,10 +34,10 @@ class SystemModuleTest(ModuleCase):
     '''
     fmt_str = "%Y-%m-%d %H:%M:%S"
 
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
-        self._orig_time = None
-        self._machine_info = True
+    @classmethod
+    def setUpClass(cls):
+        cls._orig_time = None
+        cls._machine_info = True
 
     def setUp(self):
         super(SystemModuleTest, self).setUp()

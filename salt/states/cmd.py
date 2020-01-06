@@ -912,7 +912,7 @@ def run(name,
         cmd_all = __salt__[run_cmd](
             cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['comment'] = six.text_type(err)
         return ret
 

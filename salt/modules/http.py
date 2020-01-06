@@ -50,7 +50,7 @@ def query(url, **kwargs):
 
     try:
         return salt.utils.http.query(url=url, opts=opts, **kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(six.text_type(exc))
 
 
@@ -74,7 +74,7 @@ def wait_for_successful_query(url, wait_for=300, **kwargs):
             result = query(url=url, **kwargs)
             if not result.get('Error') and not result.get('error'):
                 return result
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             caught_exception = exc
 
         if time.time() > starttime + wait_for:
