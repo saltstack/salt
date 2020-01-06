@@ -74,6 +74,8 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
     pkg.installed state tests
     '''
 
+    RUN_FUNCTION_TIMEOUT = 600
+
     @classmethod
     @requires_system_grains
     def setUpClass(cls, grains):

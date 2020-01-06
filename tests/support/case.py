@@ -806,6 +806,8 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     '''
 
+    RUN_FUNCTION_TIMEOUT = 300
+
     def wait_for_all_jobs(self, minions=('minion', 'sub_minion',), sleep=.3):
         '''
         Wait for all jobs currently running on the list of minions to finish
@@ -826,11 +828,15 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=None, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=None, master_tgt=None, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         '''
+
+        if timeout is None:
+            timeout = self.RUN_FUNCTION_TIMEOUT
+
         known_to_return_none = (
             'data.get',
             'file.chown',
