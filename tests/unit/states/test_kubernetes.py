@@ -13,8 +13,6 @@ from contextlib import contextmanager
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch)
 
@@ -24,7 +22,6 @@ from salt.states import kubernetes
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(kubernetes is False, "Probably Kubernetes client lib is not installed. \
                               Skipping test_kubernetes.py")
 class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
@@ -703,7 +700,7 @@ class KubernetesTestCase(TestCase, LoaderModuleMockMixin):
         node_data = self.make_node()
         labels = node_data['metadata']['labels'].copy()
 
-        del node_data['metadata']['labels']['failure-domain.beta.kubernetes.io/region']
+        node_data['metadata']['labels'].pop('failure-domain.beta.kubernetes.io/region')
 
         with self.mock_func('node_labels', return_value=labels):
             with self.mock_func('node_remove_label', return_value=node_data):

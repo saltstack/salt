@@ -24,8 +24,6 @@ from tests.support.mock import (
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -58,7 +56,6 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -1034,7 +1031,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert core.dns() == ret
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     @patch('salt.utils.network.ip_addrs6',
            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
@@ -1056,7 +1052,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
     @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
     def test_fqdns_socket_error(self):
@@ -1384,16 +1379,54 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertNotEqual(virtual_grains['virtual'], 'physical')
 
     @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
     def test_osdata_virtual_key_win(self):
         with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
                                         'cmd.run_all': salt.modules.cmdmod.run_all,
                                         'cmd.retcode': salt.modules.cmdmod.retcode,
                                         'smbios.get': salt.modules.smbios.get}):
+
+            _windows_platform_data_ret = core.os_data()
+            _windows_platform_data_ret['virtual'] = 'something'
+
             with patch.object(core,
-                              '_windows_virtual',
-                              return_value={'virtual': 'something'}) as _windows_virtual:
+                              '_windows_platform_data',
+                              return_value=_windows_platform_data_ret) as _windows_platform_data:
+
                 osdata_grains = core.os_data()
-                _windows_virtual.assert_called_once()
+                _windows_platform_data.assert_called_once()
 
             self.assertIn('virtual', osdata_grains)
             self.assertNotEqual(osdata_grains['virtual'], 'physical')

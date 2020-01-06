@@ -82,7 +82,7 @@ def update(branch=None, repo=None):
                     continue
             try:
                 result = remote.fetch()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'Exception \'%s\' caught while fetching git_pillar '
                     'remote \'%s\'', exc, remote.id,

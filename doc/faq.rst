@@ -394,6 +394,35 @@ Restart the Minion from the command line:
     salt -G kernel:Windows cmd.run_bg 'C:\salt\salt-call.bat service.restart salt-minion'
     salt -C 'not G@kernel:Windows' cmd.run_bg 'salt-call service.restart salt-minion'
 
+Waiting for minions to come back online
+***************************************
+
+A common issue in performing automated restarts of a salt minion, for example during
+an orchestration run, is that it will break the orchestration since the next statement
+is likely to be attempted before the minion is back online. This can be remedied
+by inserting a blocking waiting state that only returns when the selected minions
+are back up (note: this will only work in orchestration states since `manage.up`
+needs to run on the master):
+
+.. code-block:: jinja
+
+    Wait for salt minion:
+      loop.until_no_eval:
+        - name: saltutil.runner
+        - expected:
+            - my_minion
+        - args:
+            - manage.up
+        - kwargs:
+            tgt: my_minion
+        - period: 3
+        - init_wait: 3
+
+This will, after an initial delay of 3 seconds, execute the `manage.up`-runner
+targeted specifically for `my_minion`. It will do this every `period` seconds
+until the `expected` data is returned. The default timeout is 60s but can be configured
+as well.
+
 Salting the Salt Master
 -----------------------
 

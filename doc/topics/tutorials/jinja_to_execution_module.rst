@@ -6,8 +6,7 @@ How to Convert Jinja Logic to an Execution Module
 
 .. versionadded: 2016.???
 
-.. note:
-
+.. note::
     This tutorial assumes a basic knowledge of Salt states and specifically
     experience using the `maps.jinja` idiom.
 

@@ -108,7 +108,7 @@ def match(tgt, opts=None):
     log.debug('compound_match %s ? "%s" => "%s"', minion_id, tgt, results)
     try:
         return eval(results)  # pylint: disable=W0123
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error(
             'Invalid compound target: %s for results: %s', tgt, results)
         return False

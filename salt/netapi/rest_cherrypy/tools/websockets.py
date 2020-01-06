@@ -1,13 +1,11 @@
 # encoding: utf-8
 from __future__ import absolute_import, print_function, unicode_literals
 
-try:
-    import cherrypy
-
-    from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
-    from ws4py.websocket import WebSocket
-except ImportError:
-    raise
+# pylint: disable=3rd-party-module-not-gated
+import cherrypy
+from ws4py.server.cherrypyserver import WebSocketPlugin, WebSocketTool
+from ws4py.websocket import WebSocket
+# pylint: enable=3rd-party-module-not-gated
 
 cherrypy.tools.websocket = WebSocketTool()
 WebSocketPlugin(cherrypy.engine).subscribe()
@@ -25,7 +23,7 @@ class SynchronizingWebsocket(WebSocket):
     initially connect. These jobs help gather information about minions, jobs,
     and documentation.
     '''
-    def __init__(self, *args, **kwargs):  # pylint: disable=E1002
+    def __init__(self, *args, **kwargs):
         super(SynchronizingWebsocket, self).__init__(*args, **kwargs)
 
         # This pipe needs to represent the parent end of a pipe.

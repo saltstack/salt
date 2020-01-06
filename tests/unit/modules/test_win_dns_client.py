@@ -14,8 +14,6 @@ from tests.support.mock import (
     MagicMock,
     patch,
     Mock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -65,7 +63,6 @@ class Mockwinapi(object):
             return True
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_WMI, 'WMI only available on Windows')
 class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
     '''

@@ -72,16 +72,15 @@ def fire_master(data, tag, preload=None):
             load.update(preload)
 
         for master in masters:
-            channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
-            try:
-                channel.send(load)
-                # channel.send was successful.
-                # Ensure ret is True.
-                ret = True
-            except Exception:
-                ret = False
-            finally:
-                channel.close()
+            with salt.transport.client.ReqChannel.factory(__opts__,
+                                                          master_uri=master) as channel:
+                try:
+                    channel.send(load)
+                    # channel.send was successful.
+                    # Ensure ret is True.
+                    ret = True
+                except Exception:  # pylint: disable=broad-except
+                    ret = False
         return ret
     else:
         # Usually, we can send the event via the minion, which is faster
@@ -89,7 +88,7 @@ def fire_master(data, tag, preload=None):
         try:
             return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
                 {'data': data, 'tag': tag, 'events': None, 'pretag': None}, 'fire_master')
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
             log.debug(lines)
@@ -113,7 +112,7 @@ def fire(data, tag):
                                            opts=__opts__,
                                            listen=False) as event:
             return event.fire_event(data, tag)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         log.debug(lines)

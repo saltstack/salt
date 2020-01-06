@@ -27,7 +27,7 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
         command = command.replace('%s', minion_id)
         output = __salt__['cmd.run_stdout'](command, python_shell=True)
         return salt.utils.yaml.safe_load(output)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.critical(
             'YAML data from \'%s\' failed to parse. Command output:\n%s',
             command, output
