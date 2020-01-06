@@ -55,7 +55,7 @@ def _get_serializer(output):
     try:
         return getattr(serializers, output)
     except AttributeError:
-        raise CommandExecutionError("Unknown serializer '%s' found for output option", output)
+        raise CommandExecutionError('Unknown serializer `{}` found for output option'.format(output))
 
 
 def start(cmd, output='json', interval=1):
