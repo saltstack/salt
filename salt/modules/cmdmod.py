@@ -2383,6 +2383,22 @@ def script(source,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. note::
+
+            For Window's users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
