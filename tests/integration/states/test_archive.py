@@ -28,6 +28,7 @@ ARCHIVE_DIR = os.path.join('c:/', 'tmp') \
 ARCHIVE_NAME = 'custom.tar.gz'
 ARCHIVE_TAR_SOURCE = 'http://localhost:{0}/{1}'.format(9999, ARCHIVE_NAME)
 ARCHIVE_TAR_HASH = 'md5=7643861ac07c30fe7d2310e9f25ca514'
+ARCHIVE_TAR_SHA_HASH = 'sha256=9591159d86f0a180e4e0645b2320d0235e23e66c66797df61508bf185e0ac1d2'
 ARCHIVE_TAR_BAD_HASH = 'md5=d41d8cd98f00b204e9800998ecf8427e'
 ARCHIVE_TAR_HASH_UPPER = 'md5=7643861AC07C30FE7D2310E9F25CA514'
 
@@ -69,12 +70,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         log.debug('Checking for extracted file: %s', path)
         self.assertTrue(os.path.isfile(path))
 
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(ArchiveTest, self).run_function(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret
 
-    def run_state(self, *args, **kwargs):
+    def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(ArchiveTest, self).run_state(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret
@@ -256,3 +257,29 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             saltenv='prod')
         self.assertSaltTrueReturn(ret)
         self._check_extracted(os.path.join(ARCHIVE_DIR, self.untar_file))
+
+    def test_local_archive_extracted_with_skip_files_list_verify(self):
+        '''
+        test archive.extracted with local file and skip_files_list_verify set to True
+        '''
+        expected_comment = ('existing source sum is the same as the expected one and '
+                            'skip_files_list_verify argument was set to True. '
+                            'Extraction is not needed')
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar',
+                             skip_files_list_verify=True,
+                             source_hash_update=True,
+                             source_hash=ARCHIVE_TAR_SHA_HASH)
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(self.untar_file)
+
+        ret = self.run_state('archive.extracted', name=ARCHIVE_DIR,
+                             source=self.archive_local_tar_source, archive_format='tar',
+                             skip_files_list_verify=True,
+                             source_hash_update=True,
+                             source_hash=ARCHIVE_TAR_SHA_HASH)
+
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment(expected_comment, ret)

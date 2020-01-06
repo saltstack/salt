@@ -17,7 +17,7 @@ import subprocess
 
 # Import Salt Testing libs
 from tests.support.case import TestCase
-from tests.support.paths import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.helpers import get_unused_localhost_port
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.processes import terminate_process

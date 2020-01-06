@@ -55,8 +55,8 @@ import logging
 PER_REMOTE_OVERRIDES = (
     'base', 'mountpoint', 'root', 'ssl_verify',
     'saltenv_whitelist', 'saltenv_blacklist',
-    'env_whitelist', 'env_blacklist', 'refspecs',
-    'disable_saltenv_mapping', 'ref_types', 'update_interval',
+    'refspecs', 'disable_saltenv_mapping',
+    'ref_types', 'update_interval',
 )
 PER_REMOTE_ONLY = ('all_saltenvs', 'name', 'saltenv')
 

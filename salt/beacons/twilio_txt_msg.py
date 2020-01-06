@@ -101,7 +101,7 @@ def beacon(config):
 
         if int(message.num_media):
             media = client.media(message.sid).list()
-            if len(media):
+            if media:
                 for pic in media:
                     item['images'].append(six.text_type(pic.uri))
         output['texts'].append(item)
