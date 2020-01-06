@@ -226,11 +226,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with \
                 patch.dict(module.__salt__, {CMD: _mocked_func_args}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-            try:
-                ret = module.run(**{CMD: ['foo', 'bar']})
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception('test_run_args: raised exception')
-                self.fail('module.run raised exception: {0}'.format(exc))
+            ret = module.run(**{CMD: ['foo', 'bar']})
         self.assertTrue(ret['result'])
         self.assertEqual(
             ret['changes'],
@@ -246,11 +242,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with \
                 patch.dict(module.__salt__, {CMD: test_func}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-            try:
-                ret = module.run(**{CMD: ['bla', {'example': 'bla'}]})
-            except Exception as exc:
-                log.exception('test_run_42270: raised exception')
-                self.fail('module.run raised exception: {}'.format(exc))
+            ret = module.run(**{CMD: ['bla', {'example': 'bla'}]})
         self.assertFalse(ret['result'])
         self.assertEqual(
             ret['comment'],
@@ -267,11 +259,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with \
                 patch.dict(module.__salt__, {CMD: test_func}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-            try:
-                ret = module.run(**{CMD: ['foo', 'bar', {'arg3': 'baz'}, {'foo': 'bar'}]})
-            except Exception as exc:
-                log.exception('test_run_42270_kwargs_to_args: raised exception')
-                self.fail('module.run raised exception: {}'.format(exc))
+            ret = module.run(**{CMD: ['foo', 'bar', {'arg3': 'baz'}, {'foo': 'bar'}]})
         self.assertTrue(ret['result'])
         self.assertEqual(
             ret['changes'],
@@ -286,11 +274,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         with \
                 patch.dict(module.__salt__, {CMD: _mocked_none_return}), \
                 patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
-            try:
-                ret = module.run(**{CMD: None})
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception('test_run_none_return: raised exception')
-                self.fail('module.run raised exception: {0}'.format(exc))
+            ret = module.run(**{CMD: None})
         self.assertTrue(ret['result'])
         self.assertEqual(
             ret['changes'],
@@ -307,12 +291,8 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                     patch.dict(module.__salt__, {CMD: _mocked_none_return}), \
                     patch.dict(module.__opts__, {'use_superseded': ['module.run']}):
                 log.debug('test_run_typed_return: trying %s', val)
-                try:
-                    ret = module.run(**{CMD: [{'ret': val}]})
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception('test_run_typed_return: raised exception')
-                    self.fail('module.run raised exception: {0}'.format(exc))
-                self.assertTrue(ret['result'])
+                ret = module.run(**{CMD: [{'ret': val}]})
+            self.assertTrue(ret['result'])
 
     def test_run_batch_call(self):
         '''
@@ -328,11 +308,7 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
                 }, clear=True):
             for f_name in module.__salt__:
                 log.debug('test_run_batch_call: trying %s', f_name)
-                try:
-                    ret = module.run(**{f_name: None})
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.exception('test_run_batch_call: raised exception')
-                    self.fail('module.run raised exception: {0}'.format(exc))
+                ret = module.run(**{f_name: None})
                 self.assertTrue(ret['result'])
 
     def test_module_run_module_not_available(self):
@@ -380,13 +356,25 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__,
                         {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
-            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
-            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+            self.assertEqual(
+                module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]),
+                (1, 2, 3, (), {})
+            )
+            self.assertEqual(
+                module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]),
+                (1, 2, 3, (), {})
+            )
 
         with patch.dict(module.__salt__,
                         {'testfunc': lambda c, a, b, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
-            assert module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]) == (1, 2, 3, (), {})
-            assert module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]) == (1, 2, 3, (), {})
+            self.assertEqual(
+                module._call_function('testfunc', func_args=[{'a': 1}, {'b': 2}, {'c': 3}]),
+                (1, 2, 3, (), {})
+            )
+            self.assertEqual(
+                module._call_function('testfunc', func_args=[{'c': 3}, {'a': 1}, {'b': 2}]),
+                (1, 2, 3, (), {})
+            )
 
     def test_call_function_ordered_args(self):
         '''
@@ -396,5 +384,11 @@ class ModuleStateTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(module.__salt__,
                         {'testfunc': lambda a, b, c, *args, **kwargs: (a, b, c, args, kwargs)}, clear=True):
-            assert module._call_function('testfunc', func_args=[1, 2, 3]) == (1, 2, 3, (), {})
-            assert module._call_function('testfunc', func_args=[3, 1, 2]) == (3, 1, 2, (), {})
+            self.assertEqual(
+                module._call_function('testfunc', func_args=[1, 2, 3]),
+                (1, 2, 3, (), {})
+            )
+            self.assertEqual(
+                module._call_function('testfunc', func_args=[3, 1, 2]),
+                (3, 1, 2, (), {})
+            )
