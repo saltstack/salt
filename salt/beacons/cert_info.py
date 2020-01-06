@@ -132,7 +132,9 @@ def beacon(config):
                             t[0].decode(encoding='UTF-8'),
                             t[1].decode(encoding='UTF-8')
                         ) for t in cert.get_issuer().get_components()]),
-                    'issuer_dict': { k.decode('UTF-8'): v.decode('UTF-8') for k, v in cert.get_issuer().get_components() },
+                    'issuer_dict': {
+                        k.decode('UTF-8'): v.decode('UTF-8') for k, v in cert.get_issuer().get_components()
+                    },
                     'notAfter_raw': cert.get_notAfter().decode(encoding='UTF-8'),
                     'notAfter': cert_date.strftime("%Y-%m-%d %H:%M:%SZ"),
                     'notBefore_raw': cert.get_notBefore().decode(encoding='UTF-8'),
@@ -146,7 +148,9 @@ def beacon(config):
                             t[0].decode(encoding='UTF-8'),
                             t[1].decode(encoding='UTF-8')
                         ) for t in cert.get_subject().get_components()]),
-                    'subject_dict': { k.decode('UTF-8'): v.decode('UTF-8') for k, v in cert.get_subject().get_components() },
+                    'subject_dict': {
+                        k.decode('UTF-8'): v.decode('UTF-8') for k, v in cert.get_subject().get_components()
+                    },
                     'version': cert.get_version(),
                     'extensions': extensions,
                     'has_expired': cert.has_expired()
