@@ -584,16 +584,17 @@ class ThreadLocalProxy(object):
         return func()
 
     def __coerce__(self, other):
+        # `coerce` isn't available on python 3.6, 3.7, or 3.8
         reference = ThreadLocalProxy.get_reference(self)
         other = ThreadLocalProxy.unproxy(other)
-        return coerce(reference, other)
+        return coerce(reference, other)  # pylint: disable=undefined-variable
 
     if six.PY2:
         # pylint: disable=incompatible-py3-code
         def __unicode__(self):
             reference = ThreadLocalProxy.get_reference(self)
-            return unicode(reference)
+            return unicode(reference)  # pylint: disable=undefined-variable
 
         def __long__(self):
             reference = ThreadLocalProxy.get_reference(self)
-            return long(reference)
+            return long(reference)  # pylint: disable=undefined-variable
