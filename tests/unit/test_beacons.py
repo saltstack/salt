@@ -7,11 +7,8 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
-    patch)
+from tests.support.unit import TestCase
+from tests.support.mock import patch
 
 # Import Salt Libs
 import salt.beacons as beacons
@@ -21,7 +18,6 @@ import logging
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.engine.sqs_events
