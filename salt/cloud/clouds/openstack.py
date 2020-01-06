@@ -310,7 +310,7 @@ def preferred_ip(vm_, ips):
         try:
             socket.inet_pton(family, ip)
             return ip
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
     return False
 
@@ -654,7 +654,7 @@ def request_instance(vm_, conn=None, call=None):
                 kwargs['userdata'] = __utils__['cloud.userdata_template'](
                     __opts__, vm_, fp_.read()
                 )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(
                 'Failed to read userdata from %s: %s', userdata, exc)
     if 'size' in kwargs:

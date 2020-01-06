@@ -444,7 +444,8 @@ class GitFSTestBase(object):
 
         shutil.copytree(
             salt.ext.six.text_type(RUNTIME_VARS.BASE_FILES),
-            salt.ext.six.text_type(cls.tmp_repo_dir + '/')
+            salt.ext.six.text_type(cls.tmp_repo_dir + '/'),
+            symlinks=True
         )
 
         repo = git.Repo.init(cls.tmp_repo_dir)

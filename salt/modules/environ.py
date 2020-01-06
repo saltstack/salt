@@ -80,7 +80,7 @@ def setval(key, val, false_unsets=False, permanent=False):
                 if permanent and is_windows:
                     __salt__['reg.delete_value'](permanent_hive, permanent_key, key)
                 return None
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     '{0}: Exception occurred when unsetting '
                     'environ key \'{1}\': \'{2}\''
@@ -95,7 +95,7 @@ def setval(key, val, false_unsets=False, permanent=False):
             if permanent and is_windows:
                 __salt__['reg.set_value'](permanent_hive, permanent_key, key, val)
             return os.environ[key]
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.error(
                 '{0}: Exception occurred when setting'
                 'environ key \'{1}\': \'{2}\''
