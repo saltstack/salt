@@ -131,7 +131,7 @@ def create(path,
 
     CLI Example:
 
-    .. code-block:: bash
+    .. code-block:: console
 
         salt '*' virtualenv.create /path/to/new/virtualenv
 
