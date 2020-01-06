@@ -440,5 +440,16 @@ class JBoss7CliTestCase(TestCase, LoaderModuleMockMixin):
 
         self.assertEqual(self.cmd.get_last_command(), r'/opt/jboss/jboss-eap-6.0.1/bin/jboss-cli.sh --connect --controller="123.234.345.456:9999" --user="jbossadm" --password="jbossadm" --command="/subsystem=naming/binding=\"java:/sampleapp/web-module/ldap/username\":add(binding-type=simple, value=\"DOMAIN\\\\\\\\user\")"')
 
-    def test_run_operation_WFLYCTL_support(self):
-        x = jboss7_cli._call_cli
+    def test_run_operation_wflyctl_error(self):
+        call_cli_ret = {'retcode': 1,
+                        'stdout': '{"failure-description" => "WFLYCTL0234523: ops"}'}
+        with patch('salt.modules.jboss7_cli._call_cli', return_value=call_cli_ret) as _call_cli:
+            ret = jboss7_cli.run_operation(None, "ls", False)
+            self.assertEqual(ret['err_code'], "WFLYCTL0234523")
+
+    def test_run_operation_no_code_error(self):
+        call_cli_ret = {'retcode': 1,
+                        'stdout': '{"failure-description" => "ERROR234523: ops"}'}
+        with patch('salt.modules.jboss7_cli._call_cli', return_value=call_cli_ret) as _call_cli:
+            ret = jboss7_cli.run_operation(None, "ls", False)
+            self.assertEqual(ret['err_code'], "-1")

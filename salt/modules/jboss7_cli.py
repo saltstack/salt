@@ -122,7 +122,12 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
             if match is None:
                 match = re.search(r'^(WFLYCTL\d+):', cli_result['failure-description'])
 
-            cli_result['err_code'] = match.group(1)
+            if match is not None:
+                cli_result['err_code'] = match.group(1)
+            else:
+                # Could not find err_code
+                log.error("Jboss 7 operation failed! Error Code could not be found!")
+                cli_result['err_code'] = '-1'
 
             cli_result['stdout'] = cli_command_result['stdout']
         else:
@@ -164,7 +169,6 @@ def _call_cli(jboss_config, command, retries=1):
     if cli_command_result['retcode'] == 1 and 'Unable to authenticate against controller' in cli_command_result['stderr']:
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
-    # It may happen that eventhough server is up it may not respond to the call
     # TODO add WFLYCTL code
     if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
