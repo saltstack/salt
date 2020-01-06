@@ -91,7 +91,7 @@ def a2ensite(site):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Enable Site'
@@ -125,7 +125,7 @@ def a2dissite(site):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Disable Site'
@@ -181,7 +181,7 @@ def a2enmod(mod):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Enable Mod'
@@ -215,7 +215,7 @@ def a2dismod(mod):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Disable Mod'
@@ -275,7 +275,7 @@ def a2enconf(conf):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Enable Conf'
@@ -312,7 +312,7 @@ def a2disconf(conf):
 
     try:
         status = __salt__['cmd.retcode'](command, python_shell=False)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return e
 
     ret['Name'] = 'Apache2 Disable Conf'
