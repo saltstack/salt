@@ -190,7 +190,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
                 setattr(caller, attrname, flaky(caller=function, condition=condition, attempts=attempts))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
@@ -209,7 +209,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 return caller(cls)
             except SkipTest as exc:
                 cls.skipTest(exc.args[0])
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 exc_info = sys.exc_info()
                 if isinstance(exc, SkipTest):
                     six.reraise(*exc_info)
@@ -322,11 +322,11 @@ class RedirectStdStreams(object):
         if self.__redirected:
             try:
                 self.__stdout.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             try:
                 self.__stderr.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
 
@@ -475,10 +475,24 @@ class ForceImportErrorOn(object):
 
     def __fake_import__(self,
                         name,
-                        globals_={} if six.PY2 else None,
-                        locals_={} if six.PY2 else None,
-                        fromlist=[] if six.PY2 else (),
-                        level=-1 if six.PY2 else 0):
+                        globals_=None,
+                        locals_=None,
+                        fromlist=None,
+                        level=None):
+        if six.PY2:
+            if globals_ is None:
+                globals_ = {}
+            if locals_ is None:
+                locals_ = {}
+
+        if level is None:
+            if six.PY2:
+                level = -1
+            else:
+                level = 0
+        if fromlist is None:
+            fromlist = []
+
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
@@ -1211,7 +1225,7 @@ def repeat(caller=None, condition=True, times=5):
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
                 setattr(caller, attrname, repeat(caller=function, condition=condition, times=times))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller

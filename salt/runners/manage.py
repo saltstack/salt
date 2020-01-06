@@ -771,7 +771,7 @@ def bootstrap(version='develop',
                 'backend={0}'.format(http_backend),
                 'text_out={0}'.format(deploy_command)
             ]
-            client = salt.client.ssh.SSH(client_opts).run()
+            salt.client.ssh.SSH(client_opts).run()
             client_opts['argv'] = [
                 'cmd.run',
                 ' '.join(['sh', deploy_command, script_args]),

@@ -45,8 +45,8 @@ from salt.ext import six
 def __virtual__():
     IMPORT_ERR = None
     try:
-        from pyghmi.ipmi import command
-    except Exception as exc:
+        from pyghmi.ipmi import command  # pylint: disable=unused-import
+    except Exception as exc:  # pylint: disable=broad-except
         IMPORT_ERR = six.text_type(exc)
     return (IMPORT_ERR is None, IMPORT_ERR)
 

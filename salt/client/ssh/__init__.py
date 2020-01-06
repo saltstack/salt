@@ -497,7 +497,7 @@ class SSH(object):
             try:
                 data = salt.utils.json.find_json(stdout)
                 return {host: data.get('local', data)}
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if stderr:
                     return {host: stderr}
                 return {host: 'Bad Return'}
@@ -532,7 +532,7 @@ class SSH(object):
                     'stderr': stderr,
                     'retcode': retcode,
                 }
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['ret'] = {
                 'stdout': stdout,
                 'stderr': stderr,
@@ -598,7 +598,7 @@ class SSH(object):
                 if 'id' in ret:
                     returned.add(ret['id'])
                     yield {ret['id']: ret['ret']}
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 # This bare exception is here to catch spurious exceptions
                 # thrown by que.get during healthy operation. Please do not
                 # worry about this bare exception, it is entirely here to
@@ -615,7 +615,7 @@ class SSH(object):
                                 if 'id' in ret:
                                     returned.add(ret['id'])
                                     yield {ret['id']: ret['ret']}
-                        except Exception:
+                        except Exception:  # pylint: disable=broad-except
                             pass
 
                         if host not in returned:
@@ -746,7 +746,7 @@ class SSH(object):
                 self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load, minions=self.targets.keys())
             else:
                 self.returners['{0}.save_load'.format(self.opts['master_job_cache'])](jid, job_load)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception(exc)
             log.error(
                 'Could not save load with returner %s: %s',
@@ -1161,7 +1161,7 @@ class Single(object):
             result = 'TypeError encountered executing {0}: {1}'.format(self.fun, exc)
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             result = 'An Exception occurred while executing {0}: {1}'.format(self.fun, exc)
             log.error(result, exc_info_on_loglevel=logging.DEBUG)
             retcode = 1

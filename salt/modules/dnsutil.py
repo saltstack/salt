@@ -43,7 +43,7 @@ def parse_hosts(hostsfile='/etc/hosts', hosts=None):
         try:
             with salt.utils.files.fopen(hostsfile, 'r') as fp_:
                 hosts = salt.utils.stringutils.to_unicode(fp_.read())
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return 'Error: hosts data was not found'
 
     hostsdict = {}
@@ -133,7 +133,7 @@ def parse_zone(zonefile=None, zone=None):
         try:
             with salt.utils.files.fopen(zonefile, 'r') as fp_:
                 zone = salt.utils.stringutils.to_unicode(fp_.read())
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     if not zone:

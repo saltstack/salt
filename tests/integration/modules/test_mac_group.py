@@ -78,12 +78,9 @@ class MacGroupModuleTest(ModuleCase):
             self.run_function('group.delete', [DEL_GROUP])
             self.skipTest('Failed to create a group to delete')
 
-        try:
-            # Now try to delete the added group
-            ret = self.run_function('group.delete', [DEL_GROUP])
-            self.assertTrue(ret)
-        except CommandExecutionError:
-            raise
+        # Now try to delete the added group
+        ret = self.run_function('group.delete', [DEL_GROUP])
+        self.assertTrue(ret)
 
     def test_mac_group_chgid(self):
         '''

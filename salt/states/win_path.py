@@ -187,7 +187,7 @@ def exists(name, index=None):
 
     try:
         ret['result'] = __salt__['win_path.add'](name, index=index, rehash=False)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         comments.append('Encountered error: {0}.'.format(exc))
         ret['result'] = False
 
