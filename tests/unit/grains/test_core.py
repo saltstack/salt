@@ -1481,7 +1481,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                                      patch.object(core, '_virtual', empty_mock), \
                                      patch.object(core, '_ps', empty_mock), \
                                      patch.dict(core.__salt__, {'cmd.run': cmd_run_mock}):
-                                                os_grains = core.os_data()
+                                    os_grains = core.os_data()
 
         self.assertIn('osfullname', os_grains)
         self.assertEqual(os_grains.get('osfullname'), 'FreeBSD')
