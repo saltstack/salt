@@ -280,7 +280,7 @@ class Shell(object):
 
             data = proc.communicate()
             return data[0], data[1], proc.returncode
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return ('local', 'Unknown Error', None)
 
     def _run_nb_cmd(self, cmd):
@@ -304,7 +304,7 @@ class Shell(object):
                 if err:
                     err = self.get_error(err)
                 yield out, err, rcode
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             yield ('', 'Unknown Error', None)
 
     def exec_nb_cmd(self, cmd):

@@ -237,7 +237,7 @@ def __get_conn(**kwargs):
                       libvirt.VIR_CRED_PASSPHRASE,
                       libvirt.VIR_CRED_EXTERNAL]
         conn = libvirt.openAuth(conn_str, [auth_types, __get_request_auth(username, password), None], 0)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
@@ -1180,7 +1180,7 @@ def _handle_remote_boot_params(orig_boot):
                                                 saltinst_dir)
 
         return new_boot
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise err
 
 
@@ -3348,7 +3348,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             dom.undefine()
     else:
         dom.undefine()

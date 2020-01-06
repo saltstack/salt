@@ -787,7 +787,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
         instances = __salt__['boto_ec2.find_instances'](name=instance_name if instance_name else name,
                                                         region=region, key=key, keyid=keyid, profile=profile,
                                                         in_states=running_states)
-        if not len(instances):
+        if not instances:
             _create = True
         elif len(instances) > 1:
             log.debug('Multiple instances matching criteria found - cannot determine a singular instance-id')
@@ -804,7 +804,7 @@ def instance_present(name, instance_name=None, instance_id=None, image_id=None,
             args = {'ami_name': image_name, 'region': region, 'key': key,
                     'keyid': keyid, 'profile': profile}
             image_ids = __salt__['boto_ec2.find_images'](**args)
-            if len(image_ids):
+            if image_ids:
                 image_id = image_ids[0]
             else:
                 image_id = image_name
@@ -1048,7 +1048,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
     instances = __salt__['boto_ec2.find_instances'](instance_id=instance_id, region=region,
                                                     key=key, keyid=keyid, profile=profile,
                                                     return_objs=True, filters=filters)
-    if not len(instances):
+    if not instances:
         ret['result'] = True
         ret['comment'] = 'Instance {0} is already gone.'.format(instance_id)
         return ret
@@ -1086,7 +1086,7 @@ def instance_absent(name, instance_name=None, instance_id=None,
             assoc_id = None
             if getattr(instance, 'vpc_id', None):
                 r = __salt__['boto_ec2.get_eip_address_info'](addresses=ip, **base_args)
-                if len(r) and 'allocation_id' in r[0]:
+                if r and 'allocation_id' in r[0]:
                     alloc_id = r[0]['allocation_id']
                     assoc_id = r[0].get('association_id')
                 else:

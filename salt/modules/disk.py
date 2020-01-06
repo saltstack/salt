@@ -268,10 +268,16 @@ def percent(args=None):
 
 
 @salt.utils.decorators.path.which('blkid')
-def blkid(device=None):
+def blkid(device=None, token=None):
     '''
     Return block device attributes: UUID, LABEL, etc. This function only works
     on systems where blkid is available.
+
+    device
+        Device name from the system
+
+    token
+        Any valid token used for the search
 
     CLI Example:
 
@@ -279,13 +285,17 @@ def blkid(device=None):
 
         salt '*' disk.blkid
         salt '*' disk.blkid /dev/sda
+        salt '*' disk.blkid token='UUID=6a38ee5-7235-44e7-8b22-816a403bad5d'
+        salt '*' disk.blkid token='TYPE=ext4'
     '''
-    args = ""
+    cmd = ['blkid']
     if device:
-        args = " " + device
+        cmd.append(device)
+    elif token:
+        cmd.extend(['-t', token])
 
     ret = {}
-    blkid_result = __salt__['cmd.run_all']('blkid' + args, python_shell=False)
+    blkid_result = __salt__['cmd.run_all'](cmd, python_shell=False)
 
     if blkid_result['retcode'] > 0:
         return ret
@@ -608,16 +618,16 @@ def hdparms(disks, args=None):
                     try:
                         val = int(val)
                         rvals.append(val)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         if '=' in val:
                             deep_key, val = val.split('=', 1)
                             deep_key = deep_key.strip()
                             val = val.strip()
-                            if len(val):
+                            if val:
                                 valdict[deep_key] = val
-                        elif len(val):
+                        elif val:
                             rvals.append(val)
-                if len(valdict):
+                if valdict:
                     rvals.append(valdict)
                 if len(rvals) == 0:
                     continue
@@ -675,7 +685,7 @@ def hpa(disks, size=None):
     for disk, data in hpa_data.items():
         try:
             size = data['total'] - int(size)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if '%' in size:
                 size = int(size.strip('%'))
                 size = (100 - size) * data['total']
@@ -740,17 +750,17 @@ def smart_attributes(dev, attributes=None, values=None):
         data = dict(zip(fields, line[1:]))
         try:
             del data['_']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         for field in data:
             val = data[field]
             try:
                 val = int(val)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 try:
                     val = [int(value) for value in val.split(' ')]
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
             data[field] = val
 
@@ -815,7 +825,7 @@ def _iostat_fbsd(interval, count, disks):
     for line in ret:
         if not line.startswith('device'):
             continue
-        elif not len(dev_header):
+        elif not dev_header:
             dev_header = line.split()[1:]
         while line is not False:
             line = next(ret, False)
@@ -866,12 +876,12 @@ def _iostat_linux(interval, count, disks):
     ret = iter(__salt__['cmd.run_stdout'](iostat_cmd, output_loglevel='quiet').splitlines())
     for line in ret:
         if line.startswith('avg-cpu:'):
-            if not len(sys_header):
+            if not sys_header:
                 sys_header = tuple(line.split()[1:])
             line = [decimal.Decimal(x) for x in next(ret).split()]
             sys_stats.append(line)
         elif line.startswith('Device:'):
-            if not len(dev_header):
+            if not dev_header:
                 dev_header = tuple(line.split()[1:])
             while line is not False:
                 line = next(ret, False)
@@ -884,7 +894,7 @@ def _iostat_linux(interval, count, disks):
 
     iostats = {}
 
-    if len(sys_header):
+    if sys_header:
         iostats['sys'] = _iostats_dict(sys_header, sys_stats)
 
     for disk, stats in dev_stats.items():

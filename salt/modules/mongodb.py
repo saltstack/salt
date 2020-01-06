@@ -340,7 +340,7 @@ def user_roles_exists(name, roles, database, user=None, password=None, host=None
     '''
     try:
         roles = _to_dict(roles)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return 'Roles provided in wrong format'
 
     users = user_list(user, password, host, port, database, authdb)
@@ -382,7 +382,7 @@ def user_grant_roles(name, roles, database, user=None, password=None, host=None,
 
     try:
         roles = _to_dict(roles)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return 'Roles provided in wrong format'
 
     try:
@@ -417,7 +417,7 @@ def user_revoke_roles(name, roles, database, user=None, password=None, host=None
 
     try:
         roles = _to_dict(roles)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return 'Roles provided in wrong format'
 
     try:
@@ -449,7 +449,7 @@ def insert(objects, collection, user=None, password=None,
 
     try:
         objects = _to_dict(objects)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return err
 
     try:
@@ -497,7 +497,7 @@ def update_one(objects, collection, user=None, password=None, host=None, port=No
         try:
             obj = _to_dict(obj)
             document.append(obj)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             return err
 
     _id_field = document[0]
@@ -549,7 +549,7 @@ def find(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return err
 
     try:
@@ -581,7 +581,7 @@ def remove(collection, query=None, user=None, password=None,
 
     try:
         query = _to_dict(query)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         return _get_error_message(err)
 
     try:

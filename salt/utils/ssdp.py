@@ -96,7 +96,7 @@ class SSDPBase(object):
         try:
             sck.connect(('1.255.255.255', 1))  # Does not needs to be reachable
             ip_addr = sck.getsockname()[0]
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ip_addr = socket.gethostbyname(socket.gethostname())
         finally:
             sck.close()
@@ -285,7 +285,7 @@ class SSDPDiscoveryServer(SSDPBase):
                 if sock is not None:
                     sock.close()
                 exceptions.append(exc)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if sock is not None:
                     sock.close()
                 raise
@@ -299,7 +299,7 @@ class SSDPDiscoveryServer(SSDPBase):
         transport = loop._make_datagram_transport(sock, protocol, r_addr, waiter)
         try:
             yield asyncio.coroutines.From(waiter)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             transport.close()
             raise
         raise asyncio.coroutines.Return(transport, protocol)
@@ -377,7 +377,7 @@ class SSDPDiscoveryClient(SSDPBase):
                     response[addr].append(data)
                 else:
                     break
-            except Exception as err:
+            except Exception as err:  # pylint: disable=broad-except
                 self.log.error('Discovery master collection failure: %s', err)
                 break
 

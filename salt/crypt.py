@@ -523,7 +523,7 @@ class AsyncAuth(object):
 
     def __deepcopy__(self, memo):
         cls = self.__class__
-        result = cls.__new__(cls, copy.deepcopy(self.opts, memo), io_loop=None)
+        result = cls.__new__(cls, copy.deepcopy(self.opts, memo))
         memo[id(self)] = result
         for key in self.__dict__:
             if key in ('io_loop',):
@@ -832,7 +832,7 @@ class AsyncAuth(object):
             else:
                 cipher = PKCS1_OAEP.new(pub)
                 payload['token'] = cipher.encrypt(self.token)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         with salt.utils.files.fopen(self.pub_path) as f:
             payload['pub'] = f.read()
@@ -877,7 +877,7 @@ class AsyncAuth(object):
             if os.path.exists(m_path):
                 try:
                     mkey = get_rsa_pub_key(m_path)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     return '', ''
                 digest = hashlib.sha256(key_str).hexdigest()
                 if six.PY3:
@@ -968,7 +968,7 @@ class AsyncAuth(object):
                     'verification failed!', self.opts['master']
                 )
                 return False
-        except Exception as sign_exc:
+        except Exception as sign_exc:  # pylint: disable=broad-except
             log.error(
                 'There was an error while verifying the masters public-key '
                 'signature'
@@ -1032,7 +1032,7 @@ class AsyncAuth(object):
                         'The master failed to decrypt the random minion token'
                     )
                     return ''
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     'The master failed to decrypt the random minion token'
                 )

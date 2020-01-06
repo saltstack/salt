@@ -13,7 +13,7 @@ try:
     # it's installed.
     import OpenSSL  # pylint: disable=unused-import
     NO_PYOPENSSL = False
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_PYOPENSSL = True
 
 # Import Salt Testing Libs
@@ -200,10 +200,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ca_path = '/tmp/test_tls'
         ca_name = 'test_ca'
-        certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            ca_path,
-            ca_name,
-            ca_name)
+        certp = '{0}/{1}/{1}_ca_cert.crt'.format(ca_path, ca_name)
         mock_opt = MagicMock(return_value=ca_path)
         with patch.dict(tls.__salt__, {'config.option': mock_opt}), \
                 patch('os.path.exists', MagicMock(return_value=True)), \
@@ -221,10 +218,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=True)):
             ca_path = '/tmp/test_tls'
             ca_name = 'test_ca'
-            certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-                ca_path,
-                ca_name,
-                ca_name)
+            certp = '{0}/{1}/{1}_ca_cert.crt'.format(ca_path, ca_name)
             ret = {
                 'not_after': 1462379961,
                 'signature_algorithm': 'sha256WithRSAEncryption',
@@ -309,14 +303,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         Test creating CA cert
         '''
         ca_name = 'test_ca'
-        certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            ca_path,
-            ca_name,
-            ca_name)
-        certk = '{0}/{1}/{2}_ca_cert.key'.format(
-            ca_path,
-            ca_name,
-            ca_name)
+        certp = '{0}/{1}/{1}_ca_cert.crt'.format(ca_path, ca_name)
+        certk = '{0}/{1}/{1}_ca_cert.key'.format(ca_path, ca_name)
         ret = 'Created Private Key: "{0}." Created CA "{1}": "{2}."'.format(
             certk, ca_name, certp)
         mock_opt = MagicMock(return_value=ca_path)
@@ -339,14 +327,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         Test creating CA cert when one already exists
         '''
         ca_name = 'test_ca'
-        certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            ca_path,
-            ca_name,
-            ca_name)
-        certk = '{0}/{1}/{2}_ca_cert.key'.format(
-            ca_path,
-            ca_name,
-            ca_name)
+        certp = '{0}/{1}/{1}_ca_cert.crt'.format(ca_path, ca_name)
+        certk = '{0}/{1}/{1}_ca_cert.key'.format(ca_path, ca_name)
         ret = 'Created Private Key: "{0}." Created CA "{1}": "{2}."'.format(
             certk, ca_name, certp)
         mock_opt = MagicMock(return_value=ca_path)
@@ -663,14 +645,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         pillarval = {'csr': {'extendedKeyUsage': 'serverAuth'}}
         mock_pgt = MagicMock(return_value=pillarval)
         ca_name = 'test_ca'
-        certp = '{0}/{1}/{2}_ca_cert.crt'.format(
-            ca_path,
-            ca_name,
-            ca_name)
-        certk = '{0}/{1}/{2}_ca_cert.key'.format(
-            ca_path,
-            ca_name,
-            ca_name)
+        certp = '{0}/{1}/{1}_ca_cert.crt'.format(ca_path, ca_name)
+        certk = '{0}/{1}/{1}_ca_cert.key'.format(ca_path, ca_name)
         ret = 'Created Private Key: "{0}." Created CA "{1}": "{2}."'.format(
             certk, ca_name, certp)
         mock_opt = MagicMock(return_value=ca_path)
