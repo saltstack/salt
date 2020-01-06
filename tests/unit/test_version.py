@@ -17,7 +17,7 @@ import re
 from tests.support.unit import TestCase
 
 # Import Salt libs
-from salt.version import SaltStackVersion
+from salt.version import SaltStackVersion, versions_report
 from salt.utils.timed_subprocess import TimedProc
 
 
