@@ -50,7 +50,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         cls._PKG_TARGETS = ['figlet', 'sl']
         if grains['os'] == 'Windows':
             cls._PKG_TARGETS = ['7zip', 'putty']
-        elif grains['os'] == 'freebsd':
+        elif grains['os'] == 'FreeBSD':
             cls._VERSION_SPEC_SUPPORTED = False
         elif grains['os_family'] in ('Arch', 'Debian'):
             cls._WILDCARDS_SUPPORTED = True
@@ -141,12 +141,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         ret = self.run_state('pkg.removed', name=target)
         self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported')
     @requires_salt_states('pkg.installed', 'pkg.removed')
     def test_pkg_002_installed_with_version(self):
         '''
         This is a destructive test as it installs and then removes a package
         '''
+        if not self._VERSION_SPEC_SUPPORTED:
+            self.skipTest('Version specification not supported')
         target = self._PKG_TARGETS[0]
         version = self.latest_version(target)
 
@@ -186,12 +187,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkg.removed', name=None, pkgs=self._PKG_TARGETS)
             self.assertSaltTrueReturn(ret)
 
-    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported')
     @requires_salt_states('pkg.installed', 'pkg.removed')
     def test_pkg_004_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
+        if not self._VERSION_SPEC_SUPPORTED:
+            self.skipTest('Version specification not supported')
         version = self.latest_version(self._PKG_TARGETS[0])
 
         # If this assert fails, we need to find new targets, this test needs to
@@ -567,7 +569,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
         # changes from pkg.hold for Red Hat family are different
         target_changes = {}
-        if grains['os_family'] == 'RedHat':
+        if grains['os_family'] == 'RedHat' or grains['os'] == "FreeBSD":
             target_changes = {'new': 'hold', 'old': ''}
         elif grains['os_family'] == 'Debian':
             target_changes = {'new': 'hold', 'old': 'install'}
@@ -652,12 +654,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             self.assertSaltTrueReturn(ret)
 
     @skipIf(not _PKG_CAP_TARGETS, 'Capability not available')
-    @skipIf(not _VERSION_SPEC_SUPPORTED, 'Version specification not supported')
     @requires_salt_states('pkg.installed', 'pkg.removed')
     def test_pkg_cap_003_installed_multipkg_with_version(self):
         '''
         This is a destructive test as it installs and then removes two packages
         '''
+        if not self._VERSION_SPEC_SUPPORTED:
+            self.skipTest('Version specification not supported')
         target, realpkg = self._PKG_CAP_TARGETS[0]
         version = self.latest_version(target)
         realver = self.latest_version(realpkg)
