@@ -691,6 +691,8 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         # in order to remove the need for each class to implement __getstate__ and __setstate__
         # which is required on windows
         instance = super(Process, cls).__new__(cls)
+        instance._after_fork_methods = []
+        instance._finalize_methods = []
 
         if salt.utils.platform.is_windows():
             # On Windows, subclasses should call super if they define
@@ -702,27 +704,15 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
     def __init__(self, *args, **kwargs):
         log_queue = kwargs.pop('log_queue', None)
         log_queue_level = kwargs.pop('log_queue_level', None)
+
         super(Process, self).__init__(*args, **kwargs)
         self.log_queue = log_queue
         if self.log_queue is None:
             self.log_queue = salt.log.setup.get_multiprocessing_logging_queue()
-        else:
-            # Set the logging queue so that it can be retrieved later with
-            # salt.log.setup.get_multiprocessing_logging_queue().
-            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
 
         self.log_queue_level = log_queue_level
         if self.log_queue_level is None:
             self.log_queue_level = salt.log.setup.get_multiprocessing_logging_level()
-        else:
-            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
-
-        self._after_fork_methods = [
-            (Process._setup_process_logging, [self], {}),
-        ]
-        self._finalize_methods = [
-            (salt.log.setup.shutdown_multiprocessing_logging, [], {})
-        ]
 
         # Because we need to enforce our after fork and finalize routines,
         # we must wrap this class run method to allow for these extra steps
@@ -739,6 +729,10 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         kwargs = state['kwargs']
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
+        for (function, args, kwargs) in state['after_fork_methods']:
+            self.register_after_fork_method(function, *args, **kwargs)
+        for (function, args, kwargs) in state['finalize_methods']:
+            self.register_after_fork_method(function, *args, **kwargs)
 
     def __getstate__(self):
         args = self._args_for_getstate
@@ -748,15 +742,19 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
         if 'log_queue_level' not in kwargs:
             kwargs['log_queue_level'] = self.log_queue_level
         return {'args': args,
-                'kwargs': kwargs}
-
-    def _setup_process_logging(self):
-        salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+                'kwargs': kwargs,
+                'after_fork_methods': self._after_fork_methods,
+                'finalize_methods': self._finalize_methods}
 
     def __decorate_run(self, run_func):
 
         @functools.wraps(run_func)
         def wrapped_run_func():
+            # Static after fork method, always needs to happen first
+            salt.log.setup.set_multiprocessing_logging_queue(self.log_queue)
+            salt.log.setup.set_multiprocessing_logging_level(self.log_queue_level)
+            salt.log.setup.setup_multiprocessing_logging(self.log_queue)
+
             for method, args, kwargs in self._after_fork_methods:
                 method(*args, **kwargs)
             try:
@@ -775,8 +773,26 @@ class Process(multiprocessing.Process, NewStyleClassMixIn):
             finally:
                 for method, args, kwargs in self._finalize_methods:
                     method(*args, **kwargs)
+                # Static finalize method, should always run last
+                salt.log.setup.shutdown_multiprocessing_logging()
 
         return wrapped_run_func
+
+    def register_after_fork_method(self, function, *args, **kwargs):
+        '''
+        Register a function to run after the process has forked
+        '''
+        after_fork_method_tuple = (function, args, kwargs)
+        if after_fork_method_tuple not in self._after_fork_methods:
+            self._after_fork_methods.append(after_fork_method_tuple)
+
+    def register_finalize_method(self, function, *args, **kwargs):
+        '''
+        Register a function to run as process terminates
+        '''
+        finalize_method_tuple = (function, args, kwargs)
+        if finalize_method_tuple not in self._finalize_methods:
+            self._finalize_methods.append(finalize_method_tuple)
 
 
 class MultiprocessingProcess(Process):
@@ -801,9 +817,7 @@ class SignalHandlingProcess(Process):
     def __init__(self, *args, **kwargs):
         super(SignalHandlingProcess, self).__init__(*args, **kwargs)
         self._signal_handled = multiprocessing.Event()
-        self._after_fork_methods.append(
-            (SignalHandlingProcess._setup_signals, [self], {})
-        )
+        self.register_after_fork_method(SignalHandlingProcess._setup_signals, self)
 
     def signal_handled(self):
         return self._signal_handled.is_set()
