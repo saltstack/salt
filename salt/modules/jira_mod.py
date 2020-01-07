@@ -25,10 +25,7 @@ import logging
 log = logging.getLogger(__name__)
 
 # Import salt modules
-try:
-    from salt.utils import clean_kwargs
-except ImportError:
-    from salt.utils.args import clean_kwargs
+from salt.utils.args import clean_kwargs
 
 # Import third party modules
 try:

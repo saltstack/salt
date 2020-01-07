@@ -23,6 +23,12 @@ def match(tgt, delimiter=DEFAULT_TARGET_DELIM, opts=None):
                   'statement from master')
         return False
 
+    if 'pillar' in opts:
+        pillar = opts['pillar']
+    elif 'ext_pillar' in opts:
+        log.info('No pillar found, fallback to ext_pillar')
+        pillar = opts['ext_pillar']
+
     return salt.utils.data.subdict_match(
-        opts['pillar'], tgt, delimiter=delimiter, regex_match=True
+        pillar, tgt, delimiter=delimiter, regex_match=True
     )

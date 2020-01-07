@@ -470,7 +470,7 @@ def __get_artifact(salt_source):
                 if manage_result['changes']:
                     changed = True
 
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.debug(traceback.format_exc())
                 comment = 'Unable to manage file: {0}'.format(e)
 
