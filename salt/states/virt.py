@@ -828,7 +828,7 @@ def network_running(
     return ret
 
 
-def pool_running(
+def pool_defined(
     name,
     ptype=None,
     target=None,
@@ -841,9 +841,9 @@ def pool_running(
     password=None,
 ):
     """
-    Defines and starts a new pool with specified arguments.
+    Defines a new pool with specified arguments.
 
-    .. versionadded:: 2019.2.0
+    .. versionadded:: sodium
 
     :param ptype: libvirt pool type
     :param target: full path to the target device or folder. (Default: ``None``)
@@ -865,12 +865,7 @@ def pool_running(
     .. code-block:: yaml
 
         pool_name:
-          virt.pool_define
-
-    .. code-block:: yaml
-
-        pool_name:
-          virt.pool_define:
+          virt.pool_defined:
             - ptype: netfs
             - target: /mnt/cifs
             - permissions:
@@ -945,53 +940,28 @@ def pool_running(
                         password=password,
                     )
 
-                action = "started"
-                if info[name]["state"] == "running":
-                    action = "restarted"
+                action = ""
+                if info[name]["state"] != "running":
                     if not __opts__["test"]:
-                        __salt__["virt.pool_stop"](
+                        __salt__["virt.pool_build"](
                             name,
                             connection=connection,
                             username=username,
                             password=password,
                         )
+                    action = ", built"
 
-                if not __opts__["test"]:
-                    __salt__["virt.pool_build"](
-                        name,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                    )
-                    __salt__["virt.pool_start"](
-                        name,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                    )
-
-                autostart_str = ", autostart flag changed" if needs_autostart else ""
-                ret["changes"][name] = "Pool updated, built{0} and {1}".format(
-                    autostart_str, action
+                action = (
+                    "{}, autostart flag changed".format(action)
+                    if needs_autostart
+                    else action
                 )
-                ret["comment"] = "Pool {0} updated, built{1} and {2}".format(
-                    name, autostart_str, action
-                )
+                ret["changes"][name] = "Pool updated{0}".format(action)
+                ret["comment"] = "Pool {0} updated{1}".format(name, action)
 
             else:
-                if info[name]["state"] == "running":
-                    ret["comment"] = "Pool {0} unchanged and is running".format(name)
-                    ret["result"] = True
-                else:
-                    ret["changes"][name] = "Pool started"
-                    ret["comment"] = "Pool {0} started".format(name)
-                    if not __opts__["test"]:
-                        __salt__["virt.pool_start"](
-                            name,
-                            connection=connection,
-                            username=username,
-                            password=password,
-                        )
+                ret["comment"] = "Pool {0} unchanged".format(name)
+                ret["result"] = True
         else:
             needs_autostart = autostart
             if not __opts__["test"]:
@@ -1018,18 +988,12 @@ def pool_running(
                 __salt__["virt.pool_build"](
                     name, connection=connection, username=username, password=password
                 )
-
-                __salt__["virt.pool_start"](
-                    name, connection=connection, username=username, password=password
-                )
             if needs_autostart:
-                ret["changes"][name] = "Pool defined, started and marked for autostart"
-                ret[
-                    "comment"
-                ] = "Pool {0} defined, started and marked for autostart".format(name)
+                ret["changes"][name] = "Pool defined, marked for autostart"
+                ret["comment"] = "Pool {0} defined, marked for autostart".format(name)
             else:
-                ret["changes"][name] = "Pool defined and started"
-                ret["comment"] = "Pool {0} defined and started".format(name)
+                ret["changes"][name] = "Pool defined"
+                ret["comment"] = "Pool {0} defined".format(name)
 
         if needs_autostart:
             if not __opts__["test"]:
@@ -1043,6 +1007,138 @@ def pool_running(
     except libvirt.libvirtError as err:
         ret["comment"] = err.get_error_message()
         ret["result"] = False
+
+    return ret
+
+
+def pool_running(
+    name,
+    ptype=None,
+    target=None,
+    permissions=None,
+    source=None,
+    transient=False,
+    autostart=True,
+    connection=None,
+    username=None,
+    password=None,
+):
+    """
+    Defines and starts a new pool with specified arguments.
+
+    .. versionadded:: 2019.2.0
+
+    :param ptype: libvirt pool type
+    :param target: full path to the target device or folder. (Default: ``None``)
+    :param permissions:
+        target permissions. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source:
+        dictionary containing keys matching the ``source_*`` parameters in function
+        :func:`salt.modules.virt.pool_define`.
+    :param transient:
+        when set to ``True``, the pool will be automatically undefined after being stopped. (Default: ``False``)
+    :param autostart:
+        Whether to start the pool when booting the host. (Default: ``True``)
+    :param start:
+        When ``True``, define and start the pool, otherwise the pool will be left stopped.
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. code-block:: yaml
+
+        pool_name:
+          virt.pool_running
+
+    .. code-block:: yaml
+
+        pool_name:
+          virt.pool_running:
+            - ptype: netfs
+            - target: /mnt/cifs
+            - permissions:
+                - mode: 0770
+                - owner: 1000
+                - group: 100
+            - source:
+                dir: samba_share
+                hosts:
+                  - one.example.com
+                  - two.example.com
+                format: cifs
+            - autostart: True
+
+    """
+    ret = pool_defined(
+        name,
+        ptype,
+        target,
+        permissions,
+        source,
+        transient,
+        autostart,
+        connection,
+        username,
+        password,
+    )
+    defined = name in ret["changes"] and ret["changes"][name].startswith("Pool defined")
+    updated = name in ret["changes"] and ret["changes"][name].startswith("Pool updated")
+
+    result = True if not __opts__["test"] else None
+    if ret["result"] is None or ret["result"]:
+        try:
+            info = __salt__["virt.pool_info"](
+                name, connection=connection, username=username, password=password
+            )
+            action = "started"
+            # In the corner case where test=True and the pool wasn"t defined
+            # we may get not get our pool in the info dict and that is normal.
+            is_running = info.get(name, {}).get("state", "stopped") == "running"
+            if is_running:
+                if updated:
+                    action = "built, restarted"
+                    if not __opts__["test"]:
+                        __salt__["virt.pool_stop"](
+                            name,
+                            connection=connection,
+                            username=username,
+                            password=password,
+                        )
+                    if not __opts__["test"]:
+                        __salt__["virt.pool_build"](
+                            name,
+                            connection=connection,
+                            username=username,
+                            password=password,
+                        )
+                else:
+                    action = "already running"
+                    result = True
+
+            if not is_running or updated or defined:
+                if not __opts__["test"]:
+                    __salt__["virt.pool_start"](
+                        name,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                    )
+
+            comment = "Pool {0}".format(name)
+            change = "Pool"
+            if name in ret["changes"]:
+                comment = "{0},".format(ret["comment"])
+                change = "{0},".format(ret["changes"][name])
+
+            if action != "already running":
+                ret["changes"][name] = "{0} {1}".format(change, action)
+
+            ret["comment"] = "{0} {1}".format(comment, action)
+            ret["result"] = result
+
+        except libvirt.libvirtError as err:
+            ret["comment"] = err.get_error_message()
+            ret["result"] = False
 
     return ret
 

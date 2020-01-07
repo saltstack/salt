@@ -1001,6 +1001,330 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({"changes": {}, "comment": "Some error", "result": False})
             self.assertDictEqual(virt.network_running("mynet", "br2", "bridge"), ret)
 
+    def test_pool_defined(self):
+        """
+        pool_defined state test cases.
+        """
+        ret = {"name": "mypool", "changes": {}, "result": True, "comment": ""}
+        mocks = {
+            mock: MagicMock(return_value=True)
+            for mock in ["define", "autostart", "build"]
+        }
+        with patch.dict(virt.__opts__, {"test": False}):
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        side_effect=[
+                            {},
+                            {"mypool": {"state": "stopped", "autostart": True}},
+                        ]
+                    ),
+                    "virt.pool_define": mocks["define"],
+                    "virt.pool_build": mocks["build"],
+                    "virt.pool_set_autostart": mocks["autostart"],
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mypool": "Pool defined, marked for autostart"},
+                        "comment": "Pool mypool defined, marked for autostart",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        permissions={
+                            "mode": "0770",
+                            "owner": 1000,
+                            "group": 100,
+                            "label": "seclabel",
+                        },
+                        source={"devices": [{"path": "/dev/sda"}]},
+                        transient=True,
+                        autostart=True,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                mocks["define"].assert_called_with(
+                    "mypool",
+                    ptype="logical",
+                    target="/dev/base",
+                    permissions={
+                        "mode": "0770",
+                        "owner": 1000,
+                        "group": 100,
+                        "label": "seclabel",
+                    },
+                    source_devices=[{"path": "/dev/sda"}],
+                    source_dir=None,
+                    source_adapter=None,
+                    source_hosts=None,
+                    source_auth=None,
+                    source_name=None,
+                    source_format=None,
+                    source_initiator=None,
+                    transient=True,
+                    start=False,
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                )
+                mocks["autostart"].assert_called_with(
+                    "mypool",
+                    state="on",
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                )
+                mocks["build"].assert_called_with(
+                    "mypool",
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                )
+
+            mocks["update"] = MagicMock(return_value=False)
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        return_value={"mypool": {"state": "stopped", "autostart": True}}
+                    ),
+                    "virt.pool_update": mocks["update"],
+                    "virt.pool_build": mocks["build"],
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Pool mypool unchanged"})
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        source={"devices": [{"path": "/dev/sda"}]},
+                    ),
+                    ret,
+                )
+                mocks["build"].assert_not_called()
+
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(return_value={}),
+                    "virt.pool_define": MagicMock(
+                        side_effect=self.mock_libvirt.libvirtError("Some error")
+                    ),
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Some error", "result": False})
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        source={"devices": [{"path": "/dev/sda"}]},
+                    ),
+                    ret,
+                )
+
+            # Test case with update and autostart change on stopped pool
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            mocks["update"] = MagicMock(return_value=True)
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        return_value={"mypool": {"state": "stopped", "autostart": True}}
+                    ),
+                    "virt.pool_update": mocks["update"],
+                    "virt.pool_set_autostart": mocks["autostart"],
+                    "virt.pool_build": mocks["build"],
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {
+                            "mypool": "Pool updated, built, autostart flag changed"
+                        },
+                        "comment": "Pool mypool updated, built, autostart flag changed",
+                        "result": True,
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        autostart=False,
+                        permissions={
+                            "mode": "0770",
+                            "owner": 1000,
+                            "group": 100,
+                            "label": "seclabel",
+                        },
+                        source={"devices": [{"path": "/dev/sda"}]},
+                    ),
+                    ret,
+                )
+                mocks["build"].assert_called_with(
+                    "mypool", connection=None, username=None, password=None
+                )
+                mocks["autostart"].assert_called_with(
+                    "mypool", state="off", connection=None, username=None, password=None
+                )
+                mocks["update"].assert_called_with(
+                    "mypool",
+                    ptype="logical",
+                    target="/dev/base",
+                    permissions={
+                        "mode": "0770",
+                        "owner": 1000,
+                        "group": 100,
+                        "label": "seclabel",
+                    },
+                    source_devices=[{"path": "/dev/sda"}],
+                    source_dir=None,
+                    source_adapter=None,
+                    source_hosts=None,
+                    source_auth=None,
+                    source_name=None,
+                    source_format=None,
+                    source_initiator=None,
+                    connection=None,
+                    username=None,
+                    password=None,
+                )
+
+            # test case with update and no autostart change on running pool
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        return_value={
+                            "mypool": {"state": "running", "autostart": False}
+                        }
+                    ),
+                    "virt.pool_update": mocks["update"],
+                    "virt.pool_build": mocks["build"],
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mypool": "Pool updated"},
+                        "comment": "Pool mypool updated",
+                        "result": True,
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        autostart=False,
+                        permissions={
+                            "mode": "0770",
+                            "owner": 1000,
+                            "group": 100,
+                            "label": "seclabel",
+                        },
+                        source={"devices": [{"path": "/dev/sda"}]},
+                    ),
+                    ret,
+                )
+                mocks["update"].assert_called_with(
+                    "mypool",
+                    ptype="logical",
+                    target="/dev/base",
+                    permissions={
+                        "mode": "0770",
+                        "owner": 1000,
+                        "group": 100,
+                        "label": "seclabel",
+                    },
+                    source_devices=[{"path": "/dev/sda"}],
+                    source_dir=None,
+                    source_adapter=None,
+                    source_hosts=None,
+                    source_auth=None,
+                    source_name=None,
+                    source_format=None,
+                    source_initiator=None,
+                    connection=None,
+                    username=None,
+                    password=None,
+                )
+
+        with patch.dict(virt.__opts__, {"test": True}):
+            # test case with test=True and no change
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(
+                        return_value={"mypool": {"state": "running", "autostart": True}}
+                    ),
+                    "virt.pool_update": MagicMock(return_value=False),
+                },
+            ):
+                ret.update(
+                    {"changes": {}, "comment": "Pool mypool unchanged", "result": True}
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        source={"devices": [{"path": "/dev/sda"}]},
+                    ),
+                    ret,
+                )
+
+            # test case with test=True and pool to be defined
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(return_value={}),
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mypool": "Pool defined, marked for autostart"},
+                        "comment": "Pool mypool defined, marked for autostart",
+                        "result": None,
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_defined(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        permissions={
+                            "mode": "0770",
+                            "owner": 1000,
+                            "group": 100,
+                            "label": "seclabel",
+                        },
+                        source={"devices": [{"path": "/dev/sda"}]},
+                        transient=True,
+                        autostart=True,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+
     def test_pool_running(self):
         """
         pool_running state test cases.
@@ -1014,7 +1338,12 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(
                 virt.__salt__,
                 {  # pylint: disable=no-member
-                    "virt.pool_info": MagicMock(return_value={}),
+                    "virt.pool_info": MagicMock(
+                        side_effect=[
+                            {},
+                            {"mypool": {"state": "stopped", "autostart": True}},
+                        ]
+                    ),
                     "virt.pool_define": mocks["define"],
                     "virt.pool_build": mocks["build"],
                     "virt.pool_start": mocks["start"],
@@ -1024,9 +1353,9 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update(
                     {
                         "changes": {
-                            "mypool": "Pool defined, started and marked for autostart"
+                            "mypool": "Pool defined, marked for autostart, started"
                         },
-                        "comment": "Pool mypool defined, started and marked for autostart",
+                        "comment": "Pool mypool defined, marked for autostart, started",
                     }
                 )
                 self.assertDictEqual(
@@ -1103,9 +1432,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                     "virt.pool_update": MagicMock(return_value=False),
                 },
             ):
-                ret.update(
-                    {"changes": {}, "comment": "Pool mypool unchanged and is running"}
-                )
+                ret.update({"changes": {}, "comment": "Pool mypool already running"})
                 self.assertDictEqual(
                     virt.pool_running(
                         "mypool",
@@ -1188,9 +1515,9 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update(
                     {
                         "changes": {
-                            "mypool": "Pool updated, built, autostart flag changed and started"
+                            "mypool": "Pool updated, built, autostart flag changed, started"
                         },
-                        "comment": "Pool mypool updated, built, autostart flag changed and started",
+                        "comment": "Pool mypool updated, built, autostart flag changed, started",
                         "result": True,
                     }
                 )
@@ -1261,8 +1588,8 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             ):
                 ret.update(
                     {
-                        "changes": {"mypool": "Pool updated, built and restarted"},
-                        "comment": "Pool mypool updated, built and restarted",
+                        "changes": {"mypool": "Pool updated, built, restarted"},
+                        "comment": "Pool mypool updated, built, restarted",
                         "result": True,
                     }
                 )
@@ -1328,7 +1655,7 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update(
                     {
                         "changes": {},
-                        "comment": "Pool mypool unchanged and is running",
+                        "comment": "Pool mypool already running",
                         "result": True,
                     }
                 )
@@ -1368,6 +1695,45 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                         ptype="logical",
                         target="/dev/base",
                         source={"devices": [{"path": "/dev/sda"}]},
+                    ),
+                    ret,
+                )
+
+            # test case with test=True and pool to be defined
+            for mock in mocks:
+                mocks[mock].reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.pool_info": MagicMock(return_value={}),
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {
+                            "mypool": "Pool defined, marked for autostart, started"
+                        },
+                        "comment": "Pool mypool defined, marked for autostart, started",
+                        "result": None,
+                    }
+                )
+                self.assertDictEqual(
+                    virt.pool_running(
+                        "mypool",
+                        ptype="logical",
+                        target="/dev/base",
+                        permissions={
+                            "mode": "0770",
+                            "owner": 1000,
+                            "group": 100,
+                            "label": "seclabel",
+                        },
+                        source={"devices": [{"path": "/dev/sda"}]},
+                        transient=True,
+                        autostart=True,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
                     ),
                     ret,
                 )
