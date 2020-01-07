@@ -53,7 +53,6 @@ class MasterTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
             # cause timeout exceptions and respective traceback
             master.shutdown()
 
-    # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-master.

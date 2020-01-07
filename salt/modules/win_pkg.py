@@ -1165,7 +1165,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
             __opts__.get('renderer_whitelist', ''))
     except SaltRenderError as exc:
         return _failed_compile('Failed to compile', exc)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         return _failed_compile('Failed to read', exc)
 
     if config and isinstance(config, dict):
@@ -2135,7 +2135,7 @@ def get_repo_data(saltenv='base'):
                 repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
                 __context__['winrepo.data'] = repodata
                 return repodata
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 return {}
     except IOError as exc:
