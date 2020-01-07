@@ -10,6 +10,7 @@ import os
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, Mock, patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -46,6 +47,18 @@ class WinLGPOTestCase(TestCase):
     Test cases for salt.modules.win_lgpo
     '''
     encoded_null = chr(0).encode('utf-16-le')
+
+    def test__getAdmlDisplayName(self):
+        display_name = '$(string.KeepAliveTime1)'
+        adml_xml_data = 'junk, we are mocking the return'
+        obj_xpath = Mock()
+        obj_xpath.text = '300000 or 5 minutes (recommended) '
+        mock_xpath_obj = MagicMock(return_value=[obj_xpath])
+        with patch.object(win_lgpo, 'ADML_DISPLAY_NAME_XPATH', mock_xpath_obj):
+            result = win_lgpo._getAdmlDisplayName(adml_xml_data=adml_xml_data,
+                                                  display_name=display_name)
+        expected = '300000 or 5 minutes (recommended)'
+        self.assertEqual(result, expected)
 
     def test__encode_string(self):
         '''
