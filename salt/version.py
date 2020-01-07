@@ -5,7 +5,6 @@ Set up the version of Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import distro
 import re
 import sys
 import platform
