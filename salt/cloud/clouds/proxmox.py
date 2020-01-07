@@ -500,16 +500,7 @@ def _stringlist_to_dictionary(input_string):
 
     {'setting1':'value1','setting2':'value2'}
     '''
-    li = str(input_string).split(',')
-    ret = {}
-    for item in li:
-        pair = str(item).replace(' ', '').split('=')
-        if len(pair) != 2:
-            log.warn("Cannot process stringlist item %s", item)
-            continue
-
-        ret[pair[0]] = pair[1]
-    return ret
+    return dict(item.strip().split("=") for item in input_string.split(",") if item)
 
 
 def _dictionary_to_stringlist(input_dict):
@@ -520,11 +511,50 @@ def _dictionary_to_stringlist(input_dict):
 
     setting1=value1,setting2=value2
     '''
-    string_value = ""
-    for s in input_dict:
-        string_value += "{0}={1},".format(s, input_dict[s])
-    string_value = string_value[:-1]
-    return string_value
+    return ','.join('{}={}'.format(k, v) for k, v in input_dict.items())
+
+
+def _reconfigure_clone(vm_, vmid):
+    '''
+    If we cloned a machine, see if we need to reconfigure any of the options such as net0,
+    ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's brought up
+    :param vm_:
+    :return:
+    '''
+    if not vm_.get('technology') == 'qemu':
+        log.warning('Reconfiguring clones is only available under `qemu`')
+        return
+
+    # TODO: Support other settings here too as these are not the only ones that can be modified after a clone operation
+    log.info('Configuring cloned VM')
+
+    # Modify the settings for the VM one at a time so we can see any problems with the values
+    # as quickly as possible
+    for setting in vm_:
+        if re.match(r'^(ide|sata|scsi)(\d+)$', setting):
+            postParams = {setting: vm_[setting]}
+            query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+
+        elif re.match(r'^net(\d+)$', setting):
+            # net strings are a list of comma seperated settings. We need to merge the settings so that
+            # the setting in the profile only changes the settings it touches and the other settings
+            # are left alone. An example of why this is necessary is because the MAC address is set
+            # in here and generally you don't want to alter or have to know the MAC address of the new
+            # instance, but you may want to set the VLAN bridge
+            data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
+
+            # Generate a dictionary of settings from the existing string
+            new_setting = {}
+            if setting in data:
+                new_setting.update(_stringlist_to_dictionary(data[setting]))
+
+            # Merge the new settings (as a dictionary) into the existing dictionary to get the
+            # new merged settings
+            new_setting.update(_stringlist_to_dictionary(vm_[setting]))
+
+            # Convert the dictionary back into a string list
+            postParams = {setting: _dictionary_to_stringlist(new_setting)}
+            query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
 
 
 def create(vm_):
@@ -610,60 +640,8 @@ def create(vm_):
     if not wait_for_created(data['upid'], timeout=300):
         return {'Error': 'Unable to create {0}, command timed out'.format(name)}
 
-    if 'clone' in vm_ and vm_['clone'] is True and vm_['technology'] == 'qemu':
-        # If we cloned a machine, see if we need to reconfigure any of the options such as net0,
-        # ide2, etc. This enables us to have a different cloud-init ISO mounted for each VM that's
-        # brought up
-
-        # TODO: Support other settings here too as these are not the only ones that can be modified
-        # after a clone operation
-        log.info('Configuring cloned VM')
-
-        # Modify the settings for the VM one at a time so we can see any problems with the values
-        # as quickly as possible
-        for setting_number in range(3):
-            setting = 'ide{0}'.format(setting_number)
-            if setting in vm_:
-                postParams = {}
-                postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
-        for setting_number in range(5):
-            setting = 'sata{0}'.format(setting_number)
-            if setting in vm_:
-                postParams = {}
-                postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
-        for setting_number in range(13):
-            setting = 'scsi{0}'.format(setting_number)
-            if setting in vm_:
-                postParams = {}
-                postParams[setting] = vm_[setting]
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
-
-        # net strings are a list of comma seperated settings. We need to merge the settings so that
-        # the setting in the profile only changes the settings it touches and the other settings
-        # are left alone. An example of why this is necessary is because the MAC address is set
-        # in here and generally you don't want to alter or have to know the MAC address of the new
-        # instance, but you may want to set the VLAN bridge for example
-        for setting_number in range(20):
-            setting = 'net{0}'.format(setting_number)
-            if setting in vm_:
-                data = query('get', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid))
-
-                # Generate a dictionary of settings from the existing string
-                new_setting = {}
-                if setting in data:
-                    new_setting.update(_stringlist_to_dictionary(data[setting]))
-
-                # Merge the new settings (as a dictionary) into the existing dictionary to get the
-                # new merged settings
-                new_setting.update(_stringlist_to_dictionary(vm_[setting]))
-
-                # Convert the dictionary back into a string list
-                postParams = {setting: _dictionary_to_stringlist(new_setting)}
-                query('post', 'nodes/{0}/qemu/{1}/config'.format(vm_['host'], vmid), postParams)
+    if vm_.get('clone') is True:
+        _reconfigure_clone(vm_, vmid)
 
     # VM has been created. Starting..
     if not start(name, vmid, call='action'):
