@@ -466,7 +466,6 @@ Serializer Changes
          - serializer_opts:
            - preserve_case: True
 
->>>>>>> 9dc699ca09... update Neon release notes about file.symlink state/file.remove module
 Enhancements to Engines
 =======================
 
