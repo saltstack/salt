@@ -5639,7 +5639,9 @@ def _getAdmlDisplayName(adml_xml_data, display_name):
                                                  displayNameId=displayname_id)
         if search_results:
             for result in search_results:
-                return result.text
+                # Needs the `strip()` because some adml data has an extra space
+                # at the end
+                return result.text.strip()
 
     return None
 
