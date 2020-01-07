@@ -73,6 +73,14 @@ If you've installed ``pre-commit``, this will automatically happen before each
 commit.  Otherwise, see the :ref:`Linting<pylint-instructions>` documentation
 for more information.
 
+
+Copyright Headers
+-----------------
+
+Copyright headers are not needed for files in the Salt project. Files that have
+existing copyright headers should be considered legacy and not an example to
+follow.
+
 .. _github-pull-request:
 
 Sending a GitHub pull request
