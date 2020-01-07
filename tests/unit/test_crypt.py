@@ -11,8 +11,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     MockCall,
 )
@@ -98,7 +96,6 @@ SIG = (
         b'\x14H\xb2\xc4>\xc3A\xed\x86x~\xcfU\xd5Q\xfe~\x10\xd2\x9b')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYCRYPTO_RSA, 'pycrypto >= 2.6 is not available')
 @skipIf(HAS_M2, 'm2crypto is used by salt.crypt if installed')
 class CryptTestCase(TestCase):
@@ -160,7 +157,6 @@ class CryptTestCase(TestCase):
             self.assertTrue(crypt.verify_signature('/keydir/keyname.pub', MSG, SIG))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_M2, 'm2crypto is not available')
 class M2CryptTestCase(TestCase):
     @patch('os.umask', MagicMock())

@@ -5,7 +5,6 @@ Integration tests for the docker_container states
 
 # Import Python Libs
 from __future__ import absolute_import, print_function, unicode_literals
-import functools
 import random
 import string
 import sys
@@ -30,30 +29,19 @@ def _random_name(prefix=''):
     return ret
 
 
-def with_random_name(func):
-    '''
-    generate a randomized name for a container
-    '''
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        name = _random_name(prefix='salt_')
-        return func(self, _random_name(prefix='salt_test_'), *args, **kwargs)
-    return wrapper
-
-
 @destructiveTest
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 class DockerCallTestCase(ModuleCase, SaltReturnAssertsMixin):
     '''
     Test docker_container states
     '''
-    @with_random_name
-    def setUp(self, name):
+
+    def setUp(self):
         '''
         setup docker.call tests
         '''
         # Create temp dir
-        self.random_name = name
+        self.random_name = _random_name(prefix='salt_test_')
         self.image_tag = sys.version_info[0]
 
         self.run_state('docker_image.present',

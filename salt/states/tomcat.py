@@ -173,7 +173,7 @@ def war_deployed(name,
                 status = False
             else:
                 return ret
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         deploy = True
         ret['changes']['deploy'] = ('deployed {0} with {1}'.
                                     format(name, specified_ver))

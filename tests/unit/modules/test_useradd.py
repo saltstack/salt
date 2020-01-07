@@ -17,8 +17,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -26,7 +24,6 @@ import salt.modules.useradd as useradd
 from salt.exceptions import CommandExecutionError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class UserAddTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.useradd
@@ -415,14 +412,15 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
-            mock = MagicMock(side_effect=[{'name': ''}, False,
+            mock = MagicMock(side_effect=[False, {'name': ''},
                                           {'name': 'salt'}])
             with patch.object(useradd, 'info', mock):
                 self.assertTrue(useradd.rename('name', 'salt'))
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
-            mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
+            mock = MagicMock(side_effect=[False, {'name': ''},
+                                          {'name': ''}])
             with patch.object(useradd, 'info', mock):
                 self.assertFalse(useradd.rename('salt', 'salt'))
 

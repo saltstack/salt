@@ -1,10 +1,4 @@
-{% if grains['kernel'] == 'Windows' %}
-  {% set TMP = "C:\\Windows\\Temp\\" %}
-{% else %}
-  {% set TMP = "/tmp/" %}
-{% endif %}
-
 add_contents_pillar_sls:
   file.managed:
-    - name: {{ TMP }}test-lists-content-pillars
+    - name: {{ salt['runtests_helpers.get_salt_temp_dir_for_path']('test-lists-content-pillars') }}
     - contents_pillar: companions:three

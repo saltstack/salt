@@ -74,7 +74,7 @@ class SleekXMPPMUC(logging.Filter):
 
 class SendMsgBot(_ClientXMPP):
 
-    def __init__(self, jid, password, recipient, msg):  # pylint: disable=E1002
+    def __init__(self, jid, password, recipient, msg):
         # PyLint wrongly reports an error when calling super, hence the above
         # disable call
         super(SendMsgBot, self).__init__(jid, password)

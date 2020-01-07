@@ -44,7 +44,7 @@ def zmq_version():
     '''
     try:
         import zmq
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # Return True for local mode
         return True
     ver = zmq.__version__
@@ -129,7 +129,7 @@ def verify_socket(interface, pub_port, ret_port):
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((interface, int(port)))
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             msg = 'Unable to bind socket {0}:{1}'.format(interface, port)
             if exc.args:
                 msg = '{0}, error: {1}'.format(msg, str(exc))
@@ -207,7 +207,7 @@ def verify_files(files, user):
             msg = 'No permissions to access "{0}", are you running as the correct user?'.format(fn_)
             raise SaltSystemExit(msg=msg)
 
-        except OSError as err:
+        except OSError as err:  # pylint: disable=duplicate-except
             msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
             raise SaltSystemExit(msg=msg)
 

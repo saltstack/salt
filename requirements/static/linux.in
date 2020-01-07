@@ -10,6 +10,7 @@ docker
 futures>=2.0; python_version < '3.0'
 GitPython
 hgtools
+jmespath
 jsonschema
 junos-eznc
 jxmlease
@@ -41,3 +42,9 @@ timelib
 tornado<5.0
 virtualenv
 watchdog
+
+# Available template libraries that can be used
+Genshi
+Cheetah3==3.1.0
+Mako
+wempy; python_version <'3'

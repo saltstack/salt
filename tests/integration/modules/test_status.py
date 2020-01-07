@@ -27,7 +27,7 @@ class StatusModuleTest(ModuleCase):
         status_pid = self.run_function('status.pid', ['salt'])
         grab_pids = status_pid.split()[:10]
         random_pid = random.choice(grab_pids)
-        grep_salt = self.run_function('cmd.run', ['ps aux | grep salt'])
+        grep_salt = self.run_function('cmd.run', ['pgrep -f salt'])
         self.assertIn(random_pid, grep_salt)
 
     @skipIf(not salt.utils.platform.is_windows(), 'windows only test')

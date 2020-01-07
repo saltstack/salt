@@ -13,13 +13,12 @@ from __future__ import absolute_import, print_function, unicode_literals
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.returners.syslog_return as syslog
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SyslogReturnerTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test Syslog returner
@@ -41,5 +40,5 @@ class SyslogReturnerTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=opts)):
             try:
                 syslog.returner(ret)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 self.fail('syslog.returner() failed with exception: {0}'.format(e))

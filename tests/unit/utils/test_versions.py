@@ -17,7 +17,7 @@ import warnings
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch
 from tests.support.paths import CODE_DIR
 
 # Import Salt libs
@@ -135,7 +135,6 @@ class VersionTestCase(TestCase):
 
 class VersionFuncsTestCase(TestCase):
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_compare(self):
         ret = salt.utils.versions.compare('1.0', '==', '1.0')
         self.assertTrue(ret)
