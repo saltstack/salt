@@ -385,7 +385,7 @@ class Terminal(object):
                 raise ValueError('Unsupported signal: {0}'.format(sig))
             # pylint: enable=E1101
 
-        def terminate(self):
+        def terminate(self, force=False):
             '''
             Terminates the process
             '''
@@ -503,7 +503,7 @@ class Terminal(object):
                     if tty_fd >= 0:
                         os.close(tty_fd)
                 # which exception, shouldn't we catch explicitly .. ?
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Already disconnected. This happens if running inside cron
                     pass
 
@@ -521,7 +521,7 @@ class Terminal(object):
                             'still possible to open /dev/tty.'
                         )
                 # which exception, shouldn't we catch explicitly .. ?
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # Good! We are disconnected from a controlling tty.
                     pass
 

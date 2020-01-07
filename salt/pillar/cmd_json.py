@@ -26,6 +26,6 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     try:
         command = command.replace('%s', minion_id)
         return salt.utils.json.loads(__salt__['cmd.run'](command))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.critical('JSON data from %s failed to parse', command)
         return {}

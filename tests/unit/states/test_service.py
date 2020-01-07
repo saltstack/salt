@@ -250,4 +250,4 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
                     self.assertDictEqual(service.mod_watch("salt", "running"),
                                          ret[3])
 
-        self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])
+            self.assertDictEqual(service.mod_watch("salt", "stack"), ret[1])

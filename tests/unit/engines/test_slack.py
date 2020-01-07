@@ -20,7 +20,7 @@ import salt.config
 @skipIf(slack.HAS_SLACKCLIENT is False, 'The SlackClient is not installed')
 class EngineSlackTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.engine.sqs_events
+    Test cases for salt.engine.slack
     '''
 
     def setup_loader_modules(self):

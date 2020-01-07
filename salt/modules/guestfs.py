@@ -61,6 +61,11 @@ def mount(location, access='rw', root=None):
                 location.lstrip(os.sep).replace('/', '.') + rand
             )
             log.debug('Establishing new root as %s', root)
+            if not os.path.isdir(root):
+                try:
+                    os.makedirs(root)
+                except OSError:
+                    log.info('Path already existing: %s', root)
         else:
             break
     cmd = 'guestmount -i -a {0} --{1} {2}'.format(location, access, root)
