@@ -45,9 +45,9 @@ class LocaleModuleTest(ModuleCase):
             )
 
         locale = self.run_function('locale.get_locale')
-        self.assertEqual(ret['retcode'], 0)
         new_locale = _find_new_locale(locale)
         ret = self.run_function('locale.gen_locale', [new_locale])
+        self.assertEqual(ret['retcode'], 0)
         self.assertNotIn('ERROR:', locale)
 
     @destructiveTest
