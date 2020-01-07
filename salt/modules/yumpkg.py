@@ -3180,7 +3180,7 @@ def _get_patches(installed_only=False):
     for line in salt.utils.itertools.split(ret, os.linesep):
         inst, advisory_id, sev, pkg = re.match(r'([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
                                                line).groups()
-        if not advisory_id in patches:
+        if advisory_id not in patches:
             patches[advisory_id] = {
                 'installed': True if inst == 'i' else False,
                 'summary': [pkg]
