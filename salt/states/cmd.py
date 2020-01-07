@@ -33,7 +33,8 @@ touch /tmp/foo if it does not exist:
       cmd.run:
         - creates: /tmp/foo
 
-``creates`` also accepts a list of files:
+``creates`` also accepts a list of files, in which case this state will
+run if **any** of the files do not exist:
 
 .. code-block:: yaml
 
@@ -196,7 +197,7 @@ executed when the state it is watching changes. Example:
         - require:
           - file: /usr/local/bin/postinstall.sh
 
-``cmd.wait`` itself does not do anything; all functionality is inside its ``mod_watch``
+``cmd.wait`` itself do not do anything; all functionality is inside its ``mod_watch``
 function, which is called by ``watch`` on changes.
 
 The preferred format is using the :ref:`onchanges Requisite <requisites-onchanges>`, which
@@ -402,6 +403,7 @@ def wait(name,
          unless=None,
          creates=None,
          cwd=None,
+         root=None,
          runas=None,
          shell=None,
          env=(),
@@ -435,6 +437,10 @@ def wait(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -490,7 +496,9 @@ def wait(name,
         a state. For more information, see the :ref:`stateful-argument` section.
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -674,6 +682,7 @@ def run(name,
         unless=None,
         creates=None,
         cwd=None,
+        root=None,
         runas=None,
         shell=None,
         env=None,
@@ -706,6 +715,10 @@ def run(name,
     cwd
         The current working directory to execute the command in, defaults to
         /root
+
+    root
+        Path to the root of the jail to use. If this parameter is set, the command
+        will run inside a chroot
 
     runas
         The user name to run the command as
@@ -783,13 +796,6 @@ def run(name,
 
         .. versionadded:: 2018.3.0
 
-    quiet
-        This option no longer has any functionality and will be removed, please
-        set ``output_loglevel`` to ``quiet`` to suppress logging of the
-        command.
-
-        .. deprecated:: 2014.1.0
-
     timeout
         If the command has not terminated after timeout seconds, send the
         subprocess sigterm, and if sigterm is ignored, follow up with sigkill
@@ -801,7 +807,9 @@ def run(name,
         .. versionadded:: 2015.8.0
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 
@@ -853,18 +861,6 @@ def run(name,
            'result': False,
            'comment': ''}
 
-    if 'quiet' in kwargs:
-        quiet = kwargs.pop('quiet')
-        msg = (
-            'The \'quiet\' argument for cmd.run has been deprecated since '
-            '2014.1.0 and will be removed as of the Neon release. Please set '
-            '\'output_loglevel\' to \'quiet\' instead.'
-        )
-        salt.utils.versions.warn_until('Neon', msg)
-        ret.setdefault('warnings', []).append(msg)
-    else:
-        quiet = False
-
     test_name = None
     if not isinstance(stateful, list):
         stateful = stateful is True
@@ -882,6 +878,7 @@ def run(name,
 
     cmd_kwargs = copy.deepcopy(kwargs)
     cmd_kwargs.update({'cwd': cwd,
+                       'root': root,
                        'runas': runas,
                        'use_vt': use_vt,
                        'shell': shell or __grains__['shell'],
@@ -890,7 +887,6 @@ def run(name,
                        'umask': umask,
                        'output_loglevel': output_loglevel,
                        'hide_output': hide_output,
-                       'quiet': quiet,
                        'success_retcodes': success_retcodes})
 
     cret = mod_run_check(cmd_kwargs, onlyif, unless, creates)
@@ -912,10 +908,11 @@ def run(name,
 
     # Wow, we passed the test, run this sucker!
     try:
-        cmd_all = __salt__['cmd.run_all'](
-            name, timeout=timeout, python_shell=True, **cmd_kwargs
+        run_cmd = 'cmd.run_all' if not root else 'cmd.run_chroot'
+        cmd_all = __salt__[run_cmd](
+            cmd=name, timeout=timeout, python_shell=True, **cmd_kwargs
         )
-    except CommandExecutionError as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['comment'] = six.text_type(err)
         return ret
 
@@ -1053,7 +1050,9 @@ def script(name,
         'arg two' arg3"
 
     creates
-        Only run if the file or files specified by ``creates`` do not exist.
+        Only run if the file specified by ``creates`` do not exist. If you
+        specify a list of files then this state will only run if **any** of
+        the files do not exist.
 
         .. versionadded:: 2014.7.0
 

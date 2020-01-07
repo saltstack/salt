@@ -356,7 +356,7 @@ def create(vm_):
                 transport=__opts__['transport'],
             )
             return False
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on Vultr\n\n'
             'The following exception was thrown when trying to '

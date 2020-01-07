@@ -10,7 +10,7 @@ import string
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 import salt.loader
@@ -173,7 +173,7 @@ class BotoApiGatewayTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['boto3', 'args', 'systemd', 'path', 'platform'])
@@ -232,7 +232,6 @@ class BotoApiGatewayTestCaseMixin(object):
 @skipIf(_has_required_botocore() is False,
         'The botocore module must be greater than'
         ' or equal to version {0}'.format(required_botocore_version))
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoApiGatewayTestCase(BotoApiGatewayTestCaseBase, BotoApiGatewayTestCaseMixin):
     '''
     TestCase for salt.modules.boto_apigateway module

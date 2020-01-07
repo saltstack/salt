@@ -60,7 +60,7 @@ def _get_options():
         indexer = __salt__['config.get']('splunk_http_forwarder:indexer')
         sourcetype = __salt__['config.get']('splunk_http_forwarder:sourcetype')
         index = __salt__['config.get']('splunk_http_forwarder:index')
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error("Splunk HTTP Forwarder parameters not present in config.")
         return None
     splunk_opts = {"token": token, "indexer": indexer, "sourcetype": sourcetype, "index": index}

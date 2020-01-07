@@ -7,12 +7,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 import os
@@ -31,7 +29,6 @@ ZYPPNOTIFY_FILE = os.path.sep.join(
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZyppPluginsTestCase(TestCase):
     '''
     Test shipped libzypp plugins.

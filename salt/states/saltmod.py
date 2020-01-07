@@ -536,7 +536,7 @@ def function(
     try:
         _fire_args({'type': 'function', 'tgt': tgt, 'name': name, 'args': cmd_kw})
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         func_ret['result'] = False
         func_ret['comment'] = six.text_type(exc)
         return func_ret

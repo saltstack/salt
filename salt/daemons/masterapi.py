@@ -44,7 +44,6 @@ import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.verify
-import salt.utils.versions
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.pillar import git_pillar
 
@@ -263,7 +262,7 @@ def fileserver_update(fileserver):
             )
             raise salt.exceptions.SaltMasterError('No fileserver backends available')
         fileserver.update()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Exception %s occurred in file server update', exc,
             exc_info_on_loglevel=logging.DEBUG
@@ -534,7 +533,7 @@ class RemoteFuncs(object):
                 continue
             try:
                 ret = salt.utils.dictupdate.merge(ret, self.tops[fun](opts=opts, grains=grains), merge_lists=True)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # If anything happens in the top generation, log it and move on
                 log.error(
                     'Top function %s failed with error %s for minion %s',
@@ -564,14 +563,9 @@ class RemoteFuncs(object):
         if not salt.utils.verify.valid_id(self.opts, load['id']):
             return ret
         expr_form = load.get('expr_form')
+        # keep both expr_form and tgt_type to ensure
+        # comptability between old versions of salt
         if expr_form is not None and 'tgt_type' not in load:
-            salt.utils.versions.warn_until(
-                'Neon',
-                '_mine_get: minion {0} uses pre-Nitrogen API key '
-                '"expr_form". Accepting for backwards compatibility '
-                'but this is not guaranteed '
-                'after the Neon release'.format(load['id'])
-            )
             match_type = expr_form
         else:
             match_type = load.get('tgt_type', 'glob')
@@ -1079,7 +1073,7 @@ class LocalFuncs(object):
             return runner_client.asynchronous(fun,
                                               load.get('kwarg', {}),
                                               username)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception occurred while introspecting %s')
             return {'error': {'name': exc.__class__.__name__,
                               'args': exc.args,
@@ -1137,7 +1131,7 @@ class LocalFuncs(object):
             self.event.fire_event(data, salt.utils.event.tagify([jid, 'ret'], 'wheel'))
             return {'tag': tag,
                     'data': data}
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception('Exception occurred while introspecting %s', fun)
             data['return'] = 'Exception occurred in wheel {0}: {1}: {2}'.format(
                                         fun,
@@ -1288,7 +1282,7 @@ class LocalFuncs(object):
                     '"%s" does not have a save_load function!',
                     self.opts['ext_job_cache']
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.critical(
                     'The specified returner threw a stack trace:',
                     exc_info=True
@@ -1304,7 +1298,7 @@ class LocalFuncs(object):
                 '"%s" does not have a save_load function!',
                 self.opts['master_job_cache']
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical(
                 'The specified returner threw a stack trace:',
                 exc_info=True

@@ -411,7 +411,7 @@ def create(vm_):
 
     try:
         response = conn.createObject(kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on SoftLayer\n\n'
             'The following exception was thrown when trying to '

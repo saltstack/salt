@@ -15,8 +15,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 import salt.modules.libcloud_compute as libcloud_compute
 
@@ -199,7 +197,6 @@ else:
     MockComputeDriver = object
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_LIBCLOUD, 'No libcloud installed')
 @patch('salt.modules.libcloud_compute._get_driver',
        MagicMock(return_value=MockComputeDriver()))
