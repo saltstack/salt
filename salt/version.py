@@ -5,22 +5,22 @@ Set up the version of Salt
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import distro
 import re
 import sys
 import platform
 import warnings
 
 # linux_distribution deprecated in py3.7
-if not sys.platform.startswith('win'):
-    try:
-        from platform import linux_distribution as _deprecated_linux_distribution
+try:
+    from platform import linux_distribution as _deprecated_linux_distribution
 
-        def linux_distribution(**kwargs):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                return _deprecated_linux_distribution(**kwargs)
-    except ImportError:
-        from distro import linux_distribution
+    def linux_distribution(**kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return _deprecated_linux_distribution(**kwargs)
+except ImportError:
+    from distro import linux_distribution
 
 # pylint: disable=invalid-name,redefined-builtin
 # Import 3rd-party libs

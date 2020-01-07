@@ -14,9 +14,10 @@ from __future__ import absolute_import
 import re
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
 
 # Import Salt libs
+import salt.utils.platform
 from salt.version import SaltStackVersion, versions_report
 from salt.utils.timed_subprocess import TimedProc
 
@@ -66,6 +67,7 @@ class VersionTestCase(TestCase):
             self.assertTrue(SaltStackVersion.parse(higher_version) > lower_version)
             self.assertTrue(SaltStackVersion.parse(lower_version) < higher_version)
 
+    @skipIf(not salt.utils.platform.is_windows(), 'Windows only test')
     def test_version_return(self):
         '''Test that version.py return.
         This partnering test is to ensure version.py invoked by python on
