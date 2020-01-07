@@ -71,9 +71,14 @@ class NetapiClient(object):
             raise salt.exceptions.SaltInvocationError(
                     'Invalid client specified: \'{0}\''.format(low.get('client')))
 
-        if not ('token' in low or 'eauth' in low) and low['client'] != 'ssh':
+        if not ('token' in low or 'eauth' in low):
             raise salt.exceptions.EauthAuthenticationError(
                     'No authentication credentials given')
+
+        if low.get('raw_shell') and \
+                not self.opts.get('netapi_allow_raw_shell'):
+            raise salt.exceptions.EauthAuthenticationError(
+                    'Raw shell option not allowed.')
 
         l_fun = getattr(self, low['client'])
         f_call = salt.utils.args.format_call(l_fun, low)

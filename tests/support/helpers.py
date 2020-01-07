@@ -1474,7 +1474,7 @@ def generate_random_name(prefix, size=6):
 
     .. versionadded:: 2018.3.0
 
-    prefix
+    efix
         The string to prefix onto the randomly generated ascii string.
 
     size
@@ -1609,6 +1609,25 @@ class Webserver(object):
         '''
         self.ioloop.add_callback(self.ioloop.stop)
         self.server_thread.join()
+
+
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
+    '''
+    Mirror a POST body back to the client.
+    '''
+    received_requests = []
+
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        self.received_requests.append(self.request)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
 
 
 def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
