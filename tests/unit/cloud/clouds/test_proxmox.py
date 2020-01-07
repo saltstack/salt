@@ -74,10 +74,6 @@ class ProxmoxTest(TestCase, LoaderModuleMockMixin):
         result = proxmox._dictionary_to_stringlist({'a': 'a', 'b': 'b'})
         self.assertEqual(result, 'a=a,b=b')
 
-        # Negative cases
-        result = proxmox._dictionary_to_stringlist({1: {}, None: True})
-        self.assertEqual(result, '1={},None=True')
-
     def test__reconfigure_clone(self):
         # The return_value is for the net reconfigure assertions, it is irrelevant for the rest
         with patch.object(proxmox, 'query', return_value={'net0': 'c=overwritten,g=h'}) as query:

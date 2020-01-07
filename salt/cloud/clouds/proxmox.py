@@ -511,7 +511,7 @@ def _dictionary_to_stringlist(input_dict):
 
     setting1=value1,setting2=value2
     '''
-    return ','.join('{}={}'.format(k, v) for k, v in input_dict.items())
+    return ','.join('{}={}'.format(k, input_dict[k]) for k in sorted(input_dict.keys()))
 
 
 def _reconfigure_clone(vm_, vmid):
