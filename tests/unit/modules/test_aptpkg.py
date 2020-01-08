@@ -531,23 +531,21 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.modules.aptpkg._check_apt', MagicMock(return_value=True)):
                 with patch('salt.modules.aptpkg.refresh_db', MagicMock(return_value={})):
                     with patch('salt.utils.data.is_true', MagicMock(return_value=True)) as data_is_true:
-                        aptpkg.sourceslist = MagicMock()
-                        # with enabled=False; should call salt.utils.data.is_true with False
-                        repo = aptpkg.mod_repo('foo', enabled=False)
-                        data_is_true.assert_called_with(False)
-                        # with disabled=True; should call salt.utils.data.is_true True
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo('foo', disabled=True)
-                        data_is_true.assert_called_with(True)
-                        # with enabled=True; should call salt.utils.data.is_true with False
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo('foo', enabled=True)
-                        data_is_true.assert_called_with(True)
-                        # with disabled=True; should call salt.utils.data.is_true False
-                        data_is_true.reset_mock()
-                        repo = aptpkg.mod_repo('foo', disabled=False)
-                        data_is_true.assert_called_with(False)
-
+                        with patch('salt.modules.aptpkg.sourceslist', MagicMock(), create=True):
+                            repo = aptpkg.mod_repo('foo', enabled=False)
+                            data_is_true.assert_called_with(False)
+                            # with disabled=True; should call salt.utils.data.is_true True
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', disabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with enabled=True; should call salt.utils.data.is_true with False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', enabled=True)
+                            data_is_true.assert_called_with(True)
+                            # with disabled=True; should call salt.utils.data.is_true False
+                            data_is_true.reset_mock()
+                            repo = aptpkg.mod_repo('foo', disabled=False)
+                            data_is_true.assert_called_with(False)
 
 
 @skipIf(pytest is None, 'PyTest is missing')
