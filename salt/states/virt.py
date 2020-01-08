@@ -270,6 +270,198 @@ def powered_off(name, connection=None, username=None, password=None):
     )
 
 
+def defined(
+    name,
+    cpu=None,
+    mem=None,
+    vm_type=None,
+    disk_profile=None,
+    disks=None,
+    nic_profile=None,
+    interfaces=None,
+    graphics=None,
+    seed=True,
+    install=True,
+    pub_key=None,
+    priv_key=None,
+    connection=None,
+    username=None,
+    password=None,
+    os_type=None,
+    arch=None,
+    boot=None,
+    update=True,
+):
+    """
+    Starts an existing guest, or defines and starts a new VM with specified arguments.
+
+    .. versionadded:: sodium
+
+    :param name: name of the virtual machine to run
+    :param cpu: number of CPUs for the virtual machine to create
+    :param mem: amount of memory in MiB for the new virtual machine
+    :param vm_type: force virtual machine type for the new VM. The default value is taken from
+        the host capabilities. This could be useful for example to use ``'qemu'`` type instead
+        of the ``'kvm'`` one.
+    :param disk_profile:
+        Name of the disk profile to use for the new virtual machine
+    :param disks:
+        List of disk to create for the new virtual machine.
+        See :ref:`init-disk-def` for more details on the items on this list.
+    :param nic_profile:
+        Name of the network interfaces profile to use for the new virtual machine
+    :param interfaces:
+        List of network interfaces to create for the new virtual machine.
+        See :ref:`init-nic-def` for more details on the items on this list.
+    :param graphics:
+        Graphics device to create for the new virtual machine.
+        See :ref:`init-graphics-def` for more details on this dictionary
+    :param saltenv:
+        Fileserver environment (Default: ``'base'``).
+        See :mod:`cp module for more details <salt.modules.cp>`
+    :param seed: ``True`` to seed the disk image. Only used when the ``image`` parameter is provided.
+                 (Default: ``True``)
+    :param install: install salt minion if absent (Default: ``True``)
+    :param pub_key: public key to seed with (Default: ``None``)
+    :param priv_key: public key to seed with (Default: ``None``)
+    :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+    :param os_type:
+        type of virtualization as found in the ``//os/type`` element of the libvirt definition.
+        The default value is taken from the host capabilities, with a preference for ``hvm``.
+        Only used when creating a new virtual machine.
+    :param arch:
+        architecture of the virtual machine. The default value is taken from the host capabilities,
+        but ``x86_64`` is prefed over ``i686``. Only used when creating a new virtual machine.
+
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+    :param update: set to ``False`` to prevent updating a defined domain. (Default: ``True``)
+
+        .. deprecated:: sodium
+
+    .. rubric:: Example States
+
+    Make sure a virtual machine called ``domain_name`` is defined:
+
+    .. code-block:: yaml
+
+        domain_name:
+          virt.defined:
+            - cpu: 2
+            - mem: 2048
+            - disk_profile: prod
+            - disks:
+              - name: system
+                size: 8192
+                overlay_image: True
+                pool: default
+                image: /path/to/image.qcow2
+              - name: data
+                size: 16834
+            - nic_profile: prod
+            - interfaces:
+              - name: eth0
+                mac: 01:23:45:67:89:AB
+              - name: eth1
+                type: network
+                source: admin
+            - graphics:
+                type: spice
+                listen:
+                    type: address
+                    address: 192.168.0.125
+
+    """
+
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True if not __opts__["test"] else None,
+        "comment": "",
+    }
+
+    try:
+        if name in __salt__["virt.list_domains"](
+            connection=connection, username=username, password=password
+        ):
+            status = {}
+            if update:
+                status = __salt__["virt.update"](
+                    name,
+                    cpu=cpu,
+                    mem=mem,
+                    disk_profile=disk_profile,
+                    disks=disks,
+                    nic_profile=nic_profile,
+                    interfaces=interfaces,
+                    graphics=graphics,
+                    live=True,
+                    connection=connection,
+                    username=username,
+                    password=password,
+                    boot=boot,
+                    test=__opts__["test"],
+                )
+            ret["changes"][name] = status
+            if not status.get("definition"):
+                ret["comment"] = "Domain {0} unchanged".format(name)
+                ret["result"] = True
+            elif status.get("errors"):
+                ret[
+                    "comment"
+                ] = "Domain {0} updated with live update(s) failures".format(name)
+            else:
+                ret["comment"] = "Domain {0} updated".format(name)
+        else:
+            if not __opts__["test"]:
+                __salt__["virt.init"](
+                    name,
+                    cpu=cpu,
+                    mem=mem,
+                    os_type=os_type,
+                    arch=arch,
+                    hypervisor=vm_type,
+                    disk=disk_profile,
+                    disks=disks,
+                    nic=nic_profile,
+                    interfaces=interfaces,
+                    graphics=graphics,
+                    seed=seed,
+                    install=install,
+                    pub_key=pub_key,
+                    priv_key=priv_key,
+                    connection=connection,
+                    username=username,
+                    password=password,
+                    boot=boot,
+                    start=False,
+                )
+            ret["changes"][name] = {"definition": True}
+            ret["comment"] = "Domain {0} defined".format(name)
+    except libvirt.libvirtError as err:
+        # Something bad happened when defining / updating the VM, report it
+        ret["comment"] = six.text_type(err)
+        ret["result"] = False
+
+    return ret
+
+
 def running(
     name,
     cpu=None,
@@ -349,9 +541,10 @@ def running(
     :param seed_cmd: Salt command to execute to seed the image. (Default: ``'seed.apply'``)
 
         .. versionadded:: 2019.2.0
-    :param update: set to ``True`` to update a defined module. (Default: ``False``)
+    :param update: set to ``True`` to update a defined domain. (Default: ``False``)
 
         .. versionadded:: 2019.2.0
+        .. deprecated:: sodium
     :param connection: libvirt connection URI, overriding defaults
 
         .. versionadded:: 2019.2.0
@@ -430,101 +623,62 @@ def running(
                     address: 192.168.0.125
 
     """
+    merged_disks = disks
 
-    ret = {
-        "name": name,
-        "changes": {},
-        "result": True,
-        "comment": "{0} is running".format(name),
-    }
+    if not update:
+        salt.utils.versions.warn_until(
+            "Aluminium",
+            "'update' parameter has been deprecated. Future behavior will be the one of update=True"
+            "It will be removed in {version}.",
+        )
+    ret = defined(
+        name,
+        cpu=cpu,
+        mem=mem,
+        vm_type=vm_type,
+        disk_profile=disk_profile,
+        disks=merged_disks,
+        nic_profile=nic_profile,
+        interfaces=interfaces,
+        graphics=graphics,
+        seed=seed,
+        install=install,
+        pub_key=pub_key,
+        priv_key=priv_key,
+        os_type=os_type,
+        arch=arch,
+        boot=boot,
+        update=update,
+        connection=connection,
+        username=username,
+        password=password,
+    )
 
-    try:
+    result = True if not __opts__["test"] else None
+    if ret["result"] is None or ret["result"]:
+        changed = ret["changes"][name].get("definition", False)
         try:
             domain_state = __salt__["virt.vm_state"](name)
             if domain_state.get(name) != "running":
-                action_msg = "started"
-                if update:
-                    status = __salt__["virt.update"](
+                if not __opts__["test"]:
+                    __salt__["virt.start"](
                         name,
-                        cpu=cpu,
-                        mem=mem,
-                        disk_profile=disk_profile,
-                        disks=disks,
-                        nic_profile=nic_profile,
-                        interfaces=interfaces,
-                        graphics=graphics,
-                        live=False,
                         connection=connection,
                         username=username,
                         password=password,
-                        boot=boot,
                     )
-                    if status["definition"]:
-                        action_msg = "updated and started"
-                __salt__["virt.start"](name)
-                ret["changes"][name] = "Domain {0}".format(action_msg)
-                ret["comment"] = "Domain {0} {1}".format(name, action_msg)
-            else:
-                if update:
-                    status = __salt__["virt.update"](
-                        name,
-                        cpu=cpu,
-                        mem=mem,
-                        disk_profile=disk_profile,
-                        disks=disks,
-                        nic_profile=nic_profile,
-                        interfaces=interfaces,
-                        graphics=graphics,
-                        connection=connection,
-                        username=username,
-                        password=password,
-                        boot=boot,
-                    )
-                    ret["changes"][name] = status
-                    if status.get("errors", None):
-                        ret[
-                            "comment"
-                        ] = "Domain {0} updated, but some live update(s) failed".format(
-                            name
-                        )
-                    elif not status["definition"]:
-                        ret["comment"] = "Domain {0} exists and is running".format(name)
-                    else:
-                        ret[
-                            "comment"
-                        ] = "Domain {0} updated, restart to fully apply the changes".format(
-                            name
-                        )
-                else:
-                    ret["comment"] = "Domain {0} exists and is running".format(name)
-        except CommandExecutionError:
-            __salt__["virt.init"](
-                name,
-                cpu=cpu,
-                mem=mem,
-                os_type=os_type,
-                arch=arch,
-                hypervisor=vm_type,
-                disk=disk_profile,
-                disks=disks,
-                nic=nic_profile,
-                interfaces=interfaces,
-                graphics=graphics,
-                seed=seed,
-                install=install,
-                pub_key=pub_key,
-                priv_key=priv_key,
-                connection=connection,
-                username=username,
-                password=password,
-                boot=boot,
-            )
-            ret["changes"][name] = "Domain defined and started"
-            ret["comment"] = "Domain {0} defined and started".format(name)
-    except libvirt.libvirtError as err:
-        # Something bad happened when starting / updating the VM, report it
-        ret["comment"] = six.text_type(err)
-        ret["result"] = False
+                comment = "Domain {} started".format(name)
+                if not ret["comment"].endswith("unchanged"):
+                    comment = "{} and started".format(ret["comment"])
+                ret["comment"] = comment
+                ret["changes"][name]["started"] = True
+            elif not changed:
+                ret["comment"] = "Domain {0} exists and is running".format(name)
+
+        except libvirt.libvirtError as err:
+            # Something bad happened when starting / updating the VM, report it
+            ret["comment"] = six.text_type(err)
+            ret["result"] = False
 
     return ret
 
@@ -1071,15 +1225,15 @@ def pool_running(
     """
     ret = pool_defined(
         name,
-        ptype,
-        target,
-        permissions,
-        source,
-        transient,
-        autostart,
-        connection,
-        username,
-        password,
+        ptype=ptype,
+        target=target,
+        permissions=permissions,
+        source=source,
+        transient=transient,
+        autostart=autostart,
+        connection=connection,
+        username=username,
+        password=password,
     )
     defined = name in ret["changes"] and ret["changes"][name].startswith("Pool defined")
     updated = name in ret["changes"] and ret["changes"][name].startswith("Pool updated")
