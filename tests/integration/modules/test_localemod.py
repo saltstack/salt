@@ -45,18 +45,22 @@ class LocaleModuleTest(ModuleCase):
             )
 
         locale = self.run_function('locale.get_locale')
+        self.assertNotIn('ERROR:', locale)
         new_locale = _find_new_locale(locale)
         ret = self.run_function('locale.gen_locale', [new_locale])
-        self.assertEqual(ret['retcode'], 0)
-        self.assertNotIn('ERROR:', locale)
+        # Assert that ret is literally True, not a truthy value like "ERROR:..."
+        self.assertTrue(ret is True)
 
     @destructiveTest
     def test_set_locale(self):
         original_locale = self.run_function('locale.get_locale')
         locale_to_set = _find_new_locale(original_locale)
-        self.run_function('locale.gen_locale', [locale_to_set])
+        ret = self.run_function('locale.gen_locale', [locale_to_set])
+        # Assert that ret is literally True, not a truthy value like "ERROR:..."
+        self.assertTrue(ret is True)
         ret = self.run_function('locale.set_locale', [locale_to_set])
+        # Assert that ret is literally True, not a truthy value like "ERROR:..."
+        self.assertTrue(ret is True)
         new_locale = self.run_function('locale.get_locale')
-        self.assertEqual(ret['retcode'], 0)
         self.assertEqual(locale_to_set, new_locale)
         self.run_function('locale.set_locale', [original_locale])
