@@ -617,9 +617,9 @@ def _pytest(session, coverage, cmd_args):
 
     try:
         if coverage is True:
-            _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
+            _run_with_coverage(session, 'coverage', 'run', '-m', 'pytest', *cmd_args)
         else:
-            session.run('py.test', *cmd_args, env=env)
+            session.run('pytest', *cmd_args, env=env)
     except CommandFailed:  # pylint: disable=try-except-raise
         # Not rerunning failed tests for now
         raise
@@ -633,9 +633,9 @@ def _pytest(session, coverage, cmd_args):
                 cmd_args[idx] = parg.replace('.xml', '-rerun-failed.xml')
         cmd_args.append('--lf')
         if coverage is True:
-            _run_with_coverage(session, 'coverage', 'run', '-m', 'py.test', *cmd_args)
+            _run_with_coverage(session, 'coverage', 'run', '-m', 'pytest', *cmd_args)
         else:
-            session.run('py.test', *cmd_args, env=env)
+            session.run('pytest', *cmd_args, env=env)
         # pylint: enable=unreachable
 
 
