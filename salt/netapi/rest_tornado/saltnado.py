@@ -1119,8 +1119,8 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             # raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 
             import salt.utils.versions
-            salt.utils.versions.warn_until(
-                'Magnesium',
+            salt.utils.versions.warn_until_date(
+                '20210101',
                 'The empty data returning when jid not exist pub_data will be deprecated.'
                 'Please ensure the message return like '
                 '"No minions matched the target. No command was sent, no jid was assigned" if jid not exist after published.'
