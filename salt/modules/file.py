@@ -32,6 +32,12 @@ import mmap
 from collections import Iterable, Mapping, namedtuple
 from functools import reduce  # pylint: disable=redefined-builtin
 
+try:
+    import pyparsing
+    HAS_PYPARSING = True
+except ImportError:
+    HAS_PYPARSING = False
+
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range, zip
@@ -4809,6 +4815,7 @@ def check_managed_changes(
         contents=None,
         skip_verify=False,
         keep_mode=False,
+        hide_comments=None,
         **kwargs):
     '''
     Return a dictionary of what changes need to be made for a file
@@ -4875,7 +4882,8 @@ def check_file_meta(
         mode,
         attrs,
         saltenv,
-        contents=None):
+        contents=None,
+        hide_comments=None):
     '''
     Check for the changes in the file metadata.
 
@@ -4950,7 +4958,7 @@ def check_file_meta(
             if sfn:
                 try:
                     changes['diff'] = get_diff(
-                        name, sfn, template=True, show_filenames=False)
+                        name, sfn, template=True, show_filenames=False, hide_comments=hide_comments)
                 except CommandExecutionError as exc:
                     changes['diff'] = exc.strerror
             else:
@@ -4975,6 +4983,10 @@ def check_file_meta(
         if differences:
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
+            elif hide_comments is not None:
+                # diff again without comments to return to the user
+                changes['diff'] = get_diff(name, tmp, show_filenames=False,
+                                           hide_comments=hide_comments)
             else:
                 changes['diff'] = differences
 
@@ -5015,7 +5027,8 @@ def get_diff(file1,
              show_changes=True,
              template=False,
              source_hash_file1=None,
-             source_hash_file2=None):
+             source_hash_file2=None,
+             hide_comments=None):
     '''
     Return unified diff of two files
 
@@ -5066,12 +5079,21 @@ def get_diff(file1,
 
         .. versionadded:: 2018.3.0
 
+    hide_comments
+        Comment types to hide, as a dictionary; specify line comment string,
+        and/or multiline_begin and multiline_end.
+
+        .. code-block :: yaml
+
+            {'line': '//', 'multiline_begin': '/*', 'multiline_end': '*/'}+}
+
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' file.get_diff /home/fred/.vimrc salt://users/fred/.vimrc
         salt '*' file.get_diff /tmp/foo.txt /tmp/bar.txt
+        salt '*' file.get_diff /tmp/foo.txt /tmp/bar.txt hide_comments="{'line': '//'}"
     '''
     files = (file1, file2)
     source_hashes = (source_hash_file1, source_hash_file2)
@@ -5122,6 +5144,7 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
+            args = suppress_comments(args, hide_comments)
             bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
                 ret = bdiff
@@ -5132,6 +5155,60 @@ def get_diff(file1,
         return ret
     return ''
 
+
+# Suppress comments in diff
+def suppress_comments(args,
+                      hide_comments=None):
+    '''
+    Return text with comments stripped
+
+    args
+        List of texts to be processed, each a list of unicode strings.  Return value is in the same format.
+
+    hide_comments
+        Comment types to hide, as a dictionary; specify line comment string,
+        and/or multiline_begin and multiline_end.
+
+        .. code-block :: yaml
+
+            {'line': '//', 'multiline_begin': '/*', 'multiline_end': '*/'}
+    '''
+    if hide_comments is not None:
+        if HAS_PYPARSING:
+            try:
+                for idx, arg in enumerate(args):
+                    nocomment_args = args
+                    if 'line' in hide_comments:
+                        line_comment = pyparsing.Literal(hide_comments['line']) + pyparsing.restOfLine
+                        joined = ''.join(nocomment_args[idx])
+                        suppressed = line_comment.suppress().transformString(joined)
+                        nocomment_args[idx] = suppressed.splitlines(True)
+
+                    if 'multiline_begin' in hide_comments and 'multiline_end' in hide_comments:
+                        ml_begin = hide_comments['multiline_begin']
+                        ml_end = hide_comments['multiline_end']
+
+                        # begin and end must be different for nestedExpr to work
+                        if ml_begin != ml_end:
+                            multiline_comment = pyparsing.nestedExpr(ml_begin, ml_end)
+                            joined = ''.join(nocomment_args[idx])
+                            suppressed = multiline_comment.suppress().transformString(joined)
+                            nocomment_args[idx] = suppressed.splitlines(True)
+                        else:
+                            log.warning('multiline_begin and multiline_end cannot be equal, ignoring')
+
+                    elif 'multiline_begin' in hide_comments or 'multiline_end' in hide_comments:
+                        log.warning('Both multiline_begin and multiline_end must be specified to work, ignoring')
+
+                args = nocomment_args
+            # hide_comments is effectively ignored if there's an Exception
+            except Exception as e:
+                log.warning(e)
+
+        else:
+            log.warning('pyparsing not available, ignoring hide_comments')
+
+    return args
 
 def manage_file(name,
                 sfn,
@@ -5154,6 +5231,7 @@ def manage_file(name,
                 keep_mode=False,
                 encoding=None,
                 encoding_errors='strict',
+                hide_comments=None,
                 **kwargs):
     '''
     Checks the destination against what was retrieved with get_managed and
@@ -5247,6 +5325,10 @@ def manage_file(name,
 
         .. versionadded:: 2017.7.0
 
+    hide_comments
+        Comment types to hide, as a dictionary; specify line comment string,
+        and/or multiline_begin and multiline_end.
+
     CLI Example:
 
     .. code-block:: bash
@@ -5339,7 +5421,7 @@ def manage_file(name,
             else:
                 try:
                     ret['changes']['diff'] = get_diff(
-                        real_name, sfn, show_filenames=False)
+                        real_name, sfn, show_filenames=False, hide_comments=hide_comments)
                 except CommandExecutionError as exc:
                     ret['changes']['diff'] = exc.strerror
 
@@ -5380,6 +5462,13 @@ def manage_file(name,
                 differences = ''
 
             if differences:
+                # Re-run diff without comments, after deciding to replace
+                if hide_comments:
+                    differences = get_diff(
+                            real_name, tmp, show_filenames=False,
+                            show_changes=show_changes, template=True,
+                            hide_comments=hide_comments)
+
                 ret['changes']['diff'] = differences
 
                 # Pre requisites are met, the file needs to be replaced, do it
