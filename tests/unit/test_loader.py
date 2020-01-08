@@ -31,9 +31,11 @@ import salt.config
 import salt.loader
 import salt.utils.files
 import salt.utils.stringutils
+import salt.utils.thread_local_proxy as thread_local_proxy
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
 from salt.ext import six
 from salt.ext.six.moves import range
+
 # pylint: enable=no-name-in-module,redefined-builtin
 
 log = logging.getLogger(__name__)
@@ -132,6 +134,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
     '''
     Test the base loader of salt.
     '''
+
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
@@ -248,6 +251,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
     '''
     Test the loader of salt without __virtual__
     '''
+
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
@@ -284,6 +288,7 @@ class LazyLoaderWhitelistTest(TestCase):
     '''
     Test the loader of salt with a whitelist
     '''
+
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
@@ -323,6 +328,7 @@ class LazyLoaderGrainsBlacklistTest(TestCase):
     '''
     Test the loader of grains with a blacklist
     '''
+
     def setUp(self):
         self.opts = salt.config.minion_config(None)
 
@@ -348,6 +354,7 @@ class LazyLoaderSingleItem(TestCase):
     '''
     Test loading a single item via the _load() function
     '''
+
     @classmethod
     def setUpClass(cls):
         cls.opts = salt.config.minion_config(None)
@@ -758,6 +765,39 @@ class LazyLoaderSubmodReloadingTest(TestCase):
         self.loader.clear()
         self.assertIn(self.module_key, self.loader)
 
+    def test_race_condition(self):
+        # Create a second loader
+        opts = copy.deepcopy(self.opts)
+        dirs = salt.loader._module_dirs(opts, 'modules', 'module')
+        loader = salt.loader.LazyLoader(
+            dirs,
+            opts,
+            tag='module',
+            pack={'__utils__': self.utils,
+                  '__proxy__': self.proxy,
+                  '__salt__': self.minion_mods})
+
+        # ensure the module doesn't exist in either loader
+        self.assertNotIn(self.module_key, self.loader)
+        self.assertNotIn(self.module_key, loader)
+
+        # Add it to both loaders
+        self.update_module()
+        self.update_lib()
+        self.loader.clear()
+        loader.clear()
+        self.assertIn(self.module_key, self.loader)
+        self.assertIn(self.module_key, loader)
+
+        #  Inject __opts__ into the module in both loaders
+        key = self.module_key.split('.')[0]
+        salt.loader._inject_into_mod(self.loader.loaded_modules[key], '__opts__', self.opts)
+        salt.loader._inject_into_mod(loader.loaded_modules[key], '__opts__', self.opts)
+
+        # Verify that __opts__ is the same in both loaders
+        self.assertEqual(self.loader.loaded_modules[key].__opts__, loader.loaded_modules[key].__opts__)
+        self.assertIs(self.loader.loaded_modules[key].__opts__, loader.loaded_modules[key].__opts__)
+
     def test_reload(self):
         # ensure it doesn't exist
         self.assertNotIn(self.module_key, self.loader)
@@ -1054,6 +1094,7 @@ class LoaderGlobalsTest(ModuleCase):
 
     This is intended as a shorter term way of testing these so we don't break the loader
     '''
+
     def _verify_globals(self, mod_dict):
         '''
         Verify that the globals listed in the doc string (from the test) are in these modules
@@ -1178,6 +1219,7 @@ class RawModTest(TestCase):
     '''
     Test the interface of raw_mod
     '''
+
     def setUp(self):
         self.opts = salt.config.minion_config(None)
 
@@ -1381,3 +1423,93 @@ class LoaderLoadCachedGrainsTest(TestCase):
         grains = salt.loader.grains(self.opts)
         osrelease_info = grains['osrelease_info']
         assert isinstance(osrelease_info, tuple), osrelease_info
+
+
+class ThreadLocalProxyLoaderTest(TestCase):
+    module_key = 'loadertestsubmod.test'
+    module_name = 'lazyloadertest'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.opts = salt.config.minion_config(None)
+        cls.opts['grains'] = salt.loader.grains(cls.opts)
+        if not os.path.isdir(RUNTIME_VARS.TMP):
+            os.makedirs(RUNTIME_VARS.TMP)
+        cls.utils = salt.loader.utils(cls.opts)
+        cls.proxy = salt.loader.proxy(cls.opts)
+        cls.funcs = salt.loader.minion_mods(cls.opts, utils=cls.utils, proxy=cls.proxy)
+
+    def setUp(self):
+        # Setup the module
+        self.module_dir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        self.addCleanup(shutil.rmtree, self.module_dir, ignore_errors=True)
+        self.module_file = os.path.join(self.module_dir, '{0}.py'.format(self.module_key))
+        with salt.utils.files.fopen(self.module_file, 'w') as fh:
+            fh.write(salt.utils.stringutils.to_str(loader_template))
+            fh.flush()
+            os.fsync(fh.fileno())
+
+        self.loader1 = None
+        self.loader2 = None
+        self.count = 0
+        self.lib_count = 0
+
+    def tearDown(self):
+        del self.module_dir
+        del self.module_file
+        del self.loader1
+        del self.loader2
+
+    def test__inject_into_mod(self):
+        class test_module(object):
+            name = 'threadproxy.test.module'
+
+        self.assertFalse(hasattr(test_module, '__test__'))
+        salt.loader._inject_into_mod(test_module, '__test__', self.opts)
+        self.assertTrue(hasattr(test_module, '__test__'))
+        self.assertIsInstance(test_module.__test__, thread_local_proxy.ThreadLocalProxy)
+        self.assertEqual(self.opts, test_module.__test__)
+
+        salt.loader._inject_into_mod(test_module, '__test__', self.opts)
+        self.assertIsInstance(test_module.__test__, thread_local_proxy.ThreadLocalProxy)
+        self.assertEqual(self.opts, test_module.__test__)
+
+    def test__inject_into_mod_force_lock(self):
+        class test_module(object):
+            name = 'threadproxy.test.module'
+
+        self.assertFalse(hasattr(test_module, '__test2__'))
+        salt.loader._inject_into_mod(test_module, '__test2__', self.opts, force_lock=True)
+        self.assertTrue(hasattr(test_module, '__test2__'))
+        self.assertIsInstance(test_module.__test2__, thread_local_proxy.ThreadLocalProxy)
+        self.assertEqual(self.opts, test_module.__test2__)
+
+        salt.loader._inject_into_mod(test_module, '__test2__', self.opts, force_lock=True)
+        self.assertIsInstance(test_module.__test2__, thread_local_proxy.ThreadLocalProxy)
+        self.assertEqual(self.opts, test_module.__test2__)
+
+    def test_race_condition(self):
+        '''
+        Test issue #2355, create two loaders and verify that all attributes are proxied and equal
+        '''
+        self.loader1 = salt.loader.LazyLoader([self.module_dir],
+                                              copy.deepcopy(self.opts),
+                                              pack={'__utils__': self.utils,
+                                                    '__salt__': self.funcs,
+                                                    '__proxy__': self.proxy},
+                                              tag='module')
+
+        self.loader2 = salt.loader.LazyLoader([self.module_dir],
+                                              copy.deepcopy(self.opts),
+                                              pack={'__utils__': self.utils,
+                                                    '__salt__': self.funcs,
+                                                    '__proxy__': self.proxy},
+                                              tag='module')
+
+        for key, val in six.iteritems(self.loader1._dict):
+            self.assertIsInstance(val, thread_local_proxy.ThreadLocalProxy)
+
+        for key, val in six.iteritems(self.loader2._dict):
+            self.assertIsInstance(val, thread_local_proxy.ThreadLocalProxy)
+
+        self.assertEqual(self.loader1.opts, self.loader2.opts)
