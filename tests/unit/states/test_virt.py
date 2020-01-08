@@ -1424,32 +1424,67 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
             )
             self.assertDictEqual(virt.rebooted("myvm"), ret)
 
-    def test_network_running(self):
+    def test_network_defined(self):
         """
-        network_running state test cases.
+        network_defined state test cases.
         """
         ret = {"name": "mynet", "changes": {}, "result": True, "comment": ""}
-        define_mock = MagicMock(return_value=True)
-        with patch.dict(
-            virt.__salt__,
-            {  # pylint: disable=no-member
-                "virt.network_info": MagicMock(return_value={}),
-                "virt.network_define": define_mock,
-            },
-        ):
-            ret.update(
-                {
-                    "changes": {"mynet": "Network defined and started"},
-                    "comment": "Network mynet defined and started",
-                }
-            )
-            self.assertDictEqual(
-                virt.network_running(
+        with patch.dict(virt.__opts__, {"test": False}):
+            define_mock = MagicMock(return_value=True)
+            # Non-existing network case
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        side_effect=[{}, {"mynet": {"active": False}}]
+                    ),
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mynet": "Network defined"},
+                        "comment": "Network mynet defined",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.network_defined(
+                        "mynet",
+                        "br2",
+                        "bridge",
+                        vport="openvswitch",
+                        tag=180,
+                        ipv4_config={
+                            "cidr": "192.168.2.0/24",
+                            "dhcp_ranges": [
+                                {"start": "192.168.2.10", "end": "192.168.2.25"},
+                                {"start": "192.168.2.110", "end": "192.168.2.125"},
+                            ],
+                        },
+                        ipv6_config={
+                            "cidr": "2001:db8:ca2:2::1/64",
+                            "dhcp_ranges": [
+                                {
+                                    "start": "2001:db8:ca2:1::10",
+                                    "end": "2001:db8:ca2::1f",
+                                },
+                            ],
+                        },
+                        autostart=False,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                define_mock.assert_called_with(
                     "mynet",
                     "br2",
                     "bridge",
                     vport="openvswitch",
                     tag=180,
+                    autostart=False,
+                    start=False,
                     ipv4_config={
                         "cidr": "192.168.2.0/24",
                         "dhcp_ranges": [
@@ -1463,96 +1498,397 @@ class LibvirtTestCase(TestCase, LoaderModuleMockMixin):
                             {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
                         ],
                     },
-                    autostart=False,
                     connection="myconnection",
                     username="user",
                     password="secret",
-                ),
-                ret,
-            )
-            define_mock.assert_called_with(
-                "mynet",
-                "br2",
-                "bridge",
-                vport="openvswitch",
-                tag=180,
-                autostart=False,
-                start=True,
-                ipv4_config={
-                    "cidr": "192.168.2.0/24",
-                    "dhcp_ranges": [
-                        {"start": "192.168.2.10", "end": "192.168.2.25"},
-                        {"start": "192.168.2.110", "end": "192.168.2.125"},
-                    ],
-                },
-                ipv6_config={
-                    "cidr": "2001:db8:ca2:2::1/64",
-                    "dhcp_ranges": [
-                        {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
-                    ],
-                },
-                connection="myconnection",
-                username="user",
-                password="secret",
-            )
+                )
 
-        with patch.dict(
-            virt.__salt__,
-            {  # pylint: disable=no-member
-                "virt.network_info": MagicMock(
-                    return_value={"mynet": {"active": True}}
-                ),
-                "virt.network_define": define_mock,
-            },
-        ):
-            ret.update(
-                {"changes": {}, "comment": "Network mynet exists and is running"}
-            )
-            self.assertDictEqual(virt.network_running("mynet", "br2", "bridge"), ret)
+            # Case where there is nothing to be done
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        return_value={"mynet": {"active": True}}
+                    ),
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Network mynet exists"})
+                self.assertDictEqual(
+                    virt.network_defined("mynet", "br2", "bridge"), ret
+                )
 
-        start_mock = MagicMock(return_value=True)
-        with patch.dict(
-            virt.__salt__,
-            {  # pylint: disable=no-member
-                "virt.network_info": MagicMock(
-                    return_value={"mynet": {"active": False}}
-                ),
-                "virt.network_start": start_mock,
-                "virt.network_define": define_mock,
-            },
-        ):
-            ret.update(
-                {
-                    "changes": {"mynet": "Network started"},
-                    "comment": "Network mynet started",
-                }
-            )
-            self.assertDictEqual(
-                virt.network_running(
+            # Error case
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(return_value={}),
+                    "virt.network_define": MagicMock(
+                        side_effect=self.mock_libvirt.libvirtError("Some error")
+                    ),
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Some error", "result": False})
+                self.assertDictEqual(
+                    virt.network_defined("mynet", "br2", "bridge"), ret
+                )
+
+        # Test cases with __opt__['test'] set to True
+        with patch.dict(virt.__opts__, {"test": True}):
+            ret.update({"result": None})
+
+            # Non-existing network case
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(return_value={}),
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mynet": "Network defined"},
+                        "comment": "Network mynet defined",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.network_defined(
+                        "mynet",
+                        "br2",
+                        "bridge",
+                        vport="openvswitch",
+                        tag=180,
+                        ipv4_config={
+                            "cidr": "192.168.2.0/24",
+                            "dhcp_ranges": [
+                                {"start": "192.168.2.10", "end": "192.168.2.25"},
+                                {"start": "192.168.2.110", "end": "192.168.2.125"},
+                            ],
+                        },
+                        ipv6_config={
+                            "cidr": "2001:db8:ca2:2::1/64",
+                            "dhcp_ranges": [
+                                {
+                                    "start": "2001:db8:ca2:1::10",
+                                    "end": "2001:db8:ca2::1f",
+                                },
+                            ],
+                        },
+                        autostart=False,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                define_mock.assert_not_called()
+
+            # Case where there is nothing to be done
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        return_value={"mynet": {"active": True}}
+                    ),
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {"changes": {}, "comment": "Network mynet exists", "result": True}
+                )
+                self.assertDictEqual(
+                    virt.network_defined("mynet", "br2", "bridge"), ret
+                )
+
+            # Error case
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        side_effect=self.mock_libvirt.libvirtError("Some error")
+                    )
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Some error", "result": False})
+                self.assertDictEqual(
+                    virt.network_defined("mynet", "br2", "bridge"), ret
+                )
+
+    def test_network_running(self):
+        """
+        network_running state test cases.
+        """
+        ret = {"name": "mynet", "changes": {}, "result": True, "comment": ""}
+        with patch.dict(virt.__opts__, {"test": False}):
+            define_mock = MagicMock(return_value=True)
+            start_mock = MagicMock(return_value=True)
+            # Non-existing network case
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        side_effect=[{}, {"mynet": {"active": False}}]
+                    ),
+                    "virt.network_define": define_mock,
+                    "virt.network_start": start_mock,
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mynet": "Network defined and started"},
+                        "comment": "Network mynet defined and started",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.network_running(
+                        "mynet",
+                        "br2",
+                        "bridge",
+                        vport="openvswitch",
+                        tag=180,
+                        ipv4_config={
+                            "cidr": "192.168.2.0/24",
+                            "dhcp_ranges": [
+                                {"start": "192.168.2.10", "end": "192.168.2.25"},
+                                {"start": "192.168.2.110", "end": "192.168.2.125"},
+                            ],
+                        },
+                        ipv6_config={
+                            "cidr": "2001:db8:ca2:2::1/64",
+                            "dhcp_ranges": [
+                                {
+                                    "start": "2001:db8:ca2:1::10",
+                                    "end": "2001:db8:ca2::1f",
+                                },
+                            ],
+                        },
+                        autostart=False,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                define_mock.assert_called_with(
                     "mynet",
                     "br2",
                     "bridge",
+                    vport="openvswitch",
+                    tag=180,
+                    autostart=False,
+                    start=False,
+                    ipv4_config={
+                        "cidr": "192.168.2.0/24",
+                        "dhcp_ranges": [
+                            {"start": "192.168.2.10", "end": "192.168.2.25"},
+                            {"start": "192.168.2.110", "end": "192.168.2.125"},
+                        ],
+                    },
+                    ipv6_config={
+                        "cidr": "2001:db8:ca2:2::1/64",
+                        "dhcp_ranges": [
+                            {"start": "2001:db8:ca2:1::10", "end": "2001:db8:ca2::1f"},
+                        ],
+                    },
                     connection="myconnection",
                     username="user",
                     password="secret",
-                ),
-                ret,
-            )
-            start_mock.assert_called_with(
-                "mynet", connection="myconnection", username="user", password="secret"
-            )
+                )
+                start_mock.assert_called_with(
+                    "mynet",
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                )
 
-        with patch.dict(
-            virt.__salt__,
-            {  # pylint: disable=no-member
-                "virt.network_info": MagicMock(return_value={}),
-                "virt.network_define": MagicMock(
-                    side_effect=self.mock_libvirt.libvirtError("Some error")
-                ),
-            },
-        ):
-            ret.update({"changes": {}, "comment": "Some error", "result": False})
-            self.assertDictEqual(virt.network_running("mynet", "br2", "bridge"), ret)
+            # Case where there is nothing to be done
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        return_value={"mynet": {"active": True}}
+                    ),
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {"changes": {}, "comment": "Network mynet exists and is running"}
+                )
+                self.assertDictEqual(
+                    virt.network_running("mynet", "br2", "bridge"), ret
+                )
+
+            # Network existing and stopped case
+            start_mock = MagicMock(return_value=True)
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        return_value={"mynet": {"active": False}}
+                    ),
+                    "virt.network_start": start_mock,
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mynet": "Network started"},
+                        "comment": "Network mynet exists and started",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.network_running(
+                        "mynet",
+                        "br2",
+                        "bridge",
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                start_mock.assert_called_with(
+                    "mynet",
+                    connection="myconnection",
+                    username="user",
+                    password="secret",
+                )
+
+            # Error case
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(return_value={}),
+                    "virt.network_define": MagicMock(
+                        side_effect=self.mock_libvirt.libvirtError("Some error")
+                    ),
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Some error", "result": False})
+                self.assertDictEqual(
+                    virt.network_running("mynet", "br2", "bridge"), ret
+                )
+
+        # Test cases with __opt__['test'] set to True
+        with patch.dict(virt.__opts__, {"test": True}):
+            ret.update({"result": None})
+
+            # Non-existing network case
+            define_mock.reset_mock()
+            start_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(return_value={}),
+                    "virt.network_define": define_mock,
+                    "virt.network_start": start_mock,
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mynet": "Network defined and started"},
+                        "comment": "Network mynet defined and started",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.network_running(
+                        "mynet",
+                        "br2",
+                        "bridge",
+                        vport="openvswitch",
+                        tag=180,
+                        ipv4_config={
+                            "cidr": "192.168.2.0/24",
+                            "dhcp_ranges": [
+                                {"start": "192.168.2.10", "end": "192.168.2.25"},
+                                {"start": "192.168.2.110", "end": "192.168.2.125"},
+                            ],
+                        },
+                        ipv6_config={
+                            "cidr": "2001:db8:ca2:2::1/64",
+                            "dhcp_ranges": [
+                                {
+                                    "start": "2001:db8:ca2:1::10",
+                                    "end": "2001:db8:ca2::1f",
+                                },
+                            ],
+                        },
+                        autostart=False,
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                define_mock.assert_not_called()
+                start_mock.assert_not_called()
+
+            # Case where there is nothing to be done
+            define_mock.reset_mock()
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        return_value={"mynet": {"active": True}}
+                    ),
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {"changes": {}, "comment": "Network mynet exists and is running"}
+                )
+                self.assertDictEqual(
+                    virt.network_running("mynet", "br2", "bridge"), ret
+                )
+
+            # Network existing and stopped case
+            start_mock = MagicMock(return_value=True)
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        return_value={"mynet": {"active": False}}
+                    ),
+                    "virt.network_start": start_mock,
+                    "virt.network_define": define_mock,
+                },
+            ):
+                ret.update(
+                    {
+                        "changes": {"mynet": "Network started"},
+                        "comment": "Network mynet exists and started",
+                    }
+                )
+                self.assertDictEqual(
+                    virt.network_running(
+                        "mynet",
+                        "br2",
+                        "bridge",
+                        connection="myconnection",
+                        username="user",
+                        password="secret",
+                    ),
+                    ret,
+                )
+                start_mock.assert_not_called()
+
+            # Error case
+            with patch.dict(
+                virt.__salt__,
+                {  # pylint: disable=no-member
+                    "virt.network_info": MagicMock(
+                        side_effect=self.mock_libvirt.libvirtError("Some error")
+                    )
+                },
+            ):
+                ret.update({"changes": {}, "comment": "Some error", "result": False})
+                self.assertDictEqual(
+                    virt.network_running("mynet", "br2", "bridge"), ret
+                )
 
     def test_pool_defined(self):
         """
