@@ -867,6 +867,113 @@ def reverted(
     return ret
 
 
+def network_defined(
+    name,
+    bridge,
+    forward,
+    vport=None,
+    tag=None,
+    ipv4_config=None,
+    ipv6_config=None,
+    autostart=True,
+    connection=None,
+    username=None,
+    password=None,
+):
+    """
+    Defines a new network with specified arguments.
+
+    :param bridge: Bridge name
+    :param forward: Forward mode(bridge, router, nat)
+    :param vport: Virtualport type (Default: ``'None'``)
+    :param tag: Vlan tag (Default: ``'None'``)
+    :param ipv4_config:
+        IPv4 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+    :param ipv6_config:
+        IPv6 network configuration. See the :py:func`virt.network_define
+        <salt.modules.virt.network_define>` function corresponding parameter documentation
+        for more details on this dictionary.
+        (Default: None).
+    :param autostart: Network autostart (default ``'True'``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: sodium
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_defined
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_defined:
+            - bridge: main
+            - forward: bridge
+            - vport: openvswitch
+            - tag: 180
+            - autostart: True
+
+    .. code-block:: yaml
+
+        network_name:
+          virt.network_defined:
+            - bridge: natted
+            - forward: nat
+            - ipv4_config:
+                cidr: 192.168.42.0/24
+                dhcp_ranges:
+                  - start: 192.168.42.10
+                    end: 192.168.42.25
+                  - start: 192.168.42.100
+                    end: 192.168.42.150
+            - autostart: True
+
+    """
+    ret = {
+        "name": name,
+        "changes": {},
+        "result": True if not __opts__["test"] else None,
+        "comment": "",
+    }
+
+    try:
+        info = __salt__["virt.network_info"](
+            name, connection=connection, username=username, password=password
+        )
+        if info and info[name]:
+            ret["comment"] = "Network {0} exists".format(name)
+            ret["result"] = True
+        else:
+            if not __opts__["test"]:
+                __salt__["virt.network_define"](
+                    name,
+                    bridge,
+                    forward,
+                    vport=vport,
+                    tag=tag,
+                    ipv4_config=ipv4_config,
+                    ipv6_config=ipv6_config,
+                    autostart=autostart,
+                    start=False,
+                    connection=connection,
+                    username=username,
+                    password=password,
+                )
+            ret["changes"][name] = "Network defined"
+            ret["comment"] = "Network {0} defined".format(name)
+    except libvirt.libvirtError as err:
+        ret["result"] = False
+        ret["comment"] = err.get_error_message()
+
+    return ret
+
+
 def network_running(
     name,
     bridge,
@@ -914,13 +1021,13 @@ def network_running(
 
     .. code-block:: yaml
 
-        domain_name:
-          virt.network_define
+        network_name:
+          virt.network_running
 
     .. code-block:: yaml
 
         network_name:
-          virt.network_define:
+          virt.network_running:
             - bridge: main
             - forward: bridge
             - vport: openvswitch
@@ -930,7 +1037,7 @@ def network_running(
     .. code-block:: yaml
 
         network_name:
-          virt.network_define:
+          virt.network_running:
             - bridge: natted
             - forward: nat
             - ipv4_config:
@@ -943,41 +1050,52 @@ def network_running(
             - autostart: True
 
     """
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
+    ret = network_defined(
+        name,
+        bridge,
+        forward,
+        vport=vport,
+        tag=tag,
+        ipv4_config=ipv4_config,
+        ipv6_config=ipv6_config,
+        autostart=autostart,
+        connection=connection,
+        username=username,
+        password=password,
+    )
 
-    try:
-        info = __salt__["virt.network_info"](
-            name, connection=connection, username=username, password=password
-        )
-        if info:
-            if info[name]["active"]:
-                ret["comment"] = "Network {0} exists and is running".format(name)
-            else:
-                __salt__["virt.network_start"](
-                    name, connection=connection, username=username, password=password
-                )
-                ret["changes"][name] = "Network started"
-                ret["comment"] = "Network {0} started".format(name)
-        else:
-            __salt__["virt.network_define"](
-                name,
-                bridge,
-                forward,
-                vport=vport,
-                tag=tag,
-                ipv4_config=ipv4_config,
-                ipv6_config=ipv6_config,
-                autostart=autostart,
-                start=True,
-                connection=connection,
-                username=username,
-                password=password,
+    defined = name in ret["changes"] and ret["changes"][name].startswith(
+        "Network defined"
+    )
+
+    result = True if not __opts__["test"] else None
+    if ret["result"] is None or ret["result"]:
+        try:
+            info = __salt__["virt.network_info"](
+                name, connection=connection, username=username, password=password
             )
-            ret["changes"][name] = "Network defined and started"
-            ret["comment"] = "Network {0} defined and started".format(name)
-    except libvirt.libvirtError as err:
-        ret["result"] = False
-        ret["comment"] = err.get_error_message()
+            # In the corner case where test=True and the network wasn't defined
+            # we may not get the network in the info dict and that is normal.
+            if info.get(name, {}).get("active", False):
+                ret["comment"] = "{} and is running".format(ret["comment"])
+            else:
+                if not __opts__["test"]:
+                    __salt__["virt.network_start"](
+                        name,
+                        connection=connection,
+                        username=username,
+                        password=password,
+                    )
+                change = "Network started"
+                if name in ret["changes"]:
+                    change = "{} and started".format(ret["changes"][name])
+                ret["changes"][name] = change
+                ret["comment"] = "{} and started".format(ret["comment"])
+            ret["result"] = result
+
+        except libvirt.libvirtError as err:
+            ret["result"] = False
+            ret["comment"] = err.get_error_message()
 
     return ret
 
