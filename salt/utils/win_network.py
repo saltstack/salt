@@ -33,11 +33,11 @@ from salt.utils.versions import StrictVersion
 from salt.ext.six.moves import range
 
 IS_WINDOWS = platform.system() == 'Windows'
-USE_WMI = StrictVersion(platform.version()) < StrictVersion('6.2')
 
 __virtualname__ = 'win_network'
 
 if IS_WINDOWS:
+    USE_WMI = StrictVersion(platform.version()) < StrictVersion('6.2')
     if USE_WMI:
         import wmi
         import salt.utils.winapi
