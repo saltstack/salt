@@ -275,7 +275,7 @@ def present(name,
         argspec = salt.utils.args.get_function_argspec(__salt__['docker.build'])
         # Map any if existing args from kwargs into the build_args dictionary
         build_args = dict(list(zip(argspec.args, argspec.defaults)))
-        for k, v in build_args.items():
+        for k in build_args:
             if k in kwargs.get('kwargs', {}):
                 build_args[k] = kwargs.get('kwargs', {}).get(k)
         try:
@@ -285,7 +285,7 @@ def present(name,
             build_args['tag'] = tag
             build_args['dockerfile'] = dockerfile
             image_update = __salt__['docker.build'](**build_args)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = (
                 'Encountered error building {0} as {1}: {2}'.format(
                     build, full_image, exc
@@ -305,7 +305,7 @@ def present(name,
                                                         base=base,
                                                         mods=sls,
                                                         **sls_build_kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = (
                 'Encountered error using SLS {0} for building {1}: {2}'
                 .format(sls, full_image, exc)
@@ -319,7 +319,7 @@ def present(name,
             image_update = __salt__['docker.load'](path=load,
                                                    repository=name,
                                                    tag=tag)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = (
                 'Encountered error loading {0} as {1}: {2}'
                 .format(load, full_image, exc)
@@ -335,7 +335,7 @@ def present(name,
                 insecure_registry=insecure_registry,
                 client_timeout=client_timeout
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = \
                 'Encountered error pulling {0}: {1}'.format(full_image, exc)
             return ret

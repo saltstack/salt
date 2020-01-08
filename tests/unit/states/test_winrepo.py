@@ -37,7 +37,6 @@ class MockRunnerClient(object):
             '''
                 init method
             '''
-            pass
 
         @staticmethod
         def cmd(arg1, arg2):

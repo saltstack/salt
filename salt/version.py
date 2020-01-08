@@ -620,7 +620,7 @@ def dependency_information(include_salt_cloud=False):
             if isinstance(version, (tuple, list)):
                 version = '.'.join(map(str, version))
             yield name, version
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             yield name, None
 
 
@@ -684,8 +684,8 @@ def system_information():
                     version = item
             release = version
 
-        _, ver, sp, extra = platform.win32_ver()
-        version = ' '.join([release, ver, sp, extra])
+        _, ver, _sp, extra = platform.win32_ver()
+        version = ' '.join([release, ver, _sp, extra])
     else:
         version = system_version()
         release = platform.release()

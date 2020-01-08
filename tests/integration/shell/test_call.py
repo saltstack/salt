@@ -6,6 +6,7 @@
     tests.integration.shell.call
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
+# pylint: disable=invalid-name
 
 # Import python libs
 from __future__ import absolute_import
@@ -326,7 +327,6 @@ class CallTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin
             user = user_info[-1].strip()
         super(CallTest, self).tearDown()
 
-    # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to salt-call.
