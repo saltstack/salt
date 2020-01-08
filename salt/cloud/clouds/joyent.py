@@ -522,7 +522,7 @@ def take_action(name=None, call=None, command=None, data=None, method='GET',
         ret = query(command=command, data=data, method=method,
                     location=location)
         log.info('Success %s for node %s', caller, name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         if 'InvalidState' in six.text_type(exc):
             ret = [200, {}]
         else:

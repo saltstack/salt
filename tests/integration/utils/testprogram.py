@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 if 'TimeoutError' not in __builtins__:
     class TimeoutError(OSError):
         '''Compatibility exception with python3'''
-        pass
+
     __builtins__['TimeoutError'] = TimeoutError
 
 
@@ -665,7 +665,7 @@ class TestSaltProgram(six.with_metaclass(TestSaltProgramMeta, TestProgram, Scrip
                 cfg[key] = val
         return salt.utils.yaml.safe_dump(cfg, default_flow_style=False)
 
-    def run(self, **kwargs):
+    def run(self, **kwargs):  # pylint: disable=arguments-differ
         if not kwargs.get('verbatim_args'):
             args = kwargs.setdefault('args', [])
             if '-c' not in args and '--config-dir' not in args:
@@ -846,7 +846,6 @@ class TestSaltDaemon(six.with_metaclass(TestSaltProgramMeta, TestDaemon, TestSal
     '''
     A class to run arbitrary salt daemons (master, minion, syndic, etc.)
     '''
-    pass
 
 
 class TestDaemonSaltMaster(TestSaltDaemon):
@@ -879,7 +878,6 @@ class TestDaemonSaltApi(TestSaltDaemon):
     '''
     Manager for salt-api daemon.
     '''
-    pass
 
 
 class TestDaemonSaltSyndic(TestSaltDaemon):

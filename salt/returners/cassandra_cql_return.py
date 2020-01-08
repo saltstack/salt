@@ -149,13 +149,13 @@ try:
     # Effectively, if the DataStax Python Driver for Apache Cassandra is not
     # installed, both the modules/cassandra_cql execution module and this returner module
     # will not be loaded by Salt's loader system.
-    # pylint: disable=unused-import
+    # pylint: disable=unused-import,no-name-in-module
     from cassandra.cluster import Cluster
     from cassandra.cluster import NoHostAvailable
     from cassandra.connection import ConnectionException, ConnectionShutdown
     from cassandra.auth import PlainTextAuthProvider
     from cassandra.query import dict_factory
-    # pylint: enable=unused-import
+    # pylint: enable=unused-import,no-name-in-module
     HAS_CASSANDRA_DRIVER = True
 except ImportError as e:
     HAS_CASSANDRA_DRIVER = False
@@ -206,7 +206,7 @@ def returner(ret):
     except CommandExecutionError:
         log.critical('Could not insert into salt_returns with Cassandra returner.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical('Unexpected error while inserting into salt_returns: %s', e)
         raise
 
@@ -227,7 +227,7 @@ def returner(ret):
     except CommandExecutionError:
         log.critical('Could not store minion ID with Cassandra returner.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical(
             'Unexpected error while inserting minion ID into the minions '
             'table: %s', e
@@ -269,7 +269,7 @@ def event_return(events):
         except CommandExecutionError:
             log.critical('Could not store events with Cassandra returner.')
             raise
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.critical(
                 'Unexpected error while inserting into salt_events: %s', e)
             raise
@@ -299,7 +299,7 @@ def save_load(jid, load, minions=None):
     except CommandExecutionError:
         log.critical('Could not save load in jids table.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical('Unexpected error while inserting into jids: %s', e)
         raise
 
@@ -308,7 +308,6 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass
 
 
 # salt-run jobs.list_jobs FAILED
@@ -330,7 +329,7 @@ def get_load(jid):
     except CommandExecutionError:
         log.critical('Could not get load from jids table.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical('Unexpected error while getting load from jids: %s', e)
         raise
 
@@ -358,7 +357,7 @@ def get_jid(jid):
     except CommandExecutionError:
         log.critical('Could not select job specific information.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical(
             'Unexpected error while getting job specific information: %s', e)
         raise
@@ -387,7 +386,7 @@ def get_fun(fun):
     except CommandExecutionError:
         log.critical('Could not get the list of minions.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical(
             'Unexpected error while getting list of minions: %s', e)
         raise
@@ -418,7 +417,7 @@ def get_jids():
     except CommandExecutionError:
         log.critical('Could not get a list of all job ids.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical(
             'Unexpected error while getting list of all job ids: %s', e)
         raise
@@ -446,7 +445,7 @@ def get_minions():
     except CommandExecutionError:
         log.critical('Could not get the list of minions.')
         raise
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.critical(
             'Unexpected error while getting list of minions: %s', e)
         raise

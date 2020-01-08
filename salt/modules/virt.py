@@ -237,7 +237,7 @@ def __get_conn(**kwargs):
                       libvirt.VIR_CRED_PASSPHRASE,
                       libvirt.VIR_CRED_EXTERNAL]
         conn = libvirt.openAuth(conn_str, [auth_types, __get_request_auth(username, password), None], 0)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
@@ -1180,7 +1180,7 @@ def _handle_remote_boot_params(orig_boot):
                                                 saltinst_dir)
 
         return new_boot
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         raise err
 
 
@@ -3348,7 +3348,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             dom.undefine()
     else:
         dom.undefine()
@@ -4584,6 +4584,30 @@ def network_info(name=None, **kwargs):
     return result
 
 
+def network_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual network
+
+    :param name: libvirt network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.networkLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
+
+
 def network_start(name, **kwargs):
     '''
     Start a defined virtual network.
@@ -5326,6 +5350,30 @@ def pool_info(name=None, **kwargs):
     finally:
         conn.close()
     return result
+
+
+def pool_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual storage pool
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: Neon
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.storagePoolLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
 
 
 def pool_start(name, **kwargs):
