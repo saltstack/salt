@@ -10,6 +10,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import copy
+import logging
 import textwrap
 
 import salt.modules.aptpkg as aptpkg
@@ -27,6 +28,8 @@ try:
     import pytest
 except ImportError:
     pytest = None
+
+log = logging.getLogger(__name__)
 
 
 APT_KEY_LIST = r"""
@@ -151,6 +154,17 @@ Reading state information...
 """
 
 UNINSTALL = {"tmux": {"new": six.text_type(), "old": "1.8-5"}}
+
+
+class MockSourceEntry(object):
+    def __init__(self, uri, source_type, line, invalid):
+        self.uri = uri
+        self.type = source_type
+        self.line = line
+        self.invalid = invalid
+
+    def mysplit(self, line):
+        return line.split()
 
 
 class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
@@ -594,6 +608,41 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
             list_downloaded = aptpkg.list_downloaded()
             self.assertEqual(len(list_downloaded), 1)
             self.assertDictEqual(list_downloaded, DOWNLOADED_RET)
+
+    def test__skip_source(self):
+        '''
+        Test __skip_source.
+        :return:
+        '''
+        # Valid source
+        source_type = 'deb'
+        source_uri = 'http://cdn-aws.deb.debian.org/debian'
+        source_line = 'deb http://cdn-aws.deb.debian.org/debian stretch main\n'
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, False)
+
+        ret = aptpkg._skip_source(mock_source)
+        self.assertFalse(ret)
+
+        # Invalid source type
+        source_type = 'ded'
+        source_uri = 'http://cdn-aws.deb.debian.org/debian'
+        source_line = 'deb http://cdn-aws.deb.debian.org/debian stretch main\n'
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, True)
+
+        ret = aptpkg._skip_source(mock_source)
+        self.assertTrue(ret)
+
+        # Invalid source type , not skipped
+        source_type = 'deb'
+        source_uri = 'http://cdn-aws.deb.debian.org/debian'
+        source_line = 'deb [http://cdn-aws.deb.debian.org/debian] stretch main\n'
+
+        mock_source = MockSourceEntry(source_uri, source_type, source_line, True)
+
+        ret = aptpkg._skip_source(mock_source)
+        self.assertFalse(ret)
 
 
 @skipIf(pytest is None, "PyTest is missing")
