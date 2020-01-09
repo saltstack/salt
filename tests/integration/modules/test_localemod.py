@@ -26,12 +26,7 @@ def _find_new_locale(current_locale):
 @skipIf(salt.utils.platform.is_freebsd(), 'locale module is not supported on FreeBSD')
 @requires_salt_modules('locale')
 class LocaleModuleTest(ModuleCase):
-    def test_get_locale(self):
-        locale = self.run_function('locale.get_locale')
-        self.assertNotIn('ERROR:', locale)
-
-    @destructiveTest
-    def test_gen_locale(self):
+    def _requires_charmaps(self):
         # Make sure charmaps are available on test system before attempting
         # call gen_locale. We log this error to the user in the function, but
         # we don't want to fail this test if this is missing on the test system.
@@ -44,6 +39,15 @@ class LocaleModuleTest(ModuleCase):
                 char_maps['stderr'])
             )
 
+
+    def test_get_locale(self):
+        locale = self.run_function('locale.get_locale')
+        self.assertNotIn('ERROR:', locale)
+
+    @destructiveTest
+    def test_gen_locale(self):
+        self._requires_charmaps()
+
         locale = self.run_function('locale.get_locale')
         self.assertNotIn('ERROR:', locale)
         new_locale = _find_new_locale(locale)
@@ -53,6 +57,8 @@ class LocaleModuleTest(ModuleCase):
 
     @destructiveTest
     def test_set_locale(self):
+        self._requires_charmaps()
+
         original_locale = self.run_function('locale.get_locale')
         locale_to_set = _find_new_locale(original_locale)
         ret = self.run_function('locale.gen_locale', [locale_to_set])
