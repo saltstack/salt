@@ -385,7 +385,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         mock_pkg = MagicMock(return_value='3.7')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     def test_list_policies_freebsd(self):
@@ -396,7 +396,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         mock_pkg = MagicMock(return_value='3.7')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-             patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}):
+                patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     def test_list_policies_old_version(self):
@@ -407,7 +407,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         mock_pkg = MagicMock(return_value='3.0')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertDictEqual(rabbitmq.list_policies(), {})
 
     # 'set_policy' function tests: 1
@@ -443,7 +443,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         mock_pkg = MagicMock(return_value='3.0')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
-             patch.dict(rabbitmq.__grains__, {'os_family': ''}):
+                patch.dict(rabbitmq.__grains__, {'os_family': ''}):
             self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
 
     # 'list_available_plugins' function tests: 2
@@ -541,3 +541,104 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
                                             'pkg.version': mock_pkg}):
             self.assertDictEqual(rabbitmq.disable_plugin('salt'),
                                  {'Disabled': 'saltstack'})
+
+    # 'list_upstreams' function tests: 1
+
+    def test_list_upstreams(self):
+        '''
+        Test if it returns a list of upstreams.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
+                      ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
+                      'password@remote.fqdn"}',
+            'stderr': ''})
+        mock_pkg = MagicMock(return_value='')
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
+                                            'pkg.version': mock_pkg}):
+            self.assertDictEqual(
+                rabbitmq.list_upstreams(),
+                {'remote-name': ('{"ack-mode":"on-confirm","max-hops":1,'
+                                 '"trust-user-id":true,"uri":"amqp://username:'
+                                 'password@remote.fqdn"}')}
+            )
+
+    # 'upstream_exists' function tests: 2
+
+    def test_upstream_exists(self):
+        '''
+        Test whether a given rabbitmq-internal upstream exists based
+        on rabbitmqctl list_upstream.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
+                      ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
+                      'password@remote.fqdn"}',
+            'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertTrue(rabbitmq.upstream_exists('remote-name'))
+
+    def test_upstream_exists_negative(self):
+        '''
+        Negative test of whether rabbitmq-internal upstream exists based
+        on rabbitmqctl list_upstream.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': 'federation-upstream\tremote-name\t{"ack-mode":"on-confirm"'
+                      ',"max-hops":1,"trust-user-id":true,"uri":"amqp://username:'
+                      'password@remote.fqdn"}',
+            'stderr': ''})
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertFalse(rabbitmq.upstream_exists('does-not-exist'))
+
+    # 'add_upstream' function tests: 1
+
+    def test_set_upstream(self):
+        '''
+        Test if a rabbitMQ upstream gets configured properly.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': ('Setting runtime parameter "federation-upstream" for component '
+                       '"remote-name" to "{"trust-user-id": true, "uri": '
+                       '"amqp://username:password@remote.fqdn", "ack-mode": "on-confirm", '
+                       '"max-hops": 1}" in vhost "/" ...'),
+            'stderr': ''
+        })
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertTrue(rabbitmq.set_upstream('remote-name',
+                                                  'amqp://username:password@remote.fqdn',
+                                                  ack_mode='on-confirm',
+                                                  max_hops=1,
+                                                  trust_user_id=True))
+
+    # 'delete_upstream' function tests: 2
+
+    def test_delete_upstream(self):
+        '''
+        Test if an upstream gets deleted properly using rabbitmqctl delete_upstream.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 0,
+            'stdout': ('Clearing runtime parameter "remote-name" for component '
+                       '"federation-upstream" on vhost "/" ...'),
+            'stderr': ''
+        })
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertTrue(rabbitmq.delete_upstream('remote-name'))
+
+    def test_delete_upstream_negative(self):
+        '''
+        Negative test trying to delete a non-existant upstream.
+        '''
+        mock_run = MagicMock(return_value={
+            'retcode': 70,
+            'stdout': ('Clearing runtime parameter "remote-name" for component '
+                       '"federation-upstream" on vhost "/" ...'),
+            'stderr': 'Error:\nParameter does not exist'
+        })
+        with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
+            self.assertRaises(CommandExecutionError, rabbitmq.delete_upstream, 'remote-name')

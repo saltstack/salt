@@ -28,7 +28,7 @@ def mod_init(low):
     '''
     try:
         __salt__['portage_config.enforce_nice_config']()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
     return True
 
@@ -36,7 +36,7 @@ def mod_init(low):
 def _flags_helper(conf, atom, new_flags, test=False):
     try:
         new_flags = __salt__['portage_config.get_missing_flags'](conf, atom, new_flags)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if new_flags:
@@ -50,7 +50,7 @@ def _flags_helper(conf, atom, new_flags, test=False):
 def _mask_helper(conf, atom, test=False):
     try:
         is_present = __salt__['portage_config.is_present'](conf, atom)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         import traceback
         return {'result': False, 'comment': traceback.format_exc()}
     if not is_present:

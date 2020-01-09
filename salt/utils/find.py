@@ -538,7 +538,7 @@ class DeleteOption(TypeOption):
     def __init__(self, key, value):
         if 'a' in value:
             value = 'bcdpfls'
-        super(self.__class__, self).__init__(key, value)
+        super(DeleteOption, self).__init__(key, value)
 
     def execute(self, fullpath, fstat, test=False):
         if test:
@@ -576,7 +576,7 @@ class ExecOption(Option):
                     salt.utils.stringutils.to_str(err))
             return "{0}:\n{1}\n".format(command, salt.utils.stringutils.to_str(out))
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(
                 'Exception while executing command "%s":\n\n%s',
                 command,

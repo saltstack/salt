@@ -284,14 +284,14 @@ def get_group_list(user, include_default=True):
                 grp.getgrgid(grpid).gr_name for grpid in
                 os.getgrouplist(user, pwd.getpwnam(user).pw_gid)
             ]
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
     elif HAS_PYSSS:
         # Try pysss.getgrouplist
         log.trace('Trying pysss.getgrouplist for \'%s\'', user)
         try:
             group_names = list(pysss.getgrouplist(user))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     if group_names is None:

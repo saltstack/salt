@@ -147,7 +147,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         try:
             import salt.utils.yaml
             ret = salt.utils.yaml.safe_load('\n'.join(data))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         expect = []

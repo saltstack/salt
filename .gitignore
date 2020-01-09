@@ -14,6 +14,7 @@ MANIFEST
 *.DS_Store
 .pytest_cache
 Pipfile.lock
+.mypy_cache/*
 
 # virtualenv
 # - ignores directories of a virtualenv when you create it right on
@@ -105,6 +106,7 @@ tests/integration/cloud/providers/pki/minions
 
 # Kitchen tests files
 .kitchen.local.yml
+kitchen.local.yml
 .kitchen/
 .bundle/
 Gemfile.lock

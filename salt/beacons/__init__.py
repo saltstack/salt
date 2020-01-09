@@ -230,7 +230,8 @@ class Beacon(object):
         include_opts:   Whether to include beacons that are
                         configured in opts, default is True.
         '''
-        beacons = self._get_beacons(include_pillar, include_opts)
+        beacons = self._get_beacons(include_pillar=include_pillar,
+                                    include_opts=include_opts)
 
         # Fire the complete event back along with the list of beacons
         with salt.utils.event.get_event('minion', opts=self.opts) as evt:
