@@ -1020,7 +1020,7 @@ def sign(user=None,
             else:
                 signed_data = gpg.sign_file(_fp, keyid=keyid, passphrase=gpg_passphrase)
         if output:
-            with salt.utils.files.flopen(output, 'w') as fout:
+            with salt.utils.files.flopen(output, 'wb') as fout:
                 fout.write(salt.utils.stringutils.to_bytes(signed_data.data))
     else:
         raise SaltInvocationError('filename or text must be passed.')

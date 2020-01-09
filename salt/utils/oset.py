@@ -107,7 +107,7 @@ class OrderedSet(collections.MutableSet):
     def __contains__(self, key):
         return key in self.map
 
-    def add(self, key):
+    def add(self, key):  # pylint: disable=arguments-differ
         """
         Add `key` as an item to this OrderedSet, then return its index.
 
@@ -159,7 +159,7 @@ class OrderedSet(collections.MutableSet):
         del self.map[elem]
         return elem
 
-    def discard(self, key):
+    def discard(self, key):  # pylint: disable=arguments-differ
         """
         Remove an element.  Do not raise an exception if absent.
 

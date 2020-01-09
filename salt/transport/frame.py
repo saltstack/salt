@@ -4,7 +4,7 @@ Helper functions for transport components to handle message framing
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
-import msgpack
+import salt.utils.msgpack
 from salt.ext import six
 
 
@@ -18,7 +18,7 @@ def frame_msg(body, header=None, raw_body=False):  # pylint: disable=unused-argu
 
     framed_msg['head'] = header
     framed_msg['body'] = body
-    return msgpack.dumps(framed_msg)
+    return salt.utils.msgpack.dumps(framed_msg)
 
 
 def frame_msg_ipc(body, header=None, raw_body=False):  # pylint: disable=unused-argument
@@ -35,9 +35,9 @@ def frame_msg_ipc(body, header=None, raw_body=False):  # pylint: disable=unused-
     framed_msg['head'] = header
     framed_msg['body'] = body
     if six.PY2:
-        return msgpack.dumps(framed_msg)
+        return salt.utils.msgpack.dumps(framed_msg)
     else:
-        return msgpack.dumps(framed_msg, use_bin_type=True)
+        return salt.utils.msgpack.dumps(framed_msg, use_bin_type=True)
 
 
 def _decode_embedded_list(src):
@@ -50,7 +50,7 @@ def _decode_embedded_list(src):
         if isinstance(elem, dict):
             elem = _decode_embedded_dict(elem)
         elif isinstance(elem, list):
-            elem = _decode_embedded_list(elem)  # pylint: disable=redefined-variable-type
+            elem = _decode_embedded_list(elem)
         elif isinstance(elem, bytes):
             try:
                 elem = elem.decode()
@@ -70,7 +70,7 @@ def _decode_embedded_dict(src):
         if isinstance(val, dict):
             val = _decode_embedded_dict(val)
         elif isinstance(val, list):
-            val = _decode_embedded_list(val)  # pylint: disable=redefined-variable-type
+            val = _decode_embedded_list(val)
         elif isinstance(val, bytes):
             try:
                 val = val.decode()
@@ -105,7 +105,7 @@ def decode_embedded_strs(src):
         return _decode_embedded_list(src)
     elif isinstance(src, bytes):
         try:
-            return src.decode()  # pylint: disable=redefined-variable-type
+            return src.decode()
         except UnicodeError:
             return src
     else:
