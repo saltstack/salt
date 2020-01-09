@@ -297,7 +297,7 @@ def set_(name,
                                 # new
                                 if new_e_name in valid_names:
                                     salt.utils.versions.warn_until(
-                                        'Magnesium',
+                                        'Phosphorus',
                                         'The LGPO module changed the way it '
                                         'gets policy element names.\n'
                                         '"{0}" is no longer valid.\n'
