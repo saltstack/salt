@@ -486,9 +486,8 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert not localemod.gen_locale('foo')
         assert localemod.log.error.called
-        msg = localemod.log.error.call_args[0][0] % (localemod.log.error.call_args[0][1],
-                                                     localemod.log.error.call_args[0][2])
-        assert msg == 'The provided locale "foo" is not found in /usr/share/i18n/SUPPORTED'
+        msg = localemod.log.error.call_args[0][0] % localemod.log.error.call_args[0][1]
+        assert msg == 'The provided locale "foo" is not found'
 
     @patch('salt.modules.localemod.log', MagicMock())
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse'})
@@ -501,10 +500,9 @@ class LocalemodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         assert not localemod.gen_locale('de_DE.utf8')
         assert localemod.log.error.called
-        msg = localemod.log.error.call_args[0][0] % (localemod.log.error.call_args[0][1],
-                                                     localemod.log.error.call_args[0][2])
+        msg = localemod.log.error.call_args[0][0] % localemod.log.error.call_args[0][1]
         assert localemod.os.listdir.call_args[0][0] == '/usr/share/locale'
-        assert msg == 'The provided locale "en_GB.utf8" is not found in /usr/share/locale'
+        assert msg == 'The provided locale "en_GB.utf8" is not found'
 
     @patch('salt.modules.localemod.log', MagicMock())
     @patch('salt.modules.localemod.__grains__', {'os_family': 'Suse'})

@@ -303,8 +303,7 @@ def gen_locale(locale, **kwargs):
                 "Locale \"{0}\" is not available.".format(locale))
 
     if not valid:
-        log.error(
-            'The provided locale "%s" is not found in %s', locale, search)
+        log.error('The provided locale "%s" is not found', locale)
         return False
 
     if os.path.exists('/etc/locale.gen'):
