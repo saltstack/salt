@@ -59,7 +59,7 @@ from salt.minion import ProxyMinion
 
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.utils.process import (default_signals,
-                                SignalHandlingMultiprocessingProcess)
+                                SignalHandlingProcess)
 
 
 import tornado.gen  # pylint: disable=F0401
@@ -350,7 +350,7 @@ def thread_return(cls, minion_instance, opts, data):
     allow_missing_funcs = any([
         minion_instance.executors['{0}.allow_missing_func'.format(executor)](function_name)
         for executor in executors
-        if '{0}.allow_missing_func' in minion_instance.executors
+        if '{0}.allow_missing_func'.format(executor) in minion_instance.executors
     ])
     if function_name in minion_instance.functions or allow_missing_funcs is True:
         try:
@@ -426,7 +426,7 @@ def thread_return(cls, minion_instance, opts, data):
                 try:
                     func_result = all(return_data.get(x, True)
                                       for x in ('result', 'success'))
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # return data is not a dict
                     func_result = True
                 if not func_result:
@@ -470,7 +470,7 @@ def thread_return(cls, minion_instance, opts, data):
             ret['return'] = msg
             ret['out'] = 'nested'
             ret['retcode'] = salt.defaults.exitcodes.EX_GENERIC
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             msg = 'The minion function caused an exception'
             log.warning(msg, exc_info_on_loglevel=True)
             salt.utils.error.fire_exception(salt.exceptions.MinionError(msg), opts, job=data)
@@ -536,7 +536,7 @@ def thread_return(cls, minion_instance, opts, data):
                         'Returner %s could not be loaded: %s',
                         returner_str, returner_err
                     )
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(
                     'The return failed for job %s: %s', data['jid'], exc
                 )
@@ -610,7 +610,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 try:
                     func_result = all(ret['return'][key].get(x, True)
                                       for x in ('result', 'success'))
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     # return data is not a dict
                     func_result = True
                 if not func_result:
@@ -618,7 +618,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
 
             ret['retcode'][key] = retcode
             ret['success'][key] = retcode == 0
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             trb = traceback.format_exc()
             log.warning('The minion function caused an exception: %s', exc)
             if multifunc_ordered:
@@ -646,7 +646,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
                 minion_instance.returners['{0}.returner'.format(
                     returner
                 )](ret)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     'The return failed for job %s: %s',
                     data['jid'], exc
@@ -725,8 +725,10 @@ def handle_decoded_payload(self, data):
             # running on windows
             instance = None
         with default_signals(signal.SIGINT, signal.SIGTERM):
-            process = SignalHandlingMultiprocessingProcess(
-                target=self._target, args=(instance, self.opts, data, self.connected)
+            process = SignalHandlingProcess(
+                target=self._target,
+                name='ProcessPayload',
+                args=(instance, self.opts, data, self.connected)
             )
     else:
         process = threading.Thread(

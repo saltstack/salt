@@ -36,20 +36,23 @@ from tests.support.unit import TestCase
 from tests.support.case import ShellTestCase
 from tests.support.parser import PNUM, print_header, SaltTestcaseParser
 from tests.support.helpers import requires_sshd_server, RedirectStdStreams
-from tests.support.paths import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.mixins import SaltMinionEventAssertsMixin, SaltReturnAssertsMixin
 from tests.support.runtests import RUNTIME_VARS
+
 # Import Salt libs
 import salt
 import salt.config
+import salt.master
 import salt.minion
 import salt.runner
 import salt.output
 import salt.version
 import salt.utils.color
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
@@ -58,27 +61,15 @@ import salt.utils.yaml
 import salt.log.setup as salt_log_setup
 from salt.utils.verify import verify_env
 from salt.utils.immutabletypes import freeze
-from salt.utils.nb_popen import NonBlockingPopen
 from salt.exceptions import SaltClientError
 
-try:
-    import salt.master
-except ImportError:
-    # Not required for raet tests
-    pass
-
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
-from salt.ext.six.moves import cStringIO
 
 try:
-    import salt.ext.six.moves.socketserver as socketserver
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
 except ImportError:
     import socketserver
-
-from tornado import gen
-from tornado import ioloop
 
 # Import salt tests support libs
 from tests.support.processes import SaltMaster, SaltMinion, SaltSyndic
@@ -104,15 +95,16 @@ def get_unused_localhost_port():
 
     DARWIN = True if sys.platform.startswith('darwin') else False
     BSD = True if 'bsd' in sys.platform else False
+    AIX = True if sys.platform.startswith('aix') else False
 
-    if DARWIN and port in _RUNTESTS_PORTS:
+    if (AIX or DARWIN) and port in _RUNTESTS_PORTS:
         port = get_unused_localhost_port()
         usock.close()
         return port
 
     _RUNTESTS_PORTS[port] = usock
 
-    if DARWIN or BSD:
+    if DARWIN or BSD or AIX:
         usock.close()
 
     return port
@@ -150,7 +142,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer, object):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = msgpack.Unpacker(encoding='utf-8')
+        unpacker = salt.utils.msgpack.Unpacker(encoding='utf-8')
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
@@ -173,7 +165,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     # We're not on windows
                     pass
                 log.exception(exc)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
 
 
@@ -213,8 +205,6 @@ class TestDaemon(object):
 
         if self.parser.options.transport == 'zeromq':
             self.start_zeromq_daemons()
-        elif self.parser.options.transport == 'raet':
-            self.start_raet_daemons()
         elif self.parser.options.transport == 'tcp':
             self.start_tcp_daemons()
 
@@ -264,16 +254,6 @@ class TestDaemon(object):
         finally:
             self.post_setup_minions()
 
-    def start_daemon(self, cls, opts, start_fun):
-        def start(cls, opts, start_fun):
-            salt.utils.process.appendproctitle('{0}-{1}'.format(self.__class__.__name__, cls.__name__))
-            daemon = cls(opts)
-            getattr(daemon, start_fun)()
-        process = multiprocessing.Process(target=start,
-                                          args=(cls, opts, start_fun))
-        process.start()
-        return process
-
     def start_zeromq_daemons(self):
         '''
         Fire up the daemons used for zeromq tests
@@ -296,7 +276,8 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -333,7 +314,8 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -370,7 +352,8 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -408,7 +391,8 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -445,7 +429,8 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
-                start_timeout=60)
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
+                start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -484,7 +469,7 @@ class TestDaemon(object):
                     daemon_class=SaltProxy,
                     bin_dir_path=SCRIPT_DIR,
                     fail_hard=True,
-                    start_timeout=60)
+                    start_timeout=120)
                 sys.stdout.write(
                     '\r{0}\r'.format(
                         ' ' * getattr(self.parser.options, 'output_columns', PNUM)
@@ -505,31 +490,6 @@ class TestDaemon(object):
                 )
                 sys.stdout.flush()
                 raise TestDaemonStartFailed()
-
-    def start_raet_daemons(self):
-        '''
-        Fire up the raet daemons!
-        '''
-        import salt.daemons.flo
-        self.master_process = self.start_daemon(salt.daemons.flo.IofloMaster,
-                                                self.master_opts,
-                                                'start')
-
-        self.minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
-                                                self.minion_opts,
-                                                'tune_in')
-
-        self.sub_minion_process = self.start_daemon(salt.daemons.flo.IofloMinion,
-                                                    self.sub_minion_opts,
-                                                    'tune_in')
-        # Wait for the daemons to all spin up
-        time.sleep(5)
-
-        # self.smaster_process = self.start_daemon(salt.daemons.flo.IofloMaster,
-        #                                            self.syndic_master_opts,
-        #                                            'start')
-
-        # no raet syndic daemon yet
 
     start_tcp_daemons = start_zeromq_daemons
 
@@ -693,7 +653,7 @@ class TestDaemon(object):
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         self.prep_syndic()
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -739,14 +699,15 @@ class TestDaemon(object):
 
     @classmethod
     def transplant_configs(cls, transport='zeromq'):
-        if os.path.isdir(RUNTIME_VARS.TMP_CONF_DIR):
-            shutil.rmtree(RUNTIME_VARS.TMP_CONF_DIR)
+        if os.path.isdir(RUNTIME_VARS.TMP):
+            shutil.rmtree(RUNTIME_VARS.TMP)
+        os.makedirs(RUNTIME_VARS.TMP)
+        os.makedirs(RUNTIME_VARS.TMP_ROOT_DIR)
         os.makedirs(RUNTIME_VARS.TMP_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR)
         os.makedirs(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR)
-        if not os.path.exists(RUNTIME_VARS.TMP):
-            os.makedirs(RUNTIME_VARS.TMP)
+
         print(' * Transplanting configuration files to \'{0}\''.format(RUNTIME_VARS.TMP_CONF_DIR))
         tests_known_hosts_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'salt_ssh_known_hosts')
         with salt.utils.files.fopen(tests_known_hosts_file, 'w') as known_hosts:
@@ -755,12 +716,15 @@ class TestDaemon(object):
         # This master connects to syndic_master via a syndic
         master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'master'))
         master_opts['known_hosts_file'] = tests_known_hosts_file
-        master_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        master_opts['cachedir'] = 'cache'
         master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        master_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
-        master_opts['root_dir'] = os.path.join(TMP, 'rootdir')
-        master_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki', 'master')
+        master_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+        master_opts['pki_dir'] = 'pki'
         master_opts['syndic_master'] = 'localhost'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
         file_tree = {
             'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
             'follow_dir_links': False,
@@ -768,13 +732,19 @@ class TestDaemon(object):
         }
         master_opts['ext_pillar'].append({'file_tree': file_tree})
 
+        # Config settings to test `event_return`
+        if 'returner_dirs' not in master_opts:
+            master_opts['returner_dirs'] = []
+        master_opts['returner_dirs'].append(os.path.join(RUNTIME_VARS.FILES, 'returners'))
+        master_opts['event_return'] = 'runtests_noop'
+
         # Under windows we can't seem to properly create a virtualenv off of another
         # virtualenv, we can on linux but we will still point to the virtualenv binary
         # outside the virtualenv running the test suite, if that's the case.
         try:
             real_prefix = sys.real_prefix
             # The above attribute exists, this is a virtualenv
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
             else:
                 # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
@@ -786,7 +756,7 @@ class TestDaemon(object):
                         if item.startswith(sys.base_prefix):
                             path_items.remove(item)
                     os.environ['PATH'] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.which('virtualenv')
+                virtualenv_binary = salt.utils.path.which('virtualenv')
                 if path is not None:
                     # Restore previous environ PATH
                     os.environ['PATH'] = path
@@ -801,58 +771,61 @@ class TestDaemon(object):
 
         # This minion connects to master
         minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'minion'))
-        minion_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        minion_opts['cachedir'] = 'cache'
         minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        minion_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
-        minion_opts['root_dir'] = os.path.join(TMP, 'rootdir')
-        minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir', 'pki')
-        minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
-        minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        minion_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+        minion_opts['pki_dir'] = 'pki'
+        minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
+        minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
         if virtualenv_binary:
             minion_opts['venv_bin'] = virtualenv_binary
 
         # This sub_minion also connects to master
         sub_minion_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'sub_minion'))
-        sub_minion_opts['cachedir'] = os.path.join(TMP, 'rootdir-sub-minion', 'cache')
+        sub_minion_opts['cachedir'] = 'cache'
         sub_minion_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        sub_minion_opts['config_dir'] = RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR
         sub_minion_opts['root_dir'] = os.path.join(TMP, 'rootdir-sub-minion')
-        sub_minion_opts['pki_dir'] = os.path.join(TMP, 'rootdir-sub-minion', 'pki', 'minion')
-        sub_minion_opts['hosts.file'] = os.path.join(TMP, 'rootdir', 'hosts')
-        sub_minion_opts['aliases.file'] = os.path.join(TMP, 'rootdir', 'aliases')
+        sub_minion_opts['pki_dir'] = 'pki'
+        sub_minion_opts['hosts.file'] = os.path.join(TMP_ROOT_DIR, 'hosts')
+        sub_minion_opts['aliases.file'] = os.path.join(TMP_ROOT_DIR, 'aliases')
         if virtualenv_binary:
             sub_minion_opts['venv_bin'] = virtualenv_binary
 
         # This is the master of masters
         syndic_master_opts = salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic_master'))
-        syndic_master_opts['cachedir'] = os.path.join(TMP, 'rootdir-syndic-master', 'cache')
+        syndic_master_opts['cachedir'] = 'cache'
         syndic_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
-        syndic_master_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
-        syndic_master_opts['pki_dir'] = os.path.join(TMP, 'rootdir-syndic-master', 'pki', 'master')
+        syndic_master_opts['pki_dir'] = 'pki'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_syndic_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        syndic_master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(syndic_master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = 'cache'
+        syndic_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(syndic_master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
-        proxy_opts['cachedir'] = os.path.join(TMP, 'rootdir-proxy', 'cache')
-        if not os.path.exists(proxy_opts['cachedir']):
-            os.makedirs(proxy_opts['cachedir'])
+        proxy_opts['cachedir'] = 'cache'
         # proxy_opts['user'] = running_tests_user
-        proxy_opts['config_dir'] = RUNTIME_VARS.TMP_CONF_DIR
         proxy_opts['root_dir'] = os.path.join(TMP, 'rootdir-proxy')
-        proxy_opts['pki_dir'] = os.path.join(TMP, 'rootdir-proxy', 'pki')
-        if not os.path.exists(proxy_opts['pki_dir']):
-            os.makedirs(proxy_opts['pki_dir'])
+        proxy_opts['pki_dir'] = 'pki'
         proxy_opts['hosts.file'] = os.path.join(TMP, 'rootdir-proxy', 'hosts')
         proxy_opts['aliases.file'] = os.path.join(TMP, 'rootdir-proxy', 'aliases')
-
-        if transport == 'raet':
-            master_opts['transport'] = 'raet'
-            master_opts['raet_port'] = 64506
-            minion_opts['transport'] = 'raet'
-            minion_opts['raet_port'] = 64510
-            sub_minion_opts['transport'] = 'raet'
-            sub_minion_opts['raet_port'] = 64520
-            # syndic_master_opts['transport'] = 'raet'
 
         if transport == 'tcp':
             master_opts['transport'] = 'tcp'
@@ -884,10 +857,10 @@ class TestDaemon(object):
         }
         master_opts['file_roots'] = syndic_master_opts['file_roots'] = {
             'base': [
-                os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                RUNTIME_VARS.TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(FILES, 'file', 'base'),
             ],
             # Alternate root to test __env__ choices
             'prod': [
@@ -897,10 +870,10 @@ class TestDaemon(object):
         }
         minion_opts['file_roots'] = {
             'base': [
-                os.path.join(FILES, 'file', 'base'),
                 # Let's support runtime created files that can be used like:
                 #   salt://my-temp-file.txt
-                RUNTIME_VARS.TMP_STATE_TREE
+                RUNTIME_VARS.TMP_STATE_TREE,
+                os.path.join(FILES, 'file', 'base'),
             ],
             # Alternate root to test __env__ choices
             'prod': [
@@ -1041,13 +1014,11 @@ class TestDaemon(object):
                     os.path.join(master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(master_opts['pki_dir'], 'minions_denied'),
                     os.path.join(master_opts['cachedir'], 'jobs'),
-                    os.path.join(master_opts['cachedir'], 'raet'),
                     os.path.join(master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_pre'),
                     os.path.join(syndic_master_opts['pki_dir'], 'minions_rejected'),
                     os.path.join(syndic_master_opts['cachedir'], 'jobs'),
-                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
                     os.path.join(syndic_master_opts['root_dir'], 'cache', 'tokens'),
                     os.path.join(master_opts['pki_dir'], 'accepted'),
                     os.path.join(master_opts['pki_dir'], 'rejected'),
@@ -1055,16 +1026,13 @@ class TestDaemon(object):
                     os.path.join(syndic_master_opts['pki_dir'], 'accepted'),
                     os.path.join(syndic_master_opts['pki_dir'], 'rejected'),
                     os.path.join(syndic_master_opts['pki_dir'], 'pending'),
-                    os.path.join(syndic_master_opts['cachedir'], 'raet'),
 
                     os.path.join(minion_opts['pki_dir'], 'accepted'),
                     os.path.join(minion_opts['pki_dir'], 'rejected'),
                     os.path.join(minion_opts['pki_dir'], 'pending'),
-                    os.path.join(minion_opts['cachedir'], 'raet'),
                     os.path.join(sub_minion_opts['pki_dir'], 'accepted'),
                     os.path.join(sub_minion_opts['pki_dir'], 'rejected'),
                     os.path.join(sub_minion_opts['pki_dir'], 'pending'),
-                    os.path.join(sub_minion_opts['cachedir'], 'raet'),
                     os.path.dirname(master_opts['log_file']),
                     minion_opts['extension_modules'],
                     sub_minion_opts['extension_modules'],
@@ -1201,7 +1169,7 @@ class TestDaemon(object):
             if os.path.isdir(dirname):
                 try:
                     shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):

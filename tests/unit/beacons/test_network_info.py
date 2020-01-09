@@ -5,8 +5,8 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -25,7 +25,6 @@ STUB_NET_IO_COUNTERS = {'eth0': namedtuple('snetio',
                                                      0, 0, 0)}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.network_info

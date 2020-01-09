@@ -11,8 +11,6 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -91,7 +89,7 @@ class BotoCloudWatchEventTestCaseBase(TestCase, LoaderModuleMockMixin):
     conn = None
 
     def setup_loader_modules(self):
-        self.opts = opts = salt.config.DEFAULT_MINION_OPTS
+        self.opts = opts = salt.config.DEFAULT_MINION_OPTS.copy()
         utils = salt.loader.utils(
             opts,
             whitelist=['boto3', 'args', 'systemd', 'path', 'platform'],
@@ -125,7 +123,6 @@ class BotoCloudWatchEventTestCaseMixin(object):
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatchEventTestCaseMixin):
     '''
     TestCase for salt.modules.boto_cloudwatch_event module

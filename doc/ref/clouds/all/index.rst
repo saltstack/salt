@@ -22,7 +22,6 @@ cloud modules
     linode
     lxc
     msazure
-    nova
     oneandone
     opennebula
     openstack
@@ -35,6 +34,7 @@ cloud modules
     scaleway
     softlayer
     softlayer_hw
+    tencentcloud
     vagrant
     virtualbox
     vmware

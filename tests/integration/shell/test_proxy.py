@@ -98,7 +98,6 @@ class ProxyTest(testprogram.TestProgramCase):
             # cause timeout exceptions and respective traceback
             proxy.shutdown()
 
-    # pylint: disable=invalid-name
     def test_exit_status_unknown_argument(self):
         '''
         Ensure correct exit status when an unknown argument is passed to

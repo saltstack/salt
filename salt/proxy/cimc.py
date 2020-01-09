@@ -262,7 +262,7 @@ def grains():
         try:
             compute_rack = get_config_resolver_class('computeRackUnit', False)
             DETAILS['grains_cache'] = compute_rack['outConfigs']['computeRackUnit']
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(err)
     return DETAILS['grains_cache']
 
@@ -282,7 +282,7 @@ def ping():
     try:
         cookie = logon()
         logout(cookie)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.debug(err)
         return False
     return True

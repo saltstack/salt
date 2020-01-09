@@ -20,7 +20,7 @@ import salt.modules.cmdmod
 
 # Testing
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 
 class DNShelpersCase(TestCase):
@@ -153,7 +153,6 @@ class DNShelpersCase(TestCase):
             self.assertEqual(group, res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DNSlookupsCase(TestCase):
     '''
     Test the lookup result parsers
@@ -298,6 +297,7 @@ class DNSlookupsCase(TestCase):
                         msg='Error parsing DNSSEC\'d {0} returns'.format(rec_t)
                     )
 
+    @skipIf(not salt.utils.dns.HAS_NSLOOKUP, 'nslookup is not available')
     def test_lookup_with_servers(self):
         rights = {
             'A': [

@@ -19,8 +19,6 @@ from tests.support.mock import (
     patch,
     MagicMock,
     call,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 import salt.modules.netbox as netbox
 
@@ -49,7 +47,6 @@ def mocked_clean_kwargs_get(**kwargs):
 
 
 @skipIf(HAS_PYNETBOX is False, 'pynetbox lib not installed')
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.modules.netbox._config', MagicMock())
 class NetBoxTestCase(TestCase, LoaderModuleMockMixin):
 

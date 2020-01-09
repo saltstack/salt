@@ -238,7 +238,7 @@ def delete_queue(name, region, opts=None, user=None):
     url_map = _parse_queue_list(queues)
 
     logger = logging.getLogger(__name__)
-    logger.debug('map ' + six.text_type(url_map))
+    logger.debug('map %s', six.text_type(url_map))
     if name in url_map:
         delete = {'queue-url': url_map[name]}
 

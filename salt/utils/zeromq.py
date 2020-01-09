@@ -28,7 +28,7 @@ try:
         LIBZMQ_VERSION_INFO = tuple([int(v_el) for v_el in zmq.zmq_version().split('.')])
         if ZMQ_VERSION_INFO[0] > 16:  # 17.0.x+ deprecates zmq's ioloops
             ZMQDefaultLoop = tornado.ioloop.IOLoop
-except Exception:
+except Exception:  # pylint: disable=broad-except
     log.exception('Error while getting LibZMQ/PyZMQ library version')
 
 if ZMQDefaultLoop is None:
@@ -80,8 +80,11 @@ def check_ipc_path_max_len(uri):
 
 def ip_bracket(addr):
     '''
-    Convert IP address representation to ZMQ (URL) format. ZMQ expects
-    brackets around IPv6 literals, since they are used in URLs.
+    Ensure IP addresses are URI-compatible - specifically, add brackets
+    around IPv6 literals if they are not already present.
     '''
+    addr = str(addr)
+    addr = addr.lstrip('[')
+    addr = addr.rstrip(']')
     addr = ipaddress.ip_address(addr)
     return ('[{}]' if addr.version == 6 else '{}').format(addr)

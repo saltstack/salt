@@ -5,7 +5,7 @@ NAPALM Network
 
 Basic methods for interaction with the network device through the virtual proxy 'napalm'.
 
-:codeauthor: Mircea Ulinic <mircea@cloudflare.com> & Jerome Fleury <jf@cloudflare.com>
+:codeauthor: Mircea Ulinic <ping@mirceaulinic.net> & Jerome Fleury <jf@cloudflare.com>
 :maturity:   new
 :depends:    napalm
 :platform:   unix
@@ -152,7 +152,7 @@ def _explicit_close(napalm_device):
         # or regular minion
         try:
             napalm_device['DRIVER'].close()
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error('Unable to close the temp connection with the device:')
             log.error(err)
             log.error('Please report.')
