@@ -112,6 +112,7 @@ import logging
 import salt.utils.data
 import salt.utils.dictdiffer
 import salt.utils.json
+import salt.utils.versions
 import salt.utils.win_functions
 
 # Import 3rd party libs
@@ -283,8 +284,32 @@ def set_(name,
                         policy_class=p_class,
                         adml_language=adml_language,
                         return_value_only=True)
+                    # Validate element names
+                    if isinstance(p_data['requested_policy'][p_name], dict):
+                        valid_names = []
+                        for element in lookup['policy_elements']:
+                            valid_names.extend(element['element_aliases'])
+                        for e_name in p_data['requested_policy'][p_name]:
+                            if e_name not in valid_names:
+                                new_e_name = e_name.split(':')[-1].strip()
+                                # If we find an invalid name, test the new
+                                # format. If found, replace the old with the
+                                # new
+                                if new_e_name in valid_names:
+                                    salt.utils.versions.warn_until(
+                                        'Magnesium',
+                                        'The LGPO module changed the way it '
+                                        'gets policy element names.\n'
+                                        '"{0}" is no longer valid.\n'
+                                        'Please use "{1}" instead.'.format(e_name, new_e_name))
+                                    pol_data[p_class]['requested_policy'][p_name][new_e_name] = \
+                                        pol_data[p_class]['requested_policy'][p_name].pop(e_name)
+                                else:
+                                    msg = 'Invalid element name: {0}'.format(e_name)
+                                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
+                                    ret['result'] = False
                 else:
-                    ret['comment'] = ' '.join([ret['comment'], lookup['message']])
+                    ret['comment'] = '\n'.join([ret['comment'], lookup['message']]).strip()
                     ret['result'] = False
     if not ret['result']:
         return ret
@@ -299,8 +324,6 @@ def set_(name,
         if requested_policy:
             for p_name, p_setting in six.iteritems(requested_policy):
                 if p_name in current_policy[class_map[p_class]]:
-                    currently_set = True
-                if currently_set:
                     # compare
                     log.debug('need to compare %s from current/requested '
                               'policy', p_name)
@@ -364,8 +387,8 @@ def set_(name,
     else:
         if policy_changes:
             _ret = __salt__['lgpo.set'](
-                computer_policy=computer_policy,
-                user_policy=user_policy,
+                computer_policy=pol_data['machine']['requested_policy'],
+                user_policy=pol_data['user']['requested_policy'],
                 cumulative_rights_assignments=cumulative_rights_assignments,
                 adml_language=adml_language)
             if _ret:
