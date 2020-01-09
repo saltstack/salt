@@ -2,7 +2,6 @@
 '''
 :codeauthor: Shane Lee <slee@saltstack.com>
 '''
-
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
 
@@ -36,7 +35,7 @@ LOADER_DICTS = {
             'file.file_exists': salt.modules.file.file_exists,
             'file.makedirs': win_file.makedirs_,
             'file.remove': win_file.remove,
-            'file.write': salt.modules.file.write,},
+            'file.write': salt.modules.file.write},
         '__opts__': salt.config.DEFAULT_MINION_OPTS.copy(),
         '__utils__': {
             'reg.read_value': salt.utils.win_reg.read_value,
