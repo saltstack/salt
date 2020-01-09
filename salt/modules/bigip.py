@@ -176,7 +176,7 @@ def _set_value(value):
 
         try:
             return salt.utils.json.loads(value)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise salt.exceptions.CommandExecutionError
 
     #detect list of dictionaries
@@ -1485,7 +1485,7 @@ def create_virtual(hostname, username, password, name, destination,
                     payload['vlans-enabled'] = True
                 elif vlans['disabled']:
                     payload['vlans-disabled'] = True
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 return 'Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}'.format(vlans=vlans)
         elif vlans == 'none':
             payload['vlans'] = 'none'
@@ -1499,7 +1499,7 @@ def create_virtual(hostname, username, password, name, destination,
                     payload['vlans-disabled'] = True
                 elif vlans_setting == 'enabled':
                     payload['vlans-enabled'] = True
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 return 'Error: Unable to Parse vlans option: \n\tvlans={vlans}'.format(vlans=vlans)
         else:
             return 'Error: vlans must be a dictionary or string.'
@@ -1759,7 +1759,7 @@ def modify_virtual(hostname, username, password, name,
                     payload['vlans-enabled'] = True
                 elif vlans['disabled']:
                     payload['vlans-disabled'] = True
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 return 'Error: Unable to Parse vlans dictionary: \n\tvlans={vlans}'.format(vlans=vlans)
         elif vlans == 'none':
             payload['vlans'] = 'none'
@@ -1773,7 +1773,7 @@ def modify_virtual(hostname, username, password, name,
                     payload['vlans-disabled'] = True
                 elif vlans_setting == 'enabled':
                     payload['vlans-enabled'] = True
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 return 'Error: Unable to Parse vlans option: \n\tvlans={vlans}'.format(vlans=vlans)
 
     #determine state
