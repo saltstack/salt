@@ -275,7 +275,6 @@ def gen_locale(locale, **kwargs):
     on_debian = __grains__.get('os') == 'Debian'
     on_ubuntu = __grains__.get('os') == 'Ubuntu'
     on_gentoo = __grains__.get('os_family') == 'Gentoo'
-    on_suse = __grains__.get('os_family') == 'Suse'
     on_solaris = __grains__.get('os_family') == 'Solaris'
 
     if on_solaris:  # all locales are pre-generated
@@ -295,13 +294,9 @@ def gen_locale(locale, **kwargs):
                                         '^{0}$'.format(locale),
                                         flags=re.MULTILINE)
     else:  # directory-based search
-        if on_suse:
-            search = '/usr/share/locale'
-        else:
-            search = '/usr/share/i18n/locales'
-
         try:
-            valid = locale_search_str in os.listdir(search)
+            valid = locale_search_str in os.listdir('/usr/share/i18n/locales') \
+                    or locale_search_str in os.listdir('/usr/share/locale')
         except OSError as ex:
             log.error(ex)
             raise CommandExecutionError(
