@@ -277,7 +277,7 @@ def application(environ, start_response):
     except salt.exceptions.EauthAuthenticationError as exc:
         code = 401
         resp = str(exc)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         code = 500
         resp = str(exc)
 

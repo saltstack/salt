@@ -1145,8 +1145,8 @@ def set(*dataset, **kwargs):
     res = __salt__['cmd.run_all'](
         __utils__['zfs.zfs_command'](
             command='set',
-            property_name=filesystem_properties.keys(),
-            property_value=filesystem_properties.values(),
+            property_name=list(filesystem_properties.keys()),
+            property_value=list(filesystem_properties.values()),
             target=list(dataset),
         ),
         python_shell=False,

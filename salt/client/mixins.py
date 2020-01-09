@@ -136,17 +136,15 @@ class SyncClientMixin(object):
         '''
         load = kwargs
         load['cmd'] = self.client
-        channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                           crypt='clear',
-                                                           usage='master_call')
-        try:
+
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      usage='master_call') as channel:
             ret = channel.send(load)
-        finally:
-            channel.close()
-        if isinstance(ret, collections.Mapping):
-            if 'error' in ret:
-                salt.utils.error.raise_error(**ret['error'])
-        return ret
+            if isinstance(ret, collections.Mapping):
+                if 'error' in ret:
+                    salt.utils.error.raise_error(**ret['error'])
+            return ret
 
     def cmd_sync(self, low, timeout=None, full_return=False):
         '''
@@ -384,7 +382,7 @@ class SyncClientMixin(object):
                     if isinstance(data['return'], dict) and 'data' in data['return']:
                         # some functions can return boolean values
                         data['success'] = salt.utils.state.check_result(data['return']['data'])
-            except (Exception, SystemExit) as ex:
+            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data['return'] = six.text_type(ex)
                 else:

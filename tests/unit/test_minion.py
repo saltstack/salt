@@ -9,8 +9,8 @@ import copy
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.helpers import skip_if_not_root
 # Import salt libs
@@ -21,9 +21,10 @@ import salt.syspaths
 import tornado
 import tornado.testing
 from salt.ext.six.moves import range
+import salt.utils.crypt
+import salt.utils.process
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     def setUp(self):
@@ -210,7 +211,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 # mock gen.sleep to throw a special Exception when called, so that we detect it
                 class SleepCalledException(Exception):
                     """Thrown when sleep is called"""
-                    pass
+
                 tornado.gen.sleep.return_value.set_exception(SleepCalledException())
 
                 # up until process_count_max: gen.sleep does not get called, processes are started normally
@@ -340,8 +341,27 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    @patch('salt.utils.process.default_signals')
+    def test_reinit_crypto_on_fork(self, def_mock):
+        '''
+        Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
+        '''
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts["multiprocessing"] = True
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+
+        job_data = {"jid": "test-jid", "fun": "test.ping"}
+
+        def mock_start(self):
+            assert len([x for x in self._after_fork_methods if x[0] == salt.utils.crypt.reinit_crypto]) == 1  # pylint: disable=comparison-with-callable
+
+        with patch.object(salt.utils.process.SignalHandlingProcess, 'start', mock_start):
+            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
+
+
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
 
     def setUp(self):
