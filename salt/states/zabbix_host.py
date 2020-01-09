@@ -133,7 +133,6 @@ def present(host, groups, interfaces, **kwargs):
                                     'dns': dns,
                                     'port': port})
 
-        interfaces_list = interfaces_list
         interfaces_list_sorted = sorted(interfaces_list, key=lambda k: k['main'], reverse=True)
 
         return interfaces_list_sorted

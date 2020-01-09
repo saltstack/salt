@@ -28,9 +28,151 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                     'jboss7.read_simple_binding': MagicMock(),
                     'jboss7.create_simple_binding': MagicMock(),
                     'jboss7.update_simple_binding': MagicMock(),
-                }
+                    'jboss7.undeploy': MagicMock(),
+                    'jboss7.deploy': MagicMock,
+                    'file.get_managed': MagicMock,
+                    'file.manage_file': MagicMock,
+                    'jboss7.list_deployments': MagicMock,
+                },
+                '__env__': 'base'
             }
         }
+
+    def test_should_not_redeploy_unchanged(self):
+        # given
+        parameters = {'target_file': 'some_artifact', 'undeploy_force': False, 'undeploy': 'some_artifact',
+                      'source': 'some_artifact_on_master'}
+        jboss_conf = {'cli_path': 'somewhere', 'controller': 'some_controller'}
+
+        def list_deployments(jboss_config):
+            return ['some_artifact']
+
+        def file_get_managed(name, template, source, source_hash, source_hash_name, user, group, mode, attrs, saltenv,
+                             context, defaults, skip_verify, kwargs):
+            return 'sfn', 'hash', ''
+
+        def file_manage_file(name, sfn, ret, source, source_sum, user, group, mode, attrs, saltenv, backup, makedirs,
+                             template, show_diff, contents, dir_mode):
+            return {'result': True, 'changes': False}
+
+        jboss7_undeploy_mock = MagicMock()
+        jboss7_deploy_mock = MagicMock()
+        file_get_managed = MagicMock(side_effect=file_get_managed)
+        file_manage_file = MagicMock(side_effect=file_manage_file)
+        list_deployments_mock = MagicMock(side_effect=list_deployments)
+        with patch.dict(jboss7.__salt__, {'jboss7.undeploy': jboss7_undeploy_mock,
+                                          'jboss7.deploy': jboss7_deploy_mock,
+                                          'file.get_managed': file_get_managed,
+                                          'file.manage_file': file_manage_file,
+                                          'jboss7.list_deployments': list_deployments_mock}):
+            # when
+            result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
+
+            # then
+            self.assertFalse(jboss7_undeploy_mock.called)
+            self.assertFalse(jboss7_deploy_mock.called)
+
+    def test_should_redeploy_changed(self):
+        # given
+        parameters = {'target_file': 'some_artifact', 'undeploy_force': False, 'undeploy': 'some_artifact',
+                      'source': 'some_artifact_on_master'}
+        jboss_conf = {'cli_path': 'somewhere', 'controller': 'some_controller'}
+
+        def list_deployments(jboss_config):
+            return ['some_artifact']
+
+        def file_get_managed(name, template, source, source_hash, source_hash_name, user, group, mode, attrs, saltenv,
+                             context, defaults, skip_verify, kwargs):
+            return 'sfn', 'hash', ''
+
+        def file_manage_file(name, sfn, ret, source, source_sum, user, group, mode, attrs, saltenv, backup, makedirs,
+                             template, show_diff, contents, dir_mode):
+            return {'result': True, 'changes': True}
+
+        jboss7_undeploy_mock = MagicMock()
+        jboss7_deploy_mock = MagicMock()
+        file_get_managed = MagicMock(side_effect=file_get_managed)
+        file_manage_file = MagicMock(side_effect=file_manage_file)
+        list_deployments_mock = MagicMock(side_effect=list_deployments)
+        with patch.dict(jboss7.__salt__, {'jboss7.undeploy': jboss7_undeploy_mock,
+                                          'jboss7.deploy': jboss7_deploy_mock,
+                                          'file.get_managed': file_get_managed,
+                                          'file.manage_file': file_manage_file,
+                                          'jboss7.list_deployments': list_deployments_mock}):
+            # when
+            result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
+
+            # then
+            self.assertTrue(jboss7_undeploy_mock.called)
+            self.assertTrue(jboss7_deploy_mock.called)
+
+    def test_should_deploy_different_artifact(self):
+        # given
+        parameters = {'target_file': 'some_artifact', 'undeploy_force': False, 'undeploy': 'some_artifact',
+                      'source': 'some_artifact_on_master'}
+        jboss_conf = {'cli_path': 'somewhere', 'controller': 'some_controller'}
+
+        def list_deployments(jboss_config):
+            return ['some_other_artifact']
+
+        def file_get_managed(name, template, source, source_hash, source_hash_name, user, group, mode, attrs, saltenv,
+                             context, defaults, skip_verify, kwargs):
+            return 'sfn', 'hash', ''
+
+        def file_manage_file(name, sfn, ret, source, source_sum, user, group, mode, attrs, saltenv, backup, makedirs,
+                             template, show_diff, contents, dir_mode):
+            return {'result': True, 'changes': False}
+
+        jboss7_undeploy_mock = MagicMock()
+        jboss7_deploy_mock = MagicMock()
+        file_get_managed = MagicMock(side_effect=file_get_managed)
+        file_manage_file = MagicMock(side_effect=file_manage_file)
+        list_deployments_mock = MagicMock(side_effect=list_deployments)
+        with patch.dict(jboss7.__salt__, {'jboss7.undeploy': jboss7_undeploy_mock,
+                                          'jboss7.deploy': jboss7_deploy_mock,
+                                          'file.get_managed': file_get_managed,
+                                          'file.manage_file': file_manage_file,
+                                          'jboss7.list_deployments': list_deployments_mock}):
+            # when
+            result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
+
+            # then
+            self.assertFalse(jboss7_undeploy_mock.called)
+            self.assertTrue(jboss7_deploy_mock.called)
+
+    def test_should_redploy_undeploy_force(self):
+        # given
+        parameters = {'target_file': 'some_artifact', 'undeploy_force': True, 'undeploy': 'some_artifact',
+                      'source': 'some_artifact_on_master'}
+        jboss_conf = {'cli_path': 'somewhere', 'controller': 'some_controller'}
+
+        def list_deployments(jboss_config):
+            return ['some_artifact']
+
+        def file_get_managed(name, template, source, source_hash, source_hash_name, user, group, mode, attrs, saltenv,
+                             context, defaults, skip_verify, kwargs):
+            return 'sfn', 'hash', ''
+
+        def file_manage_file(name, sfn, ret, source, source_sum, user, group, mode, attrs, saltenv, backup, makedirs,
+                             template, show_diff, contents, dir_mode):
+            return {'result': True, 'changes': False}
+
+        jboss7_undeploy_mock = MagicMock()
+        jboss7_deploy_mock = MagicMock()
+        file_get_managed = MagicMock(side_effect=file_get_managed)
+        file_manage_file = MagicMock(side_effect=file_manage_file)
+        list_deployments_mock = MagicMock(side_effect=list_deployments)
+        with patch.dict(jboss7.__salt__, {'jboss7.undeploy': jboss7_undeploy_mock,
+                                          'jboss7.deploy': jboss7_deploy_mock,
+                                          'file.get_managed': file_get_managed,
+                                          'file.manage_file': file_manage_file,
+                                          'jboss7.list_deployments': list_deployments_mock}):
+            # when
+            result = jboss7.deployed(name="unchanged", jboss_config=jboss_conf, salt_source=parameters)
+
+            # then
+            self.assertTrue(jboss7_undeploy_mock.called)
+            self.assertTrue(jboss7_deploy_mock.called)
 
     def test_should_create_new_datasource_if_not_exists(self):
         # given
@@ -104,7 +246,6 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                           'jboss7.create_datasource': create_mock,
                                           'jboss7.remove_datasource': remove_mock,
                                           'jboss7.update_datasource': update_mock}):
-
             result = jboss7.datasource_exists(name='appDS', jboss_config={},
                                               datasource_properties={'connection-url': 'jdbc:/same-connection-url'},
                                               recreate=True)
@@ -127,7 +268,6 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                                           'jboss7.create_datasource': create_mock,
                                           'jboss7.remove_datasource': remove_mock,
                                           'jboss7.update_datasource': update_mock}):
-
             result = jboss7.datasource_exists(name='appDS', jboss_config={},
                                               datasource_properties={'connection-url': 'jdbc:/old-connection-url'})
 
@@ -259,3 +399,60 @@ class JBoss7StateTestCase(TestCase, LoaderModuleMockMixin):
                 self.fail('An exception should be thrown')
             except CommandExecutionError as e:
                 self.assertEqual(six.text_type(e), 'Incorrect binding name.')
+
+    def test_datasource_exist_create_datasource_good_code(self):
+        jboss_config = {'cli_path': '/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh',
+                        'controller': '127.0.0.1: 9990',
+                        'cli_user': 'user',
+                        'cli_password': 'user'}
+
+        datasource_properties = {'driver - name': 'h2',
+                                 'connection - url': 'jdbc:sqlserver://127.0.0.1:1433;DatabaseName=test_s2',
+                                 'jndi - name': 'java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar',
+                                 'user - name': 'user',
+                                 'password': 'user',
+                                 'use - java - context': True}
+
+        read_datasource = MagicMock(return_value={'success': False,
+                                                  'err_code': 'WFLYCTL0216'})
+
+        error_msg = 'Error: -1'
+        create_datasource = MagicMock(return_value={'success': False,
+                                                    'stdout': error_msg})
+
+        with patch.dict(jboss7.__salt__, {'jboss7.read_datasource': read_datasource,
+                                          'jboss7.create_datasource': create_datasource}):
+            ret = jboss7.datasource_exists("SQL", jboss_config, datasource_properties)
+
+            self.assertTrue('result' in ret)
+            self.assertFalse(ret['result'])
+            self.assertTrue('comment' in ret)
+            self.assertTrue(error_msg in ret['comment'])
+
+            read_datasource.assert_called_once()
+            create_datasource.assert_called_once()
+
+    def test_datasource_exist_create_datasource_bad_code(self):
+        jboss_config = {'cli_path': '/home/ch44d/Desktop/wildfly-18.0.0.Final/bin/jboss-cli.sh',
+                        'controller': '127.0.0.1: 9990',
+                        'cli_user': 'user',
+                        'cli_password': 'user'}
+
+        datasource_properties = {'driver - name': 'h2',
+                                 'connection - url': 'jdbc:sqlserver://127.0.0.1:1433;DatabaseName=test_s2',
+                                 'jndi - name': 'java:/home/ch44d/Desktop/sqljdbc_7.4/enu/mssql-jdbc-7.4.1.jre8.jar',
+                                 'user - name': 'user',
+                                 'password': 'user',
+                                 'use - java - context': True}
+
+        read_datasource = MagicMock(return_value={'success': False,
+                                                  'err_code': 'WFLYCTL0217',
+                                                  'failure-description': 'Something happened'})
+
+        with patch.dict(jboss7.__salt__, {'jboss7.read_datasource': read_datasource}):
+            self.assertRaises(CommandExecutionError,
+                              jboss7.datasource_exists,
+                              'SQL',
+                              jboss_config,
+                              datasource_properties)
+            read_datasource.assert_called_once()

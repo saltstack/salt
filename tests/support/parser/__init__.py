@@ -416,7 +416,7 @@ class SaltTestingParser(optparse.OptionParser):
             try:
                 with salt.utils.files.fopen(self.options.filename_map) as fp_:
                     filename_map = salt.utils.yaml.safe_load(fp_)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise RuntimeError(
                     'Failed to load filename map: {0}'.format(exc)
                 )

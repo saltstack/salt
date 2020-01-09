@@ -272,9 +272,6 @@ class MinionSwarm(Swarm):
     '''
     Create minions
     '''
-    def __init__(self, opts):
-        super(MinionSwarm, self).__init__(opts)
-
     def start_minions(self):
         '''
         Iterate over the config files and start up the minions

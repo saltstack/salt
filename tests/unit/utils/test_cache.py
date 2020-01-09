@@ -124,7 +124,6 @@ class ContextCacheTest(TestCase):
             This will inherit globals from the test module itself.
             Normally these are injected by the salt loader [salt.loader]
             '''
-            pass
 
         _test_set_cache()
 
