@@ -3586,3 +3586,14 @@ global pillar data.
 
 If set to ``False`` only the overriding pillar data will be available
 to the ``showpillar`` state.
+
+.. conf_minion:: acknowledge_jobs
+
+``acknowledge_jobs``
+--------------------
+
+.. versionadded:: Sodium
+
+Default: ``False``
+
+Configures minion to fire acknowledge events when new job is received.
