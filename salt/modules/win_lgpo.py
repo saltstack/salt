@@ -5651,33 +5651,15 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     helper function to check for a presentation label for a policy element
     '''
     search_results = adml_data.xpath('//*[@*[local-name() = "refId"] = "{0}"]'.format(ref_id))
-    prepended_text = ''
     if search_results:
         for result in search_results:
             the_localname = etree.QName(result.tag).localname
-            presentation_element = PRESENTATION_ANCESTOR_XPATH(result)
-            if presentation_element:
-                presentation_element = presentation_element[0]
-                if TEXT_ELEMENT_XPATH(presentation_element):
-                    for p_item in presentation_element.getchildren():
-                        if p_item == result:
-                            break
-                        else:
-                            if etree.QName(p_item.tag).localname == 'text':
-                                if prepended_text:
-                                    prepended_text = ' '.join((text for text in (prepended_text, getattr(p_item, 'text', '').rstrip()) if text))
-                                else:
-                                    prepended_text = getattr(p_item, 'text', '').rstrip() if getattr(p_item, 'text', '') else ''
-                            else:
-                                prepended_text = ''
-                    if prepended_text.endswith('.'):
-                        prepended_text = ''
             if the_localname == 'textBox' \
                     or the_localname == 'comboBox':
                 label_items = result.xpath('.//*[local-name() = "label"]')
                 for label_item in label_items:
                     if label_item.text:
-                        return (prepended_text + ' ' + label_item.text.rstrip().rstrip(':')).lstrip()
+                        return label_item.text.rstrip().rstrip(':').strip()
             elif the_localname == 'decimalTextBox' \
                     or the_localname == 'longDecimalTextBox' \
                     or the_localname == 'dropdownList' \
@@ -5686,7 +5668,7 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
                     or the_localname == 'text' \
                     or the_localname == 'multiTextBox':
                 if result.text:
-                    return (prepended_text + ' ' + result.text.rstrip().rstrip(':')).lstrip()
+                    return result.text.rstrip().rstrip(':').strip()
     return None
 
 
