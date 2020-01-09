@@ -180,7 +180,7 @@ def levelise(level):
     try:  # a sequence
         deep, subs = int(level[0]), level[1:]
         return bool(deep), subs
-    except Exception as error:
+    except Exception as error:  # pylint: disable=broad-except
         log.warning(error)
         raise
 

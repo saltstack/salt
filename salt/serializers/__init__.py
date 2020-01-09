@@ -21,9 +21,7 @@ from salt.exceptions import SaltException, SaltRenderError
 
 class DeserializationError(SaltRenderError, RuntimeError):
     """Raised when stream of string failed to be deserialized"""
-    pass
 
 
 class SerializationError(SaltException, RuntimeError):
     """Raised when stream of string failed to be serialized"""
-    pass

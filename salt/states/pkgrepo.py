@@ -21,7 +21,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Logstash PPA
         - name: deb http://ppa.launchpad.net/wolfnet/logstash/ubuntu precise main
         - dist: precise
         - file: /etc/apt/sources.list.d/logstash.list
@@ -38,7 +37,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: deb-multimedia
         - name: deb http://www.deb-multimedia.org stable main
         - file: /etc/apt/sources.list.d/deb-multimedia.list
         - key_url: salt://deb-multimedia/files/marillat.pub
@@ -47,7 +45,6 @@ package managers are APT, DNF, YUM and Zypper. Here is some example SLS:
 
     base:
       pkgrepo.managed:
-        - humanname: Google Chrome
         - name: deb http://dl.google.com/linux/chrome/deb/ stable main
         - dist: stable
         - file: /etc/apt/sources.list.d/chrome-browser.list
@@ -96,7 +93,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
-import salt.utils.versions
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -299,8 +295,10 @@ def managed(name, ppa=None, **kwargs):
        on debian based systems.
 
     refresh_db : True
-       .. deprecated:: 2018.3.0
-           Use ``refresh`` instead.
+       This argument has been deprecated. Please use ``refresh`` instead.
+       The ``refresh_db`` argument will continue to work to ensure backwards
+       compatibility, but we recommend using the preferred ``refresh``
+       argument instead.
 
     require_in
        Set this to a list of pkg.installed or pkg.latest to trigger the
@@ -308,12 +306,6 @@ def managed(name, ppa=None, **kwargs):
        packages. Setting a require in the pkg state will not work for this.
     '''
     if 'refresh_db' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'refresh_db\' argument to \'pkg.mod_repo\' has been '
-            'renamed to \'refresh\'. Support for using \'refresh_db\' will be '
-            'removed in the Neon release of Salt.'
-        )
         kwargs['refresh'] = kwargs.pop('refresh_db')
 
     ret = {'name': name,
@@ -503,7 +495,7 @@ def managed(name, ppa=None, **kwargs):
             __salt__['pkg.mod_repo'](repo, saltenv=__env__, **kwargs)
         else:
             __salt__['pkg.mod_repo'](repo, **kwargs)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         # This is another way to pass information back from the mod_repo
         # function.
         ret['result'] = False
@@ -526,7 +518,7 @@ def managed(name, ppa=None, **kwargs):
 
         ret['result'] = True
         ret['comment'] = 'Configured package repo \'{0}\''.format(name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = \
             'Failed to confirm config of repo \'{0}\': {1}'.format(name, exc)

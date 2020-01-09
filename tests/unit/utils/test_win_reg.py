@@ -2,10 +2,11 @@
 
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals, print_function
+from salt.ext import six
 
 # Import Salt Testing Libs
 from tests.support.helpers import destructiveTest, generate_random_name
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 # Import Salt Libs
@@ -18,7 +19,6 @@ UNICODE_VALUE = 'Unicode Value ' \
 FAKE_KEY = 'SOFTWARE\\{0}'.format(generate_random_name('SaltTesting-'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
 class WinFunctionsTestCase(TestCase):
     '''
@@ -176,6 +176,40 @@ class WinFunctionsTestCase(TestCase):
             ),
             expected
         )
+
+    @destructiveTest
+    def test_read_value_multi_sz_empty_list(self):
+        '''
+        An empty REG_MULTI_SZ value should return an empty list, not None
+        '''
+        try:
+            self.assertTrue(
+                win_reg.set_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='empty_list',
+                    vdata=[],
+                    vtype='REG_MULTI_SZ'
+                )
+            )
+            expected = {
+                'hive': 'HKLM',
+                'key': FAKE_KEY,
+                'success': True,
+                'vdata': [],
+                'vname': 'empty_list',
+                'vtype': 'REG_MULTI_SZ'
+            }
+            self.assertEqual(
+                win_reg.read_value(
+                    hive='HKLM',
+                    key=FAKE_KEY,
+                    vname='empty_list',
+                ),
+                expected
+            )
+        finally:
+            win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
 
     @destructiveTest
     def test_set_value(self):
@@ -463,3 +497,13 @@ class WinFunctionsTestCase(TestCase):
             )
         finally:
             win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
+
+    def test__to_unicode_int(self):
+        '''
+        Test the ``_to_unicode`` function when it receives an integer value.
+        Should return a unicode value, which is unicode in PY2 and str in PY3.
+        '''
+        if six.PY3:
+            self.assertTrue(isinstance(win_reg._to_unicode(1), str))
+        else:
+            self.assertTrue(isinstance(win_reg._to_unicode(1), unicode))  # pylint: disable=incompatible-py3-code,undefined-variable

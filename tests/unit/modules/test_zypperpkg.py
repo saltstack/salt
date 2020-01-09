@@ -10,14 +10,12 @@ from xml.dom import minidom
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     call,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
@@ -54,7 +52,6 @@ def get_test_data(filename):
         return rfh.read()
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZypperTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.zypper
@@ -461,6 +458,10 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
                     zypper_mock.assert_any_call('dist-upgrade', '--auto-agree-with-licenses', '--dry-run',
                                                 '--from', "Dummy", '--from', 'Dummy2', '--no-allow-vendor-change',
                                                 '--debug-solver')
+
+                with patch('salt.modules.zypperpkg.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.1"}])):
+                    ret = zypper.upgrade(dist_upgrade=False, fromrepo=["Dummy", "Dummy2"], dryrun=False)
+                    zypper_mock.assert_any_call('update', '--auto-agree-with-licenses', '--repo', "Dummy", '--repo', 'Dummy2')
 
                 with patch('salt.modules.zypperpkg.list_pkgs', MagicMock(side_effect=[{"vim": "1.1"}, {"vim": "1.2"}])):
                     ret = zypper.upgrade(dist_upgrade=True, fromrepo=["Dummy", "Dummy2"], novendorchange=True)

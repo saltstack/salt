@@ -424,7 +424,7 @@ class MasterPillarUtil(object):
             clear_what.append('mine')
         if clear_mine_func is not None:
             clear_what.append('mine_func: \'{0}\''.format(clear_mine_func))
-        if not len(clear_what):
+        if not clear_what:
             log.debug('No cached data types specified for clearing.')
             return False
 

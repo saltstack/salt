@@ -13,16 +13,13 @@ import salt.states.win_iis as win_iis
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
+    patch
 )
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinIisTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.win_pki

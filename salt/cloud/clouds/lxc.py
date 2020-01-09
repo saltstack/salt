@@ -182,7 +182,7 @@ def _salt(fun, *args, **kw):
                 if not ping:
                     raise ValueError('Unreachable')
                 break
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ping = False
                 ping_retries += 1
                 log.error('%s unreachable, retrying', target)
@@ -243,7 +243,7 @@ def _salt(fun, *args, **kw):
             if 'is not available.' in ret:
                 raise SaltCloudSystemExit(
                     'module/function {0} is not available'.format(fun))
-        except SaltCloudSystemExit:
+        except SaltCloudSystemExit:  # pylint: disable=try-except-raise
             raise
         except TypeError:
             pass

@@ -833,8 +833,8 @@ def set_wu_settings(level=None,
             try:
                 obj_sm.AddService2('7971f918-a847-4430-9279-4a52d1efe18d', 7, '')
                 ret['msupdate'] = msupdate
-            except Exception as error:
-                hr, msg, exc, arg = error.args  # pylint: disable=W0633
+            except Exception as error:  # pylint: disable=broad-except
+                hr, msg, exc, arg = error.args  # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
                 # Consider checking for -2147024891 (0x80070005) Access Denied
                 ret['Comment'] = "Failed with failure code: {0}".format(exc[5])
                 ret['Success'] = False
@@ -847,8 +847,8 @@ def set_wu_settings(level=None,
                 try:
                     obj_sm.RemoveService('7971f918-a847-4430-9279-4a52d1efe18d')
                     ret['msupdate'] = msupdate
-                except Exception as error:
-                    hr, msg, exc, arg = error.args  # pylint: disable=W0633
+                except Exception as error:  # pylint: disable=broad-except
+                    hr, msg, exc, arg = error.args  # pylint: disable=unpacking-non-sequence,unbalanced-tuple-unpacking
                     # Consider checking for the following
                     # -2147024891 (0x80070005) Access Denied
                     # -2145091564 (0x80248014) Service Not Found (shouldn't get

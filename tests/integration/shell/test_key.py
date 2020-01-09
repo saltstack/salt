@@ -8,8 +8,8 @@ import tempfile
 import textwrap
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.case import ShellCase
-from tests.support.paths import TMP
 from tests.support.mixins import ShellCaseCommonTestsMixin
 from tests.support.helpers import skip_if_not_root, destructiveTest
 
@@ -147,7 +147,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         try:
             import salt.utils.yaml
             ret = salt.utils.yaml.safe_load('\n'.join(data))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         expect = []
@@ -229,7 +229,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self.assertEqual(data, expect)
 
     def test_keys_generation(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = '--gen-keys minibar --gen-keys-dir {0}'.format(tempdir)
         self.run_key(arg_str)
         try:
@@ -245,22 +245,22 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             shutil.rmtree(tempdir)
 
     def test_keys_generation_keysize_minmax(self):
-        tempdir = tempfile.mkdtemp(dir=TMP)
+        tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         arg_str = '--gen-keys minion --gen-keys-dir {0}'.format(tempdir)
         try:
             data, error = self.run_key(
                 arg_str + ' --keysize=1024', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The minimum value for keysize is 2048', error
+                'error: The minimum value for keysize is 2048', '\n'.join(error)
             )
 
             data, error = self.run_key(
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
             self.assertIn(
-                'salt-key: error: The maximum value for keysize is 32768',
-                error
+                'error: The maximum value for keysize is 32768',
+                '\n'.join(error)
             )
         finally:
             shutil.rmtree(tempdir)

@@ -98,3 +98,30 @@ class WinSystemTestCase(TestCase):
         self.assertFalse(
             win_lgpo._compare_policies(compare_dict, None)
         )
+
+    def test__compare_policies_integer(self):
+        '''
+        ``_compare_policies`` should only return ``True`` when the integer
+        values are the same. All other scenarios should return ``False``
+        '''
+        compare_integer = 1
+        # Same
+        self.assertTrue(
+            win_lgpo._compare_policies(compare_integer, compare_integer)
+        )
+        # Different
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, 0)
+        )
+        # List
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, ['item1', 'item2'])
+        )
+        # Dict
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, {'key': 'value'})
+        )
+        # None
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, None)
+        )
