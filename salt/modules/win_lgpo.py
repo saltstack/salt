@@ -4918,7 +4918,7 @@ def _parse_xml(adm_file):
         for file_path in file_list:
             os.remove(file_path)
 
-        # Load the file
+        # Lowercase all the keys
         with salt.utils.files.fopen(adm_file, 'rb') as rfh:
 
             encoding = 'utf-8'
@@ -4937,6 +4937,13 @@ def _parse_xml(adm_file):
                     line = line.replace(line[start:q2], line[start:q2].lower())
                     found_key = True
                 modified_xml += line + '\r\n'
+
+        # Convert smart quotes to regular quotes
+        modified_xml = modified_xml.replace('\u201c', '"').replace('\u201d', '"')
+        modified_xml = modified_xml.replace('\u2018', '\'').replace('\u2019', '\'')
+
+        # Convert em dash and en dash to dash
+        modified_xml = modified_xml.replace('\u2013', '-').replace('\u2014', '-')
 
         with salt.utils.files.fopen(out_file, 'wb') as wfh:
             wfh.write(modified_xml.encode(encoding))
