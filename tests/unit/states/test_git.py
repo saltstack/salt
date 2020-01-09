@@ -11,14 +11,12 @@ import os
 # Import Salt Testing Libs
 from tests.support.helpers import with_tempdir
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
     DEFAULT,
-    NO_MOCK,
-    NO_MOCK_REASON,
 )
 
 # Import Salt Libs
@@ -27,7 +25,6 @@ import salt.states.git as git_state  # Don't potentially shadow GitPython
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GitTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.git
@@ -60,6 +57,7 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
         git_diff = Mock()
         dunder_salt = {
             'git.current_branch': MagicMock(return_value=branches[0]),
+            'git.config_get_regexp': MagicMock(return_value={}),
             'git.diff': git_diff,
             'git.fetch': MagicMock(return_value={}),
             'git.is_worktree': MagicMock(return_value=False),

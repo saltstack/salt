@@ -652,6 +652,35 @@ FQDN (for instance, Solaris).
 
     append_domain: foo.org
 
+.. conf_minion:: minion_id_remove_domain
+
+``minion_id_remove_domain``
+---------------------------
+
+.. versionadded:: Neon
+
+Default: ``False``
+
+Remove a domain when the minion id is generated as a fully qualified domain
+name (either by the user provided ``id_function``, or by Salt). This is useful
+when the minions shall be named like hostnames. Can be a single domain (to
+prevent name clashes), or True, to remove all domains.
+
+Examples:
+ - minion_id_remove_domain = foo.org
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob.bar.org
+ - minion_id_remove_domain = True
+   - FQDN = king_bob.foo.org --> minion_id = king_bob
+   - FQDN = king_bob.bar.org --> minion_id = king_bob
+
+
+For more information, please see :issue:`49212` and  :pull:`49378`.
+
+.. code-block:: yaml
+
+    minion_id_remove_domain: foo.org
+
 .. conf_minion:: minion_id_lowercase
 
 ``minion_id_lowercase``
@@ -769,6 +798,30 @@ Statically assigns grains to the minion.
       cabinet: 13
       cab_u: 14-15
 
+.. conf_minion:: grains_blacklist
+
+``grains_blacklist``
+--------------------
+
+Default: ``[]``
+
+Each grains key will be compared against each of the expressions in this list.
+Any keys which match will be filtered from the grains. Exact matches, glob
+matches, and regular expressions are supported.
+
+.. note::
+    Some states and execution modules depend on grains. Filtering may cause
+    them to be unavailable or run unreliably.
+
+.. versionadded:: Neon
+
+.. code-block:: yaml
+
+    grains_blacklist:
+      - cpu_flags
+      - zmq*
+      - ipv[46]
+
 .. conf_minion:: grains_cache
 
 ``grains_cache``
@@ -847,6 +900,23 @@ A value of 10 minutes is a reasonable default.
 
     grains_refresh_every: 0
 
+.. conf_minion:: metadata_server_grains
+
+``metadata_server_grains``
+--------------------------
+
+.. versionadded:: 2017.7.0
+
+Default: ``False``
+
+Set this option to enable gathering of cloud metadata from
+``http://169.254.169.254/latest`` for use in grains (see :py:mod:`here
+<salt.grains.metadata>` for more information).
+
+.. code-block:: yaml
+
+    metadata_server_grains: True
+
 .. conf_minion:: fibre_channel_grains
 
 ``fibre_channel_grains``
@@ -875,6 +945,20 @@ minion. Since this grain is expensive, it is disabled by default.
 .. code-block:: yaml
 
     iscsi_grains: True
+
+.. conf_minion:: nvme_grains
+
+``nvme_grains``
+------------------------
+
+Default: ``False``
+
+The ``nvme_grains`` setting will enable the ``nvme_nqn`` grain on the
+minion. Since this grain is expensive, it is disabled by default.
+
+.. code-block:: yaml
+
+    nvme_grains: True
 
 .. conf_minion:: mine_enabled
 
@@ -1309,7 +1393,7 @@ creates a new connection for every return to the master.
 Default: ``ipc``
 
 Windows platforms lack POSIX IPC and must rely on slower TCP based inter-
-process communications. Set ipc_mode to ``tcp`` on such systems.
+process communications. ``ipc_mode`` is set to ``tcp`` on such systems.
 
 .. code-block:: yaml
 
@@ -1350,9 +1434,8 @@ Default: ``zeromq``
 
 Changes the underlying transport layer. ZeroMQ is the recommended transport
 while additional transport layers are under development. Supported values are
-``zeromq``, ``raet`` (experimental), and ``tcp`` (experimental). This setting has
-a significant impact on performance and should not be changed unless you know
-what you are doing!
+``zeromq`` and ``tcp`` (experimental). This setting has a significant impact
+on performance and should not be changed unless you know what you are doing!
 
 .. code-block:: yaml
 
@@ -1476,6 +1559,21 @@ List of hosts to bypass HTTP proxy
 .. code-block:: yaml
 
     no_proxy: [ '127.0.0.1', 'foo.tld' ]
+
+``use_yamlloader_old``
+------------------------
+
+.. versionadded:: 2019.2.1
+
+Default: ``False``
+
+Use the pre-2019.2 YAML renderer.
+Uses legacy YAML rendering to support some legacy inline data structures.
+See the :ref:`2019.2.1 release notes <release-2019-2-1>` for more details.
+
+.. code-block:: yaml
+
+    use_yamlloader_old: False
 
 Docker Configuration
 ====================
@@ -3019,6 +3117,34 @@ Default: ``{}``
 
 This can be used to control logging levels more specifically. See also
 :conf_log:`log_granular_levels`.
+
+
+.. conf_minion:: log_rotate_max_bytes
+
+``log_rotate_max_bytes``
+------------------------
+
+Default:  ``0``
+
+The maximum number of bytes a single log file may contain before it is rotated.
+A value of 0 disables this feature. Currently only supported on Windows. On
+other platforms, use an external tool such as 'logrotate' to manage log files.
+:conf_log:`log_rotate_max_bytes`
+
+
+.. conf_minion:: log_rotate_backup_count
+
+``log_rotate_backup_count``
+---------------------------
+
+Default:  ``0``
+
+The number of backup files to keep when rotating log files. Only used if
+:conf_minion:`log_rotate_max_bytes` is greater than 0. Currently only supported
+on Windows. On other platforms, use an external tool such as 'logrotate' to
+manage log files.
+:conf_log:`log_rotate_backup_count`
+
 
 .. conf_minion:: zmq_monitor
 

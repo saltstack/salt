@@ -204,7 +204,7 @@ def create(vm_info):
         vb_start_vm(vm_name, timeout=boot_timeout)
         ips = vb_wait_for_network_address(wait_for_ip_timeout, machine_name=vm_name, wait_for_pattern=wait_for_pattern)
 
-        if len(ips):
+        if ips:
             ip = ips[interface_index]
             log.info("[ %s ] IPv4 is: %s", vm_name, ip)
             # ssh or smb using ip and install salt only if deploy is True

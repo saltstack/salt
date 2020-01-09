@@ -9,13 +9,13 @@ The 30 second summary
 
 Salt is:
 
-* a configuration management system, capable of maintaining remote nodes
-  in defined states (for example, ensuring that specific packages are installed and
-  specific services are running)
+* **A configuration management system.** Salt is capable of maintaining remote
+  nodes in defined states. For example, it can ensure that specific packages are
+  installed and that specific services are running.
 
-* a distributed remote execution system used to execute commands and
-  query data on remote nodes, either individually or by arbitrary
-  selection criteria
+* **A distributed remote execution system used to execute commands and
+  query data on remote nodes.** Salt can query and execute commands either on
+  individual nodes or by using an arbitrary selection criteria.
 
 It was developed in order to bring the best solutions found in the
 world of remote execution together and make them better, faster, and more
@@ -163,21 +163,21 @@ A few examples of salt states from the community:
 * https://github.com/bclermont/states
 * https://github.com/pcrews/salt-data
 
-Follow on ohloh
-===============
+Follow on Open Hub
+==================
 
-https://www.ohloh.net/p/salt
+https://www.openhub.net/p/salt
 
 Other community links
 =====================
 
 - `Salt Stack Inc. <http://www.saltstack.com>`_
 - `Subreddit <http://www.reddit.com/r/saltstack>`_
-- `Google+ <https://plus.google.com/114449193225626631691/posts>`_
 - `YouTube <http://www.youtube.com/user/SaltStack>`_
 - `Facebook <https://www.facebook.com/SaltStack>`_
 - `Twitter <https://twitter.com/SaltStackInc>`_
 - `Wikipedia page <http://en.wikipedia.org/wiki/Salt_(software)>`_
+- `Stack Overflow <https://stackoverflow.com/questions/tagged/salt-stack>`_
 
 Hack the Source
 ===============
@@ -187,4 +187,3 @@ documentation efforts, please review the :ref:`contributing documentation
 <contributing>`!
 
 .. _`Apache 2.0 license`: http://www.apache.org/licenses/LICENSE-2.0.html
-

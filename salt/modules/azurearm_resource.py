@@ -20,7 +20,7 @@ Azure (ARM) Resource Execution Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as keyword arguments
-to every function in order to work properly.
+    to every function in order to work properly.
 
     Required provider parameters:
 
@@ -37,7 +37,7 @@ to every function in order to work properly.
 
     Optional provider parameters:
 
-    **cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
+**cloud_environment**: Used to point the cloud driver to different API endpoints, such as Azure GovCloud.
     Possible values:
       * ``AZURE_PUBLIC_CLOUD`` (default)
       * ``AZURE_CHINA_CLOUD``
@@ -48,8 +48,10 @@ to every function in order to work properly.
 
 # Python libs
 from __future__ import absolute_import
-from json import loads, dumps
 import logging
+
+# Salt Libs
+import salt.utils.json
 
 # Azure libs
 HAS_LIBS = False
@@ -1061,7 +1063,7 @@ def policy_definition_create_or_update(name, policy_rule, **kwargs):  # pylint: 
     polconn = __utils__['azurearm.get_client']('policy', **kwargs)
 
     # Convert OrderedDict to dict
-    prop_kwargs = {'policy_rule': loads(dumps(policy_rule))}
+    prop_kwargs = {'policy_rule': salt.utils.json.loads(salt.utils.json.dumps(policy_rule))}
 
     policy_kwargs = kwargs.copy()
     policy_kwargs.update(prop_kwargs)

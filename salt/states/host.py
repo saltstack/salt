@@ -78,15 +78,15 @@ def present(name, ip, clean=False):  # pylint: disable=C0103
         The ip addr(s) to apply to the host. Can be a single IP or a list of IP
         addresses.
 
-    clean : False
+    clean
         Remove any entries which don't match those configured in the ``ip``
-        option.
+        option. Default is ``False``.
 
         .. versionadded:: 2018.3.4
     '''
     ret = {'name': name,
            'changes': {},
-           'result': None if __opts__['test'] else True,
+           'result': True,
            'comment': ''}
 
     if not isinstance(ip, list):
@@ -135,6 +135,7 @@ def present(name, ip, clean=False):  # pylint: disable=C0103
 
     for addr, name in to_add:
         if __opts__['test']:
+            ret['result'] = None
             comments.append(
                 'Host {0} ({1}) would be added'.format(name, addr)
             )
@@ -149,6 +150,7 @@ def present(name, ip, clean=False):  # pylint: disable=C0103
 
     for addr, name in to_remove:
         if __opts__['test']:
+            ret['result'] = None
             comments.append(
                 'Host {0} ({1}) would be removed'.format(name, addr)
             )

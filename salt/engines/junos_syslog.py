@@ -168,10 +168,10 @@ class _Parser(object):
     def parse(self, line):
         try:
             parsed = self.__pattern.parseString(line)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 parsed = self.__pattern_without_daemon.parseString(line)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 return
         if len(parsed) == 6:
             payload = {}

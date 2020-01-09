@@ -91,8 +91,12 @@ def install(gems,           # pylint: disable=C0103
         Doesn't play nice with multiple gems at once
     :param rdoc: boolean : False
         Generate RDoc documentation for the gem(s).
+        For rubygems > 3 this is interpreted as the --no-document arg and the
+        ri option will then be ignored
     :param ri: boolean : False
         Generate RI documentation for the gem(s).
+        For rubygems > 3 this is interpreted as the --no-document arg and the
+        rdoc option will then be ignored
     :param pre_releases: boolean : False
         Include pre-releases in the available versions
     :param proxy: string : None
@@ -119,12 +123,18 @@ def install(gems,           # pylint: disable=C0103
     options = []
     if version:
         options.extend(['--version', version])
-    if not rdoc:
-        options.append('--no-rdoc')
-    if not ri:
-        options.append('--no-ri')
-    if pre_releases:
-        options.append('--pre')
+    if _has_rubygems_3(ruby=ruby, runas=runas, gem_bin=gem_bin):
+        if not rdoc or not ri:
+            options.append('--no-document')
+        if pre_releases:
+            options.append('--prerelease')
+    else:
+        if not rdoc:
+            options.append('--no-rdoc')
+        if not ri:
+            options.append('--no-ri')
+        if pre_releases:
+            options.append('--pre')
     if proxy:
         options.extend(['-p', proxy])
     if source:
@@ -222,6 +232,45 @@ def update_system(version='', ruby=None, runas=None, gem_bin=None):
                 ruby,
                 gem_bin=gem_bin,
                 runas=runas)
+
+
+def version(ruby=None, runas=None, gem_bin=None):
+    '''
+    Print out the version of gem
+
+    :param gem_bin: string : None
+        Full path to ``gem`` binary to use.
+    :param ruby: string : None
+        If RVM or rbenv are installed, the ruby version and gemset to use.
+        Ignored if ``gem_bin`` is specified.
+    :param runas: string : None
+        The user to run gem as.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' gem.version
+    '''
+    cmd = ['--version']
+    stdout = _gem(cmd,
+                  ruby,
+                  gem_bin=gem_bin,
+                  runas=runas)
+    ret = {}
+    for line in salt.utils.itertools.split(stdout, '\n'):
+        match = re.match(r'[.0-9]+', line)
+        if match:
+            ret = line
+            break
+    return ret
+
+
+def _has_rubygems_3(ruby=None, runas=None, gem_bin=None):
+    match = re.match(r'^3\..*', version(ruby=ruby, runas=runas, gem_bin=gem_bin))
+    if match:
+        return True
+    return False
 
 
 def list_(prefix='', ruby=None, runas=None, gem_bin=None):

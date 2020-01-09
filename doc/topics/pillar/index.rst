@@ -741,12 +741,40 @@ done:
   option in the `master config template`_ should be updated to show the correct
   new default value.
 
-.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/develop/salt/renderers/
-.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/develop/salt/config/__init__.py
-.. _`master config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/master.rst
-.. _`minion config file`: https://github.com/saltstack/salt/tree/develop/doc/ref/configuration/minion.rst
-.. _`master config template`: https://github.com/saltstack/salt/tree/develop/conf/master
+.. _`salt/renderers/`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/renderers/
+.. _`salt/config/__init__.py`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/salt/config/__init__.py
+.. _`master config file`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/doc/ref/configuration/master.rst
+.. _`minion config file`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/doc/ref/configuration/minion.rst
+.. _`master config template`: https://github.com/saltstack/salt/tree/|repo_primary_branch|/conf/master
 
+Binary Data in the Pillar
+=========================
+
+Salt has partial support for binary pillar data.
+
+.. note::
+
+   There are some situations (such as salt-ssh) where only text (ASCII or
+   Unicode) is allowed.
+
+The simplest way to embed binary data in your pillar is to make use of YAML's
+built-in binary data type, which requires base64 encoded data.
+
+.. code-block:: yaml
+
+    salt_pic: !!binary
+        iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAMAAAC67D+PAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAA
+
+Then you can use it as a ``contents_pillar`` in a state:
+
+.. code-block:: yaml
+
+    /tmp/salt.png:
+      file.managed:
+        - contents_pillar: salt_pic
+
+It is also possible to add ASCII-armored encrypted data to pillars, as
+mentioned in the Pillar Encryption section.
 
 Master Config in Pillar
 =======================

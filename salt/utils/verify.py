@@ -35,6 +35,7 @@ import salt.utils.user
 log = logging.getLogger(__name__)
 
 ROOT_DIR = 'c:\\salt' if salt.utils.platform.is_windows() else '/'
+DEFAULT_SCHEMES = ['tcp://', 'udp://', 'file://']
 
 
 def zmq_version():
@@ -43,7 +44,7 @@ def zmq_version():
     '''
     try:
         import zmq
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # Return True for local mode
         return True
     ver = zmq.__version__
@@ -128,7 +129,7 @@ def verify_socket(interface, pub_port, ret_port):
         try:
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.bind((interface, int(port)))
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             msg = 'Unable to bind socket {0}:{1}'.format(interface, port)
             if exc.args:
                 msg = '{0}, error: {1}'.format(msg, str(exc))
@@ -144,6 +145,28 @@ def verify_socket(interface, pub_port, ret_port):
             sock.close()
 
     return True
+
+
+def verify_logs_filter(files):
+    to_verify = []
+    for filename in files:
+        verify_file = True
+        for scheme in DEFAULT_SCHEMES:
+            if filename.startswith(scheme):
+                verify_file = False
+                break
+        if verify_file:
+            to_verify.append(filename)
+    return to_verify
+
+
+def verify_log_files(files, user):
+    '''
+    Verify the log files exist and are owned by the named user.  Filenames that
+    begin with tcp:// and udp:// will be filtered out. Filenames that begin
+    with file:// are handled correctly
+    '''
+    return verify_files(verify_logs_filter(files), user)
 
 
 def verify_files(files, user):
@@ -184,7 +207,7 @@ def verify_files(files, user):
             msg = 'No permissions to access "{0}", are you running as the correct user?'.format(fn_)
             raise SaltSystemExit(msg=msg)
 
-        except OSError as err:
+        except OSError as err:  # pylint: disable=duplicate-except
             msg = 'Failed to create path "{0}" - {1}'.format(fn_, err)
             raise SaltSystemExit(msg=msg)
 

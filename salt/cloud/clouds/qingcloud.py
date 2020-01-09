@@ -356,7 +356,7 @@ def show_image(kwargs, call=None):
 
     items = query(params=params)
 
-    if len(items['image_set']) == 0:
+    if not items['image_set']:
         raise SaltCloudNotFound('The specified image could not be found.')
 
     result = {}

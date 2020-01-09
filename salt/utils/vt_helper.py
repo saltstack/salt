@@ -17,7 +17,7 @@ import os
 import re
 
 # Import salt's Libs
-from .vt import Terminal, TerminalException
+from salt.utils.vt import Terminal, TerminalException
 
 SSH_PASSWORD_PROMPT_RE = re.compile(r'(?:.*)[Pp]assword(?: for .*)?:', re.M)
 KEY_VALID_RE = re.compile(r'.*\(yes\/no\).*')

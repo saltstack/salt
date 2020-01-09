@@ -283,7 +283,7 @@ def _run(cmd,
     '''
     if 'pillar' in kwargs and not pillar_override:
         pillar_override = kwargs['pillar']
-    if _is_valid_shell(shell) is False:
+    if output_loglevel != 'quiet' and _is_valid_shell(shell) is False:
         log.warning(
             'Attempt to run a shell command with what may be an invalid shell! '
             'Check to ensure that the shell <%s> is valid for this user.',
@@ -407,16 +407,33 @@ def _run(cmd,
         return win_runas(cmd, runas, password, cwd)
 
     if runas and salt.utils.platform.is_darwin():
-        # we need to insert the user simulation into the command itself and not
-        # just run it from the environment on macOS as that
-        # method doesn't work properly when run as root for certain commands.
+        # We need to insert the user simulation into the command itself and not
+        # just run it from the environment on macOS as that method doesn't work
+        # properly when run as root for certain commands.
         if isinstance(cmd, (list, tuple)):
             cmd = ' '.join(map(_cmd_quote, cmd))
 
-        cmd = 'su -l {0} -c "{1}"'.format(runas, cmd)
-        # set runas to None, because if you try to run `su -l` as well as
-        # simulate the environment macOS will prompt for the password of the
-        # user and will cause salt to hang.
+        # Ensure directory is correct before running command
+        cmd = 'cd -- {dir} && {{ {cmd}\n }}'.format(dir=_cmd_quote(cwd), cmd=cmd)
+
+        # Ensure environment is correct for a newly logged-in user by running
+        # the command under bash as a login shell
+        try:
+            user_shell = __salt__['user.info'](runas)['shell']
+            if re.search('bash$', user_shell):
+                cmd = '{shell} -l -c {cmd}'.format(shell=user_shell,
+                                                   cmd=_cmd_quote(cmd))
+        except KeyError:
+            pass
+
+        # Ensure the login is simulated correctly (note: su runs sh, not bash,
+        # which causes the environment to be initialised incorrectly, which is
+        # fixed by the previous line of code)
+        cmd = 'su -l {0} -c {1}'.format(_cmd_quote(runas), _cmd_quote(cmd))
+
+        # Set runas to None, because if you try to run `su -l` after changing
+        # user, su will prompt for the password of the user and cause salt to
+        # hang.
         runas = None
 
     if runas:
@@ -459,7 +476,7 @@ def _run(cmd,
                 'sys.stdout.write(\"' + marker + '\");'
             )
 
-            if use_sudo or __grains__['os'] in ['MacOS', 'Darwin']:
+            if use_sudo:
                 env_cmd = ['sudo']
                 # runas is optional if use_sudo is set.
                 if runas:
@@ -570,7 +587,11 @@ def _run(cmd,
         run_env = env
 
     else:
-        run_env = os.environ.copy()
+        if salt.utils.platform.is_windows():
+            import nt
+            run_env = nt.environ.copy()
+        else:
+            run_env = os.environ.copy()
         run_env.update(env)
 
     if prepend_path:
@@ -651,21 +672,12 @@ def _run(cmd,
         except (OSError, IOError) as exc:
             msg = (
                 'Unable to run command \'{0}\' with the context \'{1}\', '
-                'reason: '.format(
+                'reason: {2}'.format(
                     cmd if output_loglevel is not None else 'REDACTED',
-                    new_kwargs
+                    new_kwargs,
+                    exc
                 )
             )
-            try:
-                if exc.filename is None:
-                    msg += 'command not found'
-                else:
-                    msg += '{0}: {1}'.format(exc, exc.filename)
-            except AttributeError:
-                # Both IOError and OSError have the filename attribute, so this
-                # is a precaution in case the exception classes in the previous
-                # try/except are changed.
-                msg += 'unknown'
             raise CommandExecutionError(msg)
 
         try:
@@ -967,8 +979,8 @@ def run(cmd,
         .. warning::
 
             For versions 2018.3.3 and above on macosx while using runas,
-            to pass special characters to the command you need to escape
-            the characters on the shell.
+            on linux while using run, to pass special characters to the
+            command you need to escape the characters on the shell.
 
             Example:
 
@@ -2371,6 +2383,22 @@ def script(source,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. note::
+
+            For Window's users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2889,6 +2917,7 @@ def run_chroot(root,
                group=None,
                shell=DEFAULT_SHELL,
                python_shell=True,
+               binds=None,
                env=None,
                clean_env=False,
                template=None,
@@ -2914,19 +2943,17 @@ def run_chroot(root,
 
     :param str root: Path to the root of the jail to use.
 
-    stdin
-        A string of standard input can be specified for the command to be run using
-        the ``stdin`` parameter. This can be useful in cases where sensitive
-        information must be read from standard input.:
+    :param str stdin: A string of standard input can be specified for
+        the command to be run using the ``stdin`` parameter. This can
+        be useful in cases where sensitive information must be read
+        from standard input.:
 
-    runas
-        User to run script as.
+    :param str runas: User to run script as.
 
-    group
-        Group to run script as.
+    :param str group: Group to run script as.
 
-    shell
-        Shell to execute under. Defaults to the system default shell.
+    :param str shell: Shell to execute under. Defaults to the system
+        default shell.
 
     :param str cmd: The command to run. ex: ``ls -lart /home``
 
@@ -2950,6 +2977,11 @@ def run_chroot(root,
         arguments. Set to True to use shell features, such as pipes or
         redirection.
 
+    :param list binds: List of directories that will be exported inside
+        the chroot with the bind option.
+
+        .. versionadded:: Sodium
+
     :param dict env: Environment variables to be set prior to execution.
 
         .. note::
@@ -2968,11 +3000,11 @@ def run_chroot(root,
         engine will be used to render the downloaded file. Currently jinja,
         mako, and wempy are supported.
 
-    :param bool rstrip:
-        Strip all whitespace off the end of output before it is returned.
+    :param bool rstrip: Strip all whitespace off the end of output
+        before it is returned.
 
-    :param str umask:
-         The umask (in octal) to use when running the command.
+    :param str umask: The umask (in octal) to use when running the
+         command.
 
     :param str output_encoding: Control the encoding used to decode the
         command's output.
@@ -3035,12 +3067,25 @@ def run_chroot(root,
     '''
     __salt__['mount.mount'](
         os.path.join(root, 'dev'),
-        'udev',
+        'devtmpfs',
         fstype='devtmpfs')
     __salt__['mount.mount'](
         os.path.join(root, 'proc'),
         'proc',
         fstype='proc')
+    __salt__['mount.mount'](
+        os.path.join(root, 'sys'),
+        'sysfs',
+        fstype='sysfs')
+
+    binds = binds if binds else []
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.mount'](
+            bind_exported_to,
+            bind_exported,
+            opts='default,bind')
 
     # Execute chroot routine
     sh_ = '/bin/sh'
@@ -3092,6 +3137,12 @@ def run_chroot(root,
         log.error('Processes running in chroot could not be killed, '
                   'filesystem will remain mounted')
 
+    for bind_exported in binds:
+        bind_exported_to = os.path.relpath(bind_exported, os.path.sep)
+        bind_exported_to = os.path.join(root, bind_exported_to)
+        __salt__['mount.umount'](bind_exported_to)
+
+    __salt__['mount.umount'](os.path.join(root, 'sys'))
     __salt__['mount.umount'](os.path.join(root, 'proc'))
     __salt__['mount.umount'](os.path.join(root, 'dev'))
     if hide_output:
@@ -3279,7 +3330,12 @@ def shell_info(shell, list_modules=False):
         # salt-call will general have home set, the salt-minion service may not
         # We need to assume ports of unix shells to windows will look after
         # themselves in setting HOME as they do it in many different ways
-        newenv = os.environ
+        if salt.utils.platform.is_windows():
+            import nt
+            newenv = nt.environ
+        else:
+            newenv = os.environ
+
         if ('HOME' not in newenv) and (not salt.utils.platform.is_windows()):
             newenv['HOME'] = os.path.expanduser('~')
             log.debug('HOME environment set to %s', newenv['HOME'])
@@ -3582,7 +3638,7 @@ def powershell(cmd,
 
     try:
         return salt.utils.json.loads(response)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
 
@@ -3907,7 +3963,7 @@ def powershell_all(cmd,
     # If we fail to parse stdoutput we will raise an exception
     try:
         result = salt.utils.json.loads(stdoutput)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
         response["cmd"] = cmd

@@ -9,6 +9,7 @@ import logging
 import os
 import socket
 import textwrap
+import platform
 
 # Import Salt Testing Libs
 try:
@@ -19,11 +20,10 @@ except ImportError as import_error:
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
     mock_open,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -32,6 +32,8 @@ import salt.utils.files
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.path
+import salt.modules.cmdmod
+import salt.modules.smbios
 import salt.grains.core as core
 
 # Import 3rd-party libs
@@ -54,7 +56,6 @@ OS_RELEASE_DIR = os.path.join(os.path.dirname(__file__), "os-releases")
 SOLARIS_DIR = os.path.join(os.path.dirname(__file__), 'solaris')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not pytest, False)
 class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -135,6 +136,27 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.files.fopen', mock_open(read_data={})):
             os_release = core._parse_os_release('/etc/os-release', '/usr/lib/os-release')
         self.assertEqual(os_release, {})
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test__windows_platform_data(self):
+        grains = core._windows_platform_data()
+        keys = ['biosversion',
+                'osrelease',
+                'kernelrelease',
+                'motherboard',
+                'serialnumber',
+                'timezone',
+                'manufacturer',
+                'kernelversion',
+                'osservicepack',
+                'virtual',
+                'productname',
+                'osfullname',
+                'osmanufacturer',
+                'osversion',
+                'windowsdomain']
+        for key in keys:
+            self.assertIn(key, grains)
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_gnu_slash_linux_in_os_name(self):
@@ -601,8 +623,117 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
         self.assertIn(returned_grains['windowsdomaintype'], valid_types)
         valid_releases = ['Vista', '7', '8', '8.1', '10', '2008Server',
                           '2008ServerR2', '2012Server', '2012ServerR2',
-                          '2016Server']
+                          '2016Server', '2019Server']
         self.assertIn(returned_grains['osrelease'], valid_releases)
+
+    def test__windows_os_release_grain(self):
+        versions = {
+            'Windows 10 Home': '10',
+            'Windows 10 Pro': '10',
+            'Windows 10 Pro for Workstations': '10',
+            'Windows 10 Pro Education': '10',
+            'Windows 10 Enterprise': '10',
+            'Windows 10 Enterprise LTSB': '10',
+            'Windows 10 Education': '10',
+            'Windows 10 IoT Core': '10',
+            'Windows 10 IoT Enterprise': '10',
+            'Windows 10 S': '10',
+            'Windows 8.1': '8.1',
+            'Windows 8.1 Pro': '8.1',
+            'Windows 8.1 Enterprise': '8.1',
+            'Windows 8.1 OEM': '8.1',
+            'Windows 8.1 with Bing': '8.1',
+            'Windows 8': '8',
+            'Windows 8 Pro': '8',
+            'Windows 8 Enterprise': '8',
+            'Windows 8 OEM': '8',
+            'Windows 7 Starter': '7',
+            'Windows 7 Home Basic': '7',
+            'Windows 7 Home Premium': '7',
+            'Windows 7 Professional': '7',
+            'Windows 7 Enterprise': '7',
+            'Windows 7 Ultimate': '7',
+            'Windows Thin PC': 'Thin',
+            'Windows Vista Starter': 'Vista',
+            'Windows Vista Home Basic': 'Vista',
+            'Windows Vista Home Premium': 'Vista',
+            'Windows Vista Business': 'Vista',
+            'Windows Vista Enterprise': 'Vista',
+            'Windows Vista Ultimate': 'Vista',
+            'Windows Server 2019 Essentials': '2019Server',
+            'Windows Server 2019 Standard': '2019Server',
+            'Windows Server 2019 Datacenter': '2019Server',
+            'Windows Server 2016 Essentials': '2016Server',
+            'Windows Server 2016 Standard': '2016Server',
+            'Windows Server 2016 Datacenter': '2016Server',
+            'Windows Server 2012 R2 Foundation': '2012ServerR2',
+            'Windows Server 2012 R2 Essentials': '2012ServerR2',
+            'Windows Server 2012 R2 Standard': '2012ServerR2',
+            'Windows Server 2012 R2 Datacenter': '2012ServerR2',
+            'Windows Server 2012 Foundation': '2012Server',
+            'Windows Server 2012 Essentials': '2012Server',
+            'Windows Server 2012 Standard': '2012Server',
+            'Windows Server 2012 Datacenter': '2012Server',
+            'Windows MultiPoint Server 2012': '2012Server',
+            'Windows Small Business Server 2011': '2011Server',
+            'Windows MultiPoint Server 2011': '2011Server',
+            'Windows Home Server 2011': '2011Server',
+            'Windows MultiPoint Server 2010': '2010Server',
+            'Windows Server 2008 R2 Foundation': '2008ServerR2',
+            'Windows Server 2008 R2 Standard': '2008ServerR2',
+            'Windows Server 2008 R2 Enterprise': '2008ServerR2',
+            'Windows Server 2008 R2 Datacenter': '2008ServerR2',
+            'Windows Server 2008 R2 for Itanium-based Systems': '2008ServerR2',
+            'Windows Web Server 2008 R2': '2008ServerR2',
+            'Windows Storage Server 2008 R2': '2008ServerR2',
+            'Windows HPC Server 2008 R2': '2008ServerR2',
+            'Windows Server 2008 Standard': '2008Server',
+            'Windows Server 2008 Enterprise': '2008Server',
+            'Windows Server 2008 Datacenter': '2008Server',
+            'Windows Server 2008 for Itanium-based Systems': '2008Server',
+            'Windows Server Foundation 2008': '2008Server',
+            'Windows Essential Business Server 2008': '2008Server',
+            'Windows HPC Server 2008': '2008Server',
+            'Windows Small Business Server 2008': '2008Server',
+            'Windows Storage Server 2008': '2008Server',
+            'Windows Web Server 2008': '2008Server'
+        }
+        for caption in versions:
+            version = core._windows_os_release_grain(caption, 1)
+            self.assertEqual(
+                version,
+                versions[caption],
+                'version: {0}\n'
+                'found: {1}\n'
+                'caption: {2}'.format(version, versions[caption], caption)
+            )
+
+        embedded_versions = {
+            'Windows Embedded 8.1 Industry Pro': '8.1',
+            'Windows Embedded 8 Industry Pro': '8',
+            'Windows POSReady 7': '7',
+            'Windows Embedded Standard 7': '7',
+            'Windows Embedded POSReady 2009': '2009',
+            'Windows Embedded Standard 2009': '2009',
+            'Windows XP Embedded': 'XP',
+        }
+        for caption in embedded_versions:
+            version = core._windows_os_release_grain(caption, 1)
+            self.assertEqual(
+                version,
+                embedded_versions[caption],
+                '{0} != {1}\n'
+                'version: {0}\n'
+                'found: {1}\n'
+                'caption: {2}'.format(version, embedded_versions[caption], caption)
+            )
+
+        # Special Cases
+        # Windows Embedded Standard is Windows 7
+        caption = 'Windows Embedded Standard'
+        with patch('platform.release', MagicMock(return_value='7')):
+            version = core._windows_os_release_grain(caption, 1)
+            self.assertEqual(version, '7')
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_linux_memdata(self):
@@ -690,7 +821,7 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
     @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
     def test_docker_virtual(self):
         '''
-        Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
+        Test if virtual grains are parsed correctly in Docker.
         '''
         with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
             with patch.object(os.path,
@@ -704,26 +835,79 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
                         'Testing Docker cgroup substring \'%s\'', cgroup_substr)
                     with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
                         with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                            grains = core._virtual({'kernel': 'Linux'})
                             self.assertEqual(
-                                core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
+                                grains.get('virtual_subtype'),
                                 'Docker'
                             )
+                            self.assertEqual(
+                                grains.get('virtual'),
+                                'container',
+                            )
+
+    @skipIf(salt.utils.platform.is_windows(), 'System is Windows')
+    def test_lxc_virtual(self):
+        '''
+        Test if virtual grains are parsed correctly in LXC.
+        '''
+        with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
+            with patch.object(os.path,
+                              'isfile',
+                              MagicMock(side_effect=lambda x: True if x == '/proc/1/cgroup' else False)):
+                cgroup_data = '10:memory:/lxc/a_long_sha256sum'
+                with patch('salt.utils.files.fopen', mock_open(read_data=cgroup_data)):
+                    with patch.dict(core.__salt__, {'cmd.run_all': MagicMock()}):
+                        grains = core._virtual({'kernel': 'Linux'})
+                        self.assertEqual(
+                            grains.get('virtual_subtype'),
+                            'LXC'
+                        )
+                        self.assertEqual(
+                            grains.get('virtual'),
+                            'container',
+                        )
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
     def test_xen_virtual(self):
         '''
         Test if OS grains are parsed correctly in Ubuntu Xenial Xerus
         '''
-        with patch.object(os.path, 'isfile', MagicMock(return_value=False)):
-            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}), \
-                patch.object(os.path,
-                             'isfile',
-                             MagicMock(side_effect=lambda x: True if x == '/sys/bus/xen/drivers/xenconsole' else False)):
+        with patch.multiple(os.path, isdir=MagicMock(side_effect=lambda x: x == '/sys/bus/xen'),
+                            isfile=MagicMock(side_effect=lambda x:
+                                             x == '/sys/bus/xen/drivers/xenconsole')):
+            with patch.dict(core.__salt__, {'cmd.run': MagicMock(return_value='')}):
                 log.debug('Testing Xen')
                 self.assertEqual(
                     core._virtual({'kernel': 'Linux'}).get('virtual_subtype'),
                     'Xen PV DomU'
                 )
+
+    def test_if_virtual_subtype_exists_virtual_should_fallback_to_virtual(self):
+        def mockstat(path):
+            if path == '/':
+                return 'fnord'
+            elif path == '/proc/1/root/.':
+                return 'roscivs'
+            return None
+        with patch.dict(
+            core.__salt__,
+            {
+                'cmd.run': MagicMock(return_value=''),
+                'cmd.run_all': MagicMock(return_value={'retcode': 0, 'stdout': ''}),
+            }
+        ):
+            with patch.multiple(
+                os.path,
+                isfile=MagicMock(return_value=False),
+                isdir=MagicMock(side_effect=lambda x: x == '/proc'),
+            ):
+                with patch.multiple(
+                    os,
+                    stat=MagicMock(side_effect=mockstat),
+                ):
+                    grains = core._virtual({'kernel': 'Linux'})
+                    assert grains.get('virtual_subtype') is not None
+                    assert grains.get('virtual') == 'virtual'
 
     def _check_ipaddress(self, value, ip_v):
         '''
@@ -847,7 +1031,6 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             assert core.dns() == ret
 
     @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
-    @patch.object(salt.utils, 'is_windows', MagicMock(return_value=False))
     @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4', '5.6.7.8']))
     @patch('salt.utils.network.ip_addrs6',
            MagicMock(return_value=['fe80::a8b2:93ff:fe00:0', 'fe80::a8b2:93ff:dead:beef']))
@@ -867,6 +1050,37 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             self.assertIn('fqdns', fqdns)
             self.assertEqual(len(fqdns['fqdns']), len(ret['fqdns']))
             self.assertEqual(set(fqdns['fqdns']), set(ret['fqdns']))
+
+    @skipIf(not salt.utils.platform.is_linux(), 'System is not Linux')
+    @patch('salt.utils.network.ip_addrs', MagicMock(return_value=['1.2.3.4']))
+    @patch('salt.utils.network.ip_addrs6', MagicMock(return_value=[]))
+    def test_fqdns_socket_error(self):
+        '''
+        test the behavior on non-critical socket errors of the dns grain
+        '''
+        def _gen_gethostbyaddr(errno):
+            def _gethostbyaddr(_):
+                herror = socket.herror()
+                herror.errno = errno
+                raise herror
+            return _gethostbyaddr
+
+        for errno in (0, core.HOST_NOT_FOUND, core.NO_DATA):
+            mock_log = MagicMock()
+            with patch.object(socket, 'gethostbyaddr',
+                              side_effect=_gen_gethostbyaddr(errno)):
+                with patch('salt.grains.core.log', mock_log):
+                    self.assertEqual(core.fqdns(), {'fqdns': []})
+                    mock_log.debug.assert_called_once()
+                    mock_log.error.assert_not_called()
+
+        mock_log = MagicMock()
+        with patch.object(socket, 'gethostbyaddr',
+                          side_effect=_gen_gethostbyaddr(-1)):
+            with patch('salt.grains.core.log', mock_log):
+                self.assertEqual(core.fqdns(), {'fqdns': []})
+                mock_log.debug.assert_not_called()
+                mock_log.error.assert_called_once()
 
     def test_core_virtual(self):
         '''
@@ -1041,3 +1255,178 @@ class CoreGrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = core._osx_memdata()
             assert ret['swap_total'] == 0
             assert ret['mem_total'] == 4096
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_tzname(self):
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', return_value=object) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    ret = core.locale_info()
+
+                    tzname.assert_called_once_with()
+                    self.assertEqual(len(now_ret_object.method_calls), 1)
+                    now.assert_called_once_with(object)
+                    self.assertEqual(len(datetime.method_calls), 1)
+                    self.assertEqual(len(datetime_module.method_calls), 1)
+                    tzlocal.assert_called_once_with()
+                    is_proxy.assert_called_once_with()
+
+                    self.assertEqual(ret['locale_info']['timezone'], 'MDT_FAKE')
+
+    @skipIf(not core._DATEUTIL_TZ, 'Missing dateutil.tz')
+    def test_locale_info_unicode_error_tzname(self):
+        # UnicodeDecodeError most have the default string encoding
+        unicode_error = UnicodeDecodeError(str('fake'), b'\x00\x00', 1, 2, str('fake'))
+
+        # mock datetime.now().tzname()
+        # cant just mock now because it is read only
+        tzname = Mock(return_value='MDT_FAKE')
+        now_ret_object = Mock(tzname=tzname)
+        now = Mock(return_value=now_ret_object)
+        datetime = Mock(now=now)
+
+        # mock tzname[0].decode()
+        decode = Mock(return_value='CST_FAKE')
+        tzname2 = (Mock(decode=decode,),)
+
+        with patch.object(core, 'datetime', datetime=datetime) as datetime_module:
+            with patch.object(core.dateutil.tz, 'tzlocal', side_effect=unicode_error) as tzlocal:
+                with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+                    with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                        with patch.object(core, 'time', tzname=tzname2):
+                            ret = core.locale_info()
+
+                            tzname.assert_not_called()
+                            self.assertEqual(len(now_ret_object.method_calls), 0)
+                            now.assert_not_called()
+                            self.assertEqual(len(datetime.method_calls), 0)
+                            decode.assert_called_once_with('mbcs')
+                            self.assertEqual(len(tzname2[0].method_calls), 1)
+                            self.assertEqual(len(datetime_module.method_calls), 0)
+                            tzlocal.assert_called_once_with()
+                            is_proxy.assert_called_once_with()
+                            is_windows.assert_called_once_with()
+
+                            self.assertEqual(ret['locale_info']['timezone'], 'CST_FAKE')
+
+    @skipIf(core._DATEUTIL_TZ, 'Not Missing dateutil.tz')
+    def test_locale_info_no_tz_tzname(self):
+        with patch.object(salt.utils.platform, 'is_proxy', return_value=False) as is_proxy:
+            with patch.object(core.salt.utils.platform, 'is_windows', return_value=True) as is_windows:
+                ret = core.locale_info()
+                is_proxy.assert_called_once_with()
+                is_windows.assert_not_called()
+                self.assertEqual(ret['locale_info']['timezone'], 'unknown')
+
+    def test_cwd_exists(self):
+        cwd_grain = core.cwd()
+
+        self.assertIsInstance(cwd_grain, dict)
+        self.assertTrue('cwd' in cwd_grain)
+        self.assertEqual(cwd_grain['cwd'], os.getcwd())
+
+    def test_cwd_is_cwd(self):
+        cwd = os.getcwd()
+
+        try:
+            # change directory
+            new_dir = os.path.split(cwd)[0]
+            os.chdir(new_dir)
+
+            cwd_grain = core.cwd()
+
+            self.assertEqual(cwd_grain['cwd'], new_dir)
+        finally:
+            # change back to original directory
+            os.chdir(cwd)
+
+    def test_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    def test_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_set_virtual_grain(self):
+        osdata = {}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_windows_virtual_has_virtual_grain(self):
+        osdata = {'virtual': 'something'}
+
+        (osdata['kernel'], osdata['nodename'],
+         osdata['kernelrelease'], osdata['kernelversion'], osdata['cpuarch'], _) = platform.uname()
+
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            virtual_grains = core._windows_virtual(osdata)
+
+        self.assertIn('virtual', virtual_grains)
+        self.assertNotEqual(virtual_grains['virtual'], 'physical')
+
+    @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
+    def test_osdata_virtual_key_win(self):
+        with patch.dict(core.__salt__, {'cmd.run': salt.modules.cmdmod.run,
+                                        'cmd.run_all': salt.modules.cmdmod.run_all,
+                                        'cmd.retcode': salt.modules.cmdmod.retcode,
+                                        'smbios.get': salt.modules.smbios.get}):
+
+            _windows_platform_data_ret = core.os_data()
+            _windows_platform_data_ret['virtual'] = 'something'
+
+            with patch.object(core,
+                              '_windows_platform_data',
+                              return_value=_windows_platform_data_ret) as _windows_platform_data:
+
+                osdata_grains = core.os_data()
+                _windows_platform_data.assert_called_once()
+
+            self.assertIn('virtual', osdata_grains)
+            self.assertNotEqual(osdata_grains['virtual'], 'physical')

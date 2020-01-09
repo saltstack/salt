@@ -11,12 +11,9 @@ from salt.ext import six
 import salt.utils.args
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    create_autospec,
     DEFAULT,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -66,7 +63,6 @@ class ArgsTestCase(TestCase):
         ret = salt.utils.args.arg_lookup(dummy_func)
         self.assertEqual(expected_dict, ret)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_format_call(self):
         with patch('salt.utils.args.arg_lookup') as arg_lookup:
             def dummy_func(first=None, second=None, third=None):
@@ -121,16 +117,17 @@ class ArgsTestCase(TestCase):
                 r'foo2 takes at least 2 arguments \(1 given\)'):
             salt.utils.args.format_call(foo2, dict(one=1))
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_argspec_report(self):
         def _test_spec(arg1, arg2, kwarg1=None):
             pass
 
-        sys_mock = create_autospec(_test_spec)
-        test_functions = {'test_module.test_spec': sys_mock}
+        test_functions = {'test_module.test_spec': _test_spec}
         ret = salt.utils.args.argspec_report(test_functions, 'test_module.test_spec')
         self.assertDictEqual(ret, {'test_module.test_spec':
-                                       {'kwargs': True, 'args': None, 'defaults': None, 'varargs': True}})
+                                       {'kwargs': None,
+                                        'args': ['arg1', 'arg2', 'kwarg1'],
+                                        'defaults': (None, ),
+                                        'varargs': None}})
 
     def test_test_mode(self):
         self.assertTrue(salt.utils.args.test_mode(test=True))
@@ -253,6 +250,10 @@ class ArgsTestCase(TestCase):
 
         # Make sure we don't load '|' as ''
         item = '|'
+        self.assertIs(_yamlify_arg(item), item)
+
+        # Make sure we don't load '!' as something else (None in 2018.3, '' in newer)
+        item = '!'
         self.assertIs(_yamlify_arg(item), item)
 
         # Make sure we load ints, floats, and strings correctly

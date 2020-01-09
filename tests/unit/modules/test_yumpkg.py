@@ -11,13 +11,11 @@ from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
-import salt.modules.rpm
+import salt.modules.rpm_lowpkg as rpm
 import salt.modules.yumpkg as yumpkg
 import salt.modules.pkg_resource as pkg_resource
 
@@ -60,7 +58,6 @@ LIST_REPOS = {
 }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class YumTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.yumpkg
@@ -599,7 +596,7 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         })
         salt_mock = {
             'cmd.run_all': cmd_mock,
-            'lowpkg.version_cmp': salt.modules.rpm.version_cmp,
+            'lowpkg.version_cmp': rpm.version_cmp,
             'pkg_resource.parse_targets': MagicMock(return_value=(
                 {name: new}, 'repository'
             )),

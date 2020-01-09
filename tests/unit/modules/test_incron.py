@@ -8,19 +8,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.modules.incron as incron
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class IncronTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.incron
@@ -102,7 +99,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
         val = {'pre': [], 'crons': [{'path': '/home/cybage',
                                      'mask': 'IN_MODIFY',
-                                     'cmd': 'echo "SALT"', 'comment': ''}]}
+                                     'cmd': 'echo "SALT"'}]}
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value=val)):
             self.assertEqual(incron.set_job('cybage', '/home/cybage',
@@ -135,7 +132,7 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
 
         val = {'pre': [], 'crons': [{'path': '/home/cybage',
                                      'mask': 'IN_MODIFY,IN_DELETE',
-                                     'cmd': 'echo "SALT"', 'comment': ''}]}
+                                     'cmd': 'echo "SALT"'}]}
         with patch.object(incron, 'list_tab',
                           MagicMock(return_value=val)):
             mock = MagicMock(return_value='incrontab')

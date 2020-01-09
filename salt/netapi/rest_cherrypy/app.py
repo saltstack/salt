@@ -820,9 +820,11 @@ def cors_tool():
             resp_head['Connection'] = 'keep-alive'
             resp_head['Access-Control-Max-Age'] = '1400'
 
-        # CORS requests should short-circuit the other tools.
-        cherrypy.response.body = ''
+        # Note: CherryPy on Py3 uses binary objects for the response
+        # Python 2.6 also supports the byte prefix, so no need for conditionals
+        cherrypy.response.body = b''
         cherrypy.response.status = 200
+        # CORS requests should short-circuit the other tools.
         cherrypy.serving.request.handler = None
 
         # Needed to avoid the auth_tool check.
@@ -870,7 +872,7 @@ def hypermedia_handler(*args, **kwargs):
         raise cherrypy.HTTPError(504)
     except cherrypy.CherryPyException:
         raise
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         # The TimeoutError exception class was removed in CherryPy in 12.0.0, but
         # Still check existence of TimeoutError and handle in CherryPy < 12.
         # The check was moved down from the SaltClientTimeout error line because
@@ -903,7 +905,7 @@ def hypermedia_handler(*args, **kwargs):
         if six.PY3:
             response = salt.utils.stringutils.to_bytes(response)
         return response
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         msg = 'Could not serialize the return data from Salt.'
         logger.debug(msg, exc_info=True)
         raise cherrypy.HTTPError(500, msg)
@@ -1082,7 +1084,7 @@ def lowdata_fmt():
     # headers for form encoded data (including charset or something similar)
     if data and isinstance(data, collections.Mapping):
         # Make the 'arg' param a list if not already
-        if 'arg' in data and not isinstance(data['arg'], list):
+        if 'arg' in data and not isinstance(data['arg'], list):  # pylint: disable=unsupported-membership-test
             data['arg'] = [data['arg']]
 
         # Finally, make a Low State and put it in request
@@ -1230,8 +1232,6 @@ class LowDataAdapter(object):
             HTTP/1.1 200 OK
             Content-Type: application/json
         '''
-        import inspect
-
         return {
             'return': "Welcome",
             'clients': salt.netapi.CLIENTS,
@@ -1722,16 +1722,21 @@ class Keys(LowDataAdapter):
         priv_key_file = tarfile.TarInfo('minion.pem')
         priv_key_file.size = len(priv_key)
 
-        fileobj = six.StringIO()
+        fileobj = BytesIO()
         tarball = tarfile.open(fileobj=fileobj, mode='w')
-        tarball.addfile(pub_key_file, six.StringIO(pub_key))
-        tarball.addfile(priv_key_file, six.StringIO(priv_key))
+
+        if six.PY3:
+            pub_key = pub_key.encode(__salt_system_encoding__)
+            priv_key = priv_key.encode(__salt_system_encoding__)
+
+        tarball.addfile(pub_key_file, BytesIO(pub_key))
+        tarball.addfile(priv_key_file, BytesIO(priv_key))
         tarball.close()
 
         headers = cherrypy.response.headers
         headers['Content-Disposition'] = 'attachment; filename="saltkeys-{0}.tar"'.format(lowstate[0]['id_'])
         headers['Content-Type'] = 'application/x-tar'
-        headers['Content-Length'] = fileobj.len
+        headers['Content-Length'] = len(fileobj.getvalue())
         headers['Cache-Control'] = 'no-cache'
 
         fileobj.seek(0)
@@ -1900,7 +1905,7 @@ class Login(LowDataAdapter):
 
             if not perms:
                 logger.debug("Eauth permission list not found.")
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             logger.debug("Configuration for external_auth malformed for "
                 "eauth '{0}', and user '{1}'."
                 .format(token.get('eauth'), token.get('name')), exc_info=True)

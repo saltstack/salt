@@ -5,14 +5,13 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.modules.gem as gem
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestGemModule(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -73,12 +72,29 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                 runas=None
             )
 
+    def test_install_pre_rubygems_3(self):
+        mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
+        with patch.dict(gem.__salt__,
+                        {'rvm.is_installed': MagicMock(return_value=False),
+                         'rbenv.is_installed': MagicMock(return_value=False),
+                         'cmd.run_all': mock}),\
+                patch.object(
+                    gem, '_has_rubygems_3', MagicMock(return_value=True)):
+            gem.install('rails', pre_releases=True)
+            mock.assert_called_once_with(
+                ['gem', 'install', 'rails', '--no-document', '--prerelease'],
+                runas=None,
+                python_shell=False
+            )
+
     def test_install_pre(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(gem.__salt__,
                         {'rvm.is_installed': MagicMock(return_value=False),
                          'rbenv.is_installed': MagicMock(return_value=False),
-                         'cmd.run_all': mock}):
+                         'cmd.run_all': mock}),\
+                patch.object(
+                    gem, '_has_rubygems_3', MagicMock(return_value=False)):
             gem.install('rails', pre_releases=True)
             mock.assert_called_once_with(
                 ['gem', 'install', 'rails', '--no-rdoc', '--no-ri', '--pre'],

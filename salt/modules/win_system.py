@@ -3,7 +3,6 @@
 Module for managing windows systems.
 
 :depends:
-    - pythoncom
     - pywintypes
     - win32api
     - win32con
@@ -25,12 +24,12 @@ from datetime import datetime
 import salt.utils.functools
 import salt.utils.locales
 import salt.utils.platform
+import salt.utils.winapi
 from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party Libs
 from salt.ext import six
 try:
-    import pythoncom
     import wmi
     import win32net
     import win32api
@@ -504,6 +503,11 @@ def get_system_info():
     '''
     Get system information.
 
+    .. note::
+
+        Not all system info is available across all versions of Windows. If it
+        is not available on an older version, it will be skipped
+
     Returns:
         dict: Dictionary containing information about the system to include
         name, description, version, etc...
@@ -527,15 +531,13 @@ def get_system_info():
         else:
             return '{0:.3f}TB'.format(val / 2**40)
 
-    # Connect to WMI
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
-
     # Lookup dicts for Win32_OperatingSystem
     os_type = {1: 'Work Station',
                2: 'Domain Controller',
                3: 'Server'}
-
+    # Connect to WMI
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     system = conn.Win32_OperatingSystem()[0]
     ret = {'name': get_computer_name(),
            'description': system.Description,
@@ -576,6 +578,10 @@ def get_system_info():
                        6: 'Appliance PC',
                        7: 'Performance Server',
                        8: 'Maximum'}
+    # Must get chassis_sku_number this way for backwards compatibility
+    # system.ChassisSKUNumber is only available on Windows 10/2016 and newer
+    product = conn.Win32_ComputerSystemProduct()[0]
+    ret.update({'chassis_sku_number': product.SKUNumber})
     system = conn.Win32_ComputerSystem()[0]
     # Get pc_system_type depending on Windows version
     if platform.release() in ['Vista', '7', '8']:
@@ -589,7 +595,6 @@ def get_system_info():
         'bootup_state': system.BootupState,
         'caption': system.Caption,
         'chassis_bootup_state': warning_states[system.ChassisBootupState],
-        'chassis_sku_number': system.ChassisSKUNumber,
         'dns_hostname': system.DNSHostname,
         'domain': system.Domain,
         'domain_role': domain_role[system.DomainRole],
@@ -618,7 +623,12 @@ def get_system_info():
         ret['processors'] += 1
         ret['processors_logical'] += system.NumberOfLogicalProcessors
         ret['processor_cores'] += system.NumberOfCores
-        ret['processor_cores_enabled'] += system.NumberOfEnabledCore
+        try:
+            ret['processor_cores_enabled'] += system.NumberOfEnabledCore
+        except (AttributeError, TypeError):
+            pass
+    if ret['processor_cores_enabled'] == 0:
+        ret.pop('processor_cores_enabled', False)
 
     system = conn.Win32_BIOS()[0]
     ret.update({'hardware_serial': system.SerialNumber,
@@ -835,8 +845,8 @@ def _join_domain(domain,
     if not account_exists:
         join_options |= NETSETUP_ACCOUNT_CREATE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
 
     # Return the results of the command as an error
@@ -927,8 +937,8 @@ def unjoin_domain(username=None,
     if disable:
         unjoin_options |= NETSETUP_ACCT_DELETE
 
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     comp = conn.Win32_ComputerSystem()[0]
     err = comp.UnjoinDomainOrWorkgroup(Password=password,
                                        UserName=username,
@@ -971,8 +981,8 @@ def get_domain_workgroup():
 
         salt 'minion-id' system.get_domain_workgroup
     '''
-    pythoncom.CoInitialize()
-    conn = wmi.WMI()
+    with salt.utils.winapi.Com():
+        conn = wmi.WMI()
     for computer in conn.Win32_ComputerSystem():
         if computer.PartOfDomain:
             return {'Domain': computer.Domain}

@@ -135,26 +135,12 @@ class InspectorFSDBTestCase(TestCase):
                 csvdb.open()
                 csvdb.create_table_from_object(FoobarEntity())
 
+            sorted_writable_data = sorted(writable.data[0].strip().split(','))
             if six.PY2:
-                assert writable.data[0].strip() == "foo:int,bar:unicode,spam:float"
+                sorted_expected_data = sorted("foo:int,bar:unicode,spam:float".split(','))
             else:
-                # Order in PY3 is not the same for every run
-                writable_data = writable.data[0].strip()
-                assert_order_options = ['bar:str,foo:int,spam:float',
-                                        'bar:str,spam:float,foo:int',
-                                        'foo:int,spam:float,bar:str',
-                                        'foo:int,bar:str,spam:float',
-                                        'spam:float,foo:int,bar:str',
-                                        'spam:float,bar:str,foo:int']
-                while assert_order_options:
-                    assert_option = assert_order_options.pop()
-                    try:
-                        assert writable_data == assert_option
-                        break
-                    except AssertionError:
-                        if not assert_order_options:
-                            raise
-                        continue
+                sorted_expected_data = sorted("foo:int,bar:str,spam:float".split(','))
+            self.assertEqual(sorted_writable_data, sorted_expected_data)
 
     def test_list_databases(self):
         '''

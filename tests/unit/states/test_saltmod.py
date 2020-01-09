@@ -9,12 +9,10 @@ import time
 import tempfile
 
 # Import Salt Testing Libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.paths import TMP
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -27,14 +25,13 @@ import salt.utils.event
 import salt.states.saltmod as saltmod
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.states.saltmod
     '''
     def setup_loader_modules(self):
         utils = salt.loader.utils(
-            salt.config.DEFAULT_MINION_OPTS,
+            salt.config.DEFAULT_MINION_OPTS.copy(),
             whitelist=['state']
         )
         return {
@@ -43,7 +40,7 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
                 '__opts__': {
                     '__role': 'master',
                     'file_client': 'remote',
-                    'sock_dir': tempfile.mkdtemp(dir=TMP),
+                    'sock_dir': tempfile.mkdtemp(dir=RUNTIME_VARS.TMP),
                     'transport': 'tcp'
                 },
                 '__salt__': {'saltutil.cmd': MagicMock()},
@@ -175,13 +172,11 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         name = 'state'
         tgt = 'larry'
 
-        comt = ('Function state will be executed'
-                ' on target {0} as test=False'.format(tgt))
-
         ret = {'name': name,
                'changes': {},
                'result': None,
-               'comment': comt}
+               'comment': 'Function state would be executed '
+                          'on target {0}'.format(tgt)}
 
         with patch.dict(saltmod.__opts__, {'test': True}):
             self.assertDictEqual(saltmod.function(name, tgt), ret)
@@ -282,11 +277,28 @@ class SaltmodTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltmod.__salt__, {'saltutil.wheel': wheel_mock}):
             self.assertDictEqual(saltmod.wheel(name), ret)
 
+    def test_state_ssh(self):
+        '''
+        Test saltmod passes roster to saltutil.cmd
+        '''
+        origcmd = saltmod.__salt__['saltutil.cmd']
+        cmd_kwargs = {}
+        cmd_args = []
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+        def cmd_mock(*args, **kwargs):
+            cmd_args.extend(args)
+            cmd_kwargs.update(kwargs)
+            return origcmd(*args, **kwargs)
+
+        with patch.dict(saltmod.__salt__, {'saltutil.cmd': cmd_mock}):
+            ret = saltmod.state('state.sls', tgt='*', ssh=True, highstate=True, roster='my_roster')
+        assert 'roster' in cmd_kwargs
+        assert cmd_kwargs['roster'] == 'my_roster'
+
+
 class StatemodTests(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
-        self.tmp_cachedir = tempfile.mkdtemp(dir=TMP)
+        self.tmp_cachedir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
         return {
             saltmod: {
                 '__env__': 'base',

@@ -215,6 +215,12 @@ def get_zone():
         hive='HKLM',
         key='SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation',
         vname='TimeZoneKeyName')['vdata']
+    # Some data may have null characters. We only need the first portion up to
+    # the first null character. See the following:
+    # https://github.com/saltstack/salt/issues/51940
+    # https://stackoverflow.com/questions/27716746/hklm-system-currentcontrolset-control-timezoneinformation-timezonekeyname-corrup
+    if '\0' in win_zone:
+        win_zone = win_zone.split('\0')[0]
     return mapper.get_unix(win_zone.lower(), 'Unknown')
 
 

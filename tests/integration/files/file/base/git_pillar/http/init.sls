@@ -38,25 +38,15 @@
 {{ venv_dir }}:
   virtualenv.managed:
     - system_site_packages: False
+    {#- Provide the real path for the python executable in case tests are running inside a virtualenv #}
+    - python: {{ salt.runtests_helpers.get_python_executable() }}
 
 uwsgi:
   pip.installed:
-    - name: 'uwsgi >= 2.0.13'
+    - name: 'uwsgi == 2.0.18'
     - bin_env: {{ venv_dir }}
+    {#- The env var bellow is EXTREMELY important #}
     - env_vars:
         UWSGI_PROFILE: cgi
     - require:
       - virtualenv: {{ venv_dir }}
-
-start_uwsgi:
-  cmd.run:
-    - name: '{{ venv_dir }}/bin/uwsgi --yaml {{ config_dir }}/uwsgi.yml'
-    - require:
-      - pip: uwsgi
-      - file: {{ config_dir }}/uwsgi.yml
-
-start_nginx:
-  cmd.run:
-    - name: 'nginx -c {{ config_dir }}/nginx.conf'
-    - require:
-      - file: {{ config_dir }}/nginx.conf

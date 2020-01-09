@@ -141,7 +141,7 @@ The following example illustrates calling the ``group_to_gid`` function in the
         - gid: {{ salt['file.group_to_gid']('some_group_that_exists') }}
 
 One way to think about this might be that the ``gid`` key is being assigned
-a value equivelent to the following python pseudo-code:
+a value equivalent to the following python pseudo-code:
 
 .. code-block:: python
 
@@ -159,7 +159,7 @@ MAC address for eth0:
     salt['network.hw_addr']('eth0')
 
 To examine the possible arguments to each execution module function,
-one can examine the `module reference documentation </ref/modules/all>`:
+one can examine the `module reference documentation </ref/modules/all>`_:
 
 Advanced SLS module syntax
 ==========================

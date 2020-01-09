@@ -53,7 +53,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.http
-import salt.ext.ipaddress as ipaddress
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -165,7 +165,7 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
                 if proxy_username:
                     ret['proxy']['username'] = proxy_username
 
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.debug(
                 'Could not create proxy config data for "%s"', minion_id)
 

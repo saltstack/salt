@@ -81,7 +81,7 @@ def _error_msg_iface(iface, option, expected):
     a list of expected values.
     '''
     msg = 'Invalid option -- Interface: {0}, Option: {1}, Expected: [{2}]'
-    return msg.format(iface, option, '|'.join(expected))
+    return msg.format(iface, option, '|'.join(str(e) for e in expected))
 
 
 def _error_msg_routes(iface, option, expected):
@@ -104,7 +104,7 @@ def _error_msg_network(option, expected):
     a list of expected values.
     '''
     msg = 'Invalid network setting -- Setting: {0}, Expected: [{1}]'
-    return msg.format(option, '|'.join(expected))
+    return msg.format(option, '|'.join(str(e) for e in expected))
 
 
 def _log_default_network(opt, value):
@@ -308,7 +308,7 @@ def _parse_settings_bond_0(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -332,7 +332,7 @@ def _parse_settings_bond_1(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -387,7 +387,7 @@ def _parse_settings_bond_2(opts, iface, bond_def):
         try:
             int(opts['arp_interval'])
             bond.update({'arp_interval': opts['arp_interval']})
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _raise_error_iface(iface, 'arp_interval', ['integer'])
     else:
         _log_default_iface(iface, 'arp_interval', bond_def['arp_interval'])
@@ -418,7 +418,7 @@ def _parse_settings_bond_3(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -462,7 +462,7 @@ def _parse_settings_bond_4(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _raise_error_iface(iface, binding, valid)
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -505,7 +505,7 @@ def _parse_settings_bond_5(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -544,7 +544,7 @@ def _parse_settings_bond_6(opts, iface, bond_def):
             try:
                 int(opts[binding])
                 bond.update({binding: opts[binding]})
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 _raise_error_iface(iface, binding, ['integer'])
         else:
             _log_default_iface(iface, binding, bond_def[binding])
@@ -877,7 +877,7 @@ def _parse_network_settings(opts, current):
         try:
             opts['hostname'] = current['hostname']
             _log_default_network('hostname', current['hostname'])
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             _raise_error_network('hostname', ['server1.example.com'])
 
     if opts['hostname']:
@@ -942,7 +942,7 @@ def _read_file(path):
             except ValueError:
                 pass
             return lines
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return []  # Return empty list for type consistency
 
 
@@ -1032,6 +1032,14 @@ def build_interface(iface, iface_type, enabled, **settings):
             rh_major = '7'
         else:
             rh_major = '6'
+    elif __grains__['os'] == 'Amazon':
+        # TODO: Is there a better formula for this? -W. Werner, 2019-05-30
+        # If not, it will need to be updated whenever Amazon releases
+        # Amazon Linux 3
+        if __grains__['osmajorrelease'] == 2:
+            rh_major = '7'
+        else:
+            rh_major = '6'
     else:
         rh_major = __grains__['osrelease'][:1]
 
@@ -1091,15 +1099,16 @@ def build_routes(iface, **settings):
             template = 'route_eth.jinja'
     except ValueError:
         pass
-    log.debug('Template name: ' + template)
+    log.debug('Template name: %s', template)
 
     opts = _parse_routes(iface, settings)
-    log.debug("Opts: \n {0}".format(opts))
+    log.debug("Opts: \n %s", opts)
     try:
         template = JINJA.get_template(template)
     except jinja2.exceptions.TemplateNotFound:
         log.error(
-            'Could not load template {0}'.format(template)
+            'Could not load template %s',
+            template
         )
         return ''
     opts6 = []

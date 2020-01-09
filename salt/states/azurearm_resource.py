@@ -20,8 +20,8 @@ Azure (ARM) Resource State Module
 :platform: linux
 
 :configuration: This module requires Azure Resource Manager credentials to be passed as a dictionary of
-keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
-parameters are sensitive, it's recommended to pass them to the states via pillar.
+    keyword arguments to the ``connection_auth`` parameter in order to work properly. Since the authentication
+    parameters are sensitive, it's recommended to pass them to the states via pillar.
 
     Required provider parameters:
 
@@ -62,7 +62,7 @@ parameters are sensitive, it's recommended to pass them to the states via pillar
 
     Example states using Azure Resource Manager authentication:
 
-    .. code-block:: yaml
+    .. code-block:: jinja
 
         {% set profile = salt['pillar.get']('azurearm:mysubscription') %}
         Ensure resource group exists:
@@ -394,7 +394,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
     if policy_rule_json:
         try:
             temp_rule = json.loads(policy_rule_json)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Unable to load policy rule json! ({0})'.format(exc)
             return ret
     elif policy_rule_file:
@@ -415,7 +415,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
                 skip_verify=skip_verify,
                 **kwargs
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Unable to locate policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)
             return ret
 
@@ -426,7 +426,7 @@ def policy_definition_present(name, policy_rule=None, policy_type=None, mode=Non
         try:
             with salt.utils.files.fopen(sfn, 'r') as prf:
                 temp_rule = json.load(prf)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Unable to load policy rule file "{0}"! ({1})'.format(policy_rule_file, exc)
             return ret
 

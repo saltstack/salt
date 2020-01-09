@@ -1,2 +1,2 @@
-cryptography==2.1.4
-pyOpenSSL==17.5.0
+cryptography==2.6.1
+pyopenssl==19.0.0

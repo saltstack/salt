@@ -311,7 +311,7 @@ def get_computer_name():
         salt '*' system.get_computer_name
     '''
     ret = __utils__['mac_utils.execute_return_result'](
-        'systemsetup -getcomputername')
+        'scutil --get ComputerName')
 
     return __utils__['mac_utils.parse_return'](ret)
 
@@ -331,7 +331,7 @@ def set_computer_name(name):
 
         salt '*' system.set_computer_name "Mike's Mac"
     '''
-    cmd = 'systemsetup -setcomputername "{0}"'.format(name)
+    cmd = 'scutil --set ComputerName "{0}"'.format(name)
     __utils__['mac_utils.execute_return_success'](cmd)
 
     return __utils__['mac_utils.confirm_updated'](

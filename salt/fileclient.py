@@ -20,7 +20,6 @@ from salt.exceptions import (
     CommandExecutionError, MinionError
 )
 import salt.client
-import salt.crypt
 import salt.loader
 import salt.payload
 import salt.transport.client
@@ -530,21 +529,24 @@ class Client(object):
                                        path_style=s3_opt('path_style', False),
                                        https_enable=s3_opt('https_enable', True))
                 return dest
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise MinionError(
                     'Could not fetch from {0}. Exception: {1}'.format(url, exc)
                 )
         if url_data.scheme == 'ftp':
             try:
                 ftp = ftplib.FTP()
-                ftp.connect(url_data.hostname, url_data.port)
+                ftp_port = url_data.port
+                if not ftp_port:
+                    ftp_port = 21
+                ftp.connect(url_data.hostname, ftp_port)
                 ftp.login(url_data.username, url_data.password)
                 remote_file_path = url_data.path.lstrip('/')
                 with salt.utils.files.fopen(dest, 'wb') as fp_:
                     ftp.retrbinary('RETR {0}'.format(remote_file_path), fp_.write)
                 ftp.quit()
                 return dest
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise MinionError('Could not retrieve {0} from FTP server. Exception: {1}'.format(url, exc))
 
         if url_data.scheme == 'swift':
@@ -569,7 +571,7 @@ class Client(object):
                                       url_data.path[1:],
                                       dest)
                 return dest
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise MinionError('Could not fetch from {0}'.format(url))
 
         get_kwargs = {}
@@ -735,7 +737,7 @@ class Client(object):
         kwargs['saltenv'] = saltenv
         url_data = urlparse(url)
         sfn = self.cache_file(url, saltenv, cachedir=cachedir)
-        if not os.path.exists(sfn):
+        if not sfn or not os.path.exists(sfn):
             return ''
         if template in salt.utils.templates.TEMPLATE_REGISTRY:
             data = salt.utils.templates.TEMPLATE_REGISTRY[template](
@@ -875,7 +877,7 @@ class PillarClient(Client):
             ):
                 # Don't walk any directories that match file_ignore_regex or glob
                 dirs[:] = [d for d in dirs if not salt.fileserver.is_file_ignored(self.opts, d)]
-                if len(dirs) == 0 and len(files) == 0:
+                if not dirs and not files:
                     ret.append(salt.utils.data.decode(os.path.relpath(root, path)))
         return ret
 
@@ -957,7 +959,7 @@ class PillarClient(Client):
             fnd_path = fnd
             try:
                 fnd_stat = list(os.stat(fnd_path))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 fnd_stat = None
 
         hash_type = self.opts.get('hash_type', 'md5')
@@ -1019,18 +1021,29 @@ class RemoteClient(Client):
         '''
         Reset the channel, in the event of an interruption
         '''
+        # Close the previous channel
+        self.channel.close()
+        # Instantiate a new one
         self.channel = salt.transport.client.ReqChannel.factory(self.opts)
         return self.channel
 
+    # pylint: disable=W1701
     def __del__(self):
         self.destroy()
+    # pylint: enable=W1701
 
     def destroy(self):
         if self._closing:
             return
 
         self._closing = True
-        self.channel.close()
+        channel = None
+        try:
+            channel = self.channel
+        except AttributeError:
+            pass
+        if channel is not None:
+            channel.close()
 
     def get_file(self,
                  path,
@@ -1318,7 +1331,7 @@ class RemoteClient(Client):
             else:
                 try:
                     return hash_result, list(os.stat(path))
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     return hash_result, None
         load = {'path': path,
                 'saltenv': saltenv,

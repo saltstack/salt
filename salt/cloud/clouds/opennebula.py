@@ -782,7 +782,7 @@ def get_template_image(kwargs=None, call=None):
         ret = list_templates()[name]['template']['disk']['image']
     except KeyError:
         raise SaltCloudSystemExit(
-            'The image for template \'{1}\' could not be found.'.format(name)
+            'The image for template \'{0}\' could not be found.'.format(name)
         )
 
     return ret
@@ -1076,7 +1076,7 @@ def create(vm_):
                 exc_info_on_loglevel=logging.DEBUG
             )
             return False
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.error(
             'Error creating %s on OpenNebula\n\n'
             'The following exception was thrown when trying to '
@@ -4566,7 +4566,7 @@ def _list_nodes(full=False):
         for nic in vm.find('TEMPLATE').findall('NIC'):
             try:
                 private_ips.append(nic.find('IP').text)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
         vms[name]['id'] = vm.find('ID').text

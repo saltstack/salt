@@ -8,11 +8,15 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import os
 import time
+import pprint
+
+# Import Salt libs
+from salt.ext.six.moves import range
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import flaky
 from tests.support.unit import skipIf
-from tests.support.helpers import destructiveTest, flaky
 
 log = logging.getLogger(__name__)
 
@@ -145,7 +149,6 @@ class TestModulesGrains(ModuleCase):
                 get_grain, int, msg='grain: {0} is not an int or empty'.format(grain))
 
 
-@destructiveTest
 class GrainsAppendTestCase(ModuleCase):
     '''
     Tests written specifically for the grains.append function.
@@ -153,8 +156,17 @@ class GrainsAppendTestCase(ModuleCase):
     GRAIN_KEY = 'salttesting-grain-key'
     GRAIN_VAL = 'my-grain-val'
 
-    def tearDown(self):
+    def setUp(self):
+        # Start off with an empty list
         self.run_function('grains.setval', [self.GRAIN_KEY, []])
+        if not self.wait_for_grain(self.GRAIN_KEY, []):
+            raise Exception('Failed to set grain')
+        self.addCleanup(self.cleanup_grain)
+
+    def cleanup_grain(self):
+        self.run_function('grains.setval', [self.GRAIN_KEY, []])
+        if not self.wait_for_grain(self.GRAIN_KEY, []):
+            raise Exception('Failed to set grain')
 
     def test_grains_append(self):
         '''
@@ -172,10 +184,12 @@ class GrainsAppendTestCase(ModuleCase):
               'salttesting-grain-key'.format(self.GRAIN_VAL)
 
         # First, make sure the test grain is present
-        self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
 
         # Now try to append again
         ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, [self.GRAIN_VAL]))
         if not ret or isinstance(ret, dict):
             # Sleep for a bit, sometimes the second "append" runs too quickly
             time.sleep(5)
@@ -188,6 +202,8 @@ class GrainsAppendTestCase(ModuleCase):
         '''
         Tests the return of a grains.append call when val is passed in as a list.
         '''
+        # Start off with an empty list, don't know if the flaky decorator runs the setUp function or not...
+        self.run_function('grains.setval', [self.GRAIN_KEY, []])
         second_grain = self.GRAIN_VAL + '-2'
         ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
         self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
@@ -198,11 +214,11 @@ class GrainsAppendTestCase(ModuleCase):
         but also ensure the grain is not listed twice.
         '''
         # First, add the test grain.
-        self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        append_1 = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
 
         # Call the function again, which results in a string message, as tested in
         # test_grains_append_val_already_present above.
-        self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+        append_2 = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
 
         # Now make sure the grain doesn't show up twice.
         grains = self.run_function('grains.items')
@@ -212,4 +228,42 @@ class GrainsAppendTestCase(ModuleCase):
                 count += 1
 
         # We should only have hit the grain key once.
-        self.assertEqual(count, 1)
+        self.assertEqual(
+            count,
+            1,
+            msg='Count did not match({}!=1) while looking for key \'{}\'.\nFirst append return:\n{}\nSecond append return:\n{}'.format(
+                count,
+                self.GRAIN_KEY,
+                pprint.pformat(append_1),
+                pprint.pformat(append_2)
+            )
+        )
+
+    def wait_for_grain(self, key, val, timeout=60, sleep=.3):
+        start = time.time()
+        while time.time() - start <= timeout:
+            ret = self.run_function('grains.get', [key])
+            if ret == val:
+                return True
+            time.sleep(sleep)
+        return False
+
+    def test_grains_remove_add(self):
+        second_grain = self.GRAIN_VAL + '-2'
+        ret = self.run_function('grains.get', [self.GRAIN_KEY])
+        self.assertEqual(ret, [])
+
+        for i in range(10):
+            ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            self.assertEqual(ret[self.GRAIN_KEY], [])
+            self.wait_for_grain(self.GRAIN_KEY, [])
+            ret = self.run_function('grains.append', [self.GRAIN_KEY, self.GRAIN_VAL])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL])
+
+            ret = self.run_function('grains.setval', [self.GRAIN_KEY, []])
+            self.wait_for_grain(self.GRAIN_KEY, [])
+            self.assertTrue(self.wait_for_grain(self.GRAIN_KEY, []))
+            ret = self.run_function('grains.append', [self.GRAIN_KEY, [self.GRAIN_VAL, second_grain]])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])
+            self.assertEqual(ret[self.GRAIN_KEY], [self.GRAIN_VAL, second_grain])

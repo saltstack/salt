@@ -80,7 +80,7 @@ def mk_token(opts, tdata):
     try:
         while redis_client.get(tok) is not None:
             tok = six.text_type(hash_type(os.urandom(512)).hexdigest())
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.warning(
             'Authentication failure: cannot get token %s from redis: %s',
             tok, err
@@ -90,7 +90,7 @@ def mk_token(opts, tdata):
     serial = salt.payload.Serial(opts)
     try:
         redis_client.set(tok, serial.dumps(tdata))
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.warning(
             'Authentication failure: cannot save token %s to redis: %s',
             tok, err
@@ -114,7 +114,7 @@ def get_token(opts, tok):
     try:
         tdata = serial.loads(redis_client.get(tok))
         return tdata
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.warning(
             'Authentication failure: cannot get token %s from redis: %s',
             tok, err
@@ -136,7 +136,7 @@ def rm_token(opts, tok):
     try:
         redis_client.delete(tok)
         return {}
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.warning('Could not remove token %s: %s', tok, err)
 
 
@@ -154,6 +154,6 @@ def list_tokens(opts):
     serial = salt.payload.Serial(opts)
     try:
         return [k.decode('utf8') for k in redis_client.keys()]
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.warning('Failed to list keys: %s', err)
         return []

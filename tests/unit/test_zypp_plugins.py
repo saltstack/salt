@@ -7,12 +7,10 @@
 from __future__ import absolute_import
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 import os
@@ -25,11 +23,12 @@ if sys.version_info >= (3,):
 else:
     BUILTINS_OPEN = '__builtin__.open'
 
-zyppnotify = imp.load_source('zyppnotify', os.path.sep.join(os.path.dirname(__file__).split(
-    os.path.sep)[:-2] + ['scripts', 'suse', 'zypper', 'plugins', 'commit', 'zyppnotify']))
+ZYPPNOTIFY_FILE = os.path.sep.join(
+    os.path.dirname(__file__).split(os.path.sep)[:-2] +
+    ['scripts', 'suse', 'zypper', 'plugins', 'commit', 'zyppnotify']
+)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class ZyppPluginsTestCase(TestCase):
     '''
     Test shipped libzypp plugins.
@@ -40,6 +39,7 @@ class ZyppPluginsTestCase(TestCase):
         Returns:
 
         '''
+        zyppnotify = imp.load_source('zyppnotify', ZYPPNOTIFY_FILE)
         drift = zyppnotify.DriftDetector()
         drift._get_mtime = MagicMock(return_value=123)
         drift._get_checksum = MagicMock(return_value='deadbeef')

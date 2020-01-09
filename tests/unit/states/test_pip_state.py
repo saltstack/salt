@@ -9,15 +9,16 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import logging
+import sys
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.states.pip_state as pip_state
-import salt.utils.versions
 
 # Import 3rd-party libs
 try:
@@ -27,7 +28,9 @@ except ImportError:
     HAS_PIP = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+log = logging.getLogger(__name__)
+
+
 @skipIf(not HAS_PIP,
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
@@ -42,6 +45,7 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
         }
 
     def test_install_requirements_parsing(self):
+        log.debug("Real pip version is %s", pip.__version__)
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         pip_list = MagicMock(return_value={'pep8': '1.3.3'})
         pip_version = pip.__version__
@@ -50,19 +54,16 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
                                                  'pip.list': pip_list}):
                 with patch.dict(pip_state.__opts__, {'test': True}):
-                    if salt.utils.versions.compare(ver1=pip_version,
-                                                   oper='<',
-                                                   ver2='10.0'):
-                        ret = pip_state.installed('pep8=1.3.2')
-                        self.assertSaltFalseReturn({'test': ret})
-                        self.assertInSaltComment(
-                            'Invalid version specification in package pep8=1.3.2. '
-                            '\'=\' is not supported, use \'==\' instead.',
-                            {'test': ret})
-                    else:
-                        self.assertRaises(
-                            pip._internal.exceptions.InstallationError,
-                            pip_state.installed, 'pep=1.3.2')
+                    log.debug(
+                        'pip_state._from_line globals: %s',
+                        [name for name in pip_state._from_line.__globals__]
+                    )
+                    ret = pip_state.installed('pep8=1.3.2')
+                    self.assertSaltFalseReturn({'test': ret})
+                    self.assertInSaltComment(
+                        'Invalid version specification in package pep8=1.3.2. '
+                        '\'=\' is not supported, use \'==\' instead.',
+                        {'test': ret})
 
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             pip_list = MagicMock(return_value={'pep8': '1.3.3'})
@@ -255,29 +256,6 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                         {'test': ret}
                     )
 
-            # Test VCS installations with version info like >= 0.1
-            with patch.object(pip, '__version__', MagicMock(side_effect=AttributeError(
-                                                        'Faked missing __version__ attribute'))):
-                mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
-                pip_list = MagicMock(return_value={'SaltTesting': '0.5.0'})
-                pip_install = MagicMock(return_value={
-                    'retcode': 0,
-                    'stderr': '',
-                    'stdout': 'Cloned!'
-                })
-                with patch.dict(pip_state.__salt__, {'cmd.run_all': mock,
-                                                     'pip.list': pip_list,
-                                                     'pip.install': pip_install}):
-                    with patch.dict(pip_state.__opts__, {'test': False}):
-                        ret = pip_state.installed(
-                            'git+https://github.com/saltstack/salt-testing.git#egg=SaltTesting>=0.5.0'
-                        )
-                        self.assertSaltTrueReturn({'test': ret})
-                        self.assertInSaltComment(
-                            'packages are already installed',
-                            {'test': ret}
-                        )
-
     def test_install_in_editable_mode(self):
         '''
         Check that `name` parameter containing bad characters is not parsed by
@@ -304,3 +282,30 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
                 'successfully installed',
                 {'test': ret}
             )
+
+
+class PipStateUtilsTest(TestCase):
+
+    def test_has_internal_exceptions_mod_function(self):
+        assert pip_state.pip_has_internal_exceptions_mod('10.0')
+        assert pip_state.pip_has_internal_exceptions_mod('18.1')
+        assert not pip_state.pip_has_internal_exceptions_mod('9.99')
+
+    def test_has_exceptions_mod_function(self):
+        assert pip_state.pip_has_exceptions_mod('1.0')
+        assert not pip_state.pip_has_exceptions_mod('0.1')
+        assert not pip_state.pip_has_exceptions_mod('10.0')
+
+    def test_pip_purge_method_with_pip(self):
+        mock_modules = sys.modules.copy()
+        mock_modules.pop('pip', None)
+        mock_modules['pip'] = object()
+        with patch('sys.modules', mock_modules):
+            pip_state.purge_pip()
+        assert 'pip' not in mock_modules
+
+    def test_pip_purge_method_without_pip(self):
+        mock_modules = sys.modules.copy()
+        mock_modules.pop('pip', None)
+        with patch('sys.modules', mock_modules):
+            pip_state.purge_pip()

@@ -3,18 +3,15 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 '''
 # Import Python Libs
-from __future__ import absolute_import, unicode_literals, print_function
-
-# Import Salt Testing Libs
-from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
-from tests.support.mock import (
-    MagicMock,
-    patch
-)
+from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.modules.win_timezone as win_timezone
+
+# Import Salt Testing Libs
+from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch
+from tests.support.unit import TestCase, skipIf
 
 
 @skipIf(not win_timezone.HAS_PYTZ, 'This test requires pytz')
@@ -25,18 +22,29 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         return {win_timezone: {}}
 
-    # 'get_zone' function tests: 1
+    # 'get_zone' function tests: 3
 
     def test_get_zone(self):
         '''
-        Test if it get current timezone (i.e. Asia/Calcutta)
+        Test if it gets current timezone (i.e. Asia/Calcutta)
         '''
         mock_read = MagicMock(side_effect=[{'vdata': 'India Standard Time'},
                                            {'vdata': 'Indian Standard Time'}])
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
             self.assertEqual(win_timezone.get_zone(), 'Asia/Calcutta')
+            self.assertEqual(win_timezone.get_zone(), 'Unknown')
 
+    def test_get_zone_null_terminated(self):
+        '''
+        Test if it handles instances where the registry contains null values
+        '''
+        mock_read = MagicMock(side_effect=[
+            {'vdata': 'India Standard Time\0\0\0\0'},
+            {'vdata': 'Indian Standard Time\0\0some more junk data\0\0'}])
+
+        with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
+            self.assertEqual(win_timezone.get_zone(), 'Asia/Calcutta')
             self.assertEqual(win_timezone.get_zone(), 'Unknown')
 
     # 'get_offset' function tests: 1
@@ -45,11 +53,6 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it get current numeric timezone offset from UCT (i.e. +0530)
         '''
-        # time = ('(UTC+05:30) Chennai, Kolkata, Mumbai, \
-        # New Delhi\nIndia Standard Time')
-        # mock_cmd = MagicMock(side_effect=['India Standard Time', time])
-        # with patch.dict(win_timezone.__salt__, {'cmd.run': mock_cmd}):
-
         mock_read = MagicMock(return_value={'vdata': 'India Standard Time'})
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):

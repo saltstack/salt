@@ -13,8 +13,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -25,7 +23,6 @@ import salt.utils.platform
 import jinja2.exceptions
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Do not run these tests on Windows')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''
@@ -51,6 +48,18 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(debian_ip.__salt__, {'kmod.load': mock,
                                                      'pkg.install': mock}):
                     self.assertEqual(debian_ip.build_bond('bond0'), '')
+
+    def test_error_message_iface_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        iface = 'ethtest'
+        option = 'test'
+        msg = debian_ip._error_msg_iface(iface, option, values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
+
+    def test_error_message_network_should_process_non_str_expected(self):
+        values = [1, True, False, 'no-kaboom']
+        msg = debian_ip._error_msg_network('fnord', values)
+        self.assertTrue(msg.endswith('[1|True|False|no-kaboom]'), msg)
 
     def test_build_bond_exception(self):
         '''
@@ -476,14 +485,17 @@ class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.debian_ip._parse_hostname',
                       MagicMock(return_value='SaltStack')), \
                         patch('salt.modules.debian_ip._parse_domainname',
-                              MagicMock(return_value='saltstack.com')):
+                              MagicMock(return_value='saltstack.com')), \
+                                      patch('salt.modules.debian_ip._parse_searchdomain',
+                                              MagicMock(return_value='test.saltstack.com')):
             mock_avai = MagicMock(return_value=True)
             with patch.dict(debian_ip.__salt__, {'service.available': mock_avai,
                                                  'service.status': mock_avai}):
                 self.assertEqual(debian_ip.get_network_settings(),
-                                 ['NETWORKING=yes\n',
-                                  'HOSTNAME=SaltStack\n',
-                                  'DOMAIN=saltstack.com\n'])
+                                 [u'NETWORKING=yes\n',
+                                  u'HOSTNAME=SaltStack\n',
+                                  u'DOMAIN=saltstack.com\n',
+                                  u'SEARCH=test.saltstack.com\n'])
 
                 mock = MagicMock(side_effect=jinja2.exceptions.TemplateNotFound
                                  ('error'))

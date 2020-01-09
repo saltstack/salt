@@ -392,7 +392,7 @@ def create(vm_):
             result = clone(kwargs={'linode_id': linode_id,
                                    'datacenter_id': datacenter_id,
                                    'plan_id': plan_id})
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Error cloning \'%s\' on Linode.\n\n'
                 'The following exception was thrown by Linode when trying to '
@@ -409,7 +409,7 @@ def create(vm_):
                 'PLANID': plan_id,
                 'DATACENTERID': datacenter_id
             })
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Error creating %s on Linode\n\n'
                 'The following exception was thrown by Linode when trying to '
@@ -1037,9 +1037,12 @@ def _decode_linode_plan_label(label):
                     'Invalid Linode plan ({}) specified - call avail_sizes() for all available options'.format(new_label)
                 )
 
-            log.warning('An outdated Linode plan label was detected in your Cloud Profile ({}).'
-                        ' Please update the profile to use'
-                        ' the new label format ({}) for the requested Linode plan size.'.format(label, new_label))
+            log.warning(
+                'An outdated Linode plan label was detected in your Cloud '
+                'Profile (%s). Please update the profile to use the new '
+                'label format (%s) for the requested Linode plan size.',
+                label, new_label
+            )
 
             label = new_label
 
@@ -1557,7 +1560,7 @@ def _query(action=None,
     )
 
     if 'ERRORARRAY' in result['dict']:
-        if len(result['dict']['ERRORARRAY']):
+        if result['dict']['ERRORARRAY']:
             error_list = []
 
             for error in result['dict']['ERRORARRAY']:

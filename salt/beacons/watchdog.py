@@ -10,9 +10,7 @@ Watch files and translate the changes into salt events
 
 '''
 # Import Python libs
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import absolute_import, print_function, unicode_literals
 import collections
 import logging
 

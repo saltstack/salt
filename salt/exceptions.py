@@ -43,7 +43,7 @@ class SaltException(Exception):
         import salt.utils.stringutils
         if not isinstance(message, six.string_types):
             message = six.text_type(message)
-        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code
+        if six.PY3 or isinstance(message, unicode):  # pylint: disable=incompatible-py3-code,undefined-variable
             super(SaltException, self).__init__(
                 salt.utils.stringutils.to_str(message)
             )
@@ -57,7 +57,7 @@ class SaltException(Exception):
             # a str version, and convert the passed value to unicode for the
             # message/strerror attributes.
             super(SaltException, self).__init__(str(message))  # future lint: blacklisted-function
-            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code
+            self.message = self.strerror = unicode(message)  # pylint: disable=incompatible-py3-code,undefined-variable
 
     def __unicode__(self):
         return self.strerror
@@ -207,7 +207,7 @@ class FileLockError(SaltException):
     '''
     Used when an error occurs obtaining a file lock
     '''
-    def __init__(self, message, time_start=None, *args, **kwargs):
+    def __init__(self, message, time_start=None, *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
         super(FileLockError, self).__init__(message, *args, **kwargs)
         if time_start is None:
             log.warning(
@@ -309,7 +309,7 @@ class SaltClientTimeout(SaltException):
 
     Takes the ``jid`` as a parameter
     '''
-    def __init__(self, message, jid=None, *args, **kwargs):
+    def __init__(self, message, jid=None, *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
         super(SaltClientTimeout, self).__init__(message, *args, **kwargs)
         self.jid = jid
 
@@ -348,6 +348,12 @@ class EauthAuthenticationError(SaltException):
 class TokenAuthenticationError(SaltException):
     '''
     Thrown when token authentication fails
+    '''
+
+
+class SaltDeserializationError(SaltException):
+    '''
+    Thrown when salt cannot deserialize data.
     '''
 
 
@@ -565,4 +571,10 @@ class VMwareVmCreationError(VMwareSaltError):
 class MissingSmb(SaltException):
     '''
     Raised when no smb library is found.
+    '''
+
+
+class LoggingRuntimeError(RuntimeError):
+    '''
+    Raised when we encounter an error while logging
     '''

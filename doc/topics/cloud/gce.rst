@@ -170,7 +170,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    salt gce-instance test.ping
+    salt gce-instance test.version
 
 
 GCE Specific Settings

@@ -2,26 +2,36 @@
 '''
 Retrieve EC2 instance data for minions for ec2_tags and ec2_tags_list
 
-The minion id must be the AWS instance-id or value in 'tag_match_key'.
-For example set 'tag_match_key' to 'Name', to have the minion-id matched against the
-tag 'Name'. The tag contents must be unique.  The value of tag_match_value can
-be 'uqdn' or 'asis'. if 'uqdn' strips any domain before comparison.
+The minion id must be the AWS instance-id or value in ``tag_match_key``.  For
+example set ``tag_match_key`` to ``Name`` to have the minion-id matched against
+the tag 'Name'. The tag contents must be unique. The value of
+``tag_match_value`` can be 'uqdn' or 'asis'. if 'uqdn', then the domain will be
+stripped before comparison.
 
-The option use_grain can be set to True.  This allows the use of an
-instance-id grain instead of the minion-id.  Since this is a potential
-security risk, the configuration can be further expanded to include
-a list of minions that are trusted to only allow the alternate id
-of the instances to specific hosts.  There is no glob matching at
-this time.
+Additionally, the ``use_grain`` option can be set to ``True``. This allows the
+use of an instance-id grain instead of the minion-id. Since this is a potential
+security risk, the configuration can be further expanded to include a list of
+minions that are trusted to only allow the alternate id of the instances to
+specific hosts. There is no glob matching at this time.
 
-The optional 'tag_list_key' indicates which keys should be added to
-'ec2_tags_list' and be split by tag_list_sep (default `;`). If a tag key is
-included in 'tag_list_key' it is removed from ec2_tags. If a tag does not
-exist it is still included as an empty list.
+.. note::
+    If you are using ``use_grain: True`` in the configuration for this external
+    pillar module, the minion must have :conf_minion:`metadata_server_grains`
+    enabled in the minion config file (see also :py:mod:`here
+    <salt.grains.metadata>`).
+
+    It is important to also note that enabling the ``use_grain`` option allows
+    the minion to manipulate the pillar data returned, as described above.
+
+The optional ``tag_list_key`` indicates which keys should be added to
+``ec2_tags_list`` and be split by ``tag_list_sep`` (by default ``;``). If a tag
+key is included in ``tag_list_key`` it is removed from ec2_tags. If a tag does
+not exist it is still included as an empty list.
 
 
-  Note: restart the salt-master for changes to take effect.
-
+..note::
+    As with any master configuration change, restart the salt-master daemon for
+    changes to take effect.
 
 .. code-block:: yaml
 
@@ -38,11 +48,10 @@ exist it is still included as an empty list.
             - trusted-minion-2
             - trusted-minion-3
 
-This is a very simple pillar that simply retrieves the instance data
-from AWS.  Currently the only portion implemented are EC2 tags, which
-returns a list of key/value pairs for all of the EC2 tags assigned to
-the instance.
-
+This is a very simple pillar configuration that simply retrieves the instance
+data from AWS. Currently the only portion implemented are EC2 tags, which
+returns a list of key/value pairs for all of the EC2 tags assigned to the
+instance.
 '''
 
 # Import python libs

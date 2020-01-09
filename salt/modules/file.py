@@ -29,7 +29,7 @@ import time
 import glob
 import hashlib
 import mmap
-from collections import Iterable, Mapping
+from collections import Iterable, Mapping, namedtuple
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
@@ -61,6 +61,7 @@ import salt.utils.templates
 import salt.utils.url
 import salt.utils.user
 import salt.utils.data
+import salt.utils.versions
 from salt.exceptions import CommandExecutionError, MinionError, SaltInvocationError, get_error_message as _get_error_message
 from salt.utils.files import HASHES, HASHES_REVMAP
 
@@ -69,6 +70,9 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     'makedirs_': 'makedirs'
 }
+
+
+AttrChanges = namedtuple('AttrChanges', 'added,removed')
 
 
 def __virtual__():
@@ -157,6 +161,51 @@ def _splitlines_preserving_trailing_newline(str):
     if str.endswith('\n') or str.endswith('\r'):
         lines.append('')
     return lines
+
+
+def _chattr_version():
+    '''
+    Return the version of chattr installed
+    '''
+    # There's no really *good* way to get the version of chattr installed.
+    # It's part of the e2fsprogs package - we could try to parse the version
+    # from the package manager, but there's no guarantee that it was
+    # installed that way.
+    #
+    # The most reliable approach is to just check tune2fs, since that should
+    # be installed with chattr, at least if it was installed in a conventional
+    # manner.
+    #
+    # See https://unix.stackexchange.com/a/520399/5788 for discussion.
+    tune2fs = salt.utils.path.which('tune2fs')
+    if not tune2fs or salt.utils.platform.is_aix():
+        return None
+    cmd = [tune2fs]
+    result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
+    match = re.search(
+        r'tune2fs (?P<version>[0-9\.]+)',
+        salt.utils.stringutils.to_str(result),
+    )
+    if match is None:
+        version = None
+    else:
+        version = match.group('version')
+
+    return version
+
+
+def _chattr_has_extended_attrs():
+    '''
+    Return ``True`` if chattr supports extended attributes, that is,
+    the version is >1.41.22. Otherwise, ``False``
+    '''
+    ver = _chattr_version()
+    if ver is None:
+        return False
+
+    needed_version = salt.utils.versions.LooseVersion('1.41.12')
+    chattr_version = salt.utils.versions.LooseVersion(ver)
+    return chattr_version > needed_version
 
 
 def gid_to_group(gid):
@@ -391,7 +440,7 @@ def set_mode(path, mode):
         raise CommandExecutionError('{0}: File not found'.format(path))
     try:
         os.chmod(path, int(mode, 8))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return 'Invalid Mode ' + mode
     return get_mode(path)
 
@@ -520,8 +569,6 @@ def _cmp_attrs(path, attrs):
     attrs
         string of attributes to compare against a given file
     '''
-    diff = [None, None]
-
     # lsattr for AIX is not the same thing as lsattr for linux.
     if salt.utils.platform.is_aix():
         return None
@@ -532,15 +579,13 @@ def _cmp_attrs(path, attrs):
         # lsattr not installed
         return None
 
-    old = [chr for chr in lattrs if chr not in attrs]
-    if len(old) > 0:
-        diff[1] = ''.join(old)
+    new = set(attrs)
+    old = set(lattrs)
 
-    new = [chr for chr in attrs if chr not in lattrs]
-    if len(new) > 0:
-        diff[0] = ''.join(new)
-
-    return diff
+    return AttrChanges(
+        added=''.join(new-old) or None,
+        removed=''.join(old-new) or None,
+    )
 
 
 def lsattr(path):
@@ -568,7 +613,7 @@ def lsattr(path):
         return None
 
     if not os.path.exists(path):
-        raise SaltInvocationError("File or directory does not exist.")
+        raise SaltInvocationError("File or directory does not exist: " + path)
 
     cmd = ['lsattr', path]
     result = __salt__['cmd.run'](cmd, ignore_retcode=True, python_shell=False)
@@ -576,8 +621,12 @@ def lsattr(path):
     results = {}
     for line in result.splitlines():
         if not line.startswith('lsattr: '):
-            vals = line.split(None, 1)
-            results[vals[1]] = re.findall(r"[acdijstuADST]", vals[0])
+            attrs, file = line.split(None, 1)
+            if _chattr_has_extended_attrs():
+                pattern = r"[aAcCdDeijPsStTu]"
+            else:
+                pattern = r"[acdijstuADST]"
+            results[file] = re.findall(pattern, attrs)
 
     return results
 
@@ -594,8 +643,8 @@ def chattr(*files, **kwargs):
         should be added or removed from files
 
     attributes
-        One or more of the following characters: ``acdijstuADST``, representing
-        attributes to add to/remove from files
+        One or more of the following characters: ``aAcCdDeijPsStTu``,
+        representing attributes to add to/remove from files
 
     version
         a version number to assign to the file(s)
@@ -620,7 +669,7 @@ def chattr(*files, **kwargs):
         raise SaltInvocationError(
             "Need an operator: 'add' or 'remove' to modify attributes.")
     if attributes is None:
-        raise SaltInvocationError("Need attributes: [AacDdijsTtSu]")
+        raise SaltInvocationError("Need attributes: [aAcCdDeijPsStTu]")
 
     cmd = ['chattr']
 
@@ -642,8 +691,7 @@ def chattr(*files, **kwargs):
     result = __salt__['cmd.run'](cmd, python_shell=False)
 
     if bool(result):
-        raise CommandExecutionError(
-            "chattr failed to run, possibly due to bad parameters.")
+        return False
 
     return True
 
@@ -1731,7 +1779,7 @@ def _regex_to_static(src, regex):
     try:
         compiled = re.compile(regex, re.DOTALL)
         src = [line for line in src if compiled.search(line) or line.count(regex)]
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         raise CommandExecutionError("{0}: '{1}'".format(_get_error_message(ex), regex))
 
     return src and src or []
@@ -2417,7 +2465,7 @@ def replace(path,
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 raise CommandExecutionError(
                     "Unable create backup symlink '{0}'. "
                     "Target was '{1}'. "
@@ -2665,7 +2713,7 @@ def blockreplace(path,
             linesep = os.linesep
         try:
             fi_file.close()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     if in_block:
@@ -2710,11 +2758,20 @@ def blockreplace(path,
                 backup_path = '{0}{1}'.format(path, backup)
                 shutil.copy2(path, backup_path)
                 # copy2 does not preserve ownership
-                check_perms(backup_path,
-                        None,
-                        perms['user'],
-                        perms['group'],
-                        perms['mode'])
+                if salt.utils.platform.is_windows():
+                    # This function resides in win_file.py and will be available
+                    # on Windows. The local function will be overridden
+                    # pylint: disable=E1120,E1123
+                    check_perms(path=backup_path,
+                                ret=None,
+                                owner=perms['user'])
+                    # pylint: enable=E1120,E1123
+                else:
+                    check_perms(name=backup_path,
+                                ret=None,
+                                user=perms['user'],
+                                group=perms['group'],
+                                mode=perms['mode'])
 
             # write new content in the file while avoiding partial reads
             try:
@@ -2725,11 +2782,20 @@ def blockreplace(path,
                 fh_.close()
 
             # this may have overwritten file attrs
-            check_perms(path,
-                    None,
-                    perms['user'],
-                    perms['group'],
-                    perms['mode'])
+            if salt.utils.platform.is_windows():
+                # This function resides in win_file.py and will be available
+                # on Windows. The local function will be overridden
+                # pylint: disable=E1120,E1123
+                check_perms(path=path,
+                            ret=None,
+                            owner=perms['user'])
+                # pylint: enable=E1120,E1123
+            else:
+                check_perms(path,
+                            ret=None,
+                            user=perms['user'],
+                            group=perms['group'],
+                            mode=perms['mode'])
 
         if show_changes:
             return diff
@@ -3287,9 +3353,27 @@ def link(src, path):
     try:
         os.link(src, path)
         return True
-    except (OSError, IOError):
-        raise CommandExecutionError('Could not create \'{0}\''.format(path))
+    except (OSError, IOError) as E:
+        raise CommandExecutionError('Could not create \'{0}\': {1}'.format(path, E))
     return False
+
+
+def is_hardlink(path):
+    '''
+    Check if the path is a hard link by verifying that the number of links
+    is larger than 1
+
+    CLI Example:
+
+    .. code-block:: bash
+
+       salt '*' file.is_hardlink /path/to/link
+    '''
+
+    # Simply use lstat and count the st_nlink field to determine if this path
+    # is hardlinked to something.
+    res = lstat(os.path.expanduser(path))
+    return res and res['st_nlink'] > 1
 
 
 def is_link(path):
@@ -3452,7 +3536,7 @@ def lstat(path):
         lst = os.lstat(path)
         return dict((key, getattr(lst, key)) for key in ('st_atime', 'st_ctime',
             'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return {}
 
 
@@ -3632,7 +3716,7 @@ def stats(path, hash_type=None, follow_symlinks=True):
     ret['mtime'] = pstat.st_mtime
     ret['ctime'] = pstat.st_ctime
     ret['size'] = pstat.st_size
-    ret['mode'] = six.text_type(oct(stat.S_IMODE(pstat.st_mode)))
+    ret['mode'] = salt.utils.files.normalize_mode(oct(stat.S_IMODE(pstat.st_mode)))
     if hash_type:
         ret['sum'] = get_hash(path, hash_type)
     ret['type'] = 'file'
@@ -4161,7 +4245,7 @@ def get_managed(
                     source,
                     saltenv,
                     source_hash=source_sum.get('hsum'))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
                 # and return a comment that will fail the calling state.
                 _source = salt.utils.url.redact_http_basic_auth(source)
@@ -4478,19 +4562,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
 
     is_dir = os.path.isdir(name)
     is_link = os.path.islink(name)
-    if attrs is not None \
-            and not salt.utils.platform.is_windows() \
-            and not is_dir and not is_link:
-        try:
-            lattrs = lsattr(name)
-        except SaltInvocationError:
-            lattrs = None
-        if lattrs is not None:
-            # List attributes on file
-            perms['lattrs'] = ''.join(lattrs.get(name, ''))
-            # Remove attributes on file so changes can be enforced.
-            if perms['lattrs']:
-                chattr(name, operator='remove', attributes=perms['lattrs'])
 
     # user/group changes if needed, then check if it worked
     if user:
@@ -4572,11 +4643,6 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
         elif 'cgroup' in perms and user != '':
             ret['changes']['group'] = group
 
-    if not salt.utils.platform.is_windows() and not is_dir:
-        # Replace attributes on file if it had been removed
-        if perms.get('lattrs', ''):
-            chattr(name, operator='add', attributes=perms['lattrs'])
-
     # Mode changes if needed
     if mode is not None:
         # File is a symlink, ignore the mode setting
@@ -4606,23 +4672,37 @@ def check_perms(name, ret, user, group, mode, attrs=None, follow_symlinks=False)
             pass
         else:
             diff_attrs = _cmp_attrs(name, attrs)
-            if diff_attrs is not None:
-                if diff_attrs[0] is not None or diff_attrs[1] is not None:
-                    if __opts__['test'] is True:
-                        ret['changes']['attrs'] = attrs
+            if diff_attrs and any(attr for attr in diff_attrs):
+                changes = {
+                    'old': ''.join(lsattr(name)[name]),
+                    'new': None,
+                }
+                if __opts__['test'] is True:
+                    changes['new'] = attrs
+                else:
+                    if diff_attrs.added:
+                        chattr(
+                            name,
+                            operator="add",
+                            attributes=diff_attrs.added,
+                        )
+                    if diff_attrs.removed:
+                        chattr(
+                            name,
+                            operator="remove",
+                            attributes=diff_attrs.removed,
+                        )
+                    cmp_attrs = _cmp_attrs(name, attrs)
+                    if any(attr for attr in cmp_attrs):
+                        ret['result'] = False
+                        ret['comment'].append(
+                            'Failed to change attributes to {0}'.format(attrs)
+                        )
+                        changes['new'] = ''.join(lsattr(name)[name])
                     else:
-                        if diff_attrs[0] is not None:
-                            chattr(name, operator="add", attributes=diff_attrs[0])
-                        if diff_attrs[1] is not None:
-                            chattr(name, operator="remove", attributes=diff_attrs[1])
-                        cmp_attrs = _cmp_attrs(name, attrs)
-                        if cmp_attrs[0] is not None or cmp_attrs[1] is not None:
-                            ret['result'] = False
-                            ret['comment'].append(
-                                'Failed to change attributes to {0}'.format(attrs)
-                            )
-                        else:
-                            ret['changes']['attrs'] = attrs
+                        changes['new'] = attrs
+                if changes['old'] != changes['new']:
+                    ret['changes']['attrs'] = changes
 
     # Only combine the comment list into a string
     # after all comments are added above
@@ -4773,7 +4853,7 @@ def check_managed_changes(
                     or source.startswith('/'):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
                               group, mode, attrs, saltenv, contents)
@@ -5202,7 +5282,7 @@ def manage_file(name,
             if _urlparse(source).scheme in ('salt', 'file', ''):
                 try:
                     mode = __salt__['cp.stat_file'](source, saltenv=saltenv, octal=True)
-                except Exception as exc:
+                except Exception as exc:  # pylint: disable=broad-except
                     log.warning('Unable to stat %s: %s', sfn, exc)
 
     # Check changes if the target file exists
@@ -5274,11 +5354,11 @@ def manage_file(name,
             # Write the static contents to a temporary file
             tmp = salt.utils.files.mkstemp(prefix=salt.utils.files.TEMPFILE_PREFIX,
                                            text=True)
-            if salt.utils.platform.is_windows():
-                contents = os.linesep.join(
-                    _splitlines_preserving_trailing_newline(contents))
             with salt.utils.files.fopen(tmp, 'wb') as tmp_:
                 if encoding:
+                    if salt.utils.platform.is_windows():
+                        contents = os.linesep.join(
+                            _splitlines_preserving_trailing_newline(contents))
                     log.debug('File will be encoded with %s', encoding)
                     tmp_.write(contents.encode(encoding=encoding, errors=encoding_errors))
                 else:
@@ -5352,7 +5432,7 @@ def manage_file(name,
             # on Windows. The local function will be overridden
             # pylint: disable=E1120,E1121,E1123
             ret = check_perms(
-               path=name,
+                path=name,
                 ret=ret,
                 owner=kwargs.get('win_owner'),
                 grant_perms=kwargs.get('win_perms'),
@@ -6308,7 +6388,7 @@ def open_files(by_pid=False):
 
         #try:
         #    fd_.append(os.path.realpath('{0}/task/{1}exe'.format(ppath, tid)))
-        #except Exception:
+        #except Exception:  # pylint: disable=broad-except
         #    pass
 
         for fpath in os.listdir('{0}/fd'.format(ppath)):

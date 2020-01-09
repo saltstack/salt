@@ -14,6 +14,7 @@
 from __future__ import absolute_import, print_function
 import os
 import sys
+import copy
 import time
 import types
 import atexit
@@ -23,9 +24,10 @@ import tempfile
 import functools
 import subprocess
 import multiprocessing
+from collections import OrderedDict
 
 # Import Salt Testing Libs
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
+from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.paths import CODE_DIR
 
@@ -47,6 +49,7 @@ from salt._compat import ElementTree as etree
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
+from salt.ext.six.moves.queue import Empty  # pylint: disable=import-error,no-name-in-module
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +72,20 @@ class CheckShellBinaryNameAndVersionMixin(object):
             self._call_binary_expected_version_ = salt.version.__version__
 
         out = '\n'.join(self.run_script(self._call_binary_, '--version'))
-        self.assertIn(self._call_binary_, out)
+        # Assert that the binary name is in the output
+        try:
+            self.assertIn(self._call_binary_, out)
+        except AssertionError:
+            # We might have generated the CLI scripts in which case we replace '-' with '_'
+            alternate_binary_name = self._call_binary_.replace('-', '_')
+            errmsg = 'Neither \'{}\' or \'{}\' were found as part of the binary name in:\n\'{}\''.format(
+                self._call_binary_,
+                alternate_binary_name,
+                out
+            )
+            self.assertIn(alternate_binary_name, out, msg=errmsg)
+
+        # Assert that the version is in the output
         self.assertIn(self._call_binary_expected_version_, out)
 
 
@@ -79,8 +95,8 @@ class AdaptedConfigurationTestCaseMixin(object):
 
     @staticmethod
     def get_temp_config(config_for, **config_overrides):
-        rootdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
-        conf_dir = os.path.join(rootdir, 'conf')
+        rootdir = config_overrides.get('root_dir', tempfile.mkdtemp(dir=RUNTIME_VARS.TMP))
+        conf_dir = config_overrides.pop('conf_dir', os.path.join(rootdir, 'conf'))
         for key in ('cachedir', 'pki_dir', 'sock_dir'):
             if key not in config_overrides:
                 config_overrides[key] = key
@@ -102,7 +118,6 @@ class AdaptedConfigurationTestCaseMixin(object):
                     os.path.join(rdict['pki_dir'], 'minions_rejected'),
                     os.path.join(rdict['pki_dir'], 'minions_denied'),
                     os.path.join(rdict['cachedir'], 'jobs'),
-                    os.path.join(rdict['cachedir'], 'raet'),
                     os.path.join(rdict['cachedir'], 'tokens'),
                     os.path.join(rdict['root_dir'], 'cache', 'tokens'),
                     os.path.join(rdict['pki_dir'], 'accepted'),
@@ -116,7 +131,6 @@ class AdaptedConfigurationTestCaseMixin(object):
                    root_dir=rdict['root_dir'],
                    )
 
-        rdict['config_dir'] = conf_dir
         rdict['conf_file'] = os.path.join(conf_dir, config_for)
         with salt.utils.files.fopen(rdict['conf_file'], 'w') as wfh:
             salt.utils.yaml.safe_dump(rdict, wfh, default_flow_style=False)
@@ -125,7 +139,7 @@ class AdaptedConfigurationTestCaseMixin(object):
     @staticmethod
     def get_config(config_for, from_scratch=False):
         if from_scratch:
-            if config_for in ('master', 'syndic_master'):
+            if config_for in ('master', 'syndic_master', 'mm_master', 'mm_sub_master'):
                 return salt.config.master_config(
                     AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
                 )
@@ -144,7 +158,7 @@ class AdaptedConfigurationTestCaseMixin(object):
                 )
 
         if config_for not in RUNTIME_VARS.RUNTIME_CONFIGS:
-            if config_for in ('master', 'syndic_master'):
+            if config_for in ('master', 'syndic_master', 'mm_master', 'mm_sub_master'):
                 RUNTIME_VARS.RUNTIME_CONFIGS[config_for] = freeze(
                     salt.config.master_config(
                         AdaptedConfigurationTestCaseMixin.get_config_file_path(config_for)
@@ -187,6 +201,14 @@ class AdaptedConfigurationTestCaseMixin(object):
             return os.path.join(RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR, 'minion')
         if filename == 'sub_minion':
             return os.path.join(RUNTIME_VARS.TMP_SUB_MINION_CONF_DIR, 'minion')
+        if filename == 'mm_master':
+            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, 'master')
+        if filename == 'mm_sub_master':
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, 'master')
+        if filename == 'mm_minion':
+            return os.path.join(RUNTIME_VARS.TMP_MM_CONF_DIR, 'minion')
+        if filename == 'mm_sub_minion':
+            return os.path.join(RUNTIME_VARS.TMP_MM_SUB_CONF_DIR, 'minion')
         return os.path.join(RUNTIME_VARS.TMP_CONF_DIR, filename)
 
     @property
@@ -209,6 +231,27 @@ class AdaptedConfigurationTestCaseMixin(object):
         Return the options used for the sub_minion
         '''
         return self.get_config('sub_minion')
+
+    @property
+    def mm_master_opts(self):
+        '''
+        Return the options used for the multimaster master
+        '''
+        return self.get_config('mm_master')
+
+    @property
+    def mm_sub_master_opts(self):
+        '''
+        Return the options used for the multimaster sub-master
+        '''
+        return self.get_config('mm_sub_master')
+
+    @property
+    def mm_minion_opts(self):
+        '''
+        Return the options used for the minion
+        '''
+        return self.get_config('mm_minion')
 
 
 class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
@@ -246,6 +289,50 @@ class SaltClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
             mopts = self.get_config(self._salt_client_config_file_name_, from_scratch=True)
             RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client'] = salt.client.get_local_client(mopts=mopts)
         return RUNTIME_VARS.RUNTIME_CONFIGS['runtime_client']
+
+
+class SaltMultimasterClientTestCaseMixin(AdaptedConfigurationTestCaseMixin):
+    '''
+    Mix-in class that provides a ``clients`` attribute which returns a list of Salt
+    :class:`LocalClient<salt:salt.client.LocalClient>`.
+
+    .. code-block:: python
+
+        class LocalClientTestCase(TestCase, SaltMultimasterClientTestCaseMixin):
+
+            def test_check_pub_data(self):
+                just_minions = {'minions': ['m1', 'm2']}
+                jid_no_minions = {'jid': '1234', 'minions': []}
+                valid_pub_data = {'minions': ['m1', 'm2'], 'jid': '1234'}
+
+                for client in self.clients:
+                    self.assertRaises(EauthAuthenticationError,
+                                      client._check_pub_data, None)
+                    self.assertDictEqual({},
+                        client._check_pub_data(just_minions),
+                        'Did not handle lack of jid correctly')
+
+                    self.assertDictEqual(
+                        {},
+                        client._check_pub_data({'jid': '0'}),
+                        'Passing JID of zero is not handled gracefully')
+    '''
+    _salt_client_config_file_name_ = 'master'
+
+    @property
+    def clients(self):
+        # Late import
+        import salt.client
+        if 'runtime_clients' not in RUNTIME_VARS.RUNTIME_CONFIGS:
+            RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients'] = OrderedDict()
+
+        runtime_clients = RUNTIME_VARS.RUNTIME_CONFIGS['runtime_clients']
+        for master_id in ('mm-master', 'mm-sub-master'):
+            if master_id in runtime_clients:
+                continue
+            mopts = self.get_config(master_id.replace('-', '_'), from_scratch=True)
+            runtime_clients[master_id] = salt.client.get_local_client(mopts=mopts)
+        return runtime_clients
 
 
 class ShellCaseCommonTestsMixin(CheckShellBinaryNameAndVersionMixin):
@@ -343,9 +430,6 @@ class LoaderModuleMockMixin(six.with_metaclass(_FixLoaderModuleMockMixinMroOrder
 
         @functools.wraps(setup_func)
         def wrapper(self):
-            if NO_MOCK:
-                self.skipTest(NO_MOCK_REASON)
-
             loader_modules_configs = self.setup_loader_modules()
             if not isinstance(loader_modules_configs, dict):
                 raise RuntimeError(
@@ -643,26 +727,33 @@ class SaltReturnAssertsMixin(object):
             self.assertNotEqual(saltret, comparison)
 
 
-def _fetch_events(q):
+def _fetch_events(q, opts):
     '''
     Collect events and store them
     '''
     def _clean_queue():
-        print('Cleaning queue!')
+        log.info('Cleaning queue!')
         while not q.empty():
             queue_item = q.get()
             queue_item.task_done()
 
     atexit.register(_clean_queue)
-    a_config = AdaptedConfigurationTestCaseMixin()
-    event = salt.utils.event.get_event('minion', sock_dir=a_config.get_config('minion')['sock_dir'], opts=a_config.get_config('minion'))
+    event = salt.utils.event.get_event('minion', sock_dir=opts['sock_dir'], opts=opts)
+
+    # Wait for event bus to be connected
+    while not event.connect_pull(30):
+        time.sleep(1)
+
+    # Notify parent process that the event bus is connected
+    q.put('CONNECTED')
+
     while True:
         try:
             events = event.get_event(full=False)
-        except Exception:
+        except Exception as exc:  # pylint: disable=broad-except
             # This is broad but we'll see all kinds of issues right now
             # if we drop the proc out from under the socket while we're reading
-            pass
+            log.exception("Exception caught while getting events %r", exc)
         q.put(events)
 
 
@@ -671,35 +762,48 @@ class SaltMinionEventAssertsMixin(object):
     Asserts to verify that a given event was seen
     '''
 
-    def __new__(cls, *args, **kwargs):
-        # We have to cross-call to re-gen a config
+    @classmethod
+    def setUpClass(cls):
+        opts = copy.deepcopy(RUNTIME_VARS.RUNTIME_CONFIGS['minion'])
         cls.q = multiprocessing.Queue()
-        cls.fetch_proc = salt.utils.process.SignalHandlingMultiprocessingProcess(
-            target=_fetch_events, args=(cls.q,)
+        cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
+            target=_fetch_events,
+            args=(cls.q, opts),
+            name='Process-{}-Queue'.format(cls.__name__)
         )
         cls.fetch_proc.start()
-        return object.__new__(cls)
+        # Wait for the event bus to be connected
+        msg = cls.q.get(block=True)
+        if msg != 'CONNECTED':
+            # Just in case something very bad happens
+            raise RuntimeError('Unexpected message in test\'s event queue')
 
-    def __exit__(self, *args, **kwargs):
-        self.fetch_proc.join()
+    @classmethod
+    def tearDownClass(cls):
+        cls.fetch_proc.join()
+        del cls.q
+        del cls.fetch_proc
 
     def assertMinionEventFired(self, tag):
         #TODO
         raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
 
-    def assertMinionEventReceived(self, desired_event):
-        queue_wait = 5  # 2.5s
-        while self.q.empty():
-            time.sleep(0.5)  # Wait for events to be pushed into the queue
-            queue_wait -= 1
-            if queue_wait <= 0:
-                raise AssertionError('Queue wait timer expired')
-        while not self.q.empty():  # This is not thread-safe and may be inaccurate
-            event = self.q.get()
+    def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
+        start = time.time()
+        while True:
+            try:
+                event = self.q.get(False)
+            except Empty:
+                time.sleep(sleep_time)
+                if time.time() - start >= timeout:
+                    break
+                continue
             if isinstance(event, dict):
                 event.pop('_stamp')
             if desired_event == event:
                 self.fetch_proc.terminate()
                 return True
+            if time.time() - start >= timeout:
+                break
         self.fetch_proc.terminate()
         raise AssertionError('Event {0} was not received by minion'.format(desired_event))

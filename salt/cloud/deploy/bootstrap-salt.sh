@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2019.01.08"
+__ScriptVersion="2019.11.04"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -499,6 +499,7 @@ exec 2>"$LOGPIPE"
 #              14               SIGALRM
 #              15               SIGTERM
 #----------------------------------------------------------------------------------------------------------------------
+APT_ERR=$(mktemp /tmp/apt_error.XXXXXX)
 __exit_cleanup() {
     EXIT_CODE=$?
 
@@ -519,6 +520,12 @@ __exit_cleanup() {
     if [ -p "$LOGPIPE" ]; then
         echodebug "Removing the logging pipe $LOGPIPE"
         rm -f "$LOGPIPE"
+    fi
+
+    # Remove the temporary apt error file when the script exits
+    if [ -f "$APT_ERR" ]; then
+        echodebug "Removing the temporary apt error file $APT_ERR"
+        rm -f "$APT_ERR"
     fi
 
     # Kill tee when exiting, CentOS, at least requires this
@@ -594,7 +601,11 @@ elif [ "$ITYPE" = "stable" ]; then
             STABLE_REV="$1"
             shift
         elif [ "$(echo "$1" | grep -E '^([0-9]*\.[0-9]*\.[0-9]*)$')" != "" ]; then
-            STABLE_REV="archive/$1"
+            if [ "$(uname)" = "Darwin" ]; then
+              STABLE_REV="$1"
+            else
+              STABLE_REV="archive/$1"
+            fi
             shift
         else
             echo "Unknown stable version: $1 (valid: 1.6, 1.7, 2014.1, 2014.7, 2015.5, 2015.8, 2016.3, 2016.11, 2017.7, 2018.3, 2019.2, latest, \$MAJOR.\$MINOR.\$PATCH)"
@@ -660,7 +671,11 @@ fi
 
 # Check if we're installing via a different Python executable and set major version variables
 if [ -n "$_PY_EXE" ]; then
-    _PY_PKG_VER=$(echo "$_PY_EXE" | sed -r "s/\\.//g")
+    if [ "$(uname)" = "Darwin" ]; then
+      _PY_PKG_VER=$(echo "$_PY_EXE" | sed "s/\\.//g")
+    else
+      _PY_PKG_VER=$(echo "$_PY_EXE" | sed -r "s/\\.//g")
+    fi
 
     _PY_MAJOR_VERSION=$(echo "$_PY_PKG_VER" | cut -c 7)
     if [ "$_PY_MAJOR_VERSION" != 3 ] && [ "$_PY_MAJOR_VERSION" != 2 ]; then
@@ -876,7 +891,6 @@ __derive_debian_numeric_version() {
         elif [ "$INPUT_VERSION" = "stretch/sid" ]; then
             NUMERIC_VERSION=$(__parse_version_string "9.0")
         elif [ "$INPUT_VERSION" = "buster/sid" ]; then
-            # Let's start detecting the upcoming Debian 10 (Buster) release
             NUMERIC_VERSION=$(__parse_version_string "10.0")
         else
             echowarn "Unable to parse the Debian Version (codename: '$INPUT_VERSION')"
@@ -994,7 +1008,7 @@ __gather_linux_system_info() {
         elif [ "${DISTRO_NAME}" = "OracleServer" ]; then
             # This the Oracle Linux Server 6.5
             DISTRO_NAME="Oracle Linux"
-        elif [ "${DISTRO_NAME}" = "AmazonAMI" ]; then
+        elif [ "${DISTRO_NAME}" = "AmazonAMI" ] || [ "${DISTRO_NAME}" = "Amazon" ]; then
             DISTRO_NAME="Amazon Linux AMI"
         elif [ "${DISTRO_NAME}" = "ManjaroLinux" ]; then
             DISTRO_NAME="Arch Linux"
@@ -1237,6 +1251,16 @@ __gather_bsd_system_info() {
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __gather_osx_system_info
+#   DESCRIPTION:  Discover MacOS X
+#----------------------------------------------------------------------------------------------------------------------
+__gather_osx_system_info() {
+    DISTRO_NAME="MacOSX"
+    DISTRO_VERSION=$(sw_vers -productVersion)
+}
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __gather_system_info
 #   DESCRIPTION:  Discover which system and distribution we are running.
 #----------------------------------------------------------------------------------------------------------------------
@@ -1250,6 +1274,9 @@ __gather_system_info() {
             ;;
         openbsd|freebsd|netbsd )
             __gather_bsd_system_info
+            ;;
+        darwin )
+            __gather_osx_system_info
             ;;
         * )
             echoerror "${OS_NAME} not supported.";
@@ -1431,7 +1458,7 @@ __debian_derivatives_translation() {
     # If the file does not exist, return
     [ ! -f /etc/os-release ] && return
 
-    DEBIAN_DERIVATIVES="(cumulus_.+|devuan|kali|linuxmint|raspbian)"
+    DEBIAN_DERIVATIVES="(cumulus_.+|devuan|kali|linuxmint|raspbian|bunsenlabs|turnkey)"
     # Mappings
     cumulus_2_debian_base="7.0"
     cumulus_3_debian_base="8.0"
@@ -1441,6 +1468,9 @@ __debian_derivatives_translation() {
     linuxmint_1_debian_base="8.0"
     raspbian_8_debian_base="8.0"
     raspbian_9_debian_base="9.0"
+    raspbian_10_debian_base="10.0"
+    bunsenlabs_9_debian_base="9.0"
+    turnkey_9_debian_base="9.0"
 
     # Translate Debian derivatives to their base Debian version
     match=$(echo "$DISTRO_NAME_L" | grep -E ${DEBIAN_DERIVATIVES})
@@ -1466,6 +1496,14 @@ __debian_derivatives_translation() {
             raspbian)
                 _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
                 _debian_derivative="raspbian"
+                ;;
+            bunsenlabs)
+                _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
+                _debian_derivative="bunsenlabs"
+                ;;
+            turnkey)
+                _major=$(echo "$DISTRO_VERSION" | sed 's/^\([0-9]*\).*/\1/g')
+                _debian_derivative="turnkey"
                 ;;
         esac
 
@@ -1752,7 +1790,7 @@ elif [ "${DISTRO_NAME_L}" = "debian" ]; then
   __debian_codename_translation
 fi
 
-if [ "$(echo "${DISTRO_NAME_L}" | grep -E '(debian|ubuntu|centos|red_hat|oracle|scientific|amazon)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]; then
+if [ "$(echo "${DISTRO_NAME_L}" | grep -E '(debian|ubuntu|centos|red_hat|oracle|scientific|amazon|fedora)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]; then
     echoerror "${DISTRO_NAME} does not have major version pegged packages support"
     exit 1
 fi
@@ -1808,25 +1846,23 @@ __wait_for_apt(){
     WAIT_TIMEOUT=900
 
     # Run our passed in apt command
-    "${@}"
+    "${@}" 2>"$APT_ERR"
     APT_RETURN=$?
 
-    # If our exit code from apt is 100, then we're waiting on a lock
-    while [ $APT_RETURN -eq 100 ]; do
-      echoinfo "Aware of the lock. Patiently waiting $WAIT_TIMEOUT more seconds..."
-      sleep 1
-      WAIT_TIMEOUT=$((WAIT_TIMEOUT - 1))
+    # Make sure we're not waiting on a lock
+    while [ $APT_RETURN -ne 0 ] && grep -q '^E: Could not get lock' "$APT_ERR"; do
+        echoinfo "Aware of the lock. Patiently waiting $WAIT_TIMEOUT more seconds..."
+        sleep 1
+        WAIT_TIMEOUT=$((WAIT_TIMEOUT - 1))
 
-      # If timeout reaches 0, abort.
-      if [ "$WAIT_TIMEOUT" -eq 0 ]; then
-          echoerror "Apt, apt-get, aptitude, or dpkg process is taking too long."
-          echoerror "Bootstrap script cannot proceed. Aborting."
-          return 1
-      else
-          # Try running apt again until our return code != 100
-	  "${@}"
-    	  APT_RETURN=$?
-      fi
+        if [ "$WAIT_TIMEOUT" -eq 0 ]; then
+            echoerror "Apt, apt-get, aptitude, or dpkg process is taking too long."
+            echoerror "Bootstrap script cannot proceed. Aborting."
+            return 1
+        else
+            "${@}" 2>"$APT_ERR"
+            APT_RETURN=$?
+        fi
     done
 
     return $APT_RETURN
@@ -1852,6 +1888,26 @@ __apt_get_upgrade_noinput() {
 
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __temp_gpg_pub
+#   DESCRIPTION:  Create a temporary file for downloading a GPG public key.
+#----------------------------------------------------------------------------------------------------------------------
+__temp_gpg_pub() {
+    if __check_command_exists mktemp; then
+        tempfile="$(mktemp /tmp/salt-gpg-XXXXXXXX.pub 2>/dev/null)"
+
+        if [ -z "$tempfile" ]; then
+            echoerror "Failed to create temporary file in /tmp"
+            return 1
+        fi
+    else
+        tempfile="/tmp/salt-gpg-$$.pub"
+    fi
+
+    echo $tempfile
+}   # ----------- end of function __temp_gpg_pub  -----------
+
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
 #          NAME:  __apt_key_fetch
 #   DESCRIPTION:  Download and import GPG public key for "apt-secure"
 #    PARAMETERS:  url
@@ -1859,8 +1915,13 @@ __apt_get_upgrade_noinput() {
 __apt_key_fetch() {
     url=$1
 
-    # shellcheck disable=SC2086
-    __wait_for_apt apt-key adv ${_GPG_ARGS} --fetch-keys "$url"; return $?
+    tempfile="$(__temp_gpg_pub)"
+
+    __fetch_url "$tempfile" "$url" || return 1
+    apt-key add "$tempfile" || return 1
+    rm -f "$tempfile"
+
+    return 0
 }   # ----------  end of function __apt_key_fetch  ----------
 
 
@@ -1872,16 +1933,7 @@ __apt_key_fetch() {
 __rpm_import_gpg() {
     url=$1
 
-    if __check_command_exists mktemp; then
-        tempfile="$(mktemp /tmp/salt-gpg-XXXXXXXX.pub 2>/dev/null)"
-
-        if [ -z "$tempfile" ]; then
-            echoerror "Failed to create temporary file in /tmp"
-            return 1
-        fi
-    else
-        tempfile="/tmp/salt-gpg-$$.pub"
-    fi
+    tempfile="$(__temp_gpg_pub)"
 
     __fetch_url "$tempfile" "$url" || return 1
     rpm --import "$tempfile" || return 1
@@ -2223,8 +2275,10 @@ __overwriteconfig() {
         tempfile="/tmp/salt-config-$$"
     fi
 
+    if [ -n "$_PY_EXE" ]; then
+        good_python="$_PY_EXE"
     # If python does not have yaml installed we're on Arch and should use python2
-    if python -c "import yaml" 2> /dev/null; then
+    elif python -c "import yaml" 2> /dev/null; then
         good_python=python
     else
         good_python=python2
@@ -2464,14 +2518,33 @@ __install_pip_pkgs() {
 
     # Install pip and pip dependencies
     if ! __check_command_exists "${_pip_cmd} --version"; then
-        __PACKAGES="${_py_pkg}-setuptools ${_py_pkg}-pip gcc ${_py_pkg}-devel"
+        __PACKAGES="${_py_pkg}-setuptools ${_py_pkg}-pip gcc"
         # shellcheck disable=SC2086
-        __yum_install_noinput ${__PACKAGES} || return 1
+        if [ "$DISTRO_NAME_L" = "debian" ];then
+            __PACKAGES="${__PACKAGES} ${_py_pkg}-dev"
+            __apt_get_install_noinput ${__PACKAGES} || return 1
+        else
+            __PACKAGES="${__PACKAGES} ${_py_pkg}-devel"
+            __yum_install_noinput ${__PACKAGES} || return 1
+        fi
+
     fi
 
     echoinfo "Installing pip packages: ${_pip_pkgs} using ${_py_exe}"
     # shellcheck disable=SC2086
     ${_pip_cmd} install ${_pip_pkgs} || return 1
+}
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __install_tornado_pip
+#    PARAMETERS:  python executable
+#   DESCRIPTION:  Return 0 or 1 if successfully able to install tornado<5.0
+#----------------------------------------------------------------------------------------------------------------------
+__install_tornado_pip() {
+    # OS needs tornado <5.0 from pip
+    __check_pip_allowed "You need to allow pip based installations (-P) for Tornado <5.0 in order to install Salt on Python 3"
+    ## install pip if its not installed and install tornado
+    __install_pip_pkgs "tornado<5.0" "${1}" || return 1
 }
 
 #---  FUNCTION  -------------------------------------------------------------------------------------------------------
@@ -2617,13 +2690,12 @@ __install_saltstack_ubuntu_repository() {
         UBUNTU_CODENAME=${DISTRO_CODENAME}
     fi
 
-    __PACKAGES=''
-
     # Install downloader backend for GPG keys fetching
-    if [ "$DISTRO_MAJOR_VERSION" -gt 16 ]; then
-        __PACKAGES="${__PACKAGES} gnupg dirmngr"
-    else
-        __PACKAGES="${__PACKAGES} gnupg-curl"
+    __PACKAGES='wget'
+
+    # Required as it is not installed by default on Ubuntu 18+
+    if [ "$DISTRO_MAJOR_VERSION" -ge 18 ]; then
+        __PACKAGES="${__PACKAGES} gnupg"
     fi
 
     # Make sure https transport is available
@@ -2667,6 +2739,12 @@ install_ubuntu_deps() {
         __PACKAGES="upstart"
     fi
 
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+        PY_PKG_VER=3
+    else
+        PY_PKG_VER=""
+    fi
+
     if [ "$DISTRO_MAJOR_VERSION" -ge 16 ] && [ -z "$_PY_EXE" ]; then
         __PACKAGES="${__PACKAGES} python2.7"
     fi
@@ -2675,13 +2753,13 @@ install_ubuntu_deps() {
         __PACKAGES="${__PACKAGES} python-virtualenv"
     fi
     # Need python-apt for managing packages via Salt
-    __PACKAGES="${__PACKAGES} python-apt"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-apt"
 
     # requests is still used by many salt modules
-    __PACKAGES="${__PACKAGES} python-requests"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-requests"
 
     # YAML module is used for generating custom master/minion configs
-    __PACKAGES="${__PACKAGES} python-yaml"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-yaml"
 
     # Additionally install procps and pciutils which allows for Docker bootstraps. See 366#issuecomment-39666813
     __PACKAGES="${__PACKAGES} procps pciutils"
@@ -2778,6 +2856,7 @@ install_ubuntu_git_deps() {
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-requests"
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado python${PY_PKG_VER}-yaml"
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-zmq"
+        __PACKAGES="${__PACKAGES} python-concurrent.futures"
 
         if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
             # Install python-libcloud if asked to
@@ -3000,30 +3079,20 @@ install_ubuntu_check_services() {
 #   Debian Install Functions
 #
 __install_saltstack_debian_repository() {
-    if [ "$DISTRO_MAJOR_VERSION" -eq 10 ]; then
-        # Packages for Debian 10 at repo.saltstack.com are not yet available
-        # Set up repository for Debian 9 for Debian 10 for now until support
-        # is available at repo.saltstack.com for Debian 10.
-        echowarn "Debian 10 distribution detected, but stable packages requested. Trying packages from Debian 9. You may experience problems."
-        DEBIAN_RELEASE="9"
-        DEBIAN_CODENAME="stretch"
-    else
-        DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
-        DEBIAN_CODENAME="$DISTRO_CODENAME"
-    fi
+    DEBIAN_RELEASE="$DISTRO_MAJOR_VERSION"
+    DEBIAN_CODENAME="$DISTRO_CODENAME"
 
     __PY_VERSION_REPO="apt"
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
         __PY_VERSION_REPO="py3"
     fi
 
-    __PACKAGES=''
-
     # Install downloader backend for GPG keys fetching
+    __PACKAGES='wget'
+
+    # Required as it is not installed by default on Debian 9+
     if [ "$DISTRO_MAJOR_VERSION" -ge 9 ]; then
-        __PACKAGES="${__PACKAGES} gnupg2 dirmngr"
-    else
-        __PACKAGES="${__PACKAGES} gnupg-curl"
+        __PACKAGES="${__PACKAGES} gnupg2"
     fi
 
     # Make sure https transport is available
@@ -3090,6 +3159,24 @@ install_debian_deps() {
     fi
 
     return 0
+}
+
+install_debian_git_pre() {
+    if ! __check_command_exists git; then
+        __apt_get_install_noinput git || return 1
+    fi
+
+    if [ "$_INSECURE_DL" -eq $BS_FALSE ] && [ "${_SALT_REPO_URL%%://*}" = "https" ]; then
+        __apt_get_install_noinput ca-certificates
+    fi
+
+    __git_clone_and_checkout || return 1
+
+    # Let's trigger config_salt()
+    if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
+        _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf/"
+        CONFIG_SALT_FUNC="config_salt"
+    fi
 }
 
 install_debian_git_deps() {
@@ -3241,7 +3328,25 @@ install_debian_9_git_deps() {
 }
 
 install_debian_10_git_deps() {
-    install_debian_9_git_deps || return 1
+    install_debian_git_pre || return 1
+
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+        _py=${_PY_EXE}
+        PY_PKG_VER=3
+        __PACKAGES="python${PY_PKG_VER}-distutils"
+    else
+        _py="python"
+        PY_PKG_VER=""
+        __PACKAGES=""
+    fi
+
+    __install_tornado_pip ${_py}|| return 1
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-jinja2"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado python${PY_PKG_VER}-yaml python${PY_PKG_VER}-zmq"
+
+    # shellcheck disable=SC2086
+    __apt_get_install_noinput ${__PACKAGES} || return 1
+
     return 0
 }
 
@@ -3343,14 +3448,8 @@ install_debian_git_post() {
         # Install initscripts for Debian 7 "Wheezy"
         elif [ ! -f "/etc/init.d/salt-$fname" ] || \
             { [ -f "/etc/init.d/salt-$fname" ] && [ "$_FORCE_OVERWRITE" -eq $BS_TRUE ]; }; then
-            if [ -f "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-$fname.init" ]; then
-                __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.init" "/etc/init.d/salt-${fname}"
-                __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/salt-${fname}.environment" "/etc/default/salt-${fname}"
-            else
-                # Make sure wget is available
-                __check_command_exists wget || __apt_get_install_noinput wget || return 1
-                __fetch_url "/etc/init.d/salt-${fname}" "${HTTP_VAL}://anonscm.debian.org/cgit/pkg-salt/salt.git/plain/debian/salt-${fname}.init"
-            fi
+            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.init" "/etc/init.d/salt-${fname}"
+            __copyfile "${_SALT_GIT_CHECKOUT_DIR}/pkg/deb/salt-${fname}.environment" "/etc/default/salt-${fname}"
 
             if [ ! -f "/etc/init.d/salt-${fname}" ]; then
                 echowarn "The init script for salt-${fname} was not found, skipping it..."
@@ -3699,13 +3798,33 @@ install_centos_stable_deps() {
         __install_saltstack_rhel_repository || return 1
     fi
 
-    __PACKAGES="yum-utils chkconfig"
-
-    # YAML module is used for generating custom master/minion configs
-    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-        __PACKAGES="${__PACKAGES} python34-PyYAML"
+    if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
+        __PACKAGES="dnf-utils chkconfig"
     else
-        __PACKAGES="${__PACKAGES} PyYAML"
+        __PACKAGES="yum-utils chkconfig"
+    fi
+
+    if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
+        # YAML module is used for generating custom master/minion configs
+        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+            __PACKAGES="${__PACKAGES} python3-pyyaml"
+        else
+            __PACKAGES="${__PACKAGES} python2-pyyaml"
+        fi
+    elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
+        # YAML module is used for generating custom master/minion configs
+        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+            __PACKAGES="${__PACKAGES} python36-PyYAML"
+        else
+            __PACKAGES="${__PACKAGES} PyYAML"
+        fi
+    else
+        # YAML module is used for generating custom master/minion configs
+        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+            __PACKAGES="${__PACKAGES} python34-PyYAML"
+        else
+            __PACKAGES="${__PACKAGES} PyYAML"
+        fi
     fi
 
     # shellcheck disable=SC2086
@@ -3787,12 +3906,26 @@ install_centos_git_deps() {
 
     __git_clone_and_checkout || return 1
 
-    __PACKAGES="m2crypto"
 
+    __PACKAGES=""
+    _install_m2crypto_req=false
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-        # Packages are named python34-<whatever>
-        PY_PKG_VER=34
+        _py=${_PY_EXE}
+        if [ "$DISTRO_MAJOR_VERSION" -gt 6 ]; then
+            _install_m2crypto_req=true
+        fi
+        if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
+            # Packages are named python3-<whatever>
+            PY_PKG_VER=3
+        else
+            # Packages are named python36-<whatever>
+            PY_PKG_VER=36
+        fi
     else
+        if [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
+            _install_m2crypto_req=true
+        fi
+        _py="python"
         PY_PKG_VER=""
 
         # Only Py2 needs python-futures
@@ -3804,7 +3937,14 @@ install_centos_git_deps() {
         fi
     fi
 
-    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-crypto python${PY_PKG_VER}-jinja2"
+    if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
+        __install_tornado_pip ${_py} || return 1
+        __PACKAGES="${__PACKAGES} python3-m2crypto"
+    else
+        __PACKAGES="${__PACKAGES} m2crypto python${PY_PKG_VER}-crypto"
+    fi
+
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-jinja2"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-msgpack python${PY_PKG_VER}-requests"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado python${PY_PKG_VER}-zmq"
 
@@ -3819,10 +3959,10 @@ install_centos_git_deps() {
 
     if [ "${_PY_EXE}" != "" ] && [ "$_PIP_ALLOWED" -eq "$BS_TRUE" ]; then
         # If "-x" is defined, install dependencies with pip based on the Python version given.
-        _PIP_PACKAGES="m2crypto jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq futures>=2.0"
+        _PIP_PACKAGES="m2crypto!=0.33.0 jinja2 msgpack-python pycrypto PyYAML tornado<5.0 zmq futures>=2.0"
 
         # install swig and openssl on cent6
-        if [ "$DISTRO_MAJOR_VERSION" -eq 6 ]; then
+        if $_install_m2crypto_req; then
             __yum_install_noinput openssl-devel swig || return 1
         fi
 
@@ -4778,8 +4918,7 @@ install_amazon_linux_ami_2_deps() {
     if [ $_DISABLE_REPOS -eq $BS_FALSE ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
         __REPO_FILENAME="saltstack-repo.repo"
 
-        base_url="$HTTP_VAL://${_REPO_URL}/yum/redhat/7/\$basearch/$repo_rev/"
-        base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/2/\$basearch/latest/"
+        base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/2/\$basearch/$repo_rev/"
         gpg_key="${base_url}SALTSTACK-GPG-KEY.pub
         ${base_url}base/RPM-GPG-KEY-CentOS-7"
         repo_name="SaltStack repo for Amazon Linux 2.0"
@@ -4803,7 +4942,7 @@ _eof
 
     # Package python-ordereddict-1.1-2.el6.noarch is obsoleted by python26-2.6.9-2.88.amzn1.x86_64
     # which is already installed
-    __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 PyYAML"
+    __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 PyYAML procps-ng"
     __PACKAGES="${__PACKAGES} ${pkg_append}-msgpack ${pkg_append}-requests ${pkg_append}-zmq"
     __PACKAGES="${__PACKAGES} ${pkg_append}-futures"
 
@@ -5151,17 +5290,21 @@ __configure_freebsd_pkg_details() {
     fi
     FROM_FREEBSD="-r FreeBSD"
 
-    ## add saltstack freebsd repo
-    salt_conf_file=/usr/local/etc/pkg/repos/saltstack.conf
-    {
-        echo "SaltStack:{"
-        echo "    url: \"${SALTPKGCONFURL}\","
-        echo "    mirror_type: \"http\","
-        echo "    enabled: true"
-        echo "    priority: 10"
-        echo "}"
-    } > $salt_conf_file
-    FROM_SALTSTACK="-r SaltStack"
+    ##### Workaround : Waiting for SaltStack Repository to be available for FreeBSD 12 ####
+    if [ "${DISTRO_MAJOR_VERSION}" -ne 12 ]; then
+        ## add saltstack freebsd repo
+        salt_conf_file=/usr/local/etc/pkg/repos/saltstack.conf
+        {
+            echo "SaltStack:{"
+            echo "    url: \"${SALTPKGCONFURL}\","
+            echo "    mirror_type: \"http\","
+            echo "    enabled: true"
+            echo "    priority: 10"
+            echo "}"
+        } > $salt_conf_file
+        FROM_SALTSTACK="-r SaltStack"
+    fi
+    ##### End Workaround : Waiting for SaltStack Repository to be available for FreeBSD 12 ####
 
     ## ensure future ports builds use pkgng
     echo "WITH_PKGNG=   yes" >> /etc/make.conf
@@ -5219,6 +5362,10 @@ install_freebsd_11_stable_deps() {
     install_freebsd_9_stable_deps
 }
 
+install_freebsd_12_stable_deps() {
+    install_freebsd_9_stable_deps
+}
+
 install_freebsd_git_deps() {
     install_freebsd_9_stable_deps || return 1
 
@@ -5226,6 +5373,8 @@ install_freebsd_git_deps() {
     SALT_DEPENDENCIES=$(/usr/local/sbin/pkg search ${FROM_FREEBSD} -R -d sysutils/py-salt | grep -i origin | sed -e 's/^[[:space:]]*//' | tail -n +2 | awk -F\" '{print $2}' | tr '\n' ' ')
     # shellcheck disable=SC2086
     /usr/local/sbin/pkg install ${FROM_FREEBSD} -y ${SALT_DEPENDENCIES} || return 1
+    # install python meta package
+    /usr/local/sbin/pkg install -y lang/python || return 1
 
     if ! __check_command_exists git; then
         /usr/local/sbin/pkg install -y git || return 1
@@ -5303,6 +5452,16 @@ install_freebsd_11_stable() {
     return 0
 }
 
+install_freebsd_12_stable() {
+#
+# installing latest version of salt from FreeBSD CURRENT ports repo
+#
+    # shellcheck disable=SC2086
+    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y sysutils/py-salt || return 1
+
+    return 0
+}
+
 install_freebsd_git() {
 
     # /usr/local/bin/python2 in FreeBSD is a symlink to /usr/local/bin/python2.7
@@ -5366,6 +5525,10 @@ install_freebsd_10_stable_post() {
 }
 
 install_freebsd_11_stable_post() {
+    install_freebsd_9_stable_post
+}
+
+install_freebsd_12_stable_post() {
     install_freebsd_9_stable_post
 }
 
@@ -6036,7 +6199,7 @@ install_opensuse_15_git_deps() {
         PY_PKG_VER=2
 
         # This is required by some of the python2 packages below
-        __PACKAGES="libpython2_7-1_0"
+        __PACKAGES="libpython2_7-1_0 python2-futures python-ipaddress"
     else
         PY_PKG_VER=3
         __PACKAGES=""
@@ -6044,6 +6207,7 @@ install_opensuse_15_git_deps() {
 
     __PACKAGES="${__PACKAGES} libzmq5 python${PY_PKG_VER}-Jinja2 python${PY_PKG_VER}-msgpack"
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-pycrypto python${PY_PKG_VER}-pyzmq"
+    __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-xml"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
         # We're on the develop branch, install whichever tornado is on the requirements file
@@ -6552,6 +6716,117 @@ daemons_running_voidlinux() {
 }
 #
 #   Ended VoidLinux Install Functions
+#
+#######################################################################################################################
+
+#######################################################################################################################
+#
+#   OS X / Darwin Install Functions
+#
+
+__macosx_get_packagesite() {
+    DARWIN_ARCH="x86_64"
+
+    __PY_VERSION_REPO="py2"
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+        __PY_VERSION_REPO="py3"
+    fi
+
+    PKG="salt-${STABLE_REV}-${__PY_VERSION_REPO}-${DARWIN_ARCH}.pkg"
+    SALTPKGCONFURL="https://repo.saltstack.com/osx/${PKG}"
+}
+
+# Using a separate conf step to head for idempotent install...
+__configure_macosx_pkg_details() {
+    __macosx_get_packagesite || return 1
+    return 0
+}
+
+install_macosx_stable_deps() {
+    __configure_macosx_pkg_details || return 1
+    return 0
+}
+
+install_macosx_git_deps() {
+    install_macosx_stable_deps || return 1
+
+    __fetch_url "/tmp/get-pip.py" "https://bootstrap.pypa.io/get-pip.py" || return 1
+
+    if [ -n "$_PY_EXE" ]; then
+        _PYEXE=${_PY_EXE}
+    else
+        _PYEXE=python2.7
+    fi
+
+    # Install PIP
+    $_PYEXE /tmp/get-pip.py || return 1
+
+    __git_clone_and_checkout || return 1
+
+    __PIP_REQUIREMENTS="dev_python27.txt"
+    if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+        __PIP_REQUIREMENTS="dev_python34.txt"
+    fi
+
+    requirements_file="${_SALT_GIT_CHECKOUT_DIR}/requirements/${__PIP_REQUIREMENTS}"
+    pip install -U -r "${requirements_file}" --install-option="--prefix=/opt/salt" || return 1
+
+    return 0
+}
+
+install_macosx_stable() {
+    install_macosx_stable_deps || return 1
+
+    /usr/bin/curl "${SALTPKGCONFURL}" > "/tmp/${PKG}" || return 1
+
+    /usr/sbin/installer -pkg "/tmp/${PKG}" -target / || return 1
+
+    return 0
+}
+
+install_macosx_git() {
+
+    if [ -n "$_PY_EXE" ]; then
+        _PYEXE=${_PY_EXE}
+    else
+        _PYEXE=python2.7
+    fi
+
+    if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
+        $_PYEXE setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --prefix=/opt/salt || return 1
+    else
+        $_PYEXE setup.py ${SETUP_PY_INSTALL_ARGS} install --prefix=/opt/salt || return 1
+    fi
+
+    return 0
+}
+
+install_macosx_stable_post() {
+   if [ ! -f /etc/paths.d/salt ]; then
+       print "%s\n" "/opt/salt/bin" "/usr/local/sbin" > /etc/paths.d/salt
+   fi
+
+   # shellcheck disable=SC1091
+   . /etc/profile
+
+   return 0
+}
+
+install_macosx_git_post() {
+    install_macosx_stable_post || return 1
+    return 0
+}
+
+install_macosx_restart_daemons() {
+    [ $_START_DAEMONS -eq $BS_FALSE ] && return
+
+    /bin/launchctl unload -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist || return 1
+    /bin/launchctl load -w /Library/LaunchDaemons/com.saltstack.salt.minion.plist || return 1
+
+   return 0
+}
+#
+#   Ended OS X / Darwin Install Functions
 #
 #######################################################################################################################
 
@@ -7096,3 +7371,5 @@ else
 fi
 
 exit 0
+
+# vim: set sts=4 ts=4 et

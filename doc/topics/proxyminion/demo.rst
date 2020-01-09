@@ -58,15 +58,13 @@ Now, configure your salt-proxy.
 
 
 This says that Salt's pillar should load some values for the proxy ``p8000``
-from the file /srv/pillar/p8000.sls (if you have not changed your default pillar_roots)
+from the file ``/srv/pillar/p8000.sls`` (if you have not changed your default pillar_roots)
 
-3. In the pillar root for your base environment, create this file:
+3. In the pillar root for your base environment, create the ``p8000.sls`` file with the
+   following contents:
 
 
 .. code-block:: yaml
-
-   p8000.sls
-   ---------
 
    proxy:
      proxytype: rest_sample
@@ -98,7 +96,7 @@ the 'url' key above should say ``url: http://127.0.0.1:8000``
 
 .. code-block:: bash
 
-    salt p8000 test.ping
+    salt p8000 test.version
 
 8. The REST service implements a degenerately simple pkg and service provider as
    well as a small set of grains.  To "install" a package, use a standard

@@ -14,6 +14,7 @@ import logging
 
 # Import Salt libs
 import salt.utils.files
+import salt.syspaths
 
 # Import 3rd-party libs
 import salt.ext.six.moves
@@ -33,7 +34,7 @@ def _write_proxy_conf(proxyfile):
     if proxyfile:
         log.debug('Writing proxy conf file')
         with salt.utils.files.fopen(proxyfile, 'w') as proxy_conf:
-            proxy_conf.write(salt.utils.stringutils.to_str('master = {0}'
+            proxy_conf.write(salt.utils.stringutils.to_str('master: {0}'
                              .format(__grains__['master'])))
         msg = 'Wrote proxy file {0}'.format(proxyfile)
         log.debug(msg)
@@ -132,7 +133,7 @@ def configure_proxy(proxyname, start=True):
     test = __opts__['test']
 
     # write the proxy file if necessary
-    proxyfile = '/etc/salt/proxy'
+    proxyfile = os.path.join(salt.syspaths.CONFIG_DIR, 'proxy')
     status_file, msg_new, msg_old = _proxy_conf_file(proxyfile, test)
     changes_new.extend(msg_new)
     changes_old.extend(msg_old)

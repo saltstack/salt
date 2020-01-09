@@ -163,7 +163,7 @@ def formatted(name, fs_type='ext4', force=False, **kwargs):
 
     # Repeat fstype check up to 10 times with 3s sleeping between each
     # to avoid detection failing although mkfs has succeeded
-    # see https://github.com/saltstack/salt/issues/25775i
+    # see https://github.com/saltstack/salt/issues/25775
     # This retry maybe superfluous - switching to blkid
     for i in range(10):
 
@@ -193,5 +193,7 @@ def _checkblk(name):
     Check if the blk exists and return its fstype if ok
     '''
 
-    blk = __salt__['cmd.run']('blkid -o value -s TYPE {0}'.format(name))
+    blk = __salt__['cmd.run'](
+        ['blkid', '-o', 'value', '-s', 'TYPE', name],
+        ignore_retcode=True)
     return '' if not blk else blk

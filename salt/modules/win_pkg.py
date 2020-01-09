@@ -95,6 +95,11 @@ def latest_version(*names, **kwargs):
     If the latest version of a given package is already installed, an empty
     string will be returned for that package.
 
+    .. note::
+        Since this is looking for the latest version available, a refresh_db
+        will be triggered by default. This can take some time. To avoid this set
+        ``refresh`` to ``False``.
+
     Args:
         names (str): A single or multiple names to lookup
 
@@ -838,7 +843,7 @@ def refresh_db(**kwargs):
     The database is stored in a serialized format located by default at the
     following location:
 
-    `C:\salt\var\cache\salt\minion\files\base\win\repo-ng\winrepo.p`
+    ``C:\salt\var\cache\salt\minion\files\base\win\repo-ng\winrepo.p``
 
     This module performs the following steps to generate the software metadata
     database:
@@ -846,7 +851,7 @@ def refresh_db(**kwargs):
     - Fetch the package definition files (.sls) from `winrepo_source_dir`
       (default `salt://win/repo-ng`) and cache them in
       `<cachedir>\files\<saltenv>\<winrepo_source_dir>`
-      (default: `C:\salt\var\cache\salt\minion\files\base\win\repo-ng`)
+      (default: ``C:\salt\var\cache\salt\minion\files\base\win\repo-ng``)
     - Call :py:func:`pkg.genrepo <salt.modules.win_pkg.genrepo>` to parse the
       package definition files and generate the repository metadata database
       file (`winrepo.p`)
@@ -1042,7 +1047,7 @@ def _get_repo_details(saltenv):
 
 def genrepo(**kwargs):
     '''
-    Generate package metedata db based on files within the winrepo_source_dir
+    Generate package metadata db based on files within the winrepo_source_dir
 
     Kwargs:
 
@@ -1160,7 +1165,7 @@ def _repo_process_pkg_sls(filename, short_path_name, ret, successful_verbose):
             __opts__.get('renderer_whitelist', ''))
     except SaltRenderError as exc:
         return _failed_compile('Failed to compile', exc)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         return _failed_compile('Failed to read', exc)
 
     if config and isinstance(config, dict):
@@ -1447,6 +1452,11 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                 'extra_install_flags': kwargs.get('extra_install_flags')
             }
         }
+    elif len(pkg_params) == 1:
+        # A dict of packages was passed, but it contains only 1 key, so we need
+        # to add the 'extra_install_flags'
+        pkg = next(iter(pkg_params))
+        pkg_params[pkg]['extra_install_flags'] = kwargs.get('extra_install_flags')
 
     # Get a list of currently installed software for comparison at the end
     old = list_pkgs(saltenv=saltenv, refresh=refresh, versions_as_list=True)
@@ -1512,7 +1522,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             continue
 
         # Is the installer in a location that requires caching
-        if installer.startswith(('salt:', 'http:', 'https:', 'ftp:')):
+        if __salt__['config.valid_fileproto'](installer):
 
             # Check for the 'cache_dir' parameter in the .sls file
             # If true, the entire directory will be cached instead of the
@@ -2087,7 +2097,7 @@ def purge(name=None, pkgs=None, **kwargs):
 
 def get_repo_data(saltenv='base'):
     '''
-    Returns the existing package meteadata db. Will create it, if it does not
+    Returns the existing package metadata db. Will create it, if it does not
     exist, however will not refresh it.
 
     Args:
@@ -2125,7 +2135,7 @@ def get_repo_data(saltenv='base'):
                 repodata = salt.utils.data.decode(serial.loads(repofile.read()) or {})
                 __context__['winrepo.data'] = repodata
                 return repodata
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 return {}
     except IOError as exc:
@@ -2147,6 +2157,13 @@ def _get_name_map(saltenv='base'):
     for k in name_map:
         u_name_map[k] = name_map[k]
     return u_name_map
+
+
+def get_package_info(name, saltenv='base'):
+    '''
+    Return package info. Returns empty map if package not available.
+    '''
+    return _get_package_info(name=name, saltenv=saltenv)
 
 
 def _get_package_info(name, saltenv='base'):
@@ -2183,7 +2200,7 @@ def _get_latest_pkg_version(pkginfo):
 
 def compare_versions(ver1='', oper='==', ver2=''):
     '''
-    Compare software package versions
+    Compare software package versions. Made public for use with Jinja
 
     Args:
         ver1 (str): A software version to compare

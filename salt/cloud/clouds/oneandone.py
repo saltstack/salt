@@ -115,9 +115,7 @@ import salt.utils.stringutils
 from salt.ext import six
 
 try:
-    from oneandone.client import (
-        OneAndOneService, Server, Hdd, BlockStorage, SshKey
-    )
+    from oneandone.client import OneAndOneService, Server, Hdd, BlockStorage, SshKey  # pylint: disable=no-name-in-module
     HAS_ONEANDONE = True
 except ImportError:
     HAS_ONEANDONE = False
@@ -398,11 +396,11 @@ def list_nodes(conn=None, call=None):
 
         size = node.get('hardware').get('fixed_instance_size_id', 'Custom size')
 
-        if node.get('private_networks') and len(node['private_networks']) > 0:
+        if node.get('private_networks'):
             for private_ip in node['private_networks']:
                 private_ips.append(private_ip)
 
-        if node.get('ips') and len(node['ips']) > 0:
+        if node.get('ips'):
             for public_ip in node['ips']:
                 public_ips.append(public_ip['ip'])
 
@@ -673,7 +671,7 @@ def create(vm_):
                 pprint.pformat(data['name']),
                 data['status']['state']
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled

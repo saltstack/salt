@@ -136,9 +136,7 @@ def setup_handlers():
             transport_registry = TransportRegistry(default_transports)
             url = urlparse(dsn)
             if not transport_registry.supported_scheme(url.scheme):
-                raise ValueError(
-                    'Unsupported Sentry DSN scheme: %s', url.scheme
-                )
+                raise ValueError('Unsupported Sentry DSN scheme: {0}'.format(url.scheme))
         except ValueError as exc:
             log.info(
                 'Raven failed to parse the configuration provided DSN: %s', exc
@@ -212,9 +210,9 @@ def setup_handlers():
             except KeyError:
                 log.debug('Sentry tag \'%s\' not found in grains.', tag)
                 continue
-            if len(tag_value) > 0:
+            if tag_value:
                 context_dict[tag] = tag_value
-        if len(context_dict) > 0:
+        if context_dict:
             client.context.merge({'tags': context_dict})
     try:
         handler = SentryHandler(client)

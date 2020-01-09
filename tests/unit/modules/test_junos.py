@@ -7,7 +7,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import test libs
 from tests.support.mixins import LoaderModuleMockMixin, XMLEqualityMixin
-from tests.support.mock import patch, mock_open
+from tests.support.mock import patch, mock_open, PropertyMock, call, ANY
 from tests.support.unit import skipIf, TestCase
 
 # Import 3rd-party libs
@@ -20,8 +20,8 @@ try:
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.sw import SW
     from jnpr.junos.device import Device
-    from jnpr.junos.device import Device
     import jxmlease  # pylint: disable=unused-import
+    from jnpr.junos.exception import LockError, UnlockError
     HAS_JUNOS = True
 except ImportError:
     HAS_JUNOS = False
@@ -50,7 +50,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
 
     def make_connect(self):
         with patch('ncclient.manager.connect') as mock_connect:
-            self.dev = self.dev = Device(
+            self.dev = Device(
                 host='1.1.1.1',
                 user='test',
                 password='test123',
@@ -129,6 +129,18 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                                   'type': 'I'},
                  'virtual': True}
         return facts
+
+    def test_timeout_decorator(self):
+        with patch('jnpr.junos.Device.timeout',
+                   new_callable=PropertyMock) as mock_timeout:
+            mock_timeout.return_value = 30
+
+            def function(x):
+                return x
+            decorator = junos.timeoutDecorator(function)
+            decorator("Test Mock", dev_timeout=10)
+            calls = [call(), call(10), call(30)]
+            mock_timeout.assert_has_calls(calls)
 
     def test_facts_refresh(self):
         with patch('salt.modules.saltutil.sync_grains') as mock_sync_grains:
@@ -514,10 +526,9 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_commit_check.return_value = True
             args = {'comment': 'Comitted via salt',
                     '__pub_user': 'root',
-                    'dev_timeout': 40,
                     '__pub_arg': [2,
                                   {'comment': 'Comitted via salt',
-                                   'timeout': 40,
+                                   'dev_timeout': 40,
                                    'confirm': 1}],
                     'confirm': 1,
                     '__pub_fun': 'junos.rollback',
@@ -528,7 +539,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             junos.rollback(id=2, **args)
             mock_rollback.assert_called_with(2)
             mock_commit.assert_called_with(
-                comment='Comitted via salt', confirm=1, timeout=40)
+                comment='Comitted via salt', confirm=1, dev_timeout=40)
 
     def test_rollback_with_only_single_arg(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
@@ -1154,25 +1165,6 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 ret)
             mock_commit.assert_called_with(comment='comitted via salt', confirm=3)
 
-    def test_install_config_commit_check_exception(self):
-        with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
-                patch('jnpr.junos.utils.config.Config.diff') as mock_diff, \
-                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
-                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
-                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
-                patch('os.path.isfile') as mock_isfile, \
-                patch('os.path.getsize') as mock_getsize:
-            mock_isfile.return_value = True
-            mock_getsize.return_value = 10
-            mock_mkstemp.return_value = 'test/path/config'
-            mock_diff.return_value = 'diff'
-            mock_commit_check.side_effect = self.raise_exception
-
-            ret = dict()
-            ret['message'] = 'Commit check threw the following exception: "Test exception"'
-            ret['out'] = False
-            self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
-
     def test_install_config_commit_check_fails(self):
         with patch('jnpr.junos.utils.config.Config.commit_check') as mock_commit_check, \
                 patch('jnpr.junos.utils.config.Config.diff') as mock_diff, \
@@ -1188,7 +1180,7 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             mock_commit_check.return_value = False
 
             ret = dict()
-            ret['message'] = 'Loaded configuration but commit check failed.'
+            ret['message'] = 'Loaded configuration but commit check failed, hence rolling back configuration.'
             ret['out'] = False
             self.assertEqual(junos.install_config('actual/path/config.xml'), ret)
 
@@ -1322,6 +1314,51 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             ret['out'] = False
             self.assertEqual(junos.install_os('path', **args), ret)
 
+    def test_install_os_no_copy(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            ret = dict()
+            ret['out'] = True
+            ret['message'] = 'Installed the os.'
+            self.assertEqual(junos.install_os('path', no_copy=True), ret)
+            mock_install.assert_called_with(u'path', no_copy=True, progress=True)
+            mock_mkstemp.assert_not_called()
+            mock_safe_rm.assert_not_called()
+
+    def test_install_os_issu(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            ret = dict()
+            ret['out'] = True
+            ret['message'] = 'Installed the os.'
+            self.assertEqual(junos.install_os('path', issu=True), ret)
+            mock_install.assert_called_with(ANY, issu=True, progress=True)
+
+    def test_install_os_add_params(self):
+        with patch('jnpr.junos.utils.sw.SW.install') as mock_install, \
+                patch('salt.utils.files.safe_rm') as mock_safe_rm, \
+                patch('salt.utils.files.mkstemp') as mock_mkstemp, \
+                patch('os.path.isfile') as mock_isfile, \
+                patch('os.path.getsize') as mock_getsize:
+            mock_getsize.return_value = 10
+            mock_isfile.return_value = True
+            ret = dict()
+            ret['out'] = True
+            ret['message'] = 'Installed the os.'
+            remote_path = '/path/to/file'
+            self.assertEqual(junos.install_os('path', remote_path=remote_path, nssu=True, validate=True), ret)
+            mock_install.assert_called_with(ANY, nssu=True, remote_path=remote_path, progress=True, validate=True)
+
     def test_file_copy_without_args(self):
         ret = dict()
         ret['message'] = \
@@ -1425,7 +1462,6 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
             args = mock_execute.call_args
             expected_rpc = '<get-interface-information format="json"/>'
             self.assertEqualXML(args[0][0], expected_rpc)
-            self.assertEqual(args[1], {'dev_timeout': 30})
 
     def test_rpc_get_interface_information_with_kwargs(self):
         with patch('jnpr.junos.device.Device.execute') as mock_execute:
@@ -1496,3 +1532,163 @@ class Test_Junos_Module(TestCase, LoaderModuleMockMixin, XMLEqualityMixin):
                 junos.rpc('get-chassis-inventory', '/path/to/file')
                 writes = m_open.write_calls()
                 assert writes == ['xml rpc reply'], writes
+
+    def test_lock_success(self):
+        ret_exp = {'out': True, 'message': 'Successfully locked the configuration.'}
+        ret = junos.lock()
+        self.assertEqual(ret, ret_exp)
+
+    def test_lock_error(self):
+        ret_exp = {'out': False, 'message': 'Could not gain lock due to : "LockError"'}
+        with patch('jnpr.junos.utils.config.Config.lock') as mock_lock:
+            mock_lock.side_effect = LockError(None)
+            ret = junos.lock()
+            self.assertEqual(ret, ret_exp)
+
+    def test_unlock_success(self):
+        ret_exp = {'out': True, 'message': 'Successfully unlocked the configuration.'}
+        ret = junos.unlock()
+        self.assertEqual(ret, ret_exp)
+
+    def test_unlock_error(self):
+        ret_exp = {'out': False, 'message': 'Could not unlock configuration due to : "UnlockError"'}
+        with patch('jnpr.junos.utils.config.Config.unlock') as mock_unlock:
+            mock_unlock.side_effect = UnlockError(None)
+            ret = junos.unlock()
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_none_path(self):
+        ret_exp = {'out': False,
+                   'message': 'Please provide the salt path where the configuration is present'}
+        ret = junos.load()
+        self.assertEqual(ret, ret_exp)
+
+    def test_load_wrong_tmp_file(self):
+        ret_exp = {'out': False, 'message': 'Invalid file path.'}
+        with patch('salt.utils.files.mkstemp') as mock_mkstemp:
+            mock_mkstemp.return_value = '/pat/to/tmp/file'
+            ret = junos.load('/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_invalid_path(self):
+        ret_exp = {'out': False, 'message': 'Template failed to render'}
+        ret = junos.load('/path/to/file')
+        self.assertEqual(ret, ret_exp)
+
+    def test_load_no_extension(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file')
+            mock_load.assert_called_with(format='text', path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_xml_extension(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file.xml')
+            mock_load.assert_called_with(format='xml', path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_set_extension(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file.set')
+            mock_load.assert_called_with(format='set', path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_replace_true(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file', replace=True)
+            mock_load.assert_called_with(format='text', merge=False, path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_replace_false(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file', replace=False)
+            mock_load.assert_called_with(format='text', replace=False, path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_overwrite_true(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file', overwrite=True)
+            mock_load.assert_called_with(format='text', overwrite=True, path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_overwrite_false(self):
+        ret_exp = {'out': True, 'message': 'Successfully loaded the configuration.'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            ret = junos.load('/path/to/file', overwrite=False)
+            mock_load.assert_called_with(format='text', merge=True, path='/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_load_error(self):
+        ret_exp = {'out': False,
+                   'format': 'text',
+                   'message': 'Could not load configuration due to : "Test Error"'}
+        with patch('os.path.getsize') as mock_getsize, \
+                patch('jnpr.junos.utils.config.Config.load') as mock_load, \
+                patch('salt.utils.files.mkstemp') as mock_mkstmp, \
+                patch('os.path.isfile') as mock_isfile:
+            mock_getsize.return_value = 1000
+            mock_mkstmp.return_value = '/path/to/file'
+            mock_isfile.return_value = True
+            mock_load.side_effect = Exception('Test Error')
+            ret = junos.load('/path/to/file')
+            self.assertEqual(ret, ret_exp)
+
+    def test_commit_check_success(self):
+        ret_exp = {'out': True, 'message': 'Commit check succeeded.'}
+        ret = junos.commit_check()
+        self.assertEqual(ret, ret_exp)
+
+    def test_commit_check_error(self):
+        ret_exp = {'out': False, 'message': 'Commit check failed with '}
+        with patch('jnpr.junos.utils.config.Config.commit_check') as mock_check:
+            mock_check.side_effect = Exception
+            ret = junos.commit_check()
+            self.assertEqual(ret, ret_exp)

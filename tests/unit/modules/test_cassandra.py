@@ -7,12 +7,10 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -20,7 +18,6 @@ from salt.ext import six
 import salt.modules.cassandra as cassandra
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class CassandraTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.cassandra
@@ -118,9 +115,12 @@ class CassandraTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertCountEqual(cassandra.column_families(),
                                       {'A': ['a', 'b'], 'B': ['c', 'd']})
             else:
-                self.assertEqual(cassandra.column_families('A'),
+                self.assertEqual(sorted(cassandra.column_families('A')),
                                  ['a', 'b'])
-                self.assertEqual(cassandra.column_families(),
+                column_families = cassandra.column_families()
+                for key in ('A', 'B'):
+                    column_families[key] = sorted(column_families[key])
+                self.assertEqual(column_families,
                                  {'A': ['a', 'b'], 'B': ['c', 'd']})
 
     def test_column_family_definition(self):

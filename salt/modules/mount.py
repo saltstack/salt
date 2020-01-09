@@ -63,7 +63,9 @@ def _active_mountinfo(ret):
         msg = 'File not readable {0}'
         raise CommandExecutionError(msg.format(filename))
 
-    blkid_info = __salt__['disk.blkid']()
+    if 'disk.blkid' not in __context__:
+        __context__['disk.blkid'] = __salt__['disk.blkid']()
+    blkid_info = __context__['disk.blkid']
 
     with salt.utils.files.fopen(filename) as ifile:
         for line in ifile:
@@ -226,6 +228,7 @@ def _resolve_user_group_names(opts):
                 if _info and _param in _info:
                     _id = _info[_param]
             opts[ind] = _param + '=' + six.text_type(_id)
+        opts[ind] = opts[ind].replace('\\040', '\\ ')
     return opts
 
 
@@ -708,10 +711,14 @@ def set_fstab(
         config='/etc/fstab',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
     CLI Example:
 
@@ -729,7 +736,7 @@ def set_fstab(
         'name': name,
         'device': device.replace('\\ ', '\\040'),
         'fstype': fstype,
-        'opts': opts,
+        'opts': opts.replace('\\ ', '\\040'),
         'dump': dump,
         'pass_num': pass_num,
     }
@@ -790,7 +797,7 @@ def set_fstab(
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
-                        if entry.match(line):
+                        if entry.match(line) or not_change:
                             lines.append(line)
                         else:
                             ret = 'change'
@@ -834,11 +841,15 @@ def set_vfstab(
         config='/etc/vfstab',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     ..verionadded:: 2016.3.2
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
     CLI Example:
 
@@ -919,7 +930,7 @@ def set_vfstab(
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
-                        if entry.match(line):
+                        if entry.match(line) or not_change:
                             lines.append(line)
                         else:
                             ret = 'change'
@@ -1020,6 +1031,7 @@ def set_automaster(
         opts='',
         config='/etc/auto_salt',
         test=False,
+        not_change=False,
         **kwargs):
     '''
     Verify that this mount is represented in the auto_salt, change the mount
@@ -1068,9 +1080,11 @@ def set_automaster(
                     lines.append(line)
                     continue
                 if comps[0] == name or comps[2] == device_fmt:
+                    present = True
+                    if not_change:
+                        continue
                     # check to see if there are changes
                     # and fix them if there are any
-                    present = True
                     if comps[0] != name:
                         change = True
                         comps[0] = name
@@ -1209,13 +1223,17 @@ def mount(name, device, mkmnt=False, fstype='', opts='defaults', user=None, util
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-    # use of fstype on AIX differs from typical Linux use of -t functionality
-    # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-    if 'AIX' in __grains__['os']:
-        if fstype:
+    if fstype:
+        # use of fstype on AIX differs from typical Linux use of -t
+        # functionality AIX uses -v vfsname, -t fstype mounts all with
+        # fstype in /etc/filesystems
+        if 'AIX' in __grains__['os']:
             args += ' -v {0}'.format(fstype)
-    else:
-        args += ' -t {0}'.format(fstype)
+        elif 'solaris' in __grains__['os'].lower():
+            args += ' -F {0}'.format(fstype)
+        else:
+            args += ' -t {0}'.format(fstype)
+
     cmd = 'mount {0} {1} {2} '.format(args, device, name)
     out = __salt__['cmd.run_all'](cmd, runas=user, python_shell=False)
     if out['retcode']:
@@ -1243,7 +1261,7 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
 
     if 'AIX' in __grains__['os']:
         if opts == 'defaults':
-            opts = ''
+            opts = []
 
     if isinstance(opts, six.string_types):
         opts = opts.split(',')
@@ -1258,14 +1276,16 @@ def remount(name, device, mkmnt=False, fstype='', opts='defaults', user=None):
         lopts = ','.join(opts)
         args = '-o {0}'.format(lopts)
 
-        # use of fstype on AIX differs from typical Linux use of -t functionality
-        # AIX uses -v vfsname, -t fstype mounts all with fstype in /etc/filesystems
-        if 'AIX' in __grains__['os']:
-            if fstype:
+        if fstype:
+            # use of fstype on AIX differs from typical Linux use of
+            # -t functionality AIX uses -v vfsname, -t fstype mounts
+            # all with fstype in /etc/filesystems
+            if 'AIX' in __grains__['os']:
                 args += ' -v {0}'.format(fstype)
-            args += ' -o remount'
-        else:
-            args += ' -t {0}'.format(fstype)
+            elif 'solaris' in __grains__['os'].lower():
+                args += ' -F {0}'.format(fstype)
+            else:
+                args += ' -t {0}'.format(fstype)
 
         if __grains__['os'] not in ['OpenBSD', 'MacOS', 'Darwin'] or force_mount:
             cmd = 'mount {0} {1} {2} '.format(args, device, name)
@@ -1663,12 +1683,16 @@ def set_filesystems(
         config='/etc/filesystems',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     .. versionadded:: 2018.3.3
 
     Verify that this mount is represented in the filesystems, change the mount
     to match the data passed, or add the mount if it is not present on AIX
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
         Provide information if the path is mounted
 
@@ -1769,7 +1793,7 @@ def set_filesystems(
         for fsys_view in six.viewitems(fsys_filedict):
             if criteria.match(fsys_view):
                 ret = 'present'
-                if entry_ip.match(fsys_view):
+                if entry_ip.match(fsys_view) or not_change:
                     view_lines.append(fsys_view)
                 else:
                     ret = 'change'

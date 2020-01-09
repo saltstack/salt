@@ -128,6 +128,7 @@ def state(name,
         queue=False,
         subset=None,
         orchestration_jid=None,
+        failhard=None,
         **kwargs):
     '''
     Invoke a state run on a given target
@@ -221,6 +222,11 @@ def state(name,
 
         .. versionadded:: 2017.7.0
 
+    failhard
+        pass failhard down to the executing state
+
+        .. versionadded:: 2019.2.2
+
     Examples:
 
     Run a list of sls files via :py:func:`state.sls <salt.state.sls>` on target
@@ -270,6 +276,8 @@ def state(name,
 
     cmd_kw['tgt_type'] = tgt_type
     cmd_kw['ssh'] = ssh
+    if 'roster' in kwargs:
+        cmd_kw['roster'] = kwargs['roster']
     cmd_kw['expect_minions'] = expect_minions
     if highstate:
         fun = 'state.highstate'
@@ -309,8 +317,12 @@ def state(name,
 
     if batch is not None:
         cmd_kw['batch'] = six.text_type(batch)
+
     if subset is not None:
         cmd_kw['subset'] = subset
+
+    if failhard is True or __opts__.get('failhard'):
+        cmd_kw['failhard'] = True
 
     masterless = __opts__['__role'] == 'minion' and \
                  __opts__['file_client'] == 'local'
@@ -425,7 +437,9 @@ def function(
         kwarg=None,
         timeout=None,
         batch=None,
-        subset=None):
+        subset=None,
+        failhard=None,
+        **kwargs):  # pylint: disable=unused-argument
     '''
     Execute a single module function on a remote minion via salt or salt-ssh
 
@@ -474,17 +488,22 @@ def function(
 
         .. versionadded:: 2017.7.0
 
+    failhard
+        pass failhard down to the executing state
+
+        .. versionadded:: 2019.2.2
+
     '''
     func_ret = {'name': name,
-           'changes': {},
-           'comment': '',
-           'result': True}
+                'changes': {},
+                'comment': '',
+                'result': True}
     if kwarg is None:
         kwarg = {}
     if isinstance(arg, six.string_types):
-        func_ret['warnings'] = ['Please specify \'arg\' as a list, not a string. '
-                           'Modifying in place, but please update SLS file '
-                           'to remove this warning.']
+        func_ret['warnings'] = [
+            'Please specify \'arg\' as a list of arguments.'
+        ]
         arg = arg.split()
 
     cmd_kw = {'arg': arg or [], 'kwarg': kwarg, 'ret': ret, 'timeout': timeout}
@@ -499,6 +518,9 @@ def function(
     cmd_kw['expect_minions'] = expect_minions
     cmd_kw['_cmd_meta'] = True
 
+    if failhard is True or __opts__.get('failhard'):
+        cmd_kw['failhard'] = True
+
     if ret_config:
         cmd_kw['ret_config'] = ret_config
 
@@ -507,15 +529,14 @@ def function(
 
     fun = name
     if __opts__['test'] is True:
-        func_ret['comment'] = (
-                'Function {0} will be executed on target {1} as test={2}'
-                ).format(fun, tgt, six.text_type(False))
+        func_ret['comment'] = \
+            'Function {0} would be executed on target {1}'.format(fun, tgt)
         func_ret['result'] = None
         return func_ret
     try:
         _fire_args({'type': 'function', 'tgt': tgt, 'name': name, 'args': cmd_kw})
         cmd_ret = __salt__['saltutil.cmd'](tgt, fun, **cmd_kw)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         func_ret['result'] = False
         func_ret['comment'] = six.text_type(exc)
         return func_ret
@@ -749,7 +770,7 @@ def runner(name, **kwargs):
     return ret
 
 
-def parallel_runners(name, runners):
+def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argument
     '''
     Executes multiple runner modules on the master in parallel.
 

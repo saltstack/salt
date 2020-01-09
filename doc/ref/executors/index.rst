@@ -30,7 +30,7 @@ The same could be done by command line:
 
 .. code-block:: bash
 
-    salt -t 40 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 30}' '*' test.ping
+    salt -t 40 --module-executors='[splay, direct_call]' --executor-opts='{splaytime: 30}' '*' test.version
 
 And the same command called via netapi will look like this:
 
@@ -43,7 +43,7 @@ And the same command called via netapi will look like this:
         -d '[{
             "client": "local",
             "tgt": "*",
-            "fun": "test.ping",
+            "fun": "test.version",
             "module_executors": ["splay", "direct_call"],
             "executor_opts": {"splaytime": 10}
             }]'
