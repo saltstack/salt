@@ -33,3 +33,5 @@ Genshi
 Cheetah3==3.1.0
 Mako
 wempy; python_version <'3'
+
+vcert~=0.7.0
