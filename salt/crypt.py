@@ -847,10 +847,10 @@ class AsyncAuth(object):
                                 log.trace('Autosign Grains - grain %s - Current level is a dict', grain)
                                 current_level = current_level.get(subkey, None)
                             element = current_level
-                    except:
+                    except IndexError:
                         # We should go here only if the level provide in grain key is out of bound
                         log.trace('Autosign Grains - grain %s - Out of bound for list', grain)
-                        element = None					
+                        element = None
                 if element is not None:
                     log.trace('Autosign Grains - grain %s - FOUND - %s', grain, element)
                 else:
