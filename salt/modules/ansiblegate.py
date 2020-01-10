@@ -303,7 +303,7 @@ def help(module=None, *args):
             'Available sections on module "{}"'.format(
                 module.__name__.replace("ansible.modules.", "")
             )
-        ] = [i for i in doc.keys()]
+        ] = [i for i in doc.keys()] # pylint: disable=consider-iterating-dictionary
     else:
         for arg in args:
             info = doc.get(arg)
