@@ -89,7 +89,31 @@ grains:
         admin: true
     username: daniel
     password: test
-
+  'file:with:columns': value_value_columns_key
+  nested_dict1:
+    nested_dict1_0: valid_value_dict1
+  nested_dict2:
+    nested_dict2_0: valid_value_dict2
+    nested_dict2_1: 
+      - invalid_value
+      - valid_value_dict2
+      - nested_dict2_1_0: valid_value_dict2
+    nested_dict2_2: 
+        nested_dict2_2_0: valid_value_dict2
+  nested_list1:
+    - valid_value_list1
+    - invalid_value
+  nested_list2:
+    - nested_list2_value0
+    - nested_dict_lvl2: valid_value_list2
+    - nested_list2_value1
+  nested_list3:
+    - - nested_list3_0_0
+      - nested_list3_0_1
+    - - nested_list3_1_0
+      - valid_value_list3
+    - - nested_list3_2_1
+      - nested_list3_2_0: valid_value_list3
 config_test:
   spam: eggs
 
@@ -107,6 +131,15 @@ cmd_blacklist_glob:
 
 autosign_grains:
   - test_grain
+  - 'file:with:columns'
+  - nested_dict1:nested_dict1_0
+  - nested_list1:0
+  - nested_list2:1:nested_dict_lvl2
+  - nested_dict2:nested_dict2_1:1
+  - nested_list3:1:1
+  - nested_dict2:nested_dict2_2:nested_dict2_2_0
+  - nested_list3:2:1:nested_list3_2_0
+  - nested_dict2:nested_dict2_1:2:nested_dict2_1_0
 
 # disable discovery for test suite saltstack/salt-jenkins#683
 discovery: false

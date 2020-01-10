@@ -822,7 +822,40 @@ class AsyncAuth(object):
         if 'autosign_grains' in self.opts:
             autosign_grains = {}
             for grain in self.opts['autosign_grains']:
-                autosign_grains[grain] = self.opts['grains'].get(grain, None)
+                log.trace('Autosign Grains - grain %s - Looking for value', grain)
+                autosign_grains[grain] = None
+                # If the autosign_grain directly accessible use it
+                # it avoid issue if the grain key contains itself columns
+                if grain in self.opts['grains']:
+                    log.trace('Autosign Grains - grain %s - Found in grain root', grain)
+                    element = self.opts['grains'].get(grain, None)
+                # Else try to split the the grain key with column
+                # In every case if the autosign_grain could not be found anywhere return None
+                else:
+                    current_level = self.opts['grains']
+                    log.trace('Autosign Grains - grain %s - Not Found in grain root', grain)
+                    try:
+                        for subkey in grain.strip(":").split(":"):
+                            log.trace('Autosign Grains - grain %s - Trying to find %s subkey', grain, subkey)
+                            # If the current level is a list try to convert the key to an index
+                            if isinstance(current_level, list):
+                                log.trace('Autosign Grains - grain %s - Current level is a list', grain)
+                                index = int(subkey)
+                                current_level = current_level[index]
+                            # Else try to get the next level
+                            elif isinstance(current_level, dict):
+                                log.trace('Autosign Grains - grain %s - Current level is a dict', grain)
+                                current_level = current_level.get(subkey, None)
+                            element = current_level
+                    except:
+                        # We should go here only if the level provide in grain key is out of bound
+                        log.trace('Autosign Grains - grain %s - Out of bound for list', grain)
+                        element = None					
+                if element is not None:
+                    log.trace('Autosign Grains - grain %s - FOUND - %s', grain, element)
+                else:
+                    log.trace('Autosign Grains - grain %s - NOT FOUND - %s', grain, element)
+                autosign_grains[grain] = element
             payload['autosign_grains'] = autosign_grains
         try:
             pubkey_path = os.path.join(self.opts['pki_dir'], self.mpub)
