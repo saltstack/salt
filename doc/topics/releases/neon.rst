@@ -408,6 +408,11 @@ Module Changes
 Deprecations
 ============
 
+Raet Deprecated
+---------------
+- The Raet transport has been deprecated. Please use the supported
+  transport protocols tcp or zeromq.
+
 Module Deprecations
 -------------------
 
