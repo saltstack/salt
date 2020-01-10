@@ -267,6 +267,7 @@ def set_(name,
             'policy_lookup': {}}}
 
     current_policy = {}
+    deprecation_comments = []
     for p_class, p_data in six.iteritems(pol_data):
         if p_data['requested_policy']:
             for p_name, _ in six.iteritems(p_data['requested_policy']):
@@ -304,7 +305,7 @@ def set_(name,
                                     salt.utils.versions.warn_until('Phosphorus', msg)
                                     pol_data[p_class]['requested_policy'][p_name][new_e_name] = \
                                         pol_data[p_class]['requested_policy'][p_name].pop(e_name)
-                                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
+                                    deprecation_comments.append(msg)
                                 else:
                                     msg = 'Invalid element name: {0}'.format(e_name)
                                     ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
@@ -313,6 +314,8 @@ def set_(name,
                     ret['comment'] = '\n'.join([ret['comment'], lookup['message']]).strip()
                     ret['result'] = False
     if not ret['result']:
+        deprecation_comments.append(ret['comment'])
+        ret['comment'] = '\n'.join(deprecation_comments).strip()
         return ret
 
     log.debug('pol_data == %s', pol_data)
@@ -344,37 +347,20 @@ def set_(name,
                         requested_policy_check, current_policy_check)
 
                     if not policies_are_equal:
-                        additional_policy_comments = []
                         if p_data['policy_lookup'][p_name]['rights_assignment'] and cumulative_rights_assignments:
                             for user in p_data['requested_policy'][p_name]:
                                 if user not in current_policy[class_map[p_class]][p_name]:
                                     user = salt.utils.win_functions.get_sam_name(user)
                                     if user not in current_policy[class_map[p_class]][p_name]:
                                         changes = True
-                                    else:
-                                        additional_policy_comments.append('"{0}" is already granted the right'.format(user))
-                                else:
-                                    additional_policy_comments.append('"{0}" is already granted the right'.format(user))
                         else:
                             changes = True
                         if changes:
-                            log.debug('%s current policy != requested policy',
-                                      p_name)
-                            log.debug(
-                                'we compared %s to %s',
-                                requested_policy_json, current_policy_json
-                            )
+                            log.debug('%s current policy != requested policy', p_name)
+                            log.debug('We compared %s to %s', requested_policy_json, current_policy_json)
                             policy_changes.append(p_name)
-                        else:
-                            if additional_policy_comments:
-                                msg = '"{0}" is already set ({1})'.format(p_name, ', '.join(additional_policy_comments))
-                                ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
-                            else:
-                                msg = '"{0}" is already set'.format(p_name)
-                                ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                     else:
                         msg = '"{0}" is already set'.format(p_name)
-                        ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                         log.debug(msg)
                 else:
                     policy_changes.append(p_name)
@@ -383,11 +369,11 @@ def set_(name,
         if policy_changes:
             msg = 'The following policies are set to change:\n{0}' \
                   ''.format('\n'.join(policy_changes))
-            ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
             ret['result'] = None
         else:
             msg = 'All specified policies are properly configured'
-            ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
+        deprecation_comments.append(msg)
+        ret['comment'] = '\n'.join(deprecation_comments).strip()
     else:
         if policy_changes:
             _ret = __salt__['lgpo.set'](
@@ -412,15 +398,18 @@ def set_(name,
                 if ret['changes']:
                     msg = 'The following policies changed:\n{0}' \
                           ''.format('\n'.join(policy_changes))
-                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                 else:
                     msg = 'The following policies are in the correct ' \
                           'state:\n{0}'.format('\n'.join(policy_changes))
-                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
             else:
                 msg = 'Errors occurred while attempting to configure ' \
                       'policies: {0}'.format(_ret)
-                ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                 ret['result'] = False
+            deprecation_comments.append(msg)
+            ret['comment'] = '\n'.join(deprecation_comments).strip()
+        else:
+            msg = 'All specified policies are properly configured'
+            deprecation_comments.append(msg)
+            ret['comment'] = '\n'.join(deprecation_comments).strip()
 
     return ret
