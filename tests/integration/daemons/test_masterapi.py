@@ -120,7 +120,7 @@ class AutosignGrainsTest(ShellCase):
 
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertIn('minion', self.run_key('-l acc'))
-    
+
     def test_autosign_grains_nested_list_fail_wrongvalue(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'nested_list1:0')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
@@ -159,7 +159,7 @@ class AutosignGrainsTest(ShellCase):
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
         self.assertIn('minion', self.run_key('-l un'))
-    
+
     def test_autosign_grains_nested_dict_in_list_fail_wrongindex(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'nested_list2:0:nested_dict_lvl2')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
@@ -179,7 +179,7 @@ class AutosignGrainsTest(ShellCase):
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
         self.assertIn('minion', self.run_key('-l un'))
-    
+
     def test_autosign_grains_nested_list_in_dict_accept(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'nested_dict2:nested_dict2_1:1')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
@@ -198,7 +198,7 @@ class AutosignGrainsTest(ShellCase):
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
         self.assertIn('minion', self.run_key('-l un'))
-    
+
     def test_autosign_grains_nested_list_in_dict_fail_wrongindex(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'nested_dict2:nested_dict2_1:0')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
@@ -237,7 +237,7 @@ class AutosignGrainsTest(ShellCase):
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
         self.assertIn('minion', self.run_key('-l un'))
-    
+
     def test_autosign_grains_nested_list_in_list_fail_wrongindex(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'nested_list3:1:0')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
@@ -266,7 +266,7 @@ class AutosignGrainsTest(ShellCase):
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertNotIn('minion', self.run_key('-l acc'))
         self.assertIn('minion', self.run_key('-l un'))
-    
+
     def test_autosign_grains_nested_dict_in_dict_fail_wrongkey(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'nested_dict2:nested_dict2_2:fake')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
@@ -294,7 +294,7 @@ class AutosignGrainsTest(ShellCase):
 
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
         self.assertIn('minion', self.run_key('-l acc'))
-    
+
     def test_autosign_grains_key_with_columns(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'file:with:columns')
         with salt.utils.files.fopen(grain_file_path, 'w') as f:
