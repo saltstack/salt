@@ -3719,7 +3719,7 @@ def _parse_snapshot_description(vm_snapshot, unix_time=False):
         if node.tag == 'name':
             ret['name'] = node.text
         elif node.tag == 'creationTime':
-            ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat(' ') \
+            ret['created'] = datetime.datetime.fromtimestamp(float(node.text)).isoformat() \
                                 if not unix_time else float(node.text)
         elif node.tag == 'state':
             ret['running'] = node.text == 'running'
