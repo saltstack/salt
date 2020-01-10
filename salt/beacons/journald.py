@@ -13,7 +13,7 @@ from salt.ext.six.moves import map
 
 # Import third party libs
 try:
-    import systemd.journal
+    import systemd.journal  # pylint: disable=no-name-in-module
     HAS_SYSTEMD = True
 except ImportError:
     HAS_SYSTEMD = False

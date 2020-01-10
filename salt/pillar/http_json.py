@@ -49,18 +49,13 @@ import re
 from salt.ext import six
 
 # Import Salt libs
-try:
-    from salt.ext.six.moves.urllib.parse import quote as _quote
-    _HAS_DEPENDENCIES = True
-except ImportError:
-    _HAS_DEPENDENCIES = False
+from salt.ext.six.moves.urllib.parse import quote as _quote  # pylint: disable=no-name-in-module
 
-# Set up logging
 log = logging.getLogger(__name__)
 
 
 def __virtual__():
-    return _HAS_DEPENDENCIES
+    return True
 
 
 def ext_pillar(minion_id,

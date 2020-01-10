@@ -117,7 +117,7 @@ def update_job(name, config):
         )
         log.debug('update response: %s', response)
         return {'success': True}
-    except Exception as ex:
+    except Exception as ex:  # pylint: disable=broad-except
         log.error('unable to update chronos job: %s', get_error_message(ex))
         return {
             'exception': {

@@ -13,8 +13,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -25,7 +23,6 @@ import salt.utils.platform
 import jinja2.exceptions
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(salt.utils.platform.is_windows(), 'Do not run these tests on Windows')
 class DebianIpTestCase(TestCase, LoaderModuleMockMixin):
     '''

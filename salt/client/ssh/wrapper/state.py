@@ -81,7 +81,7 @@ def _ssh_state(chunks, st_kwargs,
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.data.decode(salt.utils.json.loads(stdout, object_hook=salt.utils.data.encode_dict))
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(str(e))
 
@@ -167,6 +167,16 @@ def _cleanup_slsmod_high_data(high_data):
                 stateconf_data['slsmod'] = None
 
 
+def _parse_mods(mods):
+    '''
+    Parse modules.
+    '''
+    if isinstance(mods, six.string_types):
+        mods = [item.strip() for item in mods.split(',') if item.strip()]
+
+    return mods
+
+
 def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     '''
     Create the seed file for a state.sls run
@@ -181,8 +191,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.push_active()
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = _parse_mods(mods)
     high_data, errors = st_.render_highstate({saltenv: mods})
     if exclude:
         if isinstance(exclude, six.string_types):
@@ -250,7 +259,7 @@ def sls(mods, saltenv='base', test=None, exclude=None, **kwargs):
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.json.loads(stdout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
 
@@ -393,7 +402,7 @@ def low(data, **kwargs):
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.json.loads(stdout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
 
@@ -483,7 +492,7 @@ def high(data, **kwargs):
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.json.loads(stdout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
 
@@ -729,7 +738,7 @@ def highstate(test=None, **kwargs):
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.json.loads(stdout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
 
@@ -811,7 +820,7 @@ def top(topfn, test=None, **kwargs):
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.json.loads(stdout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
 
@@ -922,8 +931,7 @@ def sls_id(id_, mods, test=None, queue=False, **kwargs):
         err += __pillar__['_errors']
         return err
 
-    if isinstance(mods, six.string_types):
-        split_mods = mods.split(',')
+    split_mods = _parse_mods(mods)
     st_.push_active()
     high_, errors = st_.render_highstate({opts['saltenv']: split_mods})
     errors += st_.state.verify_high(high_)
@@ -980,8 +988,7 @@ def show_sls(mods, saltenv='base', test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.push_active()
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = _parse_mods(mods)
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -1025,8 +1032,7 @@ def show_low_sls(mods, saltenv='base', test=None, **kwargs):
             __salt__,
             __context__['fileclient'])
     st_.push_active()
-    if isinstance(mods, six.string_types):
-        mods = mods.split(',')
+    mods = _parse_mods(mods)
     high_data, errors = st_.render_highstate({saltenv: mods})
     high_data, ext_errors = st_.state.reconcile_extend(high_data)
     errors += ext_errors
@@ -1184,7 +1190,7 @@ def single(fun, name, test=None, **kwargs):
     # Read in the JSON data and return the data structure
     try:
         return salt.utils.json.loads(stdout)
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         log.error("JSON Render failed for: %s\n%s", stdout, stderr)
         log.error(six.text_type(e))
 

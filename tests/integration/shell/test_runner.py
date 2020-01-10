@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 
 '''
 Tests for the salt-run command
@@ -28,6 +29,8 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
     '''
     Test the salt-run command
     '''
+
+    _call_binary_ = 'salt-run'
 
     def _add_user(self):
         '''
@@ -78,7 +81,6 @@ class RunTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMixin)
         data = '\n'.join(data)
         self.assertNotIn('jobs.SaltException:', data)
 
-    # pylint: disable=invalid-name
     def test_salt_documentation_too_many_arguments(self):
         '''
         Test to see if passing additional arguments shows an error
