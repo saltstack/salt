@@ -1487,7 +1487,7 @@ def _netlink_tool_remote_on(port, which_end):
         chunks = line.split()
         remote_host, remote_port = chunks[4].rsplit(':', 1)
 
-        remotes.add(remote_host)
+        remotes.add(remote_host.strip("[]"))
 
     if valid is False:
         remotes = None
