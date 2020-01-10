@@ -296,14 +296,15 @@ def set_(name,
                                 # format. If found, replace the old with the
                                 # new
                                 if new_e_name in valid_names:
-                                    salt.utils.versions.warn_until(
-                                        'Phosphorus',
-                                        'The LGPO module changed the way it '
-                                        'gets policy element names.\n'
-                                        '"{0}" is no longer valid.\n'
-                                        'Please use "{1}" instead.'.format(e_name, new_e_name))
+                                    msg = 'The LGPO module changed the way ' \
+                                          'it gets policy element names.\n'\
+                                          '"{0}" is no longer valid.\n'\
+                                          'Please use "{1}" instead.' \
+                                          ''.format(e_name, new_e_name)
+                                    salt.utils.versions.warn_until('Phosphorus', msg)
                                     pol_data[p_class]['requested_policy'][p_name][new_e_name] = \
                                         pol_data[p_class]['requested_policy'][p_name].pop(e_name)
+                                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                                 else:
                                     msg = 'Invalid element name: {0}'.format(e_name)
                                     ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
@@ -366,24 +367,27 @@ def set_(name,
                             policy_changes.append(p_name)
                         else:
                             if additional_policy_comments:
-                                ret['comment'] = '"{0}" is already set ({1})\n'.format(p_name, ', '.join(additional_policy_comments))
+                                msg = '"{0}" is already set ({1})'.format(p_name, ', '.join(additional_policy_comments))
+                                ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                             else:
-                                ret['comment'] = '"{0}" is already set\n'.format(p_name) + ret['comment']
+                                msg = '"{0}" is already set'.format(p_name)
+                                ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                     else:
-                        log.debug('%s current setting matches '
-                                  'the requested setting', p_name)
-                        ret['comment'] = '"{0}" is already set\n'.format(p_name) + ret['comment']
+                        msg = '"{0}" is already set'.format(p_name)
+                        ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
+                        log.debug(msg)
                 else:
                     policy_changes.append(p_name)
-                    log.debug('policy %s is not set, we will configure it',
-                              p_name)
+                    log.debug('policy %s is not set, we will configure it', p_name)
     if __opts__['test']:
         if policy_changes:
+            msg = 'The following policies are set to change:\n{0}' \
+                  ''.format('\n'.join(policy_changes))
+            ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
             ret['result'] = None
-            ret['comment'] = 'The following policies are set to change:\n{0}'.format(
-                    '\n'.join(policy_changes))
         else:
-            ret['comment'] = 'All specified policies are properly configured'
+            msg = 'All specified policies are properly configured'
+            ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
     else:
         if policy_changes:
             _ret = __salt__['lgpo.set'](
@@ -396,8 +400,7 @@ def set_(name,
                 new_policy = {}
                 for p_class, p_data in six.iteritems(pol_data):
                     if p_data['requested_policy']:
-                        for p_name, p_setting in six.iteritems(
-                            p_data['requested_policy']):
+                        for p_name, p_setting in six.iteritems(p_data['requested_policy']):
                             new_policy.setdefault(class_map[p_class], {})
                             new_policy[class_map[p_class]][p_name] = __salt__['lgpo.get_policy'](
                                 policy_name=p_name,
@@ -407,13 +410,17 @@ def set_(name,
                 ret['changes'] = salt.utils.dictdiffer.deep_diff(
                     old=current_policy, new=new_policy)
                 if ret['changes']:
-                    ret['comment'] = 'The following policies changed:\n{0}' \
-                                     ''.format('\n'.join(policy_changes))
+                    msg = 'The following policies changed:\n{0}' \
+                          ''.format('\n'.join(policy_changes))
+                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                 else:
-                    ret['comment'] = 'The following policies are in the correct state:\n{0}' \
-                                     ''.format('\n'.join(policy_changes))
+                    msg = 'The following policies are in the correct ' \
+                          'state:\n{0}'.format('\n'.join(policy_changes))
+                    ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
             else:
+                msg = 'Errors occurred while attempting to configure ' \
+                      'policies: {0}'.format(_ret)
+                ret['comment'] = '\n'.join([ret['comment'], msg]).strip()
                 ret['result'] = False
-                ret['comment'] = 'Errors occurred while attempting to configure policies: {0}'.format(_ret)
 
     return ret

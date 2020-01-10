@@ -247,6 +247,12 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                     'Show warning only'}}
         self.assertDictEqual(
             result['changes']['new']['Computer Configuration'], expected)
+        expected = 'The LGPO module changed the way it gets policy element names.\n' \
+                   '"Security Prompts: When installing drivers for a new connection" is no longer valid.\n' \
+                   'Please use "When installing drivers for a new connection" instead.\n' \
+                   'The following policies changed:\n' \
+                   'Point and Print Restrictions'
+        self.assertEqual(result['comment'], expected)
 
     def test_invalid_elements(self):
         computer_policy = {
