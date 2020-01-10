@@ -26,6 +26,18 @@ from __future__ import absolute_import, print_function, unicode_literals
 import os
 import sys
 import logging
+from unittest import (
+    TestLoader as _TestLoader,
+    TextTestRunner as _TextTestRunner,
+    TestCase as _TestCase,
+    expectedFailure,
+    TestSuite as _TestSuite,
+    skip,
+    skipIf as _skipIf,
+    TestResult,
+    TextTestResult as _TextTestResult
+)
+from unittest.case import _id, SkipTest
 from salt.ext import six
 try:
     import psutil
@@ -51,68 +63,6 @@ Donec venenatis elementum arcu at rhoncus. Nunc pharetra erat in lacinia convall
 eu mauris sit amet convallis. Morbi vulputate vel odio non laoreet. Nullam in suscipit tellus.
 Sed quis posuere urna.'''
 
-# support python < 2.7 via unittest2
-if sys.version_info < (2, 7):
-    try:
-        # pylint: disable=import-error
-        from unittest2 import (
-            TestLoader as __TestLoader,
-            TextTestRunner as __TextTestRunner,
-            TestCase as __TestCase,
-            expectedFailure,
-            TestSuite as __TestSuite,
-            skip,
-            skipIf as _skipIf,
-            TestResult as _TestResult,
-            TextTestResult as __TextTestResult
-        )
-        from unittest2.case import _id, SkipTest
-        # pylint: enable=import-error
-
-        class NewStyleClassMixin(object):
-            '''
-            Simple new style class to make pylint shut up!
-
-            And also to avoid errors like:
-
-                'Cannot create a consistent method resolution order (MRO) for bases'
-            '''
-
-        class _TestLoader(__TestLoader, NewStyleClassMixin):
-            pass
-
-        class _TextTestRunner(__TextTestRunner, NewStyleClassMixin):
-            pass
-
-        class _TestCase(__TestCase, NewStyleClassMixin):
-            pass
-
-        class _TestSuite(__TestSuite, NewStyleClassMixin):
-            pass
-
-        class TestResult(_TestResult, NewStyleClassMixin):
-            pass
-
-        class _TextTestResult(__TextTestResult, NewStyleClassMixin):
-            pass
-
-    except ImportError:
-        raise SystemExit('You need to install unittest2 to run the salt tests')
-else:
-    from unittest import (
-        TestLoader as _TestLoader,
-        TextTestRunner as _TextTestRunner,
-        TestCase as _TestCase,
-        expectedFailure,
-        TestSuite as _TestSuite,
-        skip,
-        skipIf as _skipIf,
-        TestResult,
-        TextTestResult as _TextTestResult,
-        SkipTest,
-    )
-    from unittest.case import _id, SkipTest
-
 
 class TestSuite(_TestSuite):
 
@@ -124,11 +74,10 @@ class TestSuite(_TestSuite):
 
         # Store a reference to all class attributes before running the setUpClass method
         initial_class_attributes = dir(test.__class__)
-        ret = super(TestSuite, self)._handleClassSetUp(test, result)
+        super(TestSuite, self)._handleClassSetUp(test, result)
         # Store the difference in in a variable in order to check later if they were deleted
         test.__class__._prerun_class_attributes = [
                 attr for attr in dir(test.__class__) if attr not in initial_class_attributes]
-        return ret
 
     def _tearDownPreviousClass(self, test, result):
         # Run any tearDownClass code defined
@@ -224,7 +173,7 @@ class TestCase(_TestCase):
                     for proc in psutil.process_iter():
                         if proc.status == psutil.STATUS_ZOMBIE:
                             found_zombies += 1
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
                 proc_info += '|Z:{0}'.format(found_zombies)
             proc_info += '] {short_desc}'.format(short_desc=desc if desc else '')
@@ -351,7 +300,7 @@ class TestCase(_TestCase):
                 )
             )
 
-        def assertRegex(self, text, regex, msg=None):
+        def assertRegex(self, text, regex, msg=None):  # pylint: disable=arguments-differ
             # In python 2, alias to the future python 3 function
             return _TestCase.assertRegexpMatches(self, text, regex, msg=msg)
 
@@ -364,7 +313,7 @@ class TestCase(_TestCase):
                 )
             )
 
-        def assertNotRegex(self, text, regex, msg=None):
+        def assertNotRegex(self, text, regex, msg=None):  # pylint: disable=arguments-differ
             # In python 2, alias to the future python 3 function
             return _TestCase.assertNotRegexpMatches(self, text, regex, msg=msg)
 
@@ -377,7 +326,7 @@ class TestCase(_TestCase):
                 )
             )
 
-        def assertRaisesRegex(self, exception, regexp, *args, **kwds):
+        def assertRaisesRegex(self, exception, regexp, *args, **kwds):  # pylint: disable=arguments-differ
             # In python 2, alias to the future python 3 function
             return _TestCase.assertRaisesRegexp(self, exception, regexp, *args, **kwds)
     else:

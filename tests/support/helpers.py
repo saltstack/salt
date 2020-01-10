@@ -190,7 +190,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
                 setattr(caller, attrname, flaky(caller=function, condition=condition, attempts=attempts))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
@@ -209,7 +209,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 return caller(cls)
             except SkipTest as exc:
                 cls.skipTest(exc.args[0])
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 exc_info = sys.exc_info()
                 if isinstance(exc, SkipTest):
                     six.reraise(*exc_info)
@@ -322,11 +322,11 @@ class RedirectStdStreams(object):
         if self.__redirected:
             try:
                 self.__stdout.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             try:
                 self.__stderr.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
 
@@ -475,10 +475,24 @@ class ForceImportErrorOn(object):
 
     def __fake_import__(self,
                         name,
-                        globals_={} if six.PY2 else None,
-                        locals_={} if six.PY2 else None,
-                        fromlist=[] if six.PY2 else (),
-                        level=-1 if six.PY2 else 0):
+                        globals_=None,
+                        locals_=None,
+                        fromlist=None,
+                        level=None):
+        if six.PY2:
+            if globals_ is None:
+                globals_ = {}
+            if locals_ is None:
+                locals_ = {}
+
+        if level is None:
+            if six.PY2:
+                level = -1
+            else:
+                level = 0
+        if fromlist is None:
+            fromlist = []
+
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
@@ -1067,42 +1081,91 @@ def requires_system_grains(func):
     return decorator
 
 
-def requires_salt_modules(*names):
+@requires_system_grains
+def runs_on(grains=None, **kwargs):
     '''
-    Makes sure the passed salt module is available. Skips the test if not
-
-    .. versionadded:: 0.5.2
+    Skip the test if grains don't match the values passed into **kwargs
+    if a kwarg value is a list then skip if the grains don't match any item in the list
     '''
-    def _check_required_salt_modules(*required_salt_modules):
-        # Late import
-        from tests.support.sminion import create_sminion
-        required_salt_modules = set(required_salt_modules)
-        sminion = create_sminion(minion_id='runtests-internal-sminion')
-        available_modules = list(sminion.functions)
-        not_available_modules = set()
-        try:
-            cached_not_available_modules = sminion.__not_availiable_modules__
-        except AttributeError:
-            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
+    def decorator(caller):
+        @functools.wraps(caller)
+        def wrapper(cls):
+            for kw, value in kwargs.items():
+                if isinstance(value, list):
+                    if not any(str(grains.get(kw)).lower() != str(v).lower() for v in value):
+                        cls.skipTest('This test does not run on {}={}'.format(kw, grains.get(kw)))
+                else:
+                    if str(grains.get(kw)).lower() != str(value).lower():
+                        cls.skipTest('This test runs on {}={}, not {}'.format(kw, value, grains.get(kw)))
+            return caller(cls)
+        return wrapper
+    return decorator
 
-        if cached_not_available_modules:
-            for not_available_module in cached_not_available_modules:
-                if not_available_module in required_salt_modules:
-                    not_available_modules.add(not_available_module)
-                    required_salt_modules.remove(not_available_module)
 
-        for required_module_name in required_salt_modules:
-            search_name = required_module_name
-            if '.' not in search_name:
-                search_name += '.*'
-            if not fnmatch.filter(available_modules, search_name):
-                not_available_modules.add(required_module_name)
-                cached_not_available_modules.add(required_module_name)
+@requires_system_grains
+def not_runs_on(grains=None, **kwargs):
+    '''
+    Reverse of `runs_on`.
+    Skip the test if any grains match the values passed into **kwargs
+    if a kwarg value is a list then skip if the grains match any item in the list
+    '''
+    def decorator(caller):
+        @functools.wraps(caller)
+        def wrapper(cls):
+            for kw, value in kwargs.items():
+                if isinstance(value, list):
+                    if any(str(grains.get(kw)).lower() == str(v).lower() for v in value):
+                        cls.skipTest('This test does not run on {}={}'.format(kw, grains.get(kw)))
+                else:
+                    if str(grains.get(kw)).lower() == str(value).lower():
+                        cls.skipTest('This test does not run on {}={}, got {}'.format(kw, value, grains.get(kw)))
+            return caller(cls)
+        return wrapper
+    return decorator
 
-        if not_available_modules:
-            if len(not_available_modules) == 1:
-                raise SkipTest('Salt module \'{}\' is not available'.format(*not_available_modules))
-            raise SkipTest('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+
+def _check_required_sminion_attributes(sminion_attr, *required_items):
+    '''
+    :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
+    :param required_items: The items that must be part of the designated sminion attribute for the decorated test
+    :return The packages that are not available
+    '''
+    # Late import
+    from tests.support.sminion import create_sminion
+    required_salt_items = set(required_items)
+    sminion = create_sminion(minion_id='runtests-internal-sminion')
+    available_items = list(getattr(sminion, sminion_attr))
+    not_available_items = set()
+
+    name = '__not_available_{items}s__'.format(items=sminion_attr)
+    if not hasattr(sminion, name):
+        setattr(sminion, name, set())
+
+    cached_not_available_items = getattr(sminion, name)
+
+    for not_available_item in cached_not_available_items:
+        if not_available_item in required_salt_items:
+            not_available_items.add(not_available_item)
+            required_salt_items.remove(not_available_item)
+
+    for required_item_name in required_salt_items:
+        search_name = required_item_name
+        if '.' not in search_name:
+            search_name += '.*'
+        if not fnmatch.filter(available_items, search_name):
+            not_available_items.add(required_item_name)
+            cached_not_available_items.add(required_item_name)
+
+    return not_available_items
+
+
+def requires_salt_states(*names):
+    '''
+    Makes sure the passed salt state is available. Skips the test if not
+
+    .. versionadded:: 3000
+    '''
+    not_available = _check_required_sminion_attributes('states', *names)
 
     def decorator(caller):
         if inspect.isclass(caller):
@@ -1110,7 +1173,9 @@ def requires_salt_modules(*names):
             old_setup = getattr(caller, 'setUp', None)
 
             def setUp(self, *args, **kwargs):
-                _check_required_salt_modules(*names)
+                if not_available:
+                    raise SkipTest('Unavailable salt states: {}'.format(*not_available))
+
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
@@ -1120,7 +1185,42 @@ def requires_salt_modules(*names):
         # We're simply decorating functions
         @functools.wraps(caller)
         def wrapper(cls):
-            _check_required_salt_modules(*names)
+            if not_available:
+                raise SkipTest('Unavailable salt states: {}'.format(*not_available))
+            return caller(cls)
+
+        return wrapper
+
+    return decorator
+
+
+def requires_salt_modules(*names):
+    '''
+    Makes sure the passed salt module is available. Skips the test if not
+
+    .. versionadded:: 0.5.2
+    '''
+    not_available = _check_required_sminion_attributes('functions', *names)
+
+    def decorator(caller):
+        if inspect.isclass(caller):
+            # We're decorating a class
+            old_setup = getattr(caller, 'setUp', None)
+
+            def setUp(self, *args, **kwargs):
+                if not_available:
+                    raise SkipTest('Unavailable salt modules: {}'.format(*not_available))
+                if old_setup is not None:
+                    old_setup(self, *args, **kwargs)
+
+            caller.setUp = setUp
+            return caller
+
+        # We're simply decorating functions
+        @functools.wraps(caller)
+        def wrapper(cls):
+            if not_available:
+                raise SkipTest('Unavailable salt modules: {}'.format(*not_available))
             return caller(cls)
 
         return wrapper
@@ -1211,7 +1311,7 @@ def repeat(caller=None, condition=True, times=5):
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
                 setattr(caller, attrname, repeat(caller=function, condition=condition, times=times))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
@@ -1219,7 +1319,7 @@ def repeat(caller=None, condition=True, times=5):
     @functools.wraps(caller)
     def wrap(cls):
         result = None
-        for attempt in range(1, times+1):
+        for attempt in range(1, times + 1):
             log.info('%s test run %d of %s times', cls, attempt, times)
             caller(cls)
         return cls
