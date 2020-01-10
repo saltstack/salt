@@ -18,7 +18,6 @@ import stat
 import pprint
 import shutil
 import socket
-import fnmatch
 import logging
 import tempfile
 import textwrap
@@ -38,7 +37,7 @@ sys.path.insert(0, CODE_DIR)
 
 # Import test libs
 from tests.support.runtests import RUNTIME_VARS
-from tests.support.sminion import create_sminion
+from tests.support.sminion import create_sminion, check_required_sminion_attributes
 from tests.support.helpers import PRE_PYTEST_SKIP_REASON, PRE_PYTEST_SKIP_OR_NOT
 
 # Import pytest libs
@@ -599,27 +598,7 @@ def pytest_runtest_setup(item):
         if len(required_salt_modules) == 1 and isinstance(required_salt_modules[0], (list, tuple, set)):
             required_salt_modules = required_salt_modules[0]
         required_salt_modules = set(required_salt_modules)
-        sminion = create_sminion()
-        available_modules = list(sminion.functions)
-        not_available_modules = set()
-        try:
-            cached_not_available_modules = sminion.__not_available_modules__
-        except AttributeError:
-            cached_not_available_modules = sminion.__not_available_modules__ = set()
-
-        if cached_not_available_modules:
-            for not_available_module in cached_not_available_modules:
-                if not_available_module in required_salt_modules:
-                    not_available_modules.add(not_available_module)
-                    required_salt_modules.remove(not_available_module)
-
-        for required_module_name in required_salt_modules:
-            search_name = required_module_name
-            if '.' not in search_name:
-                search_name += '.*'
-            if not fnmatch.filter(available_modules, search_name):
-                not_available_modules.add(required_module_name)
-                cached_not_available_modules.add(required_module_name)
+        not_available_modules = check_required_sminion_attributes('functions', required_salt_modules)
 
         if not_available_modules:
             item._skipped_by_mark = True
@@ -633,27 +612,7 @@ def pytest_runtest_setup(item):
         if len(required_salt_states) == 1 and isinstance(required_salt_states[0], (list, tuple, set)):
             required_salt_states = required_salt_states[0]
         required_salt_states = set(required_salt_states)
-        sminion = create_sminion()
-        available_modules = list(sminion.functions)
-        not_available_states = set()
-        try:
-            cached_not_available_states = sminion.__not_available_states__
-        except AttributeError:
-            cached_not_available_states = sminion.__not_available_states__ = set()
-
-        if cached_not_available_states:
-            for not_available_module in cached_not_available_states:
-                if not_available_module in required_salt_states:
-                    not_available_states.add(not_available_module)
-                    required_salt_states.remove(not_available_module)
-
-        for required_state_name in required_salt_states:
-            search_name = required_state_name
-            if '.' not in search_name:
-                search_name += '.*'
-            if not fnmatch.filter(available_modules, search_name):
-                not_available_states.add(required_state_name)
-                cached_not_available_states.add(required_state_name)
+        not_available_states = check_required_sminion_attributes('states', required_salt_states)
 
         if not_available_states:
             item._skipped_by_mark = True

@@ -15,7 +15,6 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
-import fnmatch
 import functools
 import inspect
 import logging
@@ -41,7 +40,6 @@ from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,r
 from pytestsalt.utils import get_unused_localhost_port
 
 # Import Salt Tests Support libs
-from tests.support.unit import SkipTest
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
 
@@ -901,76 +899,6 @@ def not_runs_on(grains=None, **kwargs):
                         cls.skipTest('This test does not run on {}={}, got {}'.format(kw, value, grains.get(kw)))
             return caller(cls)
         return wrapper
-    return decorator
-
-
-def _check_required_sminion_attributes(sminion_attr, *required_items):
-    '''
-    :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
-    :param required_items: The items that must be part of the designated sminion attribute for the decorated test
-    :return The packages that are not available
-    '''
-    # Late import
-    from tests.support.sminion import create_sminion
-    required_salt_items = set(required_items)
-    sminion = create_sminion(minion_id='runtests-internal-sminion')
-    available_items = list(getattr(sminion, sminion_attr))
-    not_available_items = set()
-
-    name = '__not_available_{items}s__'.format(items=sminion_attr)
-    if not hasattr(sminion, name):
-        setattr(sminion, name, set())
-
-    cached_not_available_items = getattr(sminion, name)
-
-    for not_available_item in cached_not_available_items:
-        if not_available_item in required_salt_items:
-            not_available_items.add(not_available_item)
-            required_salt_items.remove(not_available_item)
-
-    for required_item_name in required_salt_items:
-        search_name = required_item_name
-        if '.' not in search_name:
-            search_name += '.*'
-        if not fnmatch.filter(available_items, search_name):
-            not_available_items.add(required_item_name)
-            cached_not_available_items.add(required_item_name)
-
-    return not_available_items
-
-
-def requires_salt_states(*names):
-    '''
-    Makes sure the passed salt state is available. Skips the test if not
-
-    .. versionadded:: 3000
-    '''
-    not_available = _check_required_sminion_attributes('states', *names)
-
-    def decorator(caller):
-        if inspect.isclass(caller):
-            # We're decorating a class
-            old_setup = getattr(caller, 'setUp', None)
-
-            def setUp(self, *args, **kwargs):
-                if not_available:
-                    raise SkipTest('Unavailable salt states: {}'.format(*not_available))
-
-                if old_setup is not None:
-                    old_setup(self, *args, **kwargs)
-
-            caller.setUp = setUp
-            return caller
-
-        # We're simply decorating functions
-        @functools.wraps(caller)
-        def wrapper(cls):
-            if not_available:
-                raise SkipTest('Unavailable salt states: {}'.format(*not_available))
-            return caller(cls)
-
-        return wrapper
-
     return decorator
 
 
