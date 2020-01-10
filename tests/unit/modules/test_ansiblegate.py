@@ -19,7 +19,7 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 import os
-<<<<<<< HEAD
+import sys
 
 import salt.modules.ansiblegate as ansible
 import salt.utils.platform
@@ -28,16 +28,11 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import MagicMock, patch, MockTimedProc
 from tests.support.unit import TestCase, skipIf
 
-=======
-import sys
->>>>>>> Fix ansiblegate unit tests to use sys.executable
 try:
     import pytest
 except ImportError as import_error:
     pytest = None
 NO_PYTEST = not bool(pytest)
-
-from salt.ext import six
 
 
 @skipIf(NO_PYTEST, False)
