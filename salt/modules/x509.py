@@ -757,7 +757,7 @@ def write_pem(text, path, overwrite=True, pem_type=None):
         Path of the file to write the PEM out to.
 
     overwrite:
-        If ``True``(default), write_pem will overwrite the entire PEM file.
+        If ``True`` (default), write_pem will overwrite the entire PEM file.
         Set False to preserve existing private keys and dh params that may
         exist in the PEM file.
 
@@ -1127,7 +1127,7 @@ def create_certificate(
         Default ``False``.
 
     overwrite:
-        If ``True``(default), create_certificate will overwrite the entire PEM
+        If ``True`` (default), create_certificate will overwrite the entire PEM
         file. Set False to preserve existing private keys and dh params that
         may exist in the PEM file.
 
