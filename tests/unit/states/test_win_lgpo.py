@@ -269,4 +269,7 @@ class WinLGPOPolicyElementNames(TestCase, LoaderModuleMockMixin):
                        'Invalid element name: Invalid element spongebob',
             'name': 'test_state',
             'result': False}
-        self.assertDictEqual(result, expected)
+        self.assertDictEqual(result['changes'], expected['changes'])
+        self.assertIn('Invalid element squidward', result['comment'])
+        self.assertIn('Invalid element spongebob', result['comment'])
+        self.assertFalse(expected['result'])
