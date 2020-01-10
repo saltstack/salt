@@ -34,10 +34,10 @@ class SystemModuleTest(ModuleCase):
     '''
     fmt_str = "%Y-%m-%d %H:%M:%S"
 
-    def __init__(self, arg):
-        super(self.__class__, self).__init__(arg)
-        self._orig_time = None
-        self._machine_info = True
+    @classmethod
+    def setUpClass(cls):
+        cls._orig_time = None
+        cls._machine_info = True
 
     def setUp(self):
         super(SystemModuleTest, self).setUp()
@@ -444,6 +444,7 @@ class WinSystemModuleTest(ModuleCase):
             In order for this test to pass, time sync must be disabled for the
             VM in the hypervisor
         '''
+        self.run_function('service.stop', ['w32time'])
         try:
             current_time = datetime.datetime.now().strftime('%H:%M:%S')
             test_time = '10:55'
@@ -453,6 +454,7 @@ class WinSystemModuleTest(ModuleCase):
             self.assertEqual(new_time, test_time)
         finally:
             self.run_function('system.set_system_time', [current_time])
+            self.run_function('service.start', ['w32time'])
 
     def test_get_system_date(self):
         '''
@@ -473,6 +475,7 @@ class WinSystemModuleTest(ModuleCase):
             In order for this test to pass, time sync must be disabled for the
             VM in the hypervisor
         '''
+        self.run_function('service.stop', ['w32time'])
         try:
             # If the test still fails, the hypervisor may be maintaining time
             # sync
@@ -482,3 +485,4 @@ class WinSystemModuleTest(ModuleCase):
             self.assertEqual(new_date, '2018/03/25')
         finally:
             self.run_function('system.set_system_date', [current_date])
+            self.run_function('service.start', ['w32time'])

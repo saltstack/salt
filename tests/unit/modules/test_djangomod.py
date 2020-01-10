@@ -7,19 +7,16 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
 import salt.modules.djangomod as djangomod
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
@@ -50,6 +47,16 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
             self.assertTrue(djangomod.syncdb('DJANGO_SETTINGS_MODULE'))
+
+    # 'migrate' function tests: 1
+
+    def test_migrate(self):
+        '''
+        Test if it runs the Django-Admin migrate command
+        '''
+        mock = MagicMock(return_value=True)
+        with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
+            self.assertTrue(djangomod.migrate('DJANGO_SETTINGS_MODULE'))
 
     # 'createsuperuser' function tests: 1
 
@@ -86,7 +93,6 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
             self.assertTrue(djangomod.collectstatic('DJANGO_SETTINGS_MODULE'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.djangomod
@@ -185,6 +191,18 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             mock.assert_called_once_with(
                 'django-admin.py syncdb --settings=settings.py --migrate '
                 '--noinput',
+                python_shell=False,
+                env=None,
+                runas=None
+            )
+
+    def test_django_admin_cli_migrate(self):
+        mock = MagicMock()
+        with patch.dict(djangomod.__salt__,
+                        {'cmd.run': mock}):
+            djangomod.migrate('settings.py')
+            mock.assert_called_once_with(
+                'django-admin.py migrate --settings=settings.py --noinput',
                 python_shell=False,
                 env=None,
                 runas=None

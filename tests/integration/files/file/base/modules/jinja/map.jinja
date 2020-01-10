@@ -1,0 +1,49 @@
+{%- set tplroot = tpldir.split('/')[0] %}
+
+{%- import_yaml tplroot ~ "/defaults.yaml" as default_settings %}
+{%- import_json tplroot ~ "/osarchmap.json" as osarchmap %}
+{%- import_yaml tplroot ~ "/osfamilymap.yaml" as osfamilymap %}
+{%- import_yaml tplroot ~ "/osmap.yaml" as osmap %}
+{%- import_yaml tplroot ~ "/osfingermap.yaml" as osfingermap %}
+
+{%- set _config = salt['config.get'](tplroot, default={}) %}
+
+{%- set defaults = salt['grains.filter_by'](
+      default_settings,
+      default='template',
+      merge=salt['grains.filter_by'](
+        osarchmap,
+        grain='osarch',
+        merge=salt['grains.filter_by'](
+          osfamilymap,
+          grain='os_family',
+          merge=salt['grains.filter_by'](
+            osmap,
+            grain='os',
+            merge=salt['grains.filter_by'](
+              osfingermap,
+              grain='osfinger',
+              merge=salt['grains.filter_by'](
+                _config,
+                default='lookup'
+              )
+            )
+          )
+        )
+      )
+    )
+%}
+
+{%- set config = salt['grains.filter_by'](
+      {'defaults': defaults},
+      default='defaults',
+      merge=_config
+    )
+%}
+
+{%- set template = config %}
+
+{%- if grains.os == 'MacOS' %}
+{%-   set macos_group = salt['cmd.run']("stat -f '%Sg' /dev/console") %}
+{%-   do template.update({'rootgroup': macos_group}) %}
+{%- endif %}

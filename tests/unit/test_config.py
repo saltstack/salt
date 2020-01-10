@@ -15,8 +15,6 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf, TestCase
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     Mock,
     MagicMock,
     patch
@@ -288,10 +286,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
     @with_tempfile()
     def test_proper_path_joining(self, fpath):
-        temp_config = 'root_dir: /\n'\
+        temp_config = 'root_dir: /\n' \
                       'key_logfile: key\n'
         if salt.utils.platform.is_windows():
-            temp_config = 'root_dir: c:\\\n'\
+            temp_config = 'root_dir: c:\\\n' \
                           'key_logfile: key\n'
         with salt.utils.files.fopen(fpath, 'w') as fp_:
             fp_.write(temp_config)
@@ -533,11 +531,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.master_config(fpath)
         base = config['file_roots']['base']
-        self.assertEqual(set(base), set([
-            os.path.join(tempdir, 'a'),
-            os.path.join(tempdir, 'b'),
-            os.path.join(tempdir, 'c')
-        ]))
+        self.assertEqual(set(base),
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
 
     def test_validate_bad_file_roots(self):
         expected = salt.config._expand_glob_path(
@@ -565,11 +560,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.master_config(fpath)
         base = config['pillar_roots']['base']
-        self.assertEqual(set(base), set([
-            os.path.join(tempdir, 'a'),
-            os.path.join(tempdir, 'b'),
-            os.path.join(tempdir, 'c')
-        ]))
+        self.assertEqual(set(base),
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
 
     def test_validate_bad_pillar_roots(self):
         expected = salt.config._expand_glob_path(
@@ -617,11 +609,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.minion_config(fpath)
         base = config['file_roots']['base']
-        self.assertEqual(set(base), set([
-            os.path.join(tempdir, 'a'),
-            os.path.join(tempdir, 'b'),
-            os.path.join(tempdir, 'c')
-        ]))
+        self.assertEqual(set(base),
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
 
     @with_tempfile()
     @with_tempdir()
@@ -640,11 +629,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.minion_config(fpath)
         base = config['pillar_roots']['base']
-        self.assertEqual(set(base), set([
-            os.path.join(tempdir, 'a'),
-            os.path.join(tempdir, 'b'),
-            os.path.join(tempdir, 'c')
-        ]))
+        self.assertEqual(set(base),
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
 
     @with_tempdir()
     def test_minion_id_function(self, tempdir):
@@ -681,9 +667,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 minion_id_caching: False
                 minion_id_lowercase: True
             '''))
-        config = salt.config.minion_config(minion_config)               # Load the configuration
-        self.assertEqual(config['minion_id_caching'], False)        # Check the configuration
-        self.assertEqual(config['minion_id_lowercase'], True)       # Check the configuration
+        config = salt.config.minion_config(minion_config)  # Load the configuration
+        self.assertEqual(config['minion_id_caching'], False)  # Check the configuration
+        self.assertEqual(config['minion_id_lowercase'], True)  # Check the configuration
         self.assertEqual(config['id'], 'king_bob')
 
     @with_tempdir()
@@ -886,11 +872,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertEqual(len(non_unicode), 0, non_unicode)
         self.assertTrue(tally['unicode'] > 0)
 
-# <---- Salt Cloud Configuration Tests ---------------------------------------------
+    # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
     # cloud_config tests
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_double_master_path(self):
         '''
         Tests passing in master_config_path and master_config kwargs.
@@ -899,7 +884,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                               master_config_path='foo', master_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_double_providers_path(self):
         '''
         Tests passing in providers_config_path and providers_config kwargs.
@@ -908,7 +892,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                               providers_config_path='foo', providers_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_double_profiles_path(self):
         '''
         Tests passing in profiles_config_path and profiles_config kwargs.
@@ -917,7 +900,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                               profiles_config_path='foo', profiles_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_providers_in_opts(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -929,7 +911,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                                   providers_config='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_providers_in_opts_path(self):
         '''
         Tests mixing old cloud providers with pre-configured providers configurations
@@ -942,7 +923,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
                                       providers_config_path='bar')
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_cloud_config_deploy_scripts_search_path(self):
         '''
         Tests the contents of the 'deploy_scripts_search_path' tuple to ensure that
@@ -986,36 +966,39 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertRaises(SaltCloudConfigError, salt.config.apply_cloud_config,
                           overrides, defaults=DEFAULT)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_cloud_config_success_list(self):
         '''
         Tests success when valid data is passed into the function as a list
         '''
         with patch('salt.config.old_to_new',
-                   MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
-                                           'providers': {
-                                               'foo': {
-                                                   'bar': {
-                                                       'driver': 'foo:bar'}}}})):
-            overrides = {'providers': {'foo': [{'driver': 'bar'}]}}
-            ret = {'default_include': 'path/to/some/cloud/conf/file',
-                   'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
+                   MagicMock(return_value={
+                       'default_include': 'path/to/some/cloud/conf/file',
+                       'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
+                   })):
+            overrides = {
+                'providers': {'foo': [{'driver': 'bar'}]}
+            }
+            ret = {
+                'default_include': 'path/to/some/cloud/conf/file',
+                'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
+            }
             self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_cloud_config_success_dict(self):
         '''
         Tests success when valid data is passed into function as a dictionary
         '''
         with patch('salt.config.old_to_new',
-                   MagicMock(return_value={'default_include': 'path/to/some/cloud/conf/file',
-                                           'providers': {
-                                               'foo': {
-                                                   'bar': {
-                                                       'driver': 'foo:bar'}}}})):
-            overrides = {'providers': {'foo': {'driver': 'bar'}}}
-            ret = {'default_include': 'path/to/some/cloud/conf/file',
-                   'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}}
+                   MagicMock(return_value={
+                       'default_include': 'path/to/some/cloud/conf/file',
+                       'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
+                   })):
+            overrides = {
+                'providers': {'foo': {'driver': 'bar'}}}
+            ret = {
+                'default_include': 'path/to/some/cloud/conf/file',
+                'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
+            }
             self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
 
     # apply_vm_profiles_config tests
@@ -1032,19 +1015,29 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests passing in valid provider and profile config files successfully
         '''
-        providers = {'test-provider':
-                         {'digitalocean':
-                              {'driver': 'digitalocean', 'profiles': {}}}}
-        overrides = {'test-profile':
-                         {'provider': 'test-provider',
-                          'image': 'Ubuntu 12.10 x64',
-                          'size': '512MB'},
-                     'conf_file': PATH}
-        ret = {'test-profile':
-                   {'profile': 'test-profile',
-                    'provider': 'test-provider:digitalocean',
-                    'image': 'Ubuntu 12.10 x64',
-                    'size': '512MB'}}
+        providers = {
+            'test-provider': {
+                'digitalocean': {
+                    'driver': 'digitalocean', 'profiles': {}
+                }
+            }
+        }
+        overrides = {
+            'test-profile': {
+                'provider': 'test-provider',
+                'image': 'Ubuntu 12.10 x64',
+                'size': '512MB'
+            },
+            'conf_file': PATH
+        }
+        ret = {
+            'test-profile': {
+                'profile': 'test-profile',
+                'provider': 'test-provider:digitalocean',
+                'image': 'Ubuntu 12.10 x64',
+                'size': '512MB'
+            }
+        }
         self.assertEqual(salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
                                                           defaults=DEFAULT), ret)
@@ -1053,25 +1046,48 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests profile extends functionality with valid provider and profile configs
         '''
-        providers = {'test-config': {'ec2': {'profiles': {}, 'driver': 'ec2'}}}
-        overrides = {'Amazon': {'image': 'test-image-1',
-                                'extends': 'dev-instances'},
-                     'Fedora': {'image': 'test-image-2',
-                                'extends': 'dev-instances'},
-                     'conf_file': PATH,
-                     'dev-instances': {'ssh_username': 'test_user',
-                                       'provider': 'test-config'}}
-        ret = {'Amazon': {'profile': 'Amazon',
-                          'ssh_username': 'test_user',
-                          'image': 'test-image-1',
-                          'provider': 'test-config:ec2'},
-               'Fedora': {'profile': 'Fedora',
-                          'ssh_username': 'test_user',
-                          'image': 'test-image-2',
-                          'provider': 'test-config:ec2'},
-               'dev-instances': {'profile': 'dev-instances',
-                                 'ssh_username': 'test_user',
-                                 'provider': 'test-config:ec2'}}
+        providers = {
+            'test-config': {
+                'ec2': {
+                    'profiles': {},
+                    'driver': 'ec2'
+                }
+            }
+        }
+        overrides = {
+            'Amazon': {
+                'image': 'test-image-1',
+                'extends': 'dev-instances'
+            },
+            'Fedora': {
+                'image': 'test-image-2',
+                'extends': 'dev-instances'
+            },
+            'conf_file': PATH,
+            'dev-instances': {
+                'ssh_username': 'test_user',
+                'provider': 'test-config'
+            }
+        }
+        ret = {
+            'Amazon': {
+                'profile': 'Amazon',
+                'ssh_username': 'test_user',
+                'image': 'test-image-1',
+                'provider': 'test-config:ec2'
+            },
+            'Fedora': {
+                'profile': 'Fedora',
+                'ssh_username': 'test_user',
+                'image': 'test-image-2',
+                'provider': 'test-config:ec2'
+            },
+            'dev-instances': {
+                'profile': 'dev-instances',
+                'ssh_username': 'test_user',
+                'provider': 'test-config:ec2'
+            }
+        }
         self.assertEqual(salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
                                                           defaults=DEFAULT), ret)
@@ -1081,24 +1097,58 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests profile extends and recursively merges data elements
         '''
         self.maxDiff = None
-        providers = {'test-config': {'ec2': {'profiles': {}, 'driver': 'ec2'}}}
-        overrides = {'Fedora': {'image': 'test-image-2',
-                                'extends': 'dev-instances',
-                                'minion': {'grains': {'stage': 'experimental'}}},
-                     'conf_file': PATH,
-                     'dev-instances': {'ssh_username': 'test_user',
-                                       'provider': 'test-config',
-                                       'minion': {'grains': {'role': 'webserver'}}}}
-        ret = {'Fedora': {'profile': 'Fedora',
-                          'ssh_username': 'test_user',
-                          'image': 'test-image-2',
-                          'minion': {'grains': {'role': 'webserver',
-                                                'stage': 'experimental'}},
-                          'provider': 'test-config:ec2'},
-               'dev-instances': {'profile': 'dev-instances',
-                                 'ssh_username': 'test_user',
-                                 'minion': {'grains': {'role': 'webserver'}},
-                                 'provider': 'test-config:ec2'}}
+        providers = {
+            'test-config': {
+                'ec2': {
+                    'profiles': {},
+                    'driver': 'ec2'
+                }
+            }
+        }
+        overrides = {
+            'Fedora': {
+                'image': 'test-image-2',
+                'extends': 'dev-instances',
+                'minion': {
+                    'grains': {
+                        'stage': 'experimental'
+                    }
+                }
+            },
+            'conf_file': PATH,
+            'dev-instances': {
+                'ssh_username': 'test_user',
+                'provider': 'test-config',
+                'minion': {
+                    'grains': {
+                        'role': 'webserver'}
+                }
+            }
+        }
+        ret = {
+            'Fedora': {
+                'profile': 'Fedora',
+                'ssh_username': 'test_user',
+                'image': 'test-image-2',
+                'minion': {
+                    'grains': {
+                        'role': 'webserver',
+                        'stage': 'experimental'
+                    }
+                },
+                'provider': 'test-config:ec2'
+            },
+            'dev-instances': {
+                'profile': 'dev-instances',
+                'ssh_username': 'test_user',
+                'minion': {
+                    'grains': {
+                        'role': 'webserver'
+                    }
+                },
+                'provider': 'test-config:ec2'
+            }
+        }
         self.assertEqual(salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
                                                           defaults=DEFAULT), ret)
@@ -1109,14 +1159,17 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests when two providers are given with the same provider name
         '''
-        overrides = {'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'ec2'},
-                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                           'password': 'supersecret',
-                           'driver': 'ec2'}],
-                     'conf_file': PATH}
+        overrides = {
+            'my-dev-envs': [{
+                'id': 'ABCDEFGHIJKLMNOP',
+                'key': 'supersecretkeysupersecretkey',
+                'driver': 'ec2'
+            }, {
+                'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                'password': 'supersecret',
+                'driver': 'ec2'
+            }],
+            'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
                           overrides,
@@ -1126,44 +1179,66 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests the successful extension of a cloud provider
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'my-dev-envs:ec2',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'
-                          }],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'ec2'
-                          },
-                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                           'password': 'supersecret',
-                           'driver': 'linode'
-                          }],
-                     'conf_file': PATH}
-        ret = {'my-production-envs':
-                   {'ec2':
-                        {'profiles': {},
-                         'location': 'us-east-1',
-                         'key': 'supersecretkeysupersecretkey',
-                         'driver': 'ec2',
-                         'id': 'ABCDEFGHIJKLMNOP',
-                         'user': 'ec2-user@mycorp.com'}},
-               'my-dev-envs':
-                   {'linode':
-                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                         'password': 'supersecret',
-                         'profiles': {},
-                         'driver': 'linode'},
-                    'ec2':
-                        {'profiles': {},
-                         'location': 'ap-southeast-1',
-                         'key': 'supersecretkeysupersecretkey',
-                         'driver': 'ec2',
-                         'id': 'ABCDEFGHIJKLMNOP',
-                         'user': 'user@mycorp.com'}}}
+        overrides = {
+            'my-production-envs': [{
+                'extends': 'my-dev-envs:ec2',
+                'location': 'us-east-1',
+                'user': 'ec2-user@mycorp.com'
+            }],
+            'my-dev-envs': [{
+                'id': 'ABCDEFGHIJKLMNOP',
+                'user': 'user@mycorp.com',
+                'location': 'ap-southeast-1',
+                'key': 'supersecretkeysupersecretkey',
+                'driver': 'ec2'
+            }, {
+                'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                'password': 'supersecret',
+                'driver': 'linode'
+            }, {
+                'id': 'a-tencentcloud-id',
+                'key': 'a-tencentcloud-key',
+                'location': 'ap-guangzhou',
+                'driver': 'tencentcloud',
+            },
+            ],
+            'conf_file': PATH
+        }
+        ret = {
+            'my-production-envs': {
+                'ec2': {
+                    'profiles': {},
+                    'location': 'us-east-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2',
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'ec2-user@mycorp.com'
+                }
+            },
+            'my-dev-envs': {
+                'linode': {
+                    'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                    'password': 'supersecret',
+                    'profiles': {},
+                    'driver': 'linode'
+                },
+                'tencentcloud': {
+                    'id': 'a-tencentcloud-id',
+                    'key': 'a-tencentcloud-key',
+                    'location': 'ap-guangzhou',
+                    'profiles': {},
+                    'driver': 'tencentcloud',
+                },
+                'ec2': {
+                    'profiles': {},
+                    'location': 'ap-southeast-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2',
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'user@mycorp.com',
+                },
+            },
+        }
         self.assertEqual(ret,
                          salt.config.apply_cloud_providers_config(
                              overrides,
@@ -1173,70 +1248,109 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests the successful extension of two cloud providers
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'my-dev-envs:ec2',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'},
-                          {'password': 'new-password',
-                           'extends': 'my-dev-envs:linode',
-                           'location': 'Salt Lake City'
-                          }],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'ec2'},
-                          {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                           'password': 'supersecret',
-                           'driver': 'linode'}],
-                     'conf_file': PATH}
-        ret = {'my-production-envs':
-                   {'linode':
-                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                         'profiles': {},
-                         'location': 'Salt Lake City',
-                         'driver': 'linode',
-                         'password': 'new-password'},
-                    'ec2':
-                        {'user': 'ec2-user@mycorp.com',
-                         'key': 'supersecretkeysupersecretkey',
-                         'driver': 'ec2',
-                         'id': 'ABCDEFGHIJKLMNOP',
-                         'profiles': {},
-                         'location': 'us-east-1'}},
-               'my-dev-envs':
-                   {'linode':
-                        {'apikey': 'abcdefghijklmnopqrstuvwxyz',
-                         'password': 'supersecret',
-                         'profiles': {},
-                         'driver': 'linode'},
-                    'ec2':
-                        {'profiles': {},
-                         'user': 'user@mycorp.com',
-                         'key': 'supersecretkeysupersecretkey',
-                         'driver': 'ec2',
-                         'id': 'ABCDEFGHIJKLMNOP',
-                         'location': 'ap-southeast-1'}}}
-        self.assertEqual(ret, salt.config.apply_cloud_providers_config(
-            overrides,
-            defaults=DEFAULT))
+        overrides = {
+            'my-production-envs': [{
+                    'extends': 'my-dev-envs:ec2',
+                    'location': 'us-east-1',
+                    'user': 'ec2-user@mycorp.com'
+                }, {
+                    'password': 'new-password',
+                    'extends': 'my-dev-envs:linode',
+                    'location': 'Salt Lake City'
+                }, {
+                    'extends': 'my-dev-envs:tencentcloud',
+                    'id': 'new-id',
+                    'key': 'new-key',
+                    'location': 'ap-beijing',
+                },
+            ],
+            'my-dev-envs': [{
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'user@mycorp.com',
+                    'location': 'ap-southeast-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2'
+                }, {
+                    'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                    'password': 'supersecret',
+                    'driver': 'linode'
+                }, {
+                    'id': 'the-tencentcloud-id',
+                    'location': 'ap-beijing',
+                    'key': 'the-tencentcloud-key',
+                    'driver': 'tencentcloud',
+                },
+            ],
+            'conf_file': PATH}
+        ret = {
+            'my-production-envs': {
+                'linode': {
+                    'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                    'profiles': {},
+                    'location': 'Salt Lake City',
+                    'driver': 'linode',
+                    'password': 'new-password'
+                },
+                'ec2': {
+                    'user': 'ec2-user@mycorp.com',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2',
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'profiles': {},
+                    'location': 'us-east-1'
+                },
+                'tencentcloud': {
+                    'id': 'new-id',
+                    'key': 'new-key',
+                    'location': 'ap-beijing',
+                    'profiles': {},
+                    'driver': 'tencentcloud',
+                },
+            },
+            'my-dev-envs': {
+                'linode': {
+                    'apikey': 'abcdefghijklmnopqrstuvwxyz',
+                    'password': 'supersecret',
+                    'profiles': {},
+                    'driver': 'linode'
+                },
+                'ec2': {
+                    'profiles': {},
+                    'user': 'user@mycorp.com',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2',
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'location': 'ap-southeast-1'
+                },
+                'tencentcloud': {
+                    'id': 'the-tencentcloud-id',
+                    'key': 'the-tencentcloud-key',
+                    'location': 'ap-beijing',
+                    'profiles': {},
+                    'driver': 'tencentcloud',
+                },
+            },
+        }
+        self.assertEqual(ret, salt.config.apply_cloud_providers_config(overrides, defaults=DEFAULT))
 
     def test_apply_cloud_providers_config_extends_bad_alias(self):
         '''
         Tests when the extension contains an alias not found in providers list
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'test-alias:ec2',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'}],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'ec2'}],
-                     'conf_file': PATH}
+        overrides = {
+            'my-production-envs': [{
+                    'extends': 'test-alias:ec2',
+                    'location': 'us-east-1',
+                    'user': 'ec2-user@mycorp.com'
+                }],
+            'my-dev-envs': [{
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'user@mycorp.com',
+                    'location': 'ap-southeast-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2'
+                }],
+            'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
                           overrides,
@@ -1246,17 +1360,25 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests when the extension contains a provider not found in providers list
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'my-dev-envs:linode',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'}],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'ec2'}],
-                     'conf_file': PATH}
+        overrides = {
+            'my-production-envs': [{
+                    'extends': 'my-dev-envs:linode',
+                    'location': 'us-east-1',
+                    'user': 'ec2-user@mycorp.com'
+                }, {
+                    'extends': 'my-dev-envs:tencentcloud',
+                    'location': 'ap-shanghai',
+                    'id': 'the-tencentcloud-id',
+                },
+            ],
+            'my-dev-envs': [{
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'user@mycorp.com',
+                    'location': 'ap-southeast-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'ec2'
+                }],
+            'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
                           overrides,
@@ -1266,17 +1388,25 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests when no provider is supplied in the extends statement
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'my-dev-envs',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'}],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'linode'}],
-                     'conf_file': PATH}
+        overrides = {
+            'my-production-envs': [{
+                    'extends': 'my-dev-envs',
+                    'location': 'us-east-1',
+                    'user': 'ec2-user@mycorp.com'
+                }, {
+                    'extends': 'my-dev-envs:tencentcloud',
+                    'location': 'ap-shanghai',
+                    'id': 'the-tencentcloud-id',
+                },
+            ],
+            'my-dev-envs': [{
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'user@mycorp.com',
+                    'location': 'ap-southeast-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'linode'
+                }],
+            'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
                           overrides,
@@ -1286,17 +1416,26 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         Tests when extends is not in the list of providers
         '''
-        overrides = {'my-production-envs':
-                         [{'extends': 'my-dev-envs ec2',
-                           'location': 'us-east-1',
-                           'user': 'ec2-user@mycorp.com'}],
-                     'my-dev-envs':
-                         [{'id': 'ABCDEFGHIJKLMNOP',
-                           'user': 'user@mycorp.com',
-                           'location': 'ap-southeast-1',
-                           'key': 'supersecretkeysupersecretkey',
-                           'driver': 'linode'}],
-                     'conf_file': PATH}
+        overrides = {
+            'my-production-envs': [{
+                    'extends': 'my-dev-envs ec2',
+                    'location': 'us-east-1',
+                    'user': 'ec2-user@mycorp.com'
+                }],
+            'my-dev-envs': [{
+                    'id': 'ABCDEFGHIJKLMNOP',
+                    'user': 'user@mycorp.com',
+                    'location': 'ap-southeast-1',
+                    'key': 'supersecretkeysupersecretkey',
+                    'driver': 'linode'
+                }, {
+                    'id': 'a-tencentcloud-id',
+                    'key': 'a-tencentcloud-key',
+                    'location': 'ap-guangzhou',
+                    'driver': 'tencentcloud',
+                },
+            ],
+            'conf_file': PATH}
         self.assertRaises(SaltCloudConfigError,
                           salt.config.apply_cloud_providers_config,
                           overrides,
@@ -1452,9 +1591,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         self.assertIn('ec2-config', config['providers'])
         self.assertIn('ec2-test', config['profiles'])
 
-# <---- Salt Cloud Configuration Tests ---------------------------------------------
+    # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_without_errors(self):
         '''
         Tests that include_config function returns valid configuration
@@ -1469,7 +1607,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertEqual(config_opts, configuration)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_with_errors(self):
         '''
         Tests that include_config function returns valid configuration even on errors
@@ -1484,7 +1621,6 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         self.assertEqual(config_opts, configuration)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_include_config_with_errors_exit(self):
         '''
         Tests that include_config exits on errors
@@ -1522,15 +1658,13 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         ret.update(kwargs)
         return ret
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_apply_config(self):
         '''
         Ensure that the environment and saltenv options work properly
         '''
         with patch.object(salt.config, '_adjust_log_file_override', Mock()), \
-                patch.object(salt.config, '_update_ssl_config', Mock()), \
-                patch.object(salt.config, '_update_discovery_config', Mock()):
-
+             patch.object(salt.config, '_update_ssl_config', Mock()), \
+             patch.object(salt.config, '_update_discovery_config', Mock()):
             # MASTER CONFIG
 
             # Ensure that environment overrides saltenv when saltenv not
@@ -1590,11 +1724,11 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             self.assertEqual(ret['saltenv'], 'foo')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class APIConfigTestCase(DefaultConfigsBase, TestCase):
     '''
     TestCase for the api_config function in salt.config.__init__.py
     '''
+
     def setUp(self):
         # Copy DEFAULT_API_OPTS to restore after the test
         self.default_api_opts = salt.config.DEFAULT_API_OPTS.copy()
@@ -1610,8 +1744,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         the DEFAULT_API_OPTS 'api_logfile' value.
         '''
         with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
-
-            expected = '{}/var/log/salt/api'.format(
+            expected = '{0}/var/log/salt/api'.format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
                 expected = '{}\\var\\log\\salt\\api'.format(
@@ -1627,8 +1760,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         the DEFAULT_API_OPTS 'api_pidfile' value.
         '''
         with patch('salt.config.client_config', MagicMock(return_value=self.mock_master_default_opts)):
-
-            expected = '{}/var/run/salt-api.pid'.format(
+            expected = '{0}/var/run/salt-api.pid'.format(
                 RUNTIME_VARS.TMP_ROOT_DIR if RUNTIME_VARS.TMP_ROOT_DIR != '/' else '')
             if salt.utils.platform.is_windows():
                 expected = '{}\\var\\run\\salt-api.pid'.format(

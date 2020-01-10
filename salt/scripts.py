@@ -296,7 +296,7 @@ def proxy_minion_process(queue):
         status = salt.defaults.exitcodes.EX_OK
         proxyminion = salt.cli.daemons.ProxyMinion()
         proxyminion.start()
-    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+    except (Exception, SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:  # pylint: disable=broad-except
         log.error('Proxy Minion failed to start: ', exc_info=True)
         restart = True
         # status is superfluous since the process will be restarted
@@ -347,7 +347,7 @@ def salt_proxy():
     while True:
         try:
             queue = multiprocessing.Queue()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # This breaks in containers
             proxyminion = salt.cli.daemons.ProxyMinion()
             proxyminion.start()
@@ -358,7 +358,7 @@ def salt_proxy():
             process.join()
             try:
                 restart_delay = queue.get(block=False)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if process.exitcode == 0:
                     # Minion process ended naturally, Ctrl+C or --version
                     break
@@ -403,7 +403,7 @@ def salt_key():
         client = salt.cli.key.SaltKey()
         _install_signal_handlers(client)
         client.run()
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         sys.stderr.write("Error: {0}\n".format(err))
 
 

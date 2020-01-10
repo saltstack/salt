@@ -91,7 +91,7 @@ def delete(key, service=None, profile=None):  # pylint: disable=W0613
     try:
         cache.flush(profile['bank'], key=key)
         return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 

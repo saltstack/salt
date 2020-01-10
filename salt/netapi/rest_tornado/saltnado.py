@@ -223,7 +223,7 @@ from salt.exceptions import (
 )
 
 salt.utils.zeromq.install_zmq()
-json = salt.utils.json.import_json()
+_json = salt.utils.json.import_json()
 log = logging.getLogger(__name__)
 
 
@@ -233,7 +233,7 @@ def _json_dumps(obj, **kwargs):
     salt.utils.json.import_json(). This ensures that we properly encode any
     strings in the object before we perform the serialization.
     '''
-    return salt.utils.json.dumps(obj, _json_module=json, **kwargs)
+    return salt.utils.json.dumps(obj, _json_module=_json, **kwargs)
 
 # The clients rest_cherrypi supports. We want to mimic the interface, but not
 #     necessarily use the same API under the hood
@@ -258,7 +258,7 @@ class Any(Future):
     '''
     Future that wraps other futures to "block" until one is done
     '''
-    def __init__(self, futures):  # pylint: disable=E1002
+    def __init__(self, futures):
         super(Any, self).__init__()
         for future in futures:
             future.add_done_callback(self.done_callback)
@@ -381,7 +381,7 @@ class EventListener(object):
         for (tag, matcher), futures in six.iteritems(self.tag_map):
             try:
                 is_matched = matcher(mtag, tag)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.error('Failed to run a matcher.', exc_info=True)
                 is_matched = False
 
@@ -615,7 +615,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Handler for login requests
     '''
-    def get(self):
+    def get(self):  # pylint: disable=arguments-differ
         '''
         All logins are done over post, this is a parked endpoint
 
@@ -655,7 +655,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
     # TODO: make asynchronous? Underlying library isn't... and we ARE making disk calls :(
-    def post(self):
+    def post(self):  # pylint: disable=arguments-differ
         '''
         :ref:`Authenticate <rest_tornado-auth>` against Salt's eauth system
 
@@ -740,6 +740,7 @@ class SaltAuthHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             self.send_error(401)
             # return since we don't want to execute any more
             return
+        self.set_cookie(AUTH_COOKIE_NAME, token['token'])
 
         # Grab eauth config for the current backend for the current user
         try:
@@ -787,7 +788,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
     '''
     Main API handler for base "/"
     '''
-    def get(self):
+    def get(self):  # pylint: disable=arguments-differ
         '''
         An endpoint to determine salt-api capabilities
 
@@ -826,7 +827,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         self.write(self.serialize(ret))
 
     @tornado.web.asynchronous
-    def post(self):
+    def post(self):  # pylint: disable=arguments-differ
         '''
         Send one or more Salt commands (lowstates) in the request body
 
@@ -932,7 +933,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             except (AuthenticationError, AuthorizationError, EauthAuthenticationError):
                 ret.append('Failed to authenticate')
                 break
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-except
                 ret.append('Unexpected exception while handling request: {0}'.format(ex))
                 log.error('Unexpected exception while handling request:', exc_info=True)
 
@@ -976,7 +977,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
             for future in events:
                 try:
                     future.set_result(None)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
             raise tornado.gen.Return('No minions matched the target. No command was sent, no jid was assigned.')
 
