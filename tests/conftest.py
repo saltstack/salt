@@ -262,6 +262,10 @@ def pytest_configure(config):
     )
     config.addinivalue_line(
         'markers',
+        'requires_salt_states(*required_state_names): Skip if at least one state module is not available.'
+    )
+    config.addinivalue_line(
+        'markers',
         'windows_whitelisted: Mark test as whitelisted to run under Windows'
     )
     # Make sure the test suite "knows" this is a pytest test run
@@ -599,9 +603,9 @@ def pytest_runtest_setup(item):
         available_modules = list(sminion.functions)
         not_available_modules = set()
         try:
-            cached_not_available_modules = sminion.__not_availiable_modules__
+            cached_not_available_modules = sminion.__not_available_modules__
         except AttributeError:
-            cached_not_available_modules = sminion.__not_availiable_modules__ = set()
+            cached_not_available_modules = sminion.__not_available_modules__ = set()
 
         if cached_not_available_modules:
             for not_available_module in cached_not_available_modules:
@@ -622,6 +626,40 @@ def pytest_runtest_setup(item):
             if len(not_available_modules) == 1:
                 pytest.skip('Salt module \'{}\' is not available'.format(*not_available_modules))
             pytest.skip('Salt modules not available: {}'.format(', '.join(not_available_modules)))
+
+    requires_salt_states_marker = item.get_closest_marker('requires_salt_states')
+    if requires_salt_states_marker is not None:
+        required_salt_states = requires_salt_states_marker.args
+        if len(required_salt_states) == 1 and isinstance(required_salt_states[0], (list, tuple, set)):
+            required_salt_states = required_salt_states[0]
+        required_salt_states = set(required_salt_states)
+        sminion = create_sminion()
+        available_modules = list(sminion.functions)
+        not_available_states = set()
+        try:
+            cached_not_available_states = sminion.__not_available_states__
+        except AttributeError:
+            cached_not_available_states = sminion.__not_available_states__ = set()
+
+        if cached_not_available_states:
+            for not_available_module in cached_not_available_states:
+                if not_available_module in required_salt_states:
+                    not_available_states.add(not_available_module)
+                    required_salt_states.remove(not_available_module)
+
+        for required_state_name in required_salt_states:
+            search_name = required_state_name
+            if '.' not in search_name:
+                search_name += '.*'
+            if not fnmatch.filter(available_modules, search_name):
+                not_available_states.add(required_state_name)
+                cached_not_available_states.add(required_state_name)
+
+        if not_available_states:
+            item._skipped_by_mark = True
+            if len(not_available_states) == 1:
+                pytest.skip('Salt state module \'{}\' is not available'.format(*not_available_states))
+            pytest.skip('Salt state modules not available: {}'.format(', '.join(not_available_states)))
 
     if salt.utils.platform.is_windows():
         if not item.fspath.fnmatch(os.path.join(CODE_DIR, 'tests', 'unit', '*')):
