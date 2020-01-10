@@ -108,7 +108,7 @@ class LoadAuth(object):
                 return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
             else:
                 return self.auth[fstr](*fcall['args'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return False
 
@@ -152,7 +152,7 @@ class LoadAuth(object):
             expected_extra_kws=AUTH_INTERNAL_KEYWORDS)
         try:
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return None
 
@@ -168,7 +168,7 @@ class LoadAuth(object):
             return auth_list
         try:
             return self.auth[fstr](auth_list, self.opts)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.debug('Authentication module threw %s', e)
             return auth_list
 
@@ -190,7 +190,7 @@ class LoadAuth(object):
             return self.auth[fstr](*fcall['args'], **fcall['kwargs'])
         except IndexError:
             return False
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return None
 
     def _allow_custom_expire(self, load):
@@ -494,12 +494,14 @@ class Resolver(object):
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
-        master_uri = 'tcp://' + salt.utils.zeromq.ip_bracket(self.opts['interface']) + \
-                     ':' + six.text_type(self.opts['ret_port'])
-        channel = salt.transport.client.ReqChannel.factory(self.opts,
-                                                           crypt='clear',
-                                                           master_uri=master_uri)
-        return channel.send(load)
+        master_uri = 'tcp://{}:{}'.format(
+            salt.utils.zeromq.ip_bracket(self.opts['interface']),
+            six.text_type(self.opts['ret_port'])
+        )
+        with salt.transport.client.ReqChannel.factory(self.opts,
+                                                      crypt='clear',
+                                                      master_uri=master_uri) as channel:
+            return channel.send(load)
 
     def cli(self, eauth):
         '''

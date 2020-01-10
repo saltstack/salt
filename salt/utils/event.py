@@ -166,7 +166,7 @@ def fire_args(opts, jid, tag_data, prefix=''):
         try:
             _event = get_master_event(opts, opts['sock_dir'], listen=False)
             _event.fire_event(tag_data, tag=tag)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # Don't let a problem here hold up the rest of the orchestration
             log.warning(
                 'Failed to fire args event %s with data %s: %s',
@@ -360,7 +360,7 @@ class SaltEvent(object):
                     self.io_loop.run_sync(
                         lambda: self.subscriber.connect(timeout=timeout))
                     self.cpub = True
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
         else:
             if self.subscriber is None:
@@ -405,7 +405,7 @@ class SaltEvent(object):
                     self.io_loop.run_sync(
                         lambda: self.pusher.connect(timeout=timeout))
                     self.cpush = True
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
         else:
             if self.pusher is None:
@@ -417,6 +417,17 @@ class SaltEvent(object):
             # fire_event() is invoked.
             self.cpush = True
         return self.cpush
+
+    def close_pull(self):
+        '''
+        Close the pusher connection (if established)
+        '''
+        if not self.cpush:
+            return
+
+        self.pusher.close()
+        self.pusher = None
+        self.cpush = False
 
     @classmethod
     def unpack(cls, raw, serial=None):
@@ -732,7 +743,7 @@ class SaltEvent(object):
             with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 try:
                     self.io_loop.run_sync(lambda: self.pusher.send(msg))
-                except Exception as ex:
+                except Exception as ex:  # pylint: disable=broad-except
                     log.debug(ex)
                     raise
         else:
@@ -756,9 +767,9 @@ class SaltEvent(object):
 
     def destroy(self):
         if self.subscriber is not None:
-            self.subscriber.close()
+            self.close_pub()
         if self.pusher is not None:
-            self.pusher.close()
+            self.close_pull()
         if self._run_io_loop_sync and not self.keep_loop:
             self.io_loop.close()
 
@@ -813,7 +824,7 @@ class SaltEvent(object):
                                 'error',
                                 fun],
                                'job'))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
     def fire_ret_load(self, load):
@@ -863,7 +874,7 @@ class SaltEvent(object):
         # shutdown-- where globals start going missing
         try:
             self.destroy()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
     # pylint: enable=W1701
 
@@ -1034,7 +1045,7 @@ class AsyncEventPublisher(object):
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical('Unexpected error while polling minion events',
                          exc_info=True)
             return None
@@ -1138,7 +1149,7 @@ class EventPublisher(salt.utils.process.SignalHandlingProcess):
             self.publisher.publish(package)
             return package
         # Add an extra fallback in case a forked process leeks through
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.critical('Unexpected error while polling master events',
                          exc_info=True)
             return None
@@ -1235,7 +1246,7 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         if event_return in self.minion.returners:
             try:
                 self.minion.returners[event_return](self.event_queue)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.error('Could not store events - returner \'%s\' raised '
                           'exception: %s', event_return, exc)
                 # don't waste processing power unnecessarily on converting a
@@ -1361,13 +1372,11 @@ class StateFire(object):
             'tok': self.auth.gen_token(b'salt'),
         })
 
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True
 
     def fire_running(self, running):
@@ -1393,11 +1402,9 @@ class StateFire(object):
                 'tag': tag,
                 'data': running[stag],
             })
-        channel = salt.transport.client.ReqChannel.factory(self.opts)
-        try:
-            channel.send(load)
-        except Exception:
-            pass
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(self.opts) as channel:
+            try:
+                channel.send(load)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.info('An exception occurred on fire_master: %s', exc, exc_info_on_loglevel=logging.DEBUG)
         return True

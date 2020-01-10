@@ -163,7 +163,7 @@ def check_file_list_cache(opts, form, list_cache, w_lock):
                     # Set the w_lock and go
                     refresh_cache = True
                     break
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 time.sleep(0.2)
                 attempt += 1
                 continue

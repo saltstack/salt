@@ -96,6 +96,30 @@ class WinFunctionsTestCase(TestCase):
     @skipIf(not salt.utils.platform.is_windows(),
             'WinDLL only available on Windows')
     @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
+    def test_get_user_groups_unavailable_dc(self):
+        groups = ['Administrators', 'Users']
+        win_error = WinError()
+        win_error.winerror = 1722
+        effect = [win_error, groups]
+        with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
+            ret = win_functions.get_user_groups('Administrator')
+            self.assertListEqual(groups, ret)
+
+    @skipIf(not salt.utils.platform.is_windows(),
+            'WinDLL only available on Windows')
+    @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
+    def test_get_user_groups_unknown_dc(self):
+        groups = ['Administrators', 'Users']
+        win_error = WinError()
+        win_error.winerror = 2453
+        effect = [win_error, groups]
+        with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
+            ret = win_functions.get_user_groups('Administrator')
+            self.assertListEqual(groups, ret)
+
+    @skipIf(not salt.utils.platform.is_windows(),
+            'WinDLL only available on Windows')
+    @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
     def test_get_user_groups_missing_permission(self):
         groups = ['Administrators', 'Users']
         win_error = WinError()
