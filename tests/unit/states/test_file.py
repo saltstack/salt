@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 from datetime import datetime
+import logging
 import os
 import pprint
 import shutil
@@ -42,6 +43,8 @@ import salt.serializers.python as pythonserializer
 from salt.exceptions import CommandExecutionError
 from salt.ext.six.moves import range
 import salt.utils.win_functions
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -846,6 +849,11 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                'comment': '',
                'changes': {}}
 
+        check_perms_ret = {'name': name,
+                           'result': False,
+                           'comment': '',
+                           'changes': {}}
+
         comt = ('Must provide name to file.directory')
         ret.update({'comment': comt, 'name': ''})
         self.assertDictEqual(filestate.directory(''), ret)
@@ -859,9 +867,9 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=False)
         if salt.utils.platform.is_windows():
-            mock_perms = MagicMock(return_value=ret)
+            mock_perms = MagicMock(return_value=check_perms_ret)
         else:
-            mock_perms = MagicMock(return_value=(ret, ''))
+            mock_perms = MagicMock(return_value=(check_perms_ret, ''))
         mock_uid = MagicMock(side_effect=['', 'U12', 'U12', 'U12', 'U12', 'U12',
                                           'U12', 'U12', 'U12', 'U12', 'U12'])
         mock_gid = MagicMock(side_effect=['', 'G12', 'G12', 'G12', 'G12', 'G12',
@@ -955,19 +963,21 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                  ret)
 
                         with patch.object(os.path, 'isdir',
-                                          MagicMock(side_effect=[True, False, True, True])):
+                                          MagicMock(side_effect=[True, False, True, False])):
                             comt = ('Failed to create directory {0}'
                                     .format(name))
-                            ret.update({'comment': comt, 'result': False})
+                            ret.update({'comment': comt,
+                                             'result': False,
+                                             'changes': {'/etc/testdir': 'New Dir'}})
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
 
                         recurse = ['ignore_files', 'ignore_dirs']
                         ret.update({'comment': 'Must not specify "recurse" '
-                                               'options "ignore_files" and '
-                                               '"ignore_dirs" at the same '
-                                               'time.',
+                                         'options "ignore_files" and '
+                                         '"ignore_dirs" at the same '
+                                         'time.',
                                     'changes': {}})
                         with patch.object(os.path, 'isdir', mock_t):
                             self.assertDictEqual(filestate.directory
@@ -975,9 +985,39 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                                   recurse=recurse, group=group),
                                                  ret)
 
+                        recurse = ['silent']
+                        ret.update({'comment': '',
+                                    'pchanges': 'Changes silenced',
+                                    'changes': {}})
+                        with patch.object(os.path, 'isdir', mock_t):
                             self.assertDictEqual(filestate.directory
-                                                 (name, user=user, group=group),
+                                                 (name, user=user,
+                                                  recurse=recurse, group=group),
                                                  ret)
+
+                        ret = {'name': name,
+                               'result': True,
+                               'comment': 'Directory /etc/testdir updated',
+                               'changes': {'group': 'group',
+                                           'mode': '0777',
+                                           'user': 'user'}}
+
+                        check_perms_ret = {'name': name,
+                                           'result': True,
+                                           'comment': '',
+                                           'changes': {'group': 'group',
+                                                       'mode': '0777',
+                                                       'user': 'user'}}
+
+                        if salt.utils.platform.is_windows():
+                            _mock_perms = MagicMock(return_value=check_perms_ret)
+                        else:
+                            _mock_perms = MagicMock(return_value=(check_perms_ret, ''))
+                        with patch.object(os.path, 'isdir', mock_t):
+                            with patch.dict(filestate.__salt__, {'file.check_perms': _mock_perms}):
+                                self.assertDictEqual(filestate.directory
+                                                     (name, user=user, group=group),
+                                                     ret)
 
     # 'recurse' function tests: 1
 
