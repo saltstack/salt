@@ -42,7 +42,7 @@ IMPORT_ERR = None
 try:
     from pyghmi.ipmi import command
     from pyghmi.ipmi.private import session
-except Exception as ex:
+except Exception as ex:  # pylint: disable=broad-except
     IMPORT_ERR = six.text_type(ex)
 
 __virtualname__ = 'ipmi'
@@ -181,7 +181,7 @@ def fast_connect_test(**kwargs):
             # TODO: should a test command be fired?
             #s.raw_command(netfn=6, command=1, retry=False)
             return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         return False
     return True
 

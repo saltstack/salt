@@ -12,14 +12,13 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.modules.mdadm_raid as mdadm
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class MdadmTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -51,14 +50,44 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 '-C', '/dev/md0',
                 '-R',
                 '-v',
-                 '-l', '5',
-                ])
+                '-l', '5'])
             self.assertEqual(args[0][10:], [
-                 '-e', 'default',
-                 '-n', '3',
-                 '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'])
-            self.assertEqual(sorted(args[0][7:10]), sorted(['--chunk', '256', '--force']))
-            self.assertIn('--chunk 256', ' '.join(args[0][7:10]))
+                '-e', 'default',
+                '-n', '3',
+                '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'])
+            self.assertEqual(sorted(args[0][7:10]),
+                             sorted(['--chunk', '256', '--force']))
+            self.assertEqual(kwargs, {'python_shell': False})
+
+    def test_create_metadata(self):
+        mock = MagicMock(return_value='salt')
+        with patch.dict(mdadm.__salt__, {'cmd.run': mock}), \
+                patch('salt.utils.path.which', lambda exe: exe):
+            ret = mdadm.create(
+                    '/dev/md0', 5,
+                    devices=['/dev/sdb1', '/dev/sdc1', '/dev/sdd1'],
+                    metadata=0.9,
+                    test_mode=False,
+                    force=True,
+                    chunk=256
+            )
+            self.assertEqual('salt', ret)
+
+            self.assert_called_once(mock)
+
+            args, kwargs = mock.call_args
+            self.assertEqual(args[0][:7], [
+                'mdadm',
+                '-C', '/dev/md0',
+                '-R',
+                '-v',
+                '-l', '5'])
+            self.assertEqual(args[0][10:], [
+                '-e', '0.9',
+                '-n', '3',
+                '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'])
+            self.assertEqual(sorted(args[0][7:10]),
+                             sorted(['--chunk', '256', '--force']))
             self.assertEqual(kwargs, {'python_shell': False})
 
     def test_create_test_mode(self):

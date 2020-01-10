@@ -341,7 +341,7 @@ def __load_project_from_file_path(file_path):
     try:
         project = get_project(project_dir=os.path.dirname(file_path),
                               config_path=[os.path.basename(file_path)])
-    except Exception as inst:
+    except Exception as inst:  # pylint: disable=broad-except
         return __handle_except(inst)
     return project
 
@@ -519,7 +519,7 @@ def pull(path, service_names=None):
     else:
         try:
             project.pull(service_names)
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Pulling containers images via docker-compose succeeded',
                                 None, None)
@@ -553,7 +553,7 @@ def build(path, service_names=None):
     else:
         try:
             project.build(service_names)
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Building containers images via docker-compose succeeded',
                                 None, None)
@@ -592,7 +592,7 @@ def restart(path, service_names=None):
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
                         result[container.get('Name')] = 'restarted'
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Restarting containers via docker-compose', result, debug_ret)
 
@@ -629,7 +629,7 @@ def stop(path, service_names=None):
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
                         result[container.get('Name')] = 'stopped'
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Stopping containers via docker-compose', result, debug_ret)
 
@@ -666,7 +666,7 @@ def pause(path, service_names=None):
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
                         result[container.get('Name')] = 'paused'
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Pausing containers via docker-compose', result, debug_ret)
 
@@ -703,7 +703,7 @@ def unpause(path, service_names=None):
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
                         result[container.get('Name')] = 'unpaused'
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Un-Pausing containers via docker-compose', result, debug_ret)
 
@@ -740,7 +740,7 @@ def start(path, service_names=None):
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
                         result[container.get('Name')] = 'started'
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Starting containers via docker-compose', result, debug_ret)
 
@@ -777,7 +777,7 @@ def kill(path, service_names=None):
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
                         result[container.get('Name')] = 'killed'
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Killing containers via docker-compose', result, debug_ret)
 
@@ -806,7 +806,7 @@ def rm(path, service_names=None):
     else:
         try:
             project.remove_stopped(service_names)
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Removing stopped containers via docker-compose', None, None)
 
@@ -886,7 +886,7 @@ def up(path, service_names=None):
                     if service_names is None or container.get('Name')[1:] in service_names:
                         container.inspect_if_not_inspected()
                         debug_ret[container.get('Name')] = container.inspect()
-        except Exception as inst:
+        except Exception as inst:  # pylint: disable=broad-except
             return __handle_except(inst)
     return __standardize_result(True, 'Adding containers via docker-compose', result, debug_ret)
 

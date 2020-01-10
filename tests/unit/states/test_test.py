@@ -8,12 +8,10 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -23,7 +21,6 @@ from salt.utils.odict import OrderedDict
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Validate the test state
@@ -226,6 +223,57 @@ class TestTestCase(TestCase, LoaderModuleMockMixin):
                               test.configurable_test_state,
                               mock_name,
                               result='Cheese')
+
+    def test_configurable_test_state_warnings(self):
+        '''
+        Test test.configurable_test_state with and without warnings
+        '''
+        # Configure mock parameters
+        mock_name = 'cheese_shop'
+        mock_comment = "I'm afraid we're fresh out of Red Leicester sir."
+        mock_warning = 'Today the van broke down.'
+        mock_warning_list = [
+            mock_warning,
+            "Oooooooooohhh........!"
+        ]
+        mock_changes = {
+            'testing': {
+                'old': 'Unchanged',
+                'new': 'Something pretended to change'
+            }
+        }
+
+        # Test default state without warnings
+        with patch.dict(test.__opts__, {'test': False}):
+            mock_ret = {'name': mock_name,
+                        'changes': mock_changes,
+                        'result': True,
+                        'comment': ''}
+            ret = test.configurable_test_state(mock_name)
+            self.assertDictEqual(ret, mock_ret)
+
+        # Test default state with warnings (string)
+        with patch.dict(test.__opts__, {'test': False}):
+            mock_ret = {'name': mock_name,
+                        'changes': mock_changes,
+                        'result': True,
+                        'comment': '',
+                        'warnings': mock_warning_list}
+            ret = test.configurable_test_state(mock_name,
+                                               warnings=mock_warning_list)
+            self.assertDictEqual(ret, mock_ret)
+
+        # Test default state with warnings (list)
+        with patch.dict(test.__opts__, {'test': False}):
+            mock_ret = {'name': mock_name,
+                        'changes': mock_changes,
+                        'result': True,
+                        'comment': '',
+                        'warnings': ['Today the van broke down.']}
+            ret = test.configurable_test_state(mock_name,
+                                               warnings=mock_warning)
+
+            self.assertDictEqual(ret, mock_ret)
 
     def test_configurable_test_state_test(self):
         '''

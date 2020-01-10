@@ -14,8 +14,8 @@ config. These are the defaults:
 
     queue.pgjsonb.host: 'salt'
     queue.pgjsonb.user: 'salt'
-    queue.pgjsonb.pass: 'salt'
-    queue.pgjsonb.db: 'salt'
+    queue.pgjsonb.password: 'salt'
+    queue.pgjsonb.dbname: 'salt'
     queue.pgjsonb.port: 5432
 
 Use the following Pg database schema:
@@ -95,7 +95,7 @@ def _conn(commit=False):
         error = err.args
         sys.stderr.write(six.text_type(error))
         cursor.execute("ROLLBACK")
-        raise err
+        six.reraise(*sys.exc_info())
     else:
         if commit:
             cursor.execute("COMMIT")

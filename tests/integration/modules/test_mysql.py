@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 NO_MYSQL = False
 try:
     import MySQLdb  # pylint: disable=import-error,unused-import
-except Exception:
+except Exception:  # pylint: disable=broad-except
     NO_MYSQL = True
 
 if not salt.utils.path.which('mysqladmin'):

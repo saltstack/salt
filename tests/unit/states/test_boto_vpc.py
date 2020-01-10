@@ -10,8 +10,8 @@ import sys
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch
-from tests.support.paths import TESTS_DIR
+from tests.support.mock import patch
+from tests.support.runtests import RUNTIME_VARS
 
 
 # Import Salt libs
@@ -28,7 +28,7 @@ from tests.unit.modules.test_boto_vpc import BotoVpcTestCaseMixin
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 try:
     import boto
-    boto.ENDPOINTS_PATH = os.path.join(TESTS_DIR, 'unit/files/endpoints.json')
+    boto.ENDPOINTS_PATH = os.path.join(RUNTIME_VARS.TESTS_DIR, 'unit/files/endpoints.json')
     import boto3
     from boto.exception import BotoServerError
 
@@ -126,7 +126,6 @@ class BotoVpcStateTestCaseBase(TestCase, LoaderModuleMockMixin):
         conn_parameters['key'] = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(50))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -225,7 +224,7 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
     @mock_ec2_deprecated
     def test_present_when_resource_exists(self):
         vpc = self._create_vpc(name='test')
-        resource = self._create_resource(vpc_id=vpc.id, name='test')
+        self._create_resource(vpc_id=vpc.id, name='test')
         with patch.dict(botomod.__salt__, self.funcs):
             resource_present_result = self.salt_states['boto_vpc.{0}_present'.format(self.resource_type)](
                     name='test', vpc_name='test', **self.extra_kwargs)
@@ -279,7 +278,6 @@ class BotoVpcResourceTestCaseMixin(BotoVpcTestCaseMixin):
             self.assertTrue('Mocked error' in resource_absent_result['comment'])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -292,7 +290,6 @@ class BotoVpcSubnetsTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCaseMi
     extra_kwargs = {'cidr_block': cidr_block}
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
 @skipIf(HAS_MOTO is False, 'The moto module must be installed.')
 @skipIf(_has_required_boto() is False, 'The boto module must be greater than'
@@ -304,7 +301,6 @@ class BotoVpcInternetGatewayTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTe
     backend_delete = 'InternetGatewayBackend.delete_internet_gateway'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(six.PY3, 'Disabled for Python 3 due to upstream bugs: '
                  'https://github.com/spulec/moto/issues/548 and '
                  'https://github.com/gabrielfalcao/HTTPretty/issues/325')
@@ -321,8 +317,8 @@ class BotoVpcRouteTableTestCase(BotoVpcStateTestCaseBase, BotoVpcResourceTestCas
     @mock_ec2_deprecated
     def test_present_with_subnets(self):
         vpc = self._create_vpc(name='test')
-        subnet1 = self._create_subnet(vpc_id=vpc.id, name='test1')
-        subnet2 = self._create_subnet(vpc_id=vpc.id, name='test2')
+        subnet1 = self._create_subnet(vpc_id=vpc.id, cidr_block='10.0.0.0/25', name='test1')
+        subnet2 = self._create_subnet(vpc_id=vpc.id, cidr_block='10.0.0.128/25', name='test2')
 
         route_table_present_result = self.salt_states['boto_vpc.route_table_present'](
                 name='test', vpc_name='test', subnet_names=['test1'], subnet_ids=[subnet2.id])
