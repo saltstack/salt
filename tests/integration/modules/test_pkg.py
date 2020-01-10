@@ -141,7 +141,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         os_grain = self.run_function('grains.item', ['os'])['os']
         repo = None
         try:
-            if os_grain in ['CentOS', 'RedHat', 'SUSE']:
+            if os_grain in ['CentOS', 'RedHat']:
                 my_baseurl = 'http://my.fake.repo/foo/bar/\n http://my.fake.repo.alt/foo/bar/'
                 expected_get_repo_baseurl = 'http://my.fake.repo/foo/bar/\nhttp://my.fake.repo.alt/foo/bar/'
                 major_release = int(
