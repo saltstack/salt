@@ -1193,13 +1193,18 @@ class Minion(MinionBase):
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
         self.job_q = multiprocessing.Queue()
-        self.job_spawner_proc = multiprocessing.Process(
+        self.job_spawner_proc = salt.utils.process.Process(
             target=self.job_spawner,
             args=(
                 self.job_q,
                 self.opts,
                 self.is_ready,
             ),
+            # These need to be passed in explicitly because once forked, the logging
+            # machiner will no longer be running in the main process, as it currently
+            # expects.
+            log_queue=salt.log.setup.get_multiprocessing_logging_queue(),
+            log_queue_level=salt.log.setup.get_multiprocessing_logging_level()
         )
         self.job_spawner_proc.start()
 
