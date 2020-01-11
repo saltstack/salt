@@ -39,7 +39,8 @@ from salt._logging.impl import (SaltLogRecord,
                                 SaltColorLogRecord,
                                 LOGGING_NULL_HANDLER,
                                 LOGGING_STORE_HANDLER,
-                                LOGGING_TEMP_HANDLER)
+                                LOGGING_TEMP_HANDLER,
+                                in_mainprocess)
 from salt._logging.impl import set_log_record_factory as setLogRecordFactory
 from salt._logging.handlers import (StreamHandler,
                                     SysLogHandler,
@@ -487,7 +488,7 @@ def get_multiprocessing_logging_queue():
     if __MP_LOGGING_QUEUE is not None:
         return __MP_LOGGING_QUEUE
 
-    if __MP_IN_MAINPROCESS is False:
+    if in_mainprocess() is False:
         # We're not in the MainProcess, return! No Queue shall be instantiated
         return __MP_LOGGING_QUEUE
 
@@ -538,7 +539,7 @@ def setup_multiprocessing_logging_listener(opts, queue=None):
     global __MP_LOGGING_LISTENER_CONFIGURED
     global __MP_MAINPROCESS_ID
 
-    if __MP_IN_MAINPROCESS is False:
+    if in_mainprocess() is False:
         # We're not in the MainProcess, return! No logging listener setup shall happen
         return
 
@@ -569,7 +570,7 @@ def setup_multiprocessing_logging(queue=None):
     global __MP_LOGGING_CONFIGURED
     global __MP_LOGGING_QUEUE_HANDLER
 
-    if __MP_IN_MAINPROCESS is True and not is_windows():
+    if in_mainprocess() is True and not is_windows():
         # We're in the MainProcess, return! No multiprocessing logging setup shall happen
         # Windows is the exception where we want to set up multiprocessing
         # logging in the MainProcess.
@@ -677,7 +678,7 @@ def shutdown_multiprocessing_logging_listener(daemonizing=False):
     global __MP_LOGGING_QUEUE_PROCESS
     global __MP_LOGGING_LISTENER_CONFIGURED
 
-    if daemonizing is False and __MP_IN_MAINPROCESS is True:
+    if daemonizing is False and in_mainprocess() is True:
         # We're in the MainProcess and we're not daemonizing, return!
         # No multiprocessing logging listener shutdown shall happen
         return

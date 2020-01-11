@@ -8,10 +8,12 @@
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import os
 import re
 import sys
 import types
 import logging
+import multiprocessing
 
 # Let's define these custom logging levels before importing the salt._logging.mixins
 # since they will be used there
@@ -414,6 +416,19 @@ if logging.getLoggerClass() is not SaltLoggingClass:
 # Now that we defined the default logging logger class, we can instantiate our logger
 # DO NOT MOVE THIS
 log = logging.getLogger(__name__)
+
+
+def in_mainprocess():
+    '''
+    Check to see if this is the main process
+    '''
+    try:
+        return in_mainprocess.__pid__ == os.getpid()
+    except AttributeError:
+        if multiprocessing.current_process().name == 'MainProcess':
+            in_mainprocess.__pid__ = os.getpid()
+            return True
+        return False
 
 
 def __get_exposed_module_attributes():
