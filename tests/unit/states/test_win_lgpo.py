@@ -7,12 +7,13 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+import salt.utils.platform
 
 # Import Salt Libs
 import salt.states.win_lgpo as win_lgpo
 
-
+@skipIf(not salt.utils.platform.is_windows(), 'LGPO not applicable')
 class WinSystemTestCase(TestCase):
     '''
     Test cases for the win_lgpo state
