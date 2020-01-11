@@ -3775,6 +3775,10 @@ def remove(path):
     .. code-block:: bash
 
         salt '*' file.remove /tmp/foo
+
+    .. versionchanged:: Neon
+        The method now works on all types of file system entries, not just
+        files, directories and symlinks.
     '''
     path = os.path.expanduser(path)
 
@@ -3782,7 +3786,7 @@ def remove(path):
         raise SaltInvocationError('File path must be absolute: {0}'.format(path))
 
     try:
-        if os.path.isfile(path) or os.path.islink(path):
+        if os.path.islink(path) or (os.path.exists(path) and not os.path.isdir(path)):
             os.remove(path)
             return True
         elif os.path.isdir(path):
