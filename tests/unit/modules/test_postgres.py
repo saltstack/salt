@@ -8,8 +8,8 @@ import re
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, Mock, patch, call
+from tests.support.unit import TestCase
+from tests.support.mock import Mock, patch, call
 
 # Import salt libs
 import salt.modules.postgres as postgres
@@ -54,7 +54,6 @@ test_privileges_list_group_csv = (
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PostgresTestCase(TestCase, LoaderModuleMockMixin):
     def setup_loader_modules(self):
         patcher = patch('salt.utils.path.which', Mock(return_value='/usr/bin/pgsql'))
@@ -1478,6 +1477,7 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                     locale=None,
                     password='test',
                     runas='postgres',
+                    checksums=False,
                     user='postgres',
                 )
                 self.assertTrue(ret)

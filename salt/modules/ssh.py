@@ -25,7 +25,6 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-import salt.utils.versions
 from salt.exceptions import (
     SaltInvocationError,
     CommandExecutionError,
@@ -838,36 +837,6 @@ def _parse_openssh_output(lines, fingerprint_hash_type=None):
 
 
 @salt.utils.decorators.path.which('ssh-keygen')
-def get_known_host(user,
-                   hostname,
-                   config=None,
-                   port=None,
-                   fingerprint_hash_type=None):
-    '''
-    .. deprecated:: 2018.3.0
-        Use :py:func:`ssh.get_known_host_entries
-        <salt.modules.ssh.get_known_host_entries>` instead.
-
-    Return information about known host from the configfile, if any.
-    If there is no such key, return None.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ssh.get_known_host <user> <hostname>
-    '''
-    salt.utils.versions.warn_until(
-            'Neon',
-            '\'get_known_host\' has been deprecated in favor of '
-            '\'get_known_host_entries\'. \'get_known_host\' will be '
-            'removed in Salt Neon.'
-    )
-    known_hosts = get_known_host_entries(user, hostname, config, port, fingerprint_hash_type)
-    return known_hosts[0] if known_hosts else None
-
-
-@salt.utils.decorators.path.which('ssh-keygen')
 def get_known_host_entries(user,
                            hostname,
                            config=None,
@@ -900,65 +869,6 @@ def get_known_host_entries(user,
                               fingerprint_hash_type=fingerprint_hash_type)
     )
     return known_host_entries if known_host_entries else None
-
-
-@salt.utils.decorators.path.which('ssh-keyscan')
-def recv_known_host(hostname,
-                    enc=None,
-                    port=None,
-                    hash_known_hosts=True,
-                    timeout=5,
-                    fingerprint_hash_type=None):
-    '''
-    Retrieve information about host public key from remote server
-
-    .. deprecated:: 2018.3.0
-        Use :py:func:`ssh.recv_known_host_entries
-        <salt.modules.ssh.recv_known_host_entries>` instead.
-
-    hostname
-        The name of the remote host (e.g. "github.com")
-
-    enc
-        Defines what type of key is being used, can be ed25519, ecdsa ssh-rsa
-        or ssh-dss
-
-    port
-        Optional parameter, denoting the port of the remote host on which an
-        SSH daemon is running. By default the port 22 is used.
-
-    hash_known_hosts : True
-        Hash all hostnames and addresses in the known hosts file.
-
-    timeout : int
-        Set the timeout for connection attempts.  If ``timeout`` seconds have
-        elapsed since a connection was initiated to a host or since the last
-        time anything was read from that host, then the connection is closed
-        and the host in question considered unavailable.  Default is 5 seconds.
-
-        .. versionadded:: 2016.3.0
-
-    fingerprint_hash_type
-        The fingerprint hash type that the public key fingerprints were
-        originally hashed with. This defaults to ``sha256`` if not specified.
-
-        .. versionadded:: 2016.11.4
-        .. versionchanged:: 2017.7.0: default changed from ``md5`` to ``sha256``
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' ssh.recv_known_host <hostname> enc=<enc> port=<port>
-    '''
-    salt.utils.versions.warn_until(
-            'Neon',
-            '\'recv_known_host\' has been deprecated in favor of '
-            '\'recv_known_host_entries\'. \'recv_known_host\' will be '
-            'removed in Salt Neon.'
-    )
-    known_hosts = recv_known_host_entries(hostname, enc, port, hash_known_hosts, timeout, fingerprint_hash_type)
-    return known_hosts[0] if known_hosts else None
 
 
 @salt.utils.decorators.path.which('ssh-keyscan')
@@ -1220,8 +1130,10 @@ def set_known_host(user=None,
                                       hash_known_hosts=hash_known_hosts,
                                       timeout=timeout,
                                       fingerprint_hash_type=fingerprint_hash_type)
+        # pylint: disable=not-an-iterable
         known_keys = [h['key'] for h in remote_host_entries] if remote_host_entries else []
         known_fingerprints = [h['fingerprint'] for h in remote_host_entries] if remote_host_entries else []
+        # pylint: enable=not-an-iterable
         if not remote_host_entries:
             return {'status': 'error',
                     'error': 'Unable to receive remote host keys'}

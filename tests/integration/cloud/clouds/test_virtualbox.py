@@ -9,8 +9,8 @@ import logging
 import socket
 
 # Import Salt Testing Libs
-import tests.integration as integration
 from tests.support.unit import TestCase, skipIf
+from tests.support.runtests import RUNTIME_VARS
 from tests.integration.cloud.helpers.virtualbox import (VirtualboxTestCase,
                                                         VirtualboxCloudTestCase,
                                                         CONFIG_NAME,
@@ -87,7 +87,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
@@ -96,7 +96,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         providers = cloud_providers_config(config_path)
         log.debug("config: %s", providers)
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.profiles.d',
             PROVIDER_NAME + '.conf'
@@ -228,10 +228,10 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         """
         try:
             socket.inet_aton(ip_str)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 socket.inet_pton(socket.AF_INET6, ip_str)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 self.fail("{0} is not a valid IP address".format(ip_str))
 
     def setUp(self):
@@ -251,7 +251,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
         # check if personal access token, ssh_key_file, and ssh_key_names are present
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.providers.d',
             PROVIDER_NAME + '.conf'
@@ -260,7 +260,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         providers = cloud_providers_config(config_path)
         log.debug("config: %s", providers)
         config_path = os.path.join(
-            integration.FILES,
+            RUNTIME_VARS.FILES,
             'conf',
             'cloud.profiles.d',
             PROVIDER_NAME + '.conf'
@@ -285,14 +285,14 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
     def tearDown(self):
         try:
             vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         if vb_machine_exists(INSTANCE_NAME):
             try:
                 vb_stop_vm(INSTANCE_NAME)
                 vb_destroy_machine(INSTANCE_NAME)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.warning("Possibly dirty state after exception", exc_info=True)
 
     def test_deploy(self):
@@ -349,8 +349,6 @@ class BaseVirtualboxTests(TestCase):
 
 
 class CreationDestructionVirtualboxTests(VirtualboxTestCase):
-    def setUp(self):
-        super(CreationDestructionVirtualboxTests, self).setUp()
 
     def test_vm_creation_and_destruction(self):
         vm_name = BASE_BOX_NAME

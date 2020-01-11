@@ -75,7 +75,7 @@ def uuid(dev=None):
         else:
             # basename of the /sys/block/{dev}/bcache/cache symlink target
             return os.path.basename(_bcsys(dev, 'cache'))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -105,7 +105,7 @@ def attach_(dev=None):
             if 'cache' in data:
                 res[dev] = attach_(dev)
 
-        if len(res):
+        if res:
             return res
         else:
             return None
@@ -150,7 +150,7 @@ def detach(dev=None):
             if 'cache' in data:
                 res[dev] = detach(dev)
 
-        if len(res):
+        if res:
             return res
         else:
             return None
@@ -492,7 +492,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
 
         try:
             result['dev'] = os.path.basename(_bcsys(dev, 'dev'))
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
         result['bdev'] = _bdev(dev)
 
@@ -536,7 +536,7 @@ def device(dev, stats=False, config=False, internals=False, superblock=False):
     if internals:
         interres = result.pop('inter_ro', {})
         interres.update(result.pop('inter_rw', {}))
-        if len(interres):
+        if interres:
             for key in interres:
                 if key.startswith('internal'):
                     nkey = re.sub(r'internal[s/]*', '', key)
@@ -604,10 +604,10 @@ def super_(dev):
 
         try:
             rval = int(rval)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             try:
                 rval = float(rval)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if rval == 'yes':
                     rval = True
                 elif rval == 'no':
@@ -800,10 +800,10 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
                 val = val.strip()
                 try:
                     val = int(val)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     try:
                         val = float(val)
-                    except Exception:
+                    except Exception:  # pylint: disable=broad-except
                         pass
                 listres[key.strip()] = val
             result[strlist] = listres
@@ -826,7 +826,7 @@ def _sysfs_parse(path, base_attr=None, stats=False, config=False, internals=Fals
         for intf in intflist:
             if intf in result:
                 ifres[intf] = result.pop(intf)
-        if len(ifres):
+        if ifres:
             bresult[iftype] = ifres
 
     return bresult
@@ -846,7 +846,7 @@ def _size_map(size):
                 size = 1024**2 * float(re.sub(r'[Mm]', '', size))
             size = int(size)
         return size
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return None
 
 

@@ -374,7 +374,7 @@ def list_(name,
             )
         except CommandExecutionError as exc:
             raise
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Uncaught exception \'{0}\' when listing contents of {1}'
                 .format(exc, name)
@@ -827,7 +827,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
                             arc_name = os.path.relpath(src, rel_root)
                         archived_files.append(arc_name)
                         zfile.write(src, arc_name)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         pass
     finally:
         # Restore the euid/egid
@@ -1101,7 +1101,7 @@ def unzip(zip_file,
                         else:
                             win32_attr = zfile.getinfo(target).external_attr & 0xFF
                             win32file.SetFileAttributes(os.path.join(dest, target), win32_attr)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         if runas:
             os.seteuid(euid)
             os.setegid(egid)
@@ -1177,7 +1177,7 @@ def is_encrypted(name, clean=False, saltenv='base', source_hash=None):
             '{0} is not a ZIP file'.format(name),
             info=archive_info
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         raise CommandExecutionError(exc.__str__(), info=archive_info)
     else:
         ret = False

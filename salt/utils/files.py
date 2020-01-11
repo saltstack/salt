@@ -61,7 +61,7 @@ def __clean_tmp(tmp):
     '''
     try:
         rm_rf(tmp)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
 
 
@@ -157,7 +157,7 @@ def copyfile(source, dest, backup_mode='', cachedir=''):
     # temp file in this case
     try:
         shutil.move(tgt, dest)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         __clean_tmp(tgt)
         raise
 
@@ -298,7 +298,7 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
     except FileLockError:
         raise
 
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         _raise_error(
             'Error encountered obtaining file lock {0}: {1}'.format(
                 lock_fn,
