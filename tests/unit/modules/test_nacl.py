@@ -7,7 +7,6 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt libs
 import salt.utils.stringutils
-import salt.modules.nacl as nacl
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,8 +17,9 @@ from tests.support.unit import skipIf
 try:
     import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
+    import salt.modules.nacl as nacl
     HAS_LIBNACL = True
-except ImportError:
+except (ImportError, OSError, AttributeError):
     HAS_LIBNACL = False
 
 
