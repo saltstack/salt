@@ -280,6 +280,6 @@ def _get_secret_path_metadata(path):
                 __context__[ckey][path] = ret
             else:
                 raise response.json()
-        except Exception as err: # pylint: disable=broad-except
+        except Exception as err:  # pylint: disable=broad-except
             log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
     return ret
