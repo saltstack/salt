@@ -11,7 +11,6 @@ from tests.support.unit import TestCase
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import (
     MagicMock,
-    call,
     patch)
 
 # Import Salt libs
@@ -80,7 +79,7 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
         mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        v2_return = {'data': {'data': {'akey': 'avalue',},
+        v2_return = {'data': {'data': {'akey': 'avalue'},
                      'metadata': {'created_time': '2018-10-23T20:21:55.042755098Z',
                                   'destroyed': False,
                                   'version': 13,
@@ -108,7 +107,7 @@ class TestVaultModule(LoaderModuleMockMixin, TestCase):
         mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        v2_return = {'data': {'data': {'akey': 'avalue',},
+        v2_return = {'data': {'data': {'akey': 'avalue'},
                      'metadata': {'created_time': '2018-10-23T20:21:55.042755098Z',
                                   'destroyed': False,
                                   'version': 13,

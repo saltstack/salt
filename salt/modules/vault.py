@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 '''
+.. |br| raw:: html
+
+    <br />
+
 Functions to interact with Hashicorp Vault.
 
 :maintainer:    SaltStack
@@ -54,27 +58,30 @@ Functions to interact with Hashicorp Vault.
         Role name for minion tokens created. If omitted, minion tokens will be
         created without any role, thus being able to inherit any master token
         policy (including token creation capabilities). Optional.
-
+        |br|
+        |br|
         For details please see:
         https://www.vaultproject.io/api/auth/token/index.html#create-token
+
         Example configuration:
         https://www.nomadproject.io/docs/vault-integration/index.html#vault-token-role-configuration
 
     auth
         Currently only token and approle auth types are supported. Required.
-
+        |br|
+        |br|
         Approle is the preferred way to authenticate with Vault as it provide
         some advanced options to control authentication process.
         Please visit Vault documentation for more info:
         https://www.vaultproject.io/docs/auth/approle.html
-
+        |br|
+        |br|
         The token must be able to create tokens with the policies that should be
         assigned to minions.
-
         You can still use the token auth via a OS environment variable via this
         config example:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
            vault:
              url: https://vault.service.domain:8200
@@ -86,21 +93,22 @@ Functions to interact with Hashicorp Vault.
 
         And then export the VAULT_TOKEN variable in your OS:
 
-        .. code-block: bash
+        .. code-block:: bash
+
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
     policies
         Policies that are assigned to minions when requesting a token. These can
-        either be static, eg saltstack/minions, or templated, eg
-        ``saltstack/minion/{minion}``. ``{minion}`` is shorthand for grains[id].
-        Grains are also available, for example like this:
-        ``my-policies/{grains[os]}``
-
+        either be static, eg saltstack/minions, or templated with grain values,
+        eg, ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for grains[id],
+        ``saltstack/minion/{minion}``. .
+        |br|
+        |br|
         If a template contains a grain which evaluates to a list, it will be
         expanded into multiple policies. For example, given the template
         ``saltstack/by-role/{grains[roles]}``, and a minion having these grains:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             grains:
                 roles:
@@ -108,13 +116,17 @@ Functions to interact with Hashicorp Vault.
                     - database
 
         The minion will have the policies ``saltstack/by-role/web`` and
-        ``saltstack/by-role/database``. Note however that list members which do
-        not have simple string representations, such as dictionaries or objects,
-        do not work and will throw an exception. Strings and numbers are
-        examples of types which work well.
+        ``saltstack/by-role/database``.
 
         Optional. If policies is not configured, ``saltstack/minions`` and
         ``saltstack/{minion}`` are used as defaults.
+
+        .. note::
+
+            list members which do not have simple string representations,
+            such as dictionaries or objects, do not work and will
+            throw an exception. Strings and numbers are examples of
+            types which work well.
 
     keys
         List of keys to use to unseal vault server with the vault.unseal runner.

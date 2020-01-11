@@ -205,6 +205,7 @@ def _wrapped_token_valid():
             'Error while looking up wrapped token : {0}'.format(e)
         )
 
+
 def is_v2(path):
     '''
     Determines if a given secret path is kv version 1 or 2
@@ -279,6 +280,6 @@ def _get_secret_path_metadata(path):
                 __context__[ckey][path] = ret
             else:
                 raise response.json()
-        except Exception as err:
+        except Exception as err: # pylint: disable=broad-except
             log.error('Failed to list secrets! %s: %s', type(err).__name__, err)
     return ret
