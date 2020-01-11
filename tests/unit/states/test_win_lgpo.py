@@ -13,6 +13,7 @@ import salt.utils.platform
 # Import Salt Libs
 import salt.states.win_lgpo as win_lgpo
 
+
 @skipIf(not salt.utils.platform.is_windows(), 'LGPO not applicable')
 class WinSystemTestCase(TestCase):
     '''
