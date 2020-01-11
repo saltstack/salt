@@ -23,7 +23,9 @@ from tests.support.mock import (
 )
 
 # Import Salt libs
+import salt.utils.stringutils
 import salt.returners.postgres_local_cache as postgres_local_cache
+from salt.ext import six
 
 log = logging.getLogger(__name__)
 
@@ -91,7 +93,7 @@ class PostgresLocalCacheTestCase(TestCase, LoaderModuleMockMixin):
         load = {'tgt_type': 'glob',
                 'fun_args': [],
                 'jid': '20200108221839189167',
-                'return': '💥'.encode('utf-8'),
+                'return': 'glücklich',
                 'retcode': 0,
                 'success': True,
                 'tgt': 'minion',
@@ -101,18 +103,24 @@ class PostgresLocalCacheTestCase(TestCase, LoaderModuleMockMixin):
                 'fun': 'test.ping',
                 'id': 'minion'}
 
+        if six.PY3:
+            expected_return = '{"return": "glücklich", "retcode": 0, "success": true}'
+        else:
+            expected_return = salt.utils.stringutils.to_str('{"return": "glücklich", "retcode": 0, "success": true}')
+
+        query_string = ('INSERT INTO salt_returns\n            '
+                        '(fun, jid, return, id, success)\n            '
+                        'VALUES (%s, %s, %s, %s, %s)')
+        query_values = ('test.ping',
+                        '20200108221839189167',
+                        expected_return,
+                        'minion',
+                        True)
+
         connect_mock = MagicMock()
         with patch.object(postgres_local_cache, '_get_conn', connect_mock):
             postgres_local_cache.returner(load)
 
-            query_string = ('INSERT INTO salt_returns\n            '
-                            '(fun, jid, return, id, success)\n            '
-                            'VALUES (%s, %s, %s, %s, %s)')
-            query_values = ('test.ping',
-                            '20200108221839189167',
-                            '{"return": "b\'\\\\xf0\\\\x9f\\\\x92\\\\xa5\'", "retcode": 0, "success": true}',
-                            'minion',
-                            True)
             calls = (
                 call().cursor().execute(query_string, query_values),
             )
