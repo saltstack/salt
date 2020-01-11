@@ -218,7 +218,7 @@ class BeaconsWithBeaconTypeTest(ModuleCase):
     def setUp(self):
         if self.minion_conf_d_dir is None:
             self.minion_conf_d_dir = os.path.join(
-                    self.minion_opts['config_dir'],
+                    RUNTIME_VARS.TMP_CONF_DIR,
                     os.path.dirname(self.minion_opts['default_include']))
             if not os.path.isdir(self.minion_conf_d_dir):
                 os.makedirs(self.minion_conf_d_dir)
