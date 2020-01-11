@@ -671,14 +671,14 @@ class WinFunctionsTestCase(TestCase):
         vdata = 1
         result = win_reg.cast_vdata(vdata=vdata, vtype='REG_QWORD')
         if six.PY2:
-            self.assertTrue(isinstance(result, long))  # pylint: disable=incompatible-py3-code
+            self.assertTrue(isinstance(result, long))  # pylint: disable=incompatible-py3-code,undefined-variable
         else:
             self.assertTrue(isinstance(result, int))
 
         vdata = '1'
         result = win_reg.cast_vdata(vdata=vdata, vtype='REG_QWORD')
         if six.PY2:
-            self.assertTrue(isinstance(result, long))
+            self.assertTrue(isinstance(result, long))  # pylint: disable=incompatible-py3-code,undefined-variable
         else:
             self.assertTrue(isinstance(result, int))
 
