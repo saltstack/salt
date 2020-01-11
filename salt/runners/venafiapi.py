@@ -128,8 +128,9 @@ def request(
                 csr = csr_file.read()
             request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
-            log.error(msg=str(e))
-            sys.exit(1)
+            raise Exception(
+                'Unable to open file {file}: {excp}'.format(file=csr_path,excp=e)
+            )
     conn.request_cert(request, zone)
 
     #TODO: add timeout parameter here
@@ -149,8 +150,9 @@ def request(
                 with salt.utils.files.fopen(pkey_path) as pkey_file:
                     private_key = pkey_file.read()
             except Exception as e:
-                log.error(msg=str(e))
-                sys.exit(1)
+                raise Exception(
+                    'Unable to open file {file}: {excp}'.format(file=pkey_path, excp=e)
+                )
         else:
             private_key = None
 
