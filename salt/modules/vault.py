@@ -156,6 +156,9 @@ def read_secret(path, key=None):
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
     '''
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
     log.debug('Reading Vault secret for %s at %s', __grains__['id'], path)
     try:
         url = 'v1/{0}'.format(path)
@@ -165,7 +168,10 @@ def read_secret(path, key=None):
         data = response.json()['data']
 
         if key is not None:
-            return data[key]
+            if version2['v2']:
+                return data['data'][key]
+            else:
+                return data[key]
         return data
     except Exception as err:  # pylint: disable=broad-except
         log.error('Failed to read secret! %s: %s', type(err).__name__, err)
@@ -184,6 +190,10 @@ def write_secret(path, **kwargs):
     '''
     log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
     data = dict([(x, y) for x, y in kwargs.items() if not x.startswith('__')])
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
+        data = {'data': data}
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('POST', url, json=data)
@@ -208,6 +218,10 @@ def write_raw(path, raw):
             salt '*' vault.write_raw "secret/my/secret" '{"user":"foo","password": "bar"}'
     '''
     log.debug('Writing vault secrets for %s at %s', __grains__['id'], path)
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
+        raw = {'data': raw}
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('POST', url, json=raw)
@@ -255,6 +269,9 @@ def list_secrets(path):
             salt '*' vault.list_secrets "secret/my/"
     '''
     log.debug('Listing vault secret keys for %s in %s', __grains__['id'], path)
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['metadata']
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('LIST', url)
