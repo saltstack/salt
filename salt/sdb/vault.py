@@ -61,6 +61,10 @@ def set_(key, value, profile=None):
     else:
         path, key = key.rsplit('/', 1)
 
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
+
     try:
         url = 'v1/{0}'.format(path)
         data = {key: value}
@@ -87,6 +91,10 @@ def get(key, profile=None):
     else:
         path, key = key.rsplit('/', 1)
 
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
+
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url, profile)
@@ -94,7 +102,10 @@ def get(key, profile=None):
             response.raise_for_status()
         data = response.json()['data']
 
-        return data[key]
+        if version2['v2']:
+            return data['data'][key]
+        else:
+            return data[key]
     except Exception as e:  # pylint: disable=broad-except
         log.error('Failed to read secret! %s: %s', type(e).__name__, e)
         raise salt.exceptions.CommandExecutionError(e)

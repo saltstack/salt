@@ -158,6 +158,10 @@ def ext_pillar(minion_id,  # pylint: disable=W0613
     try:
         path = paths[0].replace('path=', '')
         path = path.format(**{'minion': minion_id})
+        version2 = __utils__['vault.is_v2'](path)
+        if version2['v2']:
+            path = version2['data']
+
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('GET', url)
         if response.status_code == 200:
