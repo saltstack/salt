@@ -9,12 +9,11 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -63,7 +62,6 @@ timer2.timer                               disabled
 timer3.timer                               static'''
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SystemdTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.modules.systemd
@@ -110,7 +108,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 'README'
             )
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
         with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
             with patch.object(os, 'listdir', listdir_mock):
@@ -146,7 +144,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                 'README'
             )
         )
-        sysv_enabled_mock = MagicMock(side_effect=lambda x: x == 'baz')
+        sysv_enabled_mock = MagicMock(side_effect=lambda x, _: x == 'baz')
 
         with patch.dict(systemd.__salt__, {'cmd.run': cmd_mock}):
             with patch.object(os, 'listdir', listdir_mock):
@@ -260,8 +258,82 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(systemd, 'show', mock):
                 self.assertDictEqual(systemd.execs(), {'a': 'c', 'b': 'c'})
 
+    def test_status(self):
+        '''
+        Test to confirm that the function retries when the service is in the
+        activating/deactivating state.
+        '''
+        active = {
+            'stdout': 'active',
+            'stderr': '',
+            'retcode': 0,
+            'pid': 12345}
+        inactive = {
+            'stdout': 'inactive',
+            'stderr': '',
+            'retcode': 3,
+            'pid': 12345}
+        activating = {
+            'stdout': 'activating',
+            'stderr': '',
+            'retcode': 3,
+            'pid': 12345}
+        deactivating = {
+            'stdout': 'deactivating',
+            'stderr': '',
+            'retcode': 3,
+            'pid': 12345}
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
+        check_mock = Mock()
+
+        cmd_mock = MagicMock(side_effect=[activating, activating, active, inactive])
+        with patch.dict(systemd.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.object(systemd, '_check_for_unit_changes', check_mock):
+            ret = systemd.status('foo')
+            assert ret is True
+            # We should only have had three calls, since the third was not
+            # either in the activating or deactivating state and we should not
+            # have retried after.
+            assert cmd_mock.call_count == 3
+
+        cmd_mock = MagicMock(side_effect=[deactivating, deactivating, inactive, active])
+        with patch.dict(systemd.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.object(systemd, '_check_for_unit_changes', check_mock):
+            ret = systemd.status('foo')
+            assert ret is False
+            # We should only have had three calls, since the third was not
+            # either in the activating or deactivating state and we should not
+            # have retried after.
+            assert cmd_mock.call_count == 3
+
+        cmd_mock = MagicMock(side_effect=[activating, activating, active, inactive])
+        with patch.dict(systemd.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.object(systemd, '_check_for_unit_changes', check_mock):
+            ret = systemd.status('foo', wait=0.25)
+            assert ret is False
+            # We should only have had two calls, because "wait" was set too low
+            # to allow for more than one retry.
+            assert cmd_mock.call_count == 2
+
+        cmd_mock = MagicMock(side_effect=[active, inactive])
+        with patch.dict(systemd.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.object(systemd, '_check_for_unit_changes', check_mock):
+            ret = systemd.status('foo')
+            assert ret is True
+            # We should only have a single call, because the first call was in
+            # the active state.
+            assert cmd_mock.call_count == 1
+
+        cmd_mock = MagicMock(side_effect=[inactive, active])
+        with patch.dict(systemd.__salt__, {'cmd.run_all': cmd_mock}), \
+                patch.object(systemd, '_check_for_unit_changes', check_mock):
+            ret = systemd.status('foo')
+            assert ret is False
+            # We should only have a single call, because the first call was in
+            # the inactive state.
+            assert cmd_mock.call_count == 1
+
+
 class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
     '''
         Test case for salt.modules.systemd, for functions which use systemd

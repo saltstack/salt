@@ -8,20 +8,17 @@ from subprocess import PIPE
 import salt.modules.openscap as openscap
 
 # Import salt test libs
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import 3rd-party libs
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class OpenscapTestCase(TestCase):
 
     random_temp_dir = '/tmp/unique-name'

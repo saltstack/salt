@@ -256,7 +256,7 @@ def help(module=None, *args):
             docset = salt.utils.yaml.safe_load(docset)
             if docset:
                 doc.update(docset)
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error("Error parsing doc section: %s", err)
     if not args:
         if 'description' in doc:

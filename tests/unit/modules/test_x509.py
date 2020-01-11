@@ -30,8 +30,6 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
     patch,
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 from salt.modules import x509
@@ -45,7 +43,6 @@ except ImportError:
     HAS_M2CRYPTO = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not bool(pytest), False)
 class X509TestCase(TestCase, LoaderModuleMockMixin):
 

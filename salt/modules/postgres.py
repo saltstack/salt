@@ -3153,6 +3153,7 @@ def datadir_init(name,
         password=password,
         encoding=encoding,
         locale=locale,
+        checksums=checksums,
         runas=runas)
     return ret['retcode'] == 0
 

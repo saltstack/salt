@@ -88,7 +88,7 @@ except ImportError:
 try:
     from requests.packages.urllib3 import disable_warnings  # pylint: disable=no-name-in-module
     disable_warnings()
-except Exception:
+except Exception:  # pylint: disable=broad-except
     pass
 
 
