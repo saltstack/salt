@@ -3,6 +3,7 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import datetime
+import logging
 import re
 
 # Import Salt Testing libs
@@ -49,6 +50,8 @@ test_privileges_list_group_csv = (
     'baruwatest2,t\n'
     'baruwatest,f\n'
 )
+
+log = logging.getLogger(__name__)
 
 
 @skipIf(NO_MOCK, NO_MOCK_REASON)
@@ -229,13 +232,21 @@ class PostgresTestCase(TestCase, LoaderModuleMockMixin):
                 password='foo',
                 runas='foo'
             )
-            postgres._run_psql.assert_called_once_with(
-                ['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc',
-                 '--no-password', '--username', 'testuser', '--host',
-                 'testhost', '--port', 'testport', '--dbname', 'maint_db',
-                 '-c', 'DROP DATABASE "test_db"'],
-                host='testhost', user='testuser',
-                password='foo', runas='foo', port='testport')
+
+            calls = (call(['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc', '--no-password',
+                           '--username', 'testuser', '--host', 'testhost', '--port', 'testport', '--dbname',
+                           'maint_db', '-c', 'REVOKE CONNECT ON DATABASE "test_db" FROM public;'],
+                          host='testhost', password='foo', port='testport', runas='foo', user='testuser'),
+                     call(['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc', '--no-password',
+                           '--username', 'testuser', '--host', 'testhost', '--port', 'testport', '--dbname',
+                           'maint_db', '-c', "SELECT pid, pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'test_db' AND pid <> pg_backend_pid();"],
+                          host='testhost', password='foo', port='testport', runas='foo', user='testuser'),
+                     call(['/usr/bin/pgsql', '--no-align', '--no-readline', '--no-psqlrc', '--no-password',
+                           '--username', 'testuser', '--host', 'testhost', '--port', 'testport', '--dbname',
+                           'maint_db', '-c', 'DROP DATABASE "test_db";'],
+                          host='testhost', password='foo', port='testport', runas='foo', user='testuser'))
+
+            postgres._run_psql.assert_has_calls(calls, any_order=True)
 
     def test_group_create(self):
         with patch('salt.modules.postgres._run_psql',
