@@ -20,11 +20,6 @@ from string import ascii_letters, digits
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-# Attempt to import win_network
-try:
-    import salt.utils.win_network
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils.args
@@ -38,9 +33,11 @@ from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
-# inet_pton does not exist in Windows, this is a workaround
 if salt.utils.platform.is_windows():
+    # inet_pton does not exist in Windows, this is a workaround
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
+    # Attempt to import win_network
+    import salt.utils.win_network
 
 log = logging.getLogger(__name__)
 

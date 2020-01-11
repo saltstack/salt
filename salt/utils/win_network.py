@@ -225,28 +225,61 @@ def _get_network_interfaces():
     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
 
 
+def get_interface_info_dot_net_formatted():
+    '''
+    Returns data gathered via ``get_interface_info_dot_net`` and returns the
+    info in the same manner as ``get_interface_info_wmi``
+
+    Returns:
+        dict: A dictionary of information about all interfaces on the system
+    '''
+    # Massage the data returned by dotnet to mirror that returned by wmi
+    interfaces = get_interface_info_dot_net()
+    i_faces = {}
+    for i_face in interfaces:
+        if interfaces[i_face]['status'] == 'Up':
+            name = interfaces[i_face]['description']
+            i_faces.setdefault(name, {}).update({
+                'hwaddr': interfaces[i_face]['physical_address'],
+                'up': True})
+            for ip in interfaces[i_face].get('ip_addresses', []):
+                i_faces[name].setdefault('inet', []).append({
+                    'address': ip['address'],
+                    'broadcast': ip['broadcast'],
+                    'netmask': ip['netmask'],
+                    'gateway': interfaces[i_face].get('ip_gateways', [''])[0],
+                    'label': name})
+            for ip in interfaces[i_face].get('ipv6_addresses', []):
+                i_faces[name].setdefault('inet6', []).append({
+                    'address': ip['address'],
+                    'gateway': interfaces[i_face].get('ipv6_gateways', [''])[0],
+                    # Add prefix length
+                })
+
+    return i_faces
+
+
 def get_interface_info_dot_net():
     '''
     Uses .NET 4.0+ to gather Network Interface information. Should only run on
     Windows systems newer than Windows 7/Server 2008R2
+
     Returns:
         dict: A dictionary of information about all interfaces on the system
     '''
-    clr.AddReference('System.Net')
-    interfaces = _get_network_interfaces()
+    interfaces = {}
+    for i_face in _get_network_interfaces():
+        temp_dict = _get_base_properties(i_face)
+        temp_dict.update(_get_ip_base_properties(i_face))
+        temp_dict.update(_get_ip_unicast_info(i_face))
+        temp_dict.update(_get_ip_gateway_info(i_face))
+        temp_dict.update(_get_ip_dns_info(i_face))
+        temp_dict.update(_get_ip_multicast_info(i_face))
+        temp_dict.update(_get_ip_anycast_info(i_face))
+        temp_dict.update(_get_ip_wins_info(i_face))
+        interfaces[i_face.Name] = temp_dict
 
-    int_dict = {}
-    for i_face in interfaces:
-        int_dict[i_face.Name] = _get_base_properties(i_face)
-        int_dict[i_face.Name].update(_get_ip_base_properties(i_face))
-        int_dict[i_face.Name].update(_get_ip_unicast_info(i_face))
-        int_dict[i_face.Name].update(_get_ip_gateway_info(i_face))
-        int_dict[i_face.Name].update(_get_ip_dns_info(i_face))
-        int_dict[i_face.Name].update(_get_ip_multicast_info(i_face))
-        int_dict[i_face.Name].update(_get_ip_anycast_info(i_face))
-        int_dict[i_face.Name].update(_get_ip_wins_info(i_face))
-
-    return int_dict
+    return interfaces
 
 
 def get_interface_info_wmi():
@@ -254,49 +287,50 @@ def get_interface_info_wmi():
     Uses WMI to gather Network Interface information. Should only run on
     Windows 7/2008 R2 and lower systems. This code was pulled from the
     ``win_interfaces`` function in ``salt.utils.network`` unchanged.
+
     Returns:
         dict: A dictionary of information about all interfaces on the system
     '''
     with salt.utils.winapi.Com():
         c = wmi.WMI()
-        ifaces = {}
-        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
-            ifaces[iface.Description] = dict()
-            if iface.MACAddress:
-                ifaces[iface.Description]['hwaddr'] = iface.MACAddress
-            if iface.IPEnabled:
-                ifaces[iface.Description]['up'] = True
-                for ip in iface.IPAddress:
+        i_faces = {}
+        for i_face in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
+            i_faces[i_face.Description] = {}
+            if i_face.MACAddress:
+                i_faces[i_face.Description]['hwaddr'] = i_face.MACAddress
+            if i_face.IPEnabled:
+                i_faces[i_face.Description]['up'] = True
+                for ip in i_face.IPAddress:
                     if '.' in ip:
-                        if 'inet' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet'] = []
+                        if 'inet' not in i_faces[i_face.Description]:
+                            i_faces[i_face.Description]['inet'] = []
                         item = {'address': ip,
-                                'label': iface.Description}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if '.' in i), '')
+                                'label': i_face.Description}
+                        if i_face.DefaultIPGateway:
+                            broadcast = next((i for i in i_face.DefaultIPGateway if '.' in i), '')
                             if broadcast:
                                 item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if '.' in i), '')
+                        if i_face.IPSubnet:
+                            netmask = next((i for i in i_face.IPSubnet if '.' in i), '')
                             if netmask:
                                 item['netmask'] = netmask
-                        ifaces[iface.Description]['inet'].append(item)
+                        i_faces[i_face.Description]['inet'].append(item)
                     if ':' in ip:
-                        if 'inet6' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet6'] = []
+                        if 'inet6' not in i_faces[i_face.Description]:
+                            i_faces[i_face.Description]['inet6'] = []
                         item = {'address': ip}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if ':' in i), '')
+                        if i_face.DefaultIPGateway:
+                            broadcast = next((i for i in i_face.DefaultIPGateway if ':' in i), '')
                             if broadcast:
                                 item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if ':' in i), '')
+                        if i_face.IPSubnet:
+                            netmask = next((i for i in i_face.IPSubnet if ':' in i), '')
                             if netmask:
                                 item['netmask'] = netmask
-                        ifaces[iface.Description]['inet6'].append(item)
+                        i_faces[i_face.Description]['inet6'].append(item)
             else:
-                ifaces[iface.Description]['up'] = False
-    return ifaces
+                i_faces[i_face.Description]['up'] = False
+    return i_faces
 
 
 def get_interface_info():
@@ -310,28 +344,5 @@ def get_interface_info():
     # On Windows 7 machines, use WMI as dotnet 4.0 is not available by default
     if USE_WMI:
         return get_interface_info_wmi()
-
-    # Massage the data returned by dotnet to mirror that returned by wmi
-    interfaces = get_interface_info_dot_net()
-    ifaces = dict()
-    for iface in interfaces:
-        if interfaces[iface]['status'] == 'Up':
-            name = interfaces[iface]['description']
-            ifaces.setdefault(name, {}).update({
-                'hwaddr': interfaces[iface]['physical_address'],
-                'up': True})
-            for ip in interfaces[iface].get('ip_addresses', []):
-                ifaces[name].setdefault('inet', []).append({
-                    'address': ip['address'],
-                    'broadcast': ip['broadcast'],
-                    'netmask': ip['netmask'],
-                    'gateway': interfaces[iface].get('ip_gateways', [''])[0],
-                    'label': name})
-            for ip in interfaces[iface].get('ipv6_addresses', []):
-                ifaces[name].setdefault('inet6', []).append({
-                    'address': ip['address'],
-                    'gateway': interfaces[iface].get('ipv6_gateways', [''])[0],
-                    # Add prefix length
-                })
-
-    return ifaces
+    else:
+        return get_interface_info_dot_net_formatted()
