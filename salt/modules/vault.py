@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
 '''
-.. |br| raw:: html
-
-    <br />
-
 Functions to interact with Hashicorp Vault.
 
 :maintainer:    SaltStack
@@ -58,8 +54,7 @@ Functions to interact with Hashicorp Vault.
         Role name for minion tokens created. If omitted, minion tokens will be
         created without any role, thus being able to inherit any master token
         policy (including token creation capabilities). Optional.
-        |br|
-        |br|
+
         For details please see:
         https://www.vaultproject.io/api/auth/token/index.html#create-token
 
@@ -68,14 +63,12 @@ Functions to interact with Hashicorp Vault.
 
     auth
         Currently only token and approle auth types are supported. Required.
-        |br|
-        |br|
+
         Approle is the preferred way to authenticate with Vault as it provide
         some advanced options to control authentication process.
         Please visit Vault documentation for more info:
         https://www.vaultproject.io/docs/auth/approle.html
-        |br|
-        |br|
+
         The token must be able to create tokens with the policies that should be
         assigned to minions.
         You can still use the token auth via a OS environment variable via this
@@ -102,8 +95,7 @@ Functions to interact with Hashicorp Vault.
         either be static, eg saltstack/minions, or templated with grain values,
         eg, ``my-policies/{grains[os]}``. ``{minion}`` is shorthand for grains[id],
         ``saltstack/minion/{minion}``. .
-        |br|
-        |br|
+
         If a template contains a grain which evaluates to a list, it will be
         expanded into multiple policies. For example, given the template
         ``saltstack/by-role/{grains[roles]}``, and a minion having these grains:
@@ -167,6 +159,17 @@ def read_secret(path, key=None):
         secrets:
             first: {{ supersecret.first }}
             second: {{ supersecret.second }}
+
+    Support has been added for Vault KV backend version 2, where the Vault server
+    output has changed to include metadata about the secret. When using KV backend
+    version 2, secret data is now within an additional data key, which will need
+    to be handled in state lookups. For example:
+
+    .. code-block:: jinja
+
+        {% set mysecret = salt['vault'].read_secret('secret/my/secret')['data'] %}
+
+    .. versionchanged:: Neon
     '''
     version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
