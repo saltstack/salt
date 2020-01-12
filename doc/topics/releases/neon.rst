@@ -369,11 +369,101 @@ Also, slot parsing is now supported inside of nested state data structures (dict
             - "DO NOT OVERRIDE"
           ignore_if_missing: True
 
+- The :py:func:`file.symlink <salt.states.file.symlink>` state was
+  fixed to remove existing file system entries other than files,
+  directories and symbolic links properly.
+
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode.
+
 State Changes
 =============
 
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
+
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
+- Added new `onfail_all` requisite form to allow for AND logic when adding
+  onfail states.
+
+Module Changes
+==============
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
+
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
+
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
+  
+- The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
+  module now supports perstant changes with ``persist=True`` by calling the
+  :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
+
+- The :py:func:`file.remove <salt.modules.file.remove>` module was
+  fixed to remove file system entries other than files, directories
+  and symbolic links properly.
+
+- The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
+  VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
+
+- The :py:func:`chocolatey.bootstrap <salt.modules.chocolatey.bootstrap>` function
+  has been updated to support offline installation.
+
+- The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
+  has been added to uninstall Chocolatey.
+
+Runner Changes
+==============
+
+- The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
+  has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
+  will also include these modules.
+
+Util Changes
+============
+
+- The :py:func:`win_dotnet <salt.utils.win_dotnet>` Salt util has been added to
+  make it easier to detect the versions of .NET installed on the system. It includes
+  the following functions:
+
+    - :py:func:`versions <salt.utils.win_dotnet.versions>`
+    - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
+    - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
+    - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
+
+Serializer Changes
+==================
+
+- The configparser serializer and deserializer functions can now be made to preserve
+  case of item names by passing 'preserve_case=True' in the options parameter of the function.
+
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
+
+  For example, in a file.serialze state:
+
+  .. code-block:: yaml
+
+    some.ini:
+      - file.serialize:
+         - formatter: configparser
+         - merge_if_exists: True
+         - deserializer_opts:
+           - preserve_case: True
+         - serializer_opts:
+           - preserve_case: True
 
 Enhancements to Engines
 =======================
