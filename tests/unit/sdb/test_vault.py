@@ -41,9 +41,12 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         '''
         Test salt.sdb.vault.set function
         '''
+        version = {'v2': False, 'data': None, 'metadata': None, 'type': None}
+        mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}):
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
+             patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.set_('sdb://myvault/path/to/foo/bar', 'super awesome')
 
         assert mock_vault.call_args_list == [call('POST',
@@ -55,9 +58,12 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         Test salt.sdb.vault.set_ while using the old
         deprecated solution with a question mark.
         '''
+        version = {'v2': False, 'data': None, 'metadata': None, 'type': None}
+        mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
-        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}):
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
+             patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.set_('sdb://myvault/path/to/foo?bar', 'super awesome')
 
         assert mock_vault.call_args_list == [call('POST',
@@ -68,10 +74,13 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         '''
         Test salt.sdb.vault.get function
         '''
+        version = {'v2': False, 'data': None, 'metadata': None, 'type': None}
+        mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
         mock_vault.content.return_value = [{'data': {'bar', 'test'}}]
-        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}):
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
+             patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.get('sdb://myvault/path/to/foo/bar')
 
         assert mock_vault.call_args_list == [call('GET',
@@ -83,10 +92,13 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         Test salt.sdb.vault.get while using the old
         deprecated solution with a question mark.
         '''
+        version = {'v2': False, 'data': None, 'metadata': None, 'type': None}
+        mock_version = MagicMock(return_value=version)
         mock_vault = MagicMock()
         mock_vault.return_value.status_code = 200
         mock_vault.content.return_value = [{'data': {'bar', 'test'}}]
-        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}):
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
+             patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.get('sdb://myvault/path/to/foo?bar')
         assert mock_vault.call_args_list == [call('GET',
                                                   'v1/sdb://myvault/path/to/foo',
