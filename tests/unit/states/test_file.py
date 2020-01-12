@@ -1189,8 +1189,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
              patch('os.path.isdir', mock_t), \
              patch('salt.states.file._check_directory_win', mock_check):
             if salt.utils.platform.is_windows():
-                comt = ('User salt is not available Group salt'
-                        ' is not available')
+                comt = ''
             else:
                 comt = ('User salt is not available Group saltstack'
                         ' is not available')
