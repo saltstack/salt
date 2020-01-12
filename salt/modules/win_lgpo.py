@@ -5662,25 +5662,6 @@ def _getAdmlPresentationRefId(adml_data, ref_id):
     if search_results:
         for result in search_results:
             the_localname = etree.QName(result.tag).localname
-            # presentation_element = PRESENTATION_ANCESTOR_XPATH(result)
-            # if presentation_element:
-            #     presentation_element = presentation_element[0]
-            #     if TEXT_ELEMENT_XPATH(presentation_element):
-            #         for p_item in presentation_element.getchildren():
-            #             if p_item == result:
-            #                 break
-            #             else:
-            #                 if etree.QName(p_item.tag).localname == 'text':
-            #                     if prepended_text:
-            #                         if getattr(p_item, 'text'):
-            #                             prepended_text = ' '.join((text for text in (prepended_text, getattr(p_item, 'text', '').rstrip()) if text))
-            #                     else:
-            #                         if getattr(p_item, 'text'):
-            #                             prepended_text = getattr(p_item, 'text', '').rstrip()
-            #                 else:
-            #                     prepended_text = ''
-            #         if prepended_text.endswith(('.', ':')):
-            #             prepended_text = ''
             if the_localname == 'textBox' \
                     or the_localname == 'comboBox':
                 label_items = result.xpath('.//*[local-name() = "label"]')
