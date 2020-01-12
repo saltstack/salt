@@ -215,6 +215,9 @@ def is_v2(path):
     '''
     ret = {'v2': False, 'data': path, 'metadata': path, 'type': None}
     path_metadata = _get_secret_path_metadata(path)
+    if not path_metadata:
+        # metadata lookup failed. Simply return not v2
+        return ret
     ret['type'] = path_metadata.get('type', 'kv')
     if ret['type'] == 'kv' and path_metadata.get('options', {}).get('version', '1') in ['2']:
         ret['v2'] = True
