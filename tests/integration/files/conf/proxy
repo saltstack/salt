@@ -48,3 +48,6 @@ add_proxymodule_to_opts: False
 
 proxy:
   proxytype: dummy
+
+# SEP-17 related config option
+acknowledge_jobs: True

@@ -757,6 +757,42 @@ def _fetch_events(q, opts):
         q.put(events)
 
 
+def _fetch_events(q, evt_type, opts):
+    '''
+    Collect events and store them
+    '''
+    def _clean_queue():
+        log.info('Cleaning queue!')
+        while not q.empty():
+            queue_item = q.get()
+            queue_item.task_done()
+
+    atexit.register(_clean_queue)
+
+    event = salt.utils.event.get_event(
+        evt_type,
+        sock_dir=opts['sock_dir'],
+        transport=opts['transport'],
+        opts=opts,
+    )
+
+    # Wait for event bus to be connected
+    if not event.connect_pull(30):
+        raise AssertionError("Cannnot connect to event bus")
+
+    # Notify parent process that the event bus is connected
+    q.put('CONNECTED')
+
+    while True:
+        try:
+            events = event.get_event(full=False)
+        except Exception as exc:  # pylint: disable=broad-except
+            # This is broad but we'll see all kinds of issues right now
+            # if we drop the proc out from under the socket while we're reading
+            log.exception("Exception caught while getting events %r", exc)
+        q.put(events)
+
+
 class SaltMinionEventAssertsMixin(object):
     '''
     Asserts to verify that a given event was seen
@@ -764,46 +800,87 @@ class SaltMinionEventAssertsMixin(object):
 
     @classmethod
     def setUpClass(cls):
-        opts = copy.deepcopy(RUNTIME_VARS.RUNTIME_CONFIGS['minion'])
-        cls.q = multiprocessing.Queue()
-        cls.fetch_proc = salt.utils.process.SignalHandlingProcess(
-            target=_fetch_events,
-            args=(cls.q, opts),
-            name='Process-{}-Queue'.format(cls.__name__)
-        )
-        cls.fetch_proc.start()
-        # Wait for the event bus to be connected
-        msg = cls.q.get(block=True)
-        if msg != 'CONNECTED':
-            # Just in case something very bad happens
-            raise RuntimeError('Unexpected message in test\'s event queue')
+        cls.queues = {}
+        cls.fetch_procs = {}
+
+        for q in (("minion", "minion",), ("minion", "sub_minion",), ("master", "master",),):
+            opts = copy.deepcopy(RUNTIME_VARS.RUNTIME_CONFIGS[q[1]])
+            cls.queues[q[1]] = multiprocessing.Queue()
+
+            # create the async process
+            cls.fetch_procs[q[1]] = salt.utils.process.SignalHandlingProcess(
+                target=_fetch_events,
+                args=(cls.queues[q[1]], q[0], opts),
+                name='Process-{}-{}-Queue'.format(cls.__name__, q[1])
+            )
+            cls.fetch_procs[q[1]].start()
+
+            # Wait for the event bus to be connected
+            msg = cls.queues[q[1]].get(block=True, timeout=40)
+            if msg != 'CONNECTED':
+                # Just in case something very bad happens
+                raise RuntimeError('Unexpected message in test\'s event queue')
 
     @classmethod
     def tearDownClass(cls):
-        cls.fetch_proc.join()
-        del cls.q
-        del cls.fetch_proc
+        for proc in cls.fetch_procs.values():
+            proc.terminate()
 
-    def assertMinionEventFired(self, tag):
-        #TODO
-        raise salt.exceptions.NotImplemented('assertMinionEventFired() not implemented')
+        del cls.queues
+        del cls.fetch_procs
+
+    def assertMinionEventFired(self, tag, data=None, timeout=5, sleep_time=0.5):
+        start = time.time()
+        while True:
+            try:
+                event = self.queues['master'].get(False)
+            except Empty:
+                time.sleep(sleep_time)
+                if time.time() - start >= timeout:
+                    break
+                continue
+
+            if event is not None and tag == event.get("tag", None):
+                if data is not None and event.get('data', None) != data:
+                    raise AssertionError('Event with tag {0} has invalid data, obtained {1}, expected {2}'.format(tag, event['data'], data))
+                return True
+
+            if time.time() - start >= timeout:
+                break
+        raise AssertionError('Event with tag {0} was not fired by minion'.format(tag))
 
     def assertMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
         start = time.time()
         while True:
             try:
-                event = self.q.get(False)
+                event = self.__class__.queues['minion'].get(False)
             except Empty:
                 time.sleep(sleep_time)
                 if time.time() - start >= timeout:
                     break
                 continue
             if isinstance(event, dict):
-                event.pop('_stamp')
+                event.pop('_stamp', None)
             if desired_event == event:
-                self.fetch_proc.terminate()
                 return True
             if time.time() - start >= timeout:
                 break
-        self.fetch_proc.terminate()
+        raise AssertionError('Event {0} was not received by minion'.format(desired_event))
+
+    def assertSubMinionEventReceived(self, desired_event, timeout=5, sleep_time=0.5):
+        start = time.time()
+        while True:
+            try:
+                event = self.queues['sub_minion'].get(False)
+            except Empty:
+                time.sleep(sleep_time)
+                if time.time() - start >= timeout:
+                    break
+                continue
+            if isinstance(event, dict):
+                event.pop('_stamp', None)
+            if desired_event == event:
+                return True
+            if time.time() - start >= timeout:
+                break
         raise AssertionError('Event {0} was not received by minion'.format(desired_event))
