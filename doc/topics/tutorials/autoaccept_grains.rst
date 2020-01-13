@@ -40,5 +40,13 @@ Lines starting with a ``#`` are ignored.
     autosign_grains:
       - uuid
 
+It can contain ":" character in order to look deeper in grains structure
+If autosign_grains contains ":" it will first look for full named grain.
+If not found it will split the grain's name by ":" and check for every subkey
+If subkkey is an integer it will look for list indexed value
+If subkey is a string if will look for dict indexed value
+Moreover ":" can be specify multiple times in order to look deeper in grain structure
+autosign grain files should be the same as the full named grain.
+
 Now you should be able to start salt-minion and run ``salt-call
 state.apply`` or any other salt commands that require master authentication.
