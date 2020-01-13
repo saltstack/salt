@@ -2294,6 +2294,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'disabled' in kwargs:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
+    elif 'enabled' in kwargs:
+        kwargs['disabled'] = not salt.utils.data.is_true(kwargs['enabled'])
 
     kw_type = kwargs.get('type')
     kw_dist = kwargs.get('dist')
