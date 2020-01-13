@@ -1267,7 +1267,7 @@ class TestFileState(TestCase, LoaderModuleMockMixin):
                                     .format(name))
                             ret.update({'comment': comt,
                                              'result': False,
-                                             'changes': {'/etc/testdir': 'New Dir'}})
+                                             'changes': {name: 'New Dir'}})
                             self.assertDictEqual(filestate.directory
                                                  (name, user=user, group=group),
                                                  ret)
