@@ -36,7 +36,7 @@ from tests.support.unit import TestCase
 from tests.support.case import ShellTestCase
 from tests.support.parser import PNUM, print_header, SaltTestcaseParser
 from tests.support.helpers import requires_sshd_server, RedirectStdStreams
-from tests.support.paths import ScriptPathMixin
+from tests.support.cli_scripts import ScriptPathMixin
 from tests.support.mixins import CheckShellBinaryNameAndVersionMixin, ShellCaseCommonTestsMixin
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin, SaltClientTestCaseMixin
 from tests.support.mixins import SaltMinionEventAssertsMixin, SaltReturnAssertsMixin
@@ -52,6 +52,7 @@ import salt.output
 import salt.version
 import salt.utils.color
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
@@ -63,11 +64,10 @@ from salt.utils.immutabletypes import freeze
 from salt.exceptions import SaltClientError
 
 # Import 3rd-party libs
-import msgpack
 from salt.ext import six
 
 try:
-    import salt.ext.six.moves.socketserver as socketserver
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
 except ImportError:
     import socketserver
 
@@ -95,15 +95,16 @@ def get_unused_localhost_port():
 
     DARWIN = True if sys.platform.startswith('darwin') else False
     BSD = True if 'bsd' in sys.platform else False
+    AIX = True if sys.platform.startswith('aix') else False
 
-    if DARWIN and port in _RUNTESTS_PORTS:
+    if (AIX or DARWIN) and port in _RUNTESTS_PORTS:
         port = get_unused_localhost_port()
         usock.close()
         return port
 
     _RUNTESTS_PORTS[port] = usock
 
-    if DARWIN or BSD:
+    if DARWIN or BSD or AIX:
         usock.close()
 
     return port
@@ -141,7 +142,7 @@ class ThreadedSocketServer(ThreadingMixIn, socketserver.TCPServer, object):
 
 class SocketServerRequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
-        unpacker = msgpack.Unpacker(encoding='utf-8')
+        unpacker = salt.utils.msgpack.Unpacker(encoding='utf-8')
         while not self.server.shutting_down.is_set():
             try:
                 wire_bytes = self.request.recv(1024)
@@ -164,7 +165,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     # We're not on windows
                     pass
                 log.exception(exc)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
 
 
@@ -275,6 +276,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -312,6 +314,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -349,6 +352,7 @@ class TestDaemon(object):
                 daemon_class=SaltMinion,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -387,6 +391,7 @@ class TestDaemon(object):
                 daemon_class=SaltMaster,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -424,6 +429,7 @@ class TestDaemon(object):
                 daemon_class=SaltSyndic,
                 bin_dir_path=SCRIPT_DIR,
                 fail_hard=True,
+                event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
             sys.stdout.write(
                 '\r{0}\r'.format(
@@ -647,7 +653,7 @@ class TestDaemon(object):
         else:
             os.environ['SSH_DAEMON_RUNNING'] = 'True'
         self.prep_syndic()
-        with salt.utils.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
+        with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'roster'), 'a') as roster:
             roster.write('  user: {0}\n'.format(RUNTIME_VARS.RUNNING_TESTS_USER))
             roster.write('  priv: {0}/{1}'.format(RUNTIME_VARS.TMP_CONF_DIR, 'key_test'))
         sys.stdout.write(
@@ -715,6 +721,10 @@ class TestDaemon(object):
         master_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
         master_opts['pki_dir'] = 'pki'
         master_opts['syndic_master'] = 'localhost'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
         file_tree = {
             'root_dir':  os.path.join(FILES, 'pillar', 'base', 'file_tree'),
             'follow_dir_links': False,
@@ -734,7 +744,7 @@ class TestDaemon(object):
         try:
             real_prefix = sys.real_prefix
             # The above attribute exists, this is a virtualenv
-            if salt.utils.is_windows():
+            if salt.utils.platform.is_windows():
                 virtualenv_binary = os.path.join(real_prefix, 'Scripts', 'virtualenv.exe')
             else:
                 # We need to remove the virtualenv from PATH or we'll get the virtualenv binary
@@ -746,7 +756,7 @@ class TestDaemon(object):
                         if item.startswith(sys.base_prefix):
                             path_items.remove(item)
                     os.environ['PATH'] = os.pathsep.join(path_items)
-                virtualenv_binary = salt.utils.which('virtualenv')
+                virtualenv_binary = salt.utils.path.which('virtualenv')
                 if path is not None:
                     # Restore previous environ PATH
                     os.environ['PATH'] = path
@@ -787,6 +797,10 @@ class TestDaemon(object):
         syndic_master_opts['user'] = RUNTIME_VARS.RUNNING_TESTS_USER
         syndic_master_opts['root_dir'] = os.path.join(TMP, 'rootdir-syndic-master')
         syndic_master_opts['pki_dir'] = 'pki'
+        pytest_stop_sending_events_file = os.path.join(TMP_ROOT_DIR, 'pytest_stop_sending_events_file_syndic_master')
+        with salt.utils.files.fopen(pytest_stop_sending_events_file, 'w') as wfh:
+            wfh.write('')
+        syndic_master_opts['pytest_stop_sending_events_file'] = pytest_stop_sending_events_file
 
         # This is the syndic for master
         # Let's start with a copy of the syndic master configuration
@@ -795,6 +809,14 @@ class TestDaemon(object):
         syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
         syndic_opts['cachedir'] = 'cache'
         syndic_opts['root_dir'] = os.path.join(TMP_ROOT_DIR)
+
+        # This is the syndic for master
+        # Let's start with a copy of the syndic master configuration
+        syndic_opts = copy.deepcopy(syndic_master_opts)
+        # Let's update with the syndic configuration
+        syndic_opts.update(salt.config._read_conf_file(os.path.join(RUNTIME_VARS.CONF_DIR, 'syndic')))
+        syndic_opts['cachedir'] = os.path.join(TMP, 'rootdir', 'cache')
+        syndic_opts['config_dir'] = RUNTIME_VARS.TMP_SYNDIC_MINION_CONF_DIR
 
         # This proxy connects to master
         proxy_opts = salt.config._read_conf_file(os.path.join(CONF_DIR, 'proxy'))
@@ -1147,7 +1169,7 @@ class TestDaemon(object):
             if os.path.isdir(dirname):
                 try:
                     shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):

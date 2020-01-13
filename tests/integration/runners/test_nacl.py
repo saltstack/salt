@@ -15,7 +15,7 @@ try:
     import libnacl.secret  # pylint: disable=unused-import
     import libnacl.sealed  # pylint: disable=unused-import
     HAS_LIBNACL = True
-except ImportError:
+except (ImportError, OSError, AttributeError):
     HAS_LIBNACL = False
 
 log = logging.getLogger(__name__)

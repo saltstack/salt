@@ -44,6 +44,15 @@ __func_alias__ = {
 VALID_UNITS = set(['s', 'B', 'kB', 'MB', 'MiB', 'GB', 'GiB', 'TB', 'TiB', '%',
                    'cyl', 'chs', 'compact'])
 
+VALID_DISK_FLAGS = set(['cylinder_alignment', 'pmbr_boot',
+                        'implicit_partition_table'])
+
+VALID_PARTITION_FLAGS = set(['boot', 'root', 'swap', 'hidden', 'raid',
+                             'lvm', 'lba', 'hp-service', 'palo',
+                             'prep', 'msftres', 'bios_grub', 'atvrecv',
+                             'diag', 'legacy_boot', 'msftdata', 'irst',
+                             'esp', 'type'])
+
 
 def __virtual__():
     '''
@@ -224,7 +233,7 @@ def align_check(device, part_type, partition):
 
     try:
         int(partition)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid partition passed to partition.align_check'
         )
@@ -250,7 +259,7 @@ def check(device, minor):
 
     try:
         int(minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.check'
         )
@@ -277,7 +286,7 @@ def cp(device, from_minor, to_minor):  # pylint: disable=C0103
     try:
         int(from_minor)
         int(to_minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.cp'
         )
@@ -308,7 +317,7 @@ def get_id(device, minor):
 
     try:
         int(minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.get_id'
         )
@@ -339,7 +348,7 @@ def set_id(device, minor, system_id):
 
     try:
         int(minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.set_id'
         )
@@ -536,7 +545,7 @@ def name(device, partition, name):
 
     try:
         int(partition)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid partition passed to partition.name'
         )
@@ -593,7 +602,7 @@ def resize(device, minor, start, end):
 
     try:
         int(minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.resize'
         )
@@ -623,7 +632,7 @@ def rm(device, minor):  # pylint: disable=C0103
 
     try:
         int(minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.rm'
         )
@@ -641,8 +650,26 @@ def set_(device, minor, flag, state):
     :ref:`YAML Idiosyncrasies <yaml-idiosyncrasies>`). Some or all of these
     flags will be available, depending on what disk label you are using.
 
-    Valid flags are: bios_grub, legacy_boot, boot, lba, root, swap, hidden, raid,
-        LVM, PALO, PREP, DIAG
+    Valid flags are:
+      * boot
+      * root
+      * swap
+      * hidden
+      * raid
+      * lvm
+      * lba
+      * hp-service
+      * palo
+      * prep
+      * msftres
+      * bios_grub
+      * atvrecv
+      * diag
+      * legacy_boot
+      * msftdata
+      * irst
+      * esp
+      * type
 
     CLI Example:
 
@@ -654,13 +681,12 @@ def set_(device, minor, flag, state):
 
     try:
         int(minor)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid minor number passed to partition.set'
         )
 
-    if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
+    if flag not in VALID_PARTITION_FLAGS:
         raise CommandExecutionError('Invalid flag passed to partition.set')
 
     if state not in set(['on', 'off']):
@@ -686,16 +712,69 @@ def toggle(device, partition, flag):
 
     try:
         int(partition)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Invalid partition number passed to partition.toggle'
         )
 
-    if flag not in set(['bios_grub', 'legacy_boot', 'boot', 'lba', 'root',
-                        'swap', 'hidden', 'raid', 'LVM', 'PALO', 'PREP', 'DIAG']):
+    if flag not in VALID_PARTITION_FLAGS:
         raise CommandExecutionError('Invalid flag passed to partition.toggle')
 
     cmd = 'parted -m -s {0} toggle {1} {2}'.format(device, partition, flag)
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def disk_set(device, flag, state):
+    '''
+    Changes a flag on selected device.
+
+    A flag can be either "on" or "off" (make sure to use proper
+    quoting, see :ref:`YAML Idiosyncrasies
+    <yaml-idiosyncrasies>`). Some or all of these flags will be
+    available, depending on what disk label you are using.
+
+    Valid flags are:
+      * cylinder_alignment
+      * pmbr_boot
+      * implicit_partition_table
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' partition.disk_set /dev/sda pmbr_boot '"on"'
+    '''
+    _validate_device(device)
+
+    if flag not in VALID_DISK_FLAGS:
+        raise CommandExecutionError('Invalid flag passed to partition.disk_set')
+
+    if state not in set(['on', 'off']):
+        raise CommandExecutionError('Invalid state passed to partition.disk_set')
+
+    cmd = ['parted', '-m', '-s', device, 'disk_set', flag, state]
+    out = __salt__['cmd.run'](cmd).splitlines()
+    return out
+
+
+def disk_toggle(device, flag):
+    '''
+    Toggle the state of <flag> on <device>. Valid flags are the same
+    as the disk_set command.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' partition.disk_toggle /dev/sda pmbr_boot
+    '''
+    _validate_device(device)
+
+    if flag not in VALID_DISK_FLAGS:
+        raise CommandExecutionError('Invalid flag passed to partition.disk_toggle')
+
+    cmd = ['parted', '-m', '-s', device, 'disk_toggle', flag]
     out = __salt__['cmd.run'](cmd).splitlines()
     return out
 

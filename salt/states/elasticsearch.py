@@ -42,7 +42,7 @@ def index_absent(name):
                     ret['comment'] = 'Failed to remove index {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Index {0} is already absent'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -94,7 +94,7 @@ def index_present(name, definition=None):
                     ret['comment'] = 'Cannot create index {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Index {0} is already present'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -129,7 +129,7 @@ def alias_absent(name, index):
                     ret['comment'] = 'Failed to remove alias {0} for index {1} for unknown reasons'.format(name, index)
         else:
             ret['comment'] = 'Alias {0} for index {1} is already absent'.format(name, index)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -192,7 +192,7 @@ def alias_present(name, index, definition=None):
                     ret['comment'] = 'Cannot create alias {0} for index {1}, {2}'.format(name, index, output)
         else:
             ret['comment'] = 'Alias {0} for index {1} is already present'.format(name, index)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -225,7 +225,7 @@ def index_template_absent(name):
                     ret['comment'] = 'Failed to remove index template {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Index template {0} is already absent'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -302,7 +302,7 @@ def index_template_present(name, definition, check_definition=False):
                     ret['comment'] = 'Index template {0} is already present and up to date'.format(name)
             else:
                 ret['comment'] = 'Index template {0} is already present'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -335,7 +335,7 @@ def pipeline_absent(name):
                     ret['comment'] = 'Failed to remove pipeline {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Pipeline {0} is already absent'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -394,7 +394,7 @@ def pipeline_present(name, definition):
                     ret['comment'] = 'Cannot create pipeline {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Pipeline {0} is already present'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -427,7 +427,7 @@ def search_template_absent(name):
                     ret['comment'] = 'Failed to remove search template {0} for unknown reasons'.format(name)
         else:
             ret['comment'] = 'Search template {0} is already absent'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
@@ -485,7 +485,7 @@ def search_template_present(name, definition):
                     ret['comment'] = 'Cannot create search template {0}, {1}'.format(name, output)
         else:
             ret['comment'] = 'Search template {0} is already present'.format(name)
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         ret['result'] = False
         ret['comment'] = six.text_type(err)
 
