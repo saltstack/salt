@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 Support for Venafi
 
 :depends: - vcert Python module
@@ -23,7 +23,7 @@ Support for Venafi
       tpp_password: "sdb://osenv/TPP_PASSWORD"
       trust_bundle: "/opt/venafi/bundle.pem"
 
-'''
+"""
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import time
@@ -73,9 +73,9 @@ def _init_connection():
 
 
 def __virtual__():
-    '''
+    """
     Only load the module if vcert module is installed
-    '''
+    """
     if HAS_VCERT:
         return __virtualname__
     return False
@@ -94,7 +94,7 @@ def request(
     csr_path=None,
     pkey_path=None,
 ):
-    '''
+    """
     Request a new certificate
 
     CLI Example:
@@ -102,7 +102,7 @@ def request(
     .. code-block:: bash
 
         salt-run venafi.request <minion_id> <dns_name>
-    '''
+    """
 
     log.info("Requesting Venafi certificate")
     if zone is None:
@@ -129,11 +129,11 @@ def request(
             request = CertificateRequest(csr=csr, common_name=dns_name)
         except Exception as e:
             raise Exception(
-                'Unable to open file {file}: {excp}'.format(file=csr_path,excp=e)
+                'Unable to open file {file}: {excp}'.format(file=csr_path, excp=e)
             )
     conn.request_cert(request, zone)
 
-    #TODO: add timeout parameter here
+    # TODO: add timeout parameter here
     timeout_seconds = 300
     timeout = time.time() + timeout_seconds
     cert = None
@@ -172,9 +172,9 @@ renew = request
 
 
 def _id_map(minion_id, dns_name):
-    '''
+    """
     Maintain a relationship between a minion and a DNS name
-    '''
+    """
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     dns_names = cache.fetch(CACHE_BANK_NAME, minion_id)
@@ -186,7 +186,7 @@ def _id_map(minion_id, dns_name):
 
 
 def show_cert(dns_name):
-    '''
+    """
     Show issued certificate for domain
 
     CLI Example:
@@ -194,7 +194,7 @@ def show_cert(dns_name):
     .. code-block:: bash
 
         salt-run venafi.show_cert example.com
-    '''
+    """
 
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     domain_data = cache.fetch(CACHE_BANK_NAME, dns_name) or {}
@@ -203,7 +203,7 @@ def show_cert(dns_name):
 
 
 def list_domain_cache():
-    '''
+    """
     List domains that have been cached
 
     CLI Example:
@@ -211,13 +211,13 @@ def list_domain_cache():
     .. code-block:: bash
 
         salt-run venafi.list_domain_cache
-    '''
+    """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     return cache.list('venafi/domains')
 
 
 def del_cached_domain(domains):
-    '''
+    """
     Delete cached domains from the master
 
     CLI Example:
@@ -225,7 +225,7 @@ def del_cached_domain(domains):
     .. code-block:: bash
 
         salt-run venafi.del_cached_domain domain1.example.com,domain2.example.com
-    '''
+    """
     cache = salt.cache.Cache(__opts__, syspaths.CACHE_DIR)
     if isinstance(domains, six.string_types):
         domains = domains.split(',')
