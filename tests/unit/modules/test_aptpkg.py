@@ -547,7 +547,6 @@ class AptPkgTestCase(TestCase, LoaderModuleMockMixin):
                             repo = aptpkg.mod_repo('foo', disabled=False)
                             data_is_true.assert_called_with(False)
 
-                            
     @patch('salt.utils.path.os_walk', MagicMock(return_value=[('test', 'test', 'test')]))
     @patch('os.path.getsize', MagicMock(return_value=123456))
     @patch('os.path.getctime', MagicMock(return_value=1234567890.123456))
