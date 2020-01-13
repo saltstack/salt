@@ -104,6 +104,9 @@ tests/integration/cloud/providers/pki/minions
 # Ignore nox virtualenvs
 /.nox/
 
+# Ignore pyenv files
+.python-version
+
 # Kitchen tests files
 .kitchen.local.yml
 kitchen.local.yml
