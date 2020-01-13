@@ -31,6 +31,7 @@ state modules
     bigip
     blockdev
     boto3_elasticache
+    boto3_elasticsearch
     boto3_route53
     boto_apigateway
     boto_asg
@@ -115,7 +116,6 @@ state modules
     group
     heat
     hg
-    hipchat
     host
     http
     icinga2
@@ -150,6 +150,7 @@ state modules
     keystone_role_grant
     keystone_service
     keystone_user
+    keystore
     kmod
     kubernetes
     layman
@@ -244,6 +245,7 @@ state modules
     rabbitmq_cluster
     rabbitmq_plugin
     rabbitmq_policy
+    rabbitmq_upstream
     rabbitmq_user
     rabbitmq_vhost
     rbac_solaris
@@ -255,6 +257,7 @@ state modules
     rvm
     salt_proxy
     saltmod
+    saltutil
     schedule
     selinux
     serverdensity_device
@@ -314,6 +317,7 @@ state modules
     win_wusa
     winrepo
     x509
+    xml
     xmpp
     zabbix_action
     zabbix_host

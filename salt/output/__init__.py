@@ -82,7 +82,7 @@ def update_progress(opts, progress, progress_iter, out):
 def progress_end(progress_iter):
     try:
         progress_iter.stop()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         pass
     return None
 
@@ -96,7 +96,7 @@ def display_output(data, out=None, opts=None, **kwargs):
     display_data = try_printout(data, out, opts, **kwargs)
 
     output_filename = opts.get('output_file', None)
-    log.trace('data = {0}'.format(data))
+    log.trace('data = %s', data)
     try:
         # output filename can be either '' or None
         if output_filename:
@@ -129,7 +129,7 @@ def display_output(data, out=None, opts=None, **kwargs):
     except IOError as exc:
         # Only raise if it's NOT a broken pipe
         if exc.errno != errno.EPIPE:
-            raise exc
+            six.reraise(*sys.exc_info())
 
 
 def get_printout(out, opts=None, **kwargs):
@@ -193,7 +193,10 @@ def get_printout(out, opts=None, **kwargs):
         # Since the grains outputter was removed we don't need to fire this
         # error when old minions are asking for it
         if out != 'grains':
-            log.error('Invalid outputter {0} specified, fall back to nested'.format(out))
+            log.error(
+                'Invalid outputter %s specified, fall back to nested',
+                out,
+            )
         return outputters['nested']
     return outputters[out]
 

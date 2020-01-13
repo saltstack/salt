@@ -1,8 +1,7 @@
+mock >= 3.0.0
 # PyTest
-pytest >= 4.0.1
-pytest-cov
-pytest-salt == 2018.12.8
-pytest-timeout >= 1.3.3
-pytest-tempdir >= 2018.8.11
-pytest-helpers-namespace >= 2017.11.11
-pytest-salt-runtests-bridge >= 2019.1.30
+pytest >=4.6.6,<4.7   # PyTest 4.6.x are the last Py2 and Py3 releases
+pytest-salt >= 2019.12.27
+pytest-tempdir >= 2019.10.12
+pytest-helpers-namespace >= 2019.1.8
+pytest-salt-runtests-bridge >= 2019.7.10
