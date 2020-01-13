@@ -824,13 +824,14 @@ class AsyncAuth(object):
             for grain in self.opts['autosign_grains']:
                 log.trace('Autosign Grains - grain %s - Looking for value', grain)
                 autosign_grains[grain] = None
-                # If the autosign_grain directly accessible use it
-                # it avoid issue if the grain key contains itself columns
+                # If the autosign_grain is directly accessible, use it.
+                # it avoids issues if the grain key itself contains columns
+                element = None
                 if grain in self.opts['grains']:
                     log.trace('Autosign Grains - grain %s - Found in grain root', grain)
                     element = self.opts['grains'].get(grain, None)
                 # Else try to split the the grain key with column
-                # In every case if the autosign_grain could not be found anywhere return None
+                # In every case, if the autosign_grain could not be found anywhere, return None
                 else:
                     current_level = self.opts['grains']
                     log.trace('Autosign Grains - grain %s - Not Found in grain root', grain)
@@ -848,9 +849,8 @@ class AsyncAuth(object):
                                 current_level = current_level.get(subkey, None)
                             element = current_level
                     except IndexError:
-                        # We should go here only if the level provide in grain key is out of bound
-                        log.trace('Autosign Grains - grain %s - Out of bound for list', grain)
-                        element = None
+                        # We should go here only if the level provided in grain key is out of bounds
+                        log.trace('Autosign Grains - grain %s - Out of bounds for list', grain)
                 if element is not None:
                     log.trace('Autosign Grains - grain %s - FOUND - %s', grain, element)
                 else:

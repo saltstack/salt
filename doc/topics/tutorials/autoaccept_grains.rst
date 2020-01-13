@@ -40,12 +40,12 @@ Lines starting with a ``#`` are ignored.
     autosign_grains:
       - uuid
 
-It can contain ":" character in order to look deeper in grains structure
-If autosign_grains contains ":" it will first look for full named grain.
-If not found it will split the grain's name by ":" and check for every subkey
-If subkkey is an integer it will look for list indexed value
-If subkey is a string if will look for dict indexed value
-Moreover ":" can be specify multiple times in order to look deeper in grain structure
+It can contain a ":" character in order to look deeper in grain structure.
+If ``autosign_grains`` contains a ":", it will first look for the full named grain.
+If not found, it will split the grain's name by ":" and check every subkey.
+If a subkkey is an integer, it will look for a list indexed value.
+If a subkey is a string, it will look for a dict indexed value.
+Moreover, ":" can be specified multiple times in order to look deeper into grain structure.
 autosign grain files should be the same as the full named grain.
 
 Now you should be able to start salt-minion and run ``salt-call
