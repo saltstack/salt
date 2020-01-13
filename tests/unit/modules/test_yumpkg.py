@@ -253,7 +253,6 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 self.assertTrue(pkgs.get(pkg_name))
                 self.assertEqual(pkgs[pkg_name], [pkg_attr])
 
-
     def test_list_pkgs_with_attr_multiple_versions(self):
         '''
         Test packages listing with the attr parameter reporting multiple version installed
@@ -319,10 +318,9 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
     def test_list_patches(self):
         '''
         Test patches listing.
-        
+
         :return:
         '''
-        
         yum_out = [
             'i my-fake-patch-not-installed-1234 recommended    spacewalk-usix-2.7.5.2-2.2.noarch',
             '  my-fake-patch-not-installed-1234 recommended    spacewalksd-5.0.26.2-21.2.x86_64',
