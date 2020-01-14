@@ -4,105 +4,96 @@
 from __future__ import absolute_import
 
 # Salt testing libs
-from tests.support.unit import TestCase
 from tests.support.mock import MagicMock
-from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
 import salt.beacons.sensehat as sensehat
+import pytest
 
 
-class SensehatBeaconTestCase(TestCase, LoaderModuleMockMixin):
-    '''
-    Test case for salt.beacons.[s]
-    '''
-
-    def setup_loader_modules(self):
-
-        self.HUMIDITY_MOCK = MagicMock(return_value=80)
-        self.TEMPERATURE_MOCK = MagicMock(return_value=30)
-        self.PRESSURE_MOCK = MagicMock(return_value=1500)
-
-        self.addCleanup(delattr, self, 'HUMIDITY_MOCK')
-        self.addCleanup(delattr, self, 'TEMPERATURE_MOCK')
-        self.addCleanup(delattr, self, 'PRESSURE_MOCK')
-
-        return {
-            sensehat: {
-                '__context__': {},
-                '__salt__': {'sensehat.get_humidity': self.HUMIDITY_MOCK,
-                             'sensehat.get_temperature': self.TEMPERATURE_MOCK,
-                             'sensehat.get_pressure': self.PRESSURE_MOCK
-                             },
-            }
+@pytest.fixture
+def setup_loader_modules():
+    return {
+        sensehat: {
+            '__salt__': {
+                'sensehat.get_humidity': MagicMock(return_value=80),
+                'sensehat.get_temperature': MagicMock(return_value=30),
+                'sensehat.get_pressure': MagicMock(return_value=1500)
+            },
         }
+    }
 
-    def test_non_list_config(self):
-        config = {}
 
-        ret = sensehat.validate(config)
+def test_non_list_config():
+    config = {}
 
-        assert ret == (False, 'Configuration for sensehat beacon'
-                                      ' must be a list.')
+    ret = sensehat.validate(config)
 
-    def test_empty_config(self):
-        config = [{}]
+    assert ret == (False, 'Configuration for sensehat beacon must be a list.')
 
-        ret = sensehat.validate(config)
 
-        assert ret == (False, 'Configuration for sensehat '
-                                      'beacon requires sensors.')
+def test_empty_config():
+    config = [{}]
 
-    def test_sensehat_humidity_match(self):
+    ret = sensehat.validate(config)
 
-        config = [{'sensors': {'humidity': '70%'}}]
+    assert ret == (False, 'Configuration for sensehat beacon requires sensors.')
 
-        ret = sensehat.validate(config)
-        assert ret == (True, 'Valid beacon configuration')
 
-        ret = sensehat.beacon(config)
-        assert ret == [{'tag': 'sensehat/humidity',
-                                'humidity': 80}]
+def test_sensehat_humidity_match():
 
-    def test_sensehat_temperature_match(self):
+    config = [{'sensors': {'humidity': '70%'}}]
 
-        config = [{'sensors': {'temperature': 20}}]
+    ret = sensehat.validate(config)
+    assert ret == (True, 'Valid beacon configuration')
 
-        ret = sensehat.validate(config)
-        assert ret == (True, 'Valid beacon configuration')
+    ret = sensehat.beacon(config)
+    assert ret == [{'tag': 'sensehat/humidity',
+                    'humidity': 80}]
 
-        ret = sensehat.beacon(config)
-        assert ret == [{'tag': 'sensehat/temperature',
-                                'temperature': 30}]
 
-    def test_sensehat_temperature_match_range(self):
+def test_sensehat_temperature_match():
 
-        config = [{'sensors': {'temperature': [20, 29]}}]
+    config = [{'sensors': {'temperature': 20}}]
 
-        ret = sensehat.validate(config)
-        assert ret == (True, 'Valid beacon configuration')
+    ret = sensehat.validate(config)
+    assert ret == (True, 'Valid beacon configuration')
 
-        ret = sensehat.beacon(config)
-        assert ret == [{'tag': 'sensehat/temperature',
-                                'temperature': 30}]
+    ret = sensehat.beacon(config)
+    assert ret == [{'tag': 'sensehat/temperature',
+                    'temperature': 30}]
 
-    def test_sensehat_pressure_match(self):
 
-        config = [{'sensors': {'pressure': '1400'}}]
+def test_sensehat_temperature_match_range():
 
-        ret = sensehat.validate(config)
-        assert ret == (True, 'Valid beacon configuration')
+    config = [{'sensors': {'temperature': [20, 29]}}]
 
-        ret = sensehat.beacon(config)
-        assert ret == [{'tag': 'sensehat/pressure',
-                                'pressure': 1500}]
+    ret = sensehat.validate(config)
+    assert ret == (True, 'Valid beacon configuration')
 
-    def test_sensehat_no_match(self):
+    ret = sensehat.beacon(config)
+    assert ret == [{'tag': 'sensehat/temperature',
+                    'temperature': 30}]
 
-        config = [{'sensors': {'pressure': '1600'}}]
 
-        ret = sensehat.validate(config)
-        assert ret == (True, 'Valid beacon configuration')
+def test_sensehat_pressure_match():
 
-        ret = sensehat.beacon(config)
-        assert ret == []
+    config = [{'sensors': {'pressure': '1400'}}]
+
+    ret = sensehat.validate(config)
+    assert ret == (True, 'Valid beacon configuration')
+
+    ret = sensehat.beacon(config)
+    assert ret == [{'tag': 'sensehat/pressure',
+                    'pressure': 1500}]
+
+
+def test_sensehat_no_match():
+
+    config = [{'sensors': {'pressure': '1600'}}]
+
+    ret = sensehat.validate(config)
+    assert ret == (True, 'Valid beacon configuration')
+
+    ret = sensehat.beacon(config)
+    assert ret == []
