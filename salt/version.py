@@ -684,8 +684,8 @@ def system_information():
                     version = item
             release = version
 
-        _, ver, _sp, extra = platform.win32_ver()
-        version = ' '.join([release, ver, _sp, extra])
+        _, ver, service_pack, extra = platform.win32_ver()
+        version = ' '.join([release, ver, service_pack, extra])
     else:
         version = system_version()
         release = platform.release()

@@ -30,6 +30,7 @@ from salt.ext.six.moves import range
 from salt.utils.zeromq import zmq, ZMQDefaultLoop, install_zmq, ZMQ_VERSION_INFO
 import salt.transport.client
 import salt.defaults.exitcodes
+import salt.utils.crypt
 
 from salt.utils.ctx import RequestContext
 
@@ -1449,6 +1450,11 @@ class Minion(MinionBase):
         else:
             return
 
+        if self.opts['start_event_grains']:
+            grains_to_add = dict(
+                [(k, v) for k, v in six.iteritems(self.opts.get('grains', {})) if k in self.opts['start_event_grains']])
+            load['grains'] = grains_to_add
+
         if sync:
             try:
                 self._send_req_sync(load, timeout)
@@ -1531,6 +1537,7 @@ class Minion(MinionBase):
                     name='ProcessPayload',
                     args=(instance, self.opts, data, self.connected)
                 )
+                process._after_fork_methods.append((salt.utils.crypt.reinit_crypto, [], {}))
         else:
             process = threading.Thread(
                 target=self._target,

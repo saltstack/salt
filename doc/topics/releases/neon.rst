@@ -4,6 +4,171 @@
 Salt Release Notes - Codename Neon
 ==================================
 
+Saltcheck Updates
+=================
+
+Available since 2018.3, the :py:func:`saltcheck module <salt.modules.saltcheck>`
+has been enhanced to:
+
+* Support saltenv environments
+* Associate tests with states by naming convention
+* Adds report_highstate_tests function
+* Adds empty and notempty assertions
+* Adds skip keyword
+* Adds print_result keyword
+* Adds assertion_section keyword
+* Use saltcheck.state_apply to run state.apply for test setup or teardown
+* Changes output to display test time
+* Works with salt-ssh
+
+Saltcheck provides unittest like functionality requiring only the knowledge of
+salt module execution and yaml. Saltcheck uses salt modules to return data, then
+runs an assertion against that return. This allows for testing with all the
+features included in salt modules.
+
+In order to run state and highstate saltcheck tests, a sub-folder in the state directory
+must be created and named ``saltcheck-tests``. Tests for a state should be created in files
+ending in ``*.tst`` and placed in the ``saltcheck-tests`` folder. ``tst`` files are run
+through the salt rendering system, enabling tests to be written in yaml (or renderer of choice),
+and include jinja, as well as the usual grain and pillar information. Like states, multiple tests can
+be specified in a ``tst`` file. Multiple ``tst`` files can be created in the ``saltcheck-tests``
+folder, and should be named the same as the associated state. The ``id`` of a test works in the
+same manner as in salt state files and should be unique and descriptive.
+
+Usage
+-----
+
+Example file system layout:
+
+.. code-block:: text
+
+    /srv/salt/apache/
+        init.sls
+        config.sls
+        saltcheck-tests/
+            init.tst
+            config.tst
+            deployment_validation.tst
+
+Tests can be run for each state by name, for all ``apache/saltcheck/*.tst`` files,
+or for all states assigned to the minion in top.sls. Tests may also be created
+with no associated state. These tests will be run through the use of
+``saltcheck.run_state_tests``, but will not be automatically run by
+``saltcheck.run_highstate_tests``.
+
+.. code-block:: bash
+
+    salt '*' saltcheck.run_state_tests apache,apache.config
+    salt '*' saltcheck.run_state_tests apache check_all=True
+    salt '*' saltcheck.run_highstate_tests
+    salt '*' saltcheck.run_state_tests apache.deployment_validation
+
+Example Tests
+-------------
+
+.. code-block:: jinja
+
+    {# will run the common salt state before further testing #}
+    setup_test_environment:
+      module_and_function: saltcheck.state_apply
+      args:
+        - common
+      pillar-data:
+        data: value
+
+    {% for package in ["apache2", "openssh"] %}
+    {# or another example #}
+    {# for package in salt['pillar.get']("packages") #}
+    jinja_test_{{ package }}_latest:
+      module_and_function: pkg.upgrade_available
+      args:
+        - {{ package }}
+      assertion: assertFalse
+    {% endfor %}
+
+    validate_user_present_and_shell:
+      module_and_function: user.info
+      args:
+        - root
+      assertion: assertEqual
+      expected-return: /bin/bash
+      assertion_section: shell
+      print_result: False
+
+    skip_test:
+      module_and_function: pkg.upgrade_available
+      args:
+        - apache2
+      assertion: assertFalse
+      skip: True
+
+Output Format Changes
+---------------------
+
+Saltcheck output has been enhanced to display the time taken per test. This results
+in a change to the output format.
+
+Previous Output:
+
+.. code-block:: text
+
+  local:
+    |_
+      ----------
+      ntp:
+          ----------
+          ntp-client-installed:
+              Pass
+          ntp-service-status:
+              Pass
+    |_
+      ----------
+      TEST RESULTS:
+          ----------
+          Failed:
+              0
+          Missing Tests:
+              0
+          Passed:
+              2
+
+New output:
+
+.. code-block:: text
+
+  local:
+    |_
+      ----------
+      ntp:
+          ----------
+          ntp-client-installed:
+              ----------
+              duration:
+                  1.0408
+              status:
+                  Pass
+          ntp-service-status:
+              ----------
+              duration:
+                  1.464
+              status:
+                  Pass
+    |_
+      ----------
+      TEST RESULTS:
+          ----------
+          Execution Time:
+              2.5048
+          Failed:
+              0
+          Missing Tests:
+              0
+          Passed:
+              2
+          Skipped:
+              0
+
+
 Unless and onlyif Enhancements
 ==============================
 
@@ -81,6 +246,41 @@ as well as managing keystore files.
             Hn+GmxZA
             -----END CERTIFICATE-----
 
+XML Module
+==========
+
+A new state and execution module for editing XML files is now included. Currently it allows for
+editing values from an xpath query, or editing XML IDs.
+
+.. code-block:: bash
+
+  # salt-call xml.set_attribute /tmp/test.xml ".//actor[@id='3']" editedby "Jane Doe"
+  local:
+      True
+  # salt-call xml.get_attribute /tmp/test.xml ".//actor[@id='3']"
+  local:
+      ----------
+      editedby:
+          Jane Doe
+      id:
+          3
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Liam Neeson
+  # salt-call xml.set_value /tmp/test.xml ".//actor[@id='2']" "Patrick Stewart"
+  local:
+      True
+  # salt-call xml.get_value /tmp/test.xml ".//actor[@id='2']"
+  local:
+      Patrick Stewart
+
+.. code-block:: yaml
+
+    ensure_value_true:
+      xml.value_present:
+        - name: /tmp/test.xml
+        - xpath: .//actor[@id='1']
+        - value: William Shatner
 
 Jinja enhancements
 ==================
@@ -110,7 +310,6 @@ The module can be also used to test ``json`` and ``yaml`` maps:
   salt myminion jinja.import_yaml myformula/defaults.yaml
 
   salt myminion jinja.import_json myformula/defaults.json
-
 
 json_query filter
 -----------------
@@ -170,11 +369,121 @@ Also, slot parsing is now supported inside of nested state data structures (dict
             - "DO NOT OVERRIDE"
           ignore_if_missing: True
 
+- The :py:func:`file.symlink <salt.states.file.symlink>` state was
+  fixed to remove existing file system entries other than files,
+  directories and symbolic links properly.
+
+- The ``onchanges`` and ``prereq`` :ref:`requisites <requisites>` now behave
+  properly in test mode.
+
 State Changes
 =============
 
 - Added new :py:func:`ssh_auth.manage <salt.states.ssh_auth.manage>` state to
   ensure only the specified ssh keys are present for the specified user.
+
+- Added new :py:func:`saltutil <salt.states.saltutil>` state to use instead of
+  ``module.run`` to more easily handle change.
+
+- Added new `onfail_all` requisite form to allow for AND logic when adding
+  onfail states.
+
+Module Changes
+==============
+
+- The :py:func:`debian_ip <salt.modules.debian_ip>` module used by the
+  :py:func:`network.managed <salt.states.network.managed>` state has been
+  heavily refactored. The order that options appear in inet/inet6 blocks may
+  produce cosmetic changes. Many options without an 'ipvX' prefix will now be
+  shared between inet and inet6 blocks. The options ``enable_ipv4`` and
+  ``enabled_ipv6`` will now fully remove relevant inet/inet6 blocks. Overriding
+  options by prefixing them with 'ipvX' will now work with most options (i.e.
+  ``dns`` can be overriden by ``ipv4dns`` or ``ipv6dns``). The ``proto`` option
+  is now required.
+
+- Added new :py:func:`boto_ssm <salt.modules.boto_ssm>` module to set and query
+  secrets in AWS SSM parameters.
+
+- Added new :py:func:`flatpak <salt.modules.flatpak>` module to work with flatpak packages.
+  
+- The :py:func:`file.set_selinux_context <salt.modules.file.set_selinux_context>`
+  module now supports perstant changes with ``persist=True`` by calling the
+  :py:func:`selinux.fcontext_add_policy <salt.modules.selinux.fcontext_add_policy>` module.
+
+- The :py:func:`file.remove <salt.modules.file.remove>` module was
+  fixed to remove file system entries other than files, directories
+  and symbolic links properly.
+
+- The :py:func:`yumpkg <salt.modules.yumpkg>` module has been updated to support
+  VMWare's Photon OS, which uses tdnf (a C implementation of dnf).
+
+- The :py:func:`chocolatey.bootstrap <salt.modules.chocolatey.bootstrap>` function
+  has been updated to support offline installation.
+
+- The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
+  has been added to uninstall Chocolatey.
+
+Enhancements to Engines
+=======================
+
+Multiple copies of a particular Salt engine can be configured by including
+the ``engine_module`` parameter in the engine configuration.
+
+.. code-block:: yaml
+
+   engines:
+     - production_logstash:
+         host: production_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+     - develop_logstash:
+         host: develop_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+
+Runner Changes
+==============
+
+- The :py:func:`saltutil.sync_auth <salt.runners.saltutil.sync_auth>` function
+  has been added to sync loadable auth modules. :py:func:`saltutil.sync_all <salt.runners.saltutil.sync_all>`
+  will also include these modules.
+
+Util Changes
+============
+
+- The :py:func:`win_dotnet <salt.utils.win_dotnet>` Salt util has been added to
+  make it easier to detect the versions of .NET installed on the system. It includes
+  the following functions:
+
+    - :py:func:`versions <salt.utils.win_dotnet.versions>`
+    - :py:func:`versions_list <salt.utils.win_dotnet.versions_list>`
+    - :py:func:`versions_details <salt.utils.win_dotnet.versions_details>`
+    - :py:func:`version_at_least <salt.utils.win_dotnet.version_at_least>`
+
+Serializer Changes
+==================
+
+- The configparser serializer and deserializer functions can now be made to preserve
+  case of item names by passing 'preserve_case=True' in the options parameter of the function.
+
+  .. note::
+      This is a parameter consumed only by the salt.serializer.configparser serialize and
+      deserialize functions and not the low-level configparser python object.
+
+  For example, in a file.serialze state:
+
+  .. code-block:: yaml
+
+    some.ini:
+      - file.serialize:
+         - formatter: configparser
+         - merge_if_exists: True
+         - deserializer_opts:
+           - preserve_case: True
+         - serializer_opts:
+           - preserve_case: True
 
 Enhancements to Engines
 =======================
@@ -208,6 +517,11 @@ Module Changes
 
 Deprecations
 ============
+
+Raet Deprecated
+---------------
+- The Raet transport has been deprecated. Please use the supported
+  transport protocols tcp or zeromq.
 
 Module Deprecations
 -------------------
