@@ -115,11 +115,11 @@ class VaultTestCaseCurrent(ModuleCase):
         '''
         if self.count == 0:
             config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
-            self.run_state('docker_image.present', name='vault', tag='latest')
+            self.run_state('docker_image.present', name='vault', tag='1.3.1')
             self.run_state(
                 'docker_container.running',
                 name='vault',
-                image='vault:latest',
+                image='vault:1.3.1',
                 port_bindings='8200:8200',
                 environment={
                     'VAULT_DEV_ROOT_TOKEN_ID': 'testsecret',
@@ -176,6 +176,15 @@ class VaultTestCaseCurrent(ModuleCase):
         self.assertEqual(read_return, 'foo')
 
     @flaky
+    def test_list_secrets_kv2(self):
+        write_return = self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar')
+        expected_write = {'destroyed': False, 'deletion_time': ''}
+        self.assertDictContainsSubset(expected_write, write_return)
+
+        list_return = self.run_function('vault.list_secrets', arg=['secret/my/'])
+        self.assertIn('secret', list_return['keys'])
+
+    @flaky
     def test_write_raw_read_secret_kv2(self):
         write_return = self.run_function('vault.write_raw',
                                            path='secret/my/secret2',
@@ -205,12 +214,5 @@ class VaultTestCaseCurrent(ModuleCase):
         destroy_return = self.run_function('vault.destroy_secret', arg=['secret/my/secret4', '1'])
         self.assertEqual(destroy_return, True)
         #self.assertIsNone(self.run_function('vault.read_secret', arg=['secret/my/secret4']))
-
-    @flaky
-    def test_list_secrets_kv2(self):
-        write_return = self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar')
-        expected_write = {'destroyed': False, 'deletion_time': ''}
-        self.assertDictContainsSubset(expected_write, write_return)
-
-        list_return = self.run_function('vault.list_secrets', arg=['secret/my/'])
-        self.assertDictContainsSubset({'keys': ['secret']}, list_return)
+        #list_return = self.run_function('vault.list_secrets', arg=['secret/my/'])
+        #self.assertNotIn('secret4', list_return['keys'])

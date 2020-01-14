@@ -269,17 +269,17 @@ def _get_secret_path_metadata(path):
 
     ret = None
     if path.startswith(tuple(__context__[ckey].keys())):
-        log.debug('Found cached metadata for %s in %s', __grains__['id'], path)
+        log.debug('Found cached metadata for %s', path)
         ret = next(v for k, v in __context__[ckey].items() if path.startswith(k))
     else:
-        log.debug('Fetching metadata for %s in %s', __grains__['id'], path)
+        log.debug('Fetching metadata for %s', path)
         try:
             url = 'v1/sys/internal/ui/mounts/{0}'.format(path)
             response = make_request('GET', url)
             if response.ok:
                 response.raise_for_status()
             if response.json().get('data', False):
-                log.debug('Got metadata for %s in %s', __grains__['id'], path)
+                log.debug('Got metadata for %s', path)
                 ret = response.json()['data']
                 __context__[ckey][path] = ret
             else:

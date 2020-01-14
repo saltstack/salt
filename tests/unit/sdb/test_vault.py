@@ -49,9 +49,25 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
              patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.set_('sdb://myvault/path/to/foo/bar', 'super awesome')
 
-        assert mock_vault.call_args_list == [call('POST',
+        self.assertEqual(mock_vault.call_args_list, [call('POST',
                                                   'v1/sdb://myvault/path/to/foo',
-                                                  None, json={'bar': 'super awesome'})]
+                                                  json={'bar': 'super awesome'})])
+
+    def test_set_v2(self):
+        '''
+        Test salt.sdb.vault.set function with kv v2 backend
+        '''
+        version = {'v2': True, 'data': 'path/data/to/foo', 'metadata': 'path/metadata/to/foo', 'type': 'kv'}
+        mock_version = MagicMock(return_value=version)
+        mock_vault = MagicMock()
+        mock_vault.return_value.status_code = 200
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
+             patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
+            vault.set_('sdb://myvault/path/to/foo/bar', 'super awesome')
+
+        self.assertEqual(mock_vault.call_args_list, [call('POST',
+                                                  'v1/path/data/to/foo',
+                                                  json={'data': {'bar': 'super awesome'}})])
 
     def test_set_question_mark(self):
         '''
@@ -66,9 +82,9 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
              patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.set_('sdb://myvault/path/to/foo?bar', 'super awesome')
 
-        assert mock_vault.call_args_list == [call('POST',
+        self.assertEqual(mock_vault.call_args_list, [call('POST',
                                                   'v1/sdb://myvault/path/to/foo',
-                                                  None, json={'bar': 'super awesome'})]
+                                                  json={'bar': 'super awesome'})])
 
     def test_get(self):
         '''
@@ -83,9 +99,26 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
              patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.get('sdb://myvault/path/to/foo/bar')
 
-        assert mock_vault.call_args_list == [call('GET',
+        self.assertEqual(mock_vault.call_args_list, [call('GET',
                                                   'v1/sdb://myvault/path/to/foo',
-                                                  None)]
+                                                  None)])
+
+    def test_get_v2(self):
+        '''
+        Test salt.sdb.vault.get function with kv v2 backend
+        '''
+        version = {'v2': True, 'data': 'path/data/to/foo', 'metadata': 'path/metadata/to/foo', 'type': 'kv'}
+        mock_version = MagicMock(return_value=version)
+        mock_vault = MagicMock()
+        mock_vault.return_value.status_code = 200
+        mock_vault.content.return_value = [{'data': {'bar', 'test'}}]
+        with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
+             patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
+            vault.get('sdb://myvault/path/to/foo/bar')
+
+        self.assertEqual(mock_vault.call_args_list, [call('GET',
+                                                  'v1/path/data/to/foo',
+                                                  None)])
 
     def test_get_question_mark(self):
         '''
@@ -100,6 +133,6 @@ class TestVaultSDB(LoaderModuleMockMixin, TestCase):
         with patch.dict(vault.__utils__, {'vault.make_request': mock_vault}), \
              patch.dict(vault.__utils__, {'vault.is_v2': mock_version}):
             vault.get('sdb://myvault/path/to/foo?bar')
-        assert mock_vault.call_args_list == [call('GET',
+        self.assertEqual(mock_vault.call_args_list, [call('GET',
                                                   'v1/sdb://myvault/path/to/foo',
-                                                  None)]
+                                                  None)])
