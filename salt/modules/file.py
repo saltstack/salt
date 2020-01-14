@@ -4966,7 +4966,7 @@ def check_file_meta(
             if sfn:
                 try:
                     changes['diff'] = get_diff(
-                        name, sfn, template=True, show_filenames=False)
+                        name, sfn, template=True, show_filenames=False, hide_comments=hide_comments)
                 except CommandExecutionError as exc:
                     changes['diff'] = exc.strerror
             else:
