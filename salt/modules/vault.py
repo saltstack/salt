@@ -261,9 +261,41 @@ def delete_secret(path):
         salt '*' vault.delete_secret "secret/my/secret"
     '''
     log.debug('Deleting vault secrets for %s in %s', __grains__['id'], path)
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        path = version2['data']
     try:
         url = 'v1/{0}'.format(path)
         response = __utils__['vault.make_request']('DELETE', url)
+        if response.status_code != 204:
+            response.raise_for_status()
+        return True
+    except Exception as err:  # pylint: disable=broad-except
+        log.error('Failed to delete secret! %s: %s', type(err).__name__, err)
+        return False
+
+
+def destroy_secret(path):
+    '''
+    Destory secret at the path in vault. The vault policy used must allow this.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' vault.destroy_secret "secret/my/secret"
+    '''
+    log.debug('Destroying vault secrets for %s in %s', __grains__['id'], path)
+    version2 = __utils__['vault.is_v2'](path)
+    if version2['v2']:
+        metadata = version2['metadata']
+        path = __utils['vault._v2_the_path'](path, metadata, 'delete')
+    else:
+        log.error('Destroy operation is only supported on KV version 2')
+        return False
+    try:
+        url = 'v1/{0}'.format(path)
+        response = __utils__['vault.make_request']('POST', url)
         if response.status_code != 204:
             response.raise_for_status()
         return True
