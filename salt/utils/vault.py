@@ -213,7 +213,7 @@ def is_v2(path):
     .. code-block:: bash
         salt '*' vault.is_v2 "secret/my/secret"
     '''
-    ret = {'v2': False, 'data': path, 'metadata': path, 'type': None}
+    ret = {'v2': False, 'data': path, 'metadata': path, 'delete': path, 'type': None}
     path_metadata = _get_secret_path_metadata(path)
     if not path_metadata:
         # metadata lookup failed. Simply return not v2
@@ -223,6 +223,7 @@ def is_v2(path):
         ret['v2'] = True
         ret['data'] = _v2_the_path(path, path_metadata.get('path', path))
         ret['metadata'] = _v2_the_path(path, path_metadata.get('path', path), 'metadata')
+        ret['destroy'] = _v2_the_path(path, path_metadata.get('path', path), 'destroy')
     return ret
 
 
@@ -233,7 +234,7 @@ def _v2_the_path(path, pfilter, ptype='data'):
     .. code-block:: python
         _v2_the_path('dev/secrets/fu/bar', 'dev/secrets', 'data') => 'dev/secrets/data/fu/bar'
     '''
-    possible_types = ['data', 'metadata']
+    possible_types = ['data', 'metadata', 'destroy']
     assert ptype in possible_types
     msg = "Path {} already contains {} in the right place - saltstack duct tape?".format(path, ptype)
 

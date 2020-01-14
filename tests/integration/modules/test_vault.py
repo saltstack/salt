@@ -35,7 +35,7 @@ class VaultTestCase(ModuleCase):
         SetUp vault container
         '''
         if self.count == 0:
-            config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
+            config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
             self.run_state('docker_image.present', name='vault', tag='0.9.6')
             self.run_state(
                 'docker_container.running',
@@ -45,8 +45,7 @@ class VaultTestCase(ModuleCase):
                 environment={
                     'VAULT_DEV_ROOT_TOKEN_ID': 'testsecret',
                     'VAULT_LOCAL_CONFIG': config,
-                },
-                cap_add='IPC_LOCK',
+                }
             )
             time.sleep(5)
             ret = self.run_function(
@@ -80,7 +79,7 @@ class VaultTestCase(ModuleCase):
     @flaky
     def test_write_read_secret(self):
         write_return = self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar')
-        self.assertTrue(write_return)
+        self.assertEqual(write_return, True)
         assert self.run_function('vault.read_secret', arg=['secret/my/secret']) == {'password': 'bar', 'user': 'foo'}
         assert self.run_function('vault.read_secret', arg=['secret/my/secret', 'user']) == 'foo'
 
@@ -115,7 +114,7 @@ class VaultTestCaseCurrent(ModuleCase):
         SetUp vault container
         '''
         if self.count == 0:
-            config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
+            config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h", "disable_mlock": true}'
             self.run_state('docker_image.present', name='vault', tag='latest')
             self.run_state(
                 'docker_container.running',
@@ -125,8 +124,7 @@ class VaultTestCaseCurrent(ModuleCase):
                 environment={
                     'VAULT_DEV_ROOT_TOKEN_ID': 'testsecret',
                     'VAULT_LOCAL_CONFIG': config,
-                },
-                cap_add='IPC_LOCK',
+                }
             )
             time.sleep(5)
             ret = self.run_function(
@@ -196,22 +194,17 @@ class VaultTestCaseCurrent(ModuleCase):
         self.assertDictContainsSubset(expected_write, write_return)
 
         delete_return = self.run_function('vault.delete_secret', arg=['secret/my/secret3'])
-        log.info('XXXX delete_return: %s', delete_return)
-        self.assertTrue(delete_return)
-        read_return = self.run_function('vault.read_secret', arg=['secret/my/secret3'])
-        log.info('ZZZZ read after delete: %s', read_return)
+        self.assertEqual(delete_return, True)
 
     @flaky
     def test_destroy_secret_kv2(self):
-        write_return = self.run_function('vault.write_secret', path='secret/my/secret3', user3='foo3', password3='bar3')
+        write_return = self.run_function('vault.write_secret', path='secret/my/secret4', user3='foo4', password4='bar4')
         expected_write = {'destroyed': False, 'deletion_time': ''}
         self.assertDictContainsSubset(expected_write, write_return)
 
-        destroy_return = self.run_function('vault.destroy_secret', arg=['secret/my/secret3'])
-        log.info('AAAA destroy_return: %s', destroy_return)
-        self.assertTrue(destroy_return)
-        read_return = self.run_function('vault.read_secret', arg=['secret/my/secret3'])
-        log.info('BBBB read after destroy: %s', read_return)
+        destroy_return = self.run_function('vault.destroy_secret', arg=['secret/my/secret4', '1'])
+        self.assertEqual(destroy_return, True)
+        #self.assertIsNone(self.run_function('vault.read_secret', arg=['secret/my/secret4']))
 
     @flaky
     def test_list_secrets_kv2(self):
@@ -220,5 +213,4 @@ class VaultTestCaseCurrent(ModuleCase):
         self.assertDictContainsSubset(expected_write, write_return)
 
         list_return = self.run_function('vault.list_secrets', arg=['secret/my/'])
-        log.info('YYYY list_return: %s', list_return)
         self.assertDictContainsSubset({'keys': ['secret']}, list_return)

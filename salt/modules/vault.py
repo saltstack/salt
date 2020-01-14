@@ -275,27 +275,31 @@ def delete_secret(path):
         return False
 
 
-def destroy_secret(path):
+def destroy_secret(path, *args):
     '''
-    Destory secret at the path in vault. The vault policy used must allow this.
+    Destory specified secret version at the path in vault. The vault policy
+    used must allow this. Only supported on Vault KV version 2
+
+    .. versionadded:: neon
 
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' vault.destroy_secret "secret/my/secret"
+        salt '*' vault.destroy_secret "secret/my/secret" 1 2
     '''
     log.debug('Destroying vault secrets for %s in %s', __grains__['id'], path)
+    data = {'versions': list(args)}
+    log.info('RRRRR destroy data: %s', data)
     version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
-        metadata = version2['metadata']
-        path = __utils['vault._v2_the_path'](path, metadata, 'delete')
+        path = version2['destroy']
     else:
         log.error('Destroy operation is only supported on KV version 2')
         return False
     try:
         url = 'v1/{0}'.format(path)
-        response = __utils__['vault.make_request']('POST', url)
+        response = __utils__['vault.make_request']('POST', url, json=data)
         if response.status_code != 204:
             response.raise_for_status()
         return True
