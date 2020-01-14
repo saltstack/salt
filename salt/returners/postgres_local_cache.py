@@ -117,6 +117,7 @@ import sys
 # Import salt libs
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.stringutils
 from salt.ext import six
 
 # Import third party libs
