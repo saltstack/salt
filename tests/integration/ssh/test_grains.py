@@ -26,5 +26,5 @@ class SSHGrainsTest(SSHCase):
             grain = 'Darwin'
         if salt.utils.platform.is_aix():
             grain = 'AIX'
-        self.assertEqual(ret['kernel'], grain)
-        self.assertTrue(isinstance(ret, dict))
+        assert ret['kernel'] == grain
+        assert isinstance(ret, dict)

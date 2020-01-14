@@ -43,16 +43,16 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.ddns.update') as ddns_update:
             ddns_update.return_value = False
-            self.assertFalse(ddns.add_host(zone='A',
+            assert not ddns.add_host(zone='A',
                                            name='B',
                                            ttl=1,
-                                           ip='172.27.0.0'))
+                                           ip='172.27.0.0')
 
             ddns_update.return_value = True
-            self.assertTrue(ddns.add_host(zone='A',
+            assert ddns.add_host(zone='A',
                                           name='B',
                                           ttl=1,
-                                          ip='172.27.0.0'))
+                                          ip='172.27.0.0')
 
     def test_delete_host(self):
         '''
@@ -62,7 +62,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
             ddns_delete.return_value = False
             with patch.object(dns.query, 'udp') as mock:
                 mock.answer = [{'address': 'localhost'}]
-                self.assertFalse(ddns.delete_host(zone='A', name='B'))
+                assert not ddns.delete_host(zone='A', name='B')
 
     def test_update(self):
         '''
@@ -100,7 +100,7 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(dns.rdatatype, 'from_text', MagicMock(return_value=mock_rdtype)):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):
-                            self.assertTrue(ddns.update('zone', 'name', 1, 'AAAA', '::1'))
+                            assert ddns.update('zone', 'name', 1, 'AAAA', '::1')
 
     def test_delete(self):
         '''
@@ -123,4 +123,4 @@ class DDNSTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(dns.tsigkeyring, 'from_text', return_value=True):
                     with patch.object(ddns, '_get_keyring', return_value=None):
                         with patch.object(ddns, '_config', return_value=None):
-                            self.assertTrue(ddns.delete(zone='A', name='B'))
+                            assert ddns.delete(zone='A', name='B')

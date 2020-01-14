@@ -74,7 +74,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
             Test to return a list of domain names on the minion
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            self.assertListEqual(xapi.list_domains(), [])
+            assert xapi.list_domains() == []
 
     def test_vm_info(self):
         '''
@@ -83,7 +83,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(return_value=False)
             with patch.object(xapi, "_get_record_by_label", mock):
-                self.assertDictEqual(xapi.vm_info(True), {True: False})
+                assert xapi.vm_info(True) == {True: False}
 
     def test_vm_state(self):
         '''
@@ -92,9 +92,9 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(return_value={"power_state": "1"})
             with patch.object(xapi, "_get_record_by_label", mock):
-                self.assertDictEqual(xapi.vm_state("salt"), {'salt': '1'})
+                assert xapi.vm_state("salt") == {'salt': '1'}
 
-                self.assertDictEqual(xapi.vm_state(), {})
+                assert xapi.vm_state() == {}
 
     def test_get_nics(self):
         '''
@@ -104,12 +104,12 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, {"VIFs": "salt"}])
             with patch.object(xapi, "_get_record_by_label", mock):
-                self.assertFalse(xapi.get_nics("salt"))
+                assert not xapi.get_nics("salt")
 
                 mock = MagicMock(return_value={"MAC": "Stack",
                                                "device": "ETH0", "MTU": 1})
                 with patch.object(xapi, "_get_record", mock):
-                    self.assertDictEqual(xapi.get_nics("salt"), ret)
+                    assert xapi.get_nics("salt") == ret
 
     def test_get_macs(self):
         '''
@@ -117,9 +117,9 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[None, ["a", "b", "c"]])
         with patch.object(xapi, "get_nics", mock):
-            self.assertIsNone(xapi.get_macs("salt"))
+            assert xapi.get_macs("salt") is None
 
-            self.assertListEqual(xapi.get_macs("salt"), ['a', 'b', 'c'])
+            assert xapi.get_macs("salt") == ['a', 'b', 'c']
 
     def test_get_disks(self):
         '''
@@ -128,9 +128,9 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.get_disks("salt"))
+                assert not xapi.get_disks("salt")
 
-                self.assertDictEqual(xapi.get_disks("salt"), {})
+                assert xapi.get_disks("salt") == {}
 
     def test_setmem(self):
         '''
@@ -139,16 +139,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.setmem("salt", "1"))
+                assert not xapi.setmem("salt", "1")
 
-                self.assertTrue(xapi.setmem("salt", "1"))
+                assert xapi.setmem("salt", "1")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.setmem("salt", "1"))
+                    assert not xapi.setmem("salt", "1")
 
     def test_setvcpus(self):
         '''
@@ -157,16 +157,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.setvcpus("salt", "1"))
+                assert not xapi.setvcpus("salt", "1")
 
-                self.assertTrue(xapi.setvcpus("salt", "1"))
+                assert xapi.setvcpus("salt", "1")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.setvcpus("salt", "1"))
+                    assert not xapi.setvcpus("salt", "1")
 
     def test_vcpu_pin(self):
         '''
@@ -175,9 +175,9 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.vcpu_pin("salt", "1", "2"))
+                assert not xapi.vcpu_pin("salt", "1", "2")
 
-                self.assertTrue(xapi.vcpu_pin("salt", "1", "2"))
+                assert xapi.vcpu_pin("salt", "1", "2")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
@@ -185,7 +185,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
                     with patch.dict(xapi.__salt__, {'cmd.run': mock}):
-                        self.assertTrue(xapi.vcpu_pin("salt", "1", "2"))
+                        assert xapi.vcpu_pin("salt", "1", "2")
 
     def test_freemem(self):
         '''
@@ -194,7 +194,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'free_memory': 1024})
         with patch.object(xapi, "node_info", mock):
-            self.assertEqual(xapi.freemem(), 1024)
+            assert xapi.freemem() == 1024
 
     def test_freecpu(self):
         '''
@@ -203,7 +203,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'free_cpus': 1024})
         with patch.object(xapi, "node_info", mock):
-            self.assertEqual(xapi.freecpu(), 1024)
+            assert xapi.freecpu() == 1024
 
     def test_full_info(self):
         '''
@@ -213,8 +213,8 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "node_info", mock):
             mock = MagicMock(return_value="stack")
             with patch.object(xapi, "vm_info", mock):
-                self.assertDictEqual(xapi.full_info(), {'node_info': 'salt',
-                                                        'vm_info': 'stack'})
+                assert xapi.full_info() == {'node_info': 'salt',
+                                                        'vm_info': 'stack'}
 
     def test_shutdown(self):
         '''
@@ -223,16 +223,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.shutdown("salt"))
+                assert not xapi.shutdown("salt")
 
-                self.assertTrue(xapi.shutdown("salt"))
+                assert xapi.shutdown("salt")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.shutdown("salt"))
+                    assert not xapi.shutdown("salt")
 
     def test_pause(self):
         '''
@@ -241,16 +241,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.pause("salt"))
+                assert not xapi.pause("salt")
 
-                self.assertTrue(xapi.pause("salt"))
+                assert xapi.pause("salt")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.pause("salt"))
+                    assert not xapi.pause("salt")
 
     def test_resume(self):
         '''
@@ -259,16 +259,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.resume("salt"))
+                assert not xapi.resume("salt")
 
-                self.assertTrue(xapi.resume("salt"))
+                assert xapi.resume("salt")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.resume("salt"))
+                    assert not xapi.resume("salt")
 
     def test_start(self):
         '''
@@ -276,7 +276,7 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(xapi, "start", mock):
-            self.assertTrue(xapi.start("salt"))
+            assert xapi.start("salt")
 
     def test_reboot(self):
         '''
@@ -285,16 +285,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.reboot("salt"))
+                assert not xapi.reboot("salt")
 
-                self.assertTrue(xapi.reboot("salt"))
+                assert xapi.reboot("salt")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.reboot("salt"))
+                    assert not xapi.reboot("salt")
 
     def test_reset(self):
         '''
@@ -304,16 +304,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.reset("salt"))
+                assert not xapi.reset("salt")
 
-                self.assertTrue(xapi.reset("salt"))
+                assert xapi.reset("salt")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.reset("salt"))
+                    assert not xapi.reset("salt")
 
     def test_migrate(self):
         '''
@@ -322,16 +322,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.migrate("salt", "stack"))
+                assert not xapi.migrate("salt", "stack")
 
-                self.assertTrue(xapi.migrate("salt", "stack"))
+                assert xapi.migrate("salt", "stack")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.migrate("salt", "stack"))
+                    assert not xapi.migrate("salt", "stack")
 
     def test_stop(self):
         '''
@@ -341,16 +341,16 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
             mock = MagicMock(side_effect=[False, ["a", "b", "c"]])
             with patch.object(xapi, "_get_label_uuid", mock):
-                self.assertFalse(xapi.stop("salt"))
+                assert not xapi.stop("salt")
 
-                self.assertTrue(xapi.stop("salt"))
+                assert xapi.stop("salt")
 
         with patch.object(xapi, "_check_xenapi",
                           MagicMock(return_value=Mockxapi)):
             mock = MagicMock(return_value=True)
             with patch.dict(xapi.__salt__, {'config.option': mock}):
                 with patch.object(xapi, "_get_label_uuid", mock):
-                    self.assertFalse(xapi.stop("salt"))
+                    assert not xapi.stop("salt")
 
     def test_is_hyper(self):
         '''
@@ -358,24 +358,24 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
             this node is a hypervisor of any kind
         '''
         with patch.dict(xapi.__grains__, {'virtual_subtype': 'Dom0'}):
-            self.assertFalse(xapi.is_hyper())
+            assert not xapi.is_hyper()
 
         with patch.dict(xapi.__grains__, {'virtual': 'Xen Dom0'}):
-            self.assertFalse(xapi.is_hyper())
+            assert not xapi.is_hyper()
 
         with patch.dict(xapi.__grains__, {'virtual_subtype': 'Xen Dom0'}):
             with patch('salt.utils.files.fopen', mock_open(read_data="salt")):
-                self.assertFalse(xapi.is_hyper())
+                assert not xapi.is_hyper()
 
             with patch('salt.utils.files.fopen', mock_open()) as mock_read:
                 mock_read.side_effect = IOError
-                self.assertFalse(xapi.is_hyper())
+                assert not xapi.is_hyper()
 
             with patch('salt.utils.files.fopen', mock_open(read_data="xen_")):
                 with patch.dict(xapi.__grains__, {'ps': 'salt'}):
                     mock = MagicMock(return_value={'xenstore': 'salt'})
                     with patch.dict(xapi.__salt__, {'cmd.run': mock}):
-                        self.assertTrue(xapi.is_hyper())
+                        assert xapi.is_hyper()
 
     def test_vm_cputime(self):
         '''
@@ -389,22 +389,22 @@ class XapiTestCase(TestCase, LoaderModuleMockMixin):
                                                'VCPUs_utilisation': {'0': '1'}}
                                  )
                 with patch.object(xapi, "_get_metrics_record", mock):
-                    self.assertDictEqual(xapi.vm_cputime("1"), ret)
+                    assert xapi.vm_cputime("1") == ret
 
             mock = MagicMock(return_value={})
             with patch.object(xapi, "list_domains", mock):
-                self.assertDictEqual(xapi.vm_cputime(""), {})
+                assert xapi.vm_cputime("") == {}
 
     def test_vm_netstats(self):
         '''
             Test to return combined network counters used by the vms
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            self.assertDictEqual(xapi.vm_netstats(""), {})
+            assert xapi.vm_netstats("") == {}
 
     def test_vm_diskstats(self):
         '''
             Test to return disk usage counters used by the vms
         '''
         with patch.object(xapi, "_get_xapi_session", MagicMock()):
-            self.assertDictEqual(xapi.vm_diskstats(""), {})
+            assert xapi.vm_diskstats("") == {}

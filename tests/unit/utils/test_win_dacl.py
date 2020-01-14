@@ -37,49 +37,47 @@ class WinDaclTestCase(TestCase):
         Validate getting a pysid object from a name
         '''
         sid_obj = win_dacl.get_sid('Administrators')
-        self.assertTrue(
-            isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(
-            win32security.LookupAccountSid(None, sid_obj)[0],
-            'Administrators')
+        assert isinstance(sid_obj, pywintypes.SIDType)
+        assert win32security.LookupAccountSid(None, sid_obj)[0] == \
+            'Administrators'
 
     def test_get_sid_sid_string(self):
         '''
         Validate getting a pysid object from a SID string
         '''
         sid_obj = win_dacl.get_sid('S-1-5-32-544')
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win32security.LookupAccountSid(None, sid_obj)[0],
-                         'Administrators')
+        assert isinstance(sid_obj, pywintypes.SIDType)
+        assert win32security.LookupAccountSid(None, sid_obj)[0] == \
+                         'Administrators'
 
     def test_get_sid_string_name(self):
         '''
         Validate getting a pysid object from a SID string
         '''
         sid_obj = win_dacl.get_sid('Administrators')
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win_dacl.get_sid_string(sid_obj), 'S-1-5-32-544')
+        assert isinstance(sid_obj, pywintypes.SIDType)
+        assert win_dacl.get_sid_string(sid_obj) == 'S-1-5-32-544'
 
     def test_get_sid_string_none(self):
         '''
         Validate getting a pysid object from None (NULL SID)
         '''
         sid_obj = win_dacl.get_sid(None)
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win_dacl.get_sid_string(sid_obj), 'S-1-0-0')
+        assert isinstance(sid_obj, pywintypes.SIDType)
+        assert win_dacl.get_sid_string(sid_obj) == 'S-1-0-0'
 
     def test_get_name(self):
         '''
         Get the name
         '''
         # Case
-        self.assertEqual(win_dacl.get_name('adMiniStrAtorS'), 'Administrators')
+        assert win_dacl.get_name('adMiniStrAtorS') == 'Administrators'
         # SID String
-        self.assertEqual(win_dacl.get_name('S-1-5-32-544'), 'Administrators')
+        assert win_dacl.get_name('S-1-5-32-544') == 'Administrators'
         # SID Object
         sid_obj = win_dacl.get_sid('Administrators')
-        self.assertTrue(isinstance(sid_obj, pywintypes.SIDType))
-        self.assertEqual(win_dacl.get_name(sid_obj), 'Administrators')
+        assert isinstance(sid_obj, pywintypes.SIDType)
+        assert win_dacl.get_name(sid_obj) == 'Administrators'
 
 
 @skipIf(not HAS_WIN32, 'Requires pywin32')
@@ -94,10 +92,10 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         return {win_dacl: {}}
 
     def setUp(self):
-        self.assertTrue(win_reg.set_value(hive='HKLM',
+        assert win_reg.set_value(hive='HKLM',
                                           key=FAKE_KEY,
                                           vname='fake_name',
-                                          vdata='fake_data'))
+                                          vdata='fake_data')
 
     def tearDown(self):
         win_reg.delete_key_recursive(hive='HKLM', key=FAKE_KEY)
@@ -108,12 +106,12 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_owner function
         Test the get_owner function
         '''
-        self.assertTrue(win_dacl.set_owner(obj_name=self.obj_name,
+        assert win_dacl.set_owner(obj_name=self.obj_name,
                                            principal='Backup Operators',
-                                           obj_type=self.obj_type))
-        self.assertEqual(win_dacl.get_owner(obj_name=self.obj_name,
-                                            obj_type=self.obj_type),
-                         'Backup Operators')
+                                           obj_type=self.obj_type)
+        assert win_dacl.get_owner(obj_name=self.obj_name,
+                                            obj_type=self.obj_type) == \
+                         'Backup Operators'
 
     @pytest.mark.destructive_test
     def test_primary_group(self):
@@ -121,105 +119,105 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_primary_group function
         Test the get_primary_group function
         '''
-        self.assertTrue(win_dacl.set_primary_group(obj_name=self.obj_name,
+        assert win_dacl.set_primary_group(obj_name=self.obj_name,
                                                    principal='Backup Operators',
-                                                   obj_type=self.obj_type))
-        self.assertEqual(win_dacl.get_primary_group(obj_name=self.obj_name,
-                                                    obj_type=self.obj_type),
-                         'Backup Operators')
+                                                   obj_type=self.obj_type)
+        assert win_dacl.get_primary_group(obj_name=self.obj_name,
+                                                    obj_type=self.obj_type) == \
+                         'Backup Operators'
 
     @pytest.mark.destructive_test
     def test_set_permissions(self):
         '''
         Test the set_permissions function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
+                                                 protected=None)
         expected = {
             'Not Inherited': {
                 'Backup Operators': {
                     'grant': {
                         'applies to': 'This key and subkeys',
                         'permissions': 'Full Control'}}}}
-        self.assertEqual(win_dacl.get_permissions(obj_name=self.obj_name,
+        assert win_dacl.get_permissions(obj_name=self.obj_name,
                                                   principal='Backup Operators',
-                                                  obj_type=self.obj_type),
-                         expected)
+                                                  obj_type=self.obj_type) == \
+                         expected
 
     @pytest.mark.destructive_test
     def test_get_permissions(self):
         '''
         Test the get_permissions function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
+                                                 protected=None)
         expected = {
             'Not Inherited': {
                 'Backup Operators': {
                     'grant': {
                         'applies to': 'This key and subkeys',
                         'permissions': 'Full Control'}}}}
-        self.assertEqual(win_dacl.get_permissions(obj_name=self.obj_name,
+        assert win_dacl.get_permissions(obj_name=self.obj_name,
                                                   principal='Backup Operators',
-                                                  obj_type=self.obj_type),
-                         expected)
+                                                  obj_type=self.obj_type) == \
+                         expected
 
     @pytest.mark.destructive_test
     def test_has_permission(self):
         '''
         Test the has_permission function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
+                                                 protected=None)
         # Test has_permission exact
-        self.assertTrue(win_dacl.has_permission(obj_name=self.obj_name,
+        assert win_dacl.has_permission(obj_name=self.obj_name,
                                                 principal='Backup Operators',
                                                 permission='full_control',
                                                 access_mode='grant',
                                                 obj_type=self.obj_type,
-                                                exact=True))
+                                                exact=True)
         # Test has_permission contains
-        self.assertTrue(win_dacl.has_permission(obj_name=self.obj_name,
+        assert win_dacl.has_permission(obj_name=self.obj_name,
                                                 principal='Backup Operators',
                                                 permission='read',
                                                 access_mode='grant',
                                                 obj_type=self.obj_type,
-                                                exact=False))
+                                                exact=False)
 
     @pytest.mark.destructive_test
     def test_rm_permissions(self):
         '''
         Test the rm_permissions function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
-        self.assertTrue(win_dacl.rm_permissions(obj_name=self.obj_name,
+                                                 protected=None)
+        assert win_dacl.rm_permissions(obj_name=self.obj_name,
                                                 principal='Backup Operators',
-                                                obj_type=self.obj_type))
-        self.assertEqual(win_dacl.get_permissions(obj_name=self.obj_name,
+                                                obj_type=self.obj_type)
+        assert win_dacl.get_permissions(obj_name=self.obj_name,
                                                   principal='Backup Operators',
-                                                  obj_type=self.obj_type),
-                         {})
+                                                  obj_type=self.obj_type) == \
+                         {}
 
     @pytest.mark.destructive_test
     def test_inheritance(self):
@@ -227,18 +225,18 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_inheritance function
         Test the get_inheritance function
         '''
-        self.assertTrue(win_dacl.set_inheritance(obj_name=self.obj_name,
+        assert win_dacl.set_inheritance(obj_name=self.obj_name,
                                                  enabled=True,
                                                  obj_type=self.obj_type,
-                                                 clear=False))
-        self.assertTrue(win_dacl.get_inheritance(obj_name=self.obj_name,
-                                                 obj_type=self.obj_type))
-        self.assertTrue(win_dacl.set_inheritance(obj_name=self.obj_name,
+                                                 clear=False)
+        assert win_dacl.get_inheritance(obj_name=self.obj_name,
+                                                 obj_type=self.obj_type)
+        assert win_dacl.set_inheritance(obj_name=self.obj_name,
                                                  enabled=False,
                                                  obj_type=self.obj_type,
-                                                 clear=False))
-        self.assertFalse(win_dacl.get_inheritance(obj_name=self.obj_name,
-                                                  obj_type=self.obj_type))
+                                                 clear=False)
+        assert not win_dacl.get_inheritance(obj_name=self.obj_name,
+                                                  obj_type=self.obj_type)
 
     @pytest.mark.destructive_test
     def test_check_perms(self):
@@ -270,7 +268,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': '',
                     'name': self.obj_name,
                     'result': True}
-        self.assertDictEqual(result, expected)
+        assert result == expected
 
         expected = {
             'Not Inherited': {
@@ -281,12 +279,11 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                     'deny': {
                         'applies to': 'This key and subkeys',
                         'permissions': ['Delete']}}}}
-        self.assertDictEqual(
-            win_dacl.get_permissions(
+        assert win_dacl.get_permissions(
                 obj_name=self.obj_name,
                 principal='Backup Operators',
-                obj_type=self.obj_type),
-            expected)
+                obj_type=self.obj_type) == \
+            expected
 
         expected = {
             'Not Inherited': {
@@ -297,18 +294,16 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                         'Set Value',
                                         'Write DAC',
                                         'Write Owner']}}}}
-        self.assertDictEqual(
-            win_dacl.get_permissions(
+        assert win_dacl.get_permissions(
                 obj_name=self.obj_name,
                 principal='NETWORK SERVICE',
-                obj_type=self.obj_type),
-            expected)
+                obj_type=self.obj_type) == \
+            expected
 
-        self.assertEqual(
-            win_dacl.get_owner(
+        assert win_dacl.get_owner(
                 obj_name=self.obj_name,
-                obj_type=self.obj_type),
-            'Users')
+                obj_type=self.obj_type) == \
+            'Users'
 
     @pytest.mark.destructive_test
     def test_check_perms_test_true(self):
@@ -341,20 +336,18 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
             'comment': '',
             'name': self.obj_name,
             'result': None}
-        self.assertDictEqual(result, expected)
+        assert result == expected
 
-        self.assertNotEqual(
-            win_dacl.get_owner(
+        assert win_dacl.get_owner(
                 obj_name=self.obj_name,
-                obj_type=self.obj_type),
-            'Users')
+                obj_type=self.obj_type) != \
+            'Users'
 
-        self.assertEqual(
-            win_dacl.get_permissions(
+        assert win_dacl.get_permissions(
                 obj_name=self.obj_name,
                 principal='Backup Operators',
-                obj_type=self.obj_type),
-            {})
+                obj_type=self.obj_type) == \
+            {}
 
     def test_set_perms(self):
         '''
@@ -378,7 +371,7 @@ class WinDaclRegTestCase(TestCase, LoaderModuleMockMixin):
                                                    'write_owner']}},
             'grant': {'Backup Operators': {'perms': 'read'}}}
 
-        self.assertDictEqual(result, expected)
+        assert result == expected
 
 
 @skipIf(not HAS_WIN32, 'Requires pywin32')
@@ -406,12 +399,12 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_owner function
         Test the get_owner function
         '''
-        self.assertTrue(win_dacl.set_owner(obj_name=self.obj_name,
+        assert win_dacl.set_owner(obj_name=self.obj_name,
                                            principal='Backup Operators',
-                                           obj_type=self.obj_type))
-        self.assertEqual(win_dacl.get_owner(obj_name=self.obj_name,
-                                            obj_type=self.obj_type),
-                         'Backup Operators')
+                                           obj_type=self.obj_type)
+        assert win_dacl.get_owner(obj_name=self.obj_name,
+                                            obj_type=self.obj_type) == \
+                         'Backup Operators'
 
     @pytest.mark.destructive_test
     def test_primary_group(self):
@@ -419,105 +412,105 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_primary_group function
         Test the get_primary_group function
         '''
-        self.assertTrue(win_dacl.set_primary_group(obj_name=self.obj_name,
+        assert win_dacl.set_primary_group(obj_name=self.obj_name,
                                                    principal='Backup Operators',
-                                                   obj_type=self.obj_type))
-        self.assertEqual(win_dacl.get_primary_group(obj_name=self.obj_name,
-                                                    obj_type=self.obj_type),
-                         'Backup Operators')
+                                                   obj_type=self.obj_type)
+        assert win_dacl.get_primary_group(obj_name=self.obj_name,
+                                                    obj_type=self.obj_type) == \
+                         'Backup Operators'
 
     @pytest.mark.destructive_test
     def test_set_permissions(self):
         '''
         Test the set_permissions function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
+                                                 protected=None)
         expected = {
             'Not Inherited': {
                 'Backup Operators': {
                     'grant': {
                         'applies to': 'Not Inherited (file)',
                         'permissions': 'Full control'}}}}
-        self.assertEqual(win_dacl.get_permissions(obj_name=self.obj_name,
+        assert win_dacl.get_permissions(obj_name=self.obj_name,
                                                   principal='Backup Operators',
-                                                  obj_type=self.obj_type),
-                         expected)
+                                                  obj_type=self.obj_type) == \
+                         expected
 
     @pytest.mark.destructive_test
     def test_get_permissions(self):
         '''
         Test the get_permissions function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
+                                                 protected=None)
         expected = {
             'Not Inherited': {
                 'Backup Operators': {
                     'grant': {
                         'applies to': 'Not Inherited (file)',
                         'permissions': 'Full control'}}}}
-        self.assertEqual(win_dacl.get_permissions(obj_name=self.obj_name,
+        assert win_dacl.get_permissions(obj_name=self.obj_name,
                                                   principal='Backup Operators',
-                                                  obj_type=self.obj_type),
-                         expected)
+                                                  obj_type=self.obj_type) == \
+                         expected
 
     @pytest.mark.destructive_test
     def test_has_permission(self):
         '''
         Test the has_permission function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
+                                                 protected=None)
         # Test has_permission exact
-        self.assertTrue(win_dacl.has_permission(obj_name=self.obj_name,
+        assert win_dacl.has_permission(obj_name=self.obj_name,
                                                 principal='Backup Operators',
                                                 permission='full_control',
                                                 access_mode='grant',
                                                 obj_type=self.obj_type,
-                                                exact=True))
+                                                exact=True)
         # Test has_permission contains
-        self.assertTrue(win_dacl.has_permission(obj_name=self.obj_name,
+        assert win_dacl.has_permission(obj_name=self.obj_name,
                                                 principal='Backup Operators',
                                                 permission='read',
                                                 access_mode='grant',
                                                 obj_type=self.obj_type,
-                                                exact=False))
+                                                exact=False)
 
     @pytest.mark.destructive_test
     def test_rm_permissions(self):
         '''
         Test the rm_permissions function
         '''
-        self.assertTrue(win_dacl.set_permissions(obj_name=self.obj_name,
+        assert win_dacl.set_permissions(obj_name=self.obj_name,
                                                  principal='Backup Operators',
                                                  permissions='full_control',
                                                  access_mode='grant',
                                                  obj_type=self.obj_type,
                                                  reset_perms=False,
-                                                 protected=None))
-        self.assertTrue(win_dacl.rm_permissions(obj_name=self.obj_name,
+                                                 protected=None)
+        assert win_dacl.rm_permissions(obj_name=self.obj_name,
                                                 principal='Backup Operators',
-                                                obj_type=self.obj_type))
-        self.assertEqual(win_dacl.get_permissions(obj_name=self.obj_name,
+                                                obj_type=self.obj_type)
+        assert win_dacl.get_permissions(obj_name=self.obj_name,
                                                   principal='Backup Operators',
-                                                  obj_type=self.obj_type),
-                         {})
+                                                  obj_type=self.obj_type) == \
+                         {}
 
     @pytest.mark.destructive_test
     def test_inheritance(self):
@@ -525,18 +518,18 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
         Test the set_inheritance function
         Test the get_inheritance function
         '''
-        self.assertTrue(win_dacl.set_inheritance(obj_name=self.obj_name,
+        assert win_dacl.set_inheritance(obj_name=self.obj_name,
                                                  enabled=True,
                                                  obj_type=self.obj_type,
-                                                 clear=False))
-        self.assertTrue(win_dacl.get_inheritance(obj_name=self.obj_name,
-                                                 obj_type=self.obj_type))
-        self.assertTrue(win_dacl.set_inheritance(obj_name=self.obj_name,
+                                                 clear=False)
+        assert win_dacl.get_inheritance(obj_name=self.obj_name,
+                                                 obj_type=self.obj_type)
+        assert win_dacl.set_inheritance(obj_name=self.obj_name,
                                                  enabled=False,
                                                  obj_type=self.obj_type,
-                                                 clear=False))
-        self.assertFalse(win_dacl.get_inheritance(obj_name=self.obj_name,
-                                                  obj_type=self.obj_type))
+                                                 clear=False)
+        assert not win_dacl.get_inheritance(obj_name=self.obj_name,
+                                                  obj_type=self.obj_type)
 
     @pytest.mark.destructive_test
     def test_check_perms(self):
@@ -569,7 +562,7 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             'comment': '',
             'name': self.obj_name,
             'result': True}
-        self.assertDictEqual(result, expected)
+        assert result == expected
 
         expected = {
             'Not Inherited': {
@@ -580,12 +573,11 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                     'deny': {
                         'applies to': 'Not Inherited (file)',
                         'permissions': ['Delete']}}}}
-        self.assertDictEqual(
-            win_dacl.get_permissions(
+        assert win_dacl.get_permissions(
                 obj_name=self.obj_name,
                 principal='Backup Operators',
-                obj_type=self.obj_type),
-            expected)
+                obj_type=self.obj_type) == \
+            expected
 
         expected = {
             'Not Inherited': {
@@ -596,18 +588,16 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                         'Create files / write data',
                                         'Delete',
                                         'Write attributes']}}}}
-        self.assertDictEqual(
-            win_dacl.get_permissions(
+        assert win_dacl.get_permissions(
                 obj_name=self.obj_name,
                 principal='NETWORK SERVICE',
-                obj_type=self.obj_type),
-            expected)
+                obj_type=self.obj_type) == \
+            expected
 
-        self.assertEqual(
-            win_dacl.get_owner(
+        assert win_dacl.get_owner(
                 obj_name=self.obj_name,
-                obj_type=self.obj_type),
-            'Users')
+                obj_type=self.obj_type) == \
+            'Users'
 
     @pytest.mark.destructive_test
     def test_check_perms_test_true(self):
@@ -640,20 +630,18 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
             'comment': '',
             'name': self.obj_name,
             'result': None}
-        self.assertDictEqual(result, expected)
+        assert result == expected
 
-        self.assertNotEqual(
-            win_dacl.get_owner(
+        assert win_dacl.get_owner(
                 obj_name=self.obj_name,
-                obj_type=self.obj_type),
-            'Users')
+                obj_type=self.obj_type) != \
+            'Users'
 
-        self.assertEqual(
-            win_dacl.get_permissions(
+        assert win_dacl.get_permissions(
                 obj_name=self.obj_name,
                 principal='Backup Operators',
-                obj_type=self.obj_type),
-            {})
+                obj_type=self.obj_type) == \
+            {}
 
     def test_set_perms(self):
         '''
@@ -677,4 +665,4 @@ class WinDaclFileTestCase(TestCase, LoaderModuleMockMixin):
                                                    'write_data']}},
             'grant': {'Backup Operators': {'perms': 'read'}}}
 
-        self.assertDictEqual(result, expected)
+        assert result == expected

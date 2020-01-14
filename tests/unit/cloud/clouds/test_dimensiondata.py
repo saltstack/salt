@@ -25,6 +25,7 @@ from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import MagicMock, patch, __version__ as mock_version
 from tests.unit.cloud.clouds import _preferred_ip
+import pytest
 
 VM_NAME = 'winterfell'
 
@@ -53,8 +54,8 @@ class ExtendedTestCase(TestCase):
             func(*args, **kwargs)
             self.assertFail()
         except Exception as exc:  # pylint: disable=broad-except
-            self.assertEqual(type(exc), exc_type)
-            self.assertEqual(exc.message, exc_msg)
+            assert type(exc) == exc_type
+            assert exc.message == exc_msg
 
 
 class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
@@ -87,56 +88,41 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         Tests that a SaltCloudSystemExit is raised when trying to call avail_images
         with --action or -a.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            dimensiondata.avail_images,
-            call='action'
-        )
+        with pytest.raises(SaltCloudSystemExit):
+            dimensiondata.avail_images(call='action')
 
     def test_avail_locations_call(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call avail_locations
         with --action or -a.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            dimensiondata.avail_locations,
-            call='action'
-        )
+        with pytest.raises(SaltCloudSystemExit):
+            dimensiondata.avail_locations(call='action')
 
     def test_avail_sizes_call(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call avail_sizes
         with --action or -a.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            dimensiondata.avail_sizes,
-            call='action'
-        )
+        with pytest.raises(SaltCloudSystemExit):
+            dimensiondata.avail_sizes(call='action')
 
     def test_list_nodes_call(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call list_nodes
         with --action or -a.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            dimensiondata.list_nodes,
-            call='action'
-        )
+        with pytest.raises(SaltCloudSystemExit):
+            dimensiondata.list_nodes(call='action')
 
     def test_destroy_call(self):
         '''
         Tests that a SaltCloudSystemExit is raised when trying to call destroy
         with --function or -f.
         '''
-        self.assertRaises(
-            SaltCloudSystemExit,
-            dimensiondata.destroy,
-            name=VM_NAME,
-            call='function'
-        )
+        with pytest.raises(SaltCloudSystemExit):
+            dimensiondata.destroy(name=VM_NAME,
+            call='function')
 
     @skipIf(HAS_LIBCLOUD is False, "Install 'libcloud' to be able to run this unit test.")
     def test_avail_sizes(self):
@@ -144,14 +130,10 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         Tests that avail_sizes returns an empty dictionary.
         '''
         sizes = dimensiondata.avail_sizes(call='foo')
-        self.assertEqual(
-            len(sizes),
+        assert len(sizes) == \
             1
-        )
-        self.assertEqual(
-            sizes['default']['name'],
+        assert sizes['default']['name'] == \
             'default'
-        )
 
     def test_import(self):
         """
@@ -159,16 +141,16 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
         """
         with patch('salt.config.check_driver_dependencies', return_value=True) as p:
             get_deps = dimensiondata.get_dependencies()
-            self.assertEqual(get_deps, True)
+            assert get_deps is True
             if LooseVersion(mock_version) >= LooseVersion('2.0.0'):
-                self.assertTrue(p.call_count >= 1)
+                assert p.call_count >= 1
 
     def test_provider_matches(self):
         """
         Test that the first configured instance of a dimensiondata driver is matched
         """
         p = dimensiondata.get_configured_provider()
-        self.assertNotEqual(p, None)
+        assert p is not None
 
     def test_query_node_data_filter_preferred_ip_addresses(self):
         '''
@@ -191,4 +173,4 @@ class DimensionDataTestCase(ExtendedTestCase, LoaderModuleMockMixin):
                        _preferred_ip(private_ips, [zero_ip])):
                 with patch('salt.cloud.clouds.dimensiondata.ssh_interface',
                            MagicMock(return_value='private_ips')):
-                    self.assertEqual(dimensiondata._query_node_data(vm, data).public_ips, [zero_ip])
+                    assert dimensiondata._query_node_data(vm, data).public_ips == [zero_ip]

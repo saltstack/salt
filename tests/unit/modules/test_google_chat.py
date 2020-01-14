@@ -41,11 +41,11 @@ class TestModulesCfutils(TestCase, LoaderModuleMockMixin):
         Testing a successful message
         '''
         with patch.dict(gchat.__utils__, {'http.query': mocked_http_query}):  # pylint: disable=no-member
-            self.assertTrue(gchat.send_message('https://example.com', 'Yupiii'))
+            assert gchat.send_message('https://example.com', 'Yupiii')
 
     def test_send_message_failure(self):
         '''
         Testing a failed message
         '''
         with patch.dict(gchat.__utils__, {'http.query': mocked_http_query_failure}):  # pylint: disable=no-member
-            self.assertFalse(gchat.send_message('https://example.com', 'Yupiii'))
+            assert not gchat.send_message('https://example.com', 'Yupiii')

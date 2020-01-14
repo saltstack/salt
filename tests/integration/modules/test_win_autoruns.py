@@ -24,5 +24,5 @@ class AutoRunsModuleTest(ModuleCase):
         test win_autoruns.list module
         '''
         ret = self.run_function('autoruns.list')
-        self.assertIn('HKLM', str(ret))
-        self.assertTrue(isinstance(ret, dict))
+        assert 'HKLM' in str(ret)
+        assert isinstance(ret, dict)

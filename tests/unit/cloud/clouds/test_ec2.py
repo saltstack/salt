@@ -16,6 +16,7 @@ from tests.support.unit import TestCase, skipIf
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.mock import patch, PropertyMock
 from tests.unit.test_crypt import PRIVKEY_DATA
+import pytest
 
 PASS_DATA = (
     b'qOjCKDlBdcNEbJ/J8eRl7sH+bYIIm4cvHHY86gh2NEUnufFlFo0gGVTZR05Fj0cw3n/w7gR'
@@ -49,19 +50,19 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         with patch('os.path.exists', return_value=True):
             with patch('os.stat') as patched_stat:
                 type(patched_stat.return_value).st_mode = PropertyMock(return_value=0o644)
-                self.assertRaises(
-                    SaltCloudSystemExit, ec2._validate_key_path_and_mode, 'key_file')
+                with pytest.raises(SaltCloudSystemExit):
+                    ec2._validate_key_path_and_mode('key_file')
 
                 type(patched_stat.return_value).st_mode = PropertyMock(return_value=0o600)
-                self.assertTrue(ec2._validate_key_path_and_mode('key_file'))
+                assert ec2._validate_key_path_and_mode('key_file')
 
                 type(patched_stat.return_value).st_mode = PropertyMock(return_value=0o400)
-                self.assertTrue(ec2._validate_key_path_and_mode('key_file'))
+                assert ec2._validate_key_path_and_mode('key_file')
 
         # Key file does not exist
         with patch('os.path.exists', return_value=False):
-            self.assertRaises(
-                SaltCloudSystemExit, ec2._validate_key_path_and_mode, 'key_file')
+            with pytest.raises(SaltCloudSystemExit):
+                ec2._validate_key_path_and_mode('key_file')
 
     @skipIf(not ec2.HAS_M2 and not ec2.HAS_PYCRYPTO, 'Needs crypto library')
     @patch('salt.cloud.clouds.ec2._get_node')
@@ -101,11 +102,11 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         aws_query.return_value = [{'imageId': ami}]
 
         # test image filter
-        self.assertEqual(ec2.get_imageid(vm), ami)
+        assert ec2.get_imageid(vm) == ami
 
         # test ami-image
         config.return_value = ami
-        self.assertEqual(ec2.get_imageid(vm), ami)
+        assert ec2.get_imageid(vm) == ami
 
         # we should have only ran aws.query once when testing the aws filter
         aws_query.assert_called_once()
@@ -138,7 +139,8 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         get_spot_config.return_value = None
         securitygroupid.return_value = None
 
-        self.assertRaises(salt.exceptions.SaltCloudConfigError, ec2.request_instance, vm)
+        with pytest.raises(salt.exceptions.SaltCloudConfigError):
+            ec2.request_instance(vm)
         _param_from_config.assert_called_once_with('DisableApiTermination', True)
 
     @patch('salt.cloud.clouds.ec2.config.get_cloud_config_value')
@@ -166,4 +168,5 @@ class EC2TestCase(TestCase, LoaderModuleMockMixin):
         get_spot_config.return_value = None
         securitygroupid.return_value = None
 
-        self.assertRaises(salt.exceptions.SaltCloudConfigError, ec2.request_instance, vm)
+        with pytest.raises(salt.exceptions.SaltCloudConfigError):
+            ec2.request_instance(vm)

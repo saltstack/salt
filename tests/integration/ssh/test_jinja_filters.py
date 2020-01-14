@@ -20,5 +20,5 @@ class SSHJinjaFiltersTest(SSHCase):
         ret = self.run_ssh(arg)
         import salt.utils.json
         ret = salt.utils.json.loads(ret)['localhost']
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']

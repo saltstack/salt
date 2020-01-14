@@ -34,13 +34,13 @@ class TestModulesJinja(ModuleCase):
         json_file = 'osarchmap.json'
         ret = self.run_function('jinja.import_json', [self._path(json_file)])
         with salt.utils.files.fopen(self._path(json_file, absolute=True)) as fh_:
-            self.assertDictEqual(salt.utils.json.load(fh_), ret)
+            assert salt.utils.json.load(fh_) == ret
 
     def test_import_yaml(self):
         yaml_file = 'defaults.yaml'
         ret = self.run_function('jinja.import_yaml', [self._path(yaml_file)])
         with salt.utils.files.fopen(self._path(yaml_file, absolute=True)) as fh_:
-            self.assertDictEqual(salt.utils.yaml.safe_load(fh_), ret)
+            assert salt.utils.yaml.safe_load(fh_) == ret
 
     @requires_system_grains
     def test_load_map(self, grains):
@@ -57,9 +57,8 @@ class TestModulesJinja(ModuleCase):
         with salt.utils.files.fopen(self._path('osfingermap.yaml', absolute=True)) as fh_:
             osfingermap = salt.utils.yaml.safe_load(fh_)
 
-        self.assertEqual(ret.get('arch'), osarchmap.get(grains['osarch'], {}).get('arch'))
-        self.assertEqual(
-            ret.get('config'),
+        assert ret.get('arch') == osarchmap.get(grains['osarch'], {}).get('arch')
+        assert ret.get('config') == \
             osfingermap.get(
                 grains['osfinger'], {}
             ).get('config', osmap.get(
@@ -69,4 +68,3 @@ class TestModulesJinja(ModuleCase):
             ).get('config', defaults.get(
                 'template'
             ).get('config'))))
-        )

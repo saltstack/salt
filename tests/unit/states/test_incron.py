@@ -50,23 +50,23 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(incron.__opts__, {'test': True}):
                 comt = ('Incron {0} is set to be added'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
+                assert incron.present(name, path, mask, cmd) == ret
 
             with patch.dict(incron.__opts__, {'test': False}):
                 comt = ('Incron {0} already present'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
+                assert incron.present(name, path, mask, cmd) == ret
 
                 comt = ('Incron {0} added to root\'s incrontab'.format(name))
                 ret.update({'comment': comt, 'changes': {'root': 'salt'}})
-                self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
+                assert incron.present(name, path, mask, cmd) == ret
 
                 comt = ('Incron {0} updated'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
+                assert incron.present(name, path, mask, cmd) == ret
 
                 ret.update({'comment': comt4, 'result': False, 'changes': {}})
-                self.assertDictEqual(incron.present(name, path, mask, cmd), ret)
+                assert incron.present(name, path, mask, cmd) == ret
 
     # 'absent' function tests: 1
 
@@ -95,16 +95,16 @@ class IncronTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(incron.__opts__, {'test': True}):
                 comt = ('Incron {0} is absent'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
+                assert incron.absent(name, path, mask, cmd) == ret
 
             with patch.dict(incron.__opts__, {'test': False}):
                 comt = ("Incron {0} already absent".format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
+                assert incron.absent(name, path, mask, cmd) == ret
 
                 comt = (("Incron {0} removed from root's crontab".format(name)))
                 ret.update({'comment': comt, 'changes': {'root': 'salt'}})
-                self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
+                assert incron.absent(name, path, mask, cmd) == ret
 
                 ret.update({'comment': comt4, 'result': False, 'changes': {}})
-                self.assertDictEqual(incron.absent(name, path, mask, cmd), ret)
+                assert incron.absent(name, path, mask, cmd) == ret

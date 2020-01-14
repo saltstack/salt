@@ -96,7 +96,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 '''
 
         ret = x509.get_pem_entry(ca_key)
-        self.assertEqual(ret, ca_key)
+        assert ret == ca_key
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_get_private_key_size(self):
@@ -123,7 +123,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 '''
 
         ret = x509.get_private_key_size(ca_key)
-        self.assertEqual(ret, 1024)
+        assert ret == 1024
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_key(self):
@@ -133,7 +133,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         '''
         ret = x509.create_private_key(text=True,
                                       passphrase='super_secret_passphrase')
-        self.assertIn('BEGIN RSA PRIVATE KEY', ret)
+        assert 'BEGIN RSA PRIVATE KEY' in ret
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_certificate(self):
@@ -173,7 +173,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
                                       authorityKeyIdentifier='keyid,issuer:always',
                                       days_valid=3650,
                                       days_remaining=0)
-        self.assertIn('BEGIN CERTIFICATE', ret)
+        assert 'BEGIN CERTIFICATE' in ret
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_create_crl(self):
@@ -237,7 +237,7 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
         os.remove(ca_crl_file.name)
 
         # Ensure that a CRL was actually created
-        self.assertIn('BEGIN X509 CRL', crl)
+        assert 'BEGIN X509 CRL' in crl
 
     @skipIf(not HAS_M2CRYPTO, 'Skipping, M2Crypto is unavailble')
     def test_revoke_certificate_with_crl(self):
@@ -338,4 +338,4 @@ c9bcgp7D7xD+TxWWNj4CSXEccJgGr91StV+gFg4ARQ==
 
         # Ensure that the correct server cert serial is amongst
         # the revoked certificates
-        self.assertIn(serial_number, crl)
+        assert serial_number in crl

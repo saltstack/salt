@@ -43,16 +43,16 @@ class SplunkSearchTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(splunk_search.__opts__, {'test': True}):
                 comt = ("Would update {0}".format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(splunk_search.present(name), ret)
+                assert splunk_search.present(name) == ret
 
                 comt = ("Would create {0}".format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(splunk_search.present(name), ret)
+                assert splunk_search.present(name) == ret
 
             with patch.dict(splunk_search.__opts__, {'test': False}):
                 ret.update({'comment': '', 'result': True,
                             'changes': {'new': {}, 'old': False}})
-                self.assertDictEqual(splunk_search.present(name), ret)
+                assert splunk_search.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -71,9 +71,9 @@ class SplunkSearchTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(splunk_search.__opts__, {'test': True}):
                 comt = ("Would delete {0}".format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(splunk_search.absent(name), ret)
+                assert splunk_search.absent(name) == ret
 
             comt = ('{0} is absent.'.format(name))
             ret.update({'comment': comt, 'result': True,
                         'changes': {}})
-            self.assertDictEqual(splunk_search.absent(name), ret)
+            assert splunk_search.absent(name) == ret

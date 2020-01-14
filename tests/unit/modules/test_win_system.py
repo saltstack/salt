@@ -50,14 +50,14 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='salt')
         with patch.object(win_system, 'shutdown', mock):
-            self.assertEqual(win_system.halt(), 'salt')
+            assert win_system.halt() == 'salt'
 
     def test_init(self):
         '''
             Test to change the system runlevel on sysV compatible systems
         '''
-        self.assertEqual(win_system.init(3),
-                         'Not implemented on Windows at this time.')
+        assert win_system.init(3) == \
+                         'Not implemented on Windows at this time.'
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_poweroff(self):
@@ -66,7 +66,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='salt')
         with patch.object(win_system, 'shutdown', mock):
-            self.assertEqual(win_system.poweroff(), 'salt')
+            assert win_system.poweroff() == 'salt'
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_reboot(self):
@@ -75,7 +75,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.shutdown',
                    MagicMock(return_value=True)) as shutdown:
-            self.assertEqual(win_system.reboot(), True)
+            assert win_system.reboot() is True
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_reboot_with_timeout_in_minutes(self):
@@ -84,7 +84,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.shutdown',
                    MagicMock(return_value=True)) as shutdown:
-            self.assertEqual(win_system.reboot(5, in_seconds=False), True)
+            assert win_system.reboot(5, in_seconds=False) is True
             shutdown.assert_called_with(timeout=5, in_seconds=False, reboot=True,
                                         only_on_pending_reboot=False)
 
@@ -95,7 +95,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.shutdown',
                    MagicMock(return_value=True)) as shutdown:
-            self.assertEqual(win_system.reboot(5, in_seconds=True), True)
+            assert win_system.reboot(5, in_seconds=True) is True
             shutdown.assert_called_with(timeout=5, in_seconds=True, reboot=True,
                                         only_on_pending_reboot=False)
 
@@ -109,7 +109,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=True)), \
                 patch('salt.modules.win_system.time.sleep',
                       MagicMock()) as time:
-            self.assertEqual(win_system.reboot(wait_for_reboot=True), True)
+            assert win_system.reboot(wait_for_reboot=True) is True
             time.assert_called_with(330)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
@@ -119,7 +119,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.win32api.InitiateSystemShutdown',
                    MagicMock()):
-            self.assertEqual(win_system.shutdown(), True)
+            assert win_system.shutdown() is True
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_shutdown_hard(self):
@@ -128,7 +128,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.shutdown',
                    MagicMock(return_value=True)) as shutdown:
-            self.assertEqual(win_system.shutdown_hard(), True)
+            assert win_system.shutdown_hard() is True
             shutdown.assert_called_with(timeout=0)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
@@ -142,13 +142,13 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                               MagicMock(return_value='salt')):
                 with patch.object(win_system, 'get_pending_computer_name',
                                   MagicMock(return_value='salt_new')):
-                    self.assertDictEqual(win_system.set_computer_name("salt_new"),
+                    assert win_system.set_computer_name("salt_new") == \
                                          {'Computer Name': {'Current': 'salt',
-                                                            'Pending': 'salt_new'}})
+                                                            'Pending': 'salt_new'}}
         # Test set_computer_name failure
         with patch('salt.modules.win_system.windll.kernel32.SetComputerNameExW',
                    MagicMock(return_value=False)):
-            self.assertFalse(win_system.set_computer_name("salt"))
+            assert not win_system.set_computer_name("salt")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_pending_computer_name(self):
@@ -159,12 +159,12 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                           MagicMock(return_value='salt')):
             reg_mock = MagicMock(return_value={'vdata': 'salt'})
             with patch.dict(win_system.__salt__, {'reg.read_value': reg_mock}):
-                self.assertFalse(win_system.get_pending_computer_name())
+                assert not win_system.get_pending_computer_name()
 
             reg_mock = MagicMock(return_value={'vdata': 'salt_pending'})
             with patch.dict(win_system.__salt__, {'reg.read_value': reg_mock}):
-                self.assertEqual(win_system.get_pending_computer_name(),
-                                 'salt_pending')
+                assert win_system.get_pending_computer_name() == \
+                                 'salt_pending'
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_computer_name(self):
@@ -173,8 +173,8 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.win32api.GetComputerNameEx',
                    MagicMock(side_effect=['computer name', ''])):
-            self.assertEqual(win_system.get_computer_name(), 'computer name')
-            self.assertFalse(win_system.get_computer_name())
+            assert win_system.get_computer_name() == 'computer name'
+            assert not win_system.get_computer_name()
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_computer_desc(self):
@@ -187,9 +187,8 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.win_system.win32net.NetServerGetInfo', mock_get_info), \
                 patch('salt.modules.win_system.win32net.NetServerSetInfo', mock), \
                 patch.object(win_system, 'get_computer_desc', mock_get_desc):
-            self.assertDictEqual(
-                win_system.set_computer_desc("Salt's comp"),
-                {'Computer Description': "Salt's comp"})
+            assert win_system.set_computer_desc("Salt's comp") == \
+                {'Computer Description': "Salt's comp"}
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_get_computer_desc(self):
@@ -199,8 +198,8 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.win_system.get_system_info',
                    MagicMock(side_effect=[{'description': 'salt description'},
                                           {'description': None}])):
-            self.assertEqual(win_system.get_computer_desc(), 'salt description')
-            self.assertFalse(win_system.get_computer_desc())
+            assert win_system.get_computer_desc() == 'salt description'
+            assert not win_system.get_computer_desc()
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_join_domain(self):
@@ -211,16 +210,14 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=0)):
             with patch('salt.modules.win_system.get_domain_workgroup',
                        MagicMock(return_value={'Workgroup': 'Workgroup'})):
-                self.assertDictEqual(
-                    win_system.join_domain(
-                        "saltstack", "salt", "salt@123"),
-                        {'Domain': 'saltstack', 'Restart': False})
+                assert win_system.join_domain(
+                        "saltstack", "salt", "salt@123") == \
+                        {'Domain': 'saltstack', 'Restart': False}
 
             with patch('salt.modules.win_system.get_domain_workgroup',
                        MagicMock(return_value={'Domain': 'saltstack'})):
-                self.assertEqual(
-                    win_system.join_domain("saltstack", "salt", "salt@123"),
-                    'Already joined to saltstack')
+                assert win_system.join_domain("saltstack", "salt", "salt@123") == \
+                    'Already joined to saltstack'
 
     def test_get_system_time(self):
         '''
@@ -229,11 +226,11 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         tm = datetime.strftime(datetime.now(), "%I:%M:%S %p")
         win_tm = win_system.get_system_time()
         try:
-            self.assertEqual(win_tm, tm)
+            assert win_tm == tm
         except AssertionError:
             # handle race condition
             import re
-            self.assertTrue(re.search(r'^\d{2}:\d{2} \w{2}$', win_tm))
+            assert re.search(r'^\d{2}:\d{2} \w{2}$', win_tm)
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_system_time(self):
@@ -242,15 +239,15 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.set_system_date_time',
                    MagicMock(side_effect=[False, True])):
-            self.assertFalse(win_system.set_system_time("11:31:15 AM"))
-            self.assertTrue(win_system.set_system_time("11:31:15 AM"))
+            assert not win_system.set_system_time("11:31:15 AM")
+            assert win_system.set_system_time("11:31:15 AM")
 
     def test_get_system_date(self):
         '''
             Test to get system date
         '''
         date = datetime.strftime(datetime.now(), "%m/%d/%Y")
-        self.assertEqual(win_system.get_system_date(), date)
+        assert win_system.get_system_date() == date
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
     def test_set_system_date(self):
@@ -259,8 +256,8 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.win_system.set_system_date_time',
                    MagicMock(side_effect=[False, True])):
-            self.assertFalse(win_system.set_system_date("03-28-13"))
-            self.assertTrue(win_system.set_system_date("03-28-13"))
+            assert not win_system.set_system_date("03-28-13")
+            assert win_system.set_system_date("03-28-13")
 
     def test_start_time_service(self):
         '''
@@ -268,7 +265,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(win_system.__salt__, {'service.start': mock}):
-            self.assertTrue(win_system.start_time_service())
+            assert win_system.start_time_service()
 
     def test_stop_time_service(self):
         '''
@@ -276,7 +273,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(win_system.__salt__, {'service.stop': mock}):
-            self.assertTrue(win_system.stop_time_service())
+            assert win_system.stop_time_service()
 
     def test_set_hostname(self):
         '''
@@ -297,7 +294,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         cmd_run_mock = MagicMock(return_value="MINION")
         with patch.dict(win_system.__salt__, {'cmd.run': cmd_run_mock}):
             ret = win_system.get_hostname()
-            self.assertEqual(ret, "MINION")
+            assert ret == "MINION"
         cmd_run_mock.assert_called_once_with(cmd="hostname")
 
     @skipIf(not win_system.HAS_WIN32NET_MODS, 'Missing win32 libraries')
@@ -322,19 +319,19 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
         ret = win_system.get_system_info()
         # Make sure all the fields are in the return
         for field in fields:
-            self.assertIn(field, ret)
+            assert field in ret
         # os_type
         os_types = ['Work Station', 'Domain Controller', 'Server']
-        self.assertIn(ret['os_type'], os_types)
+        assert ret['os_type'] in os_types
         domain_roles = ['Standalone Workstation', 'Member Workstation',
                         'Standalone Server', 'Member Server',
                         'Backup Domain Controller', 'Primary Domain Controller']
-        self.assertIn(ret['domain_role'], domain_roles)
+        assert ret['domain_role'] in domain_roles
         system_types = ['Unspecified', 'Desktop', 'Mobile', 'Workstation',
                         'Enterprise Server', 'SOHO Server', 'Appliance PC',
                         'Performance Server', 'Slate', 'Maximum']
-        self.assertIn(ret['pc_system_type'], system_types)
+        assert ret['pc_system_type'] in system_types
         warning_states = ['Other', 'Unknown', 'Safe', 'Warning', 'Critical',
                           'Non-recoverable']
-        self.assertIn(ret['chassis_bootup_state'], warning_states)
-        self.assertIn(ret['thermal_state'], warning_states)
+        assert ret['chassis_bootup_state'] in warning_states
+        assert ret['thermal_state'] in warning_states

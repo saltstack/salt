@@ -42,11 +42,11 @@ class TestSyncWrapper(AsyncTestCase):
         '''
         ha = HelperA()
         ret = yield ha.sleep()
-        self.assertTrue(ret)
+        assert ret
 
         hb = HelperB()
         ret = yield hb.sleep()
-        self.assertFalse(ret)
+        assert not ret
 
     def test_basic_wrap(self):
         '''
@@ -54,7 +54,7 @@ class TestSyncWrapper(AsyncTestCase):
         '''
         sync = asynchronous.SyncWrapper(HelperA)
         ret = sync.sleep()
-        self.assertTrue(ret)
+        assert ret
 
     def test_double(self):
         '''
@@ -65,7 +65,7 @@ class TestSyncWrapper(AsyncTestCase):
         '''
         sync = asynchronous.SyncWrapper(HelperB)
         ret = sync.sleep()
-        self.assertFalse(ret)
+        assert not ret
 
     def test_double_sameloop(self):
         '''
@@ -75,4 +75,4 @@ class TestSyncWrapper(AsyncTestCase):
         a = asynchronous.SyncWrapper(HelperA)
         sync = asynchronous.SyncWrapper(HelperB, (a,))
         ret = sync.sleep()
-        self.assertFalse(ret)
+        assert not ret

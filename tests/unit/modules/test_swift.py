@@ -28,9 +28,9 @@ class SwiftTestCase(TestCase):
         Test for delete a container, or delete an object from a container.
         '''
         with patch.object(swift, '_auth', MagicMock()):
-            self.assertTrue(swift.delete('mycontainer'))
+            assert swift.delete('mycontainer')
 
-            self.assertTrue(swift.delete('mycontainer', path='myfile.png'))
+            assert swift.delete('mycontainer', path='myfile.png')
 
     # 'get' function tests: 1
 
@@ -40,17 +40,17 @@ class SwiftTestCase(TestCase):
         or return an object from a container.
         '''
         with patch.object(swift, '_auth', MagicMock()):
-            self.assertTrue(swift.get())
+            assert swift.get()
 
-            self.assertTrue(swift.get('mycontainer'))
+            assert swift.get('mycontainer')
 
-            self.assertTrue(swift.get('mycontainer', path='myfile.png',
-                                      return_bin=True))
+            assert swift.get('mycontainer', path='myfile.png',
+                                      return_bin=True)
 
-            self.assertTrue(swift.get('mycontainer', path='myfile.png',
-                                      local_file='/tmp/myfile.png'))
+            assert swift.get('mycontainer', path='myfile.png',
+                                      local_file='/tmp/myfile.png')
 
-            self.assertFalse(swift.get('mycontainer', path='myfile.png'))
+            assert not swift.get('mycontainer', path='myfile.png')
 
     # 'put' function tests: 1
 
@@ -59,9 +59,9 @@ class SwiftTestCase(TestCase):
         Test for create a new container, or upload an object to a container.
         '''
         with patch.object(swift, '_auth', MagicMock()):
-            self.assertTrue(swift.put('mycontainer'))
+            assert swift.put('mycontainer')
 
-            self.assertTrue(swift.put('mycontainer', path='myfile.png',
-                                      local_file='/tmp/myfile.png'))
+            assert swift.put('mycontainer', path='myfile.png',
+                                      local_file='/tmp/myfile.png')
 
-            self.assertFalse(swift.put('mycontainer', path='myfile.png'))
+            assert not swift.put('mycontainer', path='myfile.png')

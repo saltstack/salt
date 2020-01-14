@@ -31,16 +31,16 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="A \nB \n")
         with patch.dict(hadoop.__salt__, {'cmd.run': mock}):
-            self.assertEqual(hadoop.version(), 'B')
+            assert hadoop.version() == 'B'
 
     def test_dfs(self):
         '''
         Test for Execute a command on DFS
         '''
         with patch.object(hadoop, '_hadoop_cmd', return_value='A'):
-            self.assertEqual(hadoop.dfs('command'), 'A')
+            assert hadoop.dfs('command') == 'A'
 
-        self.assertEqual(hadoop.dfs(), 'Error: command must be provided')
+        assert hadoop.dfs() == 'Error: command must be provided'
 
     def test_dfs_present(self):
         '''
@@ -48,8 +48,8 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(hadoop, '_hadoop_cmd',
                           side_effect=['No such file or directory', 'A']):
-            self.assertFalse(hadoop.dfs_present('path'))
-            self.assertTrue(hadoop.dfs_present('path'))
+            assert not hadoop.dfs_present('path')
+            assert hadoop.dfs_present('path')
 
     def test_dfs_absent(self):
         '''
@@ -57,12 +57,12 @@ class HadoopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(hadoop, '_hadoop_cmd',
                           side_effect=['No such file or directory', 'A']):
-            self.assertTrue(hadoop.dfs_absent('path'))
-            self.assertFalse(hadoop.dfs_absent('path'))
+            assert hadoop.dfs_absent('path')
+            assert not hadoop.dfs_absent('path')
 
     def test_namenode_format(self):
         '''
         Test for Format a name node
         '''
         with patch.object(hadoop, '_hadoop_cmd', return_value='A'):
-            self.assertEqual(hadoop.namenode_format('force'), 'A')
+            assert hadoop.namenode_format('force') == 'A'

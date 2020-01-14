@@ -50,7 +50,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         verify that packages are installed
         '''
         ret = self.run_function('pkg.list_pkgs')
-        self.assertNotEqual(len(ret.keys()), 0)
+        assert len(ret.keys()) != 0
 
     @pytest.mark.requires_salt_modules('pkg.version_cmp')
     @requires_system_grains
@@ -72,9 +72,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             eq = ['2.3.1', '2.3.1']
             gt = ['2.3.2', '2.3.1']
 
-        self.assertEqual(self.run_function(func, lt), -1)
-        self.assertEqual(self.run_function(func, eq), 0)
-        self.assertEqual(self.run_function(func, gt), 1)
+        assert self.run_function(func, lt) == -1
+        assert self.run_function(func, eq) == 0
+        assert self.run_function(func, gt) == 1
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules('pkg.mod_repo', 'pkg.del_repo', 'pkg.get_repo')
@@ -91,19 +91,17 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 repo = 'ppa:otto-kesselgulasch/gimp-edge'
                 uri = 'http://ppa.launchpad.net/otto-kesselgulasch/gimp-edge/ubuntu'
                 ret = self.run_function('pkg.mod_repo', [repo, 'comps=main'])
-                self.assertNotEqual(ret, {})
+                assert ret != {}
                 ret = self.run_function('pkg.get_repo', [repo])
 
-                self.assertIsInstance(ret, dict,
-                                      'The \'pkg.get_repo\' command did not return the excepted dictionary. '
-                                      'Output:\n{}'.format(ret))
-                self.assertEqual(
-                    ret['uri'],
-                    uri,
-                    msg='The URI did not match. Full return:\n{}'.format(
+                assert isinstance(ret, dict), \
+                                      'The \'pkg.get_repo\' command did not return the excepted dictionary. ' \
+                                      'Output:\n{}'.format(ret)
+                assert ret['uri'] == \
+                    uri, \
+                    'The URI did not match. Full return:\n{}'.format(
                         pprint.pformat(ret)
                     )
-                )
             elif grains['os_family'] == 'RedHat':
                 repo = 'saltstack'
                 name = 'SaltStack repo for RHEL/CentOS {0}'.format(grains['osmajorrelease'])
@@ -123,12 +121,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 )
                 # return data from pkg.mod_repo contains the file modified at
                 # the top level, so use next(iter(ret)) to get that key
-                self.assertNotEqual(ret, {})
+                assert ret != {}
                 repo_info = ret[next(iter(ret))]
-                self.assertIn(repo, repo_info)
-                self.assertEqual(repo_info[repo]['baseurl'], baseurl)
+                assert repo in repo_info
+                assert repo_info[repo]['baseurl'] == baseurl
                 ret = self.run_function('pkg.get_repo', [repo])
-                self.assertEqual(ret['baseurl'], baseurl)
+                assert ret['baseurl'] == baseurl
         finally:
             if repo is not None:
                 self.run_function('pkg.del_repo', [repo])
@@ -168,15 +166,15 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 )
                 # return data from pkg.mod_repo contains the file modified at
                 # the top level, so use next(iter(ret)) to get that key
-                self.assertNotEqual(ret, {})
+                assert ret != {}
                 repo_info = ret[next(iter(ret))]
-                self.assertIn(repo, repo_info)
-                self.assertEqual(repo_info[repo]['baseurl'], my_baseurl)
+                assert repo in repo_info
+                assert repo_info[repo]['baseurl'] == my_baseurl
                 ret = self.run_function('pkg.get_repo', [repo])
-                self.assertEqual(ret['baseurl'], expected_get_repo_baseurl)
+                assert ret['baseurl'] == expected_get_repo_baseurl
                 self.run_function('pkg.mod_repo', [repo])
                 ret = self.run_function('pkg.get_repo', [repo])
-                self.assertEqual(ret['baseurl'], expected_get_repo_baseurl)
+                assert ret['baseurl'] == expected_get_repo_baseurl
         finally:
             if repo is not None:
                 self.run_function('pkg.del_repo', [repo])
@@ -188,7 +186,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         func = 'pkg.owner'
         ret = self.run_function(func, ['/bin/ls'])
-        self.assertNotEqual(len(ret), 0)
+        assert len(ret) != 0
 
     # Similar to pkg.owner, but for FreeBSD's pkgng
     @pytest.mark.requires_salt_modules('pkg.which')
@@ -198,7 +196,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         '''
         func = 'pkg.which'
         ret = self.run_function(func, ['/usr/local/bin/salt-call'])
-        self.assertNotEqual(len(ret), 0)
+        assert len(ret) != 0
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_salt_modules('pkg.version', 'pkg.install', 'pkg.remove')
@@ -211,11 +209,11 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         def test_install():
             install_ret = self.run_function('pkg.install', [self.pkg])
-            self.assertIn(self.pkg, install_ret)
+            assert self.pkg in install_ret
 
         def test_remove():
             remove_ret = self.run_function('pkg.remove', [self.pkg])
-            self.assertIn(self.pkg, remove_ret)
+            assert self.pkg in remove_ret
 
         if version and isinstance(version, dict):
             version = version[self.pkg]
@@ -258,12 +256,12 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
             hold_ret = self.run_function('pkg.hold', [self.pkg])
             if versionlock_pkg and '-versionlock is not installed' in str(hold_ret):
                 self.skipTest('{}  `{}` is installed'.format(hold_ret, versionlock_pkg))
-            self.assertIn(self.pkg, hold_ret)
-            self.assertTrue(hold_ret[self.pkg]['result'])
+            assert self.pkg in hold_ret
+            assert hold_ret[self.pkg]['result']
 
             unhold_ret = self.run_function('pkg.unhold', [self.pkg])
-            self.assertIn(self.pkg, unhold_ret)
-            self.assertTrue(unhold_ret[self.pkg]['result'])
+            assert self.pkg in unhold_ret
+            assert unhold_ret[self.pkg]['result']
             self.run_function('pkg.remove', [self.pkg])
         finally:
             if versionlock_pkg:
@@ -282,22 +280,22 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
         rtag = salt.utils.pkg.rtag(self.minion_opts)
         salt.utils.pkg.write_rtag(self.minion_opts)
-        self.assertTrue(os.path.isfile(rtag))
+        assert os.path.isfile(rtag)
 
         ret = self.run_function(func)
         if not isinstance(ret, dict):
             self.skipTest('Upstream repo did not return coherent results: {}'.format(ret))
 
         if grains['os_family'] == 'RedHat':
-            self.assertIn(ret, (True, None))
+            assert ret in (True, None)
         elif grains['os_family'] == 'Suse':
             if not isinstance(ret, dict):
                 self.skipTest('Upstream repo did not return coherent results. Skipping test.')
-            self.assertNotEqual(ret, {})
+            assert ret != {}
             for source, state in ret.items():
-                self.assertIn(state, (True, False, None))
+                assert state in (True, False, None)
 
-        self.assertFalse(os.path.isfile(rtag))
+        assert not os.path.isfile(rtag)
 
     @pytest.mark.requires_salt_modules('pkg.info_installed')
     @requires_system_grains
@@ -310,22 +308,22 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         if grains['os_family'] == 'Debian':
             ret = self.run_function(func, ['bash', 'dpkg'])
             keys = ret.keys()
-            self.assertIn('bash', keys)
-            self.assertIn('dpkg', keys)
+            assert 'bash' in keys
+            assert 'dpkg' in keys
         elif grains['os_family'] == 'RedHat':
             ret = self.run_function(func, ['rpm', 'bash'])
             keys = ret.keys()
-            self.assertIn('rpm', keys)
-            self.assertIn('bash', keys)
+            assert 'rpm' in keys
+            assert 'bash' in keys
         elif grains['os_family'] == 'Suse':
             ret = self.run_function(func, ['less', 'zypper'])
             keys = ret.keys()
-            self.assertIn('less', keys)
-            self.assertIn('zypper', keys)
+            assert 'less' in keys
+            assert 'zypper' in keys
         else:
             ret = self.run_function(func, [self.pkg])
             keys = ret.keys()
-            self.assertIn(self.pkg, keys)
+            assert self.pkg in keys
 
     @pytest.mark.destructive_test
     @pytest.mark.requires_network
@@ -385,9 +383,9 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
 
             # The changes dictionary should not be empty.
             if 'changes' in ret:
-                self.assertIn(target, ret['changes'])
+                assert target in ret['changes']
             else:
-                self.assertIn(target, ret)
+                assert target in ret
         else:
             ret = self.run_function('pkg.list_upgrades')
             if ret == '' or ret == {}:
@@ -397,7 +395,7 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
                 if grains['os_family'] == 'Debian':
                     args = ['dist_upgrade=True']
                 ret = self.run_function(func, args)
-                self.assertNotEqual(ret, {})
+                assert ret != {}
 
     @skipIf(salt.utils.platform.is_darwin(), 'The jenkins user is equivalent to root on mac, causing the test to be unrunnable')
     @pytest.mark.destructive_test
@@ -433,4 +431,4 @@ class PkgModuleTest(ModuleCase, SaltReturnAssertsMixin):
         else:
             self.skipTest('TODO: test not configured for {}'.format(grains['os_family']))
         pkg_latest = self.run_function('pkg.latest_version', [self.pkg])
-        self.assertIn(pkg_latest, cmd_pkg)
+        assert pkg_latest in cmd_pkg

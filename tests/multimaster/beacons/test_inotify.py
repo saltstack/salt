@@ -43,7 +43,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
             master_tgt='mm-master',
         )
         log.debug('Inotify beacon add returned: %s', res)
-        self.assertTrue(res.get('result'))
+        assert res.get('result')
         self.addCleanup(self.run_function, 'beacons.delete', ('inotify',), master_tgt='mm-master')
         res = self.run_function(
             'beacons.add',
@@ -51,7 +51,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
             master_tgt='mm-master',
         )
         log.debug('Status beacon add returned: %s', res)
-        self.assertTrue(res.get('result'))
+        assert res.get('result')
         self.addCleanup(self.run_function, 'beacons.delete', ('status',), master_tgt='mm-master')
 
         # Ensure beacons are added.
@@ -62,7 +62,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
             master_tgt='mm-master',
         )
         log.debug('Beacons list: %s', res)
-        self.assertEqual({
+        assert {
             'inotify': [{
                 'files': {
                     self.tmpdir: {
@@ -73,7 +73,7 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
             'status': [{
                 'time': ['all']
                 }]
-            }, res)
+            } == res
 
         file_path = os.path.join(self.tmpdir, 'tmpfile')
         master_listener = salt.utils.event.get_master_event(
@@ -165,4 +165,4 @@ class TestBeaconsInotify(MultimasterModuleCase, AdaptedConfigurationTestCaseMixi
                 }
 
         # It's better to compare both at once to see both responses in the error log.
-        self.assertEqual((expected, expected), (event, sub_event))
+        assert (expected, expected) == (event, sub_event)

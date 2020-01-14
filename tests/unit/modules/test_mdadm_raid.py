@@ -35,7 +35,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                     force=True,
                     chunk=256
             )
-            self.assertEqual('salt', ret)
+            assert 'salt' == ret
 
             self.assert_called_once(mock)
 
@@ -43,21 +43,21 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             # expected cmd is
             # mdadm -C /dev/md0 -R -v --chunk 256 --force -l 5 -e default -n 3 /dev/sdb1 /dev/sdc1 /dev/sdd1
             # where args between -v and -l could be in any order
-            self.assertEqual(len(args), 1)
-            self.assertEqual(len(args[0]), 17)
-            self.assertEqual(args[0][:7], [
+            assert len(args) == 1
+            assert len(args[0]) == 17
+            assert args[0][:7] == [
                 'mdadm',
                 '-C', '/dev/md0',
                 '-R',
                 '-v',
-                '-l', '5'])
-            self.assertEqual(args[0][10:], [
+                '-l', '5']
+            assert args[0][10:] == [
                 '-e', 'default',
                 '-n', '3',
-                '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'])
-            self.assertEqual(sorted(args[0][7:10]),
-                             sorted(['--chunk', '256', '--force']))
-            self.assertEqual(kwargs, {'python_shell': False})
+                '/dev/sdb1', '/dev/sdc1', '/dev/sdd1']
+            assert sorted(args[0][7:10]) == \
+                             sorted(['--chunk', '256', '--force'])
+            assert kwargs == {'python_shell': False}
 
     def test_create_metadata(self):
         mock = MagicMock(return_value='salt')
@@ -71,24 +71,24 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                     force=True,
                     chunk=256
             )
-            self.assertEqual('salt', ret)
+            assert 'salt' == ret
 
             self.assert_called_once(mock)
 
             args, kwargs = mock.call_args
-            self.assertEqual(args[0][:7], [
+            assert args[0][:7] == [
                 'mdadm',
                 '-C', '/dev/md0',
                 '-R',
                 '-v',
-                '-l', '5'])
-            self.assertEqual(args[0][10:], [
+                '-l', '5']
+            assert args[0][10:] == [
                 '-e', '0.9',
                 '-n', '3',
-                '/dev/sdb1', '/dev/sdc1', '/dev/sdd1'])
-            self.assertEqual(sorted(args[0][7:10]),
-                             sorted(['--chunk', '256', '--force']))
-            self.assertEqual(kwargs, {'python_shell': False})
+                '/dev/sdb1', '/dev/sdc1', '/dev/sdd1']
+            assert sorted(args[0][7:10]) == \
+                             sorted(['--chunk', '256', '--force'])
+            assert kwargs == {'python_shell': False}
 
     def test_create_test_mode(self):
         mock = MagicMock()
@@ -100,9 +100,9 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                     chunk=256,
                     test_mode=True
             )
-            self.assertEqual(sorted('mdadm -C /dev/md0 -R -v --chunk 256 '
+            assert sorted('mdadm -C /dev/md0 -R -v --chunk 256 '
                               '--force -l 5 -e default -n 3 '
-                              '/dev/sdb1 /dev/sdc1 /dev/sdd1'.split()), sorted(ret.split()))
+                              '/dev/sdb1 /dev/sdc1 /dev/sdd1'.split()) == sorted(ret.split())
             assert not mock.called, 'test mode failed, cmd.run called'
 
     def test_examine(self):
@@ -111,10 +111,10 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='ARRAY /dev/md/pool metadata=1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool')
         with patch.dict(mdadm.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(mdadm.examine('/dev/md0'),
+            assert mdadm.examine('/dev/md0') == \
                              {
                                  'ARRAY /dev/md/pool metadata': '1.2 UUID=567da122:fb8e445e:55b853e0:81bd0a3e name=positron:pool'
-                             })
+                             }
             mock.assert_called_with('mdadm -Y -E /dev/md0', ignore_retcode=False,
                                     python_shell=False)
 
@@ -124,6 +124,6 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(mdadm.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(mdadm.examine('/dev/md0', quiet=True), {})
+            assert mdadm.examine('/dev/md0', quiet=True) == {}
             mock.assert_called_with('mdadm -Y -E /dev/md0', ignore_retcode=True,
                                     python_shell=False)

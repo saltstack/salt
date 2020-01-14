@@ -232,7 +232,7 @@ class DaemonsStarterTestCase(TestCase, SaltClientTestCaseMixin):
         m_parent, m_child = multiprocessing.Pipe()
         p_ = multiprocessing.Process(target=exec_test, args=(m_child,))
         p_.start()
-        self.assertTrue(m_parent.recv())
+        assert m_parent.recv()
         p_.join()
 
     def test_master_daemon_hash_type_verified(self):

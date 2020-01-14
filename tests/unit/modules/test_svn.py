@@ -31,11 +31,11 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
                                       {'retcode': 0, 'stdout': 'A\n\nB'},
                                       {'retcode': 0, 'stdout': 'A\n\nB'}])
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.info('cwd', fmt='xml'))
+            assert svn.info('cwd', fmt='xml')
 
-            self.assertListEqual(svn.info('cwd', fmt='list'), [[], []])
+            assert svn.info('cwd', fmt='list') == [[], []]
 
-            self.assertListEqual(svn.info('cwd', fmt='dict'), [{}, {}])
+            assert svn.info('cwd', fmt='dict') == [{}, {}]
 
     def test_checkout(self):
         '''
@@ -44,7 +44,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.checkout('cwd', 'remote'))
+            assert svn.checkout('cwd', 'remote')
 
     def test_switch(self):
         '''
@@ -53,7 +53,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.switch('cwd', 'remote'))
+            assert svn.switch('cwd', 'remote')
 
     def test_update(self):
         '''
@@ -62,7 +62,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.update('cwd'))
+            assert svn.update('cwd')
 
     def test_diff(self):
         '''
@@ -71,7 +71,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.diff('cwd'))
+            assert svn.diff('cwd')
 
     def test_commit(self):
         '''
@@ -80,7 +80,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.commit('cwd'))
+            assert svn.commit('cwd')
 
     def test_add(self):
         '''
@@ -89,7 +89,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.add('cwd', False))
+            assert svn.add('cwd', False)
 
     def test_remove(self):
         '''
@@ -97,7 +97,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.remove('cwd', False))
+            assert svn.remove('cwd', False)
 
     def test_status(self):
         '''
@@ -106,7 +106,7 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.status('cwd'))
+            assert svn.status('cwd')
 
     def test_export(self):
         '''
@@ -114,4 +114,4 @@ class SvnTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': True})
         with patch.dict(svn.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(svn.export('cwd', 'remote'))
+            assert svn.export('cwd', 'remote')

@@ -41,7 +41,7 @@ class MakeconfTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(makeconf.__salt__, {'makeconf.get_var': mock_t}):
             comt = ('Variable {0} is already present in make.conf'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(makeconf.present(name), ret)
+            assert makeconf.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -61,4 +61,4 @@ class MakeconfTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('Variable {0} is already absent from make.conf'
                     .format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(makeconf.absent(name), ret)
+            assert makeconf.absent(name) == ret

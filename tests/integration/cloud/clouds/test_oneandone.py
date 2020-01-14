@@ -31,10 +31,8 @@ class OneAndOneTest(CloudTest):
         Tests the return of running the --list-images command for 1and1
         '''
         image_list = self.run_cloud('--list-images {0}'.format(self.PROVIDER_NAME))
-        self.assertIn(
-            'coreOSimage',
+        assert 'coreOSimage' in \
             [i.strip() for i in image_list]
-        )
 
     def test_instance(self):
         '''

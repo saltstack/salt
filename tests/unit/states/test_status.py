@@ -41,25 +41,25 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(status.__salt__, {'status.loadavg': mock}):
             comt = ('Requested load average mymonitor not available ')
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(status.loadavg(name), ret)
+            assert status.loadavg(name) == ret
 
         mock = MagicMock(return_value={name: 3})
         with patch.dict(status.__salt__, {'status.loadavg': mock}):
             comt = ('Min must be less than max')
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(status.loadavg(name, 1, 5), ret)
+            assert status.loadavg(name, 1, 5) == ret
 
             comt = ('Load avg is below minimum of 4 at 3.0')
             ret.update({'comment': comt, 'data': 3})
-            self.assertDictEqual(status.loadavg(name, 5, 4), ret)
+            assert status.loadavg(name, 5, 4) == ret
 
             comt = ('Load avg above maximum of 2 at 3.0')
             ret.update({'comment': comt, 'data': 3})
-            self.assertDictEqual(status.loadavg(name, 2, 1), ret)
+            assert status.loadavg(name, 2, 1) == ret
 
             comt = ('Load avg in acceptable range')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(status.loadavg(name, 3, 1), ret)
+            assert status.loadavg(name, 3, 1) == ret
 
     # 'process' function tests: 1
 
@@ -80,9 +80,9 @@ class StatusTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(status.__salt__, {'status.pid': mock}):
             comt = ('Process signature "mymonitor" not found ')
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(status.process(name), ret)
+            assert status.process(name) == ret
 
             comt = ('Process signature "mymonitor" was found ')
             ret.update({'comment': comt, 'result': True,
                         'data': {name: 1}})
-            self.assertDictEqual(status.process(name), ret)
+            assert status.process(name) == ret

@@ -34,15 +34,15 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(zk_concurrency.__opts__, {"test": True}):
             ret.update({'comment': 'Attempt to acquire lock', 'result': None})
-            self.assertDictEqual(zk_concurrency.lock('salt', 'dude'), ret)
+            assert zk_concurrency.lock('salt', 'dude') == ret
 
         with patch.dict(zk_concurrency.__opts__, {"test": False}):
             mock = MagicMock(return_value=True)
             with patch.dict(zk_concurrency.__salt__,
                             {"zk_concurrency.lock": mock}):
                 ret.update({'comment': 'lock acquired', 'result': True})
-                self.assertDictEqual(zk_concurrency.lock('salt', 'dude',
-                                                         'stack'), ret)
+                assert zk_concurrency.lock('salt', 'dude',
+                                                         'stack') == ret
 
     def test_unlock(self):
         '''
@@ -56,16 +56,16 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(zk_concurrency.__opts__, {"test": True}):
             ret.update({'comment': 'Released lock if it is here',
                         'result': None})
-            self.assertDictEqual(zk_concurrency.unlock('salt'), ret)
+            assert zk_concurrency.unlock('salt') == ret
 
         with patch.dict(zk_concurrency.__opts__, {"test": False}):
             mock = MagicMock(return_value=True)
             with patch.dict(zk_concurrency.__salt__,
                             {"zk_concurrency.unlock": mock}):
                 ret.update({'comment': '', 'result': True})
-                self.assertDictEqual(zk_concurrency.unlock('salt',
-                                                           identifier='stack'),
-                                     ret)
+                assert zk_concurrency.unlock('salt',
+                                                           identifier='stack') == \
+                                     ret
 
     def test_min_party(self):
         '''
@@ -78,16 +78,16 @@ class ZkConcurrencyTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(zk_concurrency.__opts__, {"test": True}):
             ret.update({'comment': 'Attempt to ensure min_party', 'result': None})
-            self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 1), ret)
+            assert zk_concurrency.min_party('salt', 'dude', 1) == ret
 
         with patch.dict(zk_concurrency.__opts__, {"test": False}):
             mock = MagicMock(return_value=['1', '2', '3'])
             with patch.dict(zk_concurrency.__salt__,
                             {"zk_concurrency.party_members": mock}):
                 ret.update({'comment': 'Currently 3 nodes, which is >= 2', 'result': True})
-                self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 2), ret)
+                assert zk_concurrency.min_party('salt', 'dude', 2) == ret
                 ret.update({'comment': 'Blocked until 2 nodes were available. ' +
                            'Unblocked after 3 nodes became available', 'result': True})
-                self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 2, True), ret)
+                assert zk_concurrency.min_party('salt', 'dude', 2, True) == ret
                 ret.update({'comment': 'Currently 3 nodes, which is < 4', 'result': False})
-                self.assertDictEqual(zk_concurrency.min_party('salt', 'dude', 4), ret)
+                assert zk_concurrency.min_party('salt', 'dude', 4) == ret

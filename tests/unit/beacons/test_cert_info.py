@@ -56,16 +56,16 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = cert_info.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for cert_info beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for cert_info beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = cert_info.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for cert_info beacon '
-                                      'must contain files option.'))
+        assert ret == (False, 'Configuration for cert_info beacon '
+                                      'must contain files option.')
 
     def test_cert_information(self):
         with patch('salt.utils.files.fopen',
@@ -76,7 +76,7 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = cert_info.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             _expected_return = [
                 {
@@ -104,4 +104,4 @@ class CertInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                 }
             ]
             ret = cert_info.beacon(config)
-            self.assertEqual(ret, _expected_return)
+            assert ret == _expected_return

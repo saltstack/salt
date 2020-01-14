@@ -311,7 +311,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(host.__opts__, {'test': True}):
                 ret = host.present(self.hostname, self.ip_list[:1])
 
-                self.assertDictEqual(ret, expected)
+                assert ret == expected
 
     def test_host_present_should_return_None_if_test_and_adding(self):
         expected = {
@@ -337,7 +337,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                          'hosts.rm_host': self.rm_host_mock}):
             with patch.dict(host.__opts__, {'test': True}):
                 ret = host.present(self.hostname, self.ip_list)
-                self.assertDictEqual(ret, expected)
+                assert ret == expected
 
     def test_host_present_should_return_None_if_test_and_removing(self):
         expected = {
@@ -360,7 +360,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
                          'hosts.rm_host': self.rm_host_mock}):
             with patch.dict(host.__opts__, {'test': True}):
                 ret = host.present(self.hostname, self.ip_list[:1], clean=True)
-                self.assertDictEqual(ret, expected)
+                assert ret == expected
 
     def test_absent(self):
         '''
@@ -372,7 +372,7 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=False)
         with patch.dict(host.__salt__, {'hosts.has_pair': mock}):
-            self.assertDictEqual(host.absent("salt", "127.0.0.1"), ret)
+            assert host.absent("salt", "127.0.0.1") == ret
 
     def test_only_already(self):
         '''
@@ -388,9 +388,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             mock2 = MagicMock(return_value=True)
             with patch.dict(host.__salt__, {'hosts.set_host': mock2}):
                 with patch.dict(host.__opts__, {'test': False}):
-                    self.assertDictEqual(
-                        expected,
-                        host.only("127.0.1.1", 'foo.bar'))
+                    assert expected == \
+                        host.only("127.0.1.1", 'foo.bar')
 
     def test_only_dryrun(self):
         '''
@@ -406,9 +405,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             mock2 = MagicMock(return_value=True)
             with patch.dict(host.__salt__, {'hosts.set_host': mock2}):
                 with patch.dict(host.__opts__, {'test': True}):
-                    self.assertDictEqual(
-                        expected,
-                        host.only("127.0.1.1", ['foo.bar', 'foo']))
+                    assert expected == \
+                        host.only("127.0.1.1", ['foo.bar', 'foo'])
 
     def test_only_fail(self):
         '''
@@ -425,9 +423,8 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=False)
             with patch.dict(host.__salt__, {'hosts.set_host': mock}):
                 with patch.dict(host.__opts__, {'test': False}):
-                    self.assertDictEqual(
-                        expected,
-                        host.only("127.0.1.1", ['foo.bar', 'foo']))
+                    assert expected == \
+                        host.only("127.0.1.1", ['foo.bar', 'foo'])
 
     def test_only_success(self):
         '''
@@ -444,6 +441,5 @@ class HostTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(return_value=True)
             with patch.dict(host.__salt__, {'hosts.set_host': mock}):
                 with patch.dict(host.__opts__, {'test': False}):
-                    self.assertDictEqual(
-                        expected,
-                        host.only("127.0.1.1", ['foo.bar', 'foo']))
+                    assert expected == \
+                        host.only("127.0.1.1", ['foo.bar', 'foo'])

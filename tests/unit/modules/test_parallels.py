@@ -15,6 +15,7 @@ from tests.support.mock import MagicMock, patch
 
 # Import third party libs
 from salt.ext import six
+import pytest
 
 
 class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
@@ -32,9 +33,9 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             '''
             Assert that the returned data is a list of strings
             '''
-            self.assertTrue(isinstance(ret, list))
+            assert isinstance(ret, list)
             for arg in ret:
-                self.assertTrue(isinstance(arg, six.string_types))
+                assert isinstance(arg, six.string_types)
 
         # Validate string arguments
         str_args = 'electrolytes --aqueous --anion hydroxide --cation=ammonium free radicals -- hydrogen'
@@ -64,7 +65,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         guids = ['a5b8999f-5d95-4aff-82de-e515b0101b66',
                      'a7345be5-ab66-478c-946e-a6c2caf14909']
 
-        self.assertEqual(parallels._find_guids(guid_str), guids)
+        assert parallels._find_guids(guid_str) == guids
 
     def test_prlsrvctl(self):
         '''
@@ -74,7 +75,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test missing prlsrvctl binary
         with patch('salt.utils.path.which', MagicMock(return_value=False)):
-            with self.assertRaises(CommandExecutionError):
+            with pytest.raises(CommandExecutionError):
                 parallels.prlsrvctl('info', runas=runas)
 
         # Simulate the existence of prlsrvctl
@@ -109,7 +110,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test missing prlctl binary
         with patch('salt.utils.path.which', MagicMock(return_value=False)):
-            with self.assertRaises(CommandExecutionError):
+            with pytest.raises(CommandExecutionError):
                 parallels.prlctl('info', runas=runas)
 
         # Simulate the existence of prlctl
@@ -234,12 +235,12 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         # Validate exists
         mock_list = MagicMock(return_value='Name: {0}\nState: running'.format(name))
         with patch.object(parallels, 'list_vms', mock_list):
-            self.assertTrue(parallels.exists(name, runas=runas))
+            assert parallels.exists(name, runas=runas)
 
         # Validate not exists
         mock_list = MagicMock(return_value='Name: {0}\nState: running'.format(name))
         with patch.object(parallels, 'list_vms', mock_list):
-            self.assertFalse(parallels.exists('winvm', runas=runas))
+            assert not parallels.exists('winvm', runas=runas)
 
     def test_start(self):
         '''
@@ -330,43 +331,40 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         snap_id = 'a5b8999f-5d95-4aff-82de-e515b0101b66'
 
         # Invalid GUID raises error
-        self.assertRaises(SaltInvocationError,
-                          parallels.snapshot_id_to_name,
-                          name,
+        with pytest.raises(SaltInvocationError):
+            parallels.snapshot_id_to_name(name,
                           '{8-4-4-4-12}')
 
         # Empty return from prlctl raises error (name/snap_id mismatch?)
         mock_no_data = MagicMock(return_value='')
         with patch.object(parallels, 'prlctl', mock_no_data):
-            self.assertRaises(SaltInvocationError,
-                              parallels.snapshot_id_to_name,
-                              name,
+            with pytest.raises(SaltInvocationError):
+                parallels.snapshot_id_to_name(name,
                               snap_id)
 
         # Data returned from prlctl is invalid YAML
         mock_invalid_data = MagicMock(return_value='[string theory is falsifiable}')
         with patch.object(parallels, 'prlctl', mock_invalid_data):
             snap_name = parallels.snapshot_id_to_name(name, snap_id)
-            self.assertEqual(snap_name, '')
+            assert snap_name == ''
 
         # Data returned from prlctl does not render as a dictionary
         mock_unknown_data = MagicMock(return_value="['sfermions', 'bosinos']")
         with patch.object(parallels, 'prlctl', mock_unknown_data):
             snap_name = parallels.snapshot_id_to_name(name, snap_id)
-            self.assertEqual(snap_name, '')
+            assert snap_name == ''
 
         # Snapshot is unnamed
         mock_no_name = MagicMock(return_value='Name:')
         with patch.object(parallels, 'prlctl', mock_no_name):
             snap_name = parallels.snapshot_id_to_name(name, snap_id)
-            self.assertEqual(snap_name, '')
+            assert snap_name == ''
 
         # If strict, then raise an error when name is not found
         mock_no_name = MagicMock(return_value='Name:')
         with patch.object(parallels, 'prlctl', mock_no_name):
-            self.assertRaises(SaltInvocationError,
-                              parallels.snapshot_id_to_name,
-                              name,
+            with pytest.raises(SaltInvocationError):
+                parallels.snapshot_id_to_name(name,
                               snap_id,
                               strict=True)
 
@@ -374,7 +372,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         mock_yes_name = MagicMock(return_value='Name: top')
         with patch.object(parallels, 'prlctl', mock_yes_name):
             snap_name = parallels.snapshot_id_to_name(name, snap_id)
-            self.assertEqual(snap_name, 'top')
+            assert snap_name == 'top'
 
     def test_snapshot_name_to_id(self):
         '''
@@ -395,31 +393,29 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(parallels, 'prlctl', mock_guids):
             mock_no_names = MagicMock(return_value=[])
             with patch.object(parallels, 'snapshot_id_to_name', mock_no_names):
-                self.assertRaises(SaltInvocationError,
-                                  parallels.snapshot_name_to_id,
-                                  name,
+                with pytest.raises(SaltInvocationError):
+                    parallels.snapshot_name_to_id(name,
                                   'graviton')
 
         # Validate singly-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
             mock_one_name = MagicMock(side_effect=[u'', u'ν_e'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_one_name):
-                self.assertEqual(parallels.snapshot_name_to_id(name, u'ν_e'), snap_ids[1])
+                assert parallels.snapshot_name_to_id(name, u'ν_e') == snap_ids[1]
 
         # Validate multiply-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
             mock_many_names = MagicMock(side_effect=[u'J/Ψ', u'J/Ψ'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_many_names):
-                self.assertEqual(sorted(parallels.snapshot_name_to_id(name, u'J/Ψ')),
-                                 sorted(snap_ids))
+                assert sorted(parallels.snapshot_name_to_id(name, u'J/Ψ')) == \
+                                 sorted(snap_ids)
 
         # Raise error for multiply-valued name
         with patch.object(parallels, 'prlctl', mock_guids):
             mock_many_names = MagicMock(side_effect=[u'J/Ψ', u'J/Ψ'])
             with patch.object(parallels, 'snapshot_id_to_name', mock_many_names):
-                self.assertRaises(SaltInvocationError,
-                                  parallels.snapshot_name_to_id,
-                                  name,
+                with pytest.raises(SaltInvocationError):
+                    parallels.snapshot_name_to_id(name,
                                   u'J/Ψ',
                                   strict=True)
 
@@ -431,30 +427,30 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
         snap_id = 'a5b8999f-5d95-4aff-82de-e515b0101b66'
 
         # Validate a GUID passthrough
-        self.assertEqual(parallels._validate_snap_name(name, snap_id), snap_id)
+        assert parallels._validate_snap_name(name, snap_id) == snap_id
 
         # Validate an unicode name
         mock_snap_symb = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_symb):
-            self.assertEqual(parallels._validate_snap_name(name, u'π'), snap_id)
+            assert parallels._validate_snap_name(name, u'π') == snap_id
             mock_snap_symb.assert_called_once_with(name, u'π', strict=True, runas=None)
 
         # Validate an ascii name
         mock_snap_name = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_name):
-            self.assertEqual(parallels._validate_snap_name(name, 'pion'), snap_id)
+            assert parallels._validate_snap_name(name, 'pion') == snap_id
             mock_snap_name.assert_called_once_with(name, 'pion', strict=True, runas=None)
 
         # Validate a numerical name
         mock_snap_numb = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_numb):
-            self.assertEqual(parallels._validate_snap_name(name, '3.14159'), snap_id)
+            assert parallels._validate_snap_name(name, '3.14159') == snap_id
             mock_snap_numb.assert_called_once_with(name, u'3.14159', strict=True, runas=None)
 
         # Validate not strict (think neutrino oscillation)
         mock_snap_non_strict = MagicMock(return_value=snap_id)
         with patch.object(parallels, 'snapshot_name_to_id', mock_snap_non_strict):
-            self.assertEqual(parallels._validate_snap_name(name, u'e_ν', strict=False), snap_id)
+            assert parallels._validate_snap_name(name, u'e_ν', strict=False) == snap_id
             mock_snap_non_strict.assert_called_once_with(name, u'e_ν', strict=False, runas=None)
 
     def test_list_snapshots(self):
@@ -500,7 +496,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(parallels, 'prlctl', mock_prlctl):
                 ret = parallels.list_snapshots(name, names=True)
                 for snap_name in snap_names:
-                    self.assertIn(snap_name, ret)
+                    assert snap_name in ret
                 mock_prlctl.assert_called_once_with('snapshot-list', [name], runas=None)
 
     def test_snapshot(self):
@@ -554,7 +550,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
             mock_delete = MagicMock(return_value=delete_message)
             with patch.object(parallels, 'prlctl', mock_delete):
                 ret = parallels.delete_snapshot(name, snap_name)
-                self.assertEqual(ret, delete_message)
+                assert ret == delete_message
                 mock_delete.assert_called_once_with('snapshot-delete',
                                                     [name, '--id', snap_id],
                                                     runas=None)
@@ -572,7 +568,7 @@ class ParallelsTestCase(TestCase, LoaderModuleMockMixin):
                 ret = parallels.delete_snapshot(name, snap_name, all=True)
                 mock_ret = {snap_ids[0]: delete_message,
                             snap_ids[1]: delete_message}
-                self.assertDictEqual(ret, mock_ret)
+                assert ret == mock_ret
                 mock_delete.assert_any_call('snapshot-delete',
                                             [name, '--id', snap_ids[0]],
                                             runas=None)

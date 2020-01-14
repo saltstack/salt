@@ -13,6 +13,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.win_lgpo_auditpol as win_lgpo_auditpol
+import pytest
 
 settings = ['No Auditing', 'Success', 'Failure', 'Success and Failure']
 
@@ -31,25 +32,21 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
         names = win_lgpo_auditpol._get_valid_names()
         ret = win_lgpo_auditpol.get_settings(category='All')
         for name in names:
-            self.assertIn(name, [k.lower() for k in ret])
+            assert name in [k.lower() for k in ret]
 
     def test_get_settings_invalid_category(self):
-        self.assertRaises(
-            KeyError,
-            win_lgpo_auditpol.get_settings,
-            category='Fake Category')
+        with pytest.raises(KeyError):
+            win_lgpo_auditpol.get_settings(category='Fake Category')
 
     def test_get_setting(self):
         names = win_lgpo_auditpol._get_valid_names()
         for name in names:
             ret = win_lgpo_auditpol.get_setting(name)
-            self.assertIn(ret, settings)
+            assert ret in settings
 
     def test_get_setting_invalid_name(self):
-        self.assertRaises(
-            KeyError,
-            win_lgpo_auditpol.get_setting,
-            name='Fake Name')
+        with pytest.raises(KeyError):
+            win_lgpo_auditpol.get_setting(name='Fake Name')
 
     def test_set_setting(self):
         names = ['Credential Validation', 'IPsec Driver', 'File System', 'SAM']
@@ -70,20 +67,16 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
         names = ['Credential Validation', 'IPsec Driver', 'File System']
         with patch.object(win_lgpo_auditpol, '_get_valid_names',
                           return_value=[k.lower() for k in names]):
-            self.assertRaises(
-                KeyError,
-                win_lgpo_auditpol.set_setting,
-                name='Fake Name',
+            with pytest.raises(KeyError):
+                win_lgpo_auditpol.set_setting(name='Fake Name',
                 value='No Auditing')
 
     def test_set_setting_invalid_value(self):
         names = ['Credential Validation', 'IPsec Driver', 'File System']
         with patch.object(win_lgpo_auditpol, '_get_valid_names',
                           return_value=[k.lower() for k in names]):
-            self.assertRaises(
-                KeyError,
-                win_lgpo_auditpol.set_setting,
-                name='Credential Validation',
+            with pytest.raises(KeyError):
+                win_lgpo_auditpol.set_setting(name='Credential Validation',
                 value='Fake Value')
 
     def test_get_auditpol_dump(self):
@@ -95,4 +88,4 @@ class WinLgpoAuditpolTestCase(TestCase, LoaderModuleMockMixin):
                 if name.lower() in line.lower():
                     found = True
                     break
-            self.assertTrue(found)
+            assert found

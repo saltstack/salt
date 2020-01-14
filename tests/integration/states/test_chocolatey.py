@@ -52,8 +52,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
         pre_version = '52.0.2'
         upg_version = '57.0.2'
         log.debug('Making sure %s is not installed', target)
-        self.assertFalse(
-            self.run_function('chocolatey.version', [target]))
+        assert not self.run_function('chocolatey.version', [target])
 
         try:
             ####################################################
@@ -70,7 +69,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             # Verify the package is installed
             log.debug('Verifying install success')
             ret = self.run_function('chocolatey.version', [target])
-            self.assertEqual(ret, {'Firefox': [pre_version]})
+            assert ret == {'Firefox': [pre_version]}
 
             ####################################################
             # Test `chocolatey.upgraded`
@@ -86,7 +85,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             # Verify the package is upgraded
             log.debug('Verifying upgrade success')
             ret = self.run_function('chocolatey.version', [target])
-            self.assertEqual(ret, {'Firefox': [upg_version]})
+            assert ret == {'Firefox': [upg_version]}
 
             ####################################################
             # Test `chocolatey.uninstalled`
@@ -99,7 +98,7 @@ class ChocolateyTest(ModuleCase, SaltReturnAssertsMixin):
             # Verify the package is uninstalled
             log.debug('Verifying uninstall success')
             ret = self.run_function('chocolatey.version', [target])
-            self.assertEqual(ret, {})
+            assert ret == {}
 
         finally:
             # Always uninstall

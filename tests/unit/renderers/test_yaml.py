@@ -41,20 +41,20 @@ class YAMLRendererTestCase(TestCase, LoaderModuleMockMixin):
                 self.assert_unicode(item)
 
     def assert_matches(self, ret, expected):
-        self.assertEqual(ret, expected)
+        assert ret == expected
         self.assert_unicode(ret)
 
     def test_yaml_render_string(self):
         data = 'string'
         result = yaml.render(data)
 
-        self.assertEqual(result, data)
+        assert result == data
 
     def test_yaml_render_unicode(self):
         data = '!!python/unicode python unicode string'
         result = yaml.render(data)
 
-        self.assertEqual(result, u'python unicode string')
+        assert result == u'python unicode string'
 
     def test_yaml_render_old_unicode(self):
         config = {'use_yamlloader_old': True}

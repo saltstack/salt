@@ -135,7 +135,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.list_rules.return_value = {'Rules': [rule_ret]}
         result = boto_cloudwatch_event.exists(Name=rule_name, **conn_parameters)
 
-        self.assertTrue(result['exists'])
+        assert result['exists']
 
     def test_that_when_checking_if_a_rule_exists_and_a_rule_does_not_exist_the_exists_method_returns_false(self):
         '''
@@ -144,7 +144,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.list_rules.return_value = {'Rules': []}
         result = boto_cloudwatch_event.exists(Name=rule_name, **conn_parameters)
 
-        self.assertFalse(result['exists'])
+        assert not result['exists']
 
     def test_that_when_checking_if_a_rule_exists_and_boto3_returns_an_error_the_rule_exists_method_returns_error(self):
         '''
@@ -153,7 +153,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.list_rules.side_effect = ClientError(error_content, 'list_rules')
         result = boto_cloudwatch_event.exists(Name=rule_name, **conn_parameters)
 
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_rules'))
+        assert result.get('error', {}).get('message') == error_message.format('list_rules')
 
     def test_that_when_describing_rule_and_rule_exists_the_describe_rule_method_returns_rule(self):
         '''
@@ -162,7 +162,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.describe_rule.return_value = rule_ret
         result = boto_cloudwatch_event.describe(Name=rule_name, **conn_parameters)
 
-        self.assertEqual(result.get('rule'), rule_ret)
+        assert result.get('rule') == rule_ret
 
     def test_that_when_describing_rule_and_rule_does_not_exists_the_describe_method_returns_none(self):
         '''
@@ -171,13 +171,13 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.describe_rule.side_effect = not_found_error
         result = boto_cloudwatch_event.describe(Name=rule_name, **conn_parameters)
 
-        self.assertNotEqual(result.get('error'), None)
+        assert result.get('error') is not None
 
     def test_that_when_describing_rule_and_boto3_returns_error_the_describe_method_returns_error(self):
         self.conn.describe_rule.side_effect = ClientError(error_content, 'describe_rule')
         result = boto_cloudwatch_event.describe(Name=rule_name, **conn_parameters)
 
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('describe_rule'))
+        assert result.get('error', {}).get('message') == error_message.format('describe_rule')
 
     def test_that_when_creating_a_rule_succeeds_the_create_rule_method_returns_true(self):
         '''
@@ -188,7 +188,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
                                             Description=rule_desc,
                                             ScheduleExpression=rule_sched,
                                             **conn_parameters)
-        self.assertTrue(result['created'])
+        assert result['created']
 
     def test_that_when_creating_a_rule_fails_the_create_method_returns_error(self):
         '''
@@ -199,7 +199,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
                                             Description=rule_desc,
                                             ScheduleExpression=rule_sched,
                                             **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('put_rule'))
+        assert result.get('error', {}).get('message') == error_message.format('put_rule')
 
     def test_that_when_deleting_a_rule_succeeds_the_delete_method_returns_true(self):
         '''
@@ -208,8 +208,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.delete_rule.return_value = {}
         result = boto_cloudwatch_event.delete(Name=rule_name, **conn_parameters)
 
-        self.assertTrue(result.get('deleted'))
-        self.assertEqual(result.get('error'), None)
+        assert result.get('deleted')
+        assert result.get('error') is None
 
     def test_that_when_deleting_a_rule_fails_the_delete_method_returns_error(self):
         '''
@@ -217,8 +217,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         '''
         self.conn.delete_rule.side_effect = ClientError(error_content, 'delete_rule')
         result = boto_cloudwatch_event.delete(Name=rule_name, **conn_parameters)
-        self.assertFalse(result.get('deleted'))
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('delete_rule'))
+        assert not result.get('deleted')
+        assert result.get('error', {}).get('message') == error_message.format('delete_rule')
 
     def test_that_when_listing_targets_and_rule_exists_the_list_targets_method_returns_targets(self):
         '''
@@ -227,7 +227,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.list_targets_by_rule.return_value = {'Targets': [target_ret]}
         result = boto_cloudwatch_event.list_targets(Rule=rule_name, **conn_parameters)
 
-        self.assertEqual(result.get('targets'), [target_ret])
+        assert result.get('targets') == [target_ret]
 
     def test_that_when_listing_targets_and_rule_does_not_exist_the_list_targets_method_returns_error(self):
         '''
@@ -236,7 +236,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.list_targets_by_rule.side_effect = not_found_error
         result = boto_cloudwatch_event.list_targets(Rule=rule_name, **conn_parameters)
 
-        self.assertNotEqual(result.get('error'), None)
+        assert result.get('error') is not None
 
     def test_that_when_putting_targets_succeeds_the_put_target_method_returns_no_failures(self):
         '''
@@ -246,7 +246,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         result = boto_cloudwatch_event.put_targets(Rule=rule_name,
                                             Targets=[],
                                             **conn_parameters)
-        self.assertIsNone(result['failures'])
+        assert result['failures'] is None
 
     def test_that_when_putting_targets_fails_the_put_targets_method_returns_error(self):
         '''
@@ -256,7 +256,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         result = boto_cloudwatch_event.put_targets(Rule=rule_name,
                                             Targets=[],
                                             **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('put_targets'))
+        assert result.get('error', {}).get('message') == error_message.format('put_targets')
 
     def test_that_when_removing_targets_succeeds_the_remove_targets_method_returns_true(self):
         '''
@@ -265,8 +265,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         self.conn.remove_targets.return_value = {'FailedEntryCount': 0}
         result = boto_cloudwatch_event.remove_targets(Rule=rule_name, Ids=[], **conn_parameters)
 
-        self.assertIsNone(result['failures'])
-        self.assertEqual(result.get('error'), None)
+        assert result['failures'] is None
+        assert result.get('error') is None
 
     def test_that_when_removing_targets_fails_the_remove_targets_method_returns_error(self):
         '''
@@ -274,4 +274,4 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventTestCaseBase, BotoCloudWatc
         '''
         self.conn.remove_targets.side_effect = ClientError(error_content, 'remove_targets')
         result = boto_cloudwatch_event.remove_targets(Rule=rule_name, Ids=[], **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('remove_targets'))
+        assert result.get('error', {}).get('message') == error_message.format('remove_targets')

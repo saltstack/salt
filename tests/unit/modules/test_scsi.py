@@ -62,20 +62,20 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
 
             cmd_mock = MagicMock(return_value=lsscsi_size)
             with patch.dict(scsi.__salt__, {'cmd.run_all': cmd_mock}):
-                self.assertDictEqual(scsi.ls_(), result_size)
+                assert scsi.ls_() == result_size
                 with patch.dict(lsscsi_size, {'retcode': 1, 'stderr': 'An error occurred'}):
-                    self.assertEqual(scsi.ls_(), 'An error occurred')
+                    assert scsi.ls_() == 'An error occurred'
                 with patch.dict(lsscsi_size, {'retcode': 1, 'stderr': "lsscsi: invalid option -- 's'\nUsage:"}):
-                    self.assertEqual(scsi.ls_(), "lsscsi: invalid option -- 's' - try get_size=False")
+                    assert scsi.ls_() == "lsscsi: invalid option -- 's' - try get_size=False"
 
             # get_size = False
             cmd_mock = MagicMock(return_value=lsscsi)
             with patch.dict(scsi.__salt__, {'cmd.run_all': cmd_mock}):
-                self.assertDictEqual(scsi.ls_(get_size=False), result)
+                assert scsi.ls_(get_size=False) == result
 
         mock = MagicMock(return_value=None)
         with patch.object(salt.utils.path, 'which', mock):
-            self.assertEqual(scsi.ls_(), 'scsi.ls not available - lsscsi command not found')
+            assert scsi.ls_() == 'scsi.ls not available - lsscsi command not found'
 
     def test_rescan_all(self):
         '''
@@ -83,9 +83,9 @@ class ScsiTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[False, True])
         with patch.object(os.path, 'isdir', mock):
-            self.assertEqual(scsi.rescan_all('host'),
-                             'Host host does not exist')
+            assert scsi.rescan_all('host') == \
+                             'Host host does not exist'
 
             with patch.dict(scsi.__salt__,
                             {'cmd.run': MagicMock(return_value='A')}):
-                self.assertListEqual(scsi.rescan_all('host'), ['A'])
+                assert scsi.rescan_all('host') == ['A']

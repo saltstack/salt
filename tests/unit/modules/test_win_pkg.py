@@ -77,13 +77,13 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_pkg__get_reg_software(self):
         result = win_pkg._get_reg_software()
-        self.assertTrue(isinstance(result, dict))
+        assert isinstance(result, dict)
         found_python = False
         search = 'Python 2' if six.PY2 else 'Python 3'
         for key in result:
             if search in key:
                 found_python = True
-        self.assertTrue(found_python)
+        assert found_python
 
     def test_pkg_install_not_found(self):
         '''
@@ -97,7 +97,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_pkg, '_get_reg_software', return_value=ret_reg):
             expected = {'nsis': {'not found': '3.01'}}
             result = win_pkg.install(name='nsis', version='3.01')
-            self.assertDictEqual(expected, result)
+            assert expected == result
 
     def test_pkg_install_rollback(self):
         '''
@@ -123,7 +123,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(return_value={'retcode': 0})}):
             expected = {'nsis': {'new': '3.02', 'old': '3.03'}}
             result = win_pkg.install(name='nsis', version='3.02')
-            self.assertDictEqual(expected, result)
+            assert expected == result
 
     def test_pkg_install_existing(self):
         '''
@@ -149,7 +149,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(return_value={'retcode': 0})}):
             expected = {}
             result = win_pkg.install(name='nsis')
-            self.assertDictEqual(expected, result)
+            assert expected == result
 
     def test_pkg_install_existing_with_version(self):
         '''
@@ -175,7 +175,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(return_value={'retcode': 0})}):
             expected = {}
             result = win_pkg.install(name='nsis', version='3.03')
-            self.assertDictEqual(expected, result)
+            assert expected == result
 
     def test_pkg_install_name(self):
         '''
@@ -197,7 +197,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                                 MagicMock(return_value='C:\\fake\\path.exe'),
                                            'cmd.run_all': mock_cmd_run_all}):
             ret = win_pkg.install(name='firebox', version='3.03', extra_install_flags='-e True -test_flag True')
-            self.assertTrue('-e True -test_flag True' in str(mock_cmd_run_all.call_args[0]))
+            assert '-e True -test_flag True' in str(mock_cmd_run_all.call_args[0])
 
     def test_pkg_install_single_pkg(self):
         '''
@@ -218,7 +218,7 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                                MagicMock(return_value='C:\\fake\\path.exe'),
                                            'cmd.run_all': mock_cmd_run_all}):
             ret = win_pkg.install(pkgs=['firebox'], version='3.03', extra_install_flags='-e True -test_flag True')
-            self.assertTrue('-e True -test_flag True' in str(mock_cmd_run_all.call_args[0]))
+            assert '-e True -test_flag True' in str(mock_cmd_run_all.call_args[0])
 
     def test_pkg_install_multiple_pkgs(self):
         '''
@@ -239,4 +239,4 @@ class WinPkgInstallTestCase(TestCase, LoaderModuleMockMixin):
                                                MagicMock(return_value='C:\\fake\\path.exe'),
                                            'cmd.run_all': mock_cmd_run_all}):
             ret = win_pkg.install(pkgs=['firebox', 'got'], extra_install_flags='-e True -test_flag True')
-            self.assertFalse('-e True -test_flag True' in str(mock_cmd_run_all.call_args[0]))
+            assert '-e True -test_flag True' not in str(mock_cmd_run_all.call_args[0])

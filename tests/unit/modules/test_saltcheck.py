@@ -40,7 +40,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             returned = sc_instance._call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
-            self.assertEqual(returned, 'hello')
+            assert returned == 'hello'
 
     def test_call_salt_command2(self):
         '''test simple test.echo module again'''
@@ -50,7 +50,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             returned = sc_instance._call_salt_command(fun="test.echo", args=['hello'], kwargs=None)
-            self.assertNotEqual(returned, 'not-hello')
+            assert returned != 'not-hello'
 
     def test__assert_equal1(self):
         '''test'''
@@ -61,7 +61,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = {'a': 1, 'b': 2}
             bbb = {'a': 1, 'b': 2}
             mybool = sc_instance._SaltCheck__assert_equal(aaa, bbb)
-            self.assertTrue(mybool)
+            assert mybool
 
     def test__assert_equal2(self):
         '''test'''
@@ -70,7 +70,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_equal(False, True)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_not_equal1(self):
         '''test'''
@@ -81,7 +81,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = {'a': 1, 'b': 2}
             bbb = {'a': 1, 'b': 2, 'c': 3}
             mybool = sc_instance._SaltCheck__assert_not_equal(aaa, bbb)
-            self.assertTrue(mybool)
+            assert mybool
 
     def test__assert_not_equal2(self):
         '''test'''
@@ -92,7 +92,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = {'a': 1, 'b': 2}
             bbb = {'a': 1, 'b': 2}
             mybool = sc_instance._SaltCheck__assert_not_equal(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_true1(self):
         '''test'''
@@ -101,7 +101,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_equal(True, True)
-            self.assertTrue(mybool)
+            assert mybool
 
     def test__assert_true2(self):
         '''test'''
@@ -110,7 +110,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_equal(False, True)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_false1(self):
         '''test'''
@@ -119,7 +119,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_false(False)
-            self.assertTrue(mybool)
+            assert mybool
 
     def test__assert_false2(self):
         '''test'''
@@ -128,7 +128,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_false(True)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_in1(self):
         '''test'''
@@ -139,7 +139,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = "bob"
             mylist = ['alice', 'bob', 'charles', 'dana']
             mybool = sc_instance._SaltCheck__assert_in(aaa, mylist)
-            self.assertTrue(mybool, True)
+            assert mybool, True
 
     def test__assert_in2(self):
         '''test'''
@@ -150,7 +150,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = "elaine"
             mylist = ['alice', 'bob', 'charles', 'dana']
             mybool = sc_instance._SaltCheck__assert_in(aaa, mylist)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_not_in1(self):
         '''test'''
@@ -161,7 +161,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = "elaine"
             mylist = ['alice', 'bob', 'charles', 'dana']
             mybool = sc_instance._SaltCheck__assert_not_in(aaa, mylist)
-            self.assertTrue(mybool, True)
+            assert mybool, True
 
     def test__assert_not_in2(self):
         '''test'''
@@ -172,7 +172,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = "bob"
             mylist = ['alice', 'bob', 'charles', 'dana']
             mybool = sc_instance._SaltCheck__assert_not_in(aaa, mylist)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_greater1(self):
         '''test'''
@@ -183,7 +183,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 110
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_greater(aaa, bbb)
-            self.assertTrue(mybool, True)
+            assert mybool, True
 
     def test__assert_greater2(self):
         '''test'''
@@ -194,7 +194,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 100
             bbb = 110
             mybool = sc_instance._SaltCheck__assert_greater(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_greater3(self):
         '''test'''
@@ -205,7 +205,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 100
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_greater(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_greater_equal1(self):
         '''test'''
@@ -216,7 +216,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 110
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_greater_equal(aaa, bbb)
-            self.assertTrue(mybool, True)
+            assert mybool, True
 
     def test__assert_greater_equal2(self):
         '''test'''
@@ -227,7 +227,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 100
             bbb = 110
             mybool = sc_instance._SaltCheck__assert_greater_equal(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_greater_equal3(self):
         '''test'''
@@ -238,7 +238,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 100
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_greater_equal(aaa, bbb)
-            self.assertEqual(mybool, 'Pass')
+            assert mybool == 'Pass'
 
     def test__assert_less1(self):
         '''test'''
@@ -249,7 +249,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 99
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_less(aaa, bbb)
-            self.assertTrue(mybool, True)
+            assert mybool, True
 
     def test__assert_less2(self):
         '''test'''
@@ -260,7 +260,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 110
             bbb = 99
             mybool = sc_instance._SaltCheck__assert_less(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_less3(self):
         '''test'''
@@ -271,7 +271,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 100
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_less(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_less_equal1(self):
         '''test'''
@@ -282,7 +282,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 99
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_less_equal(aaa, bbb)
-            self.assertTrue(mybool, True)
+            assert mybool, True
 
     def test__assert_less_equal2(self):
         '''test'''
@@ -293,7 +293,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 110
             bbb = 99
             mybool = sc_instance._SaltCheck__assert_less_equal(aaa, bbb)
-            self.assertNotEqual(mybool, True)
+            assert mybool is not True
 
     def test__assert_less_equal3(self):
         '''test'''
@@ -304,7 +304,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             aaa = 100
             bbb = 100
             mybool = sc_instance._SaltCheck__assert_less_equal(aaa, bbb)
-            self.assertEqual(mybool, 'Pass')
+            assert mybool == 'Pass'
 
     def test__assert_empty(self):
         '''test'''
@@ -313,7 +313,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_empty("")
-            self.assertEqual(mybool, 'Pass')
+            assert mybool == 'Pass'
 
     def test__assert_empty_fail(self):
         '''test'''
@@ -322,7 +322,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_empty("data")
-            self.assertNotEqual(mybool, 'Pass')
+            assert mybool != 'Pass'
 
     def test__assert__not_empty(self):
         '''test'''
@@ -331,7 +331,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_not_empty("data")
-            self.assertEqual(mybool, 'Pass')
+            assert mybool == 'Pass'
 
     def test__assert__not_empty_fail(self):
         '''test'''
@@ -340,7 +340,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              }):
             sc_instance = saltcheck.SaltCheck()
             mybool = sc_instance._SaltCheck__assert_not_empty("")
-            self.assertNotEqual(mybool, 'Pass')
+            assert mybool != 'Pass'
 
     def test_run_test_1(self):
         '''test'''
@@ -353,7 +353,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                                 "expected_return": "This works!",
                                                 "args": ["This works!"]
                                                 })
-            self.assertEqual(returned['status'], 'Pass')
+            assert returned['status'] == 'Pass'
 
     def test_report_highstate_tests(self):
         '''test report_highstate_tests'''
@@ -368,7 +368,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                 instance = mocked_stl.return_value
                 instance.found_states = ['found']
                 returned = saltcheck.report_highstate_tests()
-                self.assertEqual(returned, expected_output)
+                assert returned == expected_output
 
     def test_validation(self):
         '''test validation of tests'''
@@ -378,7 +378,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         test_dict = {}
         expected_return = False
         val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-        self.assertEqual(val_ret, expected_return)
+        assert val_ret == expected_return
 
         # Succeed on standard test
         test_dict = {
@@ -393,7 +393,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
         # Succeed on standard test with older expected-return syntax
         test_dict = {
@@ -408,7 +408,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
         # Do not require expected_return for some assertions
         assertions = ["assertEmpty",
@@ -426,7 +426,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                                 'sys.list_functions': MagicMock(return_value=['test.echo'])
                                                 }):
                 val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-                self.assertEqual(val_ret, expected_return)
+                assert val_ret == expected_return
 
         # Fail on invalid module
         test_dict = {
@@ -441,7 +441,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
         # Fail on invalid function
         test_dict = {
@@ -456,7 +456,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
         # Fail on missing expected_return
         test_dict = {
@@ -470,7 +470,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
         # Fail on empty expected_return
         test_dict = {
@@ -485,7 +485,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['test.echo'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
         # Succeed on m_and_f saltcheck.state_apply with only args
         test_dict = {
@@ -497,7 +497,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                                              'sys.list_functions': MagicMock(return_value=['saltcheck.state_apply'])
                                             }):
             val_ret = sc_instance._SaltCheck__is_valid_test(test_dict)
-            self.assertEqual(val_ret, expected_return)
+            assert val_ret == expected_return
 
     def test_sls_path_generation(self):
         '''test generation of sls paths'''
@@ -508,21 +508,21 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
             expected_return = ['salt://teststate/saltcheck-tests',
                                'salt:///saltcheck-tests']
             ret = testLoader._generate_sls_path(state_name)
-            self.assertEqual(ret, expected_return)
+            assert ret == expected_return
 
             state_name = 'teststate.long.path'
             expected_return = ['salt://teststate/long/path/saltcheck-tests',
                                'salt://teststate/long/saltcheck-tests',
                                'salt://teststate/saltcheck-tests']
             ret = testLoader._generate_sls_path(state_name)
-            self.assertEqual(ret, expected_return)
+            assert ret == expected_return
 
             state_name = 'teststate.really.long.path'
             expected_return = ['salt://teststate/really/long/path/saltcheck-tests',
                                'salt://teststate/really/long/saltcheck-tests',
                                'salt://teststate/saltcheck-tests']
             ret = testLoader._generate_sls_path(state_name)
-            self.assertEqual(ret, expected_return)
+            assert ret == expected_return
 
     def test_generate_output(self):
         # passing states
@@ -541,7 +541,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                             }
                            }]
         ret = saltcheck._generate_out_list(sc_results)
-        self.assertEqual(ret, expected_output)
+        assert ret == expected_output
 
         # Skipped
         sc_results = {'a_state':
@@ -559,7 +559,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                             }
                            }]
         ret = saltcheck._generate_out_list(sc_results)
-        self.assertEqual(ret, expected_output)
+        assert ret == expected_output
 
         # Failed (does not test setting __context__)
         sc_results = {'a_state':
@@ -577,7 +577,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                             }
                            }]
         ret = saltcheck._generate_out_list(sc_results)
-        self.assertEqual(ret, expected_output)
+        assert ret == expected_output
 
         # missing states
         sc_results = {'a_state':
@@ -598,4 +598,4 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
                             }
                            }]
         ret = saltcheck._generate_out_list(sc_results)
-        self.assertEqual(ret, expected_output)
+        assert ret == expected_output

@@ -51,7 +51,7 @@ class OpenscapTestCase(TestCase):
             response = openscap.xccdf(
                 'eval --profile Default {0}'.format(self.policy_file))
 
-            self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
+            assert openscap.tempfile.mkdtemp.call_count == 1
             expected_cmd = [
                 'oscap',
                 'xccdf',
@@ -68,16 +68,14 @@ class OpenscapTestCase(TestCase):
                 stderr=PIPE,
                 stdout=PIPE)
             openscap.__salt__['cp.push_dir'].assert_called_once_with(self.random_temp_dir)
-            self.assertEqual(openscap.shutil.rmtree.call_count, 1)
-            self.assertEqual(
-                response,
+            assert openscap.shutil.rmtree.call_count == 1
+            assert response == \
                 {
                     'upload_dir': self.random_temp_dir,
                     'error': '',
                     'success': True,
                     'returncode': 0
                 }
-            )
 
     def test_openscap_xccdf_eval_success_with_failing_rules(self):
         with patch('salt.modules.openscap.Popen',
@@ -88,7 +86,7 @@ class OpenscapTestCase(TestCase):
             response = openscap.xccdf(
                 'eval --profile Default {0}'.format(self.policy_file))
 
-            self.assertEqual(openscap.tempfile.mkdtemp.call_count, 1)
+            assert openscap.tempfile.mkdtemp.call_count == 1
             expected_cmd = [
                 'oscap',
                 'xccdf',
@@ -105,16 +103,14 @@ class OpenscapTestCase(TestCase):
                 stderr=PIPE,
                 stdout=PIPE)
             openscap.__salt__['cp.push_dir'].assert_called_once_with(self.random_temp_dir)
-            self.assertEqual(openscap.shutil.rmtree.call_count, 1)
-            self.assertEqual(
-                response,
+            assert openscap.shutil.rmtree.call_count == 1
+            assert response == \
                 {
                     'upload_dir': self.random_temp_dir,
                     'error': 'some error',
                     'success': True,
                     'returncode': 2
                 }
-            )
 
     def test_openscap_xccdf_eval_fail_no_profile(self):
         response = openscap.xccdf('eval --param Default /unknown/param')
@@ -122,15 +118,13 @@ class OpenscapTestCase(TestCase):
             error = 'argument --profile is required'
         else:
             error = 'the following arguments are required: --profile'
-        self.assertEqual(
-            response,
+        assert response == \
             {
                 'error': error,
                 'upload_dir': None,
                 'success': False,
                 'returncode': None
             }
-        )
 
     def test_openscap_xccdf_eval_success_ignore_unknown_params(self):
         with patch('salt.modules.openscap.Popen',
@@ -140,15 +134,13 @@ class OpenscapTestCase(TestCase):
                        ))):
             response = openscap.xccdf(
                 'eval --profile Default --param Default /policy/file')
-            self.assertEqual(
-                response,
+            assert response == \
                 {
                     'upload_dir': self.random_temp_dir,
                     'error': 'some error',
                     'success': True,
                     'returncode': 2
                 }
-            )
             expected_cmd = [
                 'oscap',
                 'xccdf',
@@ -175,15 +167,13 @@ class OpenscapTestCase(TestCase):
             response = openscap.xccdf(
                 'eval --profile Default {0}'.format(self.policy_file))
 
-            self.assertEqual(
-                response,
+            assert response == \
                 {
                     'upload_dir': None,
                     'error': 'evaluation error',
                     'success': False,
                     'returncode': 1
                 }
-            )
 
     def test_openscap_xccdf_eval_fail_not_implemented_action(self):
         response = openscap.xccdf('info {0}'.format(self.policy_file))
@@ -192,12 +182,10 @@ class OpenscapTestCase(TestCase):
         else:
             mock_err = "argument action: invalid choice: 'info' (choose from 'eval')"
 
-        self.assertEqual(
-            response,
+        assert response == \
             {
                 'upload_dir': None,
                 'error': mock_err,
                 'success': False,
                 'returncode': None
             }
-        )

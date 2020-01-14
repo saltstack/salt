@@ -14,6 +14,7 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.mac_assistive as assistive
+import pytest
 
 
 class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
@@ -28,7 +29,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value={'retcode': 0})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
             with patch.dict(assistive.__grains__, {'osrelease': '10.11.3'}):
-                self.assertTrue(assistive.install('foo'))
+                assert assistive.install('foo')
 
     def test_install_assistive_error(self):
         '''
@@ -37,7 +38,8 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value={'retcode': 1})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
             with patch.dict(assistive.__grains__, {'osrelease': '10.11.3'}):
-                self.assertRaises(CommandExecutionError, assistive.install, 'foo')
+                with pytest.raises(CommandExecutionError):
+                    assistive.install('foo')
 
     def test_installed_bundle(self):
         '''
@@ -45,7 +47,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.mac_assistive._get_assistive_access',
                    MagicMock(return_value=[('foo', 0)])):
-            self.assertTrue(assistive.installed('foo'))
+            assert assistive.installed('foo')
 
     def test_installed_bundle_not(self):
         '''
@@ -53,7 +55,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.mac_assistive._get_assistive_access',
                    MagicMock(return_value=[])):
-            self.assertFalse(assistive.installed('foo'))
+            assert not assistive.installed('foo')
 
     def test_enable_assistive(self):
         '''
@@ -63,7 +65,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}), \
                 patch('salt.modules.mac_assistive._get_assistive_access',
                       MagicMock(return_value=[('foo', 0)])):
-            self.assertTrue(assistive.enable('foo', True))
+            assert assistive.enable('foo', True)
 
     def test_enable_error(self):
         '''
@@ -73,9 +75,8 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}), \
                 patch('salt.modules.mac_assistive._get_assistive_access',
                       MagicMock(return_value=[('foo', 0)])):
-            self.assertRaises(CommandExecutionError,
-                              assistive.enable,
-                              'foo')
+            with pytest.raises(CommandExecutionError):
+                assistive.enable('foo')
 
     def test_enable_false(self):
         '''
@@ -83,7 +84,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.mac_assistive._get_assistive_access',
                    MagicMock(return_value=[])):
-            self.assertFalse(assistive.enable('foo'))
+            assert not assistive.enable('foo')
 
     def test_enabled_assistive(self):
         '''
@@ -91,7 +92,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.mac_assistive._get_assistive_access',
                    MagicMock(return_value=[('foo', '1')])):
-            self.assertTrue(assistive.enabled('foo'))
+            assert assistive.enabled('foo')
 
     def test_enabled_assistive_false(self):
         '''
@@ -99,7 +100,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.mac_assistive._get_assistive_access',
                    MagicMock(return_value=[])):
-            self.assertFalse(assistive.enabled('foo'))
+            assert not assistive.enabled('foo')
 
     def test_remove_assistive(self):
         '''
@@ -107,7 +108,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value={'retcode': 0})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertTrue(assistive.remove('foo'))
+            assert assistive.remove('foo')
 
     def test_remove_assistive_error(self):
         '''
@@ -115,9 +116,8 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value={'retcode': 1})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertRaises(CommandExecutionError,
-                              assistive.remove,
-                              'foo')
+            with pytest.raises(CommandExecutionError):
+                assistive.remove('foo')
 
     def test_get_assistive_access(self):
         '''
@@ -128,7 +128,7 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value={'retcode': 0, 'stdout': mock_out})
         expected = [('/bin/bash', '1'), ('/usr/bin/osascript', '1')]
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertEqual(assistive._get_assistive_access(), expected)
+            assert assistive._get_assistive_access() == expected
 
     def test_get_assistive_access_error(self):
         '''
@@ -136,5 +136,5 @@ class AssistiveTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value={'retcode': 1})
         with patch.dict(assistive.__salt__, {'cmd.run_all': mock_ret}):
-            self.assertRaises(CommandExecutionError,
-                              assistive._get_assistive_access)
+            with pytest.raises(CommandExecutionError):
+                assistive._get_assistive_access()

@@ -44,17 +44,17 @@ class PyraxQueuesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyrax_queues.__salt__, {'cloud.action': mock_dct}):
             comt = ('{0} present.'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(pyrax_queues.present(name, provider), ret)
+            assert pyrax_queues.present(name, provider) == ret
 
             with patch.dict(pyrax_queues.__opts__, {'test': True}):
                 comt = ('Rackspace queue myqueue is set to be created.')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(pyrax_queues.present(name, provider), ret)
+                assert pyrax_queues.present(name, provider) == ret
 
             with patch.dict(pyrax_queues.__opts__, {'test': False}):
                 comt = ('Failed to create myqueue Rackspace queue.')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(pyrax_queues.present(name, provider), ret)
+                assert pyrax_queues.present(name, provider) == ret
 
     # 'absent' function tests: 1
 
@@ -75,9 +75,9 @@ class PyraxQueuesTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pyrax_queues.__salt__, {'cloud.action': mock_dct}):
             comt = ('myqueue does not exist.')
             ret.update({'comment': comt})
-            self.assertDictEqual(pyrax_queues.absent(name, provider), ret)
+            assert pyrax_queues.absent(name, provider) == ret
 
             with patch.dict(pyrax_queues.__opts__, {'test': True}):
                 comt = ('Rackspace queue myqueue is set to be removed.')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(pyrax_queues.absent(name, provider), ret)
+                assert pyrax_queues.absent(name, provider) == ret

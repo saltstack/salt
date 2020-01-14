@@ -11,6 +11,7 @@ from tests.support.unit import TestCase
 
 # salt libs
 from salt.utils.rsax931 import RSAX931Signer, RSAX931Verifier
+import pytest
 
 
 class RSAX931Test(TestCase):
@@ -79,29 +80,29 @@ class RSAX931Test(TestCase):
         b'\x4c\x9b\xf4\xee')
 
     def test_signer(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             signer = RSAX931Signer('bogus key data')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             signer = RSAX931Signer(RSAX931Test.pubkey_data)
 
         signer = RSAX931Signer(RSAX931Test.privkey_data)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             signer.sign('x'*255)  # message too long
 
         sig = signer.sign(RSAX931Test.hello_world)
-        self.assertEqual(RSAX931Test.hello_world_sig, sig)
+        assert RSAX931Test.hello_world_sig == sig
 
     def test_verifier(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             verifier = RSAX931Verifier('bogus key data')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             verifier = RSAX931Verifier(RSAX931Test.privkey_data)
 
         verifier = RSAX931Verifier(RSAX931Test.pubkey_data)
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             verifier.verify('')
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             verifier.verify(RSAX931Test.hello_world_sig + b'junk')
 
         msg = verifier.verify(RSAX931Test.hello_world_sig)
-        self.assertEqual(RSAX931Test.hello_world, msg)
+        assert RSAX931Test.hello_world == msg

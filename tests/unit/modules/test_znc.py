@@ -32,8 +32,8 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         Tests build module using znc-buildmod
         '''
         with patch('os.path.exists', MagicMock(return_value=False)):
-            self.assertEqual(znc.buildmod('modules.cpp'),
-                             'Error: The file (modules.cpp) does not exist.')
+            assert znc.buildmod('modules.cpp') == \
+                             'Error: The file (modules.cpp) does not exist.'
 
     def test_buildmod_module(self):
         '''
@@ -42,7 +42,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='SALT')
         with patch.dict(znc.__salt__, {'cmd.run': mock}), \
                 patch('os.path.exists', MagicMock(return_value=True)):
-            self.assertEqual(znc.buildmod('modules.cpp'), 'SALT')
+            assert znc.buildmod('modules.cpp') == 'SALT'
 
     # 'dumpconf' function tests: 1
 
@@ -53,7 +53,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='SALT')
         with patch.dict(znc.__salt__, {'ps.pkill': mock}), \
                 patch.object(znc, 'signal', MagicMock()):
-            self.assertEqual(znc.dumpconf(), 'SALT')
+            assert znc.dumpconf() == 'SALT'
 
     # 'rehashconf' function tests: 1
 
@@ -64,7 +64,7 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='SALT')
         with patch.dict(znc.__salt__, {'ps.pkill': mock}), \
                 patch.object(znc, 'signal', MagicMock()):
-            self.assertEqual(znc.rehashconf(), 'SALT')
+            assert znc.rehashconf() == 'SALT'
 
     # 'version' function tests: 1
 
@@ -74,4 +74,4 @@ class ZncTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='ZNC 1.2 - http://znc.in')
         with patch.dict(znc.__salt__, {'cmd.run': mock}):
-            self.assertEqual(znc.version(), 'ZNC 1.2')
+            assert znc.version() == 'ZNC 1.2'

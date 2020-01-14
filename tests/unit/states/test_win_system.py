@@ -38,12 +38,12 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                         {"system.get_computer_desc": mock}):
             ret.update({'comment': "Computer description"
                         " already set to 'salt'"})
-            self.assertDictEqual(win_system.computer_desc('salt'), ret)
+            assert win_system.computer_desc('salt') == ret
 
             with patch.dict(win_system.__opts__, {"test": True}):
                 ret.update({'result': None, 'comment': "Computer description"
                             " will be changed to 'salt'"})
-                self.assertDictEqual(win_system.computer_desc('salt'), ret)
+                assert win_system.computer_desc('salt') == ret
 
             with patch.dict(win_system.__opts__, {"test": False}):
                 mock = MagicMock(return_value={'Computer Description': 'nfs'})
@@ -51,7 +51,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                                 {"system.set_computer_desc": mock}):
                     ret.update({'result': False, 'comment': "Unable to set"
                                 " computer description to 'salt'"})
-                    self.assertDictEqual(win_system.computer_desc('salt'), ret)
+                    assert win_system.computer_desc('salt') == ret
 
     def test_computer_name(self):
         '''
@@ -68,17 +68,17 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(win_system.__salt__,
                             {"system.get_pending_computer_name": mock}):
                 ret.update({'comment': "Computer name already set to 'salt'"})
-                self.assertDictEqual(win_system.computer_name('salt'), ret)
+                assert win_system.computer_name('salt') == ret
 
                 ret.update({'comment': "The current computer name"
                             " is 'salt', but will be changed to 'salt' on"
                             " the next reboot"})
-                self.assertDictEqual(win_system.computer_name('salt'), ret)
+                assert win_system.computer_name('salt') == ret
 
                 with patch.dict(win_system.__opts__, {"test": True}):
                     ret.update({'result': None, 'comment': "Computer name will"
                                 " be changed to 'salt'"})
-                    self.assertDictEqual(win_system.computer_name('salt'), ret)
+                    assert win_system.computer_name('salt') == ret
 
                 with patch.dict(win_system.__opts__, {"test": False}):
                     mock = MagicMock(return_value=False)
@@ -86,8 +86,8 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                                     {"system.set_computer_name": mock}):
                         ret.update({'comment': "Unable to set computer name"
                                     " to 'salt'", 'result': False})
-                        self.assertDictEqual(win_system.computer_name('salt'),
-                                             ret)
+                        assert win_system.computer_name('salt') == \
+                                             ret
 
     def test_hostname(self):
         ret = {
@@ -104,14 +104,14 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': "The current hostname is 'minion', "
                                        "but will be changed to 'salt' on the next reboot",
                             'changes': {'hostname': 'salt'}})
-                self.assertDictEqual(win_system.hostname('salt'), ret)
+                assert win_system.hostname('salt') == ret
 
             mock = MagicMock(return_value=False)
             with patch.dict(win_system.__salt__, {"system.set_hostname": mock}):
                 ret.update({'comment': "Unable to set hostname",
                             'changes': {},
                             'result': False})
-                self.assertDictEqual(win_system.hostname('salt'), ret)
+                assert win_system.hostname('salt') == ret
 
         mock = MagicMock(return_value='salt')
         with patch.dict(win_system.__salt__, {"system.get_hostname": mock}):
@@ -119,7 +119,7 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                             'changes': {},
                             'result': True})
 
-            self.assertDictEqual(win_system.hostname('salt'), ret)
+            assert win_system.hostname('salt') == ret
 
         mock = MagicMock(return_value='salt')
         with patch.dict(win_system.__salt__, {"system.get_hostname": mock}):
@@ -128,4 +128,4 @@ class WinSystemTestCase(TestCase, LoaderModuleMockMixin):
                         'changes': {},
                         'result': True})
 
-            self.assertDictEqual(win_system.hostname('SALT'), ret)
+            assert win_system.hostname('SALT') == ret

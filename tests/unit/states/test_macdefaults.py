@@ -37,7 +37,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             out = macdefaults.write('DialogType', 'com.apple.CrashReporter', 'Server')
             read_mock.assert_called_once_with('com.apple.CrashReporter', 'DialogType', None)
             write_mock.assert_called_once_with('com.apple.CrashReporter', 'DialogType', 'Server', 'string', None)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_write_set(self):
         '''
@@ -57,7 +57,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             out = macdefaults.write('DialogType', 'com.apple.CrashReporter', 'Server')
             read_mock.assert_called_once_with('com.apple.CrashReporter', 'DialogType', None)
             assert not write_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_write_boolean(self):
         '''
@@ -77,7 +77,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             out = macdefaults.write('Key', 'com.apple.something', True, vtype='boolean')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             write_mock.assert_called_once_with('com.apple.something', 'Key', True, 'boolean', None)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_write_boolean_match(self):
         '''
@@ -97,7 +97,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             out = macdefaults.write('Key', 'com.apple.something', 'YES', vtype='boolean')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             assert not write_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_write_integer(self):
         '''
@@ -117,7 +117,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             out = macdefaults.write('Key', 'com.apple.something', 1337, vtype='integer')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             write_mock.assert_called_once_with('com.apple.something', 'Key', 1337, 'integer', None)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_write_integer_match(self):
         '''
@@ -137,7 +137,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
             out = macdefaults.write('Key', 'com.apple.something', 1337, vtype='integer')
             read_mock.assert_called_once_with('com.apple.something', 'Key', None)
             assert not write_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_absent_already(self):
         '''
@@ -154,7 +154,7 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macdefaults.__salt__, {'macdefaults.delete': mock}):
             out = macdefaults.absent('Key', 'com.apple.something')
             mock.assert_called_once_with('com.apple.something', 'Key', None)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_absent_deleting_existing(self):
         '''
@@ -171,4 +171,4 @@ class MacDefaultsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macdefaults.__salt__, {'macdefaults.delete': mock}):
             out = macdefaults.absent('Key', 'com.apple.something')
             mock.assert_called_once_with('com.apple.something', 'Key', None)
-            self.assertEqual(out, expected)
+            assert out == expected

@@ -14,6 +14,7 @@ from tests.support.mock import patch
 import salt.config
 import salt.engines.script as script
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,9 +37,9 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
         if unknown serializer
         '''
         for serializers in ('json', 'yaml', 'msgpack'):
-            self.assertTrue(script._get_serializer(serializers))
+            assert script._get_serializer(serializers)
 
-        with self.assertRaises(CommandExecutionError):
+        with pytest.raises(CommandExecutionError):
             script._get_serializer('bad')
 
     def test__read_stdout(self):
@@ -47,4 +48,4 @@ class EngineScriptTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('subprocess.Popen') as popen_mock:
             popen_mock.stdout.readline.return_value = 'test'
-            self.assertEqual(next(script._read_stdout(popen_mock)), 'test')
+            assert next(script._read_stdout(popen_mock)) == 'test'

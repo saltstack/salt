@@ -50,7 +50,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     ret = copy.deepcopy(ret_base)
                     ret['comment'] = '{0} is not in the PATH'.format(NAME)
                     ret['result'] = True
-                    self.assertDictEqual(win_path.absent(NAME), ret)
+                    assert win_path.absent(NAME) == ret
 
                 # Test successful removal
                 with patch.dict(win_path.__salt__, {'win_path.exists': _mock([True, False])}):
@@ -58,14 +58,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     ret['comment'] = 'Removed {0} from the PATH'.format(NAME)
                     ret['changes']['removed'] = NAME
                     ret['result'] = True
-                    self.assertDictEqual(win_path.absent(NAME), ret)
+                    assert win_path.absent(NAME) == ret
 
                 # Test unsucessful removal
                 with patch.dict(win_path.__salt__, {'win_path.exists': _mock([True, True])}):
                     ret = copy.deepcopy(ret_base)
                     ret['comment'] = 'Failed to remove {0} from the PATH'.format(NAME)
                     ret['result'] = False
-                    self.assertDictEqual(win_path.absent(NAME), ret)
+                    assert win_path.absent(NAME) == ret
 
             # Test mode ON
             with patch.dict(win_path.__opts__, {'test': True}):
@@ -75,29 +75,27 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     ret = copy.deepcopy(ret_base)
                     ret['comment'] = '{0} is not in the PATH'.format(NAME)
                     ret['result'] = True
-                    self.assertDictEqual(win_path.absent(NAME), ret)
+                    assert win_path.absent(NAME) == ret
 
                 # Test the test-mode return
                 with patch.dict(win_path.__salt__, {'win_path.exists': _mock([True])}):
                     ret = copy.deepcopy(ret_base)
                     ret['comment'] = '{0} would be removed from the PATH'.format(NAME)
                     ret['result'] = None
-                    self.assertDictEqual(win_path.absent(NAME), ret)
+                    assert win_path.absent(NAME) == ret
 
     def test_exists_invalid_index(self):
         '''
         Tests win_path.exists when a non-integer index is specified.
         '''
         ret = win_path.exists(NAME, index='foo')
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
                 'result': False,
                 'comment': 'Index must be an integer'
             }
-        )
 
     def test_exists_add_no_index_success(self):
         '''
@@ -122,15 +120,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=None, rehash=False)
         self.assert_called_once(rehash_mock)
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {'index': {'old': None, 'new': 3}},
                 'result': True,
                 'comment': 'Added {0} to the PATH.'.format(NAME)
             }
-        )
 
     def test_exists_add_no_index_failure(self):
         '''
@@ -155,15 +151,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=None, rehash=False)
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
                 'result': False,
                 'comment': 'Failed to add {0} to the PATH.'.format(NAME)
             }
-        )
 
     def test_exists_add_no_index_failure_exception(self):
         '''
@@ -188,8 +182,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=None, rehash=False)
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
@@ -197,7 +190,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 'comment': 'Encountered error: Global Thermonuclear War. '
                            'Failed to add {0} to the PATH.'.format(NAME)
             }
-        )
 
     def test_exists_change_index_success(self):
         '''
@@ -222,15 +214,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=0, rehash=False)
         self.assert_called_once(rehash_mock)
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {'index': {'old': 3, 'new': 0}},
                 'result': True,
                 'comment': 'Moved {0} from index 3 to 0.'.format(NAME)
             }
-        )
 
     def test_exists_change_negative_index_success(self):
         '''
@@ -257,15 +247,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=-1, rehash=False)
         self.assert_called_once(rehash_mock)
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {'index': {'old': -2, 'new': -1}},
                 'result': True,
                 'comment': 'Moved {0} from index -2 to -1.'.format(NAME)
             }
-        )
 
     def test_exists_change_index_add_exception(self):
         '''
@@ -290,8 +278,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=0, rehash=False)
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
@@ -299,7 +286,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 'comment': 'Encountered error: Global Thermonuclear War. '
                            'Failed to move {0} from index 3 to 0.'.format(NAME)
             }
-        )
 
     def test_exists_change_negative_index_add_exception(self):
         '''
@@ -326,8 +312,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=-1, rehash=False)
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
@@ -335,7 +320,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                 'comment': 'Encountered error: Global Thermonuclear War. '
                            'Failed to move {0} from index -2 to -1.'.format(NAME)
             }
-        )
 
     def test_exists_change_index_failure(self):
         '''
@@ -360,15 +344,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=0, rehash=False)
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
                 'result': False,
                 'comment': 'Failed to move {0} from index 3 to 0.'.format(NAME)
             }
-        )
 
     def test_exists_change_negative_index_failure(self):
         '''
@@ -395,15 +377,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_called_once_with(NAME, index=-1, rehash=False)
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
                 'result': False,
                 'comment': 'Failed to move {0} from index -2 to -1.'.format(NAME)
             }
-        )
 
     def test_exists_change_index_test_mode(self):
         '''
@@ -427,15 +407,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_not_called()
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {'index': {'old': 3, 'new': 0}},
                 'result': None,
                 'comment': '{0} would be moved from index 3 to 0.'.format(NAME)
             }
-        )
 
     def test_exists_change_negative_index_test_mode(self):
         '''
@@ -459,15 +437,13 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_not_called()
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {'index': {'old': -2, 'new': -1}},
                 'result': None,
                 'comment': '{0} would be moved from index -2 to -1.'.format(NAME)
             }
-        )
 
     def _test_exists_add_already_present(self, index, test_mode):
         '''
@@ -497,8 +473,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         add_mock.assert_not_called()
         rehash_mock.assert_not_called()
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'name': NAME,
                 'changes': {},
@@ -508,7 +483,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
                     ' at index {0}'.format(index) if index is not None else ''
                 )
             }
-        )
 
     def test_exists_add_no_index_already_present(self):
         self._test_exists_add_already_present(None, False)

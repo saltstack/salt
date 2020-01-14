@@ -24,7 +24,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ['minion', 'test.ping'],
             f_timeout=50
         )
-        self.assertEqual(ret, {'minion': True})
+        assert ret == {'minion': True}
 
         ret = self.run_function(
             'publish.publish',
@@ -47,12 +47,12 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for name in check_true:
             if name not in ret:
                 print(name)
-            self.assertTrue(name in ret)
+            assert name in ret
 
-        self.assertEqual(ret['cheese'], 'spam')
-        self.assertEqual(ret['__pub_arg'], [{'cheese': 'spam'}])
-        self.assertEqual(ret['__pub_id'], 'minion')
-        self.assertEqual(ret['__pub_fun'], 'test.kwarg')
+        assert ret['cheese'] == 'spam'
+        assert ret['__pub_arg'] == [{'cheese': 'spam'}]
+        assert ret['__pub_id'] == 'minion'
+        assert ret['__pub_fun'] == 'test.kwarg'
 
     def test_publish_yaml_args(self):
         '''
@@ -63,7 +63,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ['minion', 'test.ping'],
             f_timeout=50
         )
-        self.assertEqual(ret, {'minion': True})
+        assert ret == {'minion': True}
 
         test_args_list = ['saltines, si', 'crackers, nein', 'cheese, indeed']
         test_args = '["{args[0]}", "{args[1]}", "{args[2]}"]'.format(args=test_args_list)
@@ -86,11 +86,11 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for name in check_true:
             if name not in ret['kwargs']:
                 print(name)
-            self.assertTrue(name in ret['kwargs'])
+            assert name in ret['kwargs']
 
-        self.assertEqual(ret['args'], test_args_list)
-        self.assertEqual(ret['kwargs']['__pub_id'], 'minion')
-        self.assertEqual(ret['kwargs']['__pub_fun'], 'test.arg')
+        assert ret['args'] == test_args_list
+        assert ret['kwargs']['__pub_id'] == 'minion'
+        assert ret['kwargs']['__pub_fun'] == 'test.arg'
 
     def test_full_data(self):
         '''
@@ -101,8 +101,8 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ['minion', 'test.fib', 20],
             f_timeout=50
         )
-        self.assertTrue(ret)
-        self.assertEqual(ret['minion']['ret'][0], 6765)
+        assert ret
+        assert ret['minion']['ret'][0] == 6765
 
     def test_kwarg(self):
         '''
@@ -129,12 +129,12 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
         for name in check_true:
             if name not in ret:
                 print(name)
-            self.assertTrue(name in ret)
+            assert name in ret
 
-        self.assertEqual(ret['cheese'], 'spam')
-        self.assertEqual(ret['__pub_arg'], [{'cheese': 'spam'}])
-        self.assertEqual(ret['__pub_id'], 'minion')
-        self.assertEqual(ret['__pub_fun'], 'test.kwarg')
+        assert ret['cheese'] == 'spam'
+        assert ret['__pub_arg'] == [{'cheese': 'spam'}]
+        assert ret['__pub_id'] == 'minion'
+        assert ret['__pub_fun'] == 'test.kwarg'
 
         ret = self.run_function(
             'publish.full_data',
@@ -142,9 +142,7 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             cheese='spam',
             f_timeout=50
         )
-        self.assertIn(
-            'The following keyword arguments are not valid', ret
-        )
+        assert 'The following keyword arguments are not valid' in ret
 
     def test_reject_minion(self):
         '''
@@ -155,4 +153,4 @@ class PublishModuleTest(ModuleCase, SaltReturnAssertsMixin):
             ['minion', 'cmd.run', ['echo foo']],
             f_timeout=50
         )
-        self.assertEqual(ret, {})
+        assert ret == {}

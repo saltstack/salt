@@ -47,15 +47,15 @@ class BeaconsAddDeleteTest(ModuleCase):
             ['ps', [{'processes': {'apache2': 'stopped'}}]],
             f_timeout=300
         )
-        self.assertTrue(_add['result'])
+        assert _add['result']
 
         # save added beacon
         _save = self.run_function('beacons.save', f_timeout=300)
-        self.assertTrue(_save['result'])
+        assert _save['result']
 
         # delete the beacon
         _delete = self.run_function('beacons.delete', ['ps'], f_timeout=300)
-        self.assertTrue(_delete['result'])
+        assert _delete['result']
 
         # save the results
         self.run_function('beacons.save', f_timeout=300)
@@ -106,20 +106,20 @@ class BeaconsTest(ModuleCase):
         _list = self.run_function('beacons.list',
                                   return_yaml=False,
                                   f_timeout=300)
-        self.assertIn('ps', _list)
+        assert 'ps' in _list
 
         ret = self.run_function('beacons.disable', f_timeout=300)
-        self.assertTrue(ret['result'])
+        assert ret['result']
 
         # assert beacons are disabled
         _list = self.run_function('beacons.list',
                                   return_yaml=False,
                                   f_timeout=300)
-        self.assertFalse(_list['enabled'])
+        assert not _list['enabled']
 
         # disable added beacon
         ret = self.run_function('beacons.disable_beacon', ['ps'], f_timeout=300)
-        self.assertTrue(ret['result'])
+        assert ret['result']
 
         # assert beacon ps is disabled
         _list = self.run_function('beacons.list',
@@ -127,7 +127,7 @@ class BeaconsTest(ModuleCase):
                                   f_timeout=300)
         for bdict in _list['ps']:
             if 'enabled' in bdict:
-                self.assertFalse(bdict['enabled'])
+                assert not bdict['enabled']
                 break
 
     def test_enable(self):
@@ -138,17 +138,17 @@ class BeaconsTest(ModuleCase):
         _list = self.run_function('beacons.list',
                                   return_yaml=False,
                                   f_timeout=300)
-        self.assertIn('ps', _list)
+        assert 'ps' in _list
 
         # enable beacons on minion
         ret = self.run_function('beacons.enable', f_timeout=300)
-        self.assertTrue(ret['result'])
+        assert ret['result']
 
         # assert beacons are enabled
         _list = self.run_function('beacons.list',
                                   return_yaml=False,
                                   f_timeout=300)
-        self.assertTrue(_list['enabled'])
+        assert _list['enabled']
 
     @skipIf(True, 'Skip until https://github.com/saltstack/salt/issues/31516 '
                   'problems are resolved.')
@@ -158,13 +158,13 @@ class BeaconsTest(ModuleCase):
         '''
         # enable added beacon
         ret = self.run_function('beacons.enable_beacon', ['ps'], f_timeout=300)
-        self.assertTrue(ret['result'])
+        assert ret['result']
 
         # assert beacon ps is enabled
         _list = self.run_function('beacons.list',
                                   return_yaml=False,
                                   f_timeout=300)
-        self.assertTrue(_list['ps']['enabled'])
+        assert _list['ps']['enabled']
 
     def test_list(self):
         '''
@@ -175,9 +175,9 @@ class BeaconsTest(ModuleCase):
                                 return_yaml=False,
                                 f_timeout=300)
         if 'enabled' in ret:
-            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}], 'enabled': True})
+            assert ret == {'ps': [{'processes': {'apache2': 'stopped'}}], 'enabled': True}
         else:
-            self.assertEqual(ret, {'ps': [{'processes': {'apache2': 'stopped'}}]})
+            assert ret == {'ps': [{'processes': {'apache2': 'stopped'}}]}
 
     def test_list_available(self):
         '''
@@ -187,4 +187,4 @@ class BeaconsTest(ModuleCase):
         ret = self.run_function('beacons.list_available',
                                 return_yaml=False,
                                 f_timeout=300)
-        self.assertTrue(ret)
+        assert ret

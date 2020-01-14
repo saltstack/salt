@@ -38,7 +38,7 @@ class PGJsonbCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         connect_mock = MagicMock()
         with patch.object(pgjsonb, '_get_serv', connect_mock):
             with patch.dict(pgjsonb.__salt__, {'config.option': MagicMock()}):
-                self.assertEqual(pgjsonb.clean_old_jobs(), None)
+                assert pgjsonb.clean_old_jobs() is None
 
     def test_clean_old_jobs_archive(self):
         '''
@@ -48,4 +48,4 @@ class PGJsonbCleanOldJobsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(pgjsonb, '_get_serv', connect_mock):
             with patch.dict(pgjsonb.__salt__, {'config.option': MagicMock()}):
                 with patch.dict(pgjsonb.__opts__, {'archive_jobs': 1}):
-                    self.assertEqual(pgjsonb.clean_old_jobs(), None)
+                    assert pgjsonb.clean_old_jobs() is None

@@ -98,7 +98,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it publish a command from the minion out to other minions.
         '''
-        self.assertDictEqual(publish.publish('os:Fedora', 'publish.salt'), {})
+        assert publish.publish('os:Fedora', 'publish.salt') == {}
 
     # 'full_data' function tests: 1
 
@@ -106,7 +106,7 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return the full data about the publication
         '''
-        self.assertDictEqual(publish.publish('*', 'publish.salt'), {})
+        assert publish.publish('*', 'publish.salt') == {}
 
     # 'runner' function tests: 1
 
@@ -117,15 +117,15 @@ class PublishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         ret = ('No access to master. If using salt-call with --local,'
                ' please remove.')
-        self.assertEqual(publish.runner('manage.down'), ret)
+        assert publish.runner('manage.down') == ret
 
         mock = MagicMock(return_value=True)
         mock_id = MagicMock(return_value='salt_id')
         with patch.dict(publish.__opts__, {'master_uri': mock,
                                            'id': mock_id}):
             Channel.flag = 0
-            self.assertTrue(publish.runner('manage.down'))
+            assert publish.runner('manage.down')
 
             Channel.flag = 1
-            self.assertEqual(publish.runner('manage.down'),
-                             "'manage.down' runner publish timed out")
+            assert publish.runner('manage.down') == \
+                             "'manage.down' runner publish timed out"

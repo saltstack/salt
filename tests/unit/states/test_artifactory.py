@@ -45,13 +45,13 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
         mck = MagicMock(return_value={'status': False, 'changes': {},
                                       'comment': ''})
         with patch.dict(artifactory.__salt__, {'artifactory.get_release': mck}):
-            self.assertDictEqual(artifactory.downloaded(name, artifact), ret)
+            assert artifactory.downloaded(name, artifact) == ret
 
         with patch.object(artifactory, '__fetch_from_artifactory',
                           MagicMock(side_effect=Exception('error'))):
             ret = artifactory.downloaded(name, artifact)
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'error')
+            assert ret['result'] is False
+            assert ret['comment'] == 'error'
 
     # 'downloaded test=True' function tests: 1
 
@@ -76,10 +76,10 @@ class ArtifactoryTestCase(TestCase, LoaderModuleMockMixin):
                                       'comment': ''})
         with patch.dict(artifactory.__salt__, {'artifactory.get_release': mck}):
             with patch.dict(artifactory.__opts__, {'test': True}):
-                self.assertDictEqual(artifactory.downloaded(name, artifact), ret)
+                assert artifactory.downloaded(name, artifact) == ret
 
         with patch.object(artifactory, '__fetch_from_artifactory',
                           MagicMock(side_effect=Exception('error'))):
             ret = artifactory.downloaded(name, artifact)
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'error')
+            assert ret['result'] is False
+            assert ret['comment'] == 'error'

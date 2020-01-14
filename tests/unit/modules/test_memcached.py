@@ -17,6 +17,7 @@ from tests.support.mock import (
 import salt.modules.memcached as memcached
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext.six import integer_types
+import pytest
 
 
 class MemcachedTestCase(TestCase):
@@ -42,8 +43,8 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertDictEqual(memcached.status(),
-                                 {'127.0.0.1:11211 (1)': {}})
+            assert memcached.status() == \
+                                 {'127.0.0.1:11211 (1)': {}}
 
     def test_status_false(self):
         '''
@@ -62,7 +63,7 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertFalse(memcached.status())
+            assert not memcached.status()
 
     # 'get' function tests: 1
 
@@ -90,7 +91,7 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertEqual(memcached.get('salt'), 'salt')
+            assert memcached.get('salt') == 'salt'
 
     # 'set_' function tests: 1
 
@@ -127,13 +128,13 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertTrue(memcached.set_('salt', '1111'))
+            assert memcached.set_('salt', '1111')
 
-            self.assertRaises(SaltInvocationError, memcached.set_,
-                              'salt', '1111', time='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.set_('salt', '1111', time='0.1')
 
-            self.assertRaises(SaltInvocationError, memcached.set_,
-                              'salt', '1111', min_compress_len='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.set_('salt', '1111', min_compress_len='0.1')
 
     # 'delete' function tests: 1
 
@@ -166,10 +167,10 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertTrue(memcached.delete('salt'))
+            assert memcached.delete('salt')
 
-            self.assertRaises(SaltInvocationError, memcached.delete,
-                              'salt', '1111', time='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.delete('salt', '1111', time='0.1')
 
     # 'add' function tests: 1
 
@@ -206,13 +207,13 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertTrue(memcached.add('salt', '1111'))
+            assert memcached.add('salt', '1111')
 
-            self.assertRaises(SaltInvocationError, memcached.add,
-                              'salt', '1111', time='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.add('salt', '1111', time='0.1')
 
-            self.assertRaises(SaltInvocationError, memcached.add,
-                              'salt', '1111', min_compress_len='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.add('salt', '1111', min_compress_len='0.1')
 
     # 'replace' function tests: 1
 
@@ -249,13 +250,13 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertTrue(memcached.replace('salt', '1111'))
+            assert memcached.replace('salt', '1111')
 
-            self.assertRaises(SaltInvocationError, memcached.replace,
-                              'salt', '1111', time='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.replace('salt', '1111', time='0.1')
 
-            self.assertRaises(SaltInvocationError, memcached.replace,
-                              'salt', '1111', min_compress_len='0.1')
+            with pytest.raises(SaltInvocationError):
+                memcached.replace('salt', '1111', min_compress_len='0.1')
 
     # 'increment' function tests: 3
 
@@ -295,10 +296,10 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertEqual(memcached.increment('salt'), 'salt')
+            assert memcached.increment('salt') == 'salt'
 
-            self.assertRaises(SaltInvocationError, memcached.increment,
-                              'salt', delta='sa')
+            with pytest.raises(SaltInvocationError):
+                memcached.increment('salt', delta='sa')
 
     def test_increment_exist(self):
         '''
@@ -327,8 +328,8 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertRaises(CommandExecutionError, memcached.increment,
-                              'salt')
+            with pytest.raises(CommandExecutionError):
+                memcached.increment('salt')
 
     def test_increment_none(self):
         '''
@@ -357,8 +358,8 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertRaises(CommandExecutionError, memcached.increment,
-                              'salt')
+            with pytest.raises(CommandExecutionError):
+                memcached.increment('salt')
 
     # 'decrement' function tests: 3
 
@@ -398,10 +399,10 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertEqual(memcached.decrement('salt'), 'salt')
+            assert memcached.decrement('salt') == 'salt'
 
-            self.assertRaises(SaltInvocationError, memcached.decrement,
-                              'salt', delta='sa')
+            with pytest.raises(SaltInvocationError):
+                memcached.decrement('salt', delta='sa')
 
     def test_decrement_exist(self):
         '''
@@ -430,8 +431,8 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertRaises(CommandExecutionError, memcached.decrement,
-                              'salt')
+            with pytest.raises(CommandExecutionError):
+                memcached.decrement('salt')
 
     def test_decrement_none(self):
         '''
@@ -460,5 +461,5 @@ class MemcachedTestCase(TestCase):
 
         with patch.object(memcached, '_connect',
                           MagicMock(return_value=MockMemcache())):
-            self.assertRaises(CommandExecutionError, memcached.decrement,
-                              'salt')
+            with pytest.raises(CommandExecutionError):
+                memcached.decrement('salt')

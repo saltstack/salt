@@ -57,7 +57,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
                    'result': True,
                    'comment': 'The following features are already installed:\n'
                               '- spongebob'}
-            self.assertDictEqual(win_servermanager.installed('spongebob'), ret)
+            assert win_servermanager.installed('spongebob') == ret
 
             with patch.dict(win_servermanager.__opts__, {"test": True}):
                 ret = {'name': 'spongebob',
@@ -65,8 +65,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
                        'comment': '',
                        'changes': {
                            'spongebob': 'Will be installed recurse=False'}}
-                self.assertDictEqual(
-                    win_servermanager.installed('spongebob'), ret)
+                assert win_servermanager.installed('spongebob') == ret
 
             with patch.dict(win_servermanager.__opts__, {"test": False}):
                 ret = {'name': 'squidward',
@@ -74,8 +73,7 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
                        'comment': 'Installed the following:\n- squidward',
                        'changes': {
                            'squidward': {'new': 'patrick', 'old': ''}}}
-                self.assertDictEqual(
-                    win_servermanager.installed('squidward'), ret)
+                assert win_servermanager.installed('squidward') == ret
 
     def test_removed(self):
         '''
@@ -109,16 +107,14 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
                    'result': True,
                    'comment': 'The following features are not installed:\n'
                               '- squidward'}
-            self.assertDictEqual(
-                win_servermanager.removed('squidward'), ret)
+            assert win_servermanager.removed('squidward') == ret
 
             with patch.dict(win_servermanager.__opts__, {"test": True}):
                 ret = {'name': 'squidward',
                        'result': None,
                        'comment': '',
                        'changes': {'squidward': 'Will be removed'}}
-                self.assertDictEqual(
-                    win_servermanager.removed('squidward'), ret)
+                assert win_servermanager.removed('squidward') == ret
 
             with patch.dict(win_servermanager.__opts__, {"test": False}):
                 ret = {'name': 'squidward',
@@ -126,5 +122,4 @@ class WinServermanagerTestCase(TestCase, LoaderModuleMockMixin):
                        'comment': 'Removed the following:\n- squidward',
                        'changes': {
                            'squidward': {'new': '', 'old': 'patrick'}}}
-                self.assertDictEqual(
-                    win_servermanager.removed('squidward'), ret)
+                assert win_servermanager.removed('squidward') == ret

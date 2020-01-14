@@ -17,6 +17,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
 )
+import pytest
 
 PARSE_CONF = {
     'include files': {
@@ -44,7 +45,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.logrotate._parse_conf',
                    MagicMock(return_value=True)):
-            self.assertTrue(logrotate.show_conf())
+            assert logrotate.show_conf()
 
     # 'set_' function tests: 4
 
@@ -56,7 +57,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value=PARSE_CONF)), \
                 patch.dict(logrotate.__salt__,
                            {'file.replace': MagicMock(return_value=True)}):
-            self.assertTrue(logrotate.set_('rotate', '2'))
+            assert logrotate.set_('rotate', '2')
 
     def test_set_failed(self):
         '''
@@ -64,7 +65,8 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.logrotate._parse_conf', MagicMock(return_value=PARSE_CONF)):
             kwargs = {'key': '/var/log/wtmp', 'value': 2}
-            self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+            with pytest.raises(SaltInvocationError):
+                logrotate.set_(**kwargs)
 
     def test_set_setting(self):
         '''
@@ -74,7 +76,7 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
                         {'file.replace': MagicMock(return_value=True)}), \
                 patch('salt.modules.logrotate._parse_conf',
                       MagicMock(return_value=PARSE_CONF)):
-            self.assertTrue(logrotate.set_('/var/log/wtmp', 'rotate', '2'))
+            assert logrotate.set_('/var/log/wtmp', 'rotate', '2')
 
     def test_set_setting_failed(self):
         '''
@@ -84,4 +86,5 @@ class LogrotateTestCase(TestCase, LoaderModuleMockMixin):
             kwargs = {'key': 'rotate',
                       'value': '/var/log/wtmp',
                       'setting': '2'}
-            self.assertRaises(SaltInvocationError, logrotate.set_, **kwargs)
+            with pytest.raises(SaltInvocationError):
+                logrotate.set_(**kwargs)

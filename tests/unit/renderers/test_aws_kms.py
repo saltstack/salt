@@ -19,6 +19,7 @@ from tests.support.mock import (
 # Import Salt libs
 import salt.exceptions
 import salt.renderers.aws_kms as aws_kms
+import pytest
 
 try:
     import botocore.exceptions
@@ -59,18 +60,19 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         config = {'aws_kms': {'data_key': ENCRYPTED_DATA_KEY}}
         with patch.dict(aws_kms.__salt__, {'config.get': config.get}):  # pylint: disable=no-member
-            self.assertEqual(aws_kms._cfg_data_key(), ENCRYPTED_DATA_KEY,
-                             '_cfg_data_key did not return the data key configured in __salt__.')
+            assert aws_kms._cfg_data_key() == ENCRYPTED_DATA_KEY, \
+                             '_cfg_data_key did not return the data key configured in __salt__.'
         with patch.dict(aws_kms.__opts__, config):  # pylint: disable=no-member
-            self.assertEqual(aws_kms._cfg_data_key(), ENCRYPTED_DATA_KEY,
-                             '_cfg_data_key did not return the data key configured in __opts__.')
+            assert aws_kms._cfg_data_key() == ENCRYPTED_DATA_KEY, \
+                             '_cfg_data_key did not return the data key configured in __opts__.'
 
     def test__cfg_data_key_no_key(self):
         '''
         When no aws_kms:data_key is configured,
         calling _cfg_data_key should raise a SaltConfigurationError
         '''
-        self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._cfg_data_key)
+        with pytest.raises(salt.exceptions.SaltConfigurationError):
+            aws_kms._cfg_data_key()
 
     def test__session_profile(self):  # pylint: disable=no-self-use
         '''
@@ -88,7 +90,8 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('boto3.Session') as session:
             session.side_effect = botocore.exceptions.ProfileNotFound(profile=AWS_PROFILE)
-            self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._session)
+            with pytest.raises(salt.exceptions.SaltConfigurationError):
+                aws_kms._session()
 
     def test__session_noregion(self):
         '''
@@ -97,7 +100,8 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('boto3.Session') as session:
             session.side_effect = botocore.exceptions.NoRegionError
-            self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._session)
+            with pytest.raises(salt.exceptions.SaltConfigurationError):
+                aws_kms._session()
 
     def test__kms(self):  # pylint: disable=no-self-use
         '''
@@ -114,7 +118,8 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('boto3.Session') as session:
             session.side_effect = botocore.exceptions.NoRegionError
-            self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._kms)
+            with pytest.raises(salt.exceptions.SaltConfigurationError):
+                aws_kms._kms()
 
     def test__api_decrypt(self):  # pylint: disable=no-self-use
         '''
@@ -142,7 +147,8 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(aws_kms, '_kms') as kms_getter:
             kms_getter.return_value = kms_client
             with patch.object(aws_kms, '_cfg_data_key', lambda: ENCRYPTED_DATA_KEY):
-                self.assertRaises(salt.exceptions.SaltConfigurationError, aws_kms._api_decrypt)
+                with pytest.raises(salt.exceptions.SaltConfigurationError):
+                    aws_kms._api_decrypt()
 
     def test__plaintext_data_key(self):
         '''
@@ -150,7 +156,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         It caches the response and only calls _api_decrypt exactly once.
         '''
         with patch.object(aws_kms, '_api_decrypt', return_value={'KeyId': 'key-id', 'Plaintext': PLAINTEXT_DATA_KEY}) as api_decrypt:
-            self.assertEqual(aws_kms._plaintext_data_key(), PLAINTEXT_DATA_KEY)
+            assert aws_kms._plaintext_data_key() == PLAINTEXT_DATA_KEY
             aws_kms._plaintext_data_key()
             api_decrypt.assert_called_once()
 
@@ -159,7 +165,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         _base64_plaintext_data_key returns the urlsafe base64 encoded plain text data key.
         '''
         with patch.object(aws_kms, '_plaintext_data_key', return_value=PLAINTEXT_DATA_KEY):
-            self.assertEqual(aws_kms._base64_plaintext_data_key(), BASE64_DATA_KEY)
+            assert aws_kms._base64_plaintext_data_key() == BASE64_DATA_KEY
 
     @skipIf(NO_FERNET, 'Failed to import cryptography.fernet')
     def test__decrypt_ciphertext(self):
@@ -169,7 +175,7 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         test_key = fernet.Fernet.generate_key()
         crypted = fernet.Fernet(test_key).encrypt(PLAINTEXT_SECRET.encode())
         with patch.object(aws_kms, '_base64_plaintext_data_key', return_value=test_key):
-            self.assertEqual(aws_kms._decrypt_ciphertext(crypted), PLAINTEXT_SECRET)
+            assert aws_kms._decrypt_ciphertext(crypted) == PLAINTEXT_SECRET
 
     @skipIf(NO_FERNET, 'Failed to import cryptography.fernet')
     def test__decrypt_object(self):
@@ -185,11 +191,11 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         crypted_list = [crypted]
 
         with patch.object(aws_kms, '_base64_plaintext_data_key', return_value=test_key):
-            self.assertEqual(aws_kms._decrypt_object(PLAINTEXT_SECRET), PLAINTEXT_SECRET)
-            self.assertEqual(aws_kms._decrypt_object(crypted), PLAINTEXT_SECRET)
-            self.assertEqual(aws_kms._decrypt_object(crypted_map), secret_map)
-            self.assertEqual(aws_kms._decrypt_object(crypted_list), secret_list)
-            self.assertEqual(aws_kms._decrypt_object(None), None)
+            assert aws_kms._decrypt_object(PLAINTEXT_SECRET) == PLAINTEXT_SECRET
+            assert aws_kms._decrypt_object(crypted) == PLAINTEXT_SECRET
+            assert aws_kms._decrypt_object(crypted_map) == secret_map
+            assert aws_kms._decrypt_object(crypted_list) == secret_list
+            assert aws_kms._decrypt_object(None) is None
 
     @skipIf(NO_FERNET, 'Failed to import cryptography.fernet')
     def test_render(self):
@@ -199,4 +205,4 @@ class AWSKMSTestCase(TestCase, LoaderModuleMockMixin):
         test_key = fernet.Fernet.generate_key()
         crypted = fernet.Fernet(test_key).encrypt(PLAINTEXT_SECRET.encode())
         with patch.object(aws_kms, '_base64_plaintext_data_key', return_value=test_key):
-            self.assertEqual(aws_kms.render(crypted), PLAINTEXT_SECRET)
+            assert aws_kms.render(crypted) == PLAINTEXT_SECRET

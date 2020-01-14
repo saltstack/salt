@@ -28,7 +28,7 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
         Test if it gets a value from a db, using a uri in the form of
         sdb://<profile>/<key>
         '''
-        self.assertEqual(sdb.get('sdb://salt/foo'), 'sdb://salt/foo')
+        assert sdb.get('sdb://salt/foo') == 'sdb://salt/foo'
 
     # 'set_' function tests: 1
 
@@ -37,4 +37,4 @@ class SdbTestCase(TestCase, LoaderModuleMockMixin):
         Test if it sets a value from a db, using a uri in the form of
         sdb://<profile>/<key>
         '''
-        self.assertFalse(sdb.set_('sdb://mymemcached/foo', 'bar'))
+        assert not sdb.set_('sdb://mymemcached/foo', 'bar')

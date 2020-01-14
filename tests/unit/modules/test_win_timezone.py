@@ -32,8 +32,8 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
                                            {'vdata': 'Indian Standard Time'}])
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
-            self.assertEqual(win_timezone.get_zone(), 'Asia/Calcutta')
-            self.assertEqual(win_timezone.get_zone(), 'Unknown')
+            assert win_timezone.get_zone() == 'Asia/Calcutta'
+            assert win_timezone.get_zone() == 'Unknown'
 
     def test_get_zone_null_terminated(self):
         '''
@@ -44,8 +44,8 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
             {'vdata': 'Indian Standard Time\0\0some more junk data\0\0'}])
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
-            self.assertEqual(win_timezone.get_zone(), 'Asia/Calcutta')
-            self.assertEqual(win_timezone.get_zone(), 'Unknown')
+            assert win_timezone.get_zone() == 'Asia/Calcutta'
+            assert win_timezone.get_zone() == 'Unknown'
 
     # 'get_offset' function tests: 1
 
@@ -56,7 +56,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         mock_read = MagicMock(return_value={'vdata': 'India Standard Time'})
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
-            self.assertEqual(win_timezone.get_offset(), '+0530')
+            assert win_timezone.get_offset() == '+0530'
 
     # 'get_zonecode' function tests: 1
 
@@ -67,7 +67,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         mock_read = MagicMock(return_value={'vdata': 'India Standard Time'})
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
-            self.assertEqual(win_timezone.get_zonecode(), 'IST')
+            assert win_timezone.get_zonecode() == 'IST'
 
     # 'set_zone' function tests: 1
 
@@ -84,7 +84,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_timezone.__salt__, {'cmd.run_all': mock_cmd}), \
                 patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
 
-            self.assertTrue(win_timezone.set_zone('Asia/Calcutta'))
+            assert win_timezone.set_zone('Asia/Calcutta')
 
     # 'zone_compare' function tests: 1
 
@@ -97,7 +97,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         mock_read = MagicMock(return_value={'vdata': 'India Standard Time'})
 
         with patch.dict(win_timezone.__utils__, {'reg.read_value': mock_read}):
-            self.assertTrue(win_timezone.zone_compare('Asia/Calcutta'))
+            assert win_timezone.zone_compare('Asia/Calcutta')
 
     # 'get_hwclock' function tests: 1
 
@@ -105,7 +105,7 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it get current hardware clock setting (UTC or localtime)
         '''
-        self.assertEqual(win_timezone.get_hwclock(), 'localtime')
+        assert win_timezone.get_hwclock() == 'localtime'
 
     # 'set_hwclock' function tests: 1
 
@@ -113,4 +113,4 @@ class WinTimezoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it sets the hardware clock to be either UTC or localtime
         '''
-        self.assertFalse(win_timezone.set_hwclock('UTC'))
+        assert not win_timezone.set_hwclock('UTC')

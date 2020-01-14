@@ -47,7 +47,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                                             'user.add': mock_false}):
                 ret.update({'comment': 'The following group(s) are'
                             ' not present: salt'})
-                self.assertDictEqual(user.present('salt', groups=['salt']), ret)
+                assert user.present('salt', groups=['salt']) == ret
 
                 mock_false = MagicMock(side_effect=[{'key': 'value'}, {'key': 'value'},
                                               {'key': 'value'}, False, False])
@@ -58,7 +58,7 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                                         'to be changed:\n'
                                         'key: value\n',
                              'result': None})
-                        self.assertDictEqual(user.present('salt'), ret)
+                        assert user.present('salt') == ret
 
                     with patch.dict(user.__opts__, {"test": False}):
                         # pylint: disable=repr-flag-used-in-string
@@ -68,17 +68,17 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                         )
                         # pylint: enable=repr-flag-used-in-string
                         ret.update({'comment': comment, 'result': False})
-                        self.assertDictEqual(user.present('salt'), ret)
+                        assert user.present('salt') == ret
 
                         with patch.dict(user.__opts__, {"test": True}):
                             ret.update({'comment': 'User salt set to'
                                         ' be added', 'result': None})
-                            self.assertDictEqual(user.present('salt'), ret)
+                            assert user.present('salt') == ret
 
                         with patch.dict(user.__opts__, {"test": False}):
                             ret.update({'comment': 'Failed to create new'
                                         ' user salt', 'result': False})
-                            self.assertDictEqual(user.present('salt'), ret)
+                            assert user.present('salt') == ret
 
     def test_present_invalid_uid_change(self):
         mock_info = MagicMock(side_effect=[
@@ -96,9 +96,9 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(user.__salt__, dunder_salt):
             ret = user.present('foo', uid=5001)
             # State should have failed
-            self.assertFalse(ret['result'])
+            assert not ret['result']
             # Only one of uid/gid should have been flagged in the comment
-            self.assertEqual(ret['comment'].count('not permitted'), 1)
+            assert ret['comment'].count('not permitted') == 1
 
     def test_present_invalid_gid_change(self):
         mock_info = MagicMock(side_effect=[
@@ -116,9 +116,9 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(user.__salt__, dunder_salt):
             ret = user.present('foo', gid=5001)
             # State should have failed
-            self.assertFalse(ret['result'])
+            assert not ret['result']
             # Only one of uid/gid should have been flagged in the comment
-            self.assertEqual(ret['comment'].count('not permitted'), 1)
+            assert ret['comment'].count('not permitted') == 1
 
     def test_present_invalid_uid_gid_change(self):
         mock_info = MagicMock(side_effect=[
@@ -136,9 +136,9 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(user.__salt__, dunder_salt):
             ret = user.present('foo', uid=5001, gid=5001)
             # State should have failed
-            self.assertFalse(ret['result'])
+            assert not ret['result']
             # Both the uid and gid should have been flagged in the comment
-            self.assertEqual(ret['comment'].count('not permitted'), 2)
+            assert ret['comment'].count('not permitted') == 2
 
     def test_present_uid_gid_change(self):
         before = {'uid': 5000,
@@ -174,15 +174,13 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                 gid=5001,
                 allow_uid_change=True,
                 allow_gid_change=True)
-            self.assertEqual(
-                ret,
+            assert ret == \
                 {'comment': 'Updated user foo',
                  'changes': {'gid': 5001,
                              'uid': 5001,
                              'groups': ['othergroup']},
                  'name': 'foo',
                  'result': True}
-            )
 
     def test_absent(self):
         '''
@@ -199,16 +197,16 @@ class UserTestCase(TestCase, LoaderModuleMockMixin):
                                         'group.info': mock1}):
             with patch.dict(user.__opts__, {"test": True}):
                 ret.update({'comment': 'User salt set for removal'})
-                self.assertDictEqual(user.absent('salt'), ret)
+                assert user.absent('salt') == ret
 
             with patch.dict(user.__opts__, {"test": False}):
                 ret.update({'comment': 'Failed to remove user salt',
                             'result': False})
-                self.assertDictEqual(user.absent('salt'), ret)
+                assert user.absent('salt') == ret
 
             ret.update({'comment': 'User salt is not present',
                         'result': True})
-            self.assertDictEqual(user.absent('salt'), ret)
+            assert user.absent('salt') == ret
 
     def test_changes(self):
         '''

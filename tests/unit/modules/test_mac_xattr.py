@@ -12,6 +12,7 @@ from tests.support.mock import MagicMock, patch
 from salt.exceptions import CommandExecutionError
 import salt.modules.mac_xattr as xattr
 import salt.utils.mac_utils
+import pytest
 
 
 class XAttrTestCase(TestCase, LoaderModuleMockMixin):
@@ -29,7 +30,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
                                                                 'patrick'])), \
                 patch('salt.utils.mac_utils.execute_return_result',
                       MagicMock(return_value='spongebob\nsquidward')):
-            self.assertEqual(xattr.list_('path/to/file'), expected)
+            assert xattr.list_('path/to/file') == expected
 
     def test_list_missing(self):
         '''
@@ -37,7 +38,8 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.mac_utils.execute_return_result',
                    MagicMock(side_effect=CommandExecutionError('No such file'))):
-            self.assertRaises(CommandExecutionError, xattr.list_, '/path/to/file')
+            with pytest.raises(CommandExecutionError):
+                xattr.list_('/path/to/file')
 
     def test_read(self):
         '''
@@ -45,8 +47,8 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.mac_utils.execute_return_result',
                    MagicMock(return_value='expected results')):
-            self.assertEqual(xattr.read('/path/to/file', 'com.attr'),
-                             'expected results')
+            assert xattr.read('/path/to/file', 'com.attr') == \
+                             'expected results'
 
     def test_read_hex(self):
         '''
@@ -54,10 +56,8 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.mac_utils, 'execute_return_result',
                           MagicMock(return_value='expected results')) as mock:
-            self.assertEqual(
-                xattr.read('/path/to/file', 'com.attr', **{'hex': True}),
+            assert xattr.read('/path/to/file', 'com.attr', **{'hex': True}) == \
                 'expected results'
-            )
             mock.assert_called_once_with(
                 ['xattr', '-p', '-x', 'com.attr', '/path/to/file'])
 
@@ -67,9 +67,8 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.mac_utils.execute_return_result',
                    MagicMock(side_effect=CommandExecutionError('No such file'))):
-            self.assertRaises(CommandExecutionError,
-                              xattr.read,
-                              '/path/to/file',
+            with pytest.raises(CommandExecutionError):
+                xattr.read('/path/to/file',
                               'attribute')
 
     def test_write(self):
@@ -80,9 +79,9 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xattr, 'read', mock_cmd), \
                 patch('salt.utils.mac_utils.execute_return_success',
                       MagicMock(return_value=True)):
-            self.assertTrue(xattr.write('/path/to/file',
+            assert xattr.write('/path/to/file',
                                         'spongebob',
-                                        'squarepants'))
+                                        'squarepants')
 
     def test_write_missing(self):
         '''
@@ -90,9 +89,8 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.mac_utils.execute_return_success',
                    MagicMock(side_effect=CommandExecutionError('No such file'))):
-            self.assertRaises(CommandExecutionError,
-                              xattr.write,
-                              '/path/to/file',
+            with pytest.raises(CommandExecutionError):
+                xattr.write('/path/to/file',
                               'attribute',
                               'value')
 
@@ -104,7 +102,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xattr, 'list_', mock_cmd), \
                 patch('salt.utils.mac_utils.execute_return_success',
                       MagicMock(return_value=True)):
-            self.assertTrue(xattr.delete('/path/to/file', 'attribute'))
+            assert xattr.delete('/path/to/file', 'attribute')
 
     def test_delete_missing(self):
         '''
@@ -112,9 +110,8 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.mac_utils.execute_return_success',
                    MagicMock(side_effect=CommandExecutionError('No such file'))):
-            self.assertRaises(CommandExecutionError,
-                              xattr.delete,
-                              '/path/to/file',
+            with pytest.raises(CommandExecutionError):
+                xattr.delete('/path/to/file',
                               'attribute')
 
     def test_clear(self):
@@ -125,7 +122,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(xattr, 'list_', mock_cmd), \
                 patch('salt.utils.mac_utils.execute_return_success',
                       MagicMock(return_value=True)):
-            self.assertTrue(xattr.clear('/path/to/file'))
+            assert xattr.clear('/path/to/file')
 
     def test_clear_missing(self):
         '''
@@ -133,4 +130,5 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.utils.mac_utils.execute_return_success',
                    MagicMock(side_effect=CommandExecutionError('No such file'))):
-            self.assertRaises(CommandExecutionError, xattr.clear, '/path/to/file')
+            with pytest.raises(CommandExecutionError):
+                xattr.clear('/path/to/file')

@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.pw_user as pw_user
 from salt.exceptions import CommandExecutionError
+import pytest
 try:
     import pwd
     HAS_PWD = True
@@ -39,7 +40,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pw_user.__grains__, {'os_family': 'RedHat'}):
             mock = MagicMock(return_value=0)
             with patch.dict(pw_user.__salt__, {'cmd.retcode': mock}):
-                self.assertTrue(pw_user.add('a'))
+                assert pw_user.add('a')
 
     def test_delete(self):
         '''
@@ -47,7 +48,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(pw_user.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(pw_user.delete('A'))
+            assert pw_user.delete('A')
 
     def test_getent(self):
         '''
@@ -60,10 +61,10 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('pwd.getpwall', MagicMock(return_value=[MockData()])):
             with patch.dict(pw_user.__context__, {'user.getent': mock_user}):
-                self.assertEqual(pw_user.getent(), mock_user)
+                assert pw_user.getent() == mock_user
 
                 with patch.object(pw_user, 'info', MagicMock(return_value=mock_user)):
-                    self.assertEqual(pw_user.getent(True)[0], mock_user)
+                    assert pw_user.getent(True)[0] == mock_user
 
     def test_chuid(self):
         '''
@@ -71,19 +72,19 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'uid': 'A'})
         with patch.object(pw_user, 'info', mock):
-            self.assertTrue(pw_user.chuid('name', 'A'))
+            assert pw_user.chuid('name', 'A')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'uid': 'A'}, {'uid': 'A'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertFalse(pw_user.chuid('name', 'B'))
+                assert not pw_user.chuid('name', 'B')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'uid': 'A'}, {'uid': 'B'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertTrue(pw_user.chuid('name', 'A'))
+                assert pw_user.chuid('name', 'A')
 
     def test_chgid(self):
         '''
@@ -91,19 +92,19 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'gid': 1})
         with patch.object(pw_user, 'info', mock):
-            self.assertTrue(pw_user.chgid('name', 1))
+            assert pw_user.chgid('name', 1)
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'gid': 2}, {'gid': 2}])
             with patch.object(pw_user, 'info', mock):
-                self.assertFalse(pw_user.chgid('name', 1))
+                assert not pw_user.chgid('name', 1)
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'gid': 1}, {'gid': 2}])
             with patch.object(pw_user, 'info', mock):
-                self.assertTrue(pw_user.chgid('name', 1))
+                assert pw_user.chgid('name', 1)
 
     def test_chshell(self):
         '''
@@ -111,19 +112,19 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'shell': 'A'})
         with patch.object(pw_user, 'info', mock):
-            self.assertTrue(pw_user.chshell('name', 'A'))
+            assert pw_user.chshell('name', 'A')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'shell': 'B'}, {'shell': 'B'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertFalse(pw_user.chshell('name', 'A'))
+                assert not pw_user.chshell('name', 'A')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'shell': 'A'}, {'shell': 'B'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertTrue(pw_user.chshell('name', 'A'))
+                assert pw_user.chshell('name', 'A')
 
     def test_chhome(self):
         '''
@@ -131,19 +132,19 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'home': 'A'})
         with patch.object(pw_user, 'info', mock):
-            self.assertTrue(pw_user.chhome('name', 'A'))
+            assert pw_user.chhome('name', 'A')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'home': 'B'}, {'home': 'B'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertFalse(pw_user.chhome('name', 'A'))
+                assert not pw_user.chhome('name', 'A')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'home': 'A'}, {'home': 'B'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertTrue(pw_user.chhome('name', 'A'))
+                assert pw_user.chhome('name', 'A')
 
     def test_chgroups(self):
         '''
@@ -153,13 +154,13 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pw_user.__salt__, {'cmd.retcode': mock}):
             mock = MagicMock(return_value=['a', 'b', 'c', 'd'])
             with patch.object(pw_user, 'list_groups', mock):
-                self.assertTrue(pw_user.chgroups('name', 'a, b, c, d'))
+                assert pw_user.chgroups('name', 'a, b, c, d')
 
         mock = MagicMock(return_value=False)
         with patch.dict(pw_user.__salt__, {'cmd.retcode': mock}):
             mock = MagicMock(return_value=['a', 'b'])
             with patch.object(pw_user, 'list_groups', mock):
-                self.assertTrue(pw_user.chgroups('name', 'a, b, c'))
+                assert pw_user.chgroups('name', 'a, b, c')
 
     def test_chfullname(self):
         '''
@@ -167,15 +168,15 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertFalse(pw_user.chfullname('name', 'fullname'))
+            assert not pw_user.chfullname('name', 'fullname')
 
         mock = MagicMock(return_value={'fullname': 'fullname'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chfullname('name', 'fullname'))
+            assert pw_user.chfullname('name', 'fullname')
 
         mock = MagicMock(return_value={'fullname': u'Unicøde name ①③②'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chfullname('name', u'Unicøde name ①③②'))
+            assert pw_user.chfullname('name', u'Unicøde name ①③②')
 
         mock = MagicMock(return_value={'fullname': 'fullname'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -183,7 +184,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'fullname': 'fullname2'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chfullname('name', 'fullname1'))
+                    assert not pw_user.chfullname('name', 'fullname1')
 
         mock = MagicMock(return_value={'fullname': 'fullname2'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -191,7 +192,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'fullname': 'fullname2'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chfullname('name', 'fullname1'))
+                    assert not pw_user.chfullname('name', 'fullname1')
 
     def test_chroomnumber(self):
         '''
@@ -199,15 +200,15 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertFalse(pw_user.chroomnumber('name', 1))
+            assert not pw_user.chroomnumber('name', 1)
 
         mock = MagicMock(return_value={'roomnumber': u'Unicøde room ①③②'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chroomnumber('name', u'Unicøde room ①③②'))
+            assert pw_user.chroomnumber('name', u'Unicøde room ①③②')
 
         mock = MagicMock(return_value={'roomnumber': '1'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chroomnumber('name', 1))
+            assert pw_user.chroomnumber('name', 1)
 
         mock = MagicMock(return_value={'roomnumber': '2'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -215,7 +216,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'roomnumber': '3'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chroomnumber('name', 1))
+                    assert not pw_user.chroomnumber('name', 1)
 
         mock = MagicMock(return_value={'roomnumber': '3'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -223,7 +224,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'roomnumber': '3'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chroomnumber('name', 1))
+                    assert not pw_user.chroomnumber('name', 1)
 
     def test_chworkphone(self):
         '''
@@ -231,15 +232,15 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertFalse(pw_user.chworkphone('name', 1))
+            assert not pw_user.chworkphone('name', 1)
 
         mock = MagicMock(return_value={'workphone': '1'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chworkphone('name', 1))
+            assert pw_user.chworkphone('name', 1)
 
         mock = MagicMock(return_value={'workphone': u'Unicøde phone number ①③②'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chworkphone('name', u'Unicøde phone number ①③②'))
+            assert pw_user.chworkphone('name', u'Unicøde phone number ①③②')
 
         mock = MagicMock(return_value={'workphone': '2'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -247,7 +248,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'workphone': '3'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chworkphone('name', 1))
+                    assert not pw_user.chworkphone('name', 1)
 
         mock = MagicMock(return_value={'workphone': '3'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -255,7 +256,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'workphone': '3'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chworkphone('name', 1))
+                    assert not pw_user.chworkphone('name', 1)
 
     def test_chhomephone(self):
         '''
@@ -263,15 +264,15 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertFalse(pw_user.chhomephone('name', 1))
+            assert not pw_user.chhomephone('name', 1)
 
         mock = MagicMock(return_value={'homephone': '1'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chhomephone('name', 1))
+            assert pw_user.chhomephone('name', 1)
 
         mock = MagicMock(return_value={'homephone': u'Unicøde phone number ①③②'})
         with patch.object(pw_user, '_get_gecos', mock):
-            self.assertTrue(pw_user.chhomephone('name', u'Unicøde phone number ①③②'))
+            assert pw_user.chhomephone('name', u'Unicøde phone number ①③②')
 
         mock = MagicMock(return_value={'homephone': '2'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -279,7 +280,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'homephone': '3'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chhomephone('name', 1))
+                    assert not pw_user.chhomephone('name', 1)
 
         mock = MagicMock(return_value={'homephone': '3'})
         with patch.object(pw_user, '_get_gecos', mock):
@@ -287,13 +288,13 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'homephone': '3'})
                 with patch.object(pw_user, 'info', mock):
-                    self.assertFalse(pw_user.chhomephone('name', 1))
+                    assert not pw_user.chhomephone('name', 1)
 
     def test_info(self):
         '''
         Return user information
         '''
-        self.assertEqual(pw_user.info('name'), {})
+        assert pw_user.info('name') == {}
 
         mock = MagicMock(return_value=pwd.struct_passwd(('_TEST_GROUP',
                                                          '*',
@@ -305,7 +306,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(pwd, 'getpwnam', mock):
             mock = MagicMock(return_value='Group Name')
             with patch.object(pw_user, 'list_groups', mock):
-                self.assertEqual(pw_user.info('name')['name'], '_TEST_GROUP')
+                assert pw_user.info('name')['name'] == '_TEST_GROUP'
 
     def test_list_groups(self):
         '''
@@ -314,7 +315,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         mock_group = 'saltgroup'
 
         with patch('salt.utils.user.get_group_list', MagicMock(return_value=[mock_group])):
-            self.assertEqual(pw_user.list_groups('name'), [mock_group])
+            assert pw_user.list_groups('name') == [mock_group]
 
     def test_list_users(self):
         '''
@@ -326,7 +327,7 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
             pw_name = mock_user
 
         with patch('pwd.getpwall', MagicMock(return_value=[MockData()])):
-            self.assertEqual(pw_user.list_users(), [mock_user])
+            assert pw_user.list_users() == [mock_user]
 
     def test_rename(self):
         '''
@@ -334,21 +335,23 @@ class PwUserTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(pw_user, 'info', mock):
-            self.assertRaises(CommandExecutionError, pw_user.rename, 'name', 1)
+            with pytest.raises(CommandExecutionError):
+                pw_user.rename('name', 1)
 
         mock = MagicMock(return_value=True)
         with patch.object(pw_user, 'info', mock):
-            self.assertRaises(CommandExecutionError, pw_user.rename, 'name', 1)
+            with pytest.raises(CommandExecutionError):
+                pw_user.rename('name', 1)
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'name': ''},
                                           False, {'name': 'name'}])
             with patch.object(pw_user, 'info', mock):
-                self.assertTrue(pw_user.rename('name', 'name'))
+                assert pw_user.rename('name', 'name')
 
         mock = MagicMock(return_value=None)
         with patch.dict(pw_user.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'name': ''}, False, {'name': ''}])
             with patch.object(pw_user, 'info', mock):
-                self.assertFalse(pw_user.rename('name', 'name'))
+                assert not pw_user.rename('name', 'name')

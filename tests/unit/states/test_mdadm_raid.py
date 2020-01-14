@@ -75,7 +75,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.examine': mock_raid_examine_ok
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertEqual(mdadm.present("salt", 5, "dev0"), ret[0])
+                assert mdadm.present("salt", 5, "dev0") == ret[0]
 
         mock_raid_examine_mixed = MagicMock(side_effect=[
                 {'MD_UUID': '6be5fc45:05802bba:1c2d6722:666f0e03'}, {'MD_UUID': 'ffffffff:ffffffff:ffffffff:ffffffff'},
@@ -86,7 +86,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.examine': mock_raid_examine_mixed
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertEqual(mdadm.present("salt", 5, ["dev0", "dev1"]), ret[1])
+                assert mdadm.present("salt", 5, ["dev0", "dev1"]) == ret[1]
 
         with patch.dict(mdadm.__salt__, {
                 'raid.list': mock_raid_list_missing,
@@ -95,7 +95,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.create': mock_raid_create_success
                 }):
             with patch.dict(mdadm.__opts__, {'test': True}):
-                self.assertDictEqual(mdadm.present("salt", 5, "dev0"), ret[2])
+                assert mdadm.present("salt", 5, "dev0") == ret[2]
 
         with patch.dict(mdadm.__salt__, {
                 'raid.list': mock_raid_list_missing,
@@ -104,7 +104,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.create': mock_raid_create_fail
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertDictEqual(mdadm.present("salt", 5, "dev0"), ret[3])
+                assert mdadm.present("salt", 5, "dev0") == ret[3]
 
         mock_raid_list_create = MagicMock(side_effect=[{}, {'salt': {'uuid': '6be5fc45:05802bba:1c2d6722:666f0e03'}}])
         with patch.dict(mdadm.__salt__, {
@@ -115,7 +115,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.save_config': mock_raid_save_config
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertDictEqual(mdadm.present("salt", 5, "dev0"), ret[4])
+                assert mdadm.present("salt", 5, "dev0") == ret[4]
 
         mock_raid_examine_replaced = MagicMock(side_effect=[
                 {'MD_UUID': '6be5fc45:05802bba:1c2d6722:666f0e03'}, {},
@@ -130,7 +130,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.save_config': mock_raid_save_config
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertDictEqual(mdadm.present("salt", 5, ["dev0", "dev1"]), ret[5])
+                assert mdadm.present("salt", 5, ["dev0", "dev1"]) == ret[5]
 
         mock_raid_examine_replaced = MagicMock(side_effect=[
                 {'MD_UUID': '6be5fc45:05802bba:1c2d6722:666f0e03'}, {},
@@ -143,7 +143,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.save_config': mock_raid_save_config
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertDictEqual(mdadm.present("salt", 5, ["dev0", "dev1"]), ret[6])
+                assert mdadm.present("salt", 5, ["dev0", "dev1"]) == ret[6]
 
         mock_raid_examine_replaced = MagicMock(side_effect=[
                 {'MD_UUID': '6be5fc45:05802bba:1c2d6722:666f0e03'}, {},
@@ -155,7 +155,7 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
                 'raid.assemble': mock_raid_assemble_fail,
                 }):
             with patch.dict(mdadm.__opts__, {'test': False}):
-                self.assertDictEqual(mdadm.present("salt", 5, ["dev0", "dev1"]), ret[7])
+                assert mdadm.present("salt", 5, ["dev0", "dev1"]) == ret[7]
 
     def test_absent(self):
         '''
@@ -171,12 +171,12 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=["saltstack"])
         with patch.dict(mdadm.__salt__, {'raid.list': mock}):
-            self.assertDictEqual(mdadm.absent("salt"), ret[0])
+            assert mdadm.absent("salt") == ret[0]
 
             with patch.dict(mdadm.__opts__, {'test': True}):
-                self.assertDictEqual(mdadm.absent("saltstack"), ret[1])
+                assert mdadm.absent("saltstack") == ret[1]
 
             with patch.dict(mdadm.__opts__, {'test': False}):
                 mock = MagicMock(return_value=True)
                 with patch.dict(mdadm.__salt__, {'raid.destroy': mock}):
-                    self.assertDictEqual(mdadm.absent("saltstack"), ret[2])
+                    assert mdadm.absent("saltstack") == ret[2]

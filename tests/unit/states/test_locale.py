@@ -43,17 +43,17 @@ class LocaleTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value="salt")
         with patch.dict(locale.__salt__, {"locale.get_locale": mock}):
-            self.assertDictEqual(locale.system("salt"), ret[0])
+            assert locale.system("salt") == ret[0]
 
             with patch.dict(locale.__opts__, {"test": True}):
-                self.assertDictEqual(locale.system("saltstack"), ret[1])
+                assert locale.system("saltstack") == ret[1]
 
             with patch.dict(locale.__opts__, {"test": False}):
                 mock = MagicMock(side_effect=[True, False])
                 with patch.dict(locale.__salt__, {"locale.set_locale": mock}):
-                    self.assertDictEqual(locale.system("saltstack"), ret[2])
+                    assert locale.system("saltstack") == ret[2]
 
-                    self.assertDictEqual(locale.system("saltstack"), ret[3])
+                    assert locale.system("saltstack") == ret[3]
 
     def test_present(self):
         '''
@@ -73,14 +73,14 @@ class LocaleTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(side_effect=[True, False, False, False])
         with patch.dict(locale.__salt__, {"locale.avail": mock}):
-            self.assertDictEqual(locale.present("salt"), ret[0])
+            assert locale.present("salt") == ret[0]
 
             with patch.dict(locale.__opts__, {"test": True}):
-                self.assertDictEqual(locale.present("salt"), ret[1])
+                assert locale.present("salt") == ret[1]
 
             with patch.dict(locale.__opts__, {"test": False}):
                 mock = MagicMock(side_effect=[True, False])
                 with patch.dict(locale.__salt__, {"locale.gen_locale": mock}):
-                    self.assertDictEqual(locale.present("salt"), ret[2])
+                    assert locale.present("salt") == ret[2]
 
-                    self.assertDictEqual(locale.present("salt"), ret[3])
+                    assert locale.present("salt") == ret[3]

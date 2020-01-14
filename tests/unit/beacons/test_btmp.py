@@ -44,15 +44,15 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
         config = {}
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for btmp beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for btmp beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
     def test_no_match(self):
         config = [{'users': {'gareth': {'time_range': {'end': '09-22-2017 5pm',
@@ -61,7 +61,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         with patch('salt.utils.files.fopen', mock_open(b'')) as m_open:
             ret = btmp.beacon(config)
@@ -74,35 +74,35 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (False, 'User configuration for btmp beacon must be a dictionary.'))
+        assert ret == (False, 'User configuration for btmp beacon must be a dictionary.')
 
     def test_invalid_groups(self):
         config = [{'groups': ['docker']}]
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (False, 'Group configuration for btmp beacon must be a dictionary.'))
+        assert ret == (False, 'Group configuration for btmp beacon must be a dictionary.')
 
     def test_default_invalid_time_range(self):
         config = [{'defaults': {'time_range': {'start': '3pm'}}}]
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (False, 'The time_range parameter for btmp beacon must contain start & end options.'))
+        assert ret == (False, 'The time_range parameter for btmp beacon must contain start & end options.')
 
     def test_users_invalid_time_range(self):
         config = [{'users': {'gareth': {'time_range': {'start': '3pm'}}}}]
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (False, 'The time_range parameter for btmp beacon must contain start & end options.'))
+        assert ret == (False, 'The time_range parameter for btmp beacon must contain start & end options.')
 
     def test_groups_invalid_time_range(self):
         config = [{'groups': {'docker': {'time_range': {'start': '3pm'}}}}]
 
         ret = btmp.validate(config)
 
-        self.assertEqual(ret, (False, 'The time_range parameter for btmp beacon must contain start & end options.'))
+        assert ret == (False, 'The time_range parameter for btmp beacon must contain start & end options.')
 
     def test_match(self):
         with patch('salt.utils.files.fopen',
@@ -113,7 +113,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                 ret = btmp.validate(config)
 
-                self.assertEqual(ret, (True, 'Valid beacon configuration'))
+                assert ret == (True, 'Valid beacon configuration')
 
                 _expected = [{'addr': 1505937373,
                               'exit_status': 0,
@@ -127,7 +127,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                               'line': 'ssh:notty',
                               'type': 6}]
                 ret = btmp.beacon(config)
-                self.assertEqual(ret, _expected)
+                assert ret == _expected
 
     @skipIf(not _TIME_SUPPORTED, 'dateutil.parser is missing.')
     def test_match_time(self):
@@ -145,7 +145,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                     ret = btmp.validate(config)
 
-                    self.assertEqual(ret, (True, 'Valid beacon configuration'))
+                    assert ret == (True, 'Valid beacon configuration')
 
                     _expected = [{'addr': 1505937373,
                                   'exit_status': 0,
@@ -159,7 +159,7 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                   'line': 'ssh:notty',
                                   'type': 6}]
                     ret = btmp.beacon(config)
-                    self.assertEqual(ret, _expected)
+                    assert ret == _expected
 
     def test_match_group(self):
 
@@ -187,8 +187,8 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
                             ret = btmp.validate(config)
 
-                            self.assertEqual(ret,
-                                             (True, 'Valid beacon configuration'))
+                            assert ret == \
+                                             (True, 'Valid beacon configuration')
 
                             _expected = [{'addr': 1505937373,
                                           'exit_status': 0,
@@ -202,4 +202,4 @@ class BTMPBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                           'line': 'ssh:notty',
                                           'type': 6}]
                             ret = btmp.beacon(config)
-                            self.assertEqual(ret, _expected)
+                            assert ret == _expected

@@ -18,16 +18,14 @@ class TestSyndic(SyndicCase):
         '''
         test.ping
         '''
-        self.assertTrue(self.run_function('test.ping'))
+        assert self.run_function('test.ping')
 
     def test_fib(self):
         '''
         test.fib
         '''
-        self.assertEqual(
-                self.run_function(
+        assert self.run_function(
                     'test.fib',
                     ['20'],
-                    )[0],
+                    )[0] == \
                 6765
-                )

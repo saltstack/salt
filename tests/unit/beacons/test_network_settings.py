@@ -37,15 +37,15 @@ class NetworkSettingsBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = network_settings.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for network_settings'
-                                      ' beacon must be a list.'))
+        assert ret == (False, 'Configuration for network_settings'
+                                      ' beacon must be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = network_settings.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
 
 @skipIf(not HAS_PYROUTE2, 'no pyroute2 installed, skipping')
@@ -60,4 +60,4 @@ class Pyroute2TestCase(TestCase):
                 #
                 # ipdb.interfaces[1] is an interface with index 1,
                 # that is the loopback interface.
-                self.assertIn(attr, ipdb.interfaces[1])
+                assert attr in ipdb.interfaces[1]

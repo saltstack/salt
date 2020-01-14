@@ -88,9 +88,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_default_output(self):
         ret = highstate.output(self.data)
-        self.assertIn('Succeeded: 1 (changed=1)', ret)
-        self.assertIn('Failed:    0', ret)
-        self.assertIn('Total states run:     1', ret)
+        assert 'Succeeded: 1 (changed=1)' in ret
+        assert 'Failed:    0' in ret
+        assert 'Total states run:     1' in ret
 
     def test_output_comment_is_not_unicode(self):
         entry = None
@@ -105,9 +105,9 @@ class JsonTestCase(TestCase, LoaderModuleMockMixin):
         else:
             entry['comment'] = salt.utils.stringutils.to_bytes(entry['comment'])
         ret = highstate.output(self.data)
-        self.assertIn('Succeeded: 1 (changed=1)', ret)
-        self.assertIn('Failed:    0', ret)
-        self.assertIn('Total states run:     1', ret)
+        assert 'Succeeded: 1 (changed=1)' in ret
+        assert 'Failed:    0' in ret
+        assert 'Total states run:     1' in ret
 
 
 # this should all pass the above tests
@@ -189,13 +189,13 @@ class JsonNestedTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_nested_output(self):
         ret = highstate.output(self.data)
-        self.assertIn('Succeeded: 1 (changed=1)', ret)
-        self.assertIn('Failed:    0', ret)
-        self.assertIn('Total states run:     1', ret)
+        assert 'Succeeded: 1 (changed=1)' in ret
+        assert 'Failed:    0' in ret
+        assert 'Total states run:     1' in ret
 
         # the whitespace is relevant in this case, it is testing that it is nested
-        self.assertIn('                        ID: always-passes-with-changes', ret)
-        self.assertIn('                   Started: 09:22:54.128415', ret)
-        self.assertIn('              Succeeded: 2 (changed=1)', ret)
-        self.assertIn('              Failed:    0', ret)
-        self.assertIn('              Total states run:     2', ret)
+        assert '                        ID: always-passes-with-changes' in ret
+        assert '                   Started: 09:22:54.128415' in ret
+        assert '              Succeeded: 2 (changed=1)' in ret
+        assert '              Failed:    0' in ret
+        assert '              Total states run:     2' in ret

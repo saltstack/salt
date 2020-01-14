@@ -119,7 +119,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
                  OrderedDict([('ip_protocol', u'tcp'), ('from_port', 80), ('to_port', 80), ('grants', [OrderedDict([('cidr_ip', u'0.0.0.0/0')])])])]
         split_rules = [{'to_port': 22, 'from_port': 22, 'ip_protocol': u'tcp', 'cidr_ip': u'0.0.0.0/0'},
                        {'to_port': 80, 'from_port': 80, 'ip_protocol': u'tcp', 'cidr_ip': u'0.0.0.0/0'}]
-        self.assertEqual(boto_secgroup._split_rules(rules), split_rules)
+        assert boto_secgroup._split_rules(rules) == split_rules
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -140,7 +140,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         secgroup_create_result = [secgroup_created_group[0].name,
                                   secgroup_created_group[0].description,
                                   secgroup_created_group[0].vpc_id]
-        self.assertEqual(expected_create_result, secgroup_create_result)
+        assert expected_create_result == secgroup_create_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -159,7 +159,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         secgroup_created_group = conn.get_all_security_groups(filters=group_filter)
         expected_create_result = [group_name, group_description, vpc_id]
         secgroup_create_result = [secgroup_created_group[0].name, secgroup_created_group[0].description, secgroup_created_group[0].vpc_id]
-        self.assertEqual(expected_create_result, secgroup_create_result)
+        assert expected_create_result == secgroup_create_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -180,7 +180,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
                                                vpc_id=vpc_id)
         retrieved_group_id = boto_secgroup.get_group_id(group_name,
                                                         **conn_parameters)
-        self.assertEqual(group_classic.id, retrieved_group_id)
+        assert group_classic.id == retrieved_group_id
 
     @skipIf(True, 'test skipped because moto does not yet support group'
                   ' filters https://github.com/spulec/moto/issues/154')
@@ -202,7 +202,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
                                                vpc_id=vpc_id)
         retrieved_group_id = boto_secgroup.get_group_id(group_name, group_vpc,
                                                         **conn_parameters)
-        self.assertEqual(group_vpc.id, retrieved_group_id)
+        assert group_vpc.id == retrieved_group_id
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -227,7 +227,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
                                                   'ip_protocol': ip_protocol, 'cidr_ip': cidr_ip}]),
                                                  ('rules_egress', rules_egress)])
         secgroup_get_config_result = boto_secgroup.get_config(group_id=group.id, **conn_parameters)
-        self.assertEqual(expected_get_config_result, secgroup_get_config_result)
+        assert expected_get_config_result == secgroup_get_config_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -241,7 +241,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         group_classic = conn.create_security_group(group_name, group_description)
         group_vpc = conn.create_security_group(group_name, group_description, vpc_id=vpc_id)
         salt_exists_result = boto_secgroup.exists(name=group_name, **conn_parameters)
-        self.assertTrue(salt_exists_result)
+        assert salt_exists_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -259,7 +259,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         conn.create_security_group(group_name, group_description, vpc_id=vpc_id)
         salt_exists_result = boto_secgroup.exists(name=group_name, vpc_id=vpc_id, **conn_parameters)
-        self.assertTrue(salt_exists_result)
+        assert salt_exists_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -269,7 +269,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         group_name = _random_group_name()
         salt_exists_result = boto_secgroup.exists(group_name, vpc_id=vpc_id, **conn_parameters)
-        self.assertFalse(salt_exists_result)
+        assert not salt_exists_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -282,7 +282,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         group = conn.create_security_group(group_name, group_description)
         salt_exists_result = boto_secgroup.exists(group_id=group.id, **conn_parameters)
-        self.assertTrue(salt_exists_result)
+        assert salt_exists_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -292,7 +292,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         group_id = _random_group_id()
         salt_exists_result = boto_secgroup.exists(group_id=group_id, **conn_parameters)
-        self.assertFalse(salt_exists_result)
+        assert not salt_exists_result
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -319,7 +319,7 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         expected_groups = deepcopy(all_groups)
         expected_groups.remove(group_classic.id)
         actual_groups = [group.id for group in conn.get_all_security_groups()]
-        self.assertEqual(expected_groups, actual_groups)
+        assert expected_groups == actual_groups
 
     @skipIf(sys.version_info > (3, 6), 'Disabled for 3.7+ pending https://github.com/spulec/moto/issues/1706.')
     @mock_ec2_deprecated
@@ -334,4 +334,4 @@ class BotoSecgroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         conn = boto.ec2.connect_to_region(region, **boto_conn_parameters)
         salt_conn = boto_secgroup._get_conn(**conn_parameters)
-        self.assertEqual(conn.__class__, salt_conn.__class__)
+        assert conn.__class__ == salt_conn.__class__

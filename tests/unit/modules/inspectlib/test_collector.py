@@ -51,12 +51,10 @@ class InspectorCollectorTestCase(TestCase):
         cachedir = os.sep + os.sep.join(['foo', 'cache'])
         piddir = os.sep + os.sep.join(['foo', 'pid'])
         inspector = Inspector(cachedir=cachedir, piddir=piddir, pidfilename='bar.pid')
-        self.assertEqual(
-            inspector.dbfile,
-            os.sep + os.sep.join(['foo', 'cache', '_minion_collector.db']))
-        self.assertEqual(
-            inspector.pidfile,
-            os.sep + os.sep.join(['foo', 'pid', 'bar.pid']))
+        assert inspector.dbfile == \
+            os.sep + os.sep.join(['foo', 'cache', '_minion_collector.db'])
+        assert inspector.pidfile == \
+            os.sep + os.sep.join(['foo', 'pid', 'bar.pid'])
 
     def test_file_tree(self):
         '''
@@ -95,7 +93,7 @@ class InspectorCollectorTestCase(TestCase):
                 buff.append(pth.replace(tree_root, ''))
             tree_result.append(buff)
         tree_result = tuple(tree_result)
-        self.assertEqual(expected_tree, tree_result)
+        assert expected_tree == tree_result
 
     def test_get_unmanaged_files(self):
         '''
@@ -114,8 +112,8 @@ class InspectorCollectorTestCase(TestCase):
             ['d', 'E', 'f'],
             ['G', 'H', 'i'],
         )
-        self.assertEqual(inspector._get_unmanaged_files(managed=managed, system_all=system_all),
-                         ([], ['E'], ['G', 'H']))
+        assert inspector._get_unmanaged_files(managed=managed, system_all=system_all) == \
+                         ([], ['E'], ['G', 'H'])
 
     def test_pkg_get(self):
         '''
@@ -147,8 +145,8 @@ gcc-6-base:i386
                 inspector.grains_core = MagicMock()
                 inspector.grains_core.os_data = MagicMock()
                 inspector.grains_core.os_data().get = MagicMock(return_value='Debian')
-                self.assertEqual(inspector._get_cfg_pkgs(), 'dpkg')
+                assert inspector._get_cfg_pkgs() == 'dpkg'
                 inspector.grains_core.os_data().get = MagicMock(return_value='Suse')
-                self.assertEqual(inspector._get_cfg_pkgs(), 'rpm')
+                assert inspector._get_cfg_pkgs() == 'rpm'
                 inspector.grains_core.os_data().get = MagicMock(return_value='redhat')
-                self.assertEqual(inspector._get_cfg_pkgs(), 'rpm')
+                assert inspector._get_cfg_pkgs() == 'rpm'

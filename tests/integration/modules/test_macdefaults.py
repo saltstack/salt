@@ -43,10 +43,10 @@ class MacDefaultsModuleTest(ModuleCase):
                                          [DEFAULT_DOMAIN,
                                           DEFAULT_KEY,
                                           DEFAULT_VALUE])
-        self.assertTrue(write_domain)
+        assert write_domain
 
         read_domain = self.run_function('macdefaults.read',
                                         [DEFAULT_DOMAIN,
                                          DEFAULT_KEY])
-        self.assertTrue(read_domain)
-        self.assertEqual(read_domain, DEFAULT_VALUE)
+        assert read_domain
+        assert read_domain == DEFAULT_VALUE

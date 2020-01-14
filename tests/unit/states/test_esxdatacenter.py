@@ -59,11 +59,11 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                         {'vsphere.get_proxy_type':
                          MagicMock(return_value='different_proxy')}):
             res = esxdatacenter.datacenter_configured('fake_dc')
-        self.assertDictEqual(res, {'name': 'fake_dc',
+        assert res == {'name': 'fake_dc',
                                    'changes': {},
                                    'result': True,
                                    'comment': 'Datacenter \'fake_dc\' already '
-                                   'exists. Nothing to be done.'})
+                                   'exists. Nothing to be done.'}
 
     def test_dc_name_esxdatacenter_proxy(self):
         with patch.dict(esxdatacenter.__salt__,
@@ -72,11 +72,11 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                          'esxdatacenter.get_details':
                          MagicMock(return_value={'datacenter': 'proxy_dc'})}):
             res = esxdatacenter.datacenter_configured('fake_dc')
-        self.assertDictEqual(res, {'name': 'fake_dc',
+        assert res == {'name': 'fake_dc',
                                    'changes': {},
                                    'result': True,
                                    'comment': 'Datacenter \'proxy_dc\' '
-                                   'already exists. Nothing to be done.'})
+                                   'already exists. Nothing to be done.'}
 
     def test_get_service_instance(self):
         mock_get_service_instance = MagicMock()
@@ -104,11 +104,11 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                          mock_create_datacenter}):
             res = esxdatacenter.datacenter_configured('fake_dc')
         mock_create_datacenter.assert_called_once_with('fake_dc', self.mock_si)
-        self.assertDictEqual(res,
+        assert res == \
                              {'name': 'fake_dc',
                               'changes': {'new': {'name': 'fake_dc'}},
                               'result': True,
-                              'comment': 'Created datacenter \'fake_dc\'.'})
+                              'comment': 'Created datacenter \'fake_dc\'.'}
 
     def test_create_datacenter_test_mode(self):
         with patch.dict(esxdatacenter.__opts__, {'test': True}):
@@ -116,12 +116,12 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                             {'vsphere.list_datacenters_via_proxy':
                              MagicMock(return_value=[])}):
                 res = esxdatacenter.datacenter_configured('fake_dc')
-        self.assertDictEqual(res,
+        assert res == \
                              {'name': 'fake_dc',
                               'changes': {'new': {'name': 'fake_dc'}},
                               'result': None,
                               'comment': 'State will create '
-                              'datacenter \'fake_dc\'.'})
+                              'datacenter \'fake_dc\'.'}
 
     def test_nothing_to_be_done_test_mode(self):
         with patch.dict(esxdatacenter.__opts__, {'test': True}):
@@ -129,11 +129,11 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                             {'vsphere.get_proxy_type':
                              MagicMock(return_value='different_proxy')}):
                 res = esxdatacenter.datacenter_configured('fake_dc')
-        self.assertDictEqual(res, {'name': 'fake_dc',
+        assert res == {'name': 'fake_dc',
                                    'changes': {},
                                    'result': True,
                                    'comment': 'Datacenter \'fake_dc\' already '
-                                   'exists. Nothing to be done.'})
+                                   'exists. Nothing to be done.'}
 
     def test_state_get_service_instance_raise_command_execution_error(self):
         mock_disconnect = MagicMock()
@@ -143,11 +143,11 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                          MagicMock(
                              side_effect=CommandExecutionError('Error'))}):
             res = esxdatacenter.datacenter_configured('fake_dc')
-        self.assertEqual(mock_disconnect.call_count, 0)
-        self.assertDictEqual(res, {'name': 'fake_dc',
+        assert mock_disconnect.call_count == 0
+        assert res == {'name': 'fake_dc',
                                    'changes': {},
                                    'result': False,
-                                   'comment': 'Error'})
+                                   'comment': 'Error'}
 
     def test_state_raise_command_execution_error_after_si(self):
         mock_disconnect = MagicMock()
@@ -158,10 +158,10 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                              side_effect=CommandExecutionError('Error'))}):
             res = esxdatacenter.datacenter_configured('fake_dc')
         mock_disconnect.assert_called_once_with(self.mock_si)
-        self.assertDictEqual(res, {'name': 'fake_dc',
+        assert res == {'name': 'fake_dc',
                                    'changes': {},
                                    'result': False,
-                                   'comment': 'Error'})
+                                   'comment': 'Error'}
 
     def test_state_raise_command_execution_error_test_mode(self):
         with patch.dict(esxdatacenter.__opts__, {'test': True}):
@@ -170,7 +170,7 @@ class DatacenterConfiguredTestCase(TestCase, LoaderModuleMockMixin):
                              MagicMock(
                                  side_effect=CommandExecutionError('Error'))}):
                 res = esxdatacenter.datacenter_configured('fake_dc')
-        self.assertDictEqual(res, {'name': 'fake_dc',
+        assert res == {'name': 'fake_dc',
                                    'changes': {},
                                    'result': None,
-                                   'comment': 'Error'})
+                                   'comment': 'Error'}

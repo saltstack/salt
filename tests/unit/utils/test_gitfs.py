@@ -14,6 +14,7 @@ from tests.support.mock import MagicMock, patch
 # Import salt libs
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
+import pytest
 
 # GLOBALS
 OPTS = {'cachedir': '/tmp/gitfs-test-cache'}
@@ -84,8 +85,6 @@ class TestGitFSProvider(TestCase):
                         with patch.dict(OPTS, {key: 'foo'}):
                             # Set the provider name to a known invalid provider
                             # and make sure it raises an exception.
-                            self.assertRaises(
-                                FileserverConfigError,
-                                role_class,
-                                *args,
+                            with pytest.raises(FileserverConfigError):
+                                role_class(*args,
                                 **kwargs)

@@ -65,9 +65,9 @@ class SchedulerMaxRunningTest(SchedulerTestsBase):
                                                        job_data,
                                                        self.schedule.opts,
                                                        now=run_time)
-        self.assertIn('_skip_reason', ret)
-        self.assertEqual('maxrunning', ret['_skip_reason'])
-        self.assertEqual(False, ret['run'])
+        assert '_skip_reason' in ret
+        assert 'maxrunning' == ret['_skip_reason']
+        assert ret['run'] is False
 
     def test_maxrunning_master(self):
         '''
@@ -114,6 +114,6 @@ class SchedulerMaxRunningTest(SchedulerTestsBase):
                                                        job_data,
                                                        self.schedule.opts,
                                                        now=run_time)
-        self.assertIn('_skip_reason', ret)
-        self.assertEqual('maxrunning', ret['_skip_reason'])
-        self.assertEqual(False, ret['run'])
+        assert '_skip_reason' in ret
+        assert 'maxrunning' == ret['_skip_reason']
+        assert ret['run'] is False

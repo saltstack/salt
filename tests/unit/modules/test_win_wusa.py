@@ -15,6 +15,7 @@ from tests.support.unit import TestCase, skipIf
 import salt.utils.platform
 import salt.modules.win_wusa as win_wusa
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'System is not Windows')
@@ -31,7 +32,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_retcode = MagicMock(return_value=1)
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            self.assertFalse(win_wusa.is_installed('KB123456'))
+            assert not win_wusa.is_installed('KB123456')
 
     def test_is_installed_true(self):
         '''
@@ -39,7 +40,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_retcode = MagicMock(return_value=0)
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            self.assertTrue(win_wusa.is_installed('KB123456'))
+            assert win_wusa.is_installed('KB123456')
 
     def test_list(self):
         '''
@@ -54,7 +55,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_wusa.__salt__, {'cmd.run_all': mock_all}):
             expected = ['KB123456', 'KB123457']
             returned = win_wusa.list()
-            self.assertListEqual(expected, returned)
+            assert expected == returned
 
     def test_install(self):
         '''
@@ -63,7 +64,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_retcode = MagicMock(return_value=0)
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            self.assertTrue(win_wusa.install(path))
+            assert win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
 
@@ -74,7 +75,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_retcode = MagicMock(return_value=0)
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            self.assertTrue(win_wusa.install(path, restart=True))
+            assert win_wusa.install(path, restart=True)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/forcerestart'], ignore_retcode=True)
 
@@ -87,12 +88,12 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         path = 'C:\\KB123456.msu'
         name = 'KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
-        self.assertEqual('{0} is already installed. Additional info follows:\n\n{1}'.format(name, retcode),
-                         excinfo.exception.strerror)
+        assert '{0} is already installed. Additional info follows:\n\n{1}'.format(name, retcode) == \
+                         excinfo.value.strerror
 
     def test_install_reboot_needed(self):
         '''
@@ -103,12 +104,12 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         path = 'C:\\KB123456.msu'
         name = 'KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
-        self.assertEqual('{0} correctly installed but server reboot is needed to complete installation. Additional info follows:\n\n{1}'.format(name, retcode),
-                         excinfo.exception.strerror)
+        assert '{0} correctly installed but server reboot is needed to complete installation. Additional info follows:\n\n{1}'.format(name, retcode) == \
+                         excinfo.value.strerror
 
     def test_install_error_87(self):
         '''
@@ -118,12 +119,12 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_retcode = MagicMock(return_value=retcode)
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
-        self.assertEqual('Unknown error. Additional info follows:\n\n{0}'.format(retcode),
-                         excinfo.exception.strerror)
+        assert 'Unknown error. Additional info follows:\n\n{0}'.format(retcode) == \
+                         excinfo.value.strerror
 
     def test_install_error_other(self):
         '''
@@ -132,11 +133,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_retcode = MagicMock(return_value=1234)
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 win_wusa.install(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', path, '/quiet', '/norestart'], ignore_retcode=True)
-        self.assertEqual('Unknown error: 1234', excinfo.exception.strerror)
+        assert 'Unknown error: 1234' == excinfo.value.strerror
 
     def test_uninstall_kb(self):
         '''
@@ -146,7 +147,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         kb = 'KB123456'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}), \
                 patch("os.path.exists", MagicMock(return_value=False)):
-            self.assertTrue(win_wusa.uninstall(kb))
+            assert win_wusa.uninstall(kb)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', '/uninstall', '/quiet', '/kb:{0}'.format(kb[2:]), '/norestart'],
             ignore_retcode=True)
@@ -159,7 +160,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}), \
                 patch("os.path.exists", MagicMock(return_value=True)):
-            self.assertTrue(win_wusa.uninstall(path))
+            assert win_wusa.uninstall(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', '/uninstall', '/quiet', path, '/norestart'],
             ignore_retcode=True)
@@ -172,7 +173,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}), \
              patch("os.path.exists", MagicMock(return_value=True)):
-            self.assertTrue(win_wusa.uninstall(path, restart=True))
+            assert win_wusa.uninstall(path, restart=True)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', '/uninstall', '/quiet', path, '/forcerestart'],
             ignore_retcode=True)
@@ -185,13 +186,13 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         mock_retcode = MagicMock(return_value=retcode)
         kb = 'KB123456'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}):
-            with self.assertRaises(CommandExecutionError) as excinfo:
+            with pytest.raises(CommandExecutionError) as excinfo:
                 win_wusa.uninstall(kb)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', '/uninstall', '/quiet', '/kb:{0}'.format(kb[2:]), '/norestart'],
             ignore_retcode=True)
-        self.assertEqual('{0} not installed. Additional info follows:\n\n{1}'.format(kb, retcode),
-                         excinfo.exception.strerror)
+        assert '{0} not installed. Additional info follows:\n\n{1}'.format(kb, retcode) == \
+                         excinfo.value.strerror
 
     def test_uninstall_path_error_other(self):
         '''
@@ -201,9 +202,9 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         path = 'C:\\KB123456.msu'
         with patch.dict(win_wusa.__salt__, {'cmd.retcode': mock_retcode}), \
                 patch("os.path.exists", MagicMock(return_value=True)), \
-                self.assertRaises(CommandExecutionError) as excinfo:
+                pytest.raises(CommandExecutionError) as excinfo:
             win_wusa.uninstall(path)
         mock_retcode.assert_called_once_with(
             ['wusa.exe', '/uninstall', '/quiet', path, '/norestart'],
             ignore_retcode=True)
-        self.assertEqual('Unknown error: 1234', excinfo.exception.strerror)
+        assert 'Unknown error: 1234' == excinfo.value.strerror

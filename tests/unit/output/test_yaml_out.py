@@ -29,10 +29,10 @@ class YamlTestCase(TestCase, LoaderModuleMockMixin):
     def test_default_output(self):
         ret = yaml.output(self.data)
         expect = 'example: one\ntest: two\n'
-        self.assertEqual(expect, ret)
+        assert expect == ret
 
     def test_negative_int_output(self):
         with patch.dict(yaml.__opts__, {'output_indent': -1}):
             ret = yaml.output(self.data)
             expect = '{example: one, test: two}\n'
-            self.assertEqual(expect, ret)
+            assert expect == ret

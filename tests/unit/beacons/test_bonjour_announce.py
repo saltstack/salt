@@ -29,14 +29,14 @@ class BonjourAnnounceBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = bonjour_announce.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for bonjour_announce'
-                                      ' beacon must be a list.'))
+        assert ret == (False, 'Configuration for bonjour_announce'
+                                      ' beacon must be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = bonjour_announce.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for bonjour_announce'
+        assert ret == (False, 'Configuration for bonjour_announce'
                                       ' beacon must contain servicetype, port'
-                                      ' and txt items.'))
+                                      ' and txt items.')

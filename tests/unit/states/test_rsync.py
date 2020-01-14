@@ -37,8 +37,8 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rsync.__opts__, {'test': True}):
             mock = MagicMock(return_value=ret)
             with patch.dict(rsync.__salt__, {'rsync.rsync': mock}):
-                self.assertDictEqual(rsync.synchronized("name", "source"),
-                                     _expected)
+                assert rsync.synchronized("name", "source") == \
+                                     _expected
 
         # Run again mocking os.path.exists as True
         ret = {'pid': 100,
@@ -54,8 +54,8 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rsync.__opts__, {'test': False}):
                 mock = MagicMock(return_value=ret)
                 with patch.dict(rsync.__salt__, {'rsync.rsync': mock}):
-                    self.assertDictEqual(rsync.synchronized("name", "source"),
-                                         _expected)
+                    assert rsync.synchronized("name", "source") == \
+                                         _expected
 
     def test_syncronized(self):
         '''
@@ -77,8 +77,8 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rsync.__opts__, {'test': False}):
                 mock = MagicMock(return_value=ret)
                 with patch.dict(rsync.__salt__, {'rsync.rsync': mock}):
-                    self.assertDictEqual(rsync.synchronized("name", "source"),
-                                     _expected)
+                    assert rsync.synchronized("name", "source") == \
+                                     _expected
 
         # Second pass simulating the file being in place
         ret = {'pid': 100,
@@ -99,8 +99,8 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rsync.__opts__, {'test': False}):
                 mock = MagicMock(return_value=ret)
                 with patch.dict(rsync.__salt__, {'rsync.rsync': mock}):
-                    self.assertDictEqual(rsync.synchronized("name", "source"),
-                                     _expected)
+                    assert rsync.synchronized("name", "source") == \
+                                     _expected
 
     def test_syncronized_test_true(self):
         '''
@@ -119,5 +119,5 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rsync.__opts__, {'test': True}):
                 mock = MagicMock(return_value=ret)
                 with patch.dict(rsync.__salt__, {'rsync.rsync': mock}):
-                    self.assertDictEqual(rsync.synchronized("name", "source"),
-                                         _expected)
+                    assert rsync.synchronized("name", "source") == \
+                                         _expected

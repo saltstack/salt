@@ -35,9 +35,9 @@ class SPMBuildTest(SPMCase, ModuleCase):
         self.run_spm('build', self.config, self.formula_dir)
         spm_file = os.path.join(self.config['spm_build_dir'], 'apache-201506-2.spm')
         # Make sure .spm file gets created
-        self.assertTrue(os.path.exists(spm_file))
+        assert os.path.exists(spm_file)
         # Make sure formula path dir is created
-        self.assertTrue(os.path.isdir(self.config['formula_path']))
+        assert os.path.isdir(self.config['formula_path'])
 
     @skipIf(salt.utils.path.which('fallocate') is None, 'fallocate not installed')
     def test_spm_build_big_file(self):
@@ -61,7 +61,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
 
         files = ['apache.sls', 'bigfile.txt']
         for sls in files:
-            self.assertIn(sls, ' '.join(get_files))
+            assert sls in ' '.join(get_files)
 
     def test_spm_build_exclude(self):
         '''
@@ -82,7 +82,7 @@ class SPMBuildTest(SPMCase, ModuleCase):
         get_files = self.run_spm('files', self.config, 'apache')
 
         for git_file in files:
-            self.assertNotIn(git_file, ' '.join(get_files))
+            assert git_file not in ' '.join(get_files)
 
     def tearDown(self):
         shutil.rmtree(self._tmp_spm)

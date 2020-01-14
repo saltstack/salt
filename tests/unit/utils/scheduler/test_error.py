@@ -50,8 +50,8 @@ class SchedulerErrorTest(SchedulerTestsBase):
             self.schedule.eval(now=run_time)
 
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_error'],
-                         'Invalid cron string. Ignoring job job1.')
+        assert ret['_error'] == \
+                         'Invalid cron string. Ignoring job job1.'
 
     def test_eval_when_invalid_date(self):
         '''
@@ -75,8 +75,8 @@ class SchedulerErrorTest(SchedulerTestsBase):
         # Evaluate 1 second before the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_error'],
-                         'Invalid date string 13/29/2017 1:00pm. Ignoring job job1.')
+        assert ret['_error'] == \
+                         'Invalid date string 13/29/2017 1:00pm. Ignoring job job1.'
 
     def test_eval_whens_grain_not_dict(self):
         '''
@@ -102,8 +102,8 @@ class SchedulerErrorTest(SchedulerTestsBase):
         # Evaluate 1 second before the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_error'],
-                         'Grain "whens" must be a dict. Ignoring job job1.')
+        assert ret['_error'] == \
+                         'Grain "whens" must be a dict. Ignoring job job1.'
 
     def test_eval_once_invalid_datestring(self):
         '''
@@ -129,7 +129,7 @@ class SchedulerErrorTest(SchedulerTestsBase):
         _expected = ('Date string could not be parsed: '
                      '2017-13-13T13:00:00, %Y-%m-%dT%H:%M:%S. '
                      'Ignoring job job1.')
-        self.assertEqual(ret['_error'], _expected)
+        assert ret['_error'] == _expected
 
     def test_eval_skip_during_range_invalid_date(self):
         '''
@@ -163,7 +163,7 @@ class SchedulerErrorTest(SchedulerTestsBase):
         _expected = ('Invalid date string for end in '
                      'skip_during_range. Ignoring '
                      'job job1.')
-        self.assertEqual(ret['_error'], _expected)
+        assert ret['_error'] == _expected
 
     def test_eval_skip_during_range_end_before_start(self):
         '''
@@ -197,7 +197,7 @@ class SchedulerErrorTest(SchedulerTestsBase):
         _expected = ('schedule.handle_func: Invalid '
                      'range, end must be larger than '
                      'start. Ignoring job job1.')
-        self.assertEqual(ret['_error'], _expected)
+        assert ret['_error'] == _expected
 
     def test_eval_skip_during_range_not_dict(self):
         '''
@@ -231,4 +231,4 @@ class SchedulerErrorTest(SchedulerTestsBase):
         _expected = ('schedule.handle_func: Invalid, '
                      'range must be specified as a '
                      'dictionary. Ignoring job job1.')
-        self.assertEqual(ret['_error'], _expected)
+        assert ret['_error'] == _expected

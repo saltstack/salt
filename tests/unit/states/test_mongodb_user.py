@@ -39,7 +39,7 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
 
         comt = ('Port ({}) is not an integer.')
         ret.update({'comment': comt})
-        self.assertDictEqual(mongodb_user.present(name, passwd, port={}), ret)
+        assert mongodb_user.present(name, passwd, port={}) == ret
 
         mock_t = MagicMock(return_value=True)
         mock_f = MagicMock(return_value=[])
@@ -51,19 +51,19 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('User {0} is not present and needs to be created'
                 ).format(name)
             ret.update({'comment': comt, 'result': None})
-            self.assertDictEqual(mongodb_user.present(name, passwd), ret)
+            assert mongodb_user.present(name, passwd) == ret
 
             with patch.dict(mongodb_user.__opts__, {'test': True}):
                 comt = ('User {0} is not present and needs to be created'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mongodb_user.present(name, passwd), ret)
+                assert mongodb_user.present(name, passwd) == ret
 
             with patch.dict(mongodb_user.__opts__, {'test': False}):
                 comt = ('User {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Present'}})
-                self.assertDictEqual(mongodb_user.present(name, passwd), ret)
+                assert mongodb_user.present(name, passwd) == ret
 
     # 'absent' function tests: 1
 
@@ -87,14 +87,14 @@ class MongodbUserTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('User {0} is present and needs to be removed'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mongodb_user.absent(name), ret)
+                assert mongodb_user.absent(name) == ret
 
             with patch.dict(mongodb_user.__opts__, {'test': False}):
                 comt = ('User {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(mongodb_user.absent(name), ret)
+                assert mongodb_user.absent(name) == ret
 
             comt = 'User {0} is not present'.format(name)
             ret.update({'comment': comt, 'result': True, 'changes': {}})
-            self.assertDictEqual(mongodb_user.absent(name), ret)
+            assert mongodb_user.absent(name) == ret

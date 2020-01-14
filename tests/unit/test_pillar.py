@@ -23,6 +23,7 @@ import salt.fileclient
 import salt.pillar
 import salt.utils.stringutils
 import salt.exceptions
+import pytest
 
 
 class MockFileclient(object):
@@ -78,8 +79,8 @@ class PillarTestCase(TestCase):
                 'os': 'Ubuntu',
             }
             pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'dev')
-            self.assertEqual(pillar.opts['saltenv'], 'dev')
-            self.assertEqual(pillar.opts['pillarenv'], 'dev')
+            assert pillar.opts['saltenv'] == 'dev'
+            assert pillar.opts['pillarenv'] == 'dev'
 
     def test_ext_pillar_no_extra_minion_data_val_dict(self):
         opts = {
@@ -366,7 +367,7 @@ class PillarTestCase(TestCase):
                                                   'phase': 'alpha', 'role':
                                                   'database'}, []))):
                 pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
-                self.assertEqual(pillar.compile_pillar()['generic']['key1'], 'value1')
+                assert pillar.compile_pillar()['generic']['key1'] == 'value1'
         finally:
             shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -382,8 +383,8 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
-        self.assertEqual(pillar.opts['pillar_roots'],
-                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
+        assert pillar.opts['pillar_roots'] == \
+                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']}
 
     def test_ignored_dynamic_pillarenv(self):
         opts = {
@@ -397,7 +398,7 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
-        self.assertEqual(pillar.opts['pillar_roots'], {'base': ['/srv/pillar/base']})
+        assert pillar.opts['pillar_roots'] == {'base': ['/srv/pillar/base']}
 
     @patch('salt.fileclient.Client.list_states')
     def test_malformed_pillar_sls(self, mock_list_states):
@@ -433,85 +434,67 @@ class PillarTestCase(TestCase):
 
             # Template compilation returned a string
             compile_template.return_value = 'BAHHH'
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({}, ['SLS \'foo.sls\' does not render to a dictionary'])
-            )
 
             # Template compilation returned a list
             compile_template.return_value = ['BAHHH']
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({}, ['SLS \'foo.sls\' does not render to a dictionary'])
-            )
 
             # Template compilation returned a dictionary, which is what's expected
             compile_template.return_value = {'foo': 'bar'}
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar'}, [])
-            )
 
             # Test improper includes
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': 'blah'},
                 {'foo2': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar', 'include': 'blah'},
                  ["Include Declaration in SLS 'foo.sls' is not formed as a list"])
-            )
 
             # Test includes as a list, which is what's expected
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': ['blah']},
                 {'foo2': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar', 'foo2': 'bar2'}, [])
-            )
 
             # Test includes as a list overriding data
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': ['blah']},
                 {'foo': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar'}, [])
-            )
 
             # Test includes using empty key directive
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': [{'blah': {'key': ''}}]},
                 {'foo': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar'}, [])
-            )
 
             # Test includes using simple non-nested key
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': [{'blah': {'key': 'nested'}}]},
                 {'foo': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar', 'nested': {'foo': 'bar2'}}, [])
-            )
 
             # Test includes using nested key
             compile_template.side_effect = [
                 {'foo': 'bar', 'include': [{'blah': {'key': 'nested:level'}}]},
                 {'foo': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar', 'nested': {'level': {'foo': 'bar2'}}}, [])
-            )
 
     def test_includes_override_sls(self):
         opts = {
@@ -551,10 +534,8 @@ class PillarTestCase(TestCase):
                 {'foo': 'bar', 'include': ['blah']},
                 {'foo': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar2'}, [])
-            )
 
             # Test with option set to False
             opts['pillar_includes_override_sls'] = False
@@ -571,10 +552,8 @@ class PillarTestCase(TestCase):
                 {'foo': 'bar', 'include': ['blah']},
                 {'foo': 'bar2'}
             ]
-            self.assertEqual(
-                pillar.render_pillar({'base': ['foo.sls']}),
+            assert pillar.render_pillar({'base': ['foo.sls']}) == \
                 ({'foo': 'bar'}, [])
-            )
 
     def test_topfile_order(self):
         opts = {
@@ -614,7 +593,7 @@ class PillarTestCase(TestCase):
                     pillar = salt.pillar.Pillar(opts, grains, 'mocked-minion', 'base')
                     # Make sure that confirm_top.confirm_top returns True
                     pillar.matchers['confirm_top.confirm_top'] = lambda *x, **y: True
-                    self.assertEqual(pillar.compile_pillar()['ssh'], expected)
+                    assert pillar.compile_pillar()['ssh'] == expected
             finally:
                 shutil.rmtree(tempdir, ignore_errors=True)
 
@@ -747,11 +726,11 @@ generic:
             # Make sure that confirm_top.confirm_top returns True
             pillar.matchers['confirm_top.confirm_top'] = lambda *x, **y: True
             compiled_pillar = pillar.compile_pillar()
-            self.assertEqual(compiled_pillar['foo_wildcard'], 'bar_wildcard')
-            self.assertEqual(compiled_pillar['foo1'], 'bar1')
-            self.assertEqual(compiled_pillar['foo2'], 'bar2')
-            self.assertEqual(compiled_pillar['sub_with_slashes'], 'sub_slashes_worked')
-            self.assertEqual(compiled_pillar['sub_init_dot'], 'sub_with_init_dot_worked')
+            assert compiled_pillar['foo_wildcard'] == 'bar_wildcard'
+            assert compiled_pillar['foo1'] == 'bar1'
+            assert compiled_pillar['foo2'] == 'bar2'
+            assert compiled_pillar['sub_with_slashes'] == 'sub_slashes_worked'
+            assert compiled_pillar['sub_init_dot'] == 'sub_with_init_dot_worked'
 
     def _setup_test_include_sls(self, tempdir):
         top_file = tempfile.NamedTemporaryFile(dir=tempdir, delete=False)
@@ -853,10 +832,10 @@ class RemotePillarTestCase(TestCase):
         }
         pillar = salt.pillar.RemotePillar(opts, self.grains,
                                           'mocked-minion', 'dev')
-        self.assertEqual(pillar.extra_minion_data,
+        assert pillar.extra_minion_data == \
                          {'path_to_add': 'fake_data',
                           'path_to_add2': {'fake_data2': ['fake_data3',
-                                                          'fake_data4']}})
+                                                          'fake_data4']}}
 
     def test_subkey_in_opts_added_to_pillar(self):
         opts = {
@@ -868,8 +847,8 @@ class RemotePillarTestCase(TestCase):
         }
         pillar = salt.pillar.RemotePillar(opts, self.grains,
                                           'mocked-minion', 'dev')
-        self.assertEqual(pillar.extra_minion_data,
-                         {'path_to_add2': {'fake_data5': 'fake_data6'}})
+        assert pillar.extra_minion_data == \
+                         {'path_to_add2': {'fake_data5': 'fake_data6'}}
 
     def test_non_existent_leaf_opt_in_add_to_pillar(self):
         opts = {
@@ -881,7 +860,7 @@ class RemotePillarTestCase(TestCase):
         }
         pillar = salt.pillar.RemotePillar(opts, self.grains,
                                           'mocked-minion', 'dev')
-        self.assertEqual(pillar.pillar_override, {})
+        assert pillar.pillar_override == {}
 
     def test_non_existent_intermediate_opt_in_add_to_pillar(self):
         opts = {
@@ -893,7 +872,7 @@ class RemotePillarTestCase(TestCase):
         }
         pillar = salt.pillar.RemotePillar(opts, self.grains,
                                           'mocked-minion', 'dev')
-        self.assertEqual(pillar.pillar_override, {})
+        assert pillar.pillar_override == {}
 
     def test_malformed_add_to_pillar(self):
         opts = {
@@ -903,10 +882,10 @@ class RemotePillarTestCase(TestCase):
                              'fake_data2': ['fake_data3', 'fake_data4']},
             'pass_to_ext_pillars': MagicMock()
         }
-        with self.assertRaises(salt.exceptions.SaltClientError) as excinfo:
+        with pytest.raises(salt.exceptions.SaltClientError) as excinfo:
             salt.pillar.RemotePillar(opts, self.grains, 'mocked-minion', 'dev')
-        self.assertEqual(excinfo.exception.strerror,
-                         '\'pass_to_ext_pillars\' config is malformed.')
+        assert excinfo.value.strerror == \
+                         '\'pass_to_ext_pillars\' config is malformed.'
 
     def test_pillar_send_extra_minion_data_from_config(self):
         opts = {
@@ -924,7 +903,7 @@ class RemotePillarTestCase(TestCase):
                                               'mocked_minion', 'fake_env')
 
         ret = pillar.compile_pillar()
-        self.assertEqual(pillar.channel, mock_channel)
+        assert pillar.channel == mock_channel
         mock_channel.crypted_transfer_decode_dictentry.assert_called_once_with(
             {'cmd': '_pillar', 'ver': '2',
              'id': 'mocked_minion',

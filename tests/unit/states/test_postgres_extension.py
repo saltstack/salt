@@ -44,12 +44,12 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_extension.__opts__, {'test': True}):
                 comt = ('Extension {0} is already present'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(postgres_extension.present(name), ret)
+                assert postgres_extension.present(name) == ret
 
             with patch.dict(postgres_extension.__opts__, {'test': False}):
                 comt = ('Extension {0} is already present'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(postgres_extension.present(name), ret)
+                assert postgres_extension.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -72,19 +72,19 @@ class PostgresExtensionTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_extension.__opts__, {'test': True}):
                 comt = ('Extension {0} is set to be removed'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_extension.absent(name), ret)
+                assert postgres_extension.absent(name) == ret
 
             with patch.dict(postgres_extension.__opts__, {'test': False}):
                 comt = ('Extension {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(postgres_extension.absent(name), ret)
+                assert postgres_extension.absent(name) == ret
 
                 comt = ('Extension {0} failed to be removed'.format(name))
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(postgres_extension.absent(name), ret)
+                assert postgres_extension.absent(name) == ret
 
             comt = ('Extension {0} is not present, so it cannot be removed'
                     .format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(postgres_extension.absent(name), ret)
+            assert postgres_extension.absent(name) == ret

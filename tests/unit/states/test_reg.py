@@ -66,7 +66,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'name': self.name,
             'result': True}
         ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     def test_present_test_true(self):
         expected = {
@@ -87,7 +87,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'result': None}
         with patch.dict(reg.__opts__, {'test': True}):
             ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     def test_present_existing(self):
         # Create the reg key for testing
@@ -103,7 +103,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'name': self.name,
             'result': True}
         ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     def test_present_existing_test_true(self):
         # Create the reg key for testing
@@ -120,7 +120,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'result': True}
         with patch.dict(reg.__opts__, {'test': True}):
             ret = reg.present(self.name, vname=self.vname, vdata=self.vdata)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     @pytest.mark.destructive_test
     def test_absent(self):
@@ -143,7 +143,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'name': self.name,
             'result': True}
         ret = reg.absent(self.name, self.vname)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     @pytest.mark.destructive_test
     def test_absent_test_true(self):
@@ -163,7 +163,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'result': None}
         with patch.dict(reg.__opts__, {'test': True}):
             ret = reg.absent(self.name, self.vname)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     def test_absent_already_absent(self):
         '''
@@ -175,7 +175,7 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'name': self.name,
             'result': True}
         ret = reg.absent(self.name, self.vname)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected
 
     def test_absent_already_absent_test_true(self):
         '''
@@ -188,4 +188,4 @@ class RegTestCase(TestCase, LoaderModuleMockMixin):
             'result': True}
         with patch.dict(reg.__opts__, {'test': True}):
             ret = reg.absent(self.name, self.vname)
-        self.assertDictEqual(ret, expected)
+        assert ret == expected

@@ -36,7 +36,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
              'rvm.install': mock}):
             rvm._check_rvm({'changes': {}})
             # rvm.install is not run anymore while checking rvm.is_installed
-            self.assertEqual(mock.call_count, 0)
+            assert mock.call_count == 0
 
     def test__check_and_install_ruby(self):
         mock_check_rvm = MagicMock(
@@ -67,7 +67,7 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
                                                'jruby-1.9.3': False,
                                                'jruby-1.9.3-p125': False}):
                 ret = rvm._check_ruby({'changes': {}, 'result': False}, ruby)
-                self.assertEqual(result, ret['result'])
+                assert result == ret['result']
 
     def test_gemset_present(self):
         with patch.object(rvm, '_check_rvm') as mock_method:
@@ -82,10 +82,10 @@ class TestRvmState(TestCase, LoaderModuleMockMixin):
                                 {'rvm.gemset_list': gemset_list,
                                  'rvm.gemset_create': gemset_create}):
                     ret = rvm.gemset_present('foo')
-                    self.assertEqual(True, ret['result'])
+                    assert ret['result'] is True
 
                     ret = rvm.gemset_present('quux')
-                    self.assertEqual(True, ret['result'])
+                    assert ret['result'] is True
                     gemset_create.assert_called_once_with(
                         'default', 'quux', runas=None)
 

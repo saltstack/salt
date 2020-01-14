@@ -409,10 +409,8 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
         for schema in ('old', 'new'):
             for rtype in REACTOR_DATA:
                 tag = '_'.join((schema, rtype))
-                self.assertEqual(
-                    self.reactor.list_reactors(tag),
+                assert self.reactor.list_reactors(tag) == \
                     self.reaction_map[tag]
-                )
 
     def test_reactions(self):
         '''
@@ -456,7 +454,7 @@ class TestReactor(TestCase, AdaptedConfigurationTestCaseMixin):
                                         'test_reactions: %s reactions: %s',
                                         tag, reactions
                                     )
-                                    self.assertEqual(reactions, LOW_CHUNKS[tag])
+                                    assert reactions == LOW_CHUNKS[tag]
 
 
 class TestReactWrap(TestCase, AdaptedConfigurationTestCaseMixin):

@@ -15,6 +15,7 @@ from tests.support.mock import (
 from salt.ext import six
 from salt.utils.odict import OrderedDict
 import salt.modules.pillar as pillarmod
+import pytest
 
 
 pillar_value_1 = dict(a=1, b='very secret')
@@ -26,27 +27,25 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         return {pillarmod: {}}
 
     def test_obfuscate_inner_recursion(self):
-        self.assertEqual(
-                pillarmod._obfuscate_inner(dict(a=[1, 2],
-                                                b=dict(pwd='secret', deeper=('a', 1)))),
+        assert pillarmod._obfuscate_inner(dict(a=[1, 2],
+                                                b=dict(pwd='secret', deeper=('a', 1)))) == \
                 dict(a=['<int>', '<int>'],
                      b=dict(pwd='<str>', deeper=('<str>', '<int>')))
-        )
 
     def test_obfuscate_inner_more_types(self):
-        self.assertEqual(pillarmod._obfuscate_inner(OrderedDict([('key', 'value')])),
-                         OrderedDict([('key', '<str>')]))
+        assert pillarmod._obfuscate_inner(OrderedDict([('key', 'value')])) == \
+                         OrderedDict([('key', '<str>')])
 
-        self.assertEqual(pillarmod._obfuscate_inner(set((1, 2))),
-                         set(['<int>']))
+        assert pillarmod._obfuscate_inner(set((1, 2))) == \
+                         set(['<int>'])
 
-        self.assertEqual(pillarmod._obfuscate_inner((1, 2)),
-                         ('<int>', '<int>'))
+        assert pillarmod._obfuscate_inner((1, 2)) == \
+                         ('<int>', '<int>')
 
     def test_obfuscate(self):
         with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
-            self.assertEqual(pillarmod.obfuscate(),
-                             dict(a='<int>', b='<str>'))
+            assert pillarmod.obfuscate() == \
+                             dict(a='<int>', b='<str>')
 
     def test_ls(self):
         with patch('salt.modules.pillar.items', MagicMock(return_value=pillar_value_1)):
@@ -54,7 +53,7 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
             if six.PY3:
                 self.assertCountEqual(ls, ['a', 'b'])
             else:
-                self.assertEqual(ls, ['a', 'b'])
+                assert ls == ['a', 'b']
 
     def test_pillar_get_default_merge(self):
         defaults = {'int': 1,
@@ -69,20 +68,19 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test that we raise a KeyError when pillar_raise_on_missing is True
         with patch.dict(pillarmod.__opts__, {'pillar_raise_on_missing': True}):
-            self.assertRaises(KeyError, pillarmod.get, 'missing')
+            with pytest.raises(KeyError):
+                pillarmod.get('missing')
         # Test that we return an empty string when it is not
         with patch.dict(pillarmod.__opts__, {}):
-            self.assertEqual(pillarmod.get('missing'), '')
+            assert pillarmod.get('missing') == ''
 
         with patch.dict(pillarmod.__pillar__, pillar_mock):
             # Test with no default passed (it should be KeyError) and merge=True.
             # The merge should be skipped and the value returned from __pillar__
             # should be returned.
             for item in pillarmod.__pillar__:
-                self.assertEqual(
-                    pillarmod.get(item, merge=True),
+                assert pillarmod.get(item, merge=True) == \
                     pillarmod.__pillar__[item]
-                )
 
             # Test merging when the type of the default value is not the same as
             # what was returned. Merging should be skipped and the value returned
@@ -91,22 +89,16 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
                 for data_type in ('dict', 'list'):
                     if default_type == data_type:
                         continue
-                    self.assertEqual(
-                        pillarmod.get(data_type, default=defaults[default_type], merge=True),
+                    assert pillarmod.get(data_type, default=defaults[default_type], merge=True) == \
                         pillarmod.__pillar__[data_type]
-                    )
 
             # Test recursive dict merging
-            self.assertEqual(
-                pillarmod.get('dict', default=defaults['dict'], merge=True),
+            assert pillarmod.get('dict', default=defaults['dict'], merge=True) == \
                 {'foo': 'bar', 'baz': 'qux', 'subkey': {'foo': 'bar', 'baz': 'qux'}}
-            )
 
             # Test list merging
-            self.assertEqual(
-                pillarmod.get('list', default=defaults['list'], merge=True),
+            assert pillarmod.get('list', default=defaults['list'], merge=True) == \
                 ['foo', 'bar', 'baz']
-            )
 
     def test_pillar_get_default_merge_regression_38558(self):
         """Test for pillar.get(key=..., default=..., merge=True)
@@ -118,17 +110,17 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pillarmod.__pillar__, {'l1': {'l2': {'l3': 42}}}):
 
             res = pillarmod.get(key='l1')
-            self.assertEqual({'l2': {'l3': 42}}, res)
+            assert {'l2': {'l3': 42}} == res
 
             default = {'l2': {'l3': 43}}
 
             res = pillarmod.get(key='l1', default=default)
-            self.assertEqual({'l2': {'l3': 42}}, res)
-            self.assertEqual({'l2': {'l3': 43}}, default)
+            assert {'l2': {'l3': 42}} == res
+            assert {'l2': {'l3': 43}} == default
 
             res = pillarmod.get(key='l1', default=default, merge=True)
-            self.assertEqual({'l2': {'l3': 42}}, res)
-            self.assertEqual({'l2': {'l3': 43}}, default)
+            assert {'l2': {'l3': 42}} == res
+            assert {'l2': {'l3': 43}} == default
 
     def test_pillar_get_default_merge_regression_39062(self):
         '''
@@ -139,7 +131,5 @@ class PillarModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(pillarmod.__pillar__, {'foo': 'bar'}):
 
-            self.assertEqual(
-                pillarmod.get(key='foo', default=None, merge=True),
-                'bar',
-            )
+            assert pillarmod.get(key='foo', default=None, merge=True) == \
+                'bar'

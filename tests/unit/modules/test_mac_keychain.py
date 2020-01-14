@@ -63,7 +63,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                                          'grep -o "alis".*\\" | grep -o \'\\"[-A-Za-z0-9.:() ]*\\"\'',
                                          python_shell=True)
 
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_get_friendly_name(self):
         '''
@@ -77,7 +77,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                                          '-nodes -nokeys 2> /dev/null | grep friendlyName:',
                                          python_shell=True)
 
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_get_default_keychain(self):
         '''

@@ -49,10 +49,10 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
                     USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD
                 ]
             )
-            self.assertTrue(add_user)
-            self.assertTrue(add_pwd)
+            assert add_user
+            assert add_pwd
             user_list = self.run_function('user.list_users')
-            self.assertIn(USERA, str(user_list))
+            assert USERA in str(user_list)
         except AssertionError:
             self.run_function('user.delete', [USERA], remove=True)
             self.skipTest(
@@ -73,7 +73,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
                                          headers={
                                              'content-type': 'application/x-www-form-urlencoded'
                                              })
-        self.assertEqual(response.status, '401 Unauthorized')
+        assert response.status == '401 Unauthorized'
 
     def test_bad_pwd_pam_login_service(self):
         '''
@@ -89,7 +89,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
                                          headers={
                                              'content-type': 'application/x-www-form-urlencoded'
                                              })
-        self.assertEqual(response.status, '401 Unauthorized')
+        assert response.status == '401 Unauthorized'
 
     def test_good_pwd_pam_chsh_service(self):
         '''
@@ -104,7 +104,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
                                          headers={
                                              'content-type': 'application/x-www-form-urlencoded'
                                              })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
     def test_good_pwd_pam_login_service(self):
         '''
@@ -119,7 +119,7 @@ class TestAuthPAM(cptc.BaseRestCherryPyTest, ModuleCase):
                                          headers={
                                              'content-type': 'application/x-www-form-urlencoded'
                                              })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root

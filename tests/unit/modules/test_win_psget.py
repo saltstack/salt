@@ -61,7 +61,7 @@ class WinPsgetCase(TestCase, LoaderModuleMockMixin):
             'stdout': BOOTSTRAP_PS_STR})
 
         with patch.dict(win_psget.__salt__, {'cmd.run_all': mock_read_ok}):
-            self.assertTrue('NuGet' in win_psget.bootstrap())
+            assert 'NuGet' in win_psget.bootstrap()
 
     def test_avail_modules(self):
         mock_read_ok = MagicMock(return_value={'pid': 78,
@@ -70,5 +70,5 @@ class WinPsgetCase(TestCase, LoaderModuleMockMixin):
             'stdout': AVAIL_MODULES_PS_STR})
 
         with patch.dict(win_psget.__salt__, {'cmd.run_all': mock_read_ok}):
-            self.assertTrue('DHCPMigration' in win_psget.avail_modules(False))
-            self.assertTrue('DHCPMigration' in win_psget.avail_modules(True))
+            assert 'DHCPMigration' in win_psget.avail_modules(False)
+            assert 'DHCPMigration' in win_psget.avail_modules(True)

@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.mac_desktop as mac_desktop
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
@@ -34,7 +35,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0, 'stdout': '25'})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(mac_desktop.get_output_volume(), '25')
+            assert mac_desktop.get_output_volume() == '25'
 
     def test_get_output_volume_error(self):
         '''
@@ -42,8 +43,8 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError,
-                              mac_desktop.get_output_volume)
+            with pytest.raises(CommandExecutionError):
+                mac_desktop.get_output_volume()
 
     # 'set_output_volume' function tests: 2
 
@@ -55,7 +56,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}), \
                 patch('salt.modules.mac_desktop.get_output_volume',
                       MagicMock(return_value='25')):
-            self.assertTrue(mac_desktop.set_output_volume('25'))
+            assert mac_desktop.set_output_volume('25')
 
     def test_set_output_volume_error(self):
         '''
@@ -63,9 +64,8 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError,
-                              mac_desktop.set_output_volume,
-                              '25')
+            with pytest.raises(CommandExecutionError):
+                mac_desktop.set_output_volume('25')
 
     # 'screensaver' function tests: 2
 
@@ -75,7 +75,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(mac_desktop.screensaver())
+            assert mac_desktop.screensaver()
 
     def test_screensaver_error(self):
         '''
@@ -83,8 +83,8 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError,
-                              mac_desktop.screensaver)
+            with pytest.raises(CommandExecutionError):
+                mac_desktop.screensaver()
 
     # 'lock' function tests: 2
 
@@ -94,7 +94,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(mac_desktop.lock())
+            assert mac_desktop.lock()
 
     def test_lock_error(self):
         '''
@@ -102,8 +102,8 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError,
-                              mac_desktop.lock)
+            with pytest.raises(CommandExecutionError):
+                mac_desktop.lock()
 
     # 'say' function tests: 2
 
@@ -113,7 +113,7 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 0})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(mac_desktop.say())
+            assert mac_desktop.say()
 
     def test_say_error(self):
         '''
@@ -121,5 +121,5 @@ class MacDesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(mac_desktop.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(CommandExecutionError,
-                              mac_desktop.say)
+            with pytest.raises(CommandExecutionError):
+                mac_desktop.say()

@@ -96,11 +96,9 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
                              return_value=[Mockwmi()]), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
-            self.assertListEqual(win_dns_client.get_dns_servers
-                                 ('Local Area Connection'),
-                                 ['10.1.1.10'])
+            assert win_dns_client.get_dns_servers('Local Area Connection') == ['10.1.1.10']
 
-            self.assertFalse(win_dns_client.get_dns_servers('Ethernet'))
+            assert not win_dns_client.get_dns_servers('Ethernet')
 
     # 'rm_dns' function tests: 1
 
@@ -110,7 +108,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(win_dns_client.__salt__,
                         {'cmd.retcode': MagicMock(return_value=0)}):
-            self.assertTrue(win_dns_client.rm_dns('10.1.1.10'))
+            assert win_dns_client.rm_dns('10.1.1.10')
 
     # 'add_dns' function tests: 1
 
@@ -124,16 +122,16 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
                              return_value=[Mockwmi()]), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
-            self.assertFalse(win_dns_client.add_dns('10.1.1.10', 'Ethernet'))
+            assert not win_dns_client.add_dns('10.1.1.10', 'Ethernet')
 
-            self.assertTrue(win_dns_client.add_dns('10.1.1.10', 'Local Area Connection'))
+            assert win_dns_client.add_dns('10.1.1.10', 'Local Area Connection')
 
         with patch.object(win_dns_client, 'get_dns_servers',
                           MagicMock(return_value=['10.1.1.10'])), \
                 patch.dict(win_dns_client.__salt__,
                            {'cmd.retcode': MagicMock(return_value=0)}), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
-            self.assertTrue(win_dns_client.add_dns('10.1.1.0', 'Local Area Connection'))
+            assert win_dns_client.add_dns('10.1.1.0', 'Local Area Connection')
 
     # 'dns_dhcp' function tests: 1
 
@@ -144,7 +142,7 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(win_dns_client.__salt__,
                         {'cmd.retcode': MagicMock(return_value=0)}):
-            self.assertTrue(win_dns_client.dns_dhcp())
+            assert win_dns_client.dns_dhcp()
 
     # 'get_dns_config' function tests: 1
 
@@ -158,4 +156,4 @@ class WinDnsClientTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(self.WMI, 'Win32_NetworkAdapterConfiguration',
                              return_value=[Mockwmi()]), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
-            self.assertTrue(win_dns_client.get_dns_config())
+            assert win_dns_client.get_dns_config()

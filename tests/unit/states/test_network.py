@@ -74,22 +74,22 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
 
             mock = MagicMock(side_effect=[AttributeError, 'A', 'A', 'A', 'A', 'A'])
             with patch.dict(network.__salt__, {"ip.get_interface": mock}):
-                self.assertDictEqual(network.managed('salt',
-                                                     'stack', test='a'), ret)
+                assert network.managed('salt',
+                                                     'stack', test='a') == ret
 
                 mock = MagicMock(return_value='B')
                 with patch.dict(network.__salt__, {"ip.build_interface": mock}):
                     mock = MagicMock(side_effect=AttributeError)
                     with patch.dict(network.__salt__, {"ip.get_bond": mock}):
-                        self.assertDictEqual(network.managed('salt',
+                        assert network.managed('salt',
                                                              'bond',
-                                                             test='a'), ret)
+                                                             test='a') == ret
 
                     ret.update({'comment': 'Interface salt is set to be'
                                 ' updated:\n--- \n+++ \n@@ -1 +1 @@\n-A\n+B',
                                 'result': None})
-                    self.assertDictEqual(network.managed('salt', 'stack',
-                                                         test='a'), ret)
+                    assert network.managed('salt', 'stack',
+                                                         test='a') == ret
 
                     mock = MagicMock(return_value=True)
                     with patch.dict(network.__salt__, {"ip.down": mock}):
@@ -97,8 +97,8 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                             ret.update({'comment': 'Interface salt updated.',
                                         'result': True,
                                         'changes': change})
-                            self.assertDictEqual(network.managed('salt', 'stack'),
-                                                 ret)
+                            assert network.managed('salt', 'stack') == \
+                                                 ret
 
                             with patch.dict(network.__grains__, {"A": True}):
                                 with patch.dict(network.__salt__,
@@ -110,10 +110,10 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                             '\n+B',
                                                             'status': 'Interface'
                                                             ' salt down'}})
-                                    self.assertDictEqual(network.managed('salt',
+                                    assert network.managed('salt',
                                                                          'stack',
-                                                                         False),
-                                                         ret)
+                                                                         False) == \
+                                                         ret
 
     def test_routes(self):
         '''
@@ -127,24 +127,24 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[AttributeError, False, False, "True",
                                       False, False])
         with patch.dict(network.__salt__, {"ip.get_routes": mock}):
-            self.assertDictEqual(network.routes('salt'), ret)
+            assert network.routes('salt') == ret
 
             mock = MagicMock(side_effect=[False, True, '', True, True])
             with patch.dict(network.__salt__, {"ip.build_routes": mock}):
                 ret.update({'result': True,
                             'comment': 'Interface salt routes are up to date.'
                             })
-                self.assertDictEqual(network.routes('salt', test='a'), ret)
+                assert network.routes('salt', test='a') == ret
 
                 ret.update({'comment': 'Interface salt routes are'
                             ' set to be added.',
                             'result': None})
-                self.assertDictEqual(network.routes('salt', test='a'), ret)
+                assert network.routes('salt', test='a') == ret
 
                 ret.update({'comment': 'Interface salt routes are set to be'
                             ' updated:\n--- \n+++ \n@@ -1,4 +0,0 @@\n-T\n-r'
                             '\n-u\n-e'})
-                self.assertDictEqual(network.routes('salt', test='a'), ret)
+                assert network.routes('salt', test='a') == ret
 
                 mock = MagicMock(side_effect=[AttributeError, True])
                 with patch.dict(network.__salt__,
@@ -153,13 +153,13 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                             'Added interface salt routes.'},
                                 'comment': '',
                                 'result': False})
-                    self.assertDictEqual(network.routes('salt'), ret)
+                    assert network.routes('salt') == ret
 
                     ret.update({'changes': {'network_routes':
                                             'Added interface salt routes.'},
                                 'comment': 'Interface salt routes added.',
                                 'result': True})
-                    self.assertDictEqual(network.routes('salt'), ret)
+                    assert network.routes('salt') == ret
 
     def test_system(self):
         '''
@@ -175,7 +175,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(side_effect=[AttributeError, False, False, 'As'])
             with patch.dict(network.__salt__,
                             {"ip.get_network_settings": mock}):
-                self.assertDictEqual(network.system('salt'), ret)
+                assert network.system('salt') == ret
 
                 mock = MagicMock(side_effect=[False, True, ''])
                 with patch.dict(network.__salt__,
@@ -183,17 +183,17 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                     ret.update({'comment': 'Global network settings'
                                 ' are up to date.',
                                 'result': True})
-                    self.assertDictEqual(network.system('salt'), ret)
+                    assert network.system('salt') == ret
 
                     ret.update({'comment': 'Global network settings are set to'
                                 ' be added.',
                                 'result': None})
-                    self.assertDictEqual(network.system('salt'), ret)
+                    assert network.system('salt') == ret
 
                     ret.update({'comment': 'Global network settings are set to'
                                 ' be updated:\n--- \n+++ \n@@ -1,2 +0,0'
                                 ' @@\n-A\n-s'})
-                    self.assertDictEqual(network.system('salt'), ret)
+                    assert network.system('salt') == ret
 
         with patch.dict(network.__opts__, {"test": False}):
             mock = MagicMock(side_effect=[False, False])
@@ -210,7 +210,7 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                                 ' settings.'},
                                     'comment': '',
                                     'result': False})
-                        self.assertDictEqual(network.system('salt'), ret)
+                        assert network.system('salt') == ret
 
                         ret.update({'changes': {'network_settings':
                                                 'Added global network'
@@ -218,4 +218,4 @@ class NetworkTestCase(TestCase, LoaderModuleMockMixin):
                                     'comment': 'Global network settings'
                                     ' are up to date.',
                                     'result': True})
-                        self.assertDictEqual(network.system('salt'), ret)
+                        assert network.system('salt') == ret

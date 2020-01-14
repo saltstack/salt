@@ -21,29 +21,26 @@ class TestLocales(TestCase):
         with patch('sys.getdefaultencoding', return_value='xyzzy'):
             encodings = locales.get_encodings()
             for enc in (__salt_system_encoding__, 'xyzzy', 'utf-8', 'latin-1'):
-                self.assertIn(enc, encodings)
+                assert enc in encodings
         reload_module(locales)
 
     def test_split_locale(self):
-        self.assertDictEqual(
-                locales.split_locale('ca_ES.UTF-8@valencia utf-8'),
+        assert locales.split_locale('ca_ES.UTF-8@valencia utf-8') == \
                 {'charmap': 'utf-8',
                  'modifier': 'valencia',
                  'codeset': 'UTF-8',
                  'language': 'ca',
-                 'territory': 'ES'})
+                 'territory': 'ES'}
 
     def test_join_locale(self):
-        self.assertEqual(
-                locales.join_locale(
+        assert locales.join_locale(
                     {'charmap': 'utf-8',
                      'modifier': 'valencia',
                      'codeset': 'UTF-8',
                      'language': 'ca',
-                     'territory': 'ES'}),
-                'ca_ES.UTF-8@valencia utf-8')
+                     'territory': 'ES'}) == \
+                'ca_ES.UTF-8@valencia utf-8'
 
     def test_normalize_locale(self):
-        self.assertEqual(
-                locales.normalize_locale('ca_es.UTF-8@valencia utf-8'),
-                'ca_ES.utf8@valencia')
+        assert locales.normalize_locale('ca_es.UTF-8@valencia utf-8') == \
+                'ca_ES.utf8@valencia'

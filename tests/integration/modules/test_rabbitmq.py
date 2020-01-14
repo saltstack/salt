@@ -23,4 +23,4 @@ class RabbitModuleTest(ModuleCase):
         Find out whether a user exists.
         '''
         ret = self.run_function('rabbitmq.user_exists', ['null_user'])
-        self.assertEqual(ret, False)
+        assert ret is False

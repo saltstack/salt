@@ -35,6 +35,7 @@ from salt.exceptions import (
     SaltConfigurationError,
     SaltCloudConfigError
 )
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -86,13 +87,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         master_config = SAMPLE_CONF_DIR + 'master'
         ret = salt.config._read_conf_file(master_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 master_config
             )
-        )
 
     def test_conf_minion_sample_is_commented(self):
         '''
@@ -101,13 +100,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         minion_config = SAMPLE_CONF_DIR + 'minion'
         ret = salt.config._read_conf_file(minion_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 minion_config
             )
-        )
 
     def test_conf_cloud_sample_is_commented(self):
         '''
@@ -116,13 +113,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         cloud_config = SAMPLE_CONF_DIR + 'cloud'
         ret = salt.config._read_conf_file(cloud_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 cloud_config
             )
-        )
 
     def test_conf_cloud_profiles_sample_is_commented(self):
         '''
@@ -131,13 +126,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         cloud_profiles_config = SAMPLE_CONF_DIR + 'cloud.profiles'
         ret = salt.config._read_conf_file(cloud_profiles_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 cloud_profiles_config
             )
-        )
 
     def test_conf_cloud_providers_sample_is_commented(self):
         '''
@@ -146,13 +139,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         cloud_providers_config = SAMPLE_CONF_DIR + 'cloud.providers'
         ret = salt.config._read_conf_file(cloud_providers_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 cloud_providers_config
             )
-        )
 
     def test_conf_proxy_sample_is_commented(self):
         '''
@@ -161,13 +152,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         proxy_config = SAMPLE_CONF_DIR + 'proxy'
         ret = salt.config._read_conf_file(proxy_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 proxy_config
             )
-        )
 
     def test_conf_roster_sample_is_commented(self):
         '''
@@ -176,13 +165,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         '''
         roster_config = SAMPLE_CONF_DIR + 'roster'
         ret = salt.config._read_conf_file(roster_config)
-        self.assertEqual(
-            ret,
-            {},
+        assert ret == \
+            {}, \
             'Sample config file \'{}\' must be commented out.'.format(
                 roster_config
             )
-        )
 
     def test_conf_cloud_profiles_d_files_are_commented(self):
         '''
@@ -197,13 +184,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         for conf_file in cloud_sample_files:
             profile_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(profile_conf)
-            self.assertEqual(
-                ret,
-                {},
+            assert ret == \
+                {}, \
                 'Sample config file \'{}\' must be commented out.'.format(
                     conf_file
                 )
-            )
 
     def test_conf_cloud_providers_d_files_are_commented(self):
         '''
@@ -218,13 +203,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         for conf_file in cloud_sample_files:
             provider_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(provider_conf)
-            self.assertEqual(
-                ret,
-                {},
+            assert ret == \
+                {}, \
                 'Sample config file \'{}\' must be commented out.'.format(
                     conf_file
                 )
-            )
 
     def test_conf_cloud_maps_d_files_are_commented(self):
         '''
@@ -239,13 +222,11 @@ class SampleConfTest(DefaultConfigsBase, TestCase):
         for conf_file in cloud_sample_files:
             map_conf = cloud_sample_dir + conf_file
             ret = salt.config._read_conf_file(map_conf)
-            self.assertEqual(
-                ret,
-                {},
+            assert ret == \
+                {}, \
                 'Sample config file \'{}\' must be commented out.'.format(
                     conf_file
                 )
-            )
 
 
 def _unhandled_mock_read(filename):
@@ -272,7 +253,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "key_logfile: key\n"
             )
         config = salt.config.master_config(fpath)
-        self.assertEqual(config['hash_type'], 'sha256')
+        assert config['hash_type'] == 'sha256'
 
     @with_tempfile()
     def test_sha256_is_default_for_minion(self, fpath):
@@ -282,7 +263,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 "key_logfile: key\n"
             )
         config = salt.config.minion_config(fpath)
-        self.assertEqual(config['hash_type'], 'sha256')
+        assert config['hash_type'] == 'sha256'
 
     @with_tempfile()
     def test_proper_path_joining(self, fpath):
@@ -302,9 +283,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             expect_sep_join = 'c:\\\\key'
 
         # os.path.join behavior
-        self.assertEqual(config['key_logfile'], expect_path_join)
+        assert config['key_logfile'] == expect_path_join
         # os.sep.join behavior
-        self.assertNotEqual(config['key_logfile'], expect_sep_join)
+        assert config['key_logfile'] != expect_sep_join
 
     @with_tempdir()
     def test_common_prefix_stripping(self, tempdir):
@@ -317,7 +298,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'log_file: {}\n'.format(root_dir, fpath)
             )
         config = salt.config.master_config(fpath)
-        self.assertEqual(config['log_file'], fpath)
+        assert config['log_file'] == fpath
 
     @with_tempdir()
     def test_default_root_dir_included_in_config_root_dir(self, tempdir):
@@ -330,7 +311,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'log_file: {}\n'.format(root_dir, fpath)
             )
         config = salt.config.master_config(fpath)
-        self.assertEqual(config['log_file'], fpath)
+        assert config['log_file'] == fpath
 
     @skipIf(
         salt.utils.platform.is_windows(),
@@ -349,7 +330,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patched_environ(SALT_MASTER_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file.
             config = salt.config.master_config('{}/master'.format(CONFIG_DIR))
-            self.assertEqual(config['log_file'], env_fpath)
+            assert config['log_file'] == env_fpath
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -365,7 +346,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # environment variable will be ignored.
         with patched_environ(SALT_MASTER_CONFIG=env_fpath):
             config = salt.config.master_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
+            assert config['log_file'] == fpath
 
     @skipIf(
         salt.utils.platform.is_windows(),
@@ -385,7 +366,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patched_environ(SALT_MINION_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
             config = salt.config.minion_config('{}/minion'.format(CONFIG_DIR))
-            self.assertEqual(config['log_file'], env_fpath)
+            assert config['log_file'] == env_fpath
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -401,7 +382,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # environment variable will be ignored.
         with patched_environ(SALT_MINION_CONFIG=env_fpath):
             config = salt.config.minion_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
+            assert config['log_file'] == fpath
 
     @with_tempdir()
     def test_load_client_config_from_environ_var(self, tempdir):
@@ -432,8 +413,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                              SALT_CLIENT_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
             config = salt.config.client_config(os.path.expanduser('~/.salt'))
-            self.assertEqual(config['log_file'], env_fpath)
-            self.assertTrue('blah' not in config)
+            assert config['log_file'] == env_fpath
+            assert 'blah' not in config
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -450,7 +431,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patched_environ(SALT_MASTER_CONFIG=env_fpath,
                              SALT_CLIENT_CONFIG=env_fpath):
             config = salt.config.master_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
+            assert config['log_file'] == fpath
 
     @with_tempdir()
     def test_issue_5970_minion_confd_inclusion(self, tempdir):
@@ -479,9 +460,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Let's load the configuration
         config = salt.config.minion_config(minion_config)
 
-        self.assertEqual(config['log_file'], minion_config)
+        assert config['log_file'] == minion_config
         # As proven by the assertion below, blah is True
-        self.assertTrue(config['blah'])
+        assert config['blah']
 
     @with_tempdir()
     def test_master_confd_inclusion(self, tempdir):
@@ -510,9 +491,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Let's load the configuration
         config = salt.config.master_config(master_config)
 
-        self.assertEqual(config['log_file'], master_config)
+        assert config['log_file'] == master_config
         # As proven by the assertion below, blah is True
-        self.assertTrue(config['blah'])
+        assert config['blah']
 
     @with_tempfile()
     @with_tempdir()
@@ -531,8 +512,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.master_config(fpath)
         base = config['file_roots']['base']
-        self.assertEqual(set(base),
-                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
+        assert set(base) == \
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')}
 
     def test_validate_bad_file_roots(self):
         expected = salt.config._expand_glob_path(
@@ -560,8 +541,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.master_config(fpath)
         base = config['pillar_roots']['base']
-        self.assertEqual(set(base),
-                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
+        assert set(base) == \
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')}
 
     def test_validate_bad_pillar_roots(self):
         expected = salt.config._expand_glob_path(
@@ -588,9 +569,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Let's load the configuration
         config = salt.config.master_config(master_config)
 
-        self.assertEqual(config['log_file'], master_config)
+        assert config['log_file'] == master_config
         # 'master_config' appends '_master' to the ID
-        self.assertEqual(config['id'], 'hello_world_master')
+        assert config['id'] == 'hello_world_master'
 
     @with_tempfile()
     @with_tempdir()
@@ -609,8 +590,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.minion_config(fpath)
         base = config['file_roots']['base']
-        self.assertEqual(set(base),
-                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
+        assert set(base) == \
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')}
 
     @with_tempfile()
     @with_tempdir()
@@ -629,8 +610,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             )
         config = salt.config.minion_config(fpath)
         base = config['pillar_roots']['base']
-        self.assertEqual(set(base),
-                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')})
+        assert set(base) == \
+                         {os.path.join(tempdir, 'a'), os.path.join(tempdir, 'b'), os.path.join(tempdir, 'c')}
 
     @with_tempdir()
     def test_minion_id_function(self, tempdir):
@@ -648,8 +629,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # Let's load the configuration
         config = salt.config.minion_config(minion_config)
 
-        self.assertEqual(config['log_file'], minion_config)
-        self.assertEqual(config['id'], 'hello_world')
+        assert config['log_file'] == minion_config
+        assert config['id'] == 'hello_world'
 
     @with_tempdir()
     def test_minion_id_lowercase(self, tempdir):
@@ -668,9 +649,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 minion_id_lowercase: True
             '''))
         config = salt.config.minion_config(minion_config)  # Load the configuration
-        self.assertEqual(config['minion_id_caching'], False)  # Check the configuration
-        self.assertEqual(config['minion_id_lowercase'], True)  # Check the configuration
-        self.assertEqual(config['id'], 'king_bob')
+        assert config['minion_id_caching'] is False  # Check the configuration
+        assert config['minion_id_lowercase'] is True  # Check the configuration
+        assert config['id'] == 'king_bob'
 
     @with_tempdir()
     def test_minion_id_remove_domain_string_positive(self, tempdir):
@@ -690,8 +671,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         # Let's load the configuration
         config = salt.config.minion_config(minion_config)
-        self.assertEqual(config['minion_id_remove_domain'], 'foo.org')
-        self.assertEqual(config['id'], 'king_bob')
+        assert config['minion_id_remove_domain'] == 'foo.org'
+        assert config['id'] == 'king_bob'
 
     @with_tempdir()
     def test_minion_id_remove_domain_string_negative(self, tempdir):
@@ -709,7 +690,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             '''))
 
         config = salt.config.minion_config(minion_config)
-        self.assertEqual(config['id'], 'king_bob.foo.org')
+        assert config['id'] == 'king_bob.foo.org'
 
     @with_tempdir()
     def test_minion_id_remove_domain_bool_true(self, tempdir):
@@ -726,7 +707,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 minion_id_caching: False
             '''))
         config = salt.config.minion_config(minion_config)
-        self.assertEqual(config['id'], 'king_bob')
+        assert config['id'] == 'king_bob'
 
     @with_tempdir()
     def test_minion_id_remove_domain_bool_false(self, tempdir):
@@ -743,7 +724,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 minion_id_caching: False
             '''))
         config = salt.config.minion_config(minion_config)
-        self.assertEqual(config['id'], 'king_bob.foo.org')
+        assert config['id'] == 'king_bob.foo.org'
 
     @with_tempdir()
     def test_backend_rename(self, tempdir):
@@ -766,8 +747,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         minion_config = salt.config.minion_config(fpath)
         expected = ['roots', 'gitfs', 'hgfs', 'svnfs', 'minionfs']
 
-        self.assertEqual(master_config['fileserver_backend'], expected)
-        self.assertEqual(minion_config['fileserver_backend'], expected)
+        assert master_config['fileserver_backend'] == expected
+        assert minion_config['fileserver_backend'] == expected
 
     def test_syndic_config(self):
         minion_conf_path = self.get_config_file_path('syndic')
@@ -775,21 +756,21 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         syndic_opts = salt.config.syndic_config(master_conf_path, minion_conf_path)
         root_dir = syndic_opts['root_dir']
         # id & pki dir are shared & so configured on the minion side
-        self.assertEqual(syndic_opts['id'], 'syndic')
-        self.assertEqual(syndic_opts['pki_dir'], os.path.join(root_dir, 'pki'))
+        assert syndic_opts['id'] == 'syndic'
+        assert syndic_opts['pki_dir'] == os.path.join(root_dir, 'pki')
         # the rest is configured master side
         if RUNTIME_VARS.PYTEST_SESSION is False:
             # Pytest assigns ports dynamically
-            self.assertEqual(syndic_opts['master_port'], 54506)
-        self.assertEqual(syndic_opts['master'], 'localhost')
-        self.assertEqual(syndic_opts['sock_dir'], os.path.join(root_dir, 'syndic_sock'))
-        self.assertEqual(syndic_opts['cachedir'], os.path.join(root_dir, 'cache'))
-        self.assertEqual(syndic_opts['log_file'], os.path.join(root_dir, 'logs', 'syndic.log'))
-        self.assertEqual(syndic_opts['pidfile'], os.path.join(root_dir, 'run', 'syndic.pid'))
+            assert syndic_opts['master_port'] == 54506
+        assert syndic_opts['master'] == 'localhost'
+        assert syndic_opts['sock_dir'] == os.path.join(root_dir, 'syndic_sock')
+        assert syndic_opts['cachedir'] == os.path.join(root_dir, 'cache')
+        assert syndic_opts['log_file'] == os.path.join(root_dir, 'logs', 'syndic.log')
+        assert syndic_opts['pidfile'] == os.path.join(root_dir, 'run', 'syndic.pid')
         # Show that the options of localclient that repub to local master
         # are not merged with syndic ones
-        self.assertEqual(syndic_opts['_master_conf_file'], minion_conf_path)
-        self.assertEqual(syndic_opts['_minion_conf_file'], master_conf_path)
+        assert syndic_opts['_master_conf_file'] == minion_conf_path
+        assert syndic_opts['_minion_conf_file'] == master_conf_path
 
     @with_tempfile()
     def _get_tally(self, fpath, conf_func):
@@ -860,8 +841,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         tally = self._get_tally(salt.config.master_config)  # pylint: disable=no-value-for-parameter
         non_unicode = tally.get('non_unicode', [])
-        self.assertEqual(len(non_unicode), 8 if six.PY2 else 0, non_unicode)
-        self.assertTrue(tally['unicode'] > 0)
+        assert len(non_unicode) == (8 if six.PY2 else 0), non_unicode
+        assert tally['unicode'] > 0
 
     def test_conf_file_strings_are_unicode_for_minion(self):
         '''
@@ -869,8 +850,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         tally = self._get_tally(salt.config.minion_config)  # pylint: disable=no-value-for-parameter
         non_unicode = tally.get('non_unicode', [])
-        self.assertEqual(len(non_unicode), 0, non_unicode)
-        self.assertTrue(tally['unicode'] > 0)
+        assert len(non_unicode) == 0, non_unicode
+        assert tally['unicode'] > 0
 
     # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
@@ -881,7 +862,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in master_config_path and master_config kwargs.
         '''
         with patch('salt.config.load_config', MagicMock(return_value={})):
-            self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
+            with pytest.raises(SaltCloudConfigError):
+                salt.config.cloud_config(PATH,
                               master_config_path='foo', master_config='bar')
 
     def test_cloud_config_double_providers_path(self):
@@ -889,7 +871,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in providers_config_path and providers_config kwargs.
         '''
         with patch('salt.config.load_config', MagicMock(return_value={})):
-            self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
+            with pytest.raises(SaltCloudConfigError):
+                salt.config.cloud_config(PATH,
                               providers_config_path='foo', providers_config='bar')
 
     def test_cloud_config_double_profiles_path(self):
@@ -897,7 +880,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in profiles_config_path and profiles_config kwargs.
         '''
         with patch('salt.config.load_config', MagicMock(return_value={})):
-            self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
+            with pytest.raises(SaltCloudConfigError):
+                salt.config.cloud_config(PATH,
                               profiles_config_path='foo', profiles_config='bar')
 
     def test_cloud_config_providers_in_opts(self):
@@ -908,7 +892,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch('salt.config.load_config', MagicMock(return_value={})):
             with patch('salt.config.apply_cloud_config',
                        MagicMock(return_value={'providers': 'foo'})):
-                self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
+                with pytest.raises(SaltCloudConfigError):
+                    salt.config.cloud_config(PATH,
                                   providers_config='bar')
 
     def test_cloud_config_providers_in_opts_path(self):
@@ -920,7 +905,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with patch('salt.config.apply_cloud_config',
                        MagicMock(return_value={'providers': 'foo'})):
                 with patch('os.path.isfile', MagicMock(return_value=True)):
-                    self.assertRaises(SaltCloudConfigError, salt.config.cloud_config, PATH,
+                    with pytest.raises(SaltCloudConfigError):
+                        salt.config.cloud_config(PATH,
                                       providers_config_path='bar')
 
     def test_cloud_config_deploy_scripts_search_path(self):
@@ -943,10 +929,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 deploy_path = '\\salt\\cloud\\deploy'
 
             # Check cloud.deploy.d path is the first element in the search_paths tuple
-            self.assertTrue(search_paths[0].endswith(etc_deploy_path))
+            assert search_paths[0].endswith(etc_deploy_path)
 
             # Check the second element in the search_paths tuple
-            self.assertTrue(search_paths[1].endswith(deploy_path))
+            assert search_paths[1].endswith(deploy_path)
 
     # apply_cloud_config tests
 
@@ -955,16 +941,16 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests when the provider is not contained in a list of details
         '''
         overrides = {'providers': {'foo': [{'bar': 'baz'}]}}
-        self.assertRaises(SaltCloudConfigError, salt.config.apply_cloud_config,
-                          overrides, defaults=DEFAULT)
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_config(overrides, defaults=DEFAULT)
 
     def test_apply_cloud_config_no_provider_detail_dict(self):
         '''
         Tests when the provider is not contained in the details dictionary
         '''
         overrides = {'providers': {'foo': {'bar': 'baz'}}}
-        self.assertRaises(SaltCloudConfigError, salt.config.apply_cloud_config,
-                          overrides, defaults=DEFAULT)
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_config(overrides, defaults=DEFAULT)
 
     def test_apply_cloud_config_success_list(self):
         '''
@@ -982,7 +968,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'default_include': 'path/to/some/cloud/conf/file',
                 'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
             }
-            self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+            assert salt.config.apply_cloud_config(overrides, defaults=DEFAULT) == ret
 
     def test_apply_cloud_config_success_dict(self):
         '''
@@ -999,7 +985,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'default_include': 'path/to/some/cloud/conf/file',
                 'providers': {'foo': {'bar': {'driver': 'foo:bar'}}}
             }
-            self.assertEqual(salt.config.apply_cloud_config(overrides, defaults=DEFAULT), ret)
+            assert salt.config.apply_cloud_config(overrides, defaults=DEFAULT) == ret
 
     # apply_vm_profiles_config tests
 
@@ -1008,8 +994,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         Tests passing in a bad profile format in overrides
         '''
         overrides = {'foo': 'bar', 'conf_file': PATH}
-        self.assertRaises(SaltCloudConfigError, salt.config.apply_vm_profiles_config,
-                          PATH, overrides, defaults=DEFAULT)
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_vm_profiles_config(PATH, overrides, defaults=DEFAULT)
 
     def test_apply_vm_profiles_config_success(self):
         '''
@@ -1038,9 +1024,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'size': '512MB'
             }
         }
-        self.assertEqual(salt.config.apply_vm_profiles_config(providers,
+        assert salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
-                                                          defaults=DEFAULT), ret)
+                                                          defaults=DEFAULT) == ret
 
     def test_apply_vm_profiles_config_extend_success(self):
         '''
@@ -1088,9 +1074,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'provider': 'test-config:ec2'
             }
         }
-        self.assertEqual(salt.config.apply_vm_profiles_config(providers,
+        assert salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
-                                                          defaults=DEFAULT), ret)
+                                                          defaults=DEFAULT) == ret
 
     def test_apply_vm_profiles_config_extend_override_success(self):
         '''
@@ -1149,9 +1135,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'provider': 'test-config:ec2'
             }
         }
-        self.assertEqual(salt.config.apply_vm_profiles_config(providers,
+        assert salt.config.apply_vm_profiles_config(providers,
                                                           overrides,
-                                                          defaults=DEFAULT), ret)
+                                                          defaults=DEFAULT) == ret
 
     # apply_cloud_providers_config tests
 
@@ -1170,9 +1156,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 'driver': 'ec2'
             }],
             'conf_file': PATH}
-        self.assertRaises(SaltCloudConfigError,
-                          salt.config.apply_cloud_providers_config,
-                          overrides,
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_providers_config(overrides,
                           DEFAULT)
 
     def test_apply_cloud_providers_config_extend(self):
@@ -1239,10 +1224,10 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 },
             },
         }
-        self.assertEqual(ret,
+        assert ret == \
                          salt.config.apply_cloud_providers_config(
                              overrides,
-                             defaults=DEFAULT))
+                             defaults=DEFAULT)
 
     def test_apply_cloud_providers_config_extend_multiple(self):
         '''
@@ -1331,7 +1316,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 },
             },
         }
-        self.assertEqual(ret, salt.config.apply_cloud_providers_config(overrides, defaults=DEFAULT))
+        assert ret == salt.config.apply_cloud_providers_config(overrides, defaults=DEFAULT)
 
     def test_apply_cloud_providers_config_extends_bad_alias(self):
         '''
@@ -1351,9 +1336,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'driver': 'ec2'
                 }],
             'conf_file': PATH}
-        self.assertRaises(SaltCloudConfigError,
-                          salt.config.apply_cloud_providers_config,
-                          overrides,
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_providers_config(overrides,
                           DEFAULT)
 
     def test_apply_cloud_providers_config_extends_bad_provider(self):
@@ -1379,9 +1363,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'driver': 'ec2'
                 }],
             'conf_file': PATH}
-        self.assertRaises(SaltCloudConfigError,
-                          salt.config.apply_cloud_providers_config,
-                          overrides,
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_providers_config(overrides,
                           DEFAULT)
 
     def test_apply_cloud_providers_config_extends_no_provider(self):
@@ -1407,9 +1390,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                     'driver': 'linode'
                 }],
             'conf_file': PATH}
-        self.assertRaises(SaltCloudConfigError,
-                          salt.config.apply_cloud_providers_config,
-                          overrides,
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_providers_config(overrides,
                           DEFAULT)
 
     def test_apply_cloud_providers_extends_not_in_providers(self):
@@ -1436,9 +1418,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 },
             ],
             'conf_file': PATH}
-        self.assertRaises(SaltCloudConfigError,
-                          salt.config.apply_cloud_providers_config,
-                          overrides,
+        with pytest.raises(SaltCloudConfigError):
+            salt.config.apply_cloud_providers_config(overrides,
                           DEFAULT)
 
     # is_provider_configured tests
@@ -1449,7 +1430,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         opts = {'providers': 'test'}
         provider = 'foo:bar'
-        self.assertFalse(salt.config.is_provider_configured(opts, provider))
+        assert not salt.config.is_provider_configured(opts, provider)
 
     def test_is_provider_configured_no_driver(self):
         '''
@@ -1457,7 +1438,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         opts = {'providers': {'foo': 'baz'}}
         provider = 'foo:bar'
-        self.assertFalse(salt.config.is_provider_configured(opts, provider))
+        assert not salt.config.is_provider_configured(opts, provider)
 
     def test_is_provider_configured_key_is_none(self):
         '''
@@ -1465,10 +1446,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         opts = {'providers': {'foo': {'bar': {'api_key': None}}}}
         provider = 'foo:bar'
-        self.assertFalse(
-            salt.config.is_provider_configured(opts,
+        assert not salt.config.is_provider_configured(opts,
                                            provider,
-                                           required_keys=('api_key',)))
+                                           required_keys=('api_key',))
 
     def test_is_provider_configured_success(self):
         '''
@@ -1477,10 +1457,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = {'providers': {'foo': {'bar': {'api_key': 'baz'}}}}
         provider = 'foo:bar'
         ret = {'api_key': 'baz'}
-        self.assertEqual(
-            salt.config.is_provider_configured(opts,
+        assert salt.config.is_provider_configured(opts,
                                            provider,
-                                           required_keys=('api_key',)), ret)
+                                           required_keys=('api_key',)) == ret
 
     def test_is_provider_configured_multiple_driver_not_provider(self):
         '''
@@ -1489,7 +1468,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         opts = {'providers': {'foo': {'bar': {'api_key': 'baz'}}}}
         provider = 'foo'
-        self.assertFalse(salt.config.is_provider_configured(opts, provider))
+        assert not salt.config.is_provider_configured(opts, provider)
 
     def test_is_provider_configured_multiple_key_is_none(self):
         '''
@@ -1498,10 +1477,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         opts = {'providers': {'foo': {'bar': {'api_key': None}}}}
         provider = 'bar'
-        self.assertFalse(
-            salt.config.is_provider_configured(opts,
+        assert not salt.config.is_provider_configured(opts,
                                            provider,
-                                           required_keys=('api_key',)))
+                                           required_keys=('api_key',))
 
     def test_is_provider_configured_multiple_success(self):
         '''
@@ -1511,10 +1489,9 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         opts = {'providers': {'foo': {'bar': {'api_key': 'baz'}}}}
         provider = 'bar'
         ret = {'api_key': 'baz'}
-        self.assertEqual(
-            salt.config.is_provider_configured(opts,
+        assert salt.config.is_provider_configured(opts,
                                            provider,
-                                           required_keys=('api_key',)), ret)
+                                           required_keys=('api_key',)) == ret
 
     # other cloud configuration tests
 
@@ -1536,7 +1513,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             # Should load from env variable, not the default configuration file
             config = salt.config.cloud_config('/etc/salt/cloud')
-            self.assertEqual(config['log_file'], env_fpath)
+            assert config['log_file'] == env_fpath
 
         root_dir = os.path.join(tempdir, 'foo', 'bar')
         os.makedirs(root_dir)
@@ -1552,7 +1529,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # environment variable will be ignored.
         with patched_environ(SALT_CLOUD_CONFIG=env_fpath):
             config = salt.config.cloud_config(fpath)
-            self.assertEqual(config['log_file'], fpath)
+            assert config['log_file'] == fpath
 
     @with_tempdir()
     def test_deploy_search_path_as_string(self, temp_conf_dir):
@@ -1570,16 +1547,12 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         default_config = salt.config.cloud_config(config_file_path)
 
         # Our custom deploy scripts path was correctly added to the list
-        self.assertIn(
-            deploy_dir_path,
+        assert deploy_dir_path in \
             default_config['deploy_scripts_search_path']
-        )
 
         # And it's even the first occurrence as it should
-        self.assertEqual(
-            deploy_dir_path,
+        assert deploy_dir_path == \
             default_config['deploy_scripts_search_path'][0]
-        )
 
     def test_includes_load(self):
         '''
@@ -1588,8 +1561,8 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         '''
         log.warning('Clound config file path: %s', self.get_config_file_path('cloud'))
         config = salt.config.cloud_config(self.get_config_file_path('cloud'))
-        self.assertIn('ec2-config', config['providers'])
-        self.assertIn('ec2-test', config['profiles'])
+        assert 'ec2-config' in config['providers']
+        assert 'ec2-test' in config['profiles']
 
     # <---- Salt Cloud Configuration Tests ---------------------------------------------
 
@@ -1605,7 +1578,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with patch('salt.config._read_conf_file', MagicMock(return_value=config_opts)):
                 configuration = salt.config.include_config(include_file, config_path, verbose=False)
 
-        self.assertEqual(config_opts, configuration)
+        assert config_opts == configuration
 
     def test_include_config_with_errors(self):
         '''
@@ -1619,7 +1592,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             with patch('salt.config._read_conf_file', _salt_configuration_error):
                 configuration = salt.config.include_config(include_file, config_path, verbose=False)
 
-        self.assertEqual(config_opts, configuration)
+        assert config_opts == configuration
 
     def test_include_config_with_errors_exit(self):
         '''
@@ -1630,7 +1603,7 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
 
         with patch('glob.glob', MagicMock(return_value=include_file)):
             with patch('salt.config._read_conf_file', _salt_configuration_error):
-                with self.assertRaises(SystemExit):
+                with pytest.raises(SystemExit):
                     salt.config.include_config(include_file,
                                            config_path,
                                            verbose=False,
@@ -1671,28 +1644,28 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             # explicitly passed.
             defaults = self._get_defaults(environment='foo')
             ret = salt.config.apply_master_config(defaults=defaults)
-            self.assertEqual(ret['environment'], 'foo')
-            self.assertEqual(ret['saltenv'], 'foo')
+            assert ret['environment'] == 'foo'
+            assert ret['saltenv'] == 'foo'
 
             # Ensure that environment overrides saltenv when saltenv not
             # explicitly passed.
             defaults = self._get_defaults(environment='foo', saltenv='bar')
             ret = salt.config.apply_master_config(defaults=defaults)
-            self.assertEqual(ret['environment'], 'bar')
-            self.assertEqual(ret['saltenv'], 'bar')
+            assert ret['environment'] == 'bar'
+            assert ret['saltenv'] == 'bar'
 
             # If environment was not explicitly set, it should not be in the
             # opts at all.
             defaults = self._get_defaults()
             ret = salt.config.apply_master_config(defaults=defaults)
-            self.assertNotIn('environment', ret)
-            self.assertEqual(ret['saltenv'], None)
+            assert 'environment' not in ret
+            assert ret['saltenv'] is None
 
             # Same test as above but with saltenv explicitly set
             defaults = self._get_defaults(saltenv='foo')
             ret = salt.config.apply_master_config(defaults=defaults)
-            self.assertNotIn('environment', ret)
-            self.assertEqual(ret['saltenv'], 'foo')
+            assert 'environment' not in ret
+            assert ret['saltenv'] == 'foo'
 
             # MINION CONFIG
 
@@ -1700,28 +1673,28 @@ class ConfigTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             # explicitly passed.
             defaults = self._get_defaults(environment='foo')
             ret = salt.config.apply_minion_config(defaults=defaults)
-            self.assertEqual(ret['environment'], 'foo')
-            self.assertEqual(ret['saltenv'], 'foo')
+            assert ret['environment'] == 'foo'
+            assert ret['saltenv'] == 'foo'
 
             # Ensure that environment overrides saltenv when saltenv not
             # explicitly passed.
             defaults = self._get_defaults(environment='foo', saltenv='bar')
             ret = salt.config.apply_minion_config(defaults=defaults)
-            self.assertEqual(ret['environment'], 'bar')
-            self.assertEqual(ret['saltenv'], 'bar')
+            assert ret['environment'] == 'bar'
+            assert ret['saltenv'] == 'bar'
 
             # If environment was not explicitly set, it should not be in the
             # opts at all.
             defaults = self._get_defaults()
             ret = salt.config.apply_minion_config(defaults=defaults)
-            self.assertNotIn('environment', ret)
-            self.assertEqual(ret['saltenv'], None)
+            assert 'environment' not in ret
+            assert ret['saltenv'] is None
 
             # Same test as above but with saltenv explicitly set
             defaults = self._get_defaults(saltenv='foo')
             ret = salt.config.apply_minion_config(defaults=defaults)
-            self.assertNotIn('environment', ret)
-            self.assertEqual(ret['saltenv'], 'foo')
+            assert 'environment' not in ret
+            assert ret['saltenv'] == 'foo'
 
 
 class APIConfigTestCase(DefaultConfigsBase, TestCase):
@@ -1751,7 +1724,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
                     RUNTIME_VARS.TMP_ROOT_DIR)
 
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['log_file'], expected)
+            assert ret['log_file'] == expected
 
     def test_api_config_pidfile_values(self):
         '''
@@ -1767,7 +1740,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
                     RUNTIME_VARS.TMP_ROOT_DIR)
 
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['pidfile'], expected)
+            assert ret['pidfile'] == expected
 
     def test_master_config_file_overrides_defaults(self):
         '''
@@ -1791,11 +1764,11 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         with patch('salt.config.client_config',
                    MagicMock(return_value=mock_master_config)):
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['rest_timeout'], 5)
-            self.assertEqual(ret['api_pidfile'], foo_dir)
-            self.assertEqual(ret['pidfile'], foo_dir)
-            self.assertEqual(ret['api_logfile'], hello_dir)
-            self.assertEqual(ret['log_file'], hello_dir)
+            assert ret['rest_timeout'] == 5
+            assert ret['api_pidfile'] == foo_dir
+            assert ret['pidfile'] == foo_dir
+            assert ret['api_logfile'] == hello_dir
+            assert ret['log_file'] == hello_dir
 
     def test_api_config_prepend_root_dirs_return(self):
         '''
@@ -1818,7 +1791,7 @@ class APIConfigTestCase(DefaultConfigsBase, TestCase):
         with patch('salt.config.client_config',
                    MagicMock(return_value=mock_master_config)):
             ret = salt.config.api_config('/some/fake/path')
-            self.assertEqual(ret['api_logfile'], mock_log)
-            self.assertEqual(ret['log_file'], mock_log)
-            self.assertEqual(ret['api_pidfile'], mock_pid)
-            self.assertEqual(ret['pidfile'], mock_pid)
+            assert ret['api_logfile'] == mock_log
+            assert ret['log_file'] == mock_log
+            assert ret['api_pidfile'] == mock_pid
+            assert ret['pidfile'] == mock_pid

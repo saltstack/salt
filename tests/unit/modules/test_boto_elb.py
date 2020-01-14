@@ -138,7 +138,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         register_result = boto_elb.register_instances(elb_name,
                                                       reservations.instances[0].id,
                                                       **conn_parameters)
-        self.assertEqual(True, register_result)
+        assert register_result is True
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
@@ -162,7 +162,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
                                    load_balancer_refreshed.instances]
 
         log.debug(load_balancer_refreshed.instances)
-        self.assertEqual([reservations.instances[0].id], registered_instance_ids)
+        assert [reservations.instances[0].id] == registered_instance_ids
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
@@ -184,7 +184,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         deregister_result = boto_elb.deregister_instances(elb_name,
                                                           reservations.instances[0].id,
                                                           **conn_parameters)
-        self.assertEqual(True, deregister_result)
+        assert deregister_result is True
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
@@ -211,7 +211,7 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         expected_instances.remove(reservations.instances[0].id)
         actual_instances = [instance.id for instance in
                             load_balancer_refreshed.instances]
-        self.assertEqual(actual_instances, expected_instances)
+        assert actual_instances == expected_instances
 
     @mock_ec2_deprecated
     @mock_elb_deprecated
@@ -241,4 +241,4 @@ class BotoElbTestCase(TestCase, LoaderModuleMockMixin):
         load_balancer_refreshed = conn_elb.get_all_load_balancers(elb_name)[0]
         actual_instances = [instance.id for instance in
                             load_balancer_refreshed.instances]
-        self.assertEqual(actual_instances, expected_instances)
+        assert actual_instances == expected_instances

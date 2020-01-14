@@ -92,12 +92,12 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
         #with patch.dict(keystore.__opts__, {'test': False}):
         with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
             with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+                assert keystore.managed(name, passphrase, entries) == state_return
 
         with patch.dict(keystore.__opts__, {'test': True}):
             with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
                 with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                    self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+                    assert keystore.managed(name, passphrase, entries) == state_return
 
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_cert_update(self):
@@ -176,13 +176,13 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(keystore.__opts__, {'test': True}):
             with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
                 with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                    self.assertDictEqual(keystore.managed(name, passphrase, entries), test_return)
+                    assert keystore.managed(name, passphrase, entries) == test_return
 
         with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
             with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
                 with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
                     with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
-                        self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+                        assert keystore.managed(name, passphrase, entries) == state_return
 
     @patch('os.path.exists', MagicMock(return_value=False))
     def test_new_file(self):
@@ -221,11 +221,11 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
             }
 
         with patch.dict(keystore.__opts__, {'test': True}):
-            self.assertDictEqual(keystore.managed(name, passphrase, entries), test_return)
+            assert keystore.managed(name, passphrase, entries) == test_return
 
         with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
             with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
-                self.assertDictEqual(keystore.managed(name, passphrase, entries), state_return)
+                assert keystore.managed(name, passphrase, entries) == state_return
 
     @patch('os.path.exists', MagicMock(return_value=True))
     def test_force_remove(self):
@@ -304,10 +304,10 @@ class KeystoreTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(keystore.__opts__, {'test': True}):
             with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
                 with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
-                    self.assertDictEqual(keystore.managed(name, passphrase, entries, force_remove=True), test_return)
+                    assert keystore.managed(name, passphrase, entries, force_remove=True) == test_return
 
         with patch.dict(keystore.__salt__, {'keystore.list': MagicMock(return_value=cert_return)}):
             with patch.dict(keystore.__salt__, {'x509.read_certificate': MagicMock(return_value=x509_return)}):
                 with patch.dict(keystore.__salt__, {'keystore.remove': MagicMock(return_value=True)}):
                     with patch.dict(keystore.__salt__, {'keystore.add': MagicMock(return_value=True)}):
-                        self.assertDictEqual(keystore.managed(name, passphrase, entries, force_remove=True), state_return)
+                        assert keystore.managed(name, passphrase, entries, force_remove=True) == state_return

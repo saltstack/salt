@@ -141,14 +141,12 @@ class GitPythonMixin(object):
               - git:
                 - master {url}
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
     def test_multiple_sources_master_dev_no_merge_lists(self):
         '''
@@ -170,15 +168,13 @@ class GitPythonMixin(object):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'dev',
              'mylist': ['dev'],
              'mydict': {'master': True,
                         'dev': True,
                         'nested_list': ['dev'],
                         'nested_dict': {'master': True, 'dev': True}}}
-        )
 
     def test_multiple_sources_dev_master_no_merge_lists(self):
         '''
@@ -200,15 +196,13 @@ class GitPythonMixin(object):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'dev': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True, 'dev': True}}}
-        )
 
     def test_multiple_sources_master_dev_merge_lists(self):
         '''
@@ -230,15 +224,13 @@ class GitPythonMixin(object):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'dev',
              'mylist': ['master', 'dev'],
              'mydict': {'master': True,
                         'dev': True,
                         'nested_list': ['master', 'dev'],
                         'nested_dict': {'master': True, 'dev': True}}}
-        )
 
     def test_multiple_sources_dev_master_merge_lists(self):
         '''
@@ -260,15 +252,13 @@ class GitPythonMixin(object):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'mylist': ['dev', 'master'],
              'mydict': {'master': True,
                         'dev': True,
                         'nested_list': ['dev', 'master'],
                         'nested_dict': {'master': True, 'dev': True}}}
-        )
 
     def test_multiple_sources_with_pillarenv(self):
         '''
@@ -286,14 +276,12 @@ class GitPythonMixin(object):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
     def test_includes_enabled(self):
         '''
@@ -313,15 +301,13 @@ class GitPythonMixin(object):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}},
              'included_pillar': True}
-        )
 
     def test_includes_disabled(self):
         '''
@@ -344,8 +330,7 @@ class GitPythonMixin(object):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'mylist': ['master'],
              'mydict': {'master': True,
@@ -353,7 +338,6 @@ class GitPythonMixin(object):
                         'nested_dict': {'master': True}},
              '_errors': ["Specified SLS 'bar' in environment 'base' is not "
                          "available on the salt master"]}
-        )
 
     def test_includes_enabled_solves___env___with_mountpoint(self):
         '''
@@ -377,15 +361,13 @@ class GitPythonMixin(object):
                   - name: webinfo
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
     def test_root_parameter(self):
         '''
@@ -408,7 +390,7 @@ class GitPythonMixin(object):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_mountpoint_parameter(self):
         '''
@@ -431,7 +413,7 @@ class GitPythonMixin(object):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_root_and_mountpoint_parameters(self):
         '''
@@ -455,7 +437,7 @@ class GitPythonMixin(object):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_all_saltenvs(self):
         '''
@@ -475,15 +457,13 @@ class GitPythonMixin(object):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'dev',
              'motd': 'The force will be with you. Always.',
              'mylist': ['dev'],
              'mydict': {'dev': True,
                         'nested_list': ['dev'],
                         'nested_dict': {'dev': True}}}
-        )
 
     def test_all_saltenvs_base(self):
         '''
@@ -502,15 +482,13 @@ class GitPythonMixin(object):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -616,7 +594,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
               - git:
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -631,7 +609,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -651,7 +629,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
               - git:
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -667,7 +645,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_withpass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_multiple_sources_master_dev_no_merge_lists(self, grains):
@@ -702,7 +680,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -721,7 +699,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -743,7 +721,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -764,7 +742,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_withpass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_multiple_sources_dev_master_no_merge_lists(self, grains):
@@ -799,7 +777,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -818,7 +796,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -840,7 +818,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -861,7 +839,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_withpass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_multiple_sources_master_dev_merge_lists(self, grains):
@@ -896,7 +874,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -915,7 +893,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -937,7 +915,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -958,7 +936,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_withpass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_multiple_sources_dev_master_merge_lists(self, grains):
@@ -993,7 +971,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1012,7 +990,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1034,7 +1012,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1055,7 +1033,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_withpass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_multiple_sources_with_pillarenv(self, grains):
@@ -1085,7 +1063,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1104,7 +1082,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1126,7 +1104,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1147,7 +1125,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_includes_enabled(self, grains):
@@ -1180,7 +1158,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1199,7 +1177,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1221,7 +1199,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1242,7 +1220,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_includes_disabled(self, grains):
@@ -1279,7 +1257,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1299,7 +1277,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1322,7 +1300,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1344,7 +1322,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_enabled_solves___env___with_mountpoint(self):
         '''
@@ -1370,15 +1348,13 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - name: webinfo
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
     @requires_system_grains
     def test_root_parameter(self, grains):
@@ -1405,7 +1381,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1425,7 +1401,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1448,7 +1424,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1470,7 +1446,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_mountpoint_parameter(self, grains):
@@ -1497,7 +1473,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1517,7 +1493,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1540,7 +1516,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1562,7 +1538,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_root_and_mountpoint_parameters(self, grains):
@@ -1590,7 +1566,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1611,7 +1587,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1635,7 +1611,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1658,7 +1634,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - passphrase: {passphrase}
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_all_saltenvs(self, grains):
@@ -1691,7 +1667,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1712,7 +1688,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1736,7 +1712,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1759,7 +1735,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_all_saltenvs_base(self, grains):
@@ -1791,7 +1767,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphraseless key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1811,7 +1787,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - pubkey: {pubkey_nopass}
                   - privkey: {privkey_nopass}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if grains['os_family'] == 'Debian':
             # passphrase-protected currently does not work here
@@ -1834,7 +1810,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with passphrase-protected key and per-repo credential options
         ret = self.get_pillar('''\
@@ -1856,7 +1832,7 @@ class TestPygit2SSH(GitPillarSSHTestBase):
                   - privkey: {privkey_nopass}
                   - passphrase: {passphrase}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -1890,7 +1866,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
               - git:
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_master_dev_no_merge_lists(self):
         '''
@@ -1921,7 +1897,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_dev_master_no_merge_lists(self):
         '''
@@ -1952,7 +1928,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_master_dev_merge_lists(self):
         '''
@@ -1983,7 +1959,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_dev_master_merge_lists(self):
         '''
@@ -2014,7 +1990,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_with_pillarenv(self):
         '''
@@ -2040,7 +2016,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_enabled(self):
         '''
@@ -2069,7 +2045,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_disabled(self):
         '''
@@ -2102,7 +2078,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_enabled_solves___env___with_mountpoint(self):
         '''
@@ -2126,15 +2102,13 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                   - name: webinfo
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
     def test_root_parameter(self):
         '''
@@ -2157,7 +2131,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_mountpoint_parameter(self):
         '''
@@ -2180,7 +2154,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_root_and_mountpoint_parameters(self):
         '''
@@ -2204,7 +2178,7 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_all_saltenvs(self):
         '''
@@ -2224,15 +2198,13 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'dev',
              'motd': 'The force will be with you. Always.',
              'mylist': ['dev'],
              'mydict': {'dev': True,
                         'nested_list': ['dev'],
                         'nested_dict': {'dev': True}}}
-        )
 
     def test_all_saltenvs_base(self):
         '''
@@ -2251,15 +2223,13 @@ class TestPygit2HTTP(GitPillarHTTPTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
 
 @skipIf(_windows_or_mac(), 'minion is windows or mac')
@@ -2303,7 +2273,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
               - git:
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2319,7 +2289,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_master_dev_no_merge_lists(self):
         '''
@@ -2354,7 +2324,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2375,7 +2345,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_dev_master_no_merge_lists(self):
         '''
@@ -2410,7 +2380,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2431,7 +2401,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_master_dev_merge_lists(self):
         '''
@@ -2466,7 +2436,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2487,7 +2457,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_dev_master_merge_lists(self):
         '''
@@ -2522,7 +2492,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - dev {url}
                 - master {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2543,7 +2513,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_multiple_sources_with_pillarenv(self):
         '''
@@ -2573,7 +2543,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - master {url}
                 - dev {url}
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2594,7 +2564,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_enabled(self):
         '''
@@ -2627,7 +2597,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_mountpoint_parameter(self):
         '''
@@ -2653,7 +2623,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_root_parameter(self):
         '''
@@ -2679,7 +2649,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2701,7 +2671,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_disabled(self):
         '''
@@ -2738,7 +2708,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - top_only {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         # Test with per-repo credential options
         ret = self.get_pillar('''\
@@ -2760,7 +2730,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - insecure_auth: True
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_includes_enabled_solves___env___with_mountpoint(self):
         '''
@@ -2793,15 +2763,13 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                   - password: {password}
                   - insecure_auth: True
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )
 
     def test_root_and_mountpoint_parameters(self):
         '''
@@ -2828,7 +2796,7 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - top_mounted {url}:
                   - env: base
             ''')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_all_saltenvs(self):
         '''
@@ -2851,15 +2819,13 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'dev',
              'motd': 'The force will be with you. Always.',
              'mylist': ['dev'],
              'mydict': {'dev': True,
                         'nested_list': ['dev'],
                         'nested_dict': {'dev': True}}}
-        )
 
     def test_all_saltenvs_base(self):
         '''
@@ -2881,12 +2847,10 @@ class TestPygit2AuthenticatedHTTP(GitPillarHTTPTestBase):
                 - __env__ {url}:
                   - mountpoint: nowhere
             ''')
-        self.assertEqual(
-            ret,
+        assert ret == \
             {'branch': 'master',
              'motd': 'The force will be with you. Always.',
              'mylist': ['master'],
              'mydict': {'master': True,
                         'nested_list': ['master'],
                         'nested_dict': {'master': True}}}
-        )

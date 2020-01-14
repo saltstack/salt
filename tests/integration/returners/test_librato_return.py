@@ -60,6 +60,6 @@ class libratoTest(ShellCase):
         Test the calculations
         '''
         results = librato_return._calculate_runtimes(MOCK_RET_OBJ['return'])
-        self.assertEqual(results['num_failed_states'], 1)
-        self.assertEqual(results['num_passed_states'], 1)
-        self.assertEqual(results['runtime'], 7.29)
+        assert results['num_failed_states'] == 1
+        assert results['num_passed_states'] == 1
+        assert results['runtime'] == 7.29

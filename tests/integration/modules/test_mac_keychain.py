@@ -65,11 +65,11 @@ class MacKeychainModuleTest(ModuleCase):
         Tests that attempts to install a certificate
         '''
         install_cert = self.run_function('keychain.install', [self.cert, self.passwd])
-        self.assertTrue(install_cert)
+        assert install_cert
 
         # check to ensure the cert was installed
         certs_list = self.run_function('keychain.list_certs')
-        self.assertIn(self.cert_alias, certs_list)
+        assert self.cert_alias in certs_list
 
     def test_mac_keychain_uninstall(self):
         '''
@@ -88,7 +88,7 @@ class MacKeychainModuleTest(ModuleCase):
 
         # check to ensure the cert was uninstalled
         try:
-            self.assertNotIn(self.cert_alias, six.text_type(certs_list))
+            assert self.cert_alias not in six.text_type(certs_list)
         except CommandExecutionError:
             self.run_function('keychain.uninstall', [self.cert_alias])
 
@@ -103,7 +103,7 @@ class MacKeychainModuleTest(ModuleCase):
             self.skipTest('Failed to install keychain')
 
         get_name = self.run_function('keychain.get_friendly_name', [self.cert, self.passwd])
-        self.assertEqual(get_name, self.cert_alias)
+        assert get_name == self.cert_alias
 
     def test_mac_keychain_get_default_keychain(self):
         '''
@@ -112,7 +112,7 @@ class MacKeychainModuleTest(ModuleCase):
         salt_get_keychain = self.run_function('keychain.get_default_keychain')
         sys_get_keychain = self.run_function('cmd.run',
                                              ['security default-keychain -d user'])
-        self.assertEqual(salt_get_keychain, sys_get_keychain)
+        assert salt_get_keychain == sys_get_keychain
 
     def test_mac_keychain_list_certs(self):
         '''
@@ -120,4 +120,4 @@ class MacKeychainModuleTest(ModuleCase):
         '''
         cert_default = 'com.apple.systemdefault'
         certs = self.run_function('keychain.list_certs')
-        self.assertIn(cert_default, certs)
+        assert cert_default in certs

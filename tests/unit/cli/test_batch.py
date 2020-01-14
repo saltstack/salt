@@ -40,7 +40,7 @@ class BatchTestCase(TestCase):
         '''
         self.batch.opts = {'batch': '2', 'timeout': 5}
         self.batch.minions = ['foo', 'bar']
-        self.assertEqual(Batch.get_bnum(self.batch), 2)
+        assert Batch.get_bnum(self.batch) == 2
 
     def test_get_bnum_int(self):
         '''
@@ -48,7 +48,7 @@ class BatchTestCase(TestCase):
         '''
         self.batch.opts = {'batch': 2, 'timeout': 5}
         self.batch.minions = ['foo', 'bar']
-        self.assertEqual(Batch.get_bnum(self.batch), 2)
+        assert Batch.get_bnum(self.batch) == 2
 
     def test_get_bnum_percentage(self):
         '''
@@ -56,7 +56,7 @@ class BatchTestCase(TestCase):
         '''
         self.batch.opts = {'batch': '50%', 'timeout': 5}
         self.batch.minions = ['foo']
-        self.assertEqual(Batch.get_bnum(self.batch), 1)
+        assert Batch.get_bnum(self.batch) == 1
 
     def test_get_bnum_high_percentage(self):
         '''
@@ -64,11 +64,11 @@ class BatchTestCase(TestCase):
         '''
         self.batch.opts = {'batch': '160%', 'timeout': 5}
         self.batch.minions = ['foo', 'bar', 'baz']
-        self.assertEqual(Batch.get_bnum(self.batch), 4)
+        assert Batch.get_bnum(self.batch) == 4
 
     def test_get_bnum_invalid_batch_data(self):
         '''
         Tests when an invalid batch value is passed
         '''
         ret = Batch.get_bnum(self.batch)
-        self.assertEqual(ret, None)
+        assert ret is None

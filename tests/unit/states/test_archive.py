@@ -160,7 +160,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], ['stdout'])
+            assert ret['changes']['extracted_files'] == ['stdout']
 
     def test_tar_bsdtar(self):
         '''
@@ -199,7 +199,7 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     options='xvzf',
                                     enforce_toplevel=False,
                                     keep=True)
-            self.assertEqual(ret['changes']['extracted_files'], ['stderr'])
+            assert ret['changes']['extracted_files'] == ['stderr']
 
     def test_extracted_when_if_missing_path_exists(self):
         '''
@@ -217,11 +217,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                 name,
                 source=source,
                 if_missing=if_missing)
-            self.assertTrue(ret['result'], ret)
-            self.assertEqual(
-                ret['comment'],
+            assert ret['result'], ret
+            assert ret['comment'] == \
                 'Path {0} exists'.format(if_missing)
-            )
 
     def test_clean_parent_conflict(self):
         '''
@@ -263,9 +261,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     clean=True,
                                     clean_parent=True,
                                     keep=True)
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(ret['comment'], ret_comment)
+            assert ret['result'] is False
+            assert ret['changes'] == {}
+            assert ret['comment'] == ret_comment
 
     def test_skip_files_list_verify_conflict(self):
         '''
@@ -308,9 +306,9 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                     skip_files_list_verify=True,
                                     skip_verify=True,
                                     keep=True)
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(ret['comment'], ret_comment)
+            assert ret['result'] is False
+            assert ret['changes'] == {}
+            assert ret['comment'] == ret_comment
 
     def test_skip_files_list_verify_success(self):
         '''
@@ -359,4 +357,4 @@ class ArchiveTestCase(TestCase, LoaderModuleMockMixin):
                                         source_hash='testhash',
                                         skip_files_list_verify=True,
                                         enforce_toplevel=False)
-                self.assertDictEqual(ret, expected_ret)
+                assert ret == expected_ret

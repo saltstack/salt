@@ -62,13 +62,13 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
             ret = docker_state.present('image:latest', force=True)
-            self.assertEqual(ret,
+            assert ret == \
                              {'changes': {},
                               'result': True,
                               'comment': "Image 'image:latest' was pulled, "
                               "but there were no changes",
                               'name': 'image:latest',
-                              })
+                              }
 
     def test_present_and_force(self):
         '''
@@ -98,7 +98,7 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(docker_state.__dict__,
                         {'__salt__': __salt__}):
             ret = docker_state.present('image:latest', force=True)
-        self.assertEqual(ret,
+        assert ret == \
                          {'changes': {
                              'Layers': {'Pulled': ['abcdefghijkl']},
                              'Status': "Image 'image:latest' was pulled",
@@ -106,4 +106,4 @@ class DockerImageTestCase(TestCase, LoaderModuleMockMixin):
                              'result': True,
                              'comment': "Image 'image:latest' was pulled",
                              'name': 'image:latest',
-                         })
+                         }

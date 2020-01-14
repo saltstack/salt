@@ -49,7 +49,7 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
             _comt = 'Postgres data directory {0} is already present'\
                 .format(self.name)
             self.ret.update({'comment': _comt, 'result': True})
-            self.assertDictEqual(postgres_initdb.present(self.name), self.ret)
+            assert postgres_initdb.present(self.name) == self.ret
 
     def test_present_non_existing_pass(self):
         '''
@@ -62,8 +62,7 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
                 _comt = 'Postgres data directory {0} is set to be initialized'\
                     .format(self.name)
                 self.ret.update({'comment': _comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_initdb.present(self.name), self.ret)
+                assert postgres_initdb.present(self.name) == self.ret
 
             with patch.dict(postgres_initdb.__opts__, {'test': False}):
                 _comt = 'Postgres data directory {0} has been initialized'\
@@ -73,8 +72,7 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': _comt,
                         'result': True,
                         'changes': _changes})
-                self.assertDictEqual(
-                    postgres_initdb.present(self.name), self.ret)
+                assert postgres_initdb.present(self.name) == self.ret
 
     def test_present_non_existing_fail(self):
         '''
@@ -90,5 +88,4 @@ class PostgresInitdbTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': _comt,
                         'result': False
                         })
-                self.assertDictEqual(
-                    postgres_initdb.present(self.name), self.ret)
+                assert postgres_initdb.present(self.name) == self.ret

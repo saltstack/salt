@@ -18,6 +18,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.glusterfs as glusterfs
 from salt.exceptions import SaltInvocationError
+import pytest
 
 
 class GlusterResults(object):
@@ -449,14 +450,13 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value=xml_peer_present)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-            self.assertDictEqual(
-                glusterfs.peer_status(),
+            assert glusterfs.peer_status() == \
                 {'uuid1': {
-                 'hostnames': ['node02', 'node02.domain.dom', '10.0.0.2']}})
+                 'hostnames': ['node02', 'node02.domain.dom', '10.0.0.2']}}
 
         mock_run = MagicMock(return_value=xml_command_success)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-            self.assertDictEqual(glusterfs.peer_status(), {})
+            assert glusterfs.peer_status() == {}
 
     # 'peer' function tests: 1
 
@@ -467,13 +467,13 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock()
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
             mock_run.return_value = xml_peer_probe_already_member
-            self.assertTrue(glusterfs.peer('salt'))
+            assert glusterfs.peer('salt')
 
             mock_run.return_value = xml_peer_probe_localhost
-            self.assertTrue(glusterfs.peer('salt'))
+            assert glusterfs.peer('salt')
 
             mock_run.return_value = xml_peer_probe_fail_cant_connect
-            self.assertFalse(glusterfs.peer('salt'))
+            assert not glusterfs.peer('salt')
 
     # 'create_volume' function tests: 1
 
@@ -483,42 +483,38 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value=xml_command_success)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-            self.assertRaises(
-                SaltInvocationError,
-                glusterfs.create_volume,
-                'newvolume',
+            with pytest.raises(SaltInvocationError):
+                glusterfs.create_volume('newvolume',
                 'host1:brick')
 
-            self.assertRaises(
-                SaltInvocationError,
-                glusterfs.create_volume,
-                'newvolume',
+            with pytest.raises(SaltInvocationError):
+                glusterfs.create_volume('newvolume',
                 'host1/brick')
 
-            self.assertFalse(mock_run.called)
+            assert not mock_run.called
 
             mock_start_volume = MagicMock(return_value=True)
             with patch.object(glusterfs, 'start_volume', mock_start_volume):
                 # Create, do not start
-                self.assertTrue(glusterfs.create_volume('newvolume',
-                                                        'host1:/brick'))
-                self.assertFalse(mock_start_volume.called)
+                assert glusterfs.create_volume('newvolume',
+                                                        'host1:/brick')
+                assert not mock_start_volume.called
 
                 # Create and start
-                self.assertTrue(glusterfs.create_volume('newvolume',
+                assert glusterfs.create_volume('newvolume',
                                                         'host1:/brick',
-                                                        start=True))
-                self.assertTrue(mock_start_volume.called)
+                                                        start=True)
+                assert mock_start_volume.called
 
                 mock_start_volume.return_value = False
                 # Create and fail start
-                self.assertFalse(glusterfs.create_volume('newvolume',
+                assert not glusterfs.create_volume('newvolume',
                                                          'host1:/brick',
-                                                         start=True))
+                                                         start=True)
 
             mock_run.return_value = xml_command_fail
-            self.assertFalse(glusterfs.create_volume('newvolume', 'host1:/brick',
-                             True, True, True, 'tcp', True))
+            assert not glusterfs.create_volume('newvolume', 'host1:/brick',
+                             True, True, True, 'tcp', True)
 
     # 'list_volumes' function tests: 1
 
@@ -528,12 +524,12 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=xml_volume_absent)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(glusterfs.list_volumes(), [])
+            assert glusterfs.list_volumes() == []
 
         mock = MagicMock(return_value=xml_volume_present)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(glusterfs.list_volumes(),
-                                 ['Newvolume1', 'Newvolume2'])
+            assert glusterfs.list_volumes() == \
+                                 ['Newvolume1', 'Newvolume2']
 
     # 'status' function tests: 1
 
@@ -543,7 +539,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value=xml_command_fail)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-            self.assertIsNone(glusterfs.status('myvol1'))
+            assert glusterfs.status('myvol1') is None
 
         res = {'bricks': {
             'node01:/tmp/foo': {
@@ -574,7 +570,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 'status': '0'}}}
         mock = MagicMock(return_value=xml_volume_status)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(glusterfs.status('myvol1'), res)
+            assert glusterfs.status('myvol1') == res
 
     # 'start_volume' function tests: 1
 
@@ -606,7 +602,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
                 'typeStr': 'Distribute'}}
         mock = MagicMock(return_value=xml_volume_info_running)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(glusterfs.info('myvol1'), res)
+            assert glusterfs.info('myvol1') == res
 
     def test_start_volume(self):
         '''
@@ -617,30 +613,24 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(glusterfs, 'info', mock_info):
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertEqual(glusterfs.start_volume('Newvolume1'), True)
-                self.assertEqual(glusterfs.start_volume('nonExisting'), False)
+                assert glusterfs.start_volume('Newvolume1') is True
+                assert glusterfs.start_volume('nonExisting') is False
             mock_run = MagicMock(return_value=xml_command_fail)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertEqual(glusterfs.start_volume('Newvolume1'), False)
+                assert glusterfs.start_volume('Newvolume1') is False
 
         # Started volume
         mock_info = MagicMock(return_value={'Newvolume1': {'status': '1'}})
         with patch.object(glusterfs, 'info', mock_info):
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertEqual(
-                    glusterfs.start_volume('Newvolume1', force=True),
-                    True
-                )
+                assert glusterfs.start_volume('Newvolume1', force=True) is True
             mock_run = MagicMock(return_value=xml_command_fail)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
                 # cmd.run should not be called for already running volume:
-                self.assertEqual(glusterfs.start_volume('Newvolume1'), True)
+                assert glusterfs.start_volume('Newvolume1') is True
                 # except when forcing:
-                self.assertEqual(
-                    glusterfs.start_volume('Newvolume1', force=True),
-                    False
-                )
+                assert glusterfs.start_volume('Newvolume1', force=True) is False
 
     # 'stop_volume' function tests: 1
 
@@ -653,23 +643,23 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(glusterfs, 'info', mock_info):
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertEqual(glusterfs.stop_volume('Newvolume1'), True)
-                self.assertEqual(glusterfs.stop_volume('nonExisting'), False)
+                assert glusterfs.stop_volume('Newvolume1') is True
+                assert glusterfs.stop_volume('nonExisting') is False
             mock_run = MagicMock(return_value=xml_command_fail)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
                 # cmd.run should not be called for already stopped volume:
-                self.assertEqual(glusterfs.stop_volume('Newvolume1'), True)
+                assert glusterfs.stop_volume('Newvolume1') is True
 
         # Started volume
         mock_info = MagicMock(return_value={'Newvolume1': {'status': '1'}})
         with patch.object(glusterfs, 'info', mock_info):
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertEqual(glusterfs.stop_volume('Newvolume1'), True)
-                self.assertEqual(glusterfs.stop_volume('nonExisting'), False)
+                assert glusterfs.stop_volume('Newvolume1') is True
+                assert glusterfs.stop_volume('nonExisting') is False
             mock_run = MagicMock(return_value=xml_command_fail)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertEqual(glusterfs.stop_volume('Newvolume1'), False)
+                assert glusterfs.stop_volume('Newvolume1') is False
 
     # 'delete_volume' function tests: 1
 
@@ -680,31 +670,31 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_info = MagicMock(return_value={'Newvolume1': {'status': '1'}})
         with patch.object(glusterfs, 'info', mock_info):
             # volume doesn't exist
-            self.assertFalse(glusterfs.delete_volume('Newvolume3'))
+            assert not glusterfs.delete_volume('Newvolume3')
 
             mock_stop_volume = MagicMock(return_value=True)
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
                 with patch.object(glusterfs, 'stop_volume', mock_stop_volume):
                     # volume exists, should not be stopped, and is started
-                    self.assertFalse(glusterfs.delete_volume('Newvolume1',
-                                                             False))
-                    self.assertFalse(mock_run.called)
-                    self.assertFalse(mock_stop_volume.called)
+                    assert not glusterfs.delete_volume('Newvolume1',
+                                                             False)
+                    assert not mock_run.called
+                    assert not mock_stop_volume.called
 
                     # volume exists, should be stopped, and is started
-                    self.assertTrue(glusterfs.delete_volume('Newvolume1'))
-                    self.assertTrue(mock_run.called)
-                    self.assertTrue(mock_stop_volume.called)
+                    assert glusterfs.delete_volume('Newvolume1')
+                    assert mock_run.called
+                    assert mock_stop_volume.called
 
         # volume exists and isn't started
         mock_info = MagicMock(return_value={'Newvolume1': {'status': '2'}})
         with patch.object(glusterfs, 'info', mock_info):
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-                self.assertTrue(glusterfs.delete_volume('Newvolume1'))
+                assert glusterfs.delete_volume('Newvolume1')
                 mock_run.return_value = xml_command_fail
-                self.assertFalse(glusterfs.delete_volume('Newvolume1'))
+                assert not glusterfs.delete_volume('Newvolume1')
 
     # 'add_volume_bricks' function tests: 1
 
@@ -725,24 +715,24 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
             mock_run = MagicMock(return_value=xml_command_success)
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
                 # Volume does not exist
-                self.assertFalse(glusterfs.add_volume_bricks('nonExisting',
-                                                             ['bricks']))
+                assert not glusterfs.add_volume_bricks('nonExisting',
+                                                             ['bricks'])
                 # Brick already exists
-                self.assertTrue(glusterfs.add_volume_bricks('Newvolume1',
-                                                       ['host:/path2']))
+                assert glusterfs.add_volume_bricks('Newvolume1',
+                                                       ['host:/path2'])
                 # Already existing brick as a string
-                self.assertTrue(glusterfs.add_volume_bricks('Newvolume1',
-                                                            'host:/path2'))
-                self.assertFalse(mock_run.called)
+                assert glusterfs.add_volume_bricks('Newvolume1',
+                                                            'host:/path2')
+                assert not mock_run.called
                 # A new brick:
-                self.assertTrue(glusterfs.add_volume_bricks('Newvolume1',
-                                                            ['host:/new1']))
-                self.assertTrue(mock_run.called)
+                assert glusterfs.add_volume_bricks('Newvolume1',
+                                                            ['host:/new1'])
+                assert mock_run.called
 
                 # Gluster call fails
                 mock_run.return_value = xml_command_fail
-                self.assertFalse(glusterfs.add_volume_bricks('Newvolume1',
-                                                             ['new:/path']))
+                assert not glusterfs.add_volume_bricks('Newvolume1',
+                                                             ['new:/path'])
 
     # 'get_op_version' function tests: 1
 
@@ -754,12 +744,12 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         # Test with xml output structure from v3.7
         mock_run = MagicMock(return_value=xml_op_version_37)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-            self.assertEqual(glusterfs.get_op_version('test'), '30707')
+            assert glusterfs.get_op_version('test') == '30707'
 
         # Test with xml output structure from v3.12
         mock_run = MagicMock(return_value=xml_op_version_312)
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_run}):
-            self.assertEqual(glusterfs.get_op_version('test'), '30707')
+            assert glusterfs.get_op_version('test') == '30707'
 
     # 'get_max_op_version' function tests: 1
 
@@ -772,11 +762,11 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_version = MagicMock(return_value='glusterfs 3.9.1')
 
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_version}):
-            self.assertFalse(glusterfs.get_max_op_version()[0])
+            assert not glusterfs.get_max_op_version()[0]
 
         with patch.object(glusterfs, '_get_version', return_value=(3, 12, 0)):
             with patch.dict(glusterfs.__salt__, {'cmd.run': mock_xml}):
-                self.assertEqual(glusterfs.get_max_op_version(), '31200')
+                assert glusterfs.get_max_op_version() == '31200'
 
     # 'set_op_version' function tests: 1
 
@@ -788,7 +778,7 @@ class GlusterfsTestCase(TestCase, LoaderModuleMockMixin):
         mock_success = MagicMock(return_value=xml_set_op_version_success)
 
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_failure}):
-            self.assertFalse(glusterfs.set_op_version(30707)[0])
+            assert not glusterfs.set_op_version(30707)[0]
 
         with patch.dict(glusterfs.__salt__, {'cmd.run': mock_success}):
-            self.assertEqual(glusterfs.set_op_version(31200), 'Set volume successful')
+            assert glusterfs.set_op_version(31200) == 'Set volume successful'

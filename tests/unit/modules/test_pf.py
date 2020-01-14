@@ -31,7 +31,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(pf.enable()['changes'])
+            assert pf.enable()['changes']
 
     def test_enable_when_enabled(self):
         '''
@@ -42,7 +42,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 1
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertFalse(pf.enable()['changes'])
+            assert not pf.enable()['changes']
 
     def test_disable_when_enabled(self):
         '''
@@ -53,7 +53,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(pf.disable()['changes'])
+            assert pf.disable()['changes']
 
     def test_disable_when_disabled(self):
         '''
@@ -64,7 +64,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 1
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertFalse(pf.disable()['changes'])
+            assert not pf.disable()['changes']
 
     def test_loglevel(self):
         '''
@@ -77,7 +77,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             res = pf.loglevel('crit')
             mock_cmd.assert_called_once_with('pfctl -x crit',
                     output_loglevel='trace', python_shell=False)
-            self.assertTrue(res['changes'])
+            assert res['changes']
 
     def test_load(self):
         '''
@@ -90,7 +90,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             res = pf.load()
             mock_cmd.assert_called_once_with(['pfctl', '-f', '/etc/pf.conf'],
                     output_loglevel='trace', python_shell=False)
-            self.assertTrue(res['changes'])
+            assert res['changes']
 
     def test_load_noop(self):
         '''
@@ -103,7 +103,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             res = pf.load(noop=True)
             mock_cmd.assert_called_once_with(['pfctl', '-f', '/etc/pf.conf', '-n'],
                     output_loglevel='trace', python_shell=False)
-            self.assertFalse(res['changes'])
+            assert not res['changes']
 
     def test_flush(self):
         '''
@@ -117,7 +117,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             res = pf.flush('info')
             mock_cmd.assert_called_once_with('pfctl -v -F info',
                     output_loglevel='trace', python_shell=False)
-            self.assertTrue(res['changes'])
+            assert res['changes']
 
     def test_flush_capital(self):
         '''
@@ -131,7 +131,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             res = pf.flush('tables')
             mock_cmd.assert_called_once_with('pfctl -v -F Tables',
                     output_loglevel='trace', python_shell=False)
-            self.assertTrue(res['changes'])
+            assert res['changes']
 
     def test_flush_without_changes(self):
         '''
@@ -142,7 +142,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertFalse(pf.flush('tables')['changes'])
+            assert not pf.flush('tables')['changes']
 
     def test_table(self):
         '''
@@ -153,7 +153,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(pf.table('flush', table='bad_hosts')['changes'])
+            assert pf.table('flush', table='bad_hosts')['changes']
 
     def test_table_expire(self):
         '''
@@ -164,7 +164,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(pf.table('expire', table='bad_hosts', number=300)['changes'])
+            assert pf.table('expire', table='bad_hosts', number=300)['changes']
 
     def test_table_add_addresses(self):
         '''
@@ -175,7 +175,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(pf.table('add', table='bad_hosts', addresses=['1.2.3.4', '5.6.7.8'])['changes'])
+            assert pf.table('add', table='bad_hosts', addresses=['1.2.3.4', '5.6.7.8'])['changes']
 
     def test_table_test_address(self):
         '''
@@ -186,7 +186,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(pf.table('test', table='bad_hosts', addresses=['1.2.3.4'])['matches'])
+            assert pf.table('test', table='bad_hosts', addresses=['1.2.3.4'])['matches']
 
     def test_table_no_changes(self):
         '''
@@ -197,7 +197,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertFalse(pf.table('expire', table='bad_hosts', number=300)['changes'])
+            assert not pf.table('expire', table='bad_hosts', number=300)['changes']
 
     def test_table_show(self):
         '''
@@ -209,7 +209,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         expected = ['1.2.3.4', '5.6.7.8']
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertListEqual(pf.table('show', table='bad_hosts')['comment'], expected)
+            assert pf.table('show', table='bad_hosts')['comment'] == expected
 
     def test_show(self):
         '''
@@ -221,7 +221,7 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
         expected = ['block return', 'pass']
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(pf.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertListEqual(pf.show('rules')['comment'], expected)
+            assert pf.show('rules')['comment'] == expected
 
     def test_show_capital(self):
         '''
@@ -235,4 +235,4 @@ class PfTestCase(TestCase, LoaderModuleMockMixin):
             res = pf.show('tables')
             mock_cmd.assert_called_once_with('pfctl -s Tables',
                     output_loglevel='trace', python_shell=False)
-            self.assertFalse(res['changes'])
+            assert not res['changes']

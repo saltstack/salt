@@ -23,6 +23,7 @@ import salt.utils.platform
 import salt.transport.client
 import salt.modules.cp as cp
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class CpTestCase(TestCase, LoaderModuleMockMixin):
@@ -43,9 +44,8 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         saltenv = 'base'
         template = 'biscuits'
         ret = (path, dest)
-        self.assertRaises(CommandExecutionError,
-                          cp._render_filenames,
-                          path, dest, saltenv, template)
+        with pytest.raises(CommandExecutionError):
+            cp._render_filenames(path, dest, saltenv, template)
 
     def test__render_filenames_render_failed(self):
         '''
@@ -61,9 +61,8 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(templates.TEMPLATE_REGISTRY,
                         {'jinja': mock_jinja}):
             with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
-                self.assertRaises(CommandExecutionError,
-                                  cp._render_filenames,
-                                  path, dest, saltenv, template)
+                with pytest.raises(CommandExecutionError):
+                    cp._render_filenames(path, dest, saltenv, template)
 
     def test__render_filenames_success(self):
         '''
@@ -80,8 +79,8 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(templates.TEMPLATE_REGISTRY,
                         {'jinja': mock_jinja}):
             with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
-                self.assertEqual(cp._render_filenames(
-                                 path, dest, saltenv, template), ret)
+                assert cp._render_filenames(
+                                 path, dest, saltenv, template) == ret
 
     def test_get_file_not_found(self):
         '''
@@ -91,7 +90,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
             path = 'salt://saltines'
             dest = '/srv/salt/cheese'
             ret = ''
-            self.assertEqual(cp.get_file(path, dest), ret)
+            assert cp.get_file(path, dest) == ret
 
     def test_get_file_str_success(self):
         '''
@@ -105,7 +104,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.files.fopen', mock_open(read_data=file_data)):
             with patch('salt.modules.cp.cache_file',
                        MagicMock(return_value=dest)):
-                self.assertEqual(cp.get_file_str(path, dest), ret)
+                assert cp.get_file_str(path, dest) == ret
 
     def test_push_non_absolute_path(self):
         '''
@@ -114,7 +113,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         path = '../saltines'
         ret = False
 
-        self.assertEqual(cp.push(path), ret)
+        assert cp.push(path) == ret
 
     def test_push_dir_non_absolute_path(self):
         '''
@@ -123,7 +122,7 @@ class CpTestCase(TestCase, LoaderModuleMockMixin):
         path = '../saltines'
         ret = False
 
-        self.assertEqual(cp.push_dir(path), ret)
+        assert cp.push_dir(path) == ret
 
     def test_push(self):
         '''

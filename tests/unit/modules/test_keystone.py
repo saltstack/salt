@@ -440,16 +440,16 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it create EC2-compatible credentials for user per tenant
         '''
-        self.assertDictEqual(keystone.ec2_credentials_create(),
-                             {'Error': 'Could not resolve User ID'})
+        assert keystone.ec2_credentials_create() == \
+                             {'Error': 'Could not resolve User ID'}
 
-        self.assertDictEqual(keystone.ec2_credentials_create(user_id='salt'),
-                             {'Error': 'Could not resolve Tenant ID'})
+        assert keystone.ec2_credentials_create(user_id='salt') == \
+                             {'Error': 'Could not resolve Tenant ID'}
 
-        self.assertDictEqual(keystone.ec2_credentials_create(user_id='salt',
-                                                             tenant_id='72278'),
+        assert keystone.ec2_credentials_create(user_id='salt',
+                                                             tenant_id='72278') == \
                              {'access': '', 'tenant_id': '72278', 'secret': '',
-                              'user_id': 'salt'})
+                              'user_id': 'salt'}
 
     # 'ec2_credentials_delete' function tests: 1
 
@@ -457,12 +457,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete EC2-compatible credentials
         '''
-        self.assertDictEqual(keystone.ec2_credentials_delete(),
-                             {'Error': 'Could not resolve User ID'})
+        assert keystone.ec2_credentials_delete() == \
+                             {'Error': 'Could not resolve User ID'}
 
-        self.assertEqual(keystone.ec2_credentials_delete(user_id='salt',
-                                                         access_key='72278'),
-                         'ec2 key "72278" deleted under user id "salt"')
+        assert keystone.ec2_credentials_delete(user_id='salt',
+                                                         access_key='72278') == \
+                         'ec2 key "72278" deleted under user id "salt"'
 
     # 'ec2_credentials_get' function tests: 1
 
@@ -471,17 +471,17 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return ec2_credentials for a user
         (keystone ec2-credentials-get)
         '''
-        self.assertDictEqual(keystone.ec2_credentials_get(),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.ec2_credentials_get() == \
+                             {'Error': 'Unable to resolve user id'}
 
-        self.assertDictEqual(keystone.ec2_credentials_get(user_id='salt'),
-                             {'Error': 'Access key is required'})
+        assert keystone.ec2_credentials_get(user_id='salt') == \
+                             {'Error': 'Access key is required'}
 
-        self.assertDictEqual(keystone.ec2_credentials_get(user_id='salt',
+        assert keystone.ec2_credentials_get(user_id='salt',
                                                           access='72278',
-                                                          profile='openstack1'),
+                                                          profile='openstack1') == \
                              {'salt': {'access': '72278', 'secret': '',
-                                       'tenant': '', 'user_id': 'salt'}})
+                                       'tenant': '', 'user_id': 'salt'}}
 
     # 'ec2_credentials_list' function tests: 1
 
@@ -490,13 +490,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of ec2_credentials
         for a specific user (keystone ec2-credentials-list)
         '''
-        self.assertDictEqual(keystone.ec2_credentials_list(),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.ec2_credentials_list() == \
+                             {'Error': 'Unable to resolve user id'}
 
-        self.assertDictEqual(keystone.ec2_credentials_list
-                             (user_id='salt', profile='openstack1'),
+        assert keystone.ec2_credentials_list(user_id='salt', profile='openstack1') == \
                              {'salt': {'access': '', 'secret': '',
-                                       'tenant_id': '', 'user_id': 'salt'}})
+                                       'tenant_id': '', 'user_id': 'salt'}}
 
     # 'endpoint_get' function tests: 1
 
@@ -504,27 +503,27 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a specific endpoint (keystone endpoint-get)
         '''
-        self.assertDictEqual(keystone.endpoint_get('nova',
+        assert keystone.endpoint_get('nova',
                                                    'RegionOne',
-                                                   profile='openstack'),
-                             {'Error': 'Could not find the specified service'})
+                                                   profile='openstack') == \
+                             {'Error': 'Could not find the specified service'}
 
         ret = {'Error': 'Could not find endpoint for the specified service'}
         MockServices.flag = 1
-        self.assertDictEqual(keystone.endpoint_get('iptables',
+        assert keystone.endpoint_get('iptables',
                                                    'RegionOne',
-                                                   profile='openstack'), ret)
+                                                   profile='openstack') == ret
 
         MockServices.flag = 0
-        self.assertDictEqual(keystone.endpoint_get('iptables',
+        assert keystone.endpoint_get('iptables',
                                                    'RegionOne',
-                                                   profile='openstack'),
+                                                   profile='openstack') == \
                              {'adminurl': 'adminurl',
                               'id': '007',
                               'internalurl': 'internalurl',
                               'publicurl': 'publicurl',
                               'region': 'RegionOne',
-                              'service_id': '117'})
+                              'service_id': '117'}
 
     # 'endpoint_list' function tests: 1
 
@@ -533,13 +532,13 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of available endpoints
         (keystone endpoints-list)
         '''
-        self.assertDictEqual(keystone.endpoint_list(profile='openstack1'),
+        assert keystone.endpoint_list(profile='openstack1') == \
                              {'007': {'adminurl': 'adminurl',
                                       'id': '007',
                                       'internalurl': 'internalurl',
                                       'publicurl': 'publicurl',
                                       'region': 'RegionOne',
-                                      'service_id': '117'}})
+                                      'service_id': '117'}}
 
     # 'endpoint_create' function tests: 1
 
@@ -547,21 +546,21 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it create an endpoint for an Openstack service
         '''
-        self.assertDictEqual(keystone.endpoint_create('nova'),
-                             {'Error': 'Could not find the specified service'})
+        assert keystone.endpoint_create('nova') == \
+                             {'Error': 'Could not find the specified service'}
 
         MockServices.flag = 2
-        self.assertDictEqual(keystone.endpoint_create('iptables',
+        assert keystone.endpoint_create('iptables',
                                                       'http://public/url',
                                                       'http://internal/url',
                                                       'http://adminurl/url',
-                                                      'RegionOne'),
+                                                      'RegionOne') == \
                              {'adminurl': 'adminurl',
                               'id': '007',
                               'internalurl': 'internalurl',
                               'publicurl': 'publicurl',
                               'region': 'RegionOne',
-                              'service_id': '117'})
+                              'service_id': '117'}
 
     # 'endpoint_delete' function tests: 1
 
@@ -570,11 +569,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it delete an endpoint for an Openstack service
         '''
         ret = {'Error': 'Could not find any endpoints for the service'}
-        self.assertDictEqual(keystone.endpoint_delete('nova', 'RegionOne'), ret)
+        assert keystone.endpoint_delete('nova', 'RegionOne') == ret
 
         with patch.object(keystone, 'endpoint_get',
                           MagicMock(side_effect=[{'id': '117'}, None])):
-            self.assertTrue(keystone.endpoint_delete('iptables', 'RegionOne'))
+            assert keystone.endpoint_delete('iptables', 'RegionOne')
 
     # 'role_create' function tests: 1
 
@@ -582,11 +581,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it create named role
         '''
-        self.assertDictEqual(keystone.role_create('nova'),
-                             {'Error': 'Role "nova" already exists'})
+        assert keystone.role_create('nova') == \
+                             {'Error': 'Role "nova" already exists'}
 
-        self.assertDictEqual(keystone.role_create('iptables'),
-                             {'Error': 'Unable to resolve role id'})
+        assert keystone.role_create('iptables') == \
+                             {'Error': 'Unable to resolve role id'}
 
     # 'role_delete' function tests: 1
 
@@ -594,11 +593,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete a role (keystone role-delete)
         '''
-        self.assertDictEqual(keystone.role_delete(),
-                             {'Error': 'Unable to resolve role id'})
+        assert keystone.role_delete() == \
+                             {'Error': 'Unable to resolve role id'}
 
-        self.assertEqual(keystone.role_delete('iptables'),
-                         'Role ID iptables deleted')
+        assert keystone.role_delete('iptables') == \
+                         'Role ID iptables deleted'
 
     # 'role_get' function tests: 1
 
@@ -606,11 +605,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a specific roles (keystone role-get)
         '''
-        self.assertDictEqual(keystone.role_get(),
-                             {'Error': 'Unable to resolve role id'})
+        assert keystone.role_get() == \
+                             {'Error': 'Unable to resolve role id'}
 
-        self.assertDictEqual(keystone.role_get(name='nova'),
-                             {'nova': {'id': '113', 'name': 'nova'}})
+        assert keystone.role_get(name='nova') == \
+                             {'nova': {'id': '113', 'name': 'nova'}}
 
     # 'role_list' function tests: 1
 
@@ -618,9 +617,9 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a list of available roles (keystone role-list)
         '''
-        self.assertDictEqual(keystone.role_list(),
+        assert keystone.role_list() == \
                              {'nova': {'id': '113', 'name': 'nova', 'tenant_id':
-                              'a1a1', 'user_id': '446'}})
+                              'a1a1', 'user_id': '446'}}
 
     # 'service_create' function tests: 1
 
@@ -629,12 +628,12 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it add service to Keystone service catalog
         '''
         MockServices.flag = 2
-        self.assertDictEqual(keystone.service_create('nova', 'compute',
-                                                     'OpenStack Service'),
+        assert keystone.service_create('nova', 'compute',
+                                                     'OpenStack Service') == \
                              {'iptables': {'description': 'description',
                                            'id': '005',
                                            'name': 'iptables',
-                                           'type': 'type'}})
+                                           'type': 'type'}}
 
     # 'service_delete' function tests: 1
 
@@ -642,8 +641,8 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete a service from Keystone service catalog
         '''
-        self.assertEqual(keystone.service_delete('iptables'),
-                         'Keystone service ID "iptables" deleted')
+        assert keystone.service_delete('iptables') == \
+                         'Keystone service ID "iptables" deleted'
 
     # 'service_get' function tests: 1
 
@@ -652,15 +651,15 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of available services (keystone services-list)
         '''
         MockServices.flag = 0
-        self.assertDictEqual(keystone.service_get(),
-                             {'Error': 'Unable to resolve service id'})
+        assert keystone.service_get() == \
+                             {'Error': 'Unable to resolve service id'}
 
         MockServices.flag = 2
-        self.assertDictEqual(keystone.service_get(service_id='c965'),
+        assert keystone.service_get(service_id='c965') == \
                              {'iptables': {'description': 'description',
                                            'id': 'c965',
                                            'name': 'iptables',
-                                           'type': 'type'}})
+                                           'type': 'type'}}
 
     # 'service_list' function tests: 1
 
@@ -669,10 +668,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of available services (keystone services-list)
         '''
         MockServices.flag = 0
-        self.assertDictEqual(keystone.service_list(profile='openstack1'),
+        assert keystone.service_list(profile='openstack1') == \
                              {'iptables': {'description': 'description',
                                            'id': '117', 'name': 'iptables',
-                                           'type': 'type'}})
+                                           'type': 'type'}}
 
     # 'tenant_create' function tests: 1
 
@@ -680,10 +679,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it create a keystone tenant
         '''
-        self.assertDictEqual(keystone.tenant_create('nova'),
+        assert keystone.tenant_create('nova') == \
                              {'nova': {'description': 'description',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True'}}
 
     # 'tenant_delete' function tests: 1
 
@@ -691,11 +690,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete a tenant (keystone tenant-delete)
         '''
-        self.assertDictEqual(keystone.tenant_delete(),
-                             {'Error': 'Unable to resolve tenant id'})
+        assert keystone.tenant_delete() == \
+                             {'Error': 'Unable to resolve tenant id'}
 
-        self.assertEqual(keystone.tenant_delete('nova'),
-                         'Tenant ID nova deleted')
+        assert keystone.tenant_delete('nova') == \
+                         'Tenant ID nova deleted'
 
     # 'tenant_get' function tests: 1
 
@@ -703,13 +702,13 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a specific tenants (keystone tenant-get)
         '''
-        self.assertDictEqual(keystone.tenant_get(),
-                             {'Error': 'Unable to resolve tenant id'})
+        assert keystone.tenant_get() == \
+                             {'Error': 'Unable to resolve tenant id'}
 
-        self.assertDictEqual(keystone.tenant_get(tenant_id='446'),
+        assert keystone.tenant_get(tenant_id='446') == \
                              {'nova': {'description': 'description',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True'}}
 
     # 'tenant_list' function tests: 1
 
@@ -717,10 +716,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a list of available tenants (keystone tenants-list)
         '''
-        self.assertDictEqual(keystone.tenant_list(),
+        assert keystone.tenant_list() == \
                              {'nova': {'description': 'description',
                                        'id': '446', 'name': 'nova',
-                                       'enabled': 'True'}})
+                                       'enabled': 'True'}}
 
     # 'tenant_update' function tests: 1
 
@@ -728,8 +727,8 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it update a tenant's information (keystone tenant-update)
         '''
-        self.assertDictEqual(keystone.tenant_update(),
-                             {'Error': 'Unable to resolve tenant id'})
+        assert keystone.tenant_update() == \
+                             {'Error': 'Unable to resolve tenant id'}
 
     # 'token_get' function tests: 1
 
@@ -737,10 +736,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return the configured tokens (keystone token-get)
         '''
-        self.assertDictEqual(keystone.token_get(), {'expires': 'No',
+        assert keystone.token_get() == {'expires': 'No',
                                                     'id': '446',
                                                     'tenant_id': 'ae04',
-                                                    'user_id': 'admin'})
+                                                    'user_id': 'admin'}
 
     # 'user_list' function tests: 1
 
@@ -748,13 +747,13 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a list of available users (keystone user-list)
         '''
-        self.assertDictEqual(keystone.user_list(),
+        assert keystone.user_list() == \
                              {'nova': {'name': 'nova',
                                        'tenant_id': 'a1a1',
                                        'enabled': 'True',
                                        'id': '446',
                                        'password': 'salt',
-                                       'email': 'salt@saltstack.com'}})
+                                       'email': 'salt@saltstack.com'}}
 
     # 'user_get' function tests: 1
 
@@ -762,27 +761,27 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return a specific users (keystone user-get)
         '''
-        self.assertDictEqual(keystone.user_get(),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.user_get() == \
+                             {'Error': 'Unable to resolve user id'}
 
-        self.assertDictEqual(keystone.user_get(user_id='446'),
+        assert keystone.user_get(user_id='446') == \
                              {'nova': {'name': 'nova', 'tenant_id': 'a1a1',
                                        'enabled': 'True', 'id': '446',
                                        'password': 'salt',
-                                       'email': 'salt@saltstack.com'}})
+                                       'email': 'salt@saltstack.com'}}
     # 'user_create' function tests: 1
 
     def test_user_create(self):
         '''
         Test if it create a user (keystone user-create)
         '''
-        self.assertDictEqual(keystone.user_create(name='nova', password='salt',
+        assert keystone.user_create(name='nova', password='salt',
                                                   email='salt@saltstack.com',
-                                                  tenant_id='a1a1'),
+                                                  tenant_id='a1a1') == \
                              {'nova': {'name': 'nova', 'tenant_id': 'a1a1',
                                        'enabled': 'True', 'id': '446',
                                        'password': 'salt',
-                                       'email': 'salt@saltstack.com'}})
+                                       'email': 'salt@saltstack.com'}}
 
     # 'user_delete' function tests: 1
 
@@ -790,11 +789,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete a user (keystone user-delete)
         '''
-        self.assertDictEqual(keystone.user_delete(),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.user_delete() == \
+                             {'Error': 'Unable to resolve user id'}
 
-        self.assertEqual(keystone.user_delete('nova'),
-                         'User ID nova deleted')
+        assert keystone.user_delete('nova') == \
+                         'User ID nova deleted'
 
     # 'user_update' function tests: 1
 
@@ -802,11 +801,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it update a user's information (keystone user-update)
         '''
-        self.assertDictEqual(keystone.user_update(),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.user_update() == \
+                             {'Error': 'Unable to resolve user id'}
 
-        self.assertEqual(keystone.user_update('nova'),
-                         'Info updated for user ID nova')
+        assert keystone.user_update('nova') == \
+                         'Info updated for user ID nova'
 
     # 'user_verify_password' function tests: 1
 
@@ -816,15 +815,15 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='http://127.0.0.1:35357/v2.0')
         with patch.dict(keystone.__salt__, {'config.option': mock}):
-            self.assertDictEqual(keystone.user_verify_password(),
-                                 {'Error': 'Unable to resolve user name'})
+            assert keystone.user_verify_password() == \
+                                 {'Error': 'Unable to resolve user name'}
 
-            self.assertTrue(keystone.user_verify_password(user_id='446',
-                                                          name='nova'))
+            assert keystone.user_verify_password(user_id='446',
+                                                          name='nova')
 
             MockClient.flag = 1
-            self.assertFalse(keystone.user_verify_password(user_id='446',
-                                                           name='nova'))
+            assert not keystone.user_verify_password(user_id='446',
+                                                           name='nova')
 
     # 'user_password_update' function tests: 1
 
@@ -832,11 +831,11 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it update a user's password (keystone user-password-update)
         '''
-        self.assertDictEqual(keystone.user_password_update(),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.user_password_update() == \
+                             {'Error': 'Unable to resolve user id'}
 
-        self.assertEqual(keystone.user_password_update('nova'),
-                         'Password updated for user ID nova')
+        assert keystone.user_password_update('nova') == \
+                         'Password updated for user ID nova'
 
     # 'user_role_add' function tests: 1
 
@@ -844,22 +843,22 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it add role for user in tenant (keystone user-role-add)
         '''
-        self.assertEqual(keystone.user_role_add(user='nova', tenant='nova',
-                                                role='nova'),
-                         '"nova" role added for user "nova" for "nova" tenant/project')
+        assert keystone.user_role_add(user='nova', tenant='nova',
+                                                role='nova') == \
+                         '"nova" role added for user "nova" for "nova" tenant/project'
 
         MockRoles.flag = 1
-        self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova',
-                                                    role='nova'),
-                             {'Error': 'Unable to resolve role id'})
+        assert keystone.user_role_add(user='nova', tenant='nova',
+                                                    role='nova') == \
+                             {'Error': 'Unable to resolve role id'}
 
         MockTenants.flag = 1
-        self.assertDictEqual(keystone.user_role_add(user='nova', tenant='nova'),
-                             {'Error': 'Unable to resolve tenant/project id'})
+        assert keystone.user_role_add(user='nova', tenant='nova') == \
+                             {'Error': 'Unable to resolve tenant/project id'}
 
         MockUsers.flag = 1
-        self.assertDictEqual(keystone.user_role_add(user='nova'),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.user_role_add(user='nova') == \
+                             {'Error': 'Unable to resolve user id'}
 
     # 'user_role_remove' function tests: 1
 
@@ -868,26 +867,26 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it add role for user in tenant (keystone user-role-add)
         '''
         MockUsers.flag = 1
-        self.assertDictEqual(keystone.user_role_remove(user='nova'),
-                             {'Error': 'Unable to resolve user id'})
+        assert keystone.user_role_remove(user='nova') == \
+                             {'Error': 'Unable to resolve user id'}
 
         MockUsers.flag = 0
         MockTenants.flag = 1
-        self.assertDictEqual(keystone.user_role_remove(user='nova',
-                                                       tenant='nova'),
-                             {'Error': 'Unable to resolve tenant/project id'})
+        assert keystone.user_role_remove(user='nova',
+                                                       tenant='nova') == \
+                             {'Error': 'Unable to resolve tenant/project id'}
 
         MockTenants.flag = 0
         MockRoles.flag = 1
-        self.assertDictEqual(keystone.user_role_remove(user='nova',
+        assert keystone.user_role_remove(user='nova',
                                                        tenant='nova',
-                                                       role='nova'),
-                             {'Error': 'Unable to resolve role id'})
+                                                       role='nova') == \
+                             {'Error': 'Unable to resolve role id'}
 
         ret = '"nova" role removed for user "nova" under "nova" tenant'
         MockRoles.flag = 0
-        self.assertEqual(keystone.user_role_remove(user='nova', tenant='nova',
-                                                   role='nova'), ret)
+        assert keystone.user_role_remove(user='nova', tenant='nova',
+                                                   role='nova') == ret
 
     # 'user_role_list' function tests: 1
 
@@ -896,10 +895,10 @@ class KeystoneTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of available user_roles
         (keystone user-roles-list)
         '''
-        self.assertDictEqual(keystone.user_role_list(user='nova'),
-                             {'Error': 'Unable to resolve user or tenant/project id'})
+        assert keystone.user_role_list(user='nova') == \
+                             {'Error': 'Unable to resolve user or tenant/project id'}
 
-        self.assertDictEqual(keystone.user_role_list(user_name='nova',
-                                                     tenant_name='nova'),
+        assert keystone.user_role_list(user_name='nova',
+                                                     tenant_name='nova') == \
                              {'nova': {'id': '113', 'name': 'nova',
-                                       'tenant_id': '446', 'user_id': '446'}})
+                                       'tenant_id': '446', 'user_id': '446'}}

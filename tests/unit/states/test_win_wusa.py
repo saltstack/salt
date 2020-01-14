@@ -11,6 +11,7 @@ from salt.exceptions import SaltInvocationError
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, patch
+import pytest
 
 
 class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
@@ -27,11 +28,11 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test wusa.installed without passing source
         '''
-        with self.assertRaises(SaltInvocationError) as excinfo:
+        with pytest.raises(SaltInvocationError) as excinfo:
             wusa.installed(name='KB123456', source=None)
 
-        self.assertEqual(excinfo.exception.strerror,
-                         'Must specify a "source" file to install')
+        assert excinfo.value.strerror == \
+                         'Must specify a "source" file to install'
 
     def test_installed_existing(self):
         '''
@@ -45,7 +46,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} already installed'.format(self.kb),
                         'name': self.kb,
                         'result': True}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_installed_test_true(self):
         '''
@@ -60,7 +61,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} would be installed'.format(self.kb),
                         'name': self.kb,
                         'result': None}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_installed_cache_fail(self):
         '''
@@ -77,7 +78,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                                    'saltenv "base"'.format(self.kb),
                         'name': self.kb,
                         'result': False}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_installed(self):
         '''
@@ -94,7 +95,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} was installed. '.format(self.kb),
                         'name': self.kb,
                         'result': True}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_installed_failed(self):
         '''
@@ -111,7 +112,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} failed to install. '.format(self.kb),
                         'name': self.kb,
                         'result': False}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_uninstalled_non_existing(self):
         '''
@@ -124,7 +125,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} already uninstalled'.format(self.kb),
                         'name': self.kb,
                         'result': True}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_uninstalled_test_true(self):
         '''
@@ -138,7 +139,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} would be uninstalled'.format(self.kb),
                         'name': self.kb,
                         'result': None}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_uninstalled(self):
         '''
@@ -152,7 +153,7 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} was uninstalled'.format(self.kb),
                         'name': self.kb,
                         'result': True}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned
 
     def test_uninstalled_failed(self):
         '''
@@ -166,4 +167,4 @@ class WinWusaTestCase(TestCase, LoaderModuleMockMixin):
                         'comment': '{0} failed to uninstall'.format(self.kb),
                         'name': self.kb,
                         'result': False}
-            self.assertDictEqual(expected, returned)
+            assert expected == returned

@@ -36,18 +36,14 @@ class SaltCloudCliTest(ShellCase,
     _call_binary_ = 'salt-cloud'
 
     def test_function_arguments(self):
-        self.assertIn(
-            'error: --function expects two arguments: '
-            '<function-name> <provider>',
+        assert 'error: --function expects two arguments: ' \
+            '<function-name> <provider>' in \
             '\n'.join(self.run_cloud('--function show_image -h', catch_stderr=True)[1])
-        )
 
     def test_list_providers_accepts_no_arguments(self):
-        self.assertIn(
-            'error: \'--list-providers\' does not accept any '
-            'arguments',
+        assert 'error: \'--list-providers\' does not accept any ' \
+            'arguments' in \
             '\n'.join(self.run_cloud('--list-providers ec2', catch_stderr=True)[1])
-        )
 
     def test_mutually_exclusive_query_options(self):
         test_options = [
@@ -55,17 +51,15 @@ class SaltCloudCliTest(ShellCase,
         ]
         while True:
             for idx in range(1, len(test_options)):
-                self.assertIn(
-                    'error: The options {0}/{1} are mutually '
+                assert 'error: The options {0}/{1} are mutually ' \
                     'exclusive. Please only choose one of them'.format(
                         test_options[0], test_options[idx]
-                    ),
+                    ) in \
                     '\n'.join(
                         self.run_cloud(
                             '{0} {1}'.format(test_options[0], test_options[idx]),
                             catch_stderr=True)[1]
                     )
-                )
             # Remove the first option from the list
             test_options.pop(0)
             if len(test_options) <= 1:
@@ -82,13 +76,11 @@ class SaltCloudCliTest(ShellCase,
                     ), catch_stderr=True
                 )
                 try:
-                    self.assertIn(
-                        'error: The options {0}/{1} are mutually '
+                    assert 'error: The options {0}/{1} are mutually ' \
                         'exclusive. Please only choose one of them'.format(
                             test_options[0], test_options[idx]
-                        ),
+                        ) in \
                         '\n'.join(output[1])
-                    )
                 except AssertionError:
                     print(output)
                     raise

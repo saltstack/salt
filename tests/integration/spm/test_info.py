@@ -32,7 +32,7 @@ class SPMInfoTest(SPMCase):
 
         check_info = ['Supported OSes', 'Supported OS', 'installing Apache']
         for info in check_info:
-            self.assertIn(info, ''.join(get_info))
+            assert info in ''.join(get_info)
 
     def tearDown(self):
         shutil.rmtree(self._tmp_spm)

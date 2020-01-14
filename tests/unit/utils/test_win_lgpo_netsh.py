@@ -20,111 +20,111 @@ class WinLgpoNetshTestCase(TestCase):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='firewallpolicy',
                                           store='local')
-        self.assertIn('Inbound', ret)
-        self.assertIn('Outbound', ret)
+        assert 'Inbound' in ret
+        assert 'Outbound' in ret
 
     def test_get_settings_firewallpolicy_lgpo(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='firewallpolicy',
                                           store='lgpo')
-        self.assertIn('Inbound', ret)
-        self.assertIn('Outbound', ret)
+        assert 'Inbound' in ret
+        assert 'Outbound' in ret
 
     def test_get_settings_logging_local(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='logging',
                                           store='local')
-        self.assertIn('FileName', ret)
-        self.assertIn('LogAllowedConnections', ret)
-        self.assertIn('LogDroppedConnections', ret)
-        self.assertIn('MaxFileSize', ret)
+        assert 'FileName' in ret
+        assert 'LogAllowedConnections' in ret
+        assert 'LogDroppedConnections' in ret
+        assert 'MaxFileSize' in ret
 
     def test_get_settings_logging_lgpo(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='logging',
                                           store='lgpo')
-        self.assertIn('FileName', ret)
-        self.assertIn('LogAllowedConnections', ret)
-        self.assertIn('LogDroppedConnections', ret)
-        self.assertIn('MaxFileSize', ret)
+        assert 'FileName' in ret
+        assert 'LogAllowedConnections' in ret
+        assert 'LogDroppedConnections' in ret
+        assert 'MaxFileSize' in ret
 
     def test_get_settings_settings_local(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='settings',
                                           store='local')
-        self.assertIn('InboundUserNotification', ret)
-        self.assertIn('LocalConSecRules', ret)
-        self.assertIn('LocalFirewallRules', ret)
-        self.assertIn('RemoteManagement', ret)
-        self.assertIn('UnicastResponseToMulticast', ret)
+        assert 'InboundUserNotification' in ret
+        assert 'LocalConSecRules' in ret
+        assert 'LocalFirewallRules' in ret
+        assert 'RemoteManagement' in ret
+        assert 'UnicastResponseToMulticast' in ret
 
     def test_get_settings_settings_lgpo(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='settings',
                                           store='lgpo')
-        self.assertIn('InboundUserNotification', ret)
-        self.assertIn('LocalConSecRules', ret)
-        self.assertIn('LocalFirewallRules', ret)
-        self.assertIn('RemoteManagement', ret)
-        self.assertIn('UnicastResponseToMulticast', ret)
+        assert 'InboundUserNotification' in ret
+        assert 'LocalConSecRules' in ret
+        assert 'LocalFirewallRules' in ret
+        assert 'RemoteManagement' in ret
+        assert 'UnicastResponseToMulticast' in ret
 
     def test_get_settings_state_local(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='state',
                                           store='local')
-        self.assertIn('State', ret)
+        assert 'State' in ret
 
     def test_get_settings_state_lgpo(self):
         ret = win_lgpo_netsh.get_settings(profile='domain',
                                           section='state',
                                           store='lgpo')
-        self.assertIn('State', ret)
+        assert 'State' in ret
 
     def test_get_all_settings_local(self):
         ret = win_lgpo_netsh.get_all_settings(profile='domain',
                                               store='local')
 
-        self.assertIn('Inbound', ret)
-        self.assertIn('Outbound', ret)
-        self.assertIn('FileName', ret)
-        self.assertIn('LogAllowedConnections', ret)
-        self.assertIn('LogDroppedConnections', ret)
-        self.assertIn('MaxFileSize', ret)
-        self.assertIn('InboundUserNotification', ret)
-        self.assertIn('LocalConSecRules', ret)
-        self.assertIn('LocalFirewallRules', ret)
-        self.assertIn('RemoteManagement', ret)
-        self.assertIn('UnicastResponseToMulticast', ret)
-        self.assertIn('State', ret)
+        assert 'Inbound' in ret
+        assert 'Outbound' in ret
+        assert 'FileName' in ret
+        assert 'LogAllowedConnections' in ret
+        assert 'LogDroppedConnections' in ret
+        assert 'MaxFileSize' in ret
+        assert 'InboundUserNotification' in ret
+        assert 'LocalConSecRules' in ret
+        assert 'LocalFirewallRules' in ret
+        assert 'RemoteManagement' in ret
+        assert 'UnicastResponseToMulticast' in ret
+        assert 'State' in ret
 
     def test_get_all_settings_lgpo(self):
         ret = win_lgpo_netsh.get_all_settings(profile='domain',
                                               store='local')
 
-        self.assertIn('Inbound', ret)
-        self.assertIn('Outbound', ret)
-        self.assertIn('FileName', ret)
-        self.assertIn('LogAllowedConnections', ret)
-        self.assertIn('LogDroppedConnections', ret)
-        self.assertIn('MaxFileSize', ret)
-        self.assertIn('InboundUserNotification', ret)
-        self.assertIn('LocalConSecRules', ret)
-        self.assertIn('LocalFirewallRules', ret)
-        self.assertIn('RemoteManagement', ret)
-        self.assertIn('UnicastResponseToMulticast', ret)
-        self.assertIn('State', ret)
+        assert 'Inbound' in ret
+        assert 'Outbound' in ret
+        assert 'FileName' in ret
+        assert 'LogAllowedConnections' in ret
+        assert 'LogDroppedConnections' in ret
+        assert 'MaxFileSize' in ret
+        assert 'InboundUserNotification' in ret
+        assert 'LocalConSecRules' in ret
+        assert 'LocalFirewallRules' in ret
+        assert 'RemoteManagement' in ret
+        assert 'UnicastResponseToMulticast' in ret
+        assert 'State' in ret
 
     def test_get_all_profiles_local(self):
         ret = win_lgpo_netsh.get_all_profiles(store='local')
-        self.assertIn('Domain Profile', ret)
-        self.assertIn('Private Profile', ret)
-        self.assertIn('Public Profile', ret)
+        assert 'Domain Profile' in ret
+        assert 'Private Profile' in ret
+        assert 'Public Profile' in ret
 
     def test_get_all_profiles_lgpo(self):
         ret = win_lgpo_netsh.get_all_profiles(store='lgpo')
-        self.assertIn('Domain Profile', ret)
-        self.assertIn('Private Profile', ret)
-        self.assertIn('Public Profile', ret)
+        assert 'Domain Profile' in ret
+        assert 'Private Profile' in ret
+        assert 'Public Profile' in ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_inbound_local(self):
@@ -135,16 +135,16 @@ class WinLgpoNetshTestCase(TestCase):
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        inbound='allowinbound',
                                                        store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                                   section='firewallpolicy',
                                                   store='local')['Inbound']
-            self.assertEqual('AllowInbound', new)
+            assert 'AllowInbound' == new
         finally:
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        inbound=current,
                                                        store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_inbound_local_notconfigured(self):
@@ -152,17 +152,15 @@ class WinLgpoNetshTestCase(TestCase):
                                               section='firewallpolicy',
                                               store='local')['Inbound']
         try:
-            self.assertRaises(
-                CommandExecutionError,
-                win_lgpo_netsh.set_firewall_settings,
-                profile='domain',
+            with pytest.raises(CommandExecutionError):
+                win_lgpo_netsh.set_firewall_settings(profile='domain',
                 inbound='notconfigured',
                 store='local')
         finally:
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        inbound=current,
                                                        store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_inbound_lgpo_notconfigured(self):
@@ -173,16 +171,16 @@ class WinLgpoNetshTestCase(TestCase):
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        inbound='notconfigured',
                                                        store='lgpo')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='firewallpolicy',
                                               store='lgpo')['Inbound']
-            self.assertEqual('NotConfigured', new)
+            assert 'NotConfigured' == new
         finally:
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        inbound=current,
                                                        store='lgpo')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_outbound_local(self):
@@ -193,16 +191,16 @@ class WinLgpoNetshTestCase(TestCase):
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        outbound='allowoutbound',
                                                        store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='firewallpolicy',
                                               store='local')['Outbound']
-            self.assertEqual('AllowOutbound', new)
+            assert 'AllowOutbound' == new
         finally:
             ret = win_lgpo_netsh.set_firewall_settings(profile='domain',
                                                        outbound=current,
                                                        store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_logging_allowed_local_enable(self):
@@ -214,17 +212,17 @@ class WinLgpoNetshTestCase(TestCase):
                                                       setting='allowedconnections',
                                                       value='enable',
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
                                               store='local')['LogAllowedConnections']
-            self.assertEqual('Enable', new)
+            assert 'Enable' == new
         finally:
             ret = win_lgpo_netsh.set_logging_settings(profile='domain',
                                                       setting='allowedconnections',
                                                       value=current,
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_logging_allowed_local_notconfigured(self):
@@ -232,10 +230,8 @@ class WinLgpoNetshTestCase(TestCase):
                                               section='logging',
                                               store='local')['LogAllowedConnections']
         try:
-            self.assertRaises(
-                CommandExecutionError,
-                win_lgpo_netsh.set_logging_settings,
-                profile='domain',
+            with pytest.raises(CommandExecutionError):
+                win_lgpo_netsh.set_logging_settings(profile='domain',
                 setting='allowedconnections',
                 value='notconfigured',
                 store='local')
@@ -244,7 +240,7 @@ class WinLgpoNetshTestCase(TestCase):
                                                       setting='allowedconnections',
                                                       value=current,
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_logging_allowed_lgpo_notconfigured(self):
@@ -256,17 +252,17 @@ class WinLgpoNetshTestCase(TestCase):
                                                       setting='allowedconnections',
                                                       value='notconfigured',
                                                       store='lgpo')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
                                               store='lgpo')['LogAllowedConnections']
-            self.assertEqual('NotConfigured', new)
+            assert 'NotConfigured' == new
         finally:
             ret = win_lgpo_netsh.set_logging_settings(profile='domain',
                                                       setting='allowedconnections',
                                                       value=current,
                                                       store='lgpo')
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_firewall_logging_dropped_local_enable(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
@@ -277,17 +273,17 @@ class WinLgpoNetshTestCase(TestCase):
                                                       setting='droppedconnections',
                                                       value='enable',
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
                                               store='local')['LogDroppedConnections']
-            self.assertEqual('Enable', new)
+            assert 'Enable' == new
         finally:
             ret = win_lgpo_netsh.set_logging_settings(profile='domain',
                                                       setting='droppedconnections',
                                                       value=current,
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_firewall_logging_filename_local(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
@@ -298,17 +294,17 @@ class WinLgpoNetshTestCase(TestCase):
                                                       setting='filename',
                                                       value='C:\\Temp\\test.log',
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
                                               store='local')['FileName']
-            self.assertEqual('C:\\Temp\\test.log', new)
+            assert 'C:\\Temp\\test.log' == new
         finally:
             ret = win_lgpo_netsh.set_logging_settings(profile='domain',
                                                       setting='filename',
                                                       value=current,
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_firewall_logging_maxfilesize_local(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
@@ -319,24 +315,22 @@ class WinLgpoNetshTestCase(TestCase):
                                                       setting='maxfilesize',
                                                       value='16384',
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='logging',
                                               store='local')['MaxFileSize']
-            self.assertEqual('16384', new)
+            assert '16384' == new
         finally:
             ret = win_lgpo_netsh.set_logging_settings(profile='domain',
                                                       setting='maxfilesize',
                                                       value=current,
                                                       store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_fwrules_local_enable(self):
-        self.assertRaises(
-            CommandExecutionError,
-            win_lgpo_netsh.set_settings,
-            profile='domain',
+        with pytest.raises(CommandExecutionError):
+            win_lgpo_netsh.set_settings(profile='domain',
             setting='localfirewallrules',
             value='enable',
             store='local')
@@ -351,24 +345,22 @@ class WinLgpoNetshTestCase(TestCase):
                                               setting='localfirewallrules',
                                               value='notconfigured',
                                               store='lgpo')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
                                               store='lgpo')['LocalFirewallRules']
-            self.assertEqual('NotConfigured', new)
+            assert 'NotConfigured' == new
         finally:
             ret = win_lgpo_netsh.set_settings(profile='domain',
                                               setting='localfirewallrules',
                                               value=current,
                                               store='lgpo')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_consecrules_local_enable(self):
-        self.assertRaises(
-            CommandExecutionError,
-            win_lgpo_netsh.set_settings,
-            profile='domain',
+        with pytest.raises(CommandExecutionError):
+            win_lgpo_netsh.set_settings(profile='domain',
             setting='localconsecrules',
             value='enable',
             store='local')
@@ -382,17 +374,17 @@ class WinLgpoNetshTestCase(TestCase):
                                               setting='inboundusernotification',
                                               value='enable',
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
                                               store='local')['InboundUserNotification']
-            self.assertEqual('Enable', new)
+            assert 'Enable' == new
         finally:
             ret = win_lgpo_netsh.set_settings(profile='domain',
                                               setting='inboundusernotification',
                                               value=current,
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_settings_notification_local_notconfigured(self):
@@ -400,10 +392,8 @@ class WinLgpoNetshTestCase(TestCase):
                                               section='settings',
                                               store='local')['InboundUserNotification']
         try:
-            self.assertRaises(
-                CommandExecutionError,
-                win_lgpo_netsh.set_settings,
-                profile='domain',
+            with pytest.raises(CommandExecutionError):
+                win_lgpo_netsh.set_settings(profile='domain',
                 setting='inboundusernotification',
                 value='notconfigured',
                 store='local')
@@ -412,7 +402,7 @@ class WinLgpoNetshTestCase(TestCase):
                                               setting='inboundusernotification',
                                               value=current,
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_firewall_settings_notification_lgpo_notconfigured(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
@@ -423,17 +413,17 @@ class WinLgpoNetshTestCase(TestCase):
                                               setting='inboundusernotification',
                                               value='notconfigured',
                                               store='lgpo')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
                                               store='lgpo')['InboundUserNotification']
-            self.assertEqual('NotConfigured', new)
+            assert 'NotConfigured' == new
         finally:
             ret = win_lgpo_netsh.set_settings(profile='domain',
                                               setting='inboundusernotification',
                                               value=current,
                                               store='lgpo')
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_firewall_settings_remotemgmt_local_enable(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
@@ -444,17 +434,17 @@ class WinLgpoNetshTestCase(TestCase):
                                               setting='remotemanagement',
                                               value='enable',
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
                                               store='local')['RemoteManagement']
-            self.assertEqual('Enable', new)
+            assert 'Enable' == new
         finally:
             ret = win_lgpo_netsh.set_settings(profile='domain',
                                               setting='remotemanagement',
                                               value=current,
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
 
     def test_set_firewall_settings_unicast_local_disable(self):
         current = win_lgpo_netsh.get_settings(profile='domain',
@@ -465,17 +455,17 @@ class WinLgpoNetshTestCase(TestCase):
                                               setting='unicastresponsetomulticast',
                                               value='disable',
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='settings',
                                               store='local')['UnicastResponseToMulticast']
-            self.assertEqual('Disable', new)
+            assert 'Disable' == new
         finally:
             ret = win_lgpo_netsh.set_settings(profile='domain',
                                               setting='unicastresponsetomulticast',
                                               value=current,
                                               store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_state_local_on(self):
@@ -486,16 +476,16 @@ class WinLgpoNetshTestCase(TestCase):
             ret = win_lgpo_netsh.set_state(profile='domain',
                                            state='off',
                                            store='local')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='state',
                                               store='local')['State']
-            self.assertEqual('OFF', new)
+            assert 'OFF' == new
         finally:
             ret = win_lgpo_netsh.set_state(profile='domain',
                                            state=current,
                                            store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_state_local_notconfigured(self):
@@ -503,17 +493,15 @@ class WinLgpoNetshTestCase(TestCase):
                                               section='state',
                                               store='local')['State']
         try:
-            self.assertRaises(
-                CommandExecutionError,
-                win_lgpo_netsh.set_state,
-                profile='domain',
+            with pytest.raises(CommandExecutionError):
+                win_lgpo_netsh.set_state(profile='domain',
                 state='notconfigured',
                 store='local')
         finally:
             ret = win_lgpo_netsh.set_state(profile='domain',
                                            state=current,
                                            store='local')
-            self.assertTrue(ret)
+            assert ret
 
     @pytest.mark.destructive_test
     def test_set_firewall_state_lgpo_notconfigured(self):
@@ -524,13 +512,13 @@ class WinLgpoNetshTestCase(TestCase):
             ret = win_lgpo_netsh.set_state(profile='domain',
                                            state='notconfigured',
                                            store='lgpo')
-            self.assertTrue(ret)
+            assert ret
             new = win_lgpo_netsh.get_settings(profile='domain',
                                               section='state',
                                               store='lgpo')['State']
-            self.assertEqual('NotConfigured', new)
+            assert 'NotConfigured' == new
         finally:
             ret = win_lgpo_netsh.set_state(profile='domain',
                                            state=current,
                                            store='lgpo')
-            self.assertTrue(ret)
+            assert ret

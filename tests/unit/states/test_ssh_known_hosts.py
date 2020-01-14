@@ -46,35 +46,35 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('If not specifying a "user", '
                         'specify an absolute "config".')
                 ret.update({'comment': comt})
-                self.assertDictEqual(ssh_known_hosts.present(name), ret)
+                assert ssh_known_hosts.present(name) == ret
 
             comt = ('Specify either "key" or "fingerprint", not both.')
             ret.update({'comment': comt})
-            self.assertDictEqual(ssh_known_hosts.present(name, user, key=key,
-                                                         fingerprint=[key]),
-                                 ret)
+            assert ssh_known_hosts.present(name, user, key=key,
+                                                         fingerprint=[key]) == \
+                                 ret
 
             comt = ('Required argument "enc" if using "key" argument.')
             ret.update({'comment': comt})
-            self.assertDictEqual(ssh_known_hosts.present(name, user, key=key),
-                                 ret)
+            assert ssh_known_hosts.present(name, user, key=key) == \
+                                 ret
 
             mock = MagicMock(side_effect=['exists', 'add', 'update'])
             with patch.dict(ssh_known_hosts.__salt__,
                             {'ssh.check_known_host': mock}):
                 comt = ('Host github.com is already in .ssh/known_hosts')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
+                assert ssh_known_hosts.present(name, user) == ret
 
                 comt = ('Key for github.com is set to be'
                         ' added to .ssh/known_hosts')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
+                assert ssh_known_hosts.present(name, user) == ret
 
                 comt = ('Key for github.com is set to be '
                         'updated in .ssh/known_hosts')
                 ret.update({'comment': comt})
-                self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
+                assert ssh_known_hosts.present(name, user) == ret
 
         with patch.dict(ssh_known_hosts.__opts__, {'test': False}):
             result = {'status': 'exists', 'error': ''}
@@ -83,14 +83,14 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                             {'ssh.set_known_host': mock}):
                 comt = ('github.com already exists in .ssh/known_hosts')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
+                assert ssh_known_hosts.present(name, user) == ret
 
             result = {'status': 'error', 'error': ''}
             mock = MagicMock(return_value=result)
             with patch.dict(ssh_known_hosts.__salt__,
                             {'ssh.set_known_host': mock}):
                 ret.update({'comment': '', 'result': False})
-                self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
+                assert ssh_known_hosts.present(name, user) == ret
 
             result = {'status': 'updated', 'error': '',
                       'new': [{'fingerprint': fingerprint, 'key': key}],
@@ -103,13 +103,13 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'new': [{'fingerprint': fingerprint,
                                                 'key': key}], 'old': ''}})
-                self.assertDictEqual(ssh_known_hosts.present(name, user,
-                                                             key=key), ret)
+                assert ssh_known_hosts.present(name, user,
+                                                             key=key) == ret
 
                 comt = ("{0}'s key saved to .ssh/known_hosts (fingerprint: {1})"
                         .format(name, fingerprint))
                 ret.update({'comment': comt})
-                self.assertDictEqual(ssh_known_hosts.present(name, user), ret)
+                assert ssh_known_hosts.present(name, user) == ret
 
     # 'absent' function tests: 1
 
@@ -129,14 +129,14 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('If not specifying a "user", '
                     'specify an absolute "config".')
             ret.update({'comment': comt})
-            self.assertDictEqual(ssh_known_hosts.absent(name), ret)
+            assert ssh_known_hosts.absent(name) == ret
 
         mock = MagicMock(return_value=False)
         with patch.dict(ssh_known_hosts.__salt__,
                         {'ssh.get_known_host_entries': mock}):
             comt = ('Host is already absent')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ssh_known_hosts.absent(name, user), ret)
+            assert ssh_known_hosts.absent(name, user) == ret
 
         mock = MagicMock(return_value=True)
         with patch.dict(ssh_known_hosts.__salt__,
@@ -145,7 +145,7 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Key for github.com is set to be'
                         ' removed from .ssh/known_hosts')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(ssh_known_hosts.absent(name, user), ret)
+                assert ssh_known_hosts.absent(name, user) == ret
 
             with patch.dict(ssh_known_hosts.__opts__, {'test': False}):
                 result = {'status': 'error', 'error': ''}
@@ -153,8 +153,8 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(ssh_known_hosts.__salt__,
                                 {'ssh.rm_known_host': mock}):
                     ret.update({'comment': '', 'result': False})
-                    self.assertDictEqual(ssh_known_hosts.absent(name, user),
-                                         ret)
+                    assert ssh_known_hosts.absent(name, user) == \
+                                         ret
 
                 result = {'status': 'removed', 'error': '',
                           'comment': 'removed'}
@@ -163,5 +163,5 @@ class SshKnownHostsTestCase(TestCase, LoaderModuleMockMixin):
                                 {'ssh.rm_known_host': mock}):
                     ret.update({'comment': 'removed', 'result': True,
                                 'changes': {'new': None, 'old': True}})
-                    self.assertDictEqual(ssh_known_hosts.absent(name, user),
-                                         ret)
+                    assert ssh_known_hosts.absent(name, user) == \
+                                         ret

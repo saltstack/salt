@@ -13,6 +13,7 @@ from yaml.constructor import ConstructorError
 from salt.utils.yamlloader import SaltYamlSafeLoader
 import salt.utils.files
 from salt.ext import six
+import pytest
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase
@@ -66,7 +67,7 @@ class YamlLoaderTestCase(TestCase):
                 self.assert_unicode(item)
 
     def assert_matches(self, ret, expected):
-        self.assertEqual(ret, expected)
+        assert ret == expected
         self.assert_unicode(ret)
 
     def test_yaml_basics(self):
@@ -123,12 +124,12 @@ class YamlLoaderTestCase(TestCase):
         '''
         Test that duplicates still throw an error
         '''
-        with self.assertRaises(ConstructorError):
+        with pytest.raises(ConstructorError):
             self.render_yaml(textwrap.dedent('''\
                 p1: alpha
                 p1: beta'''))
 
-        with self.assertRaises(ConstructorError):
+        with pytest.raises(ConstructorError):
             self.render_yaml(textwrap.dedent('''\
                 p1: &p1
                   v1: alpha

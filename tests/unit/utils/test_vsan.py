@@ -19,6 +19,7 @@ from tests.support.mock import patch, MagicMock, \
 from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
         VMwareObjectRetrievalError
 from salt.utils import vsan
+import pytest
 
 try:
     from pyVmomi import vim, vmodl  # pylint: disable=no-name-in-module
@@ -41,42 +42,42 @@ class VsanSupportedTestCase(TestCase):
         mock_si = MagicMock(content=MagicMock(about=MagicMock()))
         type(mock_si.content.about).apiVersion = \
                 PropertyMock(return_value='6.0')
-        self.assertTrue(vsan.vsan_supported(mock_si))
+        assert vsan.vsan_supported(mock_si)
 
     def test_unsupported_api_version(self):
         mock_si = MagicMock(content=MagicMock(about=MagicMock()))
         type(mock_si.content.about).apiVersion = \
                 PropertyMock(return_value='5.0')
-        self.assertFalse(vsan.vsan_supported(mock_si))
+        assert not vsan.vsan_supported(mock_si)
 
     def test_api_version_raises_no_permission(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         mock_si = MagicMock(content=MagicMock(about=MagicMock()))
         type(mock_si.content.about).apiVersion = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.vsan_supported(mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_api_version_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         mock_si = MagicMock(content=MagicMock(about=MagicMock()))
         type(mock_si.content.about).apiVersion = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.vsan_supported(mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_api_version_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         mock_si = MagicMock(content=MagicMock(about=MagicMock()))
         type(mock_si.content.about).apiVersion = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.vsan_supported(mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -115,13 +116,13 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
     def test_ssl_default_context_loaded(self):
         vsan.get_vsan_cluster_config_system(self.mock_si)
         self.mock_create_default_context.assert_called_once_with()
-        self.assertFalse(self.mock_context.check_hostname)
-        self.assertEqual(self.mock_context.verify_mode, vsan.ssl.CERT_NONE)
+        assert not self.mock_context.check_hostname
+        assert self.mock_context.verify_mode == vsan.ssl.CERT_NONE
 
     def test_ssl_default_context_not_loaded(self):
         type(vsan.sys).version_info = PropertyMock(return_value=(2, 7, 8))
         vsan.get_vsan_cluster_config_system(self.mock_si)
-        self.assertEqual(self.mock_create_default_context.call_count, 0)
+        assert self.mock_create_default_context.call_count == 0
 
     def test_GetVsanVcMos_call(self):
         mock_get_vsan_vc_mos = MagicMock()
@@ -133,7 +134,7 @@ class GetVsanClusterConfigSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_return(self):
         ret = vsan.get_vsan_cluster_config_system(self.mock_si)
-        self.assertEqual(ret, self.mock_ret)
+        assert ret == self.mock_ret
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -172,13 +173,13 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
     def test_ssl_default_context_loaded(self):
         vsan.get_vsan_disk_management_system(self.mock_si)
         self.mock_create_default_context.assert_called_once_with()
-        self.assertFalse(self.mock_context.check_hostname)
-        self.assertEqual(self.mock_context.verify_mode, vsan.ssl.CERT_NONE)
+        assert not self.mock_context.check_hostname
+        assert self.mock_context.verify_mode == vsan.ssl.CERT_NONE
 
     def test_ssl_default_context_not_loaded(self):
         type(vsan.sys).version_info = PropertyMock(return_value=(2, 7, 8))
         vsan.get_vsan_disk_management_system(self.mock_si)
-        self.assertEqual(self.mock_create_default_context.call_count, 0)
+        assert self.mock_create_default_context.call_count == 0
 
     def test_GetVsanVcMos_call(self):
         mock_get_vsan_vc_mos = MagicMock()
@@ -190,7 +191,7 @@ class GetVsanDiskManagementSystemTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_return(self):
         ret = vsan.get_vsan_disk_management_system(self.mock_si)
-        self.assertEqual(ret, self.mock_ret)
+        assert ret == self.mock_ret
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -232,7 +233,7 @@ class GetHostVsanSystemTestCase(TestCase):
             vsan.get_host_vsan_system(self.mock_si,
                                       self.mock_host_ref,
                                       hostname='passedin_hostname')
-        self.assertEqual(mock_get_managed_object_name.call_count, 0)
+        assert mock_get_managed_object_name.call_count == 0
 
     def test_traversal_spec(self):
         mock_traversal_spec = MagicMock(return_value=self.mock_traversal_spec)
@@ -264,15 +265,15 @@ class GetHostVsanSystemTestCase(TestCase):
         with patch('salt.utils.vmware.get_mors_with_properties',
                    mock_get_mors):
 
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Host\'s \'fake_hostname\' VSAN system was '
-                         'not retrieved')
+        assert excinfo.value.strerror == \
+                         'Host\'s \'fake_hostname\' VSAN system was ' \
+                         'not retrieved'
 
     def test_valid_mors_result(self):
         res = vsan.get_host_vsan_system(self.mock_si, self.mock_host_ref)
-        self.assertEqual(res, self.mock_vsan_system)
+        assert res == self.mock_vsan_system
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -317,11 +318,11 @@ class CreateDiskgroupTestCase(TestCase):
         vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
                               self.mock_host_ref, self.mock_cache_disk,
                               [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(self.mock_spec.capacityDisks, [self.mock_cap_disk1,
-                                                        self.mock_cap_disk2])
-        self.assertEqual(self.mock_spec.cacheDisks, [self.mock_cache_disk])
-        self.assertEqual(self.mock_spec.creationType, 'allFlash')
-        self.assertEqual(self.mock_spec.host, self.mock_host_ref)
+        assert self.mock_spec.capacityDisks == [self.mock_cap_disk1,
+                                                        self.mock_cap_disk2]
+        assert self.mock_spec.cacheDisks == [self.mock_cache_disk]
+        assert self.mock_spec.creationType == 'allFlash'
+        assert self.mock_spec.host == self.mock_host_ref
 
     def test_vsan_spec_hybrid(self):
         self.mock_cap_disk1.ssd = False
@@ -329,7 +330,7 @@ class CreateDiskgroupTestCase(TestCase):
                               self.mock_host_ref, self.mock_cache_disk,
                               [self.mock_cap_disk1, self.mock_cap_disk2])
         self.mock_cap_disk1.ssd = False
-        self.assertEqual(self.mock_spec.creationType, 'hybrid')
+        assert self.mock_spec.creationType == 'hybrid'
 
     def test_initialize_disk_mapping(self):
         vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
@@ -343,47 +344,47 @@ class CreateDiskgroupTestCase(TestCase):
         err.privilegeId = 'Fake privilege'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
                                   self.mock_host_ref, self.mock_cache_disk,
                                   [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
         err = vim.fault.VimFault()
         err.msg = 'vim_fault'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
                                   self.mock_host_ref, self.mock_cache_disk,
                                   [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+        assert excinfo.value.strerror == 'vim_fault'
 
     def test_initialize_disk_mapping_raise_method_not_found(self):
         err = vmodl.fault.MethodNotFound()
         err.method = 'fake_method'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
                                   self.mock_host_ref, self.mock_cache_disk,
                                   [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror,
-                         'Method \'fake_method\' not found')
+        assert excinfo.value.strerror == \
+                         'Method \'fake_method\' not found'
 
     def test_initialize_disk_mapping_raise_runtime_fault(self):
         err = vmodl.RuntimeFault()
         err.msg = 'runtime_fault'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.create_diskgroup(self.mock_si, self.mock_vsan_disk_mgmt_system,
                                   self.mock_host_ref, self.mock_cache_disk,
                                   [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+        assert excinfo.value.strerror == 'runtime_fault'
 
     def test__wait_for_tasks(self):
         mock___wait_for_tasks = MagicMock()
@@ -400,7 +401,7 @@ class CreateDiskgroupTestCase(TestCase):
                                     self.mock_vsan_disk_mgmt_system,
                                     self.mock_host_ref, self.mock_cache_disk,
                                     [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -448,11 +449,11 @@ class AddCapacityToDiskGroupTestCase(TestCase):
             self.mock_si, self.mock_vsan_disk_mgmt_system,
             self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(self.mock_spec.capacityDisks, [self.mock_cap_disk1,
-                                                        self.mock_cap_disk2])
-        self.assertEqual(self.mock_spec.cacheDisks, [self.mock_cache_disk])
-        self.assertEqual(self.mock_spec.creationType, 'allFlash')
-        self.assertEqual(self.mock_spec.host, self.mock_host_ref)
+        assert self.mock_spec.capacityDisks == [self.mock_cap_disk1,
+                                                        self.mock_cap_disk2]
+        assert self.mock_spec.cacheDisks == [self.mock_cache_disk]
+        assert self.mock_spec.creationType == 'allFlash'
+        assert self.mock_spec.host == self.mock_host_ref
 
     def test_vsan_spec_hybrid(self):
         self.mock_cap_disk1.ssd = False
@@ -461,7 +462,7 @@ class AddCapacityToDiskGroupTestCase(TestCase):
             self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2])
         self.mock_cap_disk1.ssd = False
-        self.assertEqual(self.mock_spec.creationType, 'hybrid')
+        assert self.mock_spec.creationType == 'hybrid'
 
     def test_initialize_disk_mapping(self):
         vsan.add_capacity_to_diskgroup(
@@ -476,51 +477,51 @@ class AddCapacityToDiskGroupTestCase(TestCase):
         err.privilegeId = 'Fake privilege'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.add_capacity_to_diskgroup(
                 self.mock_si, self.mock_vsan_disk_mgmt_system,
                 self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_initialize_disk_mapping_raise_vim_fault(self):
         err = vim.fault.VimFault()
         err.msg = 'vim_fault'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.add_capacity_to_diskgroup(
                 self.mock_si, self.mock_vsan_disk_mgmt_system,
                 self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+        assert excinfo.value.strerror == 'vim_fault'
 
     def test_initialize_disk_mapping_raise_method_not_found(self):
         err = vmodl.fault.MethodNotFound()
         err.method = 'fake_method'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.add_capacity_to_diskgroup(
                 self.mock_si, self.mock_vsan_disk_mgmt_system,
                 self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror,
-                         'Method \'fake_method\' not found')
+        assert excinfo.value.strerror == \
+                         'Method \'fake_method\' not found'
 
     def test_initialize_disk_mapping_raise_runtime_fault(self):
         err = vmodl.RuntimeFault()
         err.msg = 'runtime_fault'
         self.mock_vsan_disk_mgmt_system.InitializeDiskMappings = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.add_capacity_to_diskgroup(
                 self.mock_si, self.mock_vsan_disk_mgmt_system,
                 self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+        assert excinfo.value.strerror == 'runtime_fault'
 
     def test__wait_for_tasks(self):
         mock___wait_for_tasks = MagicMock()
@@ -538,7 +539,7 @@ class AddCapacityToDiskGroupTestCase(TestCase):
             self.mock_si, self.mock_vsan_disk_mgmt_system,
             self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -586,16 +587,16 @@ class RemoveCapacityFromDiskGroup(TestCase):
         vsan.remove_capacity_from_diskgroup(
             self.mock_si, self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(self.mock_spec.vsanMode.objectAction,
-                         vim.VsanHostDecommissionModeObjectAction.evacuateAllData)
+        assert self.mock_spec.vsanMode.objectAction == \
+                         vim.VsanHostDecommissionModeObjectAction.evacuateAllData
 
     def test_maintenance_mode_no_action(self):
         vsan.remove_capacity_from_diskgroup(
             self.mock_si, self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2],
             data_evacuation=False)
-        self.assertEqual(self.mock_spec.vsanMode.objectAction,
-                         vim.VsanHostDecommissionModeObjectAction.noAction)
+        assert self.mock_spec.vsanMode.objectAction == \
+                         vim.VsanHostDecommissionModeObjectAction.noAction
 
     def test_remove_disk(self):
         vsan.remove_capacity_from_diskgroup(
@@ -610,35 +611,35 @@ class RemoveCapacityFromDiskGroup(TestCase):
         err.privilegeId = 'Fake privilege'
         self.mock_host_vsan_system.RemoveDisk_Task = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.remove_capacity_from_diskgroup(
                 self.mock_si, self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_remove_disk_raise_vim_fault(self):
         err = vim.fault.VimFault()
         err.msg = 'vim_fault'
         self.mock_host_vsan_system.RemoveDisk_Task = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.remove_capacity_from_diskgroup(
                 self.mock_si, self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+        assert excinfo.value.strerror == 'vim_fault'
 
     def test_remove_disk_raise_runtime_fault(self):
         err = vmodl.RuntimeFault()
         err.msg = 'runtime_fault'
         self.mock_host_vsan_system.RemoveDisk_Task = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.remove_capacity_from_diskgroup(
                 self.mock_si, self.mock_host_ref, self.mock_diskgroup,
                 [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+        assert excinfo.value.strerror == 'runtime_fault'
 
     def test_wait_for_tasks(self):
         mock_wait_for_task = MagicMock()
@@ -654,7 +655,7 @@ class RemoveCapacityFromDiskGroup(TestCase):
         res = vsan.remove_capacity_from_diskgroup(
             self.mock_si, self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -703,8 +704,8 @@ class RemoveDiskgroup(TestCase):
         vsan.remove_capacity_from_diskgroup(
             self.mock_si, self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2])
-        self.assertEqual(self.mock_spec.vsanMode.objectAction,
-                         vim.VsanHostDecommissionModeObjectAction.evacuateAllData)
+        assert self.mock_spec.vsanMode.objectAction == \
+                         vim.VsanHostDecommissionModeObjectAction.evacuateAllData
 
     def test_maintenance_mode_no_action(self):
         vsan.remove_diskgroup(
@@ -713,8 +714,8 @@ class RemoveDiskgroup(TestCase):
             self.mock_si, self.mock_host_ref, self.mock_diskgroup,
             [self.mock_cap_disk1, self.mock_cap_disk2],
             data_evacuation=False)
-        self.assertEqual(self.mock_spec.vsanMode.objectAction,
-                         vim.VsanHostDecommissionModeObjectAction.noAction)
+        assert self.mock_spec.vsanMode.objectAction == \
+                         vim.VsanHostDecommissionModeObjectAction.noAction
 
     def test_remove_disk_mapping(self):
         vsan.remove_diskgroup(
@@ -733,32 +734,32 @@ class RemoveDiskgroup(TestCase):
         err.privilegeId = 'Fake privilege'
         self.mock_host_vsan_system.RemoveDiskMapping_Task = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.remove_diskgroup(
                 self.mock_si, self.mock_host_ref, self.mock_diskgroup)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_remove_disk_mapping_raise_vim_fault(self):
         err = vim.fault.VimFault()
         err.msg = 'vim_fault'
         self.mock_host_vsan_system.RemoveDiskMapping_Task = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             vsan.remove_diskgroup(
                 self.mock_si, self.mock_host_ref, self.mock_diskgroup)
-        self.assertEqual(excinfo.exception.strerror, 'vim_fault')
+        assert excinfo.value.strerror == 'vim_fault'
 
     def test_remove_disk_mapping_raise_runtime_fault(self):
         err = vmodl.RuntimeFault()
         err.msg = 'runtime_fault'
         self.mock_host_vsan_system.RemoveDiskMapping_Task = \
             MagicMock(side_effect=err)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             vsan.remove_diskgroup(
                 self.mock_si, self.mock_host_ref, self.mock_diskgroup)
-        self.assertEqual(excinfo.exception.strerror, 'runtime_fault')
+        assert excinfo.value.strerror == 'runtime_fault'
 
     def test_wait_for_tasks(self):
         mock_wait_for_task = MagicMock()
@@ -772,7 +773,7 @@ class RemoveDiskgroup(TestCase):
     def test_result(self):
         res = vsan.remove_diskgroup(
             self.mock_si, self.mock_host_ref, self.mock_diskgroup)
-        self.assertTrue(res)
+        assert res
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -828,11 +829,11 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
                    MagicMock(return_value=MagicMock(
                        VsanClusterGetConfig=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_VsanClusterGetConfig_raises_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -840,9 +841,9 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
                    MagicMock(return_value=MagicMock(
                        VsanClusterGetConfig=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_VsanClusterGetConfig_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
@@ -850,9 +851,9 @@ class GetClusterVsanInfoTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
                    MagicMock(return_value=MagicMock(
                        VsanClusterGetConfig=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 vsan.get_cluster_vsan_info(self.mock_cl_ref)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -922,12 +923,12 @@ class ReconfigureClusterVsanTestCase(TestCase):
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
                    MagicMock(return_value=MagicMock(
                        VsanClusterReconfig=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
                                               self.mock_cl_vsan_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_cluster_reconfig_raises_vim_fault(self):
         exc = vim.fault.VimFault()
@@ -935,10 +936,10 @@ class ReconfigureClusterVsanTestCase(TestCase):
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
                    MagicMock(return_value=MagicMock(
                        VsanClusterReconfig=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
                                               self.mock_cl_vsan_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_cluster_reconfig_raises_vmodl_runtime_error(self):
         exc = vmodl.RuntimeFault()
@@ -946,10 +947,10 @@ class ReconfigureClusterVsanTestCase(TestCase):
         with patch('salt.utils.vsan.get_vsan_cluster_config_system',
                    MagicMock(return_value=MagicMock(
                        VsanClusterReconfig=MagicMock(side_effect=exc)))):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 vsan.reconfigure_cluster_vsan(self.mock_cl_ref,
                                               self.mock_cl_vsan_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimRuntime msg')
+        assert excinfo.value.strerror == 'VimRuntime msg'
 
     def test__wait_for_tasks_call(self):
         mock_wait_for_tasks = MagicMock()
@@ -994,26 +995,26 @@ class _WaitForTasks(TestCase, LoaderModuleMockMixin):
         exc.privilegeId = 'Fake privilege'
         with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
                    MagicMock(side_effect=exc)):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_wait_for_tasks_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
                    MagicMock(side_effect=exc)):
-            with self.assertRaises(VMwareApiError) as excinfo:
+            with pytest.raises(VMwareApiError) as excinfo:
                 vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_wait_for_tasks_raises_vmodl_runtime_error(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'VimRuntime msg'
         with patch('salt.utils.vsan.vsanapiutils.WaitForTasks',
                    MagicMock(side_effect=exc)):
-            with self.assertRaises(VMwareRuntimeError) as excinfo:
+            with pytest.raises(VMwareRuntimeError) as excinfo:
                 vsan._wait_for_tasks(self.mock_tasks, self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimRuntime msg')
+        assert excinfo.value.strerror == 'VimRuntime msg'

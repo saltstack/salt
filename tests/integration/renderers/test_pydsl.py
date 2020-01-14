@@ -72,4 +72,4 @@ class PyDSLRendererIncludeTestCase(ModuleCase):
         finally:
             os.remove('/tmp/output')
 
-        self.assertEqual(sorted(ret), sorted(expected))
+        assert sorted(ret) == sorted(expected)

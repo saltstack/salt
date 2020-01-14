@@ -59,12 +59,12 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second before the run time
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
+        assert '_last_run' not in ret
 
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time2)
+        assert ret['_last_run'] == run_time2
 
     def test_eval_multiple_whens(self):
         '''
@@ -94,14 +94,14 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate run time1
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time1)
+        assert ret['_last_run'] == run_time1
 
         time.sleep(2)
 
         # Evaluate run time2
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time2)
+        assert ret['_last_run'] == run_time2
 
     def test_eval_whens(self):
         '''
@@ -124,7 +124,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate run time1
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_eval_loop_interval(self):
         '''
@@ -152,7 +152,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         self.schedule.eval(now=run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
 
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL))
+        assert ret['_last_run'] == run_time2 + datetime.timedelta(seconds=LOOP_INTERVAL)
 
     def test_eval_multiple_whens_loop_interval(self):
         '''
@@ -186,14 +186,14 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time1)
+        assert ret['_last_run'] == run_time1
 
         time.sleep(2)
 
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time2)
+        assert ret['_last_run'] == run_time2
 
     def test_eval_once(self):
         '''
@@ -217,7 +217,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_eval_once_loop_interval(self):
         '''
@@ -245,7 +245,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate at the run time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron(self):
@@ -270,7 +270,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             self.schedule.eval(now=run_time)
 
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     @skipIf(not HAS_CRONITER, 'Cannot find croniter python module')
     def test_eval_cron_loop_interval(self):
@@ -298,7 +298,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             self.schedule.eval(now=run_time)
 
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_eval_until(self):
         '''
@@ -332,7 +332,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         time.sleep(2)
 
@@ -340,7 +340,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         time.sleep(2)
 
@@ -348,8 +348,8 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_skip_reason'], 'until_passed')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert ret['_skip_reason'] == 'until_passed'
+        assert ret['_skipped_time'] == run_time
 
     def test_eval_after(self):
         '''
@@ -379,28 +379,28 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_skip_reason'], 'after_not_passed')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert ret['_skip_reason'] == 'after_not_passed'
+        assert ret['_skipped_time'] == run_time
 
         # eval at 4:00pm, will not run.
         run_time = dateutil_parser.parse('11/29/2017 4:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_skip_reason'], 'after_not_passed')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert ret['_skip_reason'] == 'after_not_passed'
+        assert ret['_skipped_time'] == run_time
 
         # eval at 5:00pm, will not run
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_skip_reason'], 'after_not_passed')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert ret['_skip_reason'] == 'after_not_passed'
+        assert ret['_skipped_time'] == run_time
 
         # eval at 6:00pm, will run
         run_time = dateutil_parser.parse('11/29/2017 6:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_eval_enabled(self):
         '''
@@ -424,7 +424,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time1)
+        assert ret['_last_run'] == run_time1
 
     def test_eval_enabled_key(self):
         '''
@@ -451,12 +451,12 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second before the run time
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status('test_eval_enabled_key')
-        self.assertNotIn('_last_run', ret)
+        assert '_last_run' not in ret
 
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time2)
         ret = self.schedule.job_status('test_eval_enabled_key')
-        self.assertEqual(ret['_last_run'], run_time2)
+        assert ret['_last_run'] == run_time2
 
     def test_eval_disabled(self):
         '''
@@ -480,11 +480,11 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_skip_reason'], 'disabled')
+        assert '_last_run' not in ret
+        assert ret['_skip_reason'] == 'disabled'
 
         # Ensure job data still matches
-        self.assertEqual(ret, job['schedule'][job_name])
+        assert ret == job['schedule'][job_name]
 
     def test_eval_global_disabled_job_enabled(self):
         '''
@@ -509,11 +509,11 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # Evaluate 1 second at the run time
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_skip_reason'], 'disabled')
+        assert '_last_run' not in ret
+        assert ret['_skip_reason'] == 'disabled'
 
         # Ensure job is still enabled
-        self.assertEqual(ret['enabled'], True)
+        assert ret['enabled'] is True
 
     def test_eval_run_on_start(self):
         '''
@@ -537,7 +537,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 2:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         # eval at 3:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:00pm')
@@ -572,7 +572,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
-            self.assertEqual(ret['_last_run'], run_time)
+            assert ret['_last_run'] == run_time
 
     def test_eval_splay_range(self):
         '''
@@ -602,7 +602,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
-            self.assertEqual(ret['_last_run'], run_time)
+            assert ret['_last_run'] == run_time
 
     def test_eval_splay_global(self):
         '''
@@ -632,7 +632,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
             run_time = dateutil_parser.parse('11/29/2017 2:00:40pm')
             self.schedule.eval(now=run_time)
             ret = self.schedule.job_status(job_name)
-            self.assertEqual(ret['_last_run'], run_time)
+            assert ret['_last_run'] == run_time
 
     def test_eval_seconds(self):
         '''
@@ -659,22 +659,22 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 2:00:01pm, will not run.
         run_time = dateutil_parser.parse('11/29/2017 2:00:01pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert '_last_run' not in ret
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 2:00:30pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 2:00:30pm')
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == run_time
+        assert ret['_next_fire_time'] == next_run_time
 
         time.sleep(2)
 
@@ -683,8 +683,8 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == run_time
+        assert ret['_next_fire_time'] == next_run_time
 
         time.sleep(2)
 
@@ -693,8 +693,8 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(seconds=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == run_time
+        assert ret['_next_fire_time'] == next_run_time
 
     def test_eval_minutes(self):
         '''
@@ -721,20 +721,20 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(minutes=30)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 2:00:01pm, will not run.
         run_time = dateutil_parser.parse('11/29/2017 2:00:01pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert '_last_run' not in ret
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 2:30:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 2:30:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         time.sleep(2)
 
@@ -742,7 +742,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 3:00:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         time.sleep(2)
 
@@ -750,7 +750,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 3:30:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_eval_hours(self):
         '''
@@ -777,20 +777,20 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(hours=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 2:00:01pm, will not run.
         run_time = dateutil_parser.parse('11/29/2017 2:00:01pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert '_last_run' not in ret
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 4:00:00pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 4:00:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         time.sleep(2)
 
@@ -798,7 +798,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 6:00:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
         time.sleep(2)
 
@@ -806,7 +806,7 @@ class SchedulerEvalTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 8:00:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_eval_days(self):
         '''
@@ -834,23 +834,23 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 11/25/2017 2:00:00pm, will run.
         run_time = dateutil_parser.parse('11/25/2017 2:00:00pm')
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == run_time
+        assert ret['_next_fire_time'] == next_run_time
 
         # eval at 11/26/2017 2:00:00pm, will not run.
         run_time = dateutil_parser.parse('11/26/2017 2:00:00pm')
         last_run_time = run_time - datetime.timedelta(days=1)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], last_run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == last_run_time
+        assert ret['_next_fire_time'] == next_run_time
 
         time.sleep(2)
 
@@ -859,8 +859,8 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == run_time
+        assert ret['_next_fire_time'] == next_run_time
 
         time.sleep(2)
 
@@ -869,8 +869,8 @@ class SchedulerEvalTest(SchedulerTestsBase):
         last_run_time = run_time - datetime.timedelta(days=1)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], last_run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == last_run_time
+        assert ret['_next_fire_time'] == next_run_time
 
         time.sleep(2)
 
@@ -879,8 +879,8 @@ class SchedulerEvalTest(SchedulerTestsBase):
         next_run_time = run_time + datetime.timedelta(days=2)
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
-        self.assertEqual(ret['_next_fire_time'], next_run_time)
+        assert ret['_last_run'] == run_time
+        assert ret['_next_fire_time'] == next_run_time
 
     def test_eval_when_splay(self):
         '''
@@ -912,12 +912,12 @@ class SchedulerEvalTest(SchedulerTestsBase):
             # Evaluate at expected runtime1, should not run
             self.schedule.eval(now=run_time1)
             ret = self.schedule.job_status(job_name)
-            self.assertNotIn('_last_run', ret)
+            assert '_last_run' not in ret
 
             # Evaluate at expected runtime2, should run
             self.schedule.eval(now=run_time2)
             ret = self.schedule.job_status(job_name)
-            self.assertEqual(ret['_last_run'], run_time2)
+            assert ret['_last_run'] == run_time2
 
     def test_eval_when_splay_in_past(self):
         '''
@@ -948,5 +948,5 @@ class SchedulerEvalTest(SchedulerTestsBase):
         # and _next_fire_time should be None
         self.schedule.eval(now=run_time1)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_next_fire_time'], None)
+        assert '_last_run' not in ret
+        assert ret['_next_fire_time'] is None

@@ -41,10 +41,8 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         )
 
     def assert_path_matches(self, env, new_path):
-        self.assertEqual(
-            env['PATH'],
+        assert env['PATH'] == \
             salt.utils.stringutils.to_str(self.pathsep.join(new_path))
-        )
 
     def test_get_path(self):
         '''
@@ -52,7 +50,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'vdata': 'C:\\Salt'})
         with patch.dict(win_path.__salt__, {'reg.read_value': mock}):
-            self.assertListEqual(win_path.get_path(), ['C:\\Salt'])
+            assert win_path.get_path() == ['C:\\Salt']
 
     def test_exists(self):
         '''
@@ -61,9 +59,9 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         get_mock = MagicMock(return_value=['C:\\Foo', 'C:\\Bar'])
         with patch.object(win_path, 'get_path', get_mock):
             # Ensure case insensitivity respected
-            self.assertTrue(win_path.exists('C:\\FOO'))
-            self.assertTrue(win_path.exists('c:\\foo'))
-            self.assertFalse(win_path.exists('c:\\mystuff'))
+            assert win_path.exists('C:\\FOO')
+            assert win_path.exists('c:\\foo')
+            assert not win_path.exists('c:\\mystuff')
 
     def test_add(self):
         '''
@@ -94,14 +92,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # Test a successful reg update
         ret, env, mock_set = _run('c:\\salt', retval=True)
         new_path = ('C:\\Foo', 'C:\\Bar', 'c:\\salt')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
         # Test an unsuccessful reg update
         ret, env, mock_set = _run('c:\\salt', retval=False)
         new_path = ('C:\\Foo', 'C:\\Bar', 'c:\\salt')
-        self.assertFalse(ret)
+        assert not ret
         self.assert_call_matches(mock_set, new_path)
         # The local path should still have been modified even
         # though reg.set_value failed.
@@ -110,14 +108,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # Test adding with a custom index
         ret, env, mock_set = _run('c:\\salt', index=1, retval=True)
         new_path = ('C:\\Foo', 'c:\\salt', 'C:\\Bar')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
         # Test adding with a custom index of 0
         ret, env, mock_set = _run('c:\\salt', index=0, retval=True)
         new_path = ('c:\\salt', 'C:\\Foo', 'C:\\Bar')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
@@ -125,7 +123,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # no index provided. The path should remain unchanged and we should not
         # update the registry.
         ret, env, mock_set = _run('c:\\foo', retval=True)
-        self.assertTrue(ret)
+        assert ret
         mock_set.assert_not_called()
         self.assert_path_matches(env, orig_path)
 
@@ -135,7 +133,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # the list.
         ret, env, mock_set = _run('c:\\foo', index=-1, retval=True)
         new_path = ('C:\\Bar', 'c:\\foo')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
@@ -143,7 +141,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # negative index provided which matches the current index. No changes
         # should be made.
         ret, env, mock_set = _run('c:\\foo', index=-2, retval=True)
-        self.assertTrue(ret)
+        assert ret
         mock_set.assert_not_called()
         self.assert_path_matches(env, orig_path)
 
@@ -152,7 +150,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # changes should be made, since in these cases we assume an index of 0,
         # and the case-insensitive match is also at index 0.
         ret, env, mock_set = _run('c:\\foo', index=-5, retval=True)
-        self.assertTrue(ret)
+        assert ret
         mock_set.assert_not_called()
         self.assert_path_matches(env, orig_path)
 
@@ -163,7 +161,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # we put it at the beginning of the list.
         ret, env, mock_set = _run('c:\\bar', index=-5, retval=True)
         new_path = ('c:\\bar', 'C:\\Foo')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
@@ -171,7 +169,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # negative index provided which matches the current index. The path
         # should remain unchanged and we should not update the registry.
         ret, env, mock_set = _run('c:\\bar', index=-1, retval=True)
-        self.assertTrue(ret)
+        assert ret
         mock_set.assert_not_called()
         self.assert_path_matches(env, orig_path)
 
@@ -181,7 +179,7 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # and the path should be added to the end of the list.
         ret, env, mock_set = _run('c:\\foo', index=5, retval=True)
         new_path = ('C:\\Bar', 'c:\\foo')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
@@ -214,14 +212,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         # Test a successful reg update
         ret, env, mock_set = _run('C:\\Bar', retval=True)
         new_path = ('C:\\Foo', 'C:\\Baz')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
         # Test a successful reg update with a case-insensitive match
         ret, env, mock_set = _run('c:\\bar', retval=True)
         new_path = ('C:\\Foo', 'C:\\Baz')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
@@ -230,14 +228,14 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
         old_path = orig_path + ('C:\\BAR',)
         ret, env, mock_set = _run('c:\\bar', retval=True)
         new_path = ('C:\\Foo', 'C:\\Baz')
-        self.assertTrue(ret)
+        assert ret
         self.assert_call_matches(mock_set, new_path)
         self.assert_path_matches(env, new_path)
 
         # Test an unsuccessful reg update
         ret, env, mock_set = _run('c:\\bar', retval=False)
         new_path = ('C:\\Foo', 'C:\\Baz')
-        self.assertFalse(ret)
+        assert not ret
         self.assert_call_matches(mock_set, new_path)
         # The local path should still have been modified even
         # though reg.set_value failed.
@@ -245,6 +243,6 @@ class WinPathTestCase(TestCase, LoaderModuleMockMixin):
 
         # Test when no match found
         ret, env, mock_set = _run('C:\\NotThere', retval=True)
-        self.assertTrue(ret)
+        assert ret
         mock_set.assert_not_called()
         self.assert_path_matches(env, orig_path)

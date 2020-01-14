@@ -21,6 +21,6 @@ class SentryReturnerTestCase(TestCase):
            'return': 'Long Return containing a Traceback'}
 
     def test_get_message(self):
-        self.assertEqual(sentry._get_message(self.ret), 'salt func: mytest.func arg1 arg2 foo=bar')
-        self.assertEqual(sentry._get_message({'fun': 'test.func', 'fun_args': []}), 'salt func: test.func')
-        self.assertEqual(sentry._get_message({'fun': 'test.func'}), 'salt func: test.func')
+        assert sentry._get_message(self.ret) == 'salt func: mytest.func arg1 arg2 foo=bar'
+        assert sentry._get_message({'fun': 'test.func', 'fun_args': []}) == 'salt func: test.func'
+        assert sentry._get_message({'fun': 'test.func'}) == 'salt func: test.func'

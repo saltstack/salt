@@ -79,7 +79,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         info = MagicMock(return_value=False)
         with patch.object(win_groupadd, 'info', info),\
                 patch.object(win_groupadd, '_get_computer_object', Mock()):
-            self.assertTrue(win_groupadd.add('foo'))
+            assert win_groupadd.add('foo')
 
     def test_add_group_exists(self):
         '''
@@ -91,7 +91,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                                        'members': ['HOST\\spongebob']})
         with patch.object(win_groupadd, 'info', info),\
                 patch.object(win_groupadd, '_get_computer_object', Mock()):
-            self.assertFalse(win_groupadd.add('foo'))
+            assert not win_groupadd.add('foo')
 
     def test_add_error(self):
         '''
@@ -104,7 +104,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         info = MagicMock(return_value=False)
         with patch.object(win_groupadd, 'info', info),\
                 patch.object(win_groupadd, '_get_computer_object', obj_comp_mock):
-            self.assertFalse(win_groupadd.add('foo'))
+            assert not win_groupadd.add('foo')
 
     def test_delete(self):
         '''
@@ -116,7 +116,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                                        'members': ['HOST\\spongebob']})
         with patch.object(win_groupadd, 'info', info), \
                 patch.object(win_groupadd, '_get_computer_object', Mock()):
-            self.assertTrue(win_groupadd.delete('foo'))
+            assert win_groupadd.delete('foo')
 
     def test_delete_no_group(self):
         '''
@@ -125,7 +125,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         info = MagicMock(return_value=False)
         with patch.object(win_groupadd, 'info', info), \
                 patch.object(win_groupadd, '_get_computer_object', Mock()):
-            self.assertFalse(win_groupadd.delete('foo'))
+            assert not win_groupadd.delete('foo')
 
     def test_delete_error(self):
         '''
@@ -141,7 +141,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                                        'members': ['HOST\\spongebob']})
         with patch.object(win_groupadd, 'info', info),\
                 patch.object(win_groupadd, '_get_computer_object', obj_comp_mock):
-            self.assertFalse(win_groupadd.delete('foo'))
+            assert not win_groupadd.delete('foo')
 
     def test_info(self):
         '''
@@ -149,11 +149,11 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         obj_group_mock = MagicMock(return_value=MockGroupObj('salt', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock):
-            self.assertDictEqual(win_groupadd.info('salt'),
+            assert win_groupadd.info('salt') == \
                                  {'gid': None,
                                   'members': ['HOST\\steve'],
                                   'passwd': None,
-                                  'name': 'salt'})
+                                  'name': 'salt'}
 
     def test_getent(self):
         obj_group_mock = MagicMock(
@@ -163,19 +163,18 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         mock_g_to_g = MagicMock(side_effect=[1, 2])
         with patch.object(win_groupadd, '_get_all_groups', obj_group_mock),\
                 patch.dict(win_groupadd.__salt__, {'file.group_to_gid': mock_g_to_g}):
-            self.assertListEqual(
-                win_groupadd.getent(),
+            assert win_groupadd.getent() == \
                 [
                     {'gid': 1, 'members': ['HOST\\steve'], 'name': 'salt', 'passwd': 'x'},
                     {'gid': 2, 'members': ['HOST\\spongebob'], 'name': 'salty', 'passwd': 'x'}
-                ])
+                ]
 
     def test_getent_context(self):
         '''
         Test group.getent is using the values in __context__
         '''
         with patch.dict(win_groupadd.__context__, {'group.getent': True}):
-            self.assertTrue(win_groupadd.getent())
+            assert win_groupadd.getent()
 
     def test_adduser(self):
         '''
@@ -184,7 +183,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(win_groupadd.adduser('foo', 'spongebob'))
+            assert win_groupadd.adduser('foo', 'spongebob')
 
     def test_adduser_already_exists(self):
         '''
@@ -193,7 +192,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertFalse(win_groupadd.adduser('foo', 'steve'))
+            assert not win_groupadd.adduser('foo', 'steve')
 
     def test_adduser_error(self):
         '''
@@ -208,12 +207,12 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=GroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertFalse(win_groupadd.adduser('foo', 'username'))
+            assert not win_groupadd.adduser('foo', 'username')
 
     def test_adduser_group_does_not_exist(self):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock):
-            self.assertFalse(win_groupadd.adduser('foo', 'spongebob'))
+            assert not win_groupadd.adduser('foo', 'spongebob')
 
     def test_deluser(self):
         '''
@@ -223,7 +222,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/spongebob']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(win_groupadd.deluser('foo', 'spongebob'))
+            assert win_groupadd.deluser('foo', 'spongebob')
 
     def test_deluser_no_user(self):
         '''
@@ -233,7 +232,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertFalse(win_groupadd.deluser('foo', 'spongebob'))
+            assert not win_groupadd.deluser('foo', 'spongebob')
 
     def test_deluser_error(self):
         '''
@@ -246,12 +245,12 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=GroupObj('foo', ['WinNT://HOST/spongebob']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertFalse(win_groupadd.deluser('foo', 'spongebob'))
+            assert not win_groupadd.deluser('foo', 'spongebob')
 
     def test_deluser_group_does_not_exist(self):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock):
-            self.assertFalse(win_groupadd.deluser('foo', 'spongebob'))
+            assert not win_groupadd.deluser('foo', 'spongebob')
 
     def test_members(self):
         '''
@@ -260,8 +259,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', ['WinNT://HOST/steve']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(
-                win_groupadd.members('foo', 'spongebob,patrick,squidward'))
+            assert win_groupadd.members('foo', 'spongebob,patrick,squidward')
             obj_group_mock.assert_called_once_with('foo')
 
     def test_members_correct_membership(self):
@@ -274,8 +272,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=MockGroupObj('foo', members_list))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertTrue(
-                win_groupadd.members('foo', 'spongebob,patrick,squidward'))
+            assert win_groupadd.members('foo', 'spongebob,patrick,squidward')
             obj_group_mock.assert_called_once_with('foo')
 
     def test_members_group_does_not_exist(self):
@@ -285,7 +282,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(side_effect=PYWINTYPES_ERROR)
         with patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock),\
                 patch.object(win_groupadd, '_get_group_object', obj_group_mock):
-            self.assertFalse(win_groupadd.members('foo', 'spongebob'))
+            assert not win_groupadd.members('foo', 'spongebob')
 
     def test_members_fail_to_remove(self):
         '''
@@ -298,7 +295,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=GroupObj('foo', ['WinNT://HOST/spongebob']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertFalse(win_groupadd.members('foo', 'patrick'))
+            assert not win_groupadd.members('foo', 'patrick')
             obj_group_mock.assert_called_once_with('foo')
 
     def test_members_fail_to_add(self):
@@ -312,7 +309,7 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
         obj_group_mock = MagicMock(return_value=GroupObj('foo', ['WinNT://HOST/spongebob']))
         with patch.object(win_groupadd, '_get_group_object', obj_group_mock), \
                 patch.object(salt.utils.win_functions, 'get_sam_name', sam_mock):
-            self.assertFalse(win_groupadd.members('foo', 'patrick'))
+            assert not win_groupadd.members('foo', 'patrick')
             obj_group_mock.assert_called_once_with('foo')
 
     def test_list_groups(self):
@@ -324,12 +321,12 @@ class WinGroupTestCase(TestCase, LoaderModuleMockMixin):
                 MockGroupObj('salt', ['WinNT://HOST/steve']),
                 MockGroupObj('salty', ['WinNT://HOST/Administrator'])])
         with patch.object(win_groupadd, '_get_all_groups', obj_group_mock):
-            self.assertListEqual(win_groupadd.list_groups(),
-                                 ['salt', 'salty'])
+            assert win_groupadd.list_groups() == \
+                                 ['salt', 'salty']
 
     def test_list_groups_context(self):
         '''
         Test group.list_groups is using the values in __context__
         '''
         with patch.dict(win_groupadd.__context__, {'group.list_groups': True}):
-            self.assertTrue(win_groupadd.list_groups())
+            assert win_groupadd.list_groups()

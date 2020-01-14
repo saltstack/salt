@@ -48,4 +48,4 @@ class EnvTestCase(ModuleCase, SaltReturnAssertsMixin):
     def test_env_module_sets_key(self):
         state_key = 'test_|-always-changes-and-succeeds_|-foo_|-succeed_with_changes'
         ret = self.run_function('state.sls', [self.state_name])
-        self.assertTrue(ret[state_key]['result'])
+        assert ret[state_key]['result']

@@ -43,14 +43,14 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(drac.__opts__, {'test': True}):
                 comt = ('`{0}` already exists'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(drac.present(name, password, permission),
-                                     ret)
+                assert drac.present(name, password, permission) == \
+                                     ret
 
             with patch.dict(drac.__opts__, {'test': False}):
                 comt = ('`{0}` already exists'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(drac.present(name, password, permission),
-                                     ret)
+                assert drac.present(name, password, permission) == \
+                                     ret
 
     # 'absent' function tests: 1
 
@@ -70,12 +70,12 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(drac.__opts__, {'test': True}):
                 comt = ('`{0}` does not exist'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(drac.absent(name), ret)
+                assert drac.absent(name) == ret
 
             with patch.dict(drac.__opts__, {'test': False}):
                 comt = ('`{0}` does not exist'.format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(drac.absent(name), ret)
+                assert drac.absent(name) == ret
 
     # 'network' function tests: 1
 
@@ -100,13 +100,13 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(drac.__salt__, {'drac.network_info': mock_info,
                                         'drac.set_network': mock_bool}):
             with patch.dict(drac.__opts__, {'test': True}):
-                self.assertDictEqual(drac.network(ip_, netmask, gateway), ret)
+                assert drac.network(ip_, netmask, gateway) == ret
 
             with patch.dict(drac.__opts__, {'test': False}):
                 comt = ('Network is in the desired state')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(drac.network(ip_, netmask, gateway), ret)
+                assert drac.network(ip_, netmask, gateway) == ret
 
                 comt = ('unable to configure network')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(drac.network(ip_, netmask, gateway), ret)
+                assert drac.network(ip_, netmask, gateway) == ret

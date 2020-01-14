@@ -20,6 +20,7 @@ from tests.support.mock import (
 import salt.modules.grub_legacy as grub_legacy
 import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
@@ -35,7 +36,7 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='out')
         with patch.dict(grub_legacy.__salt__, {'cmd.run': mock}):
-            self.assertEqual(grub_legacy.version(), 'out')
+            assert grub_legacy.version() == 'out'
 
     def test_conf(self):
         '''
@@ -44,7 +45,8 @@ class GrublegacyTestCase(TestCase, LoaderModuleMockMixin):
         file_data = IOError(errno.EACCES, 'Permission denied')
         with patch('salt.utils.files.fopen', mock_open(read_data=file_data)), \
                 patch.object(grub_legacy, '_detect_conf', return_value='A'):
-            self.assertRaises(CommandExecutionError, grub_legacy.conf)
+            with pytest.raises(CommandExecutionError):
+                grub_legacy.conf()
 
         file_data = salt.utils.stringutils.to_str('\n'.join(['#', 'A B C D,E,F G H']))
         with patch('salt.utils.files.fopen', mock_open(read_data=file_data)), \

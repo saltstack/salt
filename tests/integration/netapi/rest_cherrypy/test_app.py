@@ -22,28 +22,28 @@ class TestAuth(cptc.BaseRestCherryPyTest):
         GET requests to the root URL should not require auth
         '''
         request, response = self.request('/')
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
     def test_post_root_auth(self):
         '''
         POST requests to the root URL redirect to login
         '''
         request, response = self.request('/', method='POST', data={})
-        self.assertEqual(response.status, '401 Unauthorized')
+        assert response.status == '401 Unauthorized'
 
     def test_login_noauth(self):
         '''
         GET requests to the login URL should not require auth
         '''
         request, response = self.request('/login')
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
     def test_webhook_auth(self):
         '''
         Requests to the webhook URL require auth by default
         '''
         request, response = self.request('/hook', method='POST', data={})
-        self.assertEqual(response.status, '401 Unauthorized')
+        assert response.status == '401 Unauthorized'
 
 
 class TestLogin(cptc.BaseRestCherryPyTest):
@@ -61,7 +61,7 @@ class TestLogin(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
         return response
 
     def test_bad_login(self):
@@ -73,7 +73,7 @@ class TestLogin(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '401 Unauthorized')
+        assert response.status == '401 Unauthorized'
 
     def test_logout(self):
         ret = self.test_good_login()
@@ -85,7 +85,7 @@ class TestLogin(cptc.BaseRestCherryPyTest):
                 'content-type': 'application/x-www-form-urlencoded',
                 'X-Auth-Token': token,
         })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
 
 class TestRun(cptc.BaseRestCherryPyTest):
@@ -111,7 +111,7 @@ class TestRun(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
     def test_run_bad_login(self):
         '''
@@ -124,7 +124,7 @@ class TestRun(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '401 Unauthorized')
+        assert response.status == '401 Unauthorized'
 
     def test_run_empty_token(self):
         '''
@@ -203,7 +203,7 @@ class TestRun(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
 
 class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
@@ -226,7 +226,7 @@ class TestWebhookDisableAuth(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
 
 class TestArgKwarg(cptc.BaseRestCherryPyTest):
@@ -277,9 +277,9 @@ class TestArgKwarg(cptc.BaseRestCherryPyTest):
             }
         )
         resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
-        self.assertEqual(resp['return'][0]['args'], [1234])
-        self.assertEqual(resp['return'][0]['kwargs'],
-                         {'ext_source': 'redis'})
+        assert resp['return'][0]['args'] == [1234]
+        assert resp['return'][0]['kwargs'] == \
+                         {'ext_source': 'redis'}
 
 
 class TestJobs(cptc.BaseRestCherryPyTest):
@@ -320,7 +320,7 @@ class TestJobs(cptc.BaseRestCherryPyTest):
             headers={
                 'content-type': 'application/x-www-form-urlencoded'
         })
-        self.assertEqual(response.status, '200 OK')
+        assert response.status == '200 OK'
 
     @pytest.mark.flaky(max_runs=4)
     def test_all_jobs(self):
@@ -336,5 +336,5 @@ class TestJobs(cptc.BaseRestCherryPyTest):
         })
 
         resp = salt.utils.json.loads(salt.utils.stringutils.to_str(response.body[0]))
-        self.assertIn('test.ping', str(resp['return']))
-        self.assertEqual(response.status, '200 OK')
+        assert 'test.ping' in str(resp['return'])
+        assert response.status == '200 OK'

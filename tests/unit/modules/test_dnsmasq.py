@@ -19,6 +19,7 @@ from tests.support.mock import (
 # Import Salt Libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.dnsmasq as dnsmasq
+import pytest
 
 
 class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
@@ -34,7 +35,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A B C')
         with patch.dict(dnsmasq.__salt__, {'cmd.run': mock}):
-            self.assertEqual(dnsmasq.version(), "C")
+            assert dnsmasq.version() == "C"
 
     def test_fullversion(self):
         '''
@@ -42,9 +43,9 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A B C\nD E F G H I')
         with patch.dict(dnsmasq.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(dnsmasq.fullversion(),
+            assert dnsmasq.fullversion() == \
                                  {'version': 'C',
-                                  'compile options': ['G', 'H', 'I']})
+                                  'compile options': ['G', 'H', 'I']}
 
     def test_set_config(self):
         '''
@@ -54,7 +55,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(dnsmasq, 'get_config', mock):
             mock = MagicMock(return_value=['.', '~', 'bak', '#'])
             with patch.object(os, 'listdir', mock):
-                self.assertDictEqual(dnsmasq.set_config(), {})
+                assert dnsmasq.set_config() == {}
 
     def test_set_config_filter_pub_kwargs(self):
         '''
@@ -71,7 +72,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
                                          __pub_pid=8184,
                                          __pub_jid=20161101194639387946,
                                          __pub_tgt='salt-call')
-            self.assertEqual(ret, {'domain': mock_domain, 'address': mock_address})
+            assert ret == {'domain': mock_domain, 'address': mock_address}
 
     def test_get_config(self):
         '''
@@ -81,14 +82,15 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(dnsmasq, 'get_config', mock):
             mock = MagicMock(return_value=['.', '~', 'bak', '#'])
             with patch.object(os, 'listdir', mock):
-                self.assertDictEqual(dnsmasq.get_config(), {'conf-dir': 'A'})
+                assert dnsmasq.get_config() == {'conf-dir': 'A'}
 
     def test_parse_dnsmasq_no_file(self):
         '''
         Tests that a CommandExecutionError is when a filename that doesn't exist is
         passed in.
         '''
-        self.assertRaises(CommandExecutionError, dnsmasq._parse_dnamasq, 'filename')
+        with pytest.raises(CommandExecutionError):
+            dnsmasq._parse_dnamasq('filename')
 
     def test_parse_dnamasq(self):
         '''
@@ -102,7 +104,7 @@ class DnsmasqTestCase(TestCase, LoaderModuleMockMixin):
                 #''')
             with patch('salt.utils.files.fopen',
                        mock_open(read_data=text_file_data)):
-                self.assertDictEqual(dnsmasq._parse_dnamasq('filename'),
+                assert dnsmasq._parse_dnamasq('filename') == \
                                      {'A': 'B',
                                       'unparsed': ['line here\n',
-                                                   'second line\n']})
+                                                   'second line\n']}

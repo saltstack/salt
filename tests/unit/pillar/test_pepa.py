@@ -26,4 +26,4 @@ class PepaPillarTestCase(TestCase):
             ('foo..bar..baz', True),
         ])
         result = pepa.key_value_to_tree(data)
-        self.assertDictEqual(result, expected_result)
+        assert result == expected_result

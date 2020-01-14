@@ -49,8 +49,8 @@ class MacPortsModuleTest(ModuleCase):
         Test pkg.list_pkgs
         '''
         self.run_function('pkg.install', ['agree'])
-        self.assertIsInstance(self.run_function('pkg.list_pkgs'), dict)
-        self.assertIn('agree', self.run_function('pkg.list_pkgs'))
+        assert isinstance(self.run_function('pkg.list_pkgs'), dict)
+        assert 'agree' in self.run_function('pkg.list_pkgs')
 
     @pytest.mark.destructive_test
     def test_latest_version(self):
@@ -61,8 +61,8 @@ class MacPortsModuleTest(ModuleCase):
         result = self.run_function('pkg.latest_version',
                                    ['agree'],
                                    refresh=False)
-        self.assertIsInstance(result, dict)
-        self.assertIn('agree', result)
+        assert isinstance(result, dict)
+        assert 'agree' in result
 
     @pytest.mark.destructive_test
     def test_remove(self):
@@ -71,8 +71,8 @@ class MacPortsModuleTest(ModuleCase):
         '''
         self.run_function('pkg.install', ['agree'])
         removed = self.run_function('pkg.remove', ['agree'])
-        self.assertIsInstance(removed, dict)
-        self.assertIn('agree', removed)
+        assert isinstance(removed, dict)
+        assert 'agree' in removed
 
     @pytest.mark.destructive_test
     def test_install(self):
@@ -81,15 +81,14 @@ class MacPortsModuleTest(ModuleCase):
         '''
         self.run_function('pkg.remove', ['agree'])
         installed = self.run_function('pkg.install', ['agree'])
-        self.assertIsInstance(installed, dict)
-        self.assertIn('agree', installed)
+        assert isinstance(installed, dict)
+        assert 'agree' in installed
 
     def test_list_upgrades(self):
         '''
         Test pkg.list_upgrades
         '''
-        self.assertIsInstance(
-            self.run_function('pkg.list_upgrades', refresh=False), dict)
+        assert isinstance(self.run_function('pkg.list_upgrades', refresh=False), dict)
 
     @pytest.mark.destructive_test
     def test_upgrade_available(self):
@@ -97,15 +96,15 @@ class MacPortsModuleTest(ModuleCase):
         Test pkg.upgrade_available
         '''
         self.run_function('pkg.install', ['agree'])
-        self.assertFalse(self.run_function('pkg.upgrade_available',
+        assert not self.run_function('pkg.upgrade_available',
                                            ['agree'],
-                                           refresh=False))
+                                           refresh=False)
 
     def test_refresh_db(self):
         '''
         Test pkg.refresh_db
         '''
-        self.assertTrue(self.run_function('pkg.refresh_db'))
+        assert self.run_function('pkg.refresh_db')
 
     @pytest.mark.destructive_test
     def test_upgrade(self):
@@ -113,5 +112,5 @@ class MacPortsModuleTest(ModuleCase):
         Test pkg.upgrade
         '''
         results = self.run_function('pkg.upgrade', refresh=False)
-        self.assertIsInstance(results, dict)
-        self.assertTrue(results['result'])
+        assert isinstance(results, dict)
+        assert results['result']

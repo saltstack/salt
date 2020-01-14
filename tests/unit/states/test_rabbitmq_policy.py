@@ -46,15 +46,15 @@ class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
                         {'rabbitmq.list_policies': mock}):
             comt = ('Policy / HA is already present')
             ret.update({'comment': comt})
-            self.assertDictEqual(rabbitmq_policy.present(name, pattern,
-                                                         definition), ret)
+            assert rabbitmq_policy.present(name, pattern,
+                                                         definition) == ret
 
             with patch.dict(rabbitmq_policy.__opts__, {'test': True}):
                 comment = 'Policy / HA is set to be created'
                 changes = {'new': 'HA', 'old': {}}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
-                self.assertDictEqual(rabbitmq_policy.present(name, pattern,
-                                                             definition), ret)
+                assert rabbitmq_policy.present(name, pattern,
+                                                             definition) == ret
 
     # 'absent' function tests: 1
 
@@ -74,10 +74,10 @@ class RabbitmqPolicyTestCase(TestCase, LoaderModuleMockMixin):
                         {'rabbitmq.policy_exists': mock}):
             comment = "Policy '/ HA' is not present."
             ret.update({'comment': comment})
-            self.assertDictEqual(rabbitmq_policy.absent(name), ret)
+            assert rabbitmq_policy.absent(name) == ret
 
             with patch.dict(rabbitmq_policy.__opts__, {'test': True}):
                 comment = "Policy '/ HA' will be removed."
                 changes = {'new': '', 'old': 'HA'}
                 ret.update({'comment': comment, 'result': None, 'changes': changes})
-                self.assertDictEqual(rabbitmq_policy.absent(name), ret)
+                assert rabbitmq_policy.absent(name) == ret

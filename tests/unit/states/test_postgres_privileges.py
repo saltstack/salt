@@ -49,12 +49,11 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 {'postgres.has_privileges': self.mock_true}):
             comt = 'The requested privilege(s) are already set'
             self.ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(
-                postgres_privileges.present(
+            assert postgres_privileges.present(
                     self.name,
                     self.table_name,
-                    'table'),
-                self.ret)
+                    'table') == \
+                self.ret
 
         with patch.dict(postgres_privileges.__salt__,
             {'postgres.has_privileges': self.mock_false,
@@ -63,9 +62,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('The privilege(s): {0} are'
                         ' set to be granted to {1}').format('ALL', self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_privileges.present(self.name,
-                        self.table_name, 'table', privileges=['ALL']), self.ret)
+                assert postgres_privileges.present(self.name,
+                        self.table_name, 'table', privileges=['ALL']) == self.ret
 
             with patch.dict(postgres_privileges.__opts__, {'test': False}):
                 comt = ('The privilege(s): {0} have '
@@ -73,9 +71,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 self.ret.update({'comment': comt,
                             'result': True,
                             'changes': {'baruwa': 'Present'}})
-                self.assertDictEqual(
-                    postgres_privileges.present(self.name,
-                        self.table_name, 'table', privileges=['ALL']), self.ret)
+                assert postgres_privileges.present(self.name,
+                        self.table_name, 'table', privileges=['ALL']) == self.ret
 
     def test_present_group(self):
         '''
@@ -89,9 +86,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                         ' set to be granted to {1}').format(self.group_name,
                             self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_privileges.present(self.name,
-                        self.group_name, 'group'), self.ret)
+                assert postgres_privileges.present(self.name,
+                        self.group_name, 'group') == self.ret
 
             with patch.dict(postgres_privileges.__opts__, {'test': False}):
                 comt = ('The privilege(s): {0} have '
@@ -100,9 +96,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 self.ret.update({'comment': comt,
                             'result': True,
                             'changes': {'baruwa': 'Present'}})
-                self.assertDictEqual(
-                    postgres_privileges.present(self.name,
-                        self.group_name, 'group'), self.ret)
+                assert postgres_privileges.present(self.name,
+                        self.group_name, 'group') == self.ret
 
     def test_absent_table(self):
         '''
@@ -114,12 +109,11 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('The requested privilege(s)'
                     ' are not set so cannot be revoked')
                 self.ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(
-                    postgres_privileges.absent(
+                assert postgres_privileges.absent(
                         self.name,
                         self.table_name,
-                        'table'),
-                    self.ret)
+                        'table') == \
+                    self.ret
 
         with patch.dict(postgres_privileges.__salt__,
             {'postgres.has_privileges': self.mock_true,
@@ -128,9 +122,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('The privilege(s): {0} are'
                         ' set to be revoked from {1}').format('ALL', self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_privileges.absent(self.name,
-                        self.table_name, 'table', privileges=['ALL']), self.ret)
+                assert postgres_privileges.absent(self.name,
+                        self.table_name, 'table', privileges=['ALL']) == self.ret
 
             with patch.dict(postgres_privileges.__opts__, {'test': False}):
                 comt = ('The privilege(s): {0} have '
@@ -138,9 +131,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 self.ret.update({'comment': comt,
                             'result': True,
                             'changes': {'baruwa': 'Absent'}})
-                self.assertDictEqual(
-                    postgres_privileges.absent(self.name,
-                        self.table_name, 'table', privileges=['ALL']), self.ret)
+                assert postgres_privileges.absent(self.name,
+                        self.table_name, 'table', privileges=['ALL']) == self.ret
 
     def test_absent_group(self):
         '''
@@ -154,9 +146,8 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                         ' set to be revoked from {1}').format(self.group_name,
                             self.name)
                 self.ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(
-                    postgres_privileges.absent(self.name,
-                        self.group_name, 'group'), self.ret)
+                assert postgres_privileges.absent(self.name,
+                        self.group_name, 'group') == self.ret
 
             with patch.dict(postgres_privileges.__opts__, {'test': False}):
                 comt = ('The privilege(s): {0} have '
@@ -165,6 +156,5 @@ class PostgresPrivilegesTestCase(TestCase, LoaderModuleMockMixin):
                 self.ret.update({'comment': comt,
                             'result': True,
                             'changes': {'baruwa': 'Absent'}})
-                self.assertDictEqual(
-                    postgres_privileges.absent(self.name,
-                        self.group_name, 'group'), self.ret)
+                assert postgres_privileges.absent(self.name,
+                        self.group_name, 'group') == self.ret

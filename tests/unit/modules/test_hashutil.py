@@ -29,38 +29,38 @@ class HashutilTestCase(ModuleCase):
 
     def test_base64_encodestring(self):
         ret = self.hashutil['hashutil.base64_encodestring'](self.the_string)
-        self.assertEqual(ret, self.the_string_base64)
+        assert ret == self.the_string_base64
 
     def test_base64_decodestring(self):
         ret = self.hashutil['hashutil.base64_decodestring'](self.the_string_base64)
-        self.assertEqual(ret, self.the_string)
+        assert ret == self.the_string
 
     def test_md5_digest(self):
         ret = self.hashutil['hashutil.md5_digest'](self.the_string)
-        self.assertEqual(ret, self.the_string_md5)
+        assert ret == self.the_string_md5
 
     def test_sha256_digest(self):
         ret = self.hashutil['hashutil.sha256_digest'](self.the_string)
-        self.assertEqual(ret, self.the_string_sha256)
+        assert ret == self.the_string_sha256
 
     def test_sha512_digest(self):
         ret = self.hashutil['hashutil.sha512_digest'](self.the_string)
-        self.assertEqual(ret, self.the_string_sha512)
+        assert ret == self.the_string_sha512
 
     def test_hmac_signature(self):
         ret = self.hashutil['hashutil.hmac_signature'](
                 self.the_string,
                 'shared secret',
                 self.the_string_hmac)
-        self.assertTrue(ret)
+        assert ret
 
     def test_hmac_compute(self):
         ret = self.hashutil['hashutil.hmac_compute'](self.the_string, 'shared secret')
-        self.assertEqual(ret, self.the_string_hmac_compute)
+        assert ret == self.the_string_hmac_compute
 
     def test_github_signature(self):
         ret = self.hashutil['hashutil.github_signature'](
                 self.the_string,
                 'shared secret',
                 self.the_string_github)
-        self.assertTrue(ret)
+        assert ret

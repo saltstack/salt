@@ -42,9 +42,9 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pagerduty.__opts__, {'test': True}):
             comt = ('Need to create event: {0}'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(pagerduty.create_event(name, details,
-                                                        service_key, profile),
-                                 ret)
+            assert pagerduty.create_event(name, details,
+                                                        service_key, profile) == \
+                                 ret
 
         with patch.dict(pagerduty.__opts__, {'test': False}):
             mock_t = MagicMock(return_value=True)
@@ -52,6 +52,6 @@ class PagerdutyTestCase(TestCase, LoaderModuleMockMixin):
                             {'pagerduty.create_event': mock_t}):
                 comt = ('Created event: {0}'.format(name))
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(pagerduty.create_event(name, details,
+                assert pagerduty.create_event(name, details,
                                                             service_key,
-                                                            profile), ret)
+                                                            profile) == ret

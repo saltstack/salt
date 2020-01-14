@@ -23,6 +23,7 @@ import salt.payload
 import salt.utils.files
 import salt.cache.localfs as localfs
 from salt.exceptions import SaltCacheError
+import pytest
 
 
 class LocalFSTest(TestCase, LoaderModuleMockMixin):
@@ -52,7 +53,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.makedirs', MagicMock(side_effect=OSError(errno.EEXIST, ''))):
             with patch('tempfile.mkstemp', MagicMock(side_effect=Exception)):
-                self.assertRaises(Exception, localfs.store, bank='', key='', data='', cachedir='')
+                with pytest.raises(Exception):
+                    localfs.store(bank='', key='', data='', cachedir='')
 
     def test_unhandled_exception_cache_dir(self):
         '''
@@ -60,7 +62,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         cannot be created.
         '''
         with patch('os.makedirs', MagicMock(side_effect=OSError(1, ''))):
-            self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
+            with pytest.raises(SaltCacheError):
+                localfs.store(bank='', key='', data='', cachedir='')
 
     def test_store_close_mkstemp_file_handle(self):
         '''
@@ -72,7 +75,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.makedirs', MagicMock(side_effect=OSError(errno.EEXIST, ''))):
             with patch('tempfile.mkstemp', MagicMock(return_value=(12345, 'foo'))):
-                self.assertRaises(OSError, localfs.store, bank='', key='', data='', cachedir='')
+                with pytest.raises(OSError):
+                    localfs.store(bank='', key='', data='', cachedir='')
 
     def test_store_error_writing_cache(self):
         '''
@@ -83,7 +87,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
             with patch('tempfile.mkstemp', MagicMock(return_value=('one', 'two'))):
                 with patch('os.close', MagicMock(return_value=None)):
                     with patch('salt.utils.files.fopen', MagicMock(side_effect=IOError)):
-                        self.assertRaises(SaltCacheError, localfs.store, bank='', key='', data='', cachedir='')
+                        with pytest.raises(SaltCacheError):
+                            localfs.store(bank='', key='', data='', cachedir='')
 
     def test_store_success(self):
         '''
@@ -98,7 +103,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         # Read in the contents of the key.p file and assert "payload data" was written
         with salt.utils.files.fopen(tmp_dir + '/bank/key.p', 'rb') as fh_:
             for line in fh_:
-                self.assertIn(b'payload data', line)
+                assert b'payload data' in line
 
     # 'fetch' function tests: 3
 
@@ -108,7 +113,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         doesn't exist.
         '''
         with patch('os.path.isfile', MagicMock(return_value=False)):
-            self.assertEqual(localfs.fetch(bank='', key='', cachedir=''), {})
+            assert localfs.fetch(bank='', key='', cachedir='') == {}
 
     def test_fetch_error_reading_cache(self):
         '''
@@ -117,7 +122,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
             with patch('salt.utils.files.fopen', MagicMock(side_effect=IOError)):
-                self.assertRaises(SaltCacheError, localfs.fetch, bank='', key='', cachedir='')
+                with pytest.raises(SaltCacheError):
+                    localfs.fetch(bank='', key='', cachedir='')
 
     def test_fetch_success(self):
         '''
@@ -135,7 +141,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         # Now fetch the data from the new cache key file
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
             with patch.dict(localfs.__context__, {'serial': serializer}):
-                self.assertIn('payload data', localfs.fetch(bank='bank', key='key', cachedir=tmp_dir))
+                assert 'payload data' in localfs.fetch(bank='bank', key='key', cachedir=tmp_dir)
 
     # 'updated' function tests: 3
 
@@ -145,7 +151,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         exist.
         '''
         with patch('os.path.isfile', MagicMock(return_value=False)):
-            self.assertIsNone(localfs.updated(bank='', key='', cachedir=''))
+            assert localfs.updated(bank='', key='', cachedir='') is None
 
     def test_updated_error_when_reading_mtime(self):
         '''
@@ -154,7 +160,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
             with patch('os.path.getmtime', MagicMock(side_effect=IOError)):
-                self.assertRaises(SaltCacheError, localfs.updated, bank='', key='', cachedir='')
+                with pytest.raises(SaltCacheError):
+                    localfs.updated(bank='', key='', cachedir='')
 
     def test_updated_success(self):
         '''
@@ -167,7 +174,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         self._create_tmp_cache_file(tmp_dir, salt.payload.Serial(self))
 
         with patch('os.path.join', MagicMock(return_value=tmp_dir + '/bank/key.p')):
-            self.assertIsInstance(localfs.updated(bank='bank', key='key', cachedir=tmp_dir), int)
+            assert isinstance(localfs.updated(bank='bank', key='key', cachedir=tmp_dir), int)
 
     # 'flush' function tests: 4
 
@@ -177,7 +184,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         target directory doesn't exist.
         '''
         with patch('os.path.isdir', MagicMock(return_value=False)):
-            self.assertFalse(localfs.flush(bank='', key=None, cachedir=''))
+            assert not localfs.flush(bank='', key=None, cachedir='')
 
     def test_flush_key_provided_and_no_key_file_false(self):
         '''
@@ -185,7 +192,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         the target key file doesn't exist in the cache bank.
         '''
         with patch('os.path.isfile', MagicMock(return_value=False)):
-            self.assertFalse(localfs.flush(bank='', key='key', cachedir=''))
+            assert not localfs.flush(bank='', key='key', cachedir='')
 
     def test_flush_success(self):
         '''
@@ -201,7 +208,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
             # Now test the return of the flush function
             with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-                self.assertTrue(localfs.flush(bank='bank', key='key', cachedir=tmp_dir))
+                assert localfs.flush(bank='bank', key='key', cachedir=tmp_dir)
 
     def test_flush_error_raised(self):
         '''
@@ -210,7 +217,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.path.isfile', MagicMock(return_value=True)):
             with patch('os.remove', MagicMock(side_effect=OSError)):
-                self.assertRaises(SaltCacheError, localfs.flush, bank='', key='key', cachedir='/var/cache/salt')
+                with pytest.raises(SaltCacheError):
+                    localfs.flush(bank='', key='key', cachedir='/var/cache/salt')
 
     # 'list' function tests: 3
 
@@ -220,7 +228,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         doesn't exist.
         '''
         with patch('os.path.isdir', MagicMock(return_value=False)):
-            self.assertEqual(localfs.list_(bank='', cachedir=''), [])
+            assert localfs.list_(bank='', cachedir='') == []
 
     def test_list_error_raised_no_bank_directory_access(self):
         '''
@@ -229,7 +237,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
         '''
         with patch('os.path.isdir', MagicMock(return_value=True)):
             with patch('os.listdir', MagicMock(side_effect=OSError)):
-                self.assertRaises(SaltCacheError, localfs.list_, bank='', cachedir='')
+                with pytest.raises(SaltCacheError):
+                    localfs.list_(bank='', cachedir='')
 
     def test_list_success(self):
         '''
@@ -243,7 +252,7 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
         # Now test the return of the ls function
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-            self.assertEqual(localfs.list_(bank='bank', cachedir=tmp_dir), ['key'])
+            assert localfs.list_(bank='bank', cachedir=tmp_dir) == ['key']
 
     # 'contains' function tests: 1
 
@@ -260,8 +269,8 @@ class LocalFSTest(TestCase, LoaderModuleMockMixin):
 
         # Now test the return of the contains function when key=None
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-            self.assertTrue(localfs.contains(bank='bank', key=None, cachedir=tmp_dir))
+            assert localfs.contains(bank='bank', key=None, cachedir=tmp_dir)
 
         # Now test the return of the contains function when key='key'
         with patch.dict(localfs.__opts__, {'cachedir': tmp_dir}):
-            self.assertTrue(localfs.contains(bank='bank', key='key', cachedir=tmp_dir))
+            assert localfs.contains(bank='bank', key='key', cachedir=tmp_dir)

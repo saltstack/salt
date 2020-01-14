@@ -21,6 +21,7 @@ import salt.utils.files
 from salt.ext.six.moves import range
 from salt import fileclient
 from salt.ext import six
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class FileclientTestCase(TestCase):
         '''
         with patch('os.path.isfile', lambda prm: False):
             with patch('os.makedirs', self._fake_makedir(num=errno.EROFS)):
-                with self.assertRaises(OSError):
+                with pytest.raises(OSError):
                     with fileclient.Client(self.opts)._cache_loc('testfile') as c_ref_itr:
                         assert c_ref_itr == '/__test__/files/base/testfile'
 
@@ -107,14 +108,14 @@ class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMo
         '''
         Ensure that the fileclient class won't allow a direct call to file_list_emptydirs()
         '''
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             self.file_client.file_list_emptydirs()
 
     def test_get_file(self):
         '''
         Ensure that the fileclient class won't allow a direct call to get_file()
         '''
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             self.file_client.get_file(None)
 
     def test_get_file_client(self):
@@ -122,7 +123,7 @@ class FileClientTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMo
         minion_opts['file_client'] = 'remote'
         with patch('salt.fileclient.RemoteClient', MagicMock(return_value='remote_client')):
             ret = fileclient.get_file_client(minion_opts)
-            self.assertEqual('remote_client', ret)
+            assert 'remote_client' == ret
 
 
 class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin):
@@ -203,13 +204,11 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
-                self.assertTrue(
-                    client.cache_dir(
+                assert client.cache_dir(
                         'salt://{0}'.format(SUBDIR),
                         saltenv,
                         cachedir=None
                     )
-                )
                 for subdir_file in SUBDIR_FILES:
                     cache_loc = os.path.join(fileclient.__opts__['cachedir'],
                                              'files',
@@ -227,9 +226,9 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                         content = fp_.read()
                     log.debug('cache_loc = %s', cache_loc)
                     log.debug('content = %s', content)
-                    self.assertTrue(subdir_file in content)
-                    self.assertTrue(SUBDIR in content)
-                    self.assertTrue(saltenv in content)
+                    assert subdir_file in content
+                    assert SUBDIR in content
+                    assert saltenv in content
 
     def test_cache_dir_with_alternate_cachedir_and_absolute_path(self):
         '''
@@ -243,13 +242,11 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
-                self.assertTrue(
-                    client.cache_dir(
+                assert client.cache_dir(
                         'salt://{0}'.format(SUBDIR),
                         saltenv,
                         cachedir=alt_cachedir
                     )
-                )
                 for subdir_file in SUBDIR_FILES:
                     cache_loc = os.path.join(alt_cachedir,
                                              'files',
@@ -267,9 +264,9 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                         content = fp_.read()
                     log.debug('cache_loc = %s', cache_loc)
                     log.debug('content = %s', content)
-                    self.assertTrue(subdir_file in content)
-                    self.assertTrue(SUBDIR in content)
-                    self.assertTrue(saltenv in content)
+                    assert subdir_file in content
+                    assert SUBDIR in content
+                    assert saltenv in content
 
     def test_cache_dir_with_alternate_cachedir_and_relative_path(self):
         '''
@@ -283,13 +280,11 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
-                self.assertTrue(
-                    client.cache_dir(
+                assert client.cache_dir(
                         'salt://{0}'.format(SUBDIR),
                         saltenv,
                         cachedir=alt_cachedir
                     )
-                )
                 for subdir_file in SUBDIR_FILES:
                     cache_loc = os.path.join(fileclient.__opts__['cachedir'],
                                              alt_cachedir,
@@ -308,9 +303,9 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                         content = fp_.read()
                     log.debug('cache_loc = %s', cache_loc)
                     log.debug('content = %s', content)
-                    self.assertTrue(subdir_file in content)
-                    self.assertTrue(SUBDIR in content)
-                    self.assertTrue(saltenv in content)
+                    assert subdir_file in content
+                    assert SUBDIR in content
+                    assert saltenv in content
 
     def test_cache_file(self):
         '''
@@ -322,9 +317,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
-                self.assertTrue(
-                    client.cache_file('salt://foo.txt', saltenv, cachedir=None)
-                )
+                assert client.cache_file('salt://foo.txt', saltenv, cachedir=None)
                 cache_loc = os.path.join(
                     fileclient.__opts__['cachedir'], 'files', saltenv, 'foo.txt')
                 # Double check that the content of the cached file identifies
@@ -338,7 +331,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     content = fp_.read()
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
-                self.assertTrue(saltenv in content)
+                assert saltenv in content
 
     def test_cache_file_with_alternate_cachedir_and_absolute_path(self):
         '''
@@ -352,11 +345,9 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
-                self.assertTrue(
-                    client.cache_file('salt://foo.txt',
+                assert client.cache_file('salt://foo.txt',
                                       saltenv,
                                       cachedir=alt_cachedir)
-                )
                 cache_loc = os.path.join(alt_cachedir,
                                          'files',
                                          saltenv,
@@ -372,7 +363,7 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     content = fp_.read()
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
-                self.assertTrue(saltenv in content)
+                assert saltenv in content
 
     def test_cache_file_with_alternate_cachedir_and_relative_path(self):
         '''
@@ -386,11 +377,9 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
         with patch.dict(fileclient.__opts__, patched_opts):
             client = fileclient.get_file_client(fileclient.__opts__, pillar=False)
             for saltenv in SALTENVS:
-                self.assertTrue(
-                    client.cache_file('salt://foo.txt',
+                assert client.cache_file('salt://foo.txt',
                                       saltenv,
                                       cachedir=alt_cachedir)
-                )
                 cache_loc = os.path.join(fileclient.__opts__['cachedir'],
                                          alt_cachedir,
                                          'files',
@@ -407,4 +396,4 @@ class FileclientCacheTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderMod
                     content = fp_.read()
                 log.debug('cache_loc = %s', cache_loc)
                 log.debug('content = %s', content)
-                self.assertTrue(saltenv in content)
+                assert saltenv in content

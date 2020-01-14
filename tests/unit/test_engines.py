@@ -50,7 +50,7 @@ class EngineTestCase(TestCase, LoaderModuleMockMixin):
                 fun = process_map[proc]['Process'].fun
 
                 # Ensure function is start from the test engine
-                self.assertEqual(fun, 'test.start')
+                assert fun == 'test.start'
 
             # Ensure there were two engine started
-            self.assertEqual(count, len(mock_opts['engines']))
+            assert count == len(mock_opts['engines'])

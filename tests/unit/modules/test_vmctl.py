@@ -32,7 +32,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(vmctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(vmctl.create_disk('/path/to/disk.img', '1G'))
+            assert vmctl.create_disk('/path/to/disk.img', '1G')
 
     def test_load(self):
         '''
@@ -42,7 +42,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(vmctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(vmctl.load('/etc/vm.switches.conf'))
+            assert vmctl.load('/etc/vm.switches.conf')
 
     def test_reload(self):
         '''
@@ -52,7 +52,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         ret['retcode'] = 0
         mock_cmd = MagicMock(return_value=ret)
         with patch.dict(vmctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertTrue(vmctl.reload())
+            assert vmctl.reload()
 
     def test_reset(self):
         '''
@@ -65,7 +65,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             res = vmctl.reset()
             mock_cmd.assert_called_once_with(['vmctl', 'reset'],
                 output_loglevel='trace', python_shell=False)
-            self.assertTrue(res)
+            assert res
 
     def test_reset_vms(self):
         '''
@@ -78,7 +78,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             res = vmctl.reset(vms=True)
             mock_cmd.assert_called_once_with(['vmctl', 'reset', 'vms'],
                 output_loglevel='trace', python_shell=False)
-            self.assertTrue(res)
+            assert res
 
     def test_reset_switches(self):
         '''
@@ -91,7 +91,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             res = vmctl.reset(switches=True)
             mock_cmd.assert_called_once_with(['vmctl', 'reset', 'switches'],
                 output_loglevel='trace', python_shell=False)
-            self.assertTrue(res)
+            assert res
 
     def test_reset_all(self):
         '''
@@ -104,7 +104,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             res = vmctl.reset(all=True)
             mock_cmd.assert_called_once_with(['vmctl', 'reset', 'all'],
                 output_loglevel='trace', python_shell=False)
-            self.assertTrue(res)
+            assert res
 
     def test_start_existing_vm(self):
         '''
@@ -116,7 +116,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
         mock_cmd = MagicMock(return_value=ret)
         expected = {'changes': True, 'console': '/dev/ttyp4'}
         with patch.dict(vmctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertDictEqual(expected, vmctl.start('4'))
+            assert expected == vmctl.start('4')
 
     def test_start_new_vm(self):
         '''
@@ -133,7 +133,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
                 res = vmctl.start('web1', bootpath='/bsd.rd', nics=2, disk='/disk.img')
                 mock_cmd.assert_called_once_with(['vmctl', 'start', 'web1', '-i 2', '-b', '/bsd.rd', '-d', '/disk.img'],
                     output_loglevel='trace', python_shell=False)
-                self.assertDictEqual(expected, res)
+                assert expected == res
 
     def test_status(self):
         '''
@@ -179,7 +179,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
         with patch.dict(vmctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(expected, vmctl.status())
+            assert expected == vmctl.status()
 
     def test_status_single(self):
         '''
@@ -204,7 +204,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             },
         }
         with patch.dict(vmctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(expected, vmctl.status('web4'))
+            assert expected == vmctl.status('web4')
 
     def test_stop_when_running(self):
         '''
@@ -219,7 +219,7 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             res = vmctl.stop('web1')
             mock_cmd.assert_called_once_with(['vmctl', 'stop', 'web1'],
                 output_loglevel='trace', python_shell=False)
-            self.assertTrue(res['changes'])
+            assert res['changes']
 
     def test_stop_when_stopped(self):
         '''
@@ -234,4 +234,4 @@ class VmctlTestCase(TestCase, LoaderModuleMockMixin):
             res = vmctl.stop('web1')
             mock_cmd.assert_called_once_with(['vmctl', 'stop', 'web1'],
                 output_loglevel='trace', python_shell=False)
-            self.assertFalse(res['changes'])
+            assert not res['changes']

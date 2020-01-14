@@ -35,7 +35,7 @@ class SPMInstallTest(SPMCase):
 
         sls = os.path.join(self.config['formula_path'], 'apache', 'apache.sls')
 
-        self.assertTrue(os.path.exists(sls))
+        assert os.path.exists(sls)
 
     def test_spm_install_from_repo(self):
         '''
@@ -46,7 +46,7 @@ class SPMInstallTest(SPMCase):
 
         sls = os.path.join(self.config['formula_path'], 'apache', 'apache.sls')
 
-        self.assertTrue(os.path.exists(sls))
+        assert os.path.exists(sls)
 
     def tearDown(self):
         shutil.rmtree(self._tmp_spm)

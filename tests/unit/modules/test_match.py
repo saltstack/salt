@@ -73,7 +73,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
             # The matcher should get called with MINION_ID
             matchers.assert_called_once()
             matchers_opts = matchers.call_args[0][0]
-            self.assertEqual(matchers_opts.get('id'), new_minion_id)
+            assert matchers_opts.get('id') == new_minion_id
 
             # The compound matcher should not get MINION_ID, no opts should be passed
             mock_compound_match.assert_called_once_with(target)
@@ -90,8 +90,8 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
 
             # The matcher should get called with MINION_ID
             matchers.assert_called_once()
-            self.assertEqual(len(matchers.call_args[0]), 1)
-            self.assertEqual(matchers.call_args[0][0].get('id'), MINION_ID)
+            assert len(matchers.call_args[0]) == 1
+            assert matchers.call_args[0][0].get('id') == MINION_ID
 
             # The compound matcher should not get MINION_ID, no opts should be passed
             mock_compound_match.assert_called_once_with(target)
@@ -110,7 +110,7 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         }
         result = {'key1': 'barval1', 'key2': 'barval2'}
 
-        self.assertDictEqual(match.filter_by(lookup), result)
+        assert match.filter_by(lookup) == result
 
     def test_watch_for_opts_mismatch_glob_match(self):
         '''
@@ -122,9 +122,9 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         and use it instead of `__opts__`.  If sometime in the future we update the matchers
         and use `__opts__` directly this breaks proxy matching.
         '''
-        self.assertTrue(glob_match.match('bar03'))
-        self.assertTrue(glob_match.match('rest03', {'id': 'rest03'}))
-        self.assertFalse(glob_match.match('rest03'))
+        assert glob_match.match('bar03')
+        assert glob_match.match('rest03', {'id': 'rest03'})
+        assert not glob_match.match('rest03')
 
     def test_watch_for_opts_mismatch_list_match(self):
         '''
@@ -136,9 +136,9 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         and use it instead of `__opts__`.  If sometime in the future we update the matchers
         and use `__opts__` directly this breaks proxy matching.
         '''
-        self.assertTrue(list_match.match('bar03'))
-        self.assertTrue(list_match.match('rest03', {'id': 'rest03'}))
-        self.assertFalse(list_match.match('rest03'))
+        assert list_match.match('bar03')
+        assert list_match.match('rest03', {'id': 'rest03'})
+        assert not list_match.match('rest03')
 
     def test_watch_for_opts_mismatch_compound_match(self):
         '''
@@ -150,6 +150,6 @@ class MatchTestCase(TestCase, LoaderModuleMockMixin):
         and use it instead of `__opts__`.  If sometime in the future we update the matchers
         and use `__opts__` directly this breaks proxy matching.
         '''
-        self.assertTrue(compound_match.match('L@bar03'))
-        self.assertTrue(compound_match.match('L@rest03', {'id': 'rest03'}))
-        self.assertFalse(compound_match.match('L@rest03'))
+        assert compound_match.match('L@bar03')
+        assert compound_match.match('L@rest03', {'id': 'rest03'})
+        assert not compound_match.match('L@rest03')

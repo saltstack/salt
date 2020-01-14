@@ -216,7 +216,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
         Feed it an 'orphan' image as we get it from from imgadm list -j
         '''
         ret = {'Error': 'This looks like an orphaned image, image payload was invalid.'}
-        self.assertEqual(_parse_image_meta(image_orphan, True), ret)
+        assert _parse_image_meta(image_orphan, True) == ret
 
     def test_parse_image_meta_native(self):
         '''
@@ -229,7 +229,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
                'published': '2018-04-09T08:25:52Z',
                'source': 'https://images.joyent.com',
                'version': '18.1.0'}
-        self.assertEqual(_parse_image_meta(image_native, True), ret)
+        assert _parse_image_meta(image_native, True) == ret
 
     def test_parse_image_meta_lx(self):
         '''
@@ -244,7 +244,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
                'published': '2016-06-01T02:17:41Z',
                'source': 'https://images.joyent.com',
                'version': '20160601'}
-        self.assertEqual(_parse_image_meta(image_lx, True), ret)
+        assert _parse_image_meta(image_lx, True) == ret
 
     def test_parse_image_meta_zvol(self):
         '''
@@ -258,7 +258,7 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
                'published': '2018-10-11T12:45:24.804Z',
                'source': 'https://images.joyent.com',
                'version': '20180808'}
-        self.assertEqual(_parse_image_meta(image_zvol, True), ret)
+        assert _parse_image_meta(image_zvol, True) == ret
 
     def test_parse_image_meta_docker(self):
         '''
@@ -273,4 +273,4 @@ class ImgadmTestCase(TestCase, LoaderModuleMockMixin):
                'published': '2019-03-23T01:32:25.320Z',
                'source': 'https://docker.io',
                'version': '62487cf6a7f6'}
-        self.assertEqual(_parse_image_meta(image_docker, True), ret)
+        assert _parse_image_meta(image_docker, True) == ret

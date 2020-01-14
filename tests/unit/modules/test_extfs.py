@@ -30,7 +30,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock()
         with patch.dict(extfs.__salt__, {'cmd.run': mock}):
-            self.assertListEqual([], extfs.mkfs('/dev/sda1', 'ext4'))
+            assert [] == extfs.mkfs('/dev/sda1', 'ext4')
 
     # 'tune' function tests: 1
 
@@ -41,7 +41,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock()
         with patch.dict(extfs.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.extfs.tune', MagicMock(return_value='')):
-            self.assertEqual('', extfs.tune('/dev/sda1'))
+            assert '' == extfs.tune('/dev/sda1')
 
     # 'dump' function tests: 1
 
@@ -51,8 +51,8 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock()
         with patch.dict(extfs.__salt__, {'cmd.run': mock}):
-            self.assertEqual({'attributes': {}, 'blocks': {}},
-                             extfs.dump('/dev/sda1'))
+            assert {'attributes': {}, 'blocks': {}} == \
+                             extfs.dump('/dev/sda1')
 
     # 'attributes' function tests: 1
 
@@ -62,7 +62,7 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.extfs.dump',
                     MagicMock(return_value={'attributes': {}, 'blocks': {}})):
-            self.assertEqual({}, extfs.attributes('/dev/sda1'))
+            assert {} == extfs.attributes('/dev/sda1')
 
     # 'blocks' function tests: 1
 
@@ -72,4 +72,4 @@ class ExtfsTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.extfs.dump',
                    MagicMock(return_value={'attributes': {}, 'blocks': {}})):
-            self.assertEqual({}, extfs.blocks('/dev/sda1'))
+            assert {} == extfs.blocks('/dev/sda1')

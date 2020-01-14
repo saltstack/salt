@@ -102,8 +102,7 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
             ret = self.run_state('pkgrepo.managed', **kwargs)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertEqual(
-                ret['changes'],
+            assert ret['changes'] == \
                 {
                     'comments': {
                         'old': ['This is a comment'],
@@ -111,17 +110,14 @@ class PkgrepoTest(ModuleCase, SaltReturnAssertsMixin):
                                 'This is another comment']
                     }
                 }
-            )
 
             # Run a third time, no changes should be made
             ret = self.run_state('pkgrepo.managed', **kwargs)
             self.assertSaltTrueReturn(ret)
             ret = ret[next(iter(ret))]
-            self.assertFalse(ret['changes'])
-            self.assertEqual(
-                ret['comment'],
+            assert not ret['changes']
+            assert ret['comment'] == \
                 "Package repo '{0}' already configured".format(kwargs['name'])
-            )
         finally:
             # Clean up
             self.run_state('pkgrepo.absent', name=kwargs['name'])

@@ -101,7 +101,7 @@ class RunnerReturnsTest(ShellCase):
             'master',
             'return.p',
         )
-        self.assertFalse(os.path.isfile(serialized_return))
+        assert not os.path.isfile(serialized_return)
 
     def test_runner_returns_enabled(self):
         '''
@@ -136,12 +136,10 @@ class RunnerReturnsTest(ShellCase):
             user = RUNTIME_VARS.RUNNING_TESTS_USER
         if salt.utils.platform.is_windows():
             user = 'sudo_{0}\\{1}'.format(socket.gethostname(), user)
-        self.assertEqual(
-            deserialized,
+        assert deserialized == \
             {'return': {'fun': 'runner.test.arg',
                         'fun_args': ['foo', {'bar': 'hello world!'}],
                         'jid': jid,
                         'return': {'args': ['foo'], 'kwargs': {'bar': 'hello world!'}},
                         'success': True,
                         'user': user}}
-        )

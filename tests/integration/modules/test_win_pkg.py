@@ -44,8 +44,8 @@ class WinPKGTest(ModuleCase):
         '''
         def _check_pkg(pkgs, check_refresh, exists=True):
             refresh = self.run_function('pkg.refresh_db')
-            self.assertEqual(check_refresh, refresh['total'],
-                 msg='total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh))
+            assert check_refresh == refresh['total'], \
+                 'total returned {0}. Expected return {1}'.format(refresh['total'], check_refresh)
             repo_data = self.run_function('pkg.get_repo_data')
             repo_cache = os.path.join(RUNTIME_VARS.TMP, 'rootdir', 'cache', 'files', 'base', 'win', 'repo-ng')
             for pkg in pkgs:
@@ -86,7 +86,7 @@ class WinPKGTest(ModuleCase):
         # now check if curl is also in cache and repo query
         pkgs.append('curl')
         for pkg in pkgs:
-            self.assertIn(pkg + '.sls', os.listdir(self.repo_dir))
+            assert pkg + '.sls' in os.listdir(self.repo_dir)
         _check_pkg(pkgs, 3)
 
         # remove curl sls and check its not in cache and repo query

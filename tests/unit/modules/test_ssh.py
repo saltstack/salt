@@ -17,6 +17,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.modules.ssh as ssh
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
@@ -44,33 +45,35 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         '''
         output = ssh._expand_authorized_keys_path('/home/%u', 'user',
                 '/home/user')
-        self.assertEqual(output, '/home/user')
+        assert output == '/home/user'
 
         output = ssh._expand_authorized_keys_path('/home/%h', 'user',
                 '/home/user')
-        self.assertEqual(output, '/home//home/user')
+        assert output == '/home//home/user'
 
         output = ssh._expand_authorized_keys_path('%h/foo', 'user',
                 '/home/user')
-        self.assertEqual(output, '/home/user/foo')
+        assert output == '/home/user/foo'
 
         output = ssh._expand_authorized_keys_path('/srv/%h/aaa/%u%%', 'user',
                 '/home/user')
-        self.assertEqual(output, '/srv//home/user/aaa/user%')
+        assert output == '/srv//home/user/aaa/user%'
 
         user = 'dude'
         home = '/home/dude'
         path = '/home/dude%'
-        self.assertRaises(CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home)
+        with pytest.raises(CommandExecutionError):
+            ssh._expand_authorized_keys_path(path, user, home)
 
         path = '/home/%dude'
-        self.assertRaises(CommandExecutionError, ssh._expand_authorized_keys_path, path, user, home)
+        with pytest.raises(CommandExecutionError):
+            ssh._expand_authorized_keys_path(path, user, home)
 
     def test_set_auth_key_invalid(self):
         self.user_info_mock = {'home': '/dev/null'}
         # Inserting invalid public key should be rejected
         invalid_key = 'AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY'  # missing padding
-        self.assertEqual(ssh.set_auth_key('user', invalid_key), 'Invalid public key')
+        assert ssh.set_auth_key('user', invalid_key) == 'Invalid public key'
 
     def test_replace_auth_key(self):
         '''
@@ -108,10 +111,10 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         # The previous authorized key should have been replaced by the simpler one
         with salt.utils.files.fopen(temp_file.name) as _fh:
             file_txt = salt.utils.stringutils.to_unicode(_fh.read())
-            self.assertIn(enc, file_txt)
-            self.assertIn(key, file_txt)
-            self.assertNotIn(options, file_txt)
-            self.assertNotIn(email, file_txt)
+            assert enc in file_txt
+            assert key in file_txt
+            assert options not in file_txt
+            assert email not in file_txt
 
         # Now test a very simple key using ecdsa instead of ssh-rsa and with multiple options
         enc = 'ecdsa-sha2-nistp256'
@@ -133,9 +136,9 @@ class SSHAuthKeyTestCase(TestCase, LoaderModuleMockMixin):
         # Assert that the new line was added as-is to the file
         with salt.utils.files.fopen(temp_file.name) as _fh:
             file_txt = salt.utils.stringutils.to_unicode(_fh.read())
-            self.assertIn(enc, file_txt)
-            self.assertIn(key, file_txt)
-            self.assertIn('{0} '.format(','.join(options)), file_txt)
-            self.assertIn(email, file_txt)
-            self.assertIn(empty_line, file_txt)
-            self.assertIn(comment_line, file_txt)
+            assert enc in file_txt
+            assert key in file_txt
+            assert '{0} '.format(','.join(options)) in file_txt
+            assert email in file_txt
+            assert empty_line in file_txt
+            assert comment_line in file_txt

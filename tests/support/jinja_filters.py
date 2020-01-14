@@ -23,9 +23,9 @@ class JinjaFiltersTest(object):
 
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_compare_dicts'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_compare_lists(self):
         '''
@@ -34,9 +34,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': {'old': ['b']}}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_compare_lists'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_decode_dict(self):
         '''
@@ -45,8 +45,8 @@ class JinjaFiltersTest(object):
         _expected = {'ret': {'a': 'b', 'c': 'd'}}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_decode_dict'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_data_decode_list(self):
         '''
@@ -55,8 +55,8 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['a', 'b', 'c', 'd']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_decode_list'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_data_encode_dict(self):
         '''
@@ -65,8 +65,8 @@ class JinjaFiltersTest(object):
         _expected = {'ret': {'a': 'b', 'c': 'd'}}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_encode_dict'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_data_encode_list(self):
         '''
@@ -75,8 +75,8 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['a', 'b', 'c', 'd']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_encode_list'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_data_exactly_n(self):
         '''
@@ -85,9 +85,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_exactly_n'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_exactly_one(self):
         '''
@@ -96,9 +96,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_exactly_one'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_is_iter(self):
         '''
@@ -107,9 +107,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_is_iter'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_is_list(self):
         '''
@@ -118,9 +118,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_is_list'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_mysql_to_dict(self):
         '''
@@ -129,9 +129,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': {'show processlist': {'Info': 'show processlist', 'db': 'NULL', 'Host': 'localhost', 'State': 'init', 'Command': 'Query', 'User': 'root', 'Time': 0, 'Id': 7}}}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_mysql_to_dict'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_sorted_ignorecase(self):
         '''
@@ -140,9 +140,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['Abcd', 'efgh', 'Ijk', 'lmno', 'Pqrs']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_sorted_ignorecase'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_data_substring_in_list(self):
         '''
@@ -151,9 +151,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.data_substring_in_list'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_dateutils_strftime(self):
         '''
@@ -161,8 +161,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.dateutils_strftime'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_files_is_binary(self):
         '''
@@ -171,9 +171,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.files_is_binary'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_files_is_empty(self):
         '''
@@ -186,9 +186,9 @@ class JinjaFiltersTest(object):
             _expected = {'ret': True}
             ret = self.run_function('state.sls',
                                     ['jinja_filters.files_is_empty'])
-            self.assertIn('module_|-test_|-test.echo_|-run', ret)
-            self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                             _expected)
+            assert 'module_|-test_|-test.echo_|-run' in ret
+            assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                             _expected
         finally:
             if salt.utils.platform.is_windows():
                 os.remove('c:\\empty_file')
@@ -200,9 +200,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.files_is_text'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_files_list_files(self):
         '''
@@ -210,13 +210,13 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.files_list_files'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
+        assert 'module_|-test_|-test.echo_|-run' in ret
         if salt.utils.platform.is_windows():
-            self.assertIn('c:\\\\salt\\\\conf\\\\minion',
-                          ret['module_|-test_|-test.echo_|-run']['changes']['ret'])
+            assert 'c:\\\\salt\\\\conf\\\\minion' in \
+                          ret['module_|-test_|-test.echo_|-run']['changes']['ret']
         else:
-            self.assertIn('/bin/ls',
-                          ret['module_|-test_|-test.echo_|-run']['changes']['ret'])
+            assert '/bin/ls' in \
+                          ret['module_|-test_|-test.echo_|-run']['changes']['ret']
 
     def test_hashutils_base4_64decode(self):
         '''
@@ -225,9 +225,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'Salt Rocks!'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_base4_64decode'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_hashutils_base4_64encode(self):
         '''
@@ -236,9 +236,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'U2FsdCBSb2NrcyE='}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_base4_64encode'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_hashutils_file_hashsum(self):
         '''
@@ -246,8 +246,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_file_hashsum'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_hashutils_hmac(self):
         '''
@@ -256,9 +256,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_hmac'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_hashutils_md5_digest(self):
         '''
@@ -267,9 +267,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': '85d6e71db655ee8e42c8b18475f0925f'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_md5_digest'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_hashutils_random_hash(self):
         '''
@@ -277,9 +277,9 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_random_hash'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret',
-                      ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in \
+                      ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_hashutils_sha256_digest(self):
         '''
@@ -288,9 +288,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'cce7fe00fd9cc6122fd3b2ed22feae215bcfe7ac4a7879d336c1993426a763fe'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_sha256_digest'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_hashutils_sha512_digest(self):
         '''
@@ -299,9 +299,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': '44d829491d8caa7039ad08a5b7fa9dd0f930138c614411c5326dd4755fdc9877ec6148219fccbe404139e7bb850e77237429d64f560c204f3697ab489fd8bfa5'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.hashutils_sha512_digest'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_http_query(self):
         '''
@@ -310,9 +310,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': {}}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.http_query'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_avg(self):
         '''
@@ -320,8 +320,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_avg'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_jinja_difference(self):
         '''
@@ -330,9 +330,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': [1, 3]}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_difference'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_intersect(self):
         '''
@@ -341,9 +341,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': [2, 4]}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_intersect'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_max(self):
         '''
@@ -352,9 +352,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 4}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_max'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_min(self):
         '''
@@ -363,9 +363,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 1}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_min'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_quote(self):
         '''
@@ -374,9 +374,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'Salt Rocks!'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_quote'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_regex_escape(self):
         '''
@@ -385,9 +385,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'Salt\\ Rocks'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_regex_escape'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_regex_match(self):
         '''
@@ -396,9 +396,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': "('a', 'd')"}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_regex_match'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_regex_replace(self):
         '''
@@ -407,9 +407,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'lets__replace__spaces'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_regex_replace'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_regex_search(self):
         '''
@@ -418,9 +418,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': "('a', 'd')"}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_regex_search'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_sequence(self):
         '''
@@ -429,9 +429,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['Salt Rocks!']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_sequence'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_skip(self):
         '''
@@ -440,9 +440,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': None}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_skip'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_symmetric_difference(self):
         '''
@@ -451,9 +451,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': [1, 3, 6]}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_symmetric_difference'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_to_bool(self):
         '''
@@ -462,9 +462,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_to_bool'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_union(self):
         '''
@@ -473,9 +473,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': [1, 2, 3, 4, 6]}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_union'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_unique(self):
         '''
@@ -484,9 +484,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['a', 'b', 'c']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_unique'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_jinja_uuid(self):
         '''
@@ -495,9 +495,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': '799192d9-7f32-5227-a45f-dfeb4a34e06f'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.jinja_uuid'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_gen_mac(self):
         '''
@@ -506,8 +506,8 @@ class JinjaFiltersTest(object):
         _expected = 'AC:DE:48:'
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_gen_mac'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertTrue(ret['module_|-test_|-test.echo_|-run']['changes']['ret'].startswith(_expected))
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes']['ret'].startswith(_expected)
 
     def test_network_ipaddr(self):
         '''
@@ -515,8 +515,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_ipaddr'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_network_ip_host(self):
         '''
@@ -525,9 +525,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': '192.168.0.12/24'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_ip_host'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_ipv4(self):
         '''
@@ -536,9 +536,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['127.0.0.1']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_ipv4'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_ipv6(self):
         '''
@@ -546,8 +546,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_ipv6'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_network_is_ip(self):
         '''
@@ -556,9 +556,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_is_ip'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_is_ipv4(self):
         '''
@@ -567,9 +567,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_is_ipv4'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_is_ipv6(self):
         '''
@@ -578,9 +578,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_is_ipv6'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_network_hosts(self):
         '''
@@ -589,9 +589,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': ['192.168.1.1', '192.168.1.2']}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_network_hosts'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_network_network_size(self):
         '''
@@ -600,9 +600,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 16}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.network_network_size'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_path_join(self):
         '''
@@ -611,9 +611,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': os.path.sep + os.path.join('a', 'b', 'c', 'd')}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.path_join'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_path_which(self):
         '''
@@ -621,8 +621,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.path_which'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_stringutils_contains_whitespace(self):
         '''
@@ -631,9 +631,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.stringutils_contains_whitespace'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_stringutils_is_hex(self):
         '''
@@ -642,9 +642,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.stringutils_is_hex'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_stringutils_random_str(self):
         '''
@@ -652,8 +652,8 @@ class JinjaFiltersTest(object):
         '''
         ret = self.run_function('state.sls',
                                 ['jinja_filters.stringutils_random_str'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_stringutils_to_bytes(self):
         '''
@@ -662,8 +662,8 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'Salt Rocks!'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.stringutils_to_bytes'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertIn('ret', ret['module_|-test_|-test.echo_|-run']['changes'])
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert 'ret' in ret['module_|-test_|-test.echo_|-run']['changes']
 
     def test_stringutils_to_num(self):
         '''
@@ -672,9 +672,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 42}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.stringutils_to_num'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_stringutils_whitelist_blacklist(self):
         '''
@@ -683,9 +683,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': True}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.stringutils_whitelist_blacklist'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on windows')
     def test_user_get_uid(self):
@@ -695,9 +695,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 0}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.user_get_uid'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_yamlencoding_yaml_dquote(self):
         '''
@@ -706,9 +706,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'A double-quoted string in YAML'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.yamlencoding_yaml_dquote'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_yamlencoding_yaml_encode(self):
         '''
@@ -717,9 +717,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'An encoded string in YAML'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.yamlencoding_yaml_encode'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_yamlencoding_yaml_squote(self):
         '''
@@ -728,9 +728,9 @@ class JinjaFiltersTest(object):
         _expected = {'ret': 'A single-quoted string in YAML'}
         ret = self.run_function('state.sls',
                                 ['jinja_filters.yamlencoding_yaml_squote'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_yaml(self):
         '''
@@ -738,9 +738,9 @@ class JinjaFiltersTest(object):
         '''
         _expected = {'ret': "{Question: 'Quieres Café?'}"}
         ret = self.run_function('state.sls', ['jinja_filters.yaml'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected
 
     def test_json(self):
         '''
@@ -748,6 +748,6 @@ class JinjaFiltersTest(object):
         '''
         _expected = {'ret': '{"Question": "Quieres Café?"}'}
         ret = self.run_function('state.sls', ['jinja_filters.json'])
-        self.assertIn('module_|-test_|-test.echo_|-run', ret)
-        self.assertEqual(ret['module_|-test_|-test.echo_|-run']['changes'],
-                         _expected)
+        assert 'module_|-test_|-test.echo_|-run' in ret
+        assert ret['module_|-test_|-test.echo_|-run']['changes'] == \
+                         _expected

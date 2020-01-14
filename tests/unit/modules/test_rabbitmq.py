@@ -17,6 +17,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.rabbitmq as rabbitmq
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,8 +39,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': '',
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(),
-                                 {'guest': ['administrator', 'user'], 'justAnAdmin': ['administrator']})
+            assert rabbitmq.list_users() == \
+                                 {'guest': ['administrator', 'user'], 'justAnAdmin': ['administrator']}
 
     # 'list_users_rabbitmq3' function tests: 1
 
@@ -53,7 +54,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': ''
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user'], 'other': ['a', 'b']})
+            assert rabbitmq.list_users() == {'guest': ['administrator', 'user'], 'other': ['a', 'b']}
 
     # 'list_users_with_warning_rabbitmq2' function tests: 1
 
@@ -68,7 +69,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         ])
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': rtn_stdout, 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+            assert rabbitmq.list_users() == {'guest': ['administrator', 'user']}
 
     # 'list_users_with_warning_rabbitmq3' function tests: 1
 
@@ -83,7 +84,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         ])
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': rtn_stdout, 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_users(), {'guest': ['administrator', 'user']})
+            assert rabbitmq.list_users() == {'guest': ['administrator', 'user']}
 
     # 'list_vhosts' function tests: 2
 
@@ -93,7 +94,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': '/\nsaltstack\n...', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['/', 'saltstack', '...'])
+            assert rabbitmq.list_vhosts() == ['/', 'saltstack', '...']
 
     def test_list_vhosts_with_warning(self):
         '''
@@ -108,7 +109,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         ])
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': rtn_stdout, 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertListEqual(rabbitmq.list_vhosts(), ['/', 'saltstack', '...'])
+            assert rabbitmq.list_vhosts() == ['/', 'saltstack', '...']
 
     # 'user_exists' function tests: 2
 
@@ -120,7 +121,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\n'
                                                                    'saltstack\t[administrator]\n...done', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertTrue(rabbitmq.user_exists('saltstack'))
+            assert rabbitmq.user_exists('saltstack')
 
     def test_user_exists_negative(self):
         '''
@@ -130,7 +131,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing users ...\n'
                                                                    'saltstack\t[administrator]\n...done', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertFalse(rabbitmq.user_exists('salt'))
+            assert not rabbitmq.user_exists('salt')
 
     # 'vhost_exists' function tests: 2
 
@@ -141,7 +142,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing vhosts ...\nsaltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertTrue(rabbitmq.vhost_exists('saltstack'))
+            assert rabbitmq.vhost_exists('saltstack')
 
     def test_vhost_exists_negative(self):
         '''
@@ -150,7 +151,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'Listing vhosts ...\nsaltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertFalse(rabbitmq.vhost_exists('salt'))
+            assert not rabbitmq.vhost_exists('salt')
 
     # 'add_user' function tests: 1
 
@@ -161,14 +162,15 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.add_user('saltstack'),
-                                 {'Added': 'saltstack'})
+            assert rabbitmq.add_user('saltstack') == \
+                                 {'Added': 'saltstack'}
 
         mock_run = MagicMock(return_value='Error')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
             with patch.object(rabbitmq, 'clear_password',
                               return_value={'Error': 'Error', 'retcode': 1}):
-                self.assertRaises(CommandExecutionError, rabbitmq.add_user, 'saltstack')
+                with pytest.raises(CommandExecutionError):
+                    rabbitmq.add_user('saltstack')
 
     # 'delete_user' function tests: 1
 
@@ -178,8 +180,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.delete_user('saltstack'),
-                                 {'Deleted': 'saltstack'})
+            assert rabbitmq.delete_user('saltstack') == \
+                                 {'Deleted': 'saltstack'}
 
     # 'change_password' function tests: 1
 
@@ -189,9 +191,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.change_password('saltstack',
-                                                          'salt@123'),
-                                 {'Password Changed': 'saltstack'})
+            assert rabbitmq.change_password('saltstack',
+                                                          'salt@123') == \
+                                 {'Password Changed': 'saltstack'}
 
     # 'clear_password' function tests: 1
 
@@ -201,8 +203,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.clear_password('saltstack'),
-                                 {'Password Cleared': 'saltstack'})
+            assert rabbitmq.clear_password('saltstack') == \
+                                 {'Password Cleared': 'saltstack'}
 
     # 'add_vhost' function tests: 1
 
@@ -212,8 +214,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.add_vhost('saltstack'),
-                                 {'Added': 'saltstack'})
+            assert rabbitmq.add_vhost('saltstack') == \
+                                 {'Added': 'saltstack'}
 
     # 'delete_vhost' function tests: 1
 
@@ -223,8 +225,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.delete_vhost('saltstack'),
-                                 {'Deleted': 'saltstack'})
+            assert rabbitmq.delete_vhost('saltstack') == \
+                                 {'Deleted': 'saltstack'}
 
     # 'set_permissions' function tests: 1
 
@@ -234,8 +236,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.set_permissions('myvhost', 'myuser'),
-                                 {'Permissions Set': 'saltstack'})
+            assert rabbitmq.set_permissions('myvhost', 'myuser') == \
+                                 {'Permissions Set': 'saltstack'}
 
     # 'list_permissions' function tests: 1
 
@@ -250,8 +252,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': '',
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
-                                 {'saltstack': ['saltstack', '.*', '1'], 'guest': ['0', 'one']})
+            assert rabbitmq.list_user_permissions('myuser') == \
+                                 {'saltstack': ['saltstack', '.*', '1'], 'guest': ['0', 'one']}
 
     # 'list_user_permissions' function tests: 1
 
@@ -266,8 +268,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': '',
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_user_permissions('myuser'),
-                                 {'saltstack': ['saltstack', '0', '1'], 'guest': ['0', 'one']})
+            assert rabbitmq.list_user_permissions('myuser') == \
+                                 {'saltstack': ['saltstack', '0', '1'], 'guest': ['0', 'one']}
 
     # 'set_user_tags' function tests: 1
 
@@ -277,8 +279,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.set_user_tags('myadmin', 'admin'),
-                                 {'Tag(s) set': 'saltstack'})
+            assert rabbitmq.set_user_tags('myadmin', 'admin') == \
+                                 {'Tag(s) set': 'saltstack'}
 
     # 'status' function tests: 1
 
@@ -288,7 +290,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.status(), 'saltstack')
+            assert rabbitmq.status() == 'saltstack'
 
     # 'cluster_status' function tests: 1
 
@@ -298,7 +300,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.cluster_status(), 'saltstack')
+            assert rabbitmq.cluster_status() == 'saltstack'
 
     # 'join_cluster' function tests: 1
 
@@ -308,8 +310,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.join_cluster('rabbit.example.com'),
-                                 {'Join': 'saltstack'})
+            assert rabbitmq.join_cluster('rabbit.example.com') == \
+                                 {'Join': 'saltstack'}
 
     # 'stop_app' function tests: 1
 
@@ -320,7 +322,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.stop_app(), 'saltstack')
+            assert rabbitmq.stop_app() == 'saltstack'
 
     # 'start_app' function tests: 1
 
@@ -330,7 +332,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.start_app(), 'saltstack')
+            assert rabbitmq.start_app() == 'saltstack'
 
     # 'reset' function tests: 1
 
@@ -340,7 +342,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.reset(), 'saltstack')
+            assert rabbitmq.reset() == 'saltstack'
 
     # 'force_reset' function tests: 1
 
@@ -350,7 +352,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertEqual(rabbitmq.force_reset(), 'saltstack')
+            assert rabbitmq.force_reset() == 'saltstack'
 
     # 'list_queues' function tests: 1
 
@@ -361,7 +363,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10',
                                            'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_queues(), {'saltstack': ['0'], 'celeryev.234-234': ['10']})
+            assert rabbitmq.list_queues() == {'saltstack': ['0'], 'celeryev.234-234': ['10']}
 
     # 'list_queues_vhost' function tests: 1
 
@@ -372,8 +374,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack\t0\nceleryev.234-234\t10',
                                            'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.list_queues_vhost('consumers'), {'saltstack': ['0'],
-                                                                           'celeryev.234-234': ['10']})
+            assert rabbitmq.list_queues_vhost('consumers') == {'saltstack': ['0'],
+                                                                           'celeryev.234-234': ['10']}
 
     # 'list_policies' function tests: 3
 
@@ -386,7 +388,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='3.7')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
                 patch.dict(rabbitmq.__grains__, {'os_family': ''}):
-            self.assertDictEqual(rabbitmq.list_policies(), {})
+            assert rabbitmq.list_policies() == {}
 
     def test_list_policies_freebsd(self):
         '''
@@ -397,7 +399,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='3.7')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
                 patch.dict(rabbitmq.__grains__, {'os_family': 'FreeBSD'}):
-            self.assertDictEqual(rabbitmq.list_policies(), {})
+            assert rabbitmq.list_policies() == {}
 
     def test_list_policies_old_version(self):
         '''
@@ -408,7 +410,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='3.0')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
                 patch.dict(rabbitmq.__grains__, {'os_family': ''}):
-            self.assertDictEqual(rabbitmq.list_policies(), {})
+            assert rabbitmq.list_policies() == {}
 
     # 'set_policy' function tests: 1
 
@@ -418,9 +420,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.set_policy('/', 'HA', '.*',
-                                                     '{"ha-mode": "all"}'),
-                                 {'Set': 'saltstack'})
+            assert rabbitmq.set_policy('/', 'HA', '.*',
+                                                     '{"ha-mode": "all"}') == \
+                                 {'Set': 'saltstack'}
 
     # 'delete_policy' function tests: 1
 
@@ -430,8 +432,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value={'retcode': 0, 'stdout': 'saltstack', 'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertDictEqual(rabbitmq.delete_policy('/', 'HA'),
-                                 {'Deleted': 'saltstack'})
+            assert rabbitmq.delete_policy('/', 'HA') == \
+                                 {'Deleted': 'saltstack'}
 
     # 'policy_exists' function tests: 1
 
@@ -444,7 +446,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='3.0')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run, 'pkg.version': mock_pkg}), \
                 patch.dict(rabbitmq.__grains__, {'os_family': ''}):
-            self.assertFalse(rabbitmq.policy_exists('/', 'HA'))
+            assert not rabbitmq.policy_exists('/', 'HA')
 
     # 'list_available_plugins' function tests: 2
 
@@ -456,7 +458,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertListEqual(rabbitmq.list_available_plugins(), ['saltstack', 'salt', 'other'])
+            assert rabbitmq.list_available_plugins() == ['saltstack', 'salt', 'other']
 
     def test_list_available_plugins_space_delimited(self):
         '''
@@ -466,7 +468,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertListEqual(rabbitmq.list_available_plugins(), ['saltstack', 'salt', 'other'])
+            assert rabbitmq.list_available_plugins() == ['saltstack', 'salt', 'other']
 
     # 'list_enabled_plugins' function tests: 2
 
@@ -478,7 +480,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertListEqual(rabbitmq.list_enabled_plugins(), ['saltstack', 'salt', 'other'])
+            assert rabbitmq.list_enabled_plugins() == ['saltstack', 'salt', 'other']
 
     def test_list_enabled_plugins_space_delimited(self):
         '''
@@ -488,7 +490,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertListEqual(rabbitmq.list_enabled_plugins(), ['saltstack', 'salt', 'other'])
+            assert rabbitmq.list_enabled_plugins() == ['saltstack', 'salt', 'other']
 
     # 'plugin_is_enabled' function tests: 2
 
@@ -500,9 +502,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertTrue(rabbitmq.plugin_is_enabled('saltstack'))
-            self.assertTrue(rabbitmq.plugin_is_enabled('salt'))
-            self.assertTrue(rabbitmq.plugin_is_enabled('other'))
+            assert rabbitmq.plugin_is_enabled('saltstack')
+            assert rabbitmq.plugin_is_enabled('salt')
+            assert rabbitmq.plugin_is_enabled('other')
 
     def test_plugin_is_enabled_negative(self):
         '''
@@ -512,9 +514,9 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertFalse(rabbitmq.plugin_is_enabled('salt'))
-            self.assertFalse(rabbitmq.plugin_is_enabled('stack'))
-            self.assertFalse(rabbitmq.plugin_is_enabled('random'))
+            assert not rabbitmq.plugin_is_enabled('salt')
+            assert not rabbitmq.plugin_is_enabled('stack')
+            assert not rabbitmq.plugin_is_enabled('random')
 
     # 'enable_plugin' function tests: 1
 
@@ -526,8 +528,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertDictEqual(rabbitmq.enable_plugin('salt'),
-                                 {'Enabled': 'saltstack'})
+            assert rabbitmq.enable_plugin('salt') == \
+                                 {'Enabled': 'saltstack'}
 
     # 'disable_plugin' function tests: 1
 
@@ -539,8 +541,8 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertDictEqual(rabbitmq.disable_plugin('salt'),
-                                 {'Disabled': 'saltstack'})
+            assert rabbitmq.disable_plugin('salt') == \
+                                 {'Disabled': 'saltstack'}
 
     # 'list_upstreams' function tests: 1
 
@@ -557,12 +559,10 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
         mock_pkg = MagicMock(return_value='')
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run,
                                             'pkg.version': mock_pkg}):
-            self.assertDictEqual(
-                rabbitmq.list_upstreams(),
+            assert rabbitmq.list_upstreams() == \
                 {'remote-name': ('{"ack-mode":"on-confirm","max-hops":1,'
                                  '"trust-user-id":true,"uri":"amqp://username:'
                                  'password@remote.fqdn"}')}
-            )
 
     # 'upstream_exists' function tests: 2
 
@@ -578,7 +578,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
                       'password@remote.fqdn"}',
             'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertTrue(rabbitmq.upstream_exists('remote-name'))
+            assert rabbitmq.upstream_exists('remote-name')
 
     def test_upstream_exists_negative(self):
         '''
@@ -592,7 +592,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
                       'password@remote.fqdn"}',
             'stderr': ''})
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertFalse(rabbitmq.upstream_exists('does-not-exist'))
+            assert not rabbitmq.upstream_exists('does-not-exist')
 
     # 'add_upstream' function tests: 1
 
@@ -609,11 +609,11 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': ''
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertTrue(rabbitmq.set_upstream('remote-name',
+            assert rabbitmq.set_upstream('remote-name',
                                                   'amqp://username:password@remote.fqdn',
                                                   ack_mode='on-confirm',
                                                   max_hops=1,
-                                                  trust_user_id=True))
+                                                  trust_user_id=True)
 
     # 'delete_upstream' function tests: 2
 
@@ -628,7 +628,7 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': ''
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertTrue(rabbitmq.delete_upstream('remote-name'))
+            assert rabbitmq.delete_upstream('remote-name')
 
     def test_delete_upstream_negative(self):
         '''
@@ -641,4 +641,5 @@ class RabbitmqTestCase(TestCase, LoaderModuleMockMixin):
             'stderr': 'Error:\nParameter does not exist'
         })
         with patch.dict(rabbitmq.__salt__, {'cmd.run_all': mock_run}):
-            self.assertRaises(CommandExecutionError, rabbitmq.delete_upstream, 'remote-name')
+            with pytest.raises(CommandExecutionError):
+                rabbitmq.delete_upstream('remote-name')

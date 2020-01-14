@@ -34,7 +34,7 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='X11 Layout=us')
         with patch.dict(keyboard.__grains__, {'os_family': 'RedHat'}):
             with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
-                self.assertEqual(keyboard.get_sys(), 'us')
+                assert keyboard.get_sys() == 'us'
 
     # 'set_sys' function tests: 1
 
@@ -46,7 +46,7 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(keyboard.__grains__, {'os_family': 'RedHat'}):
             with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
                 with patch.dict(keyboard.__salt__, {'file.sed': MagicMock()}):
-                    self.assertEqual(keyboard.set_sys('us'), 'us')
+                    assert keyboard.set_sys('us') == 'us'
 
     # 'get_x' function tests: 1
 
@@ -56,7 +56,7 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='layout:     us')
         with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
-            self.assertEqual(keyboard.get_x(), 'us')
+            assert keyboard.get_x() == 'us'
 
     # 'set_x' function tests: 1
 
@@ -66,4 +66,4 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='us')
         with patch.dict(keyboard.__salt__, {'cmd.run': mock}):
-            self.assertEqual(keyboard.set_x('us'), 'us')
+            assert keyboard.set_x('us') == 'us'

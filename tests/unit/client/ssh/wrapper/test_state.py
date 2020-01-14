@@ -22,4 +22,4 @@ class StateTests(TestCase):
         mods = 'a,b, c,  d,e ,f  '
 
         actual = state._parse_mods(mods)
-        self.assertEqual(expected, actual)
+        assert expected == actual

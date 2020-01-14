@@ -30,7 +30,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(service, 'run', MagicMock(return_value=True)):
-                self.assertTrue(service.start('name'))
+                assert service.start('name')
 
     def test_stop(self):
         '''
@@ -38,7 +38,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(service, 'run', MagicMock(return_value=True)):
-                self.assertTrue(service.stop('name'))
+                assert service.stop('name')
 
     def test_restart(self):
         '''
@@ -46,7 +46,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(service, 'run', MagicMock(return_value=True)):
-                self.assertTrue(service.restart('name'))
+                assert service.restart('name')
 
     def test_status(self):
         '''
@@ -56,7 +56,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(service.__salt__,
                         {'status.pid': MagicMock(return_value=True)}):
-            self.assertTrue(service.status('name'))
+            assert service.status('name')
 
     def test_reload_(self):
         '''
@@ -64,7 +64,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(service, 'run', MagicMock(return_value=True)):
-                self.assertTrue(service.reload_('name'))
+                assert service.reload_('name')
 
     def test_run(self):
         '''
@@ -72,7 +72,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'join', return_value='A'):
             with patch.object(service, 'run', MagicMock(return_value=True)):
-                self.assertTrue(service.run('name', 'action'))
+                assert service.run('name', 'action')
 
     def test_available(self):
         '''
@@ -80,14 +80,14 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         otherwise returns ``False``.
         '''
         with patch.object(service, 'get_all', return_value=['name', 'A']):
-            self.assertTrue(service.available('name'))
+            assert service.available('name')
 
     def test_missing(self):
         '''
         Test to inverse of service.available.
         '''
         with patch.object(service, 'get_all', return_value=['name1', 'A']):
-            self.assertTrue(service.missing('name'))
+            assert service.missing('name')
 
     def test_get_all(self):
         '''
@@ -95,7 +95,7 @@ class ServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'isdir', side_effect=[False, True]):
 
-            self.assertEqual(service.get_all(), [])
+            assert service.get_all() == []
 
             with patch.object(os, 'listdir', return_value=['A', 'B']):
-                self.assertListEqual(service.get_all(), ['A', 'B'])
+                assert service.get_all() == ['A', 'B']

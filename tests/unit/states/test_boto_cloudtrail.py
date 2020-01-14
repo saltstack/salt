@@ -171,9 +171,9 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
                          Name=trail_ret['Name'],
                          S3BucketName=trail_ret['S3BucketName'])
 
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['trail']['Name'],
-                         trail_ret['Name'])
+        assert result['result']
+        assert result['changes']['new']['trail']['Name'] == \
+                         trail_ret['Name']
 
     def test_present_when_trail_exists(self):
         self.conn.get_trail_status.return_value = status_ret
@@ -185,8 +185,8 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
                          Name=trail_ret['Name'],
                          S3BucketName=trail_ret['S3BucketName'],
                          LoggingEnabled=False)
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {})
+        assert result['result']
+        assert result['changes'] == {}
 
     def test_present_with_failure(self):
         self.conn.get_trail_status.side_effect = [not_found_error, status_ret]
@@ -197,8 +197,8 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
                          Name=trail_ret['Name'],
                          S3BucketName=trail_ret['S3BucketName'],
                          LoggingEnabled=False)
-        self.assertFalse(result['result'])
-        self.assertTrue('An error occurred' in result['comment'])
+        assert not result['result']
+        assert 'An error occurred' in result['comment']
 
     def test_absent_when_trail_does_not_exist(self):
         '''
@@ -206,18 +206,18 @@ class BotoCloudTrailTestCase(BotoCloudTrailStateTestCaseBase, BotoCloudTrailTest
         '''
         self.conn.get_trail_status.side_effect = not_found_error
         result = self.salt_states['boto_cloudtrail.absent']('test', 'mytrail')
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes'], {})
+        assert result['result']
+        assert result['changes'] == {}
 
     def test_absent_when_trail_exists(self):
         self.conn.get_trail_status.return_value = status_ret
         result = self.salt_states['boto_cloudtrail.absent']('test', trail_ret['Name'])
-        self.assertTrue(result['result'])
-        self.assertEqual(result['changes']['new']['trail'], None)
+        assert result['result']
+        assert result['changes']['new']['trail'] is None
 
     def test_absent_with_failure(self):
         self.conn.get_trail_status.return_value = status_ret
         self.conn.delete_trail.side_effect = ClientError(error_content, 'delete_trail')
         result = self.salt_states['boto_cloudtrail.absent']('test', trail_ret['Name'])
-        self.assertFalse(result['result'])
-        self.assertTrue('An error occurred' in result['comment'])
+        assert not result['result']
+        assert 'An error occurred' in result['comment']

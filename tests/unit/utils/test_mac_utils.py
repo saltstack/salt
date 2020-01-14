@@ -47,9 +47,8 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stdout': 'not supported',
                                            'stderr': 'error'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
-            self.assertRaises(CommandExecutionError,
-                              mac_utils.execute_return_success,
-                              'dir c:\\')
+            with pytest.raises(CommandExecutionError):
+                mac_utils.execute_return_success('dir c:\\')
 
     def test_execute_return_success_command_failed(self):
         '''
@@ -60,9 +59,8 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stdout': 'spongebob',
                                            'stderr': 'error'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
-            self.assertRaises(CommandExecutionError,
-                              mac_utils.execute_return_success,
-                              'dir c:\\')
+            with pytest.raises(CommandExecutionError):
+                mac_utils.execute_return_success('dir c:\\')
 
     def test_execute_return_success_command_succeeded(self):
         '''
@@ -73,7 +71,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stdout': 'spongebob'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
             ret = mac_utils.execute_return_success('dir c:\\')
-            self.assertEqual(ret, True)
+            assert ret is True
 
     def test_execute_return_result_command_failed(self):
         '''
@@ -84,9 +82,8 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stdout': 'spongebob',
                                            'stderr': 'squarepants'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
-            self.assertRaises(CommandExecutionError,
-                              mac_utils.execute_return_result,
-                              'dir c:\\')
+            with pytest.raises(CommandExecutionError):
+                mac_utils.execute_return_result('dir c:\\')
 
     def test_execute_return_result_command_succeeded(self):
         '''
@@ -97,56 +94,55 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stdout': 'spongebob'})
         with patch.object(mac_utils, '_run_all', mock_cmd):
             ret = mac_utils.execute_return_result('dir c:\\')
-            self.assertEqual(ret, 'spongebob')
+            assert ret == 'spongebob'
 
     def test_parse_return_space(self):
         '''
         test parse_return function
         space after colon
         '''
-        self.assertEqual(mac_utils.parse_return('spongebob: squarepants'),
-                         'squarepants')
+        assert mac_utils.parse_return('spongebob: squarepants') == \
+                         'squarepants'
 
     def test_parse_return_new_line(self):
         '''
         test parse_return function
         new line after colon
         '''
-        self.assertEqual(mac_utils.parse_return('spongebob:\nsquarepants'),
-                         'squarepants')
+        assert mac_utils.parse_return('spongebob:\nsquarepants') == \
+                         'squarepants'
 
     def test_parse_return_no_delimiter(self):
         '''
         test parse_return function
         no delimiter
         '''
-        self.assertEqual(mac_utils.parse_return('squarepants'),
-                         'squarepants')
+        assert mac_utils.parse_return('squarepants') == \
+                         'squarepants'
 
     def test_validate_enabled_on(self):
         '''
         test validate_enabled function
         test on
         '''
-        self.assertEqual(mac_utils.validate_enabled('On'),
-                         'on')
+        assert mac_utils.validate_enabled('On') == \
+                         'on'
 
     def test_validate_enabled_off(self):
         '''
         test validate_enabled function
         test off
         '''
-        self.assertEqual(mac_utils.validate_enabled('Off'),
-                         'off')
+        assert mac_utils.validate_enabled('Off') == \
+                         'off'
 
     def test_validate_enabled_bad_string(self):
         '''
         test validate_enabled function
         test bad string
         '''
-        self.assertRaises(SaltInvocationError,
-                          mac_utils.validate_enabled,
-                          'bad string')
+        with pytest.raises(SaltInvocationError):
+            mac_utils.validate_enabled('bad string')
 
     def test_validate_enabled_non_zero(self):
         '''
@@ -154,32 +150,32 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
         test non zero
         '''
         for x in range(1, 179, 3):
-            self.assertEqual(mac_utils.validate_enabled(x),
-                             'on')
+            assert mac_utils.validate_enabled(x) == \
+                             'on'
 
     def test_validate_enabled_0(self):
         '''
         test validate_enabled function
         test 0
         '''
-        self.assertEqual(mac_utils.validate_enabled(0),
-                         'off')
+        assert mac_utils.validate_enabled(0) == \
+                         'off'
 
     def test_validate_enabled_true(self):
         '''
         test validate_enabled function
         test True
         '''
-        self.assertEqual(mac_utils.validate_enabled(True),
-                         'on')
+        assert mac_utils.validate_enabled(True) == \
+                         'on'
 
     def test_validate_enabled_false(self):
         '''
         test validate_enabled function
         test False
         '''
-        self.assertEqual(mac_utils.validate_enabled(False),
-                         'off')
+        assert mac_utils.validate_enabled(False) == \
+                         'off'
 
     def test_launchctl(self):
         '''
@@ -190,7 +186,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                                            'stderr': 'none'})
         with patch('salt.utils.mac_utils.__salt__', {'cmd.run_all': mock_cmd}):
             ret = mac_utils.launchctl('enable', 'org.salt.minion')
-            self.assertEqual(ret, True)
+            assert ret is True
 
     def test_launchctl_return_stdout(self):
         '''
@@ -203,7 +199,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             ret = mac_utils.launchctl('enable',
                                       'org.salt.minion',
                                       return_stdout=True)
-            self.assertEqual(ret, 'success')
+            assert ret == 'success'
 
     def test_launchctl_error(self):
         '''
@@ -220,7 +216,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             try:
                 mac_utils.launchctl('enable', 'org.salt.minion')
             except CommandExecutionError as exc:
-                self.assertEqual(exc.message, error)
+                assert exc.message == error
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
@@ -244,7 +240,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 'file_name': 'com.apple.lla1.plist',
                 'file_path': file_path,
                 'plist': plists[0]}}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
@@ -279,7 +275,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
             {'Label': 'com.apple.uslla1'}]
         ret = _run_available_services(plists)
 
-        self.assertEqual(len(ret), 5)
+        assert len(ret) == 5
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
@@ -304,7 +300,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 'file_name': 'com.apple.lla1.plist',
                 'file_path': file_path,
                 'plist': plists[0]}}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @patch('salt.utils.path.os_walk')
     @patch('os.path.exists')
@@ -355,7 +351,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 'file_name': 'com.apple.lla1.plist',
                 'file_path': file_path,
                 'plist': plists[0]}}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         if six.PY2:
             mock_run.assert_has_calls(calls, any_order=True)
@@ -382,7 +378,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
                 with patch('plistlib.load', mock_load):
                     ret = mac_utils._available_services()
 
-            self.assertEqual(len(ret), 0)
+            assert len(ret) == 0
 
     @patch('salt.utils.mac_utils.__salt__')
     @patch('plistlib.readPlist')
@@ -433,7 +429,7 @@ class MacUtilsTestCase(TestCase, LoaderModuleMockMixin):
 
             mock_run.assert_has_calls(calls, any_order=True)
 
-        self.assertEqual(len(ret), 0)
+        assert len(ret) == 0
 
 
 def _get_walk_side_effects(results):

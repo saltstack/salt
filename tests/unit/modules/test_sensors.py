@@ -29,4 +29,4 @@ class SensorTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(sensors.__salt__,
                         {'cmd.run': MagicMock(return_value='A:a B:b C:c D:d')}):
-            self.assertDictEqual(sensors.sense('chip'), {'A': 'a B'})
+            assert sensors.sense('chip') == {'A': 'a B'}

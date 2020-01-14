@@ -35,7 +35,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value='DB')
         with patch.object(salt.loader, 'returners',
                           MagicMock(return_value={'redis.get_jid': mock_ret})):
-            self.assertEqual(ret.get_jid('redis', 'net'), 'DB')
+            assert ret.get_jid('redis', 'net') == 'DB'
 
     # 'get_fun' function tests: 1
 
@@ -46,7 +46,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value='DB')
         with patch.object(salt.loader, 'returners',
                           MagicMock(return_value={'mysql.get_fun': mock_ret})):
-            self.assertEqual(ret.get_fun('mysql', 'net'), 'DB')
+            assert ret.get_fun('mysql', 'net') == 'DB'
 
     # 'get_jids' function tests: 1
 
@@ -57,7 +57,7 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
         mock_ret = MagicMock(return_value='DB')
         with patch.object(salt.loader, 'returners',
                           MagicMock(return_value={'mysql.get_jids': mock_ret})):
-            self.assertEqual(ret.get_jids('mysql'), 'DB')
+            assert ret.get_jids('mysql') == 'DB'
 
     # 'get_minions' function tests: 1
 
@@ -69,4 +69,4 @@ class RetTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(salt.loader, 'returners',
                           MagicMock(return_value=
                                     {'mysql.get_minions': mock_ret})):
-            self.assertEqual(ret.get_minions('mysql'), 'DB')
+            assert ret.get_minions('mysql') == 'DB'

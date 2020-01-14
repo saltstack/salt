@@ -108,7 +108,7 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_module_creation(self):
         client = libcloud_loadbalancer._get_driver('test')
-        self.assertFalse(client is None)
+        assert client is not None
 
     def test_init(self):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
@@ -116,21 +116,21 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
             dunder.assert_called_with('salt.modules.libcloud_loadbalancer')
 
     def _validate_balancer(self, balancer):
-        self.assertEqual(balancer['name'], 'test_balancer')
+        assert balancer['name'] == 'test_balancer'
 
     def _validate_member(self, member):
-        self.assertEqual(member['id'], 'member_id')
-        self.assertEqual(member['ip'], '12.3.4.5')
+        assert member['id'] == 'member_id'
+        assert member['ip'] == '12.3.4.5'
 
     def test_list_balancers(self):
         balancers = libcloud_loadbalancer.list_balancers('test')
-        self.assertEqual(len(balancers), 1)
+        assert len(balancers) == 1
         self._validate_balancer(balancers[0])
 
     def test_list_protocols(self):
         protocols = libcloud_loadbalancer.list_protocols('test')
-        self.assertEqual(len(protocols), 2)
-        self.assertTrue('http' in protocols)
+        assert len(protocols) == 2
+        assert 'http' in protocols
 
     def test_create_balancer(self):
         balancer = libcloud_loadbalancer.create_balancer('new_test_balancer', 80, 'http', 'test')
@@ -142,7 +142,7 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_destroy_balancer(self):
         result = libcloud_loadbalancer.destroy_balancer('test_id', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_get_balancer_by_name(self):
         balancer = libcloud_loadbalancer.get_balancer_by_name('test_balancer', 'test')
@@ -158,7 +158,7 @@ class LibcloudLoadBalancerModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_balancer_detach_member(self):
         result = libcloud_loadbalancer.balancer_detach_member('test_id', 'member_id', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_list_balancer_members(self):
         members = libcloud_loadbalancer.list_balancer_members('test_id', 'test')

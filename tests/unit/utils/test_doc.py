@@ -32,4 +32,4 @@ class DocUtilsTestCase(TestCase):
                                  '============================\n\n                                '
                                  ':depends:   - keystoneclient Python module\n                                '
                                  ':configuration: See :py:mod:`salt.modules.keystone` for setup instructions.\n'}
-        self.assertDictEqual(ret, expected_dict)
+        assert ret == expected_dict

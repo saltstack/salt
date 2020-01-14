@@ -28,6 +28,7 @@ from salt.utils.versions import warn_until_date
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
 import psutil
+import pytest
 
 
 def die(func):
@@ -194,10 +195,10 @@ class TestThreadPool(TestCase):
 
         pool = salt.utils.process.ThreadPool()
         sent = pool.fire_async(incr_counter, args=(counter,))
-        self.assertTrue(sent)
+        assert sent
         time.sleep(1)  # Sleep to let the threads do things
-        self.assertEqual(counter.value, 1)
-        self.assertEqual(pool._job_queue.qsize(), 0)
+        assert counter.value == 1
+        assert pool._job_queue.qsize() == 0
 
     def test_full_queue(self):
         '''
@@ -211,15 +212,15 @@ class TestThreadPool(TestCase):
         pool = salt.utils.process.ThreadPool(0, 1)
         # make sure we can put the one item in
         sent = pool.fire_async(incr_counter, args=(counter,))
-        self.assertTrue(sent)
+        assert sent
         # make sure we can't put more in
         sent = pool.fire_async(incr_counter, args=(counter,))
-        self.assertFalse(sent)
+        assert not sent
         time.sleep(1)  # Sleep to let the threads do things
         # make sure no one updated the counter
-        self.assertEqual(counter.value, 0)
+        assert counter.value == 0
         # make sure the queue is still full
-        self.assertEqual(pool._job_queue.qsize(), 1)
+        assert pool._job_queue.qsize() == 1
 
 
 class TestProcess(TestCase):
@@ -228,19 +229,19 @@ class TestProcess(TestCase):
         # pylint: disable=assignment-from-none
         with patch('sys.argv', ['salt-call']):
             ret = salt.utils.process.daemonize_if({})
-            self.assertEqual(None, ret)
+            assert ret is None
 
         ret = salt.utils.process.daemonize_if({'multiprocessing': False})
-        self.assertEqual(None, ret)
+        assert ret is None
 
         with patch('sys.platform', 'win'):
             ret = salt.utils.process.daemonize_if({})
-            self.assertEqual(None, ret)
+            assert ret is None
 
         with patch('salt.utils.process.daemonize'), \
                 patch('sys.platform', 'linux2'):
             salt.utils.process.daemonize_if({})
-            self.assertTrue(salt.utils.process.daemonize.called)
+            assert salt.utils.process.daemonize.called
         # pylint: enable=assignment-from-none
 
 
@@ -476,7 +477,7 @@ class TestDup2(TestCase):
         'The dup2 method does not fail on streams without fileno support'
         f1 = io.StringIO("some initial text data")
         f2 = io.StringIO("some initial other text data")
-        with self.assertRaises(io.UnsupportedOperation):
+        with pytest.raises(io.UnsupportedOperation):
             f1.fileno()
         with patch('os.dup2') as dup_mock:
             try:
@@ -582,13 +583,11 @@ class TestDeprecatedClassNames(TestCase):
                 # Test warning
                 with warnings.catch_warnings(record=True) as recorded_warnings:
                     proc = salt.utils.process.MultiprocessingProcess(target=self.process_target)
-                    self.assertEqual(
-                        'Please stop using \'salt.utils.process.MultiprocessingProcess\' '
-                        'and instead use \'salt.utils.process.Process\'. '
-                        '\'salt.utils.process.MultiprocessingProcess\' will go away '
-                        'after 2022-01-01.',
+                    assert 'Please stop using \'salt.utils.process.MultiprocessingProcess\' ' \
+                        'and instead use \'salt.utils.process.Process\'. ' \
+                        '\'salt.utils.process.MultiprocessingProcess\' will go away ' \
+                        'after 2022-01-01.' == \
                         six.text_type(recorded_warnings[0].message)
-                    )
         finally:
             if proc is not None:
                 del proc
@@ -600,9 +599,7 @@ class TestDeprecatedClassNames(TestCase):
 
         try:
             with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
-                with self.assertRaisesRegex(
-                        RuntimeError,
-                        r"Please stop using 'salt.utils.process.MultiprocessingProcess' "
+                with pytest.raises(RuntimeError, match=r"Please stop using 'salt.utils.process.MultiprocessingProcess' "
                         r"and instead use 'salt.utils.process.Process'. "
                         r"'salt.utils.process.MultiprocessingProcess' will go away "
                         r'after 2022-01-01. '
@@ -628,13 +625,11 @@ class TestDeprecatedClassNames(TestCase):
                 # Test warning
                 with warnings.catch_warnings(record=True) as recorded_warnings:
                     proc = salt.utils.process.SignalHandlingMultiprocessingProcess(target=self.process_target)
-                    self.assertEqual(
-                        'Please stop using \'salt.utils.process.SignalHandlingMultiprocessingProcess\' '
-                        'and instead use \'salt.utils.process.SignalHandlingProcess\'. '
-                        '\'salt.utils.process.SignalHandlingMultiprocessingProcess\' will go away '
-                        'after 2022-01-01.',
+                    assert 'Please stop using \'salt.utils.process.SignalHandlingMultiprocessingProcess\' ' \
+                        'and instead use \'salt.utils.process.SignalHandlingProcess\'. ' \
+                        '\'salt.utils.process.SignalHandlingMultiprocessingProcess\' will go away ' \
+                        'after 2022-01-01.' == \
                         six.text_type(recorded_warnings[0].message)
-                    )
         finally:
             if proc is not None:
                 del proc
@@ -646,9 +641,7 @@ class TestDeprecatedClassNames(TestCase):
 
         try:
             with patch('salt.utils.versions.warn_until_date', self.patched_warn_until_date(fake_utcnow)):
-                with self.assertRaisesRegex(
-                        RuntimeError,
-                        r"Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
+                with pytest.raises(RuntimeError, match=r"Please stop using 'salt.utils.process.SignalHandlingMultiprocessingProcess' "
                         r"and instead use 'salt.utils.process.SignalHandlingProcess'. "
                         r"'salt.utils.process.SignalHandlingMultiprocessingProcess' will go away "
                         r'after 2022-01-01. '

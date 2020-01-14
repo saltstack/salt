@@ -69,7 +69,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config('minion')
             minion_opts['pillar'] = {'git': OrderedDict([('test1', 'test')])}
             state_obj = salt.state.State(minion_opts)
-            with self.assertRaises(salt.exceptions.SaltRenderError):
+            with pytest.raises(salt.exceptions.SaltRenderError):
                 state_obj.call_high(high_data)
 
     def test_verify_onlyif_parse(self):
@@ -103,7 +103,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config('minion')
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_onlyif(low_data, '')
-            self.assertEqual(expected_result, return_result)
+            assert expected_result == return_result
 
     def test_verify_unless_parse(self):
         low_data = {
@@ -136,7 +136,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config('minion')
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_unless(low_data, '')
-            self.assertEqual(expected_result, return_result)
+            assert expected_result == return_result
 
     def _expand_win_path(self, path):
         """
@@ -183,7 +183,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config('minion')
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_onlyif(low_data, '')
-            self.assertEqual(expected_result, return_result)
+            assert expected_result == return_result
 
     @with_tempfile()
     def test_verify_unless_parse_slots(self, name):
@@ -219,7 +219,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config('minion')
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_unless(low_data, '')
-            self.assertEqual(expected_result, return_result)
+            assert expected_result == return_result
 
 
 class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -251,23 +251,23 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_top_matches_with_list(self):
         top = {'env': {'match': ['state1', 'state2'], 'nomatch': ['state3']}}
         matches = self.highstate.top_matches(top)
-        self.assertEqual(matches, {'env': ['state1', 'state2']})
+        assert matches == {'env': ['state1', 'state2']}
 
     def test_top_matches_with_string(self):
         top = {'env': {'match': 'state1', 'nomatch': 'state2'}}
         matches = self.highstate.top_matches(top)
-        self.assertEqual(matches, {'env': ['state1']})
+        assert matches == {'env': ['state1']}
 
     def test_matches_whitelist(self):
         matches = {'env': ['state1', 'state2', 'state3']}
         matches = self.highstate.matches_whitelist(matches, ['state2'])
-        self.assertEqual(matches, {'env': ['state2']})
+        assert matches == {'env': ['state2']}
 
     def test_matches_whitelist_with_string(self):
         matches = {'env': ['state1', 'state2', 'state3']}
         matches = self.highstate.matches_whitelist(matches,
                                                    'state2,state3')
-        self.assertEqual(matches, {'env': ['state2', 'state3']})
+        assert matches == {'env': ['state2', 'state3']}
 
     def test_show_state_usage(self):
         # monkey patch sub methods
@@ -291,11 +291,11 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         # get compile_state_usage() result
         state_usage_dict = self.highstate.compile_state_usage()
 
-        self.assertEqual(state_usage_dict['base']['count_unused'], 1)
-        self.assertEqual(state_usage_dict['base']['count_used'], 2)
-        self.assertEqual(state_usage_dict['base']['count_all'], 3)
-        self.assertEqual(state_usage_dict['base']['used'], ['state.a', 'state.b'])
-        self.assertEqual(state_usage_dict['base']['unused'], ['state.c'])
+        assert state_usage_dict['base']['count_unused'] == 1
+        assert state_usage_dict['base']['count_used'] == 2
+        assert state_usage_dict['base']['count_all'] == 3
+        assert state_usage_dict['base']['used'] == ['state.a', 'state.b']
+        assert state_usage_dict['base']['unused'] == ['state.c']
 
     def test_find_sls_ids_with_exclude(self):
         '''
@@ -317,7 +317,7 @@ class HighStateTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         matches = self.highstate.top_matches(top)
         high, _ = self.highstate.render_highstate(matches)
         ret = salt.state.find_sls_ids('issue-47182.stateA.newer', high)
-        self.assertEqual(ret, [('somestuff', 'cmd')])
+        assert ret == [('somestuff', 'cmd')]
 
 
 @skipIf(pytest is None, 'PyTest is missing')
@@ -408,7 +408,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
                 }
         }
         self.state_obj.format_slots(cdata)
-        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'val'}})
+        assert cdata == {'args': ['arg'], 'kwargs': {'key': 'val'}}
 
     def test_format_slots_arg(self):
         '''
@@ -426,7 +426,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': ['fun_return'], 'kwargs': {'key': 'val'}})
+        assert cdata == {'args': ['fun_return'], 'kwargs': {'key': 'val'}}
 
     def test_format_slots_dict_arg(self):
         '''
@@ -444,7 +444,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': [{'subarg': 'fun_return'}], 'kwargs': {'key': 'val'}})
+        assert cdata == {'args': [{'subarg': 'fun_return'}], 'kwargs': {'key': 'val'}}
 
     def test_format_slots_listdict_arg(self):
         '''
@@ -462,7 +462,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': [[{'subarg': 'fun_return'}]], 'kwargs': {'key': 'val'}})
+        assert cdata == {'args': [[{'subarg': 'fun_return'}]], 'kwargs': {'key': 'val'}}
 
     def test_format_slots_liststr_arg(self):
         '''
@@ -480,7 +480,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': [['fun_return']], 'kwargs': {'key': 'val'}})
+        assert cdata == {'args': [['fun_return']], 'kwargs': {'key': 'val'}}
 
     def test_format_slots_kwarg(self):
         '''
@@ -498,7 +498,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'fun_return'}})
+        assert cdata == {'args': ['arg'], 'kwargs': {'key': 'fun_return'}}
 
     def test_format_slots_multi(self):
         '''
@@ -528,10 +528,10 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         mock_b.assert_called_once_with('b_arg', b_key='b_kwarg')
         mock_c.assert_called_once_with('c_arg', c_key='c_kwarg')
         mock_d.assert_called_once_with('d_arg', d_key='d_kwarg')
-        self.assertEqual(cdata, {'args': ['fun_a_return',
+        assert cdata == {'args': ['fun_a_return',
                                           'fun_b_return'],
                                  'kwargs': {'kw_key_1': 'fun_c_return',
-                                            'kw_key_2': 'fun_d_return'}})
+                                            'kw_key_2': 'fun_d_return'}}
 
     def test_format_slots_malformed(self):
         '''
@@ -560,7 +560,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'not.called': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_not_called()
-        self.assertEqual(cdata, sls_data)
+        assert cdata == sls_data
 
     def test_slot_traverse_dict(self):
         '''
@@ -579,7 +579,7 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1'}})
+        assert cdata == {'args': ['arg'], 'kwargs': {'key': 'value1'}}
 
     def test_slot_append(self):
         '''
@@ -598,4 +598,4 @@ class StateFormatSlotsTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         with patch.dict(self.state_obj.functions, {'mod.fun': mock}):
             self.state_obj.format_slots(cdata)
         mock.assert_called_once_with('fun_arg', fun_key='fun_val')
-        self.assertEqual(cdata, {'args': ['arg'], 'kwargs': {'key': 'value1thing~'}})
+        assert cdata == {'args': ['arg'], 'kwargs': {'key': 'value1thing~'}}

@@ -34,8 +34,8 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(side_effect=[{'installed version': None},
                                           {'installed version': '3.1'}])
             with patch.object(cpan, 'show', mock):
-                self.assertDictEqual(cpan.install('Alloy'),
-                                     {'new': '3.1', 'old': None})
+                assert cpan.install('Alloy') == \
+                                     {'new': '3.1', 'old': None}
 
     def test_install_error(self):
         '''
@@ -43,9 +43,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="don't know what it is")
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(cpan.install('Alloy'),
+            assert cpan.install('Alloy') == \
                                 {'error': 'CPAN cannot identify this package',
-                                 'new': None, 'old': None})
+                                 'new': None, 'old': None}
 
     # 'remove' function tests: 4
 
@@ -60,8 +60,8 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
                                                'cpan build dirs': [''],
                                                'installed file': '/root'})
                 with patch.object(cpan, 'show', mock):
-                    self.assertDictEqual(cpan.remove('Alloy'),
-                                         {'new': None, 'old': '2.1'})
+                    assert cpan.remove('Alloy') == \
+                                         {'new': None, 'old': '2.1'}
 
     def test_remove_unexist_error(self):
         '''
@@ -69,9 +69,9 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="don't know what it is")
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(cpan.remove('Alloy'),
+            assert cpan.remove('Alloy') == \
                                  {'error':
-                                  'This package does not seem to exist'})
+                                  'This package does not seem to exist'}
 
     def test_remove_noninstalled_error(self):
         '''
@@ -79,8 +79,8 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'installed version': None})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Alloy'),
-                                 {'new': None, 'old': None})
+            assert cpan.remove('Alloy') == \
+                                 {'new': None, 'old': None}
 
     def test_remove_nopan_error(self):
         '''
@@ -89,7 +89,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'error': 'No CPAN data available to use for uninstalling'}
         mock = MagicMock(return_value={'installed version': '2.1'})
         with patch.object(cpan, 'show', mock):
-            self.assertDictEqual(cpan.remove('Alloy'), ret)
+            assert cpan.remove('Alloy') == ret
 
     # 'list' function tests: 1
 
@@ -99,7 +99,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(cpan.list_(), {})
+            assert cpan.list_() == {}
 
     # 'show' function tests: 2
 
@@ -109,10 +109,10 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(cpan.show('Alloy'),
+            assert cpan.show('Alloy') == \
                                  {'error':
                                   'This package does not seem to exist',
-                                  'name': 'Alloy'})
+                                  'name': 'Alloy'}
 
     def test_show_mock(self):
         '''
@@ -121,7 +121,7 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.cpan.show', MagicMock(return_value={'Salt': 'salt'})):
             mock = MagicMock(return_value='Salt module installed')
             with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-                self.assertDictEqual(cpan.show('Alloy'), {'Salt': 'salt'})
+                assert cpan.show('Alloy') == {'Salt': 'salt'}
 
     # 'show_config' function tests: 1
 
@@ -131,4 +131,4 @@ class CpanTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(cpan.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(cpan.show_config(), {})
+            assert cpan.show_config() == {}

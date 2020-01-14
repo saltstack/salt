@@ -39,10 +39,8 @@ class TestGrainsCore(ModuleCase):
         test grains['mem_total']
         '''
         physmem = self.run_function('sysctl.get', ['hw.physmem'])
-        self.assertEqual(
-            self.run_function('grains.items')['mem_total'],
+        assert self.run_function('grains.items')['mem_total'] == \
             int(physmem) // 1048576
-        )
 
     @skipIf(not salt.utils.platform.is_openbsd(), 'Only run on OpenBSD')
     def test_openbsd_swap_total(self):
@@ -50,10 +48,8 @@ class TestGrainsCore(ModuleCase):
         test grains['swap_total']
         '''
         swapmem = self.run_function('cmd.run', ['swapctl -sk']).split(' ')[1]
-        self.assertEqual(
-            self.run_function('grains.items')['swap_total'],
+        assert self.run_function('grains.items')['swap_total'] == \
             int(swapmem) // 1048576
-        )
 
 
 @pytest.mark.windows_whitelisted
@@ -81,7 +77,5 @@ class TestGrainsReg(ModuleCase, LoaderModuleMockMixin):
                 'HKEY_LOCAL_MACHINE',
                 'HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0',
                 'ProcessorNameString').get('vdata')
-        self.assertEqual(
-            self.run_function('grains.items')['cpu_model'],
+        assert self.run_function('grains.items')['cpu_model'] == \
             cpu_model_text
-        )

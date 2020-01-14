@@ -57,8 +57,8 @@ class BotoSNSTest(ModuleCase):
         self.assertSaltModuleTrueReturn(ret)
 
         ret = self.run_function('boto_sns.get_all_topics')
-        self.assertIn(self.topic_name, list(ret.keys()))
-        self.assertIn(self._get_arn(self.topic_name), list(ret.values()))
+        assert self.topic_name in list(ret.keys())
+        assert self._get_arn(self.topic_name) in list(ret.values())
 
     def test_delete_non_existing(self):
         ret = self.run_function('boto_sns.delete', [self.topic_name])
@@ -70,8 +70,8 @@ class BotoSNSTest(ModuleCase):
         self.assertSaltModuleTrueReturn(ret)
 
         ret = self.run_function('boto_sns.get_all_topics')
-        self.assertNotIn(self.topic_name, list(ret.keys()))
-        self.assertNotIn(self._get_arn(self.topic_name), list(ret.values()))
+        assert self.topic_name not in list(ret.keys())
+        assert self._get_arn(self.topic_name) not in list(ret.values())
 
     def test_get_all_topics(self):
         self.topic_names.append(self.topic_name + '-2')
@@ -81,8 +81,8 @@ class BotoSNSTest(ModuleCase):
         ret = self.run_function('boto_sns.get_all_topics')
 
         for topic in self.topic_names:
-            self.assertIn(topic, list(ret.keys()))
-            self.assertIn(self._get_arn(topic), list(ret.values()))
+            assert topic in list(ret.keys())
+            assert self._get_arn(topic) in list(ret.values())
 
     def test_subscribe_and_get_all_subscriptions_by_topic(self):
         topic_name = self.topic_name
@@ -96,10 +96,10 @@ class BotoSNSTest(ModuleCase):
 
         ret = self.run_function('boto_sns.get_all_subscriptions_by_topic',
                                 [topic_name])
-        self.assertDictContainsSubset({
+        assert dict(ret[0], **{
             'Protocol': 'https',
             'Endpoint': 'https://www.example.com/sns/endpoint'
-        }, ret[0])
+        }) == ret[0]
 
     def _get_arn(self, name):
         return 'arn:aws:sns:us-east-1:{0}:{1}'.format(self.account_id, name)
@@ -112,9 +112,9 @@ class BotoSNSTest(ModuleCase):
         return self._account_id
 
     def assertSaltModuleTrueReturn(self, ret):
-        self.assertIsInstance(ret, bool)
-        self.assertTrue(ret)
+        assert isinstance(ret, bool)
+        assert ret
 
     def assertSaltModuleFalseReturn(self, ret):
-        self.assertIsInstance(ret, bool)
-        self.assertFalse(ret)
+        assert isinstance(ret, bool)
+        assert not ret

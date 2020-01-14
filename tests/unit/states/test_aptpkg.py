@@ -38,4 +38,4 @@ class AptTestCase(TestCase, LoaderModuleMockMixin):
 
         mock = MagicMock(return_value=False)
         with patch.dict(aptpkg.__salt__, {'pkg.get_selections': mock}):
-            self.assertDictEqual(aptpkg.held(name), ret)
+            assert aptpkg.held(name) == ret

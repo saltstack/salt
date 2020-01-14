@@ -35,11 +35,8 @@ class SaltcloudmodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='''{"foo": "bar"}''')
         with patch.dict(saltcloudmod.__salt__, {'cmd.run_stdout': mock}):
-            self.assertTrue(
-                saltcloudmod.create("webserver", "rackspace_centos_512"))
+            assert saltcloudmod.create("webserver", "rackspace_centos_512")
 
             with patch.object(salt.utils.json, 'loads', self.mock_json_loads):
-                self.assertDictEqual(
-                    saltcloudmod.create("webserver", "rackspace_centos_512"),
+                assert saltcloudmod.create("webserver", "rackspace_centos_512") == \
                     {}
-                )

@@ -30,7 +30,7 @@ class CompileTest(ModuleCase):
         '''
         ret = self.run_function('state.sls', mods='fuzz.multi_state')
         # Verify that the return is a list, aka, an error
-        self.assertIsInstance(ret, list)
+        assert isinstance(ret, list)
 
     def test_jinja_deep_error(self):
         '''
@@ -43,7 +43,5 @@ class CompileTest(ModuleCase):
                 self.skipTest('This test is flaky on Debian 8. Skipping.')
 
         ret = self.run_function('state.sls', ['issue-10010'])
-        self.assertTrue(
-            ', in jinja_error' in ret[0].strip())
-        self.assertTrue(
-            ret[0].strip().endswith('Exception: hehehe'))
+        assert ', in jinja_error' in ret[0].strip()
+        assert ret[0].strip().endswith('Exception: hehehe')

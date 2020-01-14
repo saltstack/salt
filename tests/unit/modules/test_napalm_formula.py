@@ -110,11 +110,11 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
             'interfaces:interface:Ethernet2:config'
         ]
         ret = napalm_formula.container_path(self.model)
-        self.assertEqual(set(ret), set(paths))
+        assert set(ret) == set(paths)
 
     def test_setval(self):
         dict_ = {'foo': {'bar': {'baz': True}}}
-        self.assertEqual(dict_, napalm_formula.setval('foo:bar:baz', True))
+        assert dict_ == napalm_formula.setval('foo:bar:baz', True)
 
     def test_defaults(self):
         expected_result = {
@@ -176,14 +176,14 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
             }
         }
         ret = napalm_formula.defaults(self.model, self.defaults)
-        self.assertEqual(ret, expected_result)
+        assert ret == expected_result
 
     def test_render_field(self):
         config = {
             'description': 'Interface description'
         }
         ret = napalm_formula.render_field(config, 'description', quotes=True)
-        self.assertEqual(ret, 'description "Interface description"')
+        assert ret == 'description "Interface description"'
 
     def test_render_field_junos(self):
         config = {
@@ -191,7 +191,7 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(napalm_formula.__grains__, {'os': 'junos'}):
             ret = napalm_formula.render_field(config, 'description', quotes=True)
-            self.assertEqual(ret, 'description "Interface description";')
+            assert ret == 'description "Interface description";'
 
     def test_render_fields(self):
         config = {
@@ -202,4 +202,4 @@ class TestModulesNAPALMFormula(TestCase, LoaderModuleMockMixin):
                 mtu "2048"
                 description "Interface description"''')
         ret = napalm_formula.render_fields(config, 'mtu', 'description', quotes=True)
-        self.assertEqual(ret, expected_render)
+        assert ret == expected_render

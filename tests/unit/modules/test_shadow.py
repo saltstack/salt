@@ -53,20 +53,18 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         '''
         Test shadow.gen_password
         '''
-        self.assertTrue(HAS_SHADOW)
+        assert HAS_SHADOW
         for algorithm, hash_info in six.iteritems(_HASHES):
-            self.assertEqual(
-                shadow.gen_password(
+            assert shadow.gen_password(
                     _PASSWORD,
                     crypt_salt=hash_info['pw_salt'],
                     algorithm=algorithm
-                ),
+                ) == \
                 hash_info['pw_hash']
-            )
 
     @pytest.mark.skip_if_not_root
     def test_list_users(self):
         '''
         Test if it returns a list of all users
         '''
-        self.assertTrue(shadow.list_users())
+        assert shadow.list_users()

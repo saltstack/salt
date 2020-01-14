@@ -31,9 +31,9 @@ class OutputReturnTest(ShellCase):
         Tests the return of json-formatted data
         '''
         ret = self.run_call('test.ping --out=json')
-        self.assertIn('{', ret)
-        self.assertIn('"local": true', ''.join(ret))
-        self.assertIn('}', ''.join(ret))
+        assert '{' in ret
+        assert '"local": true' in ''.join(ret)
+        assert '}' in ''.join(ret)
 
     def test_output_nested(self):
         '''
@@ -41,7 +41,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ['local:', '    True']
         ret = self.run_call('test.ping --out=nested')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_output_quiet(self):
         '''
@@ -49,7 +49,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = []
         ret = self.run_call('test.ping --out=quiet')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_output_pprint(self):
         '''
@@ -57,7 +57,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=pprint')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_output_raw(self):
         '''
@@ -65,7 +65,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ["{u'local': True}"] if six.PY2 else ["{'local': True}"]
         ret = self.run_call('test.ping --out=raw')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_output_txt(self):
         '''
@@ -73,7 +73,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ['local: True']
         ret = self.run_call('test.ping --out=txt')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_output_yaml(self):
         '''
@@ -81,7 +81,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ['local: true']
         ret = self.run_call('test.ping --out=yaml')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_output_yaml_namespaced_dict_wrapper(self):
         '''
@@ -119,7 +119,7 @@ class OutputReturnTest(ShellCase):
             old_max_diff = getattr(self, 'maxDiff', sentinel)
             try:
                 self.maxDiff = None
-                self.assertEqual(trace, '')
+                assert trace == ''
             finally:
                 if old_max_diff is sentinel:
                     delattr(self, 'maxDiff')
@@ -141,28 +141,28 @@ class OutputReturnTest(ShellCase):
         state_run = self.run_salt('"minion" state.sls simple-ping')
 
         for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            assert expected_item in state_run
 
         # Test highstate output while also passing --out=highstate.
         # This is a regression test for Issue #29796
         state_run = self.run_salt('"minion" state.sls simple-ping --out=highstate')
 
         for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            assert expected_item in state_run
 
         # Test highstate output when passing --static and running a state function.
         # See Issue #44556.
         state_run = self.run_salt('"minion" state.sls simple-ping --static')
 
         for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            assert expected_item in state_run
 
         # Test highstate output when passing --static and --out=highstate.
         # See Issue #44556.
         state_run = self.run_salt('"minion" state.sls simple-ping --static --out=highstate')
 
         for expected_item in expected:
-            self.assertIn(expected_item, state_run)
+            assert expected_item in state_run
 
     def test_output_highstate_falls_back_nested(self):
         '''
@@ -171,7 +171,7 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ['minion:', '    True']
         ret = self.run_salt('"minion" test.ping --out=highstate')
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_static_simple(self):
         '''
@@ -180,4 +180,4 @@ class OutputReturnTest(ShellCase):
         '''
         expected = ['minion:', '    True']
         ret = self.run_salt('"minion" test.ping --static')
-        self.assertEqual(ret, expected)
+        assert ret == expected

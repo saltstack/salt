@@ -40,8 +40,8 @@ class IpsetSetPresentTestCase(TestCase, LoaderModuleMockMixin):
         if new_set_assertion:
             mock_new_set.assert_called_once_with(self.fake_name, self.fake_set_type, 'ipv4')
         else:
-            self.assertTrue(mock_new_set.call_count == 0)
-        self.assertDictEqual(actual_ret, expected_ret)
+            assert mock_new_set.call_count == 0
+        assert actual_ret == expected_ret
 
     def test_already_exists(self):
         '''
@@ -104,12 +104,12 @@ class IpsetSetAbsentTestCase(TestCase, LoaderModuleMockMixin):
         if flush_assertion:
             mock_flush.assert_called_once_with(self.fake_name, 'ipv4')
         else:
-            self.assertTrue(mock_flush.call_count == 0)
+            assert mock_flush.call_count == 0
         if delete_set_assertion:
             mock_delete_set.assert_called_once_with(self.fake_name, 'ipv4')
         else:
-            self.assertTrue(mock_delete_set.call_count == 0)
-        self.assertDictEqual(actual_ret, expected_ret)
+            assert mock_delete_set.call_count == 0
+        assert actual_ret == expected_ret
 
     def test_already_absent(self):
         ret = {'name': self.fake_name,
@@ -168,8 +168,8 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
                 expected_calls = expected_calls[:1]
             mock_add.assert_has_calls(expected_calls, any_order=True)
         else:
-            self.assertTrue(mock_add.call_count == 0)
-        self.assertDictEqual(actual_ret, expected_ret)
+            assert mock_add.call_count == 0
+        assert actual_ret == expected_ret
 
     def test_entries_already_present(self):
         ret = {'name': self.fake_name,
@@ -213,7 +213,7 @@ class IpsetPresentTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
         mock = MagicMock(return_value=True)
         with patch.dict(ipset.__salt__, {'ipset.check': mock}):
-            self.assertDictEqual(ipset.present(self.fake_name), ret)
+            assert ipset.present(self.fake_name) == ret
 
 
 class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
@@ -242,8 +242,8 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
                 expected_calls = expected_calls[:1]
             mock_delete.assert_has_calls(expected_calls, any_order=True)
         else:
-            self.assertTrue(mock_delete.call_count == 0)
-        self.assertDictEqual(actual_ret, expected_ret)
+            assert mock_delete.call_count == 0
+        assert actual_ret == expected_ret
 
     def test_already_absent(self):
         ret = {'name': self.fake_name,
@@ -287,7 +287,7 @@ class IpsetAbsentTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {}}
         mock = MagicMock(return_value=True)
         with patch.dict(ipset.__salt__, {'ipset.check': mock}):
-            self.assertDictEqual(ipset.absent(self.fake_name), ret)
+            assert ipset.absent(self.fake_name) == ret
 
 
 class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
@@ -312,8 +312,8 @@ class IpsetFlushTestCase(TestCase, LoaderModuleMockMixin):
         if flush_assertion:
             mock_flush.assert_called_once_with(self.fake_name, 'ipv4')
         else:
-            self.assertTrue(mock_flush.call_count == 0)
-        self.assertDictEqual(actual_ret, expected_ret)
+            assert mock_flush.call_count == 0
+        assert actual_ret == expected_ret
 
     def test_no_set(self):
         ret = {'name': self.fake_name,

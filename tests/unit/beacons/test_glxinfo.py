@@ -29,7 +29,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = glxinfo.__virtual__()
 
             mock.assert_called_once_with('glxinfo')
-            self.assertFalse(ret)
+            assert not ret
 
     def test_with_glxinfo_command(self):
         with patch('salt.utils.path.which') as mock:
@@ -38,15 +38,15 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = glxinfo.__virtual__()
 
             mock.assert_called_once_with('glxinfo')
-            self.assertEqual(ret, 'glxinfo')
+            assert ret == 'glxinfo'
 
     def test_non_list_config(self):
         config = {}
 
         ret = glxinfo.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for glxinfo '
-                                      'beacon must be a list.'))
+        assert ret == (False, 'Configuration for glxinfo '
+                                      'beacon must be a list.')
 
     def test_no_user(self):
         config = [{'screen_event': True}]
@@ -55,7 +55,7 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                             'include a user as glxinfo is not '
                             'available to root.')
         ret = glxinfo.validate(config)
-        self.assertEqual(ret, _expected)
+        assert ret == _expected
 
     def test_screen_state(self):
         config = [{'screen_event': True,
@@ -65,11 +65,11 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
 
             ret = glxinfo.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = glxinfo.beacon(config)
-            self.assertEqual(ret, [{'tag': 'screen_event',
-                                    'screen_available': True}])
+            assert ret == [{'tag': 'screen_event',
+                                    'screen_available': True}]
             mock.assert_called_once_with('DISPLAY=:0 glxinfo',
                                          runas='frank', python_shell=True)
 
@@ -79,11 +79,11 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(return_value=255)
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
             ret = glxinfo.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = glxinfo.beacon(config)
-            self.assertEqual(ret, [{'tag': 'screen_event',
-                                    'screen_available': False}])
+            assert ret == [{'tag': 'screen_event',
+                                    'screen_available': False}]
 
     def test_screen_state_no_repeat(self):
         config = [{'screen_event': True, 'user': 'frank'}]
@@ -91,14 +91,14 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(return_value=255)
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
             ret = glxinfo.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = glxinfo.beacon(config)
-            self.assertEqual(ret, [{'tag': 'screen_event',
-                                    'screen_available': False}])
+            assert ret == [{'tag': 'screen_event',
+                                    'screen_available': False}]
 
             ret = glxinfo.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_screen_state_change(self):
         config = [{'screen_event': True, 'user': 'frank'}]
@@ -106,12 +106,12 @@ class GLXInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=[255, 0])
         with patch.dict(glxinfo.__salt__, {'cmd.retcode': mock}):
             ret = glxinfo.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = glxinfo.beacon(config)
-            self.assertEqual(ret, [{'tag': 'screen_event',
-                                    'screen_available': False}])
+            assert ret == [{'tag': 'screen_event',
+                                    'screen_available': False}]
 
             ret = glxinfo.beacon(config)
-            self.assertEqual(ret, [{'tag': 'screen_event',
-                                    'screen_available': True}])
+            assert ret == [{'tag': 'screen_event',
+                                    'screen_available': True}]

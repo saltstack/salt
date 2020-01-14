@@ -12,6 +12,7 @@ from tests.support.mock import Mock, patch
 # Import Salt libs
 import salt.utils.systemd as _systemd
 from salt.exceptions import SaltInvocationError
+import pytest
 
 
 def _booted_effect(path):
@@ -38,11 +39,11 @@ class SystemdTestCase(TestCase):
         # data, so it is sufficient enough to mock it as True for these tests.
         with patch('os.stat', side_effect=_booted_effect):
             # Test without context dict passed
-            self.assertTrue(_systemd.booted())
+            assert _systemd.booted()
             # Test that context key is set when context dict is passed
             context = {}
-            self.assertTrue(_systemd.booted(context))
-            self.assertEqual(context, {'salt.utils.systemd.booted': True})
+            assert _systemd.booted(context)
+            assert context == {'salt.utils.systemd.booted': True}
 
     def test_not_booted(self):
         '''
@@ -53,11 +54,11 @@ class SystemdTestCase(TestCase):
         # a systemd-booted host.
         with patch('os.stat', side_effect=_not_booted_effect):
             # Test without context dict passed
-            self.assertFalse(_systemd.booted())
+            assert not _systemd.booted()
             # Test that context key is set when context dict is passed
             context = {}
-            self.assertFalse(_systemd.booted(context))
-            self.assertEqual(context, {'salt.utils.systemd.booted': False})
+            assert not _systemd.booted(context)
+            assert context == {'salt.utils.systemd.booted': False}
 
     def test_booted_return_from_context(self):
         '''
@@ -67,7 +68,7 @@ class SystemdTestCase(TestCase):
         produces.
         '''
         context = {'salt.utils.systemd.booted': 'foo'}
-        self.assertEqual(_systemd.booted(context), 'foo')
+        assert _systemd.booted(context) == 'foo'
 
     def test_booted_invalid_context(self):
         '''
@@ -75,7 +76,7 @@ class SystemdTestCase(TestCase):
         this should raise a SaltInvocationError.
         '''
         # Test with invalid context data
-        with self.assertRaises(SaltInvocationError):
+        with pytest.raises(SaltInvocationError):
             _systemd.booted(99999)
 
     def test_version(self):
@@ -93,11 +94,11 @@ class SystemdTestCase(TestCase):
             )
 
             # Test without context dict passed
-            self.assertEqual(_systemd.version(), _version)
+            assert _systemd.version() == _version
             # Test that context key is set when context dict is passed
             context = {}
-            self.assertTrue(_systemd.version(context))
-            self.assertEqual(context, {'salt.utils.systemd.version': _version})
+            assert _systemd.version(context)
+            assert context == {'salt.utils.systemd.version': _version}
 
     def test_version_generated_from_git_describe(self):
         '''
@@ -114,11 +115,11 @@ class SystemdTestCase(TestCase):
             )
 
             # Test without context dict passed
-            self.assertEqual(_systemd.version(), _version)
+            assert _systemd.version() == _version
             # Test that context key is set when context dict is passed
             context = {}
-            self.assertTrue(_systemd.version(context))
-            self.assertEqual(context, {'salt.utils.systemd.version': _version})
+            assert _systemd.version(context)
+            assert context == {'salt.utils.systemd.version': _version}
 
     def test_version_return_from_context(self):
         '''
@@ -128,7 +129,7 @@ class SystemdTestCase(TestCase):
         produces.
         '''
         context = {'salt.utils.systemd.version': 'foo'}
-        self.assertEqual(_systemd.version(context), 'foo')
+        assert _systemd.version(context) == 'foo'
 
     def test_version_invalid_context(self):
         '''
@@ -136,7 +137,7 @@ class SystemdTestCase(TestCase):
         this should raise a SaltInvocationError.
         '''
         # Test with invalid context data
-        with self.assertRaises(SaltInvocationError):
+        with pytest.raises(SaltInvocationError):
             _systemd.version(99999)
 
     def test_version_parse_problem(self):
@@ -151,13 +152,13 @@ class SystemdTestCase(TestCase):
                 retcode=0
             )
             # Test without context dict passed
-            self.assertIsNone(_systemd.version())
+            assert _systemd.version() is None
             # Test that context key is set when context dict is passed. A failure
             # to parse the systemctl output should not set a context key, so it
             # should not be present in the context dict.
             context = {}
-            self.assertIsNone(_systemd.version(context))
-            self.assertEqual(context, {})
+            assert _systemd.version(context) is None
+            assert context == {}
 
     def test_has_scope_systemd204(self):
         '''
@@ -181,15 +182,13 @@ class SystemdTestCase(TestCase):
             # these tests.
             with patch('os.stat', side_effect=_booted_effect):
                 # Test without context dict passed
-                self.assertEqual(_systemd.has_scope(), _expected)
+                assert _systemd.has_scope() == _expected
                 # Test that context key is set when context dict is passed
                 context = {}
-                self.assertEqual(_systemd.has_scope(context), _expected)
-                self.assertEqual(
-                    context,
+                assert _systemd.has_scope(context) == _expected
+                assert context == \
                     {'salt.utils.systemd.booted': True,
-                     'salt.utils.systemd.version': _version},
-                )
+                     'salt.utils.systemd.version': _version}
 
     def test_has_scope_systemd205(self):
         '''
@@ -213,15 +212,13 @@ class SystemdTestCase(TestCase):
             # these tests.
             with patch('os.stat', side_effect=_booted_effect):
                 # Test without context dict passed
-                self.assertEqual(_systemd.has_scope(), _expected)
+                assert _systemd.has_scope() == _expected
                 # Test that context key is set when context dict is passed
                 context = {}
-                self.assertEqual(_systemd.has_scope(context), _expected)
-                self.assertEqual(
-                    context,
+                assert _systemd.has_scope(context) == _expected
+                assert context == \
                     {'salt.utils.systemd.booted': True,
-                     'salt.utils.systemd.version': _version},
-                )
+                     'salt.utils.systemd.version': _version}
 
     def test_has_scope_systemd206(self):
         '''
@@ -245,15 +242,13 @@ class SystemdTestCase(TestCase):
             # these tests.
             with patch('os.stat', side_effect=_booted_effect):
                 # Test without context dict passed
-                self.assertEqual(_systemd.has_scope(), _expected)
+                assert _systemd.has_scope() == _expected
                 # Test that context key is set when context dict is passed
                 context = {}
-                self.assertEqual(_systemd.has_scope(context), _expected)
-                self.assertEqual(
-                    context,
+                assert _systemd.has_scope(context) == _expected
+                assert context == \
                     {'salt.utils.systemd.booted': True,
-                     'salt.utils.systemd.version': _version},
-                )
+                     'salt.utils.systemd.version': _version}
 
     def test_has_scope_no_systemd(self):
         '''
@@ -262,14 +257,14 @@ class SystemdTestCase(TestCase):
         '''
         with patch('os.stat', side_effect=_not_booted_effect):
             # Test without context dict passed
-            self.assertFalse(_systemd.has_scope())
+            assert not _systemd.has_scope()
             # Test that context key is set when context dict is passed.
             # Because we are not systemd-booted, there should be no key in the
             # context dict for the version check, as we shouldn't have
             # performed this check.
             context = {}
-            self.assertFalse(_systemd.has_scope(context))
-            self.assertEqual(context, {'salt.utils.systemd.booted': False})
+            assert not _systemd.has_scope(context)
+            assert context == {'salt.utils.systemd.booted': False}
 
     def test_has_scope_version_parse_problem(self):
         '''
@@ -284,13 +279,13 @@ class SystemdTestCase(TestCase):
             )
             with patch('os.stat', side_effect=_booted_effect):
                 # Test without context dict passed
-                self.assertFalse(_systemd.has_scope())
+                assert not _systemd.has_scope()
                 # Test that context key is set when context dict is passed. A
                 # failure to parse the systemctl output should not set a context
                 # key, so it should not be present in the context dict.
                 context = {}
-                self.assertFalse(_systemd.has_scope(context))
-                self.assertEqual(context, {'salt.utils.systemd.booted': True})
+                assert not _systemd.has_scope(context)
+                assert context == {'salt.utils.systemd.booted': True}
 
     def test_has_scope_invalid_context(self):
         '''
@@ -298,5 +293,5 @@ class SystemdTestCase(TestCase):
         this should raise a SaltInvocationError.
         '''
         # Test with invalid context data
-        with self.assertRaises(SaltInvocationError):
+        with pytest.raises(SaltInvocationError):
             _systemd.has_scope(99999)

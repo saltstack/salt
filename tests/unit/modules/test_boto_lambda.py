@@ -27,6 +27,7 @@ import salt.utils.stringutils
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+import pytest
 # pylint: disable=import-error,no-name-in-module
 try:
     import boto3
@@ -171,7 +172,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         func_exists_result = boto_lambda.function_exists(
             FunctionName=function_ret['FunctionName'], **conn_parameters)
 
-        self.assertTrue(func_exists_result['exists'])
+        assert func_exists_result['exists']
 
     def test_that_when_checking_if_a_function_exists_and_a_function_does_not_exist_the_function_exists_method_returns_false(self):
         '''
@@ -181,7 +182,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         func_exists_result = boto_lambda.function_exists(
             FunctionName='myfunc', **conn_parameters)
 
-        self.assertFalse(func_exists_result['exists'])
+        assert not func_exists_result['exists']
 
     def test_that_when_checking_if_a_function_exists_and_boto3_returns_an_error_the_function_exists_method_returns_error(self):
         '''
@@ -192,8 +193,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         func_exists_result = boto_lambda.function_exists(
             FunctionName='myfunc', **conn_parameters)
 
-        self.assertEqual(func_exists_result.get('error', {}).get(
-            'message'), error_message.format('list_functions'))
+        assert func_exists_result.get('error', {}).get(
+            'message') == error_message.format('list_functions')
 
     def test_that_when_creating_a_function_from_zipfile_succeeds_the_create_function_method_returns_true(self):
         '''
@@ -210,7 +211,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                     ZipFile=zipfile,
                     **conn_parameters)
 
-        self.assertTrue(lambda_creation_result['created'])
+        assert lambda_creation_result['created']
 
     def test_that_when_creating_a_function_from_s3_succeeds_the_create_function_method_returns_true(self):
         '''
@@ -227,15 +228,14 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                 S3Key='key',
                 **conn_parameters)
 
-        self.assertTrue(lambda_creation_result['created'])
+        assert lambda_creation_result['created']
 
     def test_that_when_creating_a_function_without_code_raises_a_salt_invocation_error(self):
         '''
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegex(SaltInvocationError,
-                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with pytest.raises(SaltInvocationError, match='Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 lambda_creation_result = boto_lambda.create_function(
                     FunctionName='testfunction',
                     Runtime='python2.7',
@@ -248,8 +248,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegex(SaltInvocationError,
-                                        'Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
+            with pytest.raises(SaltInvocationError, match='Either ZipFile must be specified, or S3Bucket and S3Key must be provided.'):
                 with TempZipFile() as zipfile:
                     lambda_creation_result = boto_lambda.create_function(
                         FunctionName='testfunction',
@@ -276,8 +275,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                     Handler='file.method',
                     ZipFile=zipfile,
                     **conn_parameters)
-        self.assertEqual(lambda_creation_result.get('error', {}).get(
-            'message'), error_message.format('create_function'))
+        assert lambda_creation_result.get('error', {}).get(
+            'message') == error_message.format('create_function')
 
     def test_that_when_deleting_a_function_succeeds_the_delete_function_method_returns_true(self):
         '''
@@ -288,7 +287,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                                                  Qualifier=1,
                                                  **conn_parameters)
 
-        self.assertTrue(result['deleted'])
+        assert result['deleted']
 
     def test_that_when_deleting_a_function_fails_the_delete_function_method_returns_false(self):
         '''
@@ -299,7 +298,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                 error_content, 'delete_function')
             result = boto_lambda.delete_function(FunctionName='testfunction',
                                                  **conn_parameters)
-        self.assertFalse(result['deleted'])
+        assert not result['deleted']
 
     def test_that_when_describing_function_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -311,7 +310,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             result = boto_lambda.describe_function(
                 FunctionName=function_ret['FunctionName'], **conn_parameters)
 
-        self.assertEqual(result, {'function': function_ret})
+        assert result == {'function': function_ret}
 
     def test_that_when_describing_function_it_returns_the_dict_of_properties_returns_false(self):
         '''
@@ -322,7 +321,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             result = boto_lambda.describe_function(
                 FunctionName='testfunction', **conn_parameters)
 
-        self.assertFalse(result['function'])
+        assert not result['function']
 
     def test_that_when_describing_lambda_on_client_error_it_returns_error(self):
         '''
@@ -332,7 +331,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             error_content, 'list_functions')
         result = boto_lambda.describe_function(
             FunctionName='testfunction', **conn_parameters)
-        self.assertTrue('error' in result)
+        assert 'error' in result
 
     def test_that_when_updating_a_function_succeeds_the_update_function_method_returns_true(self):
         '''
@@ -343,7 +342,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             result = boto_lambda.update_function_config(
                 FunctionName=function_ret['FunctionName'], Role='myrole', **conn_parameters)
 
-        self.assertTrue(result['updated'])
+        assert result['updated']
 
     def test_that_when_updating_a_function_fails_the_update_function_method_returns_error(self):
         '''
@@ -355,8 +354,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             result = boto_lambda.update_function_config(FunctionName='testfunction',
                                                         Role='myrole',
                                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('update_function'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('update_function')
 
     def test_that_when_updating_function_code_from_zipfile_succeeds_the_update_function_method_returns_true(self):
         '''
@@ -369,7 +368,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                     FunctionName=function_ret['FunctionName'],
                     ZipFile=zipfile, **conn_parameters)
 
-        self.assertTrue(result['updated'])
+        assert result['updated']
 
     def test_that_when_updating_function_code_from_s3_succeeds_the_update_function_method_returns_true(self):
         '''
@@ -383,16 +382,14 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                 S3Key='key',
                 **conn_parameters)
 
-        self.assertTrue(result['updated'])
+        assert result['updated']
 
     def test_that_when_updating_function_code_without_code_raises_a_salt_invocation_error(self):
         '''
         tests Creating a function without code
         '''
         with patch.dict(boto_lambda.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
-            with self.assertRaisesRegex(
-                SaltInvocationError,
-                ('Either ZipFile must be specified, or S3Bucket '
+            with pytest.raises(SaltInvocationError, match=('Either ZipFile must be specified, or S3Bucket '
                  'and S3Key must be provided.')):
                 result = boto_lambda.update_function_code(
                     FunctionName='testfunction',
@@ -410,8 +407,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                 S3Bucket='bucket',
                 S3Key='key',
                 **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('update_function_code'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('update_function_code')
 
     def test_that_when_listing_function_versions_succeeds_the_list_function_versions_method_returns_true(self):
         '''
@@ -424,7 +421,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
                 FunctionName='testfunction',
                 **conn_parameters)
 
-        self.assertTrue(result['Versions'])
+        assert result['Versions']
 
     def test_that_when_listing_function_versions_fails_the_list_function_versions_method_returns_false(self):
         '''
@@ -435,7 +432,7 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             result = boto_lambda.list_function_versions(
                 FunctionName='testfunction',
                 **conn_parameters)
-        self.assertFalse(result['Versions'])
+        assert not result['Versions']
 
     def test_that_when_listing_function_versions_fails_the_list_function_versions_method_returns_error(self):
         '''
@@ -447,8 +444,8 @@ class BotoLambdaFunctionTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin
             result = boto_lambda.list_function_versions(
                 FunctionName='testfunction',
                 **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('list_versions_by_function'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('list_versions_by_function')
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -471,7 +468,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                               'FunctionVersion'],
                                           **conn_parameters)
 
-        self.assertTrue(result['created'])
+        assert result['created']
 
     def test_that_when_creating_an_alias_fails_the_create_alias_method_returns_error(self):
         '''
@@ -484,8 +481,8 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                           FunctionVersion=alias_ret[
                                               'FunctionVersion'],
                                           **conn_parameters)
-        self.assertEqual(result.get('error', {}).get(
-            'message'), error_message.format('create_alias'))
+        assert result.get('error', {}).get(
+            'message') == error_message.format('create_alias')
 
     def test_that_when_deleting_an_alias_succeeds_the_delete_alias_method_returns_true(self):
         '''
@@ -495,7 +492,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
 
-        self.assertTrue(result['deleted'])
+        assert result['deleted']
 
     def test_that_when_deleting_an_alias_fails_the_delete_alias_method_returns_false(self):
         '''
@@ -506,7 +503,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         result = boto_lambda.delete_alias(FunctionName='testfunction',
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
-        self.assertFalse(result['deleted'])
+        assert not result['deleted']
 
     def test_that_when_checking_if_an_alias_exists_and_the_alias_exists_the_alias_exists_method_returns_true(self):
         '''
@@ -516,7 +513,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         result = boto_lambda.alias_exists(FunctionName='testfunction',
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
-        self.assertTrue(result['exists'])
+        assert result['exists']
 
     def test_that_when_checking_if_an_alias_exists_and_the_alias_does_not_exist_the_alias_exists_method_returns_false(self):
         '''
@@ -527,7 +524,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                           Name='otheralias',
                                           **conn_parameters)
 
-        self.assertFalse(result['exists'])
+        assert not result['exists']
 
     def test_that_when_checking_if_an_alias_exists_and_boto3_returns_an_error_the_alias_exists_method_returns_error(self):
         '''
@@ -539,8 +536,8 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
 
-        self.assertEqual(result.get('error', {}).get(
-            'message'), error_message.format('list_aliases'))
+        assert result.get('error', {}).get(
+            'message') == error_message.format('list_aliases')
 
     def test_that_when_describing_alias_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -552,7 +549,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                             Name=alias_ret['Name'],
                                             **conn_parameters)
 
-        self.assertEqual(result, {'alias': alias_ret})
+        assert result == {'alias': alias_ret}
 
     def test_that_when_describing_alias_it_returns_the_dict_of_properties_returns_false(self):
         '''
@@ -563,7 +560,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                             Name='othername',
                                             **conn_parameters)
 
-        self.assertFalse(result['alias'])
+        assert not result['alias']
 
     def test_that_when_describing_lambda_on_client_error_it_returns_error(self):
         '''
@@ -574,7 +571,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         result = boto_lambda.describe_alias(FunctionName='testfunction',
                                             Name=alias_ret['Name'],
                                             **conn_parameters)
-        self.assertTrue('error' in result)
+        assert 'error' in result
 
     def test_that_when_updating_an_alias_succeeds_the_update_alias_method_returns_true(self):
         '''
@@ -586,7 +583,7 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
                                           Description=alias_ret['Description'],
                                           **conn_parameters)
 
-        self.assertTrue(result['updated'])
+        assert result['updated']
 
     def test_that_when_updating_an_alias_fails_the_update_alias_method_returns_error(self):
         '''
@@ -597,8 +594,8 @@ class BotoLambdaAliasTestCase(BotoLambdaTestCaseBase, BotoLambdaTestCaseMixin):
         result = boto_lambda.update_alias(FunctionName='testfunction',
                                           Name=alias_ret['Name'],
                                           **conn_parameters)
-        self.assertEqual(result.get('error', {}).get(
-            'message'), error_message.format('update_alias'))
+        assert result.get('error', {}).get(
+            'message') == error_message.format('update_alias')
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -621,7 +618,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             StartingPosition='LATEST',
             **conn_parameters)
 
-        self.assertTrue(result['created'])
+        assert result['created']
 
     def test_that_when_creating_an_event_source_mapping_fails_the_create_event_source_mapping_method_returns_error(self):
         '''
@@ -634,8 +631,8 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             FunctionName=event_source_mapping_ret['FunctionArn'],
             StartingPosition='LATEST',
             **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('create_event_source_mapping'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('create_event_source_mapping')
 
     def test_that_when_listing_mapping_ids_succeeds_the_get_event_source_mapping_ids_method_returns_true(self):
         '''
@@ -648,7 +645,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             FunctionName=event_source_mapping_ret['FunctionArn'],
             **conn_parameters)
 
-        self.assertTrue(result)
+        assert result
 
     def test_that_when_listing_event_source_mapping_ids_fails_the_get_event_source_mapping_ids_versions_method_returns_false(self):
         '''
@@ -660,7 +657,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             EventSourceArn=event_source_mapping_ret['EventSourceArn'],
             FunctionName=event_source_mapping_ret['FunctionArn'],
             **conn_parameters)
-        self.assertFalse(result)
+        assert not result
 
     def test_that_when_listing_event_source_mapping_ids_fails_the_get_event_source_mapping_ids_method_returns_error(self):
         '''
@@ -672,8 +669,8 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             EventSourceArn=event_source_mapping_ret['EventSourceArn'],
             FunctionName=event_source_mapping_ret['FunctionArn'],
             **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('list_event_source_mappings'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('list_event_source_mappings')
 
     def test_that_when_deleting_an_event_source_mapping_by_UUID_succeeds_the_delete_event_source_mapping_method_returns_true(self):
         '''
@@ -682,7 +679,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.delete_event_source_mapping(
             UUID=event_source_mapping_ret['UUID'],
             **conn_parameters)
-        self.assertTrue(result['deleted'])
+        assert result['deleted']
 
     @skipIf(True, 'This appears to leak memory and crash the unit test suite')
     def test_that_when_deleting_an_event_source_mapping_by_name_succeeds_the_delete_event_source_mapping_method_returns_true(self):
@@ -695,15 +692,13 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             EventSourceArn=event_source_mapping_ret['EventSourceArn'],
             FunctionName=event_source_mapping_ret['FunctionArn'],
             **conn_parameters)
-        self.assertTrue(result['deleted'])
+        assert result['deleted']
 
     def test_that_when_deleting_an_event_source_mapping_without_identifier_the_delete_event_source_mapping_method_raises_saltinvocationexception(self):
         '''
         tests Deleting a mapping without identifier
         '''
-        with self.assertRaisesRegex(
-            SaltInvocationError,
-            ('Either UUID must be specified, or EventSourceArn '
+        with pytest.raises(SaltInvocationError, match=('Either UUID must be specified, or EventSourceArn '
              'and FunctionName must be provided.')):
             result = boto_lambda.delete_event_source_mapping(**conn_parameters)
 
@@ -715,7 +710,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             error_content, 'delete_event_source_mapping')
         result = boto_lambda.delete_event_source_mapping(UUID=event_source_mapping_ret['UUID'],
                                                          **conn_parameters)
-        self.assertFalse(result['deleted'])
+        assert not result['deleted']
 
     def test_that_when_checking_if_an_event_source_mapping_exists_and_the_event_source_mapping_exists_the_event_source_mapping_exists_method_returns_true(self):
         '''
@@ -726,7 +721,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.event_source_mapping_exists(
             UUID=event_source_mapping_ret['UUID'],
             **conn_parameters)
-        self.assertTrue(result['exists'])
+        assert result['exists']
 
     def test_that_when_checking_if_an_event_source_mapping_exists_and_the_event_source_mapping_does_not_exist_the_event_source_mapping_exists_method_returns_false(self):
         '''
@@ -737,7 +732,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.event_source_mapping_exists(
             UUID='other_UUID',
             **conn_parameters)
-        self.assertFalse(result['exists'])
+        assert not result['exists']
 
     def test_that_when_checking_if_an_event_source_mapping_exists_and_boto3_returns_an_error_the_event_source_mapping_exists_method_returns_error(self):
         '''
@@ -748,8 +743,8 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.event_source_mapping_exists(
             UUID=event_source_mapping_ret['UUID'],
             **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('list_event_source_mappings'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('list_event_source_mappings')
 
     def test_that_when_describing_event_source_mapping_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -759,8 +754,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.describe_event_source_mapping(
             UUID=event_source_mapping_ret['UUID'],
             **conn_parameters)
-        self.assertEqual(
-            result, {'event_source_mapping': event_source_mapping_ret})
+        assert result == {'event_source_mapping': event_source_mapping_ret}
 
     def test_that_when_describing_event_source_mapping_it_returns_the_dict_of_properties_returns_false(self):
         '''
@@ -770,7 +764,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.describe_event_source_mapping(
             UUID=event_source_mapping_ret['UUID'],
             **conn_parameters)
-        self.assertFalse(result['event_source_mapping'])
+        assert not result['event_source_mapping']
 
     def test_that_when_describing_event_source_mapping_on_client_error_it_returns_error(self):
         '''
@@ -781,7 +775,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
         result = boto_lambda.describe_event_source_mapping(
             UUID=event_source_mapping_ret['UUID'],
             **conn_parameters)
-        self.assertTrue('error' in result)
+        assert 'error' in result
 
     def test_that_when_updating_an_event_source_mapping_succeeds_the_update_event_source_mapping_method_returns_true(self):
         '''
@@ -793,7 +787,7 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             FunctionName=event_source_mapping_ret['FunctionArn'],
             **conn_parameters)
 
-        self.assertTrue(result['updated'])
+        assert result['updated']
 
     def test_that_when_updating_an_event_source_mapping_fails_the_update_event_source_mapping_method_returns_error(self):
         '''
@@ -805,5 +799,5 @@ class BotoLambdaEventSourceMappingTestCase(BotoLambdaTestCaseBase, BotoLambdaTes
             UUID=event_source_mapping_ret['UUID'],
             FunctionName=event_source_mapping_ret['FunctionArn'],
             **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'),
-                         error_message.format('update_event_source_mapping'))
+        assert result.get('error', {}).get('message') == \
+                         error_message.format('update_event_source_mapping')

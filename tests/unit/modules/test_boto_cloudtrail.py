@@ -148,7 +148,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.get_trail_status.return_value = trail_ret
         result = boto_cloudtrail.exists(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertTrue(result['exists'])
+        assert result['exists']
 
     def test_that_when_checking_if_a_trail_exists_and_a_trail_does_not_exist_the_trail_exists_method_returns_false(self):
         '''
@@ -157,7 +157,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.get_trail_status.side_effect = not_found_error
         result = boto_cloudtrail.exists(Name='mytrail', **conn_parameters)
 
-        self.assertFalse(result['exists'])
+        assert not result['exists']
 
     def test_that_when_checking_if_a_trail_exists_and_boto3_returns_an_error_the_trail_exists_method_returns_error(self):
         '''
@@ -166,7 +166,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.get_trail_status.side_effect = ClientError(error_content, 'get_trail_status')
         result = boto_cloudtrail.exists(Name='mytrail', **conn_parameters)
 
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('get_trail_status'))
+        assert result.get('error', {}).get('message') == error_message.format('get_trail_status')
 
     def test_that_when_creating_a_trail_succeeds_the_create_trail_method_returns_true(self):
         '''
@@ -177,7 +177,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
                                         S3BucketName=trail_ret['S3BucketName'],
                                         **conn_parameters)
 
-        self.assertTrue(result['created'])
+        assert result['created']
 
     def test_that_when_creating_a_trail_fails_the_create_trail_method_returns_error(self):
         '''
@@ -187,7 +187,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.create(Name=trail_ret['Name'],
                                         S3BucketName=trail_ret['S3BucketName'],
                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('create_trail'))
+        assert result.get('error', {}).get('message') == error_message.format('create_trail')
 
     def test_that_when_deleting_a_trail_succeeds_the_delete_trail_method_returns_true(self):
         '''
@@ -196,7 +196,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.delete(Name='testtrail',
                                         **conn_parameters)
 
-        self.assertTrue(result['deleted'])
+        assert result['deleted']
 
     def test_that_when_deleting_a_trail_fails_the_delete_trail_method_returns_false(self):
         '''
@@ -205,7 +205,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.delete_trail.side_effect = ClientError(error_content, 'delete_trail')
         result = boto_cloudtrail.delete(Name='testtrail',
                                         **conn_parameters)
-        self.assertFalse(result['deleted'])
+        assert not result['deleted']
 
     def test_that_when_describing_trail_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -215,7 +215,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
 
         result = boto_cloudtrail.describe(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertTrue(result['trail'])
+        assert result['trail']
 
     def test_that_when_describing_trail_it_returns_the_dict_of_properties_returns_false(self):
         '''
@@ -224,7 +224,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.describe_trails.side_effect = not_found_error
         result = boto_cloudtrail.describe(Name='testtrail', **conn_parameters)
 
-        self.assertFalse(result['trail'])
+        assert not result['trail']
 
     def test_that_when_describing_trail_on_client_error_it_returns_error(self):
         '''
@@ -232,7 +232,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         '''
         self.conn.describe_trails.side_effect = ClientError(error_content, 'get_trail')
         result = boto_cloudtrail.describe(Name='testtrail', **conn_parameters)
-        self.assertTrue('error' in result)
+        assert 'error' in result
 
     def test_that_when_getting_status_it_returns_the_dict_of_properties_returns_true(self):
         '''
@@ -242,7 +242,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
 
         result = boto_cloudtrail.status(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertTrue(result['trail'])
+        assert result['trail']
 
     def test_that_when_getting_status_it_returns_the_dict_of_properties_returns_false(self):
         '''
@@ -251,7 +251,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.get_trail_status.side_effect = not_found_error
         result = boto_cloudtrail.status(Name='testtrail', **conn_parameters)
 
-        self.assertFalse(result['trail'])
+        assert not result['trail']
 
     def test_that_when_getting_status_on_client_error_it_returns_error(self):
         '''
@@ -259,7 +259,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         '''
         self.conn.get_trail_status.side_effect = ClientError(error_content, 'get_trail_status')
         result = boto_cloudtrail.status(Name='testtrail', **conn_parameters)
-        self.assertTrue('error' in result)
+        assert 'error' in result
 
     def test_that_when_listing_trails_succeeds_the_list_trails_method_returns_true(self):
         '''
@@ -268,7 +268,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.describe_trails.return_value = {'trailList': [trail_ret]}
         result = boto_cloudtrail.list(**conn_parameters)
 
-        self.assertTrue(result['trails'])
+        assert result['trails']
 
     def test_that_when_listing_trail_fails_the_list_trail_method_returns_false(self):
         '''
@@ -276,7 +276,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         '''
         self.conn.describe_trails.return_value = {'trailList': []}
         result = boto_cloudtrail.list(**conn_parameters)
-        self.assertFalse(result['trails'])
+        assert not result['trails']
 
     def test_that_when_listing_trail_fails_the_list_trail_method_returns_error(self):
         '''
@@ -284,7 +284,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         '''
         self.conn.describe_trails.side_effect = ClientError(error_content, 'list_trails')
         result = boto_cloudtrail.list(**conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('list_trails'))
+        assert result.get('error', {}).get('message') == error_message.format('list_trails')
 
     def test_that_when_updating_a_trail_succeeds_the_update_trail_method_returns_true(self):
         '''
@@ -295,7 +295,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
                                         S3BucketName=trail_ret['S3BucketName'],
                                         **conn_parameters)
 
-        self.assertTrue(result['updated'])
+        assert result['updated']
 
     def test_that_when_updating_a_trail_fails_the_update_trail_method_returns_error(self):
         '''
@@ -305,7 +305,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         result = boto_cloudtrail.update(Name=trail_ret['Name'],
                                         S3BucketName=trail_ret['S3BucketName'],
                                         **conn_parameters)
-        self.assertEqual(result.get('error', {}).get('message'), error_message.format('update_trail'))
+        assert result.get('error', {}).get('message') == error_message.format('update_trail')
 
     def test_that_when_starting_logging_succeeds_the_start_logging_method_returns_true(self):
         '''
@@ -313,7 +313,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         '''
         result = boto_cloudtrail.start_logging(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertTrue(result['started'])
+        assert result['started']
 
     def test_that_when_start_logging_fails_the_start_logging_method_returns_false(self):
         '''
@@ -322,7 +322,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.describe_trails.return_value = {'trailList': []}
         self.conn.start_logging.side_effect = ClientError(error_content, 'start_logging')
         result = boto_cloudtrail.start_logging(Name=trail_ret['Name'], **conn_parameters)
-        self.assertFalse(result['started'])
+        assert not result['started']
 
     def test_that_when_stopping_logging_succeeds_the_stop_logging_method_returns_true(self):
         '''
@@ -330,7 +330,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         '''
         result = boto_cloudtrail.stop_logging(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertTrue(result['stopped'])
+        assert result['stopped']
 
     def test_that_when_stop_logging_fails_the_stop_logging_method_returns_false(self):
         '''
@@ -339,7 +339,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.describe_trails.return_value = {'trailList': []}
         self.conn.stop_logging.side_effect = ClientError(error_content, 'stop_logging')
         result = boto_cloudtrail.stop_logging(Name=trail_ret['Name'], **conn_parameters)
-        self.assertFalse(result['stopped'])
+        assert not result['stopped']
 
     def test_that_when_adding_tags_succeeds_the_add_tags_method_returns_true(self):
         '''
@@ -348,7 +348,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.add_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
 
-        self.assertTrue(result['tagged'])
+        assert result['tagged']
 
     def test_that_when_adding_tags_fails_the_add_tags_method_returns_false(self):
         '''
@@ -357,7 +357,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.add_tags.side_effect = ClientError(error_content, 'add_tags')
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.add_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
-        self.assertFalse(result['tagged'])
+        assert not result['tagged']
 
     def test_that_when_removing_tags_succeeds_the_remove_tags_method_returns_true(self):
         '''
@@ -366,7 +366,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.remove_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
 
-        self.assertTrue(result['tagged'])
+        assert result['tagged']
 
     def test_that_when_removing_tags_fails_the_remove_tags_method_returns_false(self):
         '''
@@ -375,7 +375,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.remove_tags.side_effect = ClientError(error_content, 'remove_tags')
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.remove_tags(Name=trail_ret['Name'], a='b', **conn_parameters)
-        self.assertFalse(result['tagged'])
+        assert not result['tagged']
 
     def test_that_when_listing_tags_succeeds_the_list_tags_method_returns_true(self):
         '''
@@ -384,7 +384,7 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.list_tags(Name=trail_ret['Name'], **conn_parameters)
 
-        self.assertEqual(result['tags'], {})
+        assert result['tags'] == {}
 
     def test_that_when_listing_tags_fails_the_list_tags_method_returns_false(self):
         '''
@@ -393,4 +393,4 @@ class BotoCloudTrailTestCase(BotoCloudTrailTestCaseBase, BotoCloudTrailTestCaseM
         self.conn.list_tags.side_effect = ClientError(error_content, 'list_tags')
         with patch.dict(boto_cloudtrail.__salt__, {'boto_iam.get_account_id': MagicMock(return_value='1234')}):
             result = boto_cloudtrail.list_tags(Name=trail_ret['Name'], **conn_parameters)
-        self.assertTrue(result['error'])
+        assert result['error']

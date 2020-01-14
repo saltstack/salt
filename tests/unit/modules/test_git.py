@@ -144,30 +144,24 @@ class GitTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(os.path, 'isdir', isdir_mock):
                 # Test all=True. Include all return data.
                 self.maxDiff = None
-                self.assertEqual(
-                    git_mod.list_worktrees(
+                assert git_mod.list_worktrees(
                         WORKTREE_ROOT, all=True, stale=False
-                    ),
+                    ) == \
                     worktree_ret
-                )
                 # Test all=False and stale=False. Exclude stale worktrees from
                 # return data.
-                self.assertEqual(
-                    git_mod.list_worktrees(
+                assert git_mod.list_worktrees(
                         WORKTREE_ROOT, all=False, stale=False
-                    ),
+                    ) == \
                     dict([(x, worktree_ret[x]) for x in WORKTREE_INFO
                           if not WORKTREE_INFO[x].get('stale', False)])
-                )
                 # Test stale=True. Exclude non-stale worktrees from return
                 # data.
-                self.assertEqual(
-                    git_mod.list_worktrees(
+                assert git_mod.list_worktrees(
                         WORKTREE_ROOT, all=False, stale=True
-                    ),
+                    ) == \
                     dict([(x, worktree_ret[x]) for x in WORKTREE_INFO
                           if WORKTREE_INFO[x].get('stale', False)])
-                )
 
     def test__git_run_tmp_wrapper(self):
         '''

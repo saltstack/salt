@@ -27,7 +27,7 @@ class NTPTest(ModuleCase):
         '''
         ntp_srv = 'pool.ntp.org'
         set_srv = self.run_function('ntp.set_servers', [ntp_srv])
-        self.assertTrue(set_srv)
+        assert set_srv
 
         get_srv = self.run_function('ntp.get_servers')
-        self.assertEqual(ntp_srv, get_srv[0])
+        assert ntp_srv == get_srv[0]

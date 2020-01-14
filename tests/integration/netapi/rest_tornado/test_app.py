@@ -59,11 +59,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               connect_timeout=30,
                               request_timeout=30,
                 )
-        self.assertEqual(response.code, 200)
+        assert response.code == 200
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(sorted(response_obj['clients']),
-                         ['local', 'local_async', 'runner', 'runner_async'])
-        self.assertEqual(response_obj['return'], 'Welcome')
+        assert sorted(response_obj['clients']) == \
+                         ['local', 'local_async', 'runner', 'runner_async']
+        assert response_obj['return'] == 'Welcome'
 
     def test_post_no_auth(self):
         '''
@@ -82,8 +82,8 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               connect_timeout=30,
                               request_timeout=30,
                               )
-        self.assertEqual(response.code, 302)
-        self.assertEqual(response.headers['Location'], '/login')
+        assert response.code == 302
+        assert response.headers['Location'] == '/login'
 
     # Local client tests
 
@@ -105,13 +105,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 1)
+        assert len(response_obj['return']) == 1
         # If --proxy is set, it will cause an extra minion_id to be in the
         # response. Since there's not a great way to know if the test
         # runner's proxy minion is running, and we're not testing proxy
         # minions here anyway, just remove it from the response.
         response_obj['return'][0].pop('proxytest', None)
-        self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
+        assert response_obj['return'][0] == {'minion': True, 'sub_minion': True}
 
     def test_simple_local_post_no_tgt(self):
         '''
@@ -130,7 +130,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], ["No minions matched the target. No command was sent, no jid was assigned."])
+        assert response_obj['return'] == ["No minions matched the target. No command was sent, no jid was assigned."]
 
     # local client request body test
 
@@ -152,13 +152,13 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=30,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 1)
+        assert len(response_obj['return']) == 1
         # If --proxy is set, it will cause an extra minion_id to be in the
         # response. Since there's not a great way to know if the test
         # runner's proxy minion is running, and we're not testing proxy
         # minions here anyway, just remove it from the response.
         response_obj['return'][0].pop('proxytest', None)
-        self.assertEqual(response_obj['return'][0], {'minion': True, 'sub_minion': True})
+        assert response_obj['return'][0] == {'minion': True, 'sub_minion': True}
 
     def test_simple_local_post_invalid_request(self):
         '''
@@ -173,7 +173,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               connect_timeout=30,
                               request_timeout=30,
                               )
-        self.assertEqual(response.code, 400)
+        assert response.code == 400
 
     # local_async tests
     def test_simple_local_async_post(self):
@@ -201,9 +201,9 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
             pass
 
         # TODO: verify pub function? Maybe look at how we test the publisher
-        self.assertEqual(len(ret), 1)
-        self.assertIn('jid', ret[0])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        assert len(ret) == 1
+        assert 'jid' in ret[0]
+        assert ret[0]['minions'] == sorted(['minion', 'sub_minion'])
 
     def test_multi_local_async_post(self):
         low = [{'client': 'local_async',
@@ -235,11 +235,11 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         except ValueError:
             pass
 
-        self.assertEqual(len(ret), 2)
-        self.assertIn('jid', ret[0])
-        self.assertIn('jid', ret[1])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
-        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
+        assert len(ret) == 2
+        assert 'jid' in ret[0]
+        assert 'jid' in ret[1]
+        assert ret[0]['minions'] == sorted(['minion', 'sub_minion'])
+        assert ret[1]['minions'] == sorted(['minion', 'sub_minion'])
 
     def test_multi_local_async_post_multitoken(self):
         low = [{'client': 'local_async',
@@ -278,12 +278,12 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         except ValueError:
             pass
 
-        self.assertEqual(len(ret), 3)  # make sure we got 3 responses
-        self.assertIn('jid', ret[0])  # the first 2 are regular returns
-        self.assertIn('jid', ret[1])
-        self.assertIn('Failed to authenticate', ret[2])  # bad auth
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
-        self.assertEqual(ret[1]['minions'], sorted(['minion', 'sub_minion']))
+        assert len(ret) == 3  # make sure we got 3 responses
+        assert 'jid' in ret[0]  # the first 2 are regular returns
+        assert 'jid' in ret[1]
+        assert 'Failed to authenticate' in ret[2]  # bad auth
+        assert ret[0]['minions'] == sorted(['minion', 'sub_minion'])
+        assert ret[1]['minions'] == sorted(['minion', 'sub_minion'])
 
     def test_simple_local_async_post_no_tgt(self):
         low = [{'client': 'local_async',
@@ -297,7 +297,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{}])
+        assert response_obj['return'] == [{}]
 
     @skipIf(True, 'Undetermined race condition in test. Temporarily disabled.')
     def test_simple_local_post_only_dictionary_request_with_order_masters(self):
@@ -328,7 +328,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # proxy minion is running, and we're not testing proxy minions here
         # anyway, just remove it from the response.
         response_obj[0]['return'].pop('proxytest', None)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+        assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
 
     # runner tests
     def test_simple_local_runner_post(self):
@@ -344,7 +344,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=300,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 1)
+        assert len(response_obj['return']) == 1
         try:
             # If --proxy is set, it will cause an extra minion_id to be in the
             # response. Since there's not a great way to know if the test
@@ -353,7 +353,7 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
             response_obj['return'][0].remove('proxytest')
         except ValueError:
             pass
-        self.assertEqual(sorted(response_obj['return'][0]), sorted(['minion', 'sub_minion']))
+        assert sorted(response_obj['return'][0]) == sorted(['minion', 'sub_minion'])
 
     # runner_async tests
     def test_simple_local_runner_async_post(self):
@@ -369,10 +369,10 @@ class TestSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               request_timeout=10,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertIn('return', response_obj)
-        self.assertEqual(1, len(response_obj['return']))
-        self.assertIn('jid', response_obj['return'][0])
-        self.assertIn('tag', response_obj['return'][0])
+        assert 'return' in response_obj
+        assert 1 == len(response_obj['return'])
+        assert 'jid' in response_obj['return'][0]
+        assert 'tag' in response_obj['return'][0]
 
 
 @pytest.mark.flaky(max_runs=4)
@@ -394,12 +394,12 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               follow_redirects=False,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 1)
+        assert len(response_obj['return']) == 1
         # one per minion
-        self.assertEqual(len(response_obj['return'][0]), 2)
+        assert len(response_obj['return'][0]) == 2
         # check a single grain
         for minion_id, grains in six.iteritems(response_obj['return'][0]):
-            self.assertEqual(minion_id, grains['id'])
+            assert minion_id == grains['id']
 
     @skipIf(True, 'to be re-enabled when #23623 is merged')
     def test_get(self):
@@ -409,10 +409,10 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               follow_redirects=False,
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(len(response_obj['return']), 1)
-        self.assertEqual(len(response_obj['return'][0]), 1)
+        assert len(response_obj['return']) == 1
+        assert len(response_obj['return'][0]) == 1
         # check a single grain
-        self.assertEqual(response_obj['return'][0]['minion']['id'], 'minion')
+        assert response_obj['return'][0]['minion']['id'] == 'minion'
 
     def test_post(self):
         low = [{'tgt': '*minion',
@@ -430,9 +430,9 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
         # TODO: verify pub function? Maybe look at how we test the publisher
-        self.assertEqual(len(ret), 1)
-        self.assertIn('jid', ret[0])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        assert len(ret) == 1
+        assert 'jid' in ret[0]
+        assert ret[0]['minions'] == sorted(['minion', 'sub_minion'])
 
     def test_post_with_client(self):
         # get a token for this test
@@ -452,9 +452,9 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
         ret[0]['minions'] = sorted(ret[0]['minions'])
 
         # TODO: verify pub function? Maybe look at how we test the publisher
-        self.assertEqual(len(ret), 1)
-        self.assertIn('jid', ret[0])
-        self.assertEqual(ret[0]['minions'], sorted(['minion', 'sub_minion']))
+        assert len(ret) == 1
+        assert 'jid' in ret[0]
+        assert ret[0]['minions'] == sorted(['minion', 'sub_minion'])
 
     def test_post_with_incorrect_client(self):
         '''
@@ -472,7 +472,7 @@ class TestMinionSaltAPIHandler(_SaltnadoIntegrationTestCase):
                               headers={'Content-Type': self.content_type_map['json'],
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
-        self.assertEqual(response.code, 400)
+        assert response.code == 400
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
@@ -498,12 +498,12 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         response_obj = salt.utils.json.loads(response.body)['return'][0]
         try:
             for jid, ret in six.iteritems(response_obj):
-                self.assertIn('Function', ret)
-                self.assertIn('Target', ret)
-                self.assertIn('Target-type', ret)
-                self.assertIn('User', ret)
-                self.assertIn('StartTime', ret)
-                self.assertIn('Arguments', ret)
+                assert 'Function' in ret
+                assert 'Target' in ret
+                assert 'Target-type' in ret
+                assert 'User' in ret
+                assert 'StartTime' in ret
+                assert 'Arguments' in ret
         except AttributeError as attribute_error:
             print(salt.utils.json.loads(response.body))
             raise
@@ -518,13 +518,13 @@ class TestJobsSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                )
         response = self.wait(timeout=30)
         response_obj = salt.utils.json.loads(response.body)['return'][0]
-        self.assertIn('Function', response_obj)
-        self.assertIn('Target', response_obj)
-        self.assertIn('Target-type', response_obj)
-        self.assertIn('User', response_obj)
-        self.assertIn('StartTime', response_obj)
-        self.assertIn('Arguments', response_obj)
-        self.assertIn('Result', response_obj)
+        assert 'Function' in response_obj
+        assert 'Target' in response_obj
+        assert 'Target-type' in response_obj
+        assert 'User' in response_obj
+        assert 'StartTime' in response_obj
+        assert 'Arguments' in response_obj
+        assert 'Result' in response_obj
 
 
 # TODO: run all the same tests from the root handler, but for now since they are
@@ -551,7 +551,7 @@ class TestRunSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                        saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                               )
         response_obj = salt.utils.json.loads(response.body)
-        self.assertEqual(response_obj['return'], [{'minion': True, 'sub_minion': True}])
+        assert response_obj['return'] == [{'minion': True, 'sub_minion': True}]
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
@@ -596,8 +596,8 @@ class TestEventsSaltAPIHandler(_SaltnadoIntegrationTestCase):
         # if we got a retry, just continue
         if event != 'retry: 400':
             tag, data = event.splitlines()
-            self.assertTrue(tag.startswith('tag: '))
-            self.assertTrue(data.startswith('data: '))
+            assert tag.startswith('tag: ')
+            assert data.startswith('data: ')
 
 
 @skipIf(HAS_ZMQ_IOLOOP is False, 'PyZMQ version must be >= 14.0.1 to run these tests.')
@@ -638,19 +638,17 @@ class TestWebhookSaltAPIHandler(_SaltnadoIntegrationTestCase):
                                   headers={saltnado.AUTH_TOKEN_HEADER: self.token['token']},
                                   )
             response_obj = salt.utils.json.loads(response.body)
-            self.assertTrue(response_obj['success'])
+            assert response_obj['success']
             resolve_future_timeout = 60
             self._future_resolved.wait(resolve_future_timeout)
             try:
                 event = future.result()
             except Exception as exc:  # pylint: disable=broad-except
                 self.fail('Failed to resolve future under {} secs: {}'.format(resolve_future_timeout, exc))
-            self.assertEqual(event['tag'], 'salt/netapi/hook')
-            self.assertIn('headers', event['data'])
-            self.assertEqual(
-                event['data']['post'],
+            assert event['tag'] == 'salt/netapi/hook'
+            assert 'headers' in event['data']
+            assert event['data']['post'] == \
                 {'foo': salt.utils.stringutils.to_bytes('bar')}
-            )
         finally:
             self._future_resolved.clear()
             del self._future_resolved

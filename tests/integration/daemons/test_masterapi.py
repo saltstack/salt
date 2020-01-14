@@ -71,7 +71,7 @@ class AutosignGrainsTest(ShellCase):
         os.chmod(grain_file_path, self.autosign_file_permissions)
 
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
-        self.assertIn('minion', self.run_key('-l acc'))
+        assert 'minion' in self.run_key('-l acc')
 
     def test_autosign_grains_fail(self):
         grain_file_path = os.path.join(self.autosign_grains_dir, 'test_grain')
@@ -80,5 +80,5 @@ class AutosignGrainsTest(ShellCase):
         os.chmod(grain_file_path, self.autosign_file_permissions)
 
         self.run_call('test.ping -l quiet')  # get minon to try to authenticate itself again
-        self.assertNotIn('minion', self.run_key('-l acc'))
-        self.assertIn('minion', self.run_key('-l un'))
+        assert 'minion' not in self.run_key('-l acc')
+        assert 'minion' in self.run_key('-l un')

@@ -116,7 +116,7 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
                         repr(ret)
                     )
                 )
-            self.assertEqual([['1']], ret['results'])
+            assert [['1']] == ret['results']
 
         # Now removing databases
         kwargs.pop('character_set')
@@ -228,4 +228,4 @@ class MysqlDatabaseStateTest(ModuleCase, SaltReturnAssertsMixin):
                 'comment': descr['comment'],
                 'result': descr['result']
             }
-        self.assertEqual(expected_result, result)
+        assert expected_result == result

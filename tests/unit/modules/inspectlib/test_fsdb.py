@@ -140,7 +140,7 @@ class InspectorFSDBTestCase(TestCase):
                 sorted_expected_data = sorted("foo:int,bar:unicode,spam:float".split(','))
             else:
                 sorted_expected_data = sorted("foo:int,bar:str,spam:float".split(','))
-            self.assertEqual(sorted_writable_data, sorted_expected_data)
+            assert sorted_writable_data == sorted_expected_data
 
     def test_list_databases(self):
         '''

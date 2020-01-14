@@ -13,6 +13,7 @@ from tests.support.mock import MagicMock, patch
 import salt.modules.vagrant as vagrant
 import salt.exceptions
 import salt.utils.platform
+import pytest
 
 TEMP_DATABASE_FILE = '/tmp/salt-tests-tmpdir/test_vagrant.sqlite'
 
@@ -40,7 +41,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
     def test_vagrant_get_vm_info_not_found(self):
         mock_sdb = MagicMock(return_value=None)
         with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb}):
-            with self.assertRaises(salt.exceptions.SaltInvocationError):
+            with pytest.raises(salt.exceptions.SaltInvocationError):
                 vagrant.get_vm_info('thisNameDoesNotExist')
 
     def test_vagrant_init_positional(self):
@@ -58,7 +59,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 'french',
                 {'different': 'very'}
                 )
-            self.assertTrue(resp.startswith('Name test1 defined'))
+            assert resp.startswith('Name test1 defined')
             expected = dict(name='test1',
                             cwd=path_nowhere,
                             machine='onetest',
@@ -80,7 +81,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
         mock_sdb = MagicMock(return_value=testdict)
         with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb}):
             resp = vagrant.get_vm_info('test1')
-            self.assertEqual(resp, testdict)
+            assert resp == testdict
 
     def test_vagrant_init_dict(self):
         testdict = dict(cwd='/tmp/anywhere',
@@ -126,7 +127,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
             mock_sdb = MagicMock(return_value={})
             with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb}):
                 vagrant.init('test3', cwd='/tmp')
-                with self.assertRaises(salt.exceptions.SaltInvocationError):
+                with pytest.raises(salt.exceptions.SaltInvocationError):
                     vagrant.get_ssh_config('test3')  # has not been started
 
     def test_vagrant_destroy(self):
@@ -140,7 +141,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 mock_sdb_get = MagicMock(return_value={
                     'machine': 'macfour', 'cwd': path_mydir})
                 with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb_get}):
-                    self.assertTrue(vagrant.destroy('test4'))
+                    assert vagrant.destroy('test4')
                     mock_sdb.assert_any_call(
                         'sdb://vagrant_sdb_data/macfour?{0}'.format(path_mydir),
                         self.LOCAL_OPTS)
@@ -160,7 +161,7 @@ class VagrantTestCase(TestCase, LoaderModuleMockMixin):
                 'machine': 'five', 'cwd': '/the/dir', 'runas': 'me',
                 'vagrant_provider': 'him'})
             with patch.dict(vagrant.__utils__, {'sdb.sdb_get': mock_sdb_get}):
-                self.assertTrue(vagrant.start('test5'))
+                assert vagrant.start('test5')
                 cmd = 'vagrant up five --provider=him'
                 mock_cmd.assert_called_with(cmd,
                                             runas='me',

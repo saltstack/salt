@@ -27,9 +27,9 @@ class FirewallTest(ModuleCase):
         for net in network:
             if post_run[net] != pre_run[net]:
                 if pre_run[net]:
-                    self.assertTrue(self.run_function('firewall.enable', profile=net))
+                    assert self.run_function('firewall.enable', profile=net)
                 else:
-                    self.assertTrue(self.run_function('firewall.disable', profile=net))
+                    assert self.run_function('firewall.disable', profile=net)
 
     @pytest.mark.destructive_test
     def test_firewall_get_config(self):
@@ -38,11 +38,11 @@ class FirewallTest(ModuleCase):
         '''
         pre_run = self.run_function('firewall.get_config')
         # ensure all networks are enabled then test status
-        self.assertTrue(self.run_function('firewall.enable', profile='allprofiles'))
+        assert self.run_function('firewall.enable', profile='allprofiles')
         ret = self.run_function('firewall.get_config')
         network = ['Domain', 'Public', 'Private']
         for net in network:
-            self.assertTrue(ret[net])
+            assert ret[net]
         self._pre_firewall_status(pre_run)
 
     @pytest.mark.destructive_test
@@ -55,11 +55,11 @@ class FirewallTest(ModuleCase):
 
         ret = self.run_function('firewall.get_config')[network]
         if not ret:
-            self.assertTrue(self.run_function('firewall.enable', profile=network))
+            assert self.run_function('firewall.enable', profile=network)
 
-        self.assertTrue(self.run_function('firewall.disable', profile=network))
+        assert self.run_function('firewall.disable', profile=network)
         ret = self.run_function('firewall.get_config')[network]
-        self.assertFalse(ret)
+        assert not ret
         self._pre_firewall_status(pre_run)
 
     @pytest.mark.destructive_test
@@ -72,11 +72,11 @@ class FirewallTest(ModuleCase):
 
         ret = self.run_function('firewall.get_config')[network]
         if ret:
-            self.assertTrue(self.run_function('firewall.disable', profile=network))
+            assert self.run_function('firewall.disable', profile=network)
 
-        self.assertTrue(self.run_function('firewall.enable', profile=network))
+        assert self.run_function('firewall.enable', profile=network)
         ret = self.run_function('firewall.get_config')[network]
-        self.assertTrue(ret)
+        assert ret
         self._pre_firewall_status(pre_run)
 
     def test_firewall_get_rule(self):
@@ -88,7 +88,7 @@ class FirewallTest(ModuleCase):
         ret = self.run_function('firewall.get_rule', [rule])
         checks = ['Private', 'LocalPort', 'RemotePort']
         for check in checks:
-            self.assertIn(check, ret[rule])
+            assert check in ret[rule]
 
     @pytest.mark.destructive_test
     def test_firewall_add_delete_rule(self):
@@ -101,12 +101,12 @@ class FirewallTest(ModuleCase):
         # test adding firewall rule
         add_rule = self.run_function('firewall.add_rule', [rule, port])
         ret = self.run_function('firewall.get_rule', [rule])
-        self.assertIn(rule, ret[rule])
-        self.assertIn(port, ret[rule])
+        assert rule in ret[rule]
+        assert port in ret[rule]
 
         # test deleting firewall rule
-        self.assertTrue(self.run_function('firewall.delete_rule', [rule, port]))
+        assert self.run_function('firewall.delete_rule', [rule, port])
         ret = self.run_function('firewall.get_rule', [rule])
-        self.assertNotIn(rule, ret)
-        self.assertNotIn(port, ret)
-        self.assertIn('No rules match the specified criteria.', ret)
+        assert rule not in ret
+        assert port not in ret
+        assert 'No rules match the specified criteria.' in ret

@@ -283,13 +283,13 @@ class BasePillarTest(_CommonBase):
         opts = self._build_opts(nodegroup_opts)
         pillar_obj = pillar.Pillar(opts, grains, 'minion', 'base')
         ret = pillar_obj.compile_pillar()
-        self.assertEqual(ret.get('pillar_from_nodegroup_with_ghost'), True)
-        self.assertEqual(ret.get('pillar_from_nodegroup'), None)
+        assert ret.get('pillar_from_nodegroup_with_ghost') is True
+        assert ret.get('pillar_from_nodegroup') is None
 
         sub_pillar_obj = pillar.Pillar(opts, grains, 'sub_minion', 'base')
         sub_ret = sub_pillar_obj.compile_pillar()
-        self.assertEqual(sub_ret.get('pillar_from_nodegroup_with_ghost'), None)
-        self.assertEqual(sub_ret.get('pillar_from_nodegroup'), True)
+        assert sub_ret.get('pillar_from_nodegroup_with_ghost') is None
+        assert sub_ret.get('pillar_from_nodegroup') is True
 
 
 @skipIf(not salt.utils.path.which('gpg'), 'GPG is not installed')
@@ -375,7 +375,7 @@ class DecryptGPGPillarTest(_CommonBase):
         opts = self._build_opts(decrypt_pillar_opts)
         pillar_obj = pillar.Pillar(opts, grains, 'test', 'base')
         ret = pillar_obj.compile_pillar()
-        self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
+        assert ret == GPG_PILLAR_DECRYPTED
 
     @requires_system_grains
     def test_decrypt_pillar_alternate_delimiter(self, grains=None):
@@ -391,7 +391,7 @@ class DecryptGPGPillarTest(_CommonBase):
         opts = self._build_opts(decrypt_pillar_opts)
         pillar_obj = pillar.Pillar(opts, grains, 'test', 'base')
         ret = pillar_obj.compile_pillar()
-        self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
+        assert ret == GPG_PILLAR_DECRYPTED
 
     @requires_system_grains
     def test_decrypt_pillar_deeper_nesting(self, grains=None):
@@ -409,7 +409,7 @@ class DecryptGPGPillarTest(_CommonBase):
         expected = copy.deepcopy(GPG_PILLAR_ENCRYPTED)
         expected['secrets']['vault']['qux'][-1] = \
             GPG_PILLAR_DECRYPTED['secrets']['vault']['qux'][-1]
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     @requires_system_grains
     def test_decrypt_pillar_explicit_renderer(self, grains=None):
@@ -429,7 +429,7 @@ class DecryptGPGPillarTest(_CommonBase):
         opts = self._build_opts(decrypt_pillar_opts)
         pillar_obj = pillar.Pillar(opts, grains, 'test', 'base')
         ret = pillar_obj.compile_pillar()
-        self.assertEqual(ret, GPG_PILLAR_DECRYPTED)
+        assert ret == GPG_PILLAR_DECRYPTED
 
     @requires_system_grains
     def test_decrypt_pillar_missing_renderer(self, grains=None):
@@ -452,15 +452,15 @@ class DecryptGPGPillarTest(_CommonBase):
             'Failed to decrypt pillar key \'secrets:vault\': Decryption '
             'renderer \'asdf\' is not available'
         ]
-        self.assertEqual(ret['_errors'], expected['_errors'])
-        self.assertEqual(ret['secrets']['vault']['foo'],
-                         expected['secrets']['vault']['foo'])
-        self.assertEqual(ret['secrets']['vault']['bar'],
-                         expected['secrets']['vault']['bar'])
-        self.assertEqual(ret['secrets']['vault']['baz'],
-                         expected['secrets']['vault']['baz'])
-        self.assertEqual(ret['secrets']['vault']['qux'],
-                         expected['secrets']['vault']['qux'])
+        assert ret['_errors'] == expected['_errors']
+        assert ret['secrets']['vault']['foo'] == \
+                         expected['secrets']['vault']['foo']
+        assert ret['secrets']['vault']['bar'] == \
+                         expected['secrets']['vault']['bar']
+        assert ret['secrets']['vault']['baz'] == \
+                         expected['secrets']['vault']['baz']
+        assert ret['secrets']['vault']['qux'] == \
+                         expected['secrets']['vault']['qux']
 
     @requires_system_grains
     def test_decrypt_pillar_invalid_renderer(self, grains=None):
@@ -485,15 +485,15 @@ class DecryptGPGPillarTest(_CommonBase):
             'Failed to decrypt pillar key \'secrets:vault\': \'gpg\' is '
             'not a valid decryption renderer. Valid choices are: foo, bar'
         ]
-        self.assertEqual(ret['_errors'], expected['_errors'])
-        self.assertEqual(ret['secrets']['vault']['foo'],
-                         expected['secrets']['vault']['foo'])
-        self.assertEqual(ret['secrets']['vault']['bar'],
-                         expected['secrets']['vault']['bar'])
-        self.assertEqual(ret['secrets']['vault']['baz'],
-                         expected['secrets']['vault']['baz'])
-        self.assertEqual(ret['secrets']['vault']['qux'],
-                         expected['secrets']['vault']['qux'])
+        assert ret['_errors'] == expected['_errors']
+        assert ret['secrets']['vault']['foo'] == \
+                         expected['secrets']['vault']['foo']
+        assert ret['secrets']['vault']['bar'] == \
+                         expected['secrets']['vault']['bar']
+        assert ret['secrets']['vault']['baz'] == \
+                         expected['secrets']['vault']['baz']
+        assert ret['secrets']['vault']['qux'] == \
+                         expected['secrets']['vault']['qux']
 
 
 @pytest.mark.windows_whitelisted

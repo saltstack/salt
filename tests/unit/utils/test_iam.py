@@ -19,4 +19,4 @@ class IamTestCase(TestCase):
         '''
         key = 'foo'
         expected = key.encode('utf-8')
-        self.assertEqual(iam._convert_key_to_str(key), expected)
+        assert iam._convert_key_to_str(key) == expected

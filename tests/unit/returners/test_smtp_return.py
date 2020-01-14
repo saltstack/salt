@@ -75,7 +75,7 @@ class SMTPReturnerTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.returners.smtp_return._get_options', MagicMock(return_value=options)), \
              patch.object(SaltCacheLoader, 'file_client', MagicMock()):
             smtp.returner(ret)
-            self.assertTrue(mocked_smtplib.return_value.sendmail.called)
+            assert mocked_smtplib.return_value.sendmail.called
 
     if HAS_GNUPG:
         def test_returner(self):

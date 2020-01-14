@@ -29,12 +29,12 @@ class CacheFunctionsTest(TestCase):
 
     def test_factory_cache(self):
         ret = salt.cache.factory(self.opts)
-        self.assertIsInstance(ret, salt.cache.Cache)
+        assert isinstance(ret, salt.cache.Cache)
 
     def test_factory_memcache(self):
         self.opts['memcache_expire_seconds'] = 10
         ret = salt.cache.factory(self.opts)
-        self.assertIsInstance(ret, salt.cache.MemCache)
+        assert isinstance(ret, salt.cache.MemCache)
 
 
 class MemCacheTest(TestCase):
@@ -57,32 +57,32 @@ class MemCacheTest(TestCase):
         # Fetch value, it will be kept in cache.
         with patch('time.time', return_value=0):
             ret = self.cache.fetch('bank', 'key')
-        self.assertEqual(ret, 'fake_data')
-        self.assertDictEqual(salt.cache.MemCache.data, {
+        assert ret == 'fake_data'
+        assert salt.cache.MemCache.data == {
             'fake_driver': {
                 ('bank', 'key'): [0, 'fake_data'],
-                }})
+                }}
         cache_fetch_mock.assert_called_once_with('bank', 'key')
         cache_fetch_mock.reset_mock()
 
         # Fetch again, cached value is used, time updated.
         with patch('time.time', return_value=1):
             ret = self.cache.fetch('bank', 'key')
-        self.assertEqual(ret, 'fake_data')
-        self.assertDictEqual(salt.cache.MemCache.data, {
+        assert ret == 'fake_data'
+        assert salt.cache.MemCache.data == {
             'fake_driver': {
                 ('bank', 'key'): [1, 'fake_data'],
-                }})
+                }}
         cache_fetch_mock.assert_not_called()
 
         # Fetch after expire
         with patch('time.time', return_value=12):
             ret = self.cache.fetch('bank', 'key')
-        self.assertEqual(ret, 'fake_data')
-        self.assertDictEqual(salt.cache.MemCache.data, {
+        assert ret == 'fake_data'
+        assert salt.cache.MemCache.data == {
             'fake_driver': {
                 ('bank', 'key'): [12, 'fake_data'],
-                }})
+                }}
         cache_fetch_mock.assert_called_once_with('bank', 'key')
         cache_fetch_mock.reset_mock()
 
@@ -92,21 +92,21 @@ class MemCacheTest(TestCase):
         # Fetch value, it will be kept in cache.
         with patch('time.time', return_value=0):
             self.cache.store('bank', 'key', 'fake_data')
-        self.assertDictEqual(salt.cache.MemCache.data, {
+        assert salt.cache.MemCache.data == {
             'fake_driver': {
                 ('bank', 'key'): [0, 'fake_data'],
-                }})
+                }}
         cache_store_mock.assert_called_once_with('bank', 'key', 'fake_data')
         cache_store_mock.reset_mock()
 
         # Store another value.
         with patch('time.time', return_value=1):
             self.cache.store('bank', 'key2', 'fake_data2')
-        self.assertDictEqual(salt.cache.MemCache.data, {
+        assert salt.cache.MemCache.data == {
             'fake_driver': {
                 ('bank', 'key'): [0, 'fake_data'],
                 ('bank', 'key2'): [1, 'fake_data2'],
-                }})
+                }}
         cache_store_mock.assert_called_once_with('bank', 'key2', 'fake_data2')
 
     @patch('salt.cache.Cache.store')
@@ -115,25 +115,25 @@ class MemCacheTest(TestCase):
     def test_flush(self, loader_mock, cache_flush_mock, cache_store_mock):
         # Flush non-existing bank
         self.cache.flush('bank')
-        self.assertDictEqual(salt.cache.MemCache.data, {'fake_driver': {}})
+        assert salt.cache.MemCache.data == {'fake_driver': {}}
         cache_flush_mock.assert_called_once_with('bank', None)
         cache_flush_mock.reset_mock()
         # Flush non-existing key
         self.cache.flush('bank', 'key')
-        self.assertDictEqual(salt.cache.MemCache.data, {'fake_driver': {}})
+        assert salt.cache.MemCache.data == {'fake_driver': {}}
         cache_flush_mock.assert_called_once_with('bank', 'key')
         cache_flush_mock.reset_mock()
         # Flush existing key
         with patch('time.time', return_value=0):
             self.cache.store('bank', 'key', 'fake_data')
-        self.assertEqual(salt.cache.MemCache.data['fake_driver'][('bank', 'key')],
-                         [0, 'fake_data'])
-        self.assertDictEqual(salt.cache.MemCache.data, {
+        assert salt.cache.MemCache.data['fake_driver'][('bank', 'key')] == \
+                         [0, 'fake_data']
+        assert salt.cache.MemCache.data == {
             'fake_driver': {
                 ('bank', 'key'): [0, 'fake_data'],
-                }})
+                }}
         self.cache.flush('bank', 'key')
-        self.assertDictEqual(salt.cache.MemCache.data, {'fake_driver': {}})
+        assert salt.cache.MemCache.data == {'fake_driver': {}}
         cache_flush_mock.assert_called_once_with('bank', 'key')
         cache_flush_mock.reset_mock()
 
@@ -147,19 +147,19 @@ class MemCacheTest(TestCase):
             self.cache.store('bank1', 'key2', 'fake_data12')
         with patch('time.time', return_value=2):
             self.cache.store('bank2', 'key1', 'fake_data21')
-        self.assertDictEqual(salt.cache.MemCache.data['fake_driver'], {
+        assert salt.cache.MemCache.data['fake_driver'] == {
             ('bank1', 'key1'): [0, 'fake_data11'],
             ('bank1', 'key2'): [1, 'fake_data12'],
             ('bank2', 'key1'): [2, 'fake_data21'],
-            })
+            }
         # Put one more and check the oldest was removed
         with patch('time.time', return_value=3):
             self.cache.store('bank2', 'key2', 'fake_data22')
-        self.assertDictEqual(salt.cache.MemCache.data['fake_driver'], {
+        assert salt.cache.MemCache.data['fake_driver'] == {
             ('bank1', 'key2'): [1, 'fake_data12'],
             ('bank2', 'key1'): [2, 'fake_data21'],
             ('bank2', 'key2'): [3, 'fake_data22'],
-            })
+            }
 
     @patch('salt.cache.Cache.store')
     @patch('salt.loader.cache', return_value={})
@@ -173,18 +173,18 @@ class MemCacheTest(TestCase):
             self.cache.store('bank1', 'key2', 'fake_data12')
         with patch('time.time', return_value=2):
             self.cache.store('bank2', 'key1', 'fake_data21')
-        self.assertDictEqual(salt.cache.MemCache.data['fake_driver'], {
+        assert salt.cache.MemCache.data['fake_driver'] == {
             ('bank1', 'key1'): [0, 'fake_data11'],
             ('bank1', 'key2'): [1, 'fake_data12'],
             ('bank2', 'key1'): [2, 'fake_data21'],
-            })
+            }
         # Put one more and check all expired was removed
         with patch('time.time', return_value=12):
             self.cache.store('bank2', 'key2', 'fake_data22')
-        self.assertDictEqual(salt.cache.MemCache.data['fake_driver'], {
+        assert salt.cache.MemCache.data['fake_driver'] == {
             ('bank2', 'key1'): [2, 'fake_data21'],
             ('bank2', 'key2'): [12, 'fake_data22'],
-            })
+            }
 
     @patch('salt.cache.Cache.fetch', return_value='fake_data')
     @patch('salt.loader.cache', return_value={})
@@ -210,5 +210,5 @@ class MemCacheTest(TestCase):
             ret = self.cache.fetch('bank', 'key2')
 
         # Check debug data
-        self.assertEqual(self.cache.call, 6)
-        self.assertEqual(self.cache.hit, 3)
+        assert self.cache.call == 6
+        assert self.cache.hit == 3

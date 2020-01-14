@@ -47,7 +47,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             data = salt.utils.yaml.safe_load(line)
             minions.extend(data.keys())
 
-        self.assertNotEqual(minions, [])
+        assert minions != []
 
         testfile = os.path.abspath(
             os.path.join(
@@ -81,7 +81,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 )
 
                 data = salt.utils.yaml.safe_load('\n'.join(ret))
-                self.assertTrue(data[minion])
+                assert data[minion]
 
             minion_testfile = os.path.join(
                 RUNTIME_VARS.TMP, 'cp_{0}_testfile'.format(idx)
@@ -96,7 +96,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
             data = eval('\n'.join(ret), {}, {})  # pylint: disable=eval-used
             for part in six.itervalues(data):
                 key = minion_testfile
-                self.assertTrue(part[key])
+                assert part[key]
 
             ret = self.run_salt(
                 '--out yaml {0} file.file_exists {1}'.format(
@@ -105,7 +105,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
-            self.assertTrue(data[minion])
+            assert data[minion]
 
             ret = self.run_salt(
                 '--out yaml {0} file.contains {1} {2}'.format(
@@ -115,7 +115,7 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
-            self.assertTrue(data[minion])
+            assert data[minion]
             ret = self.run_salt(
                 '--out yaml {0} file.remove {1}'.format(
                     quote(minion),
@@ -123,4 +123,4 @@ class CopyTest(ShellCase, ShellCaseCommonTestsMixin):
                 )
             )
             data = salt.utils.yaml.safe_load('\n'.join(ret))
-            self.assertTrue(data[minion])
+            assert data[minion]

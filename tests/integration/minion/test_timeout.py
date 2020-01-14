@@ -38,8 +38,8 @@ class MinionTimeoutTestCase(ShellCase):
             catch_stderr=True,
             popen_kwargs=popen_kwargs,
         )
-        self.assertTrue(isinstance(ret[0], list), 'Return is not a list. Minion'
-                ' may have returned error: {0}'.format(ret))
-        self.assertEqual(len(ret[0]), 2, 'Standard out wrong length {}'.format(ret))
-        self.assertTrue('True' in ret[0][1], 'Minion did not return True after '
-                '{0} seconds. ret={1}'.format(sleep_length, ret))
+        assert isinstance(ret[0], list), 'Return is not a list. Minion' \
+                ' may have returned error: {0}'.format(ret)
+        assert len(ret[0]) == 2, 'Standard out wrong length {}'.format(ret)
+        assert 'True' in ret[0][1], 'Minion did not return True after ' \
+                '{0} seconds. ret={1}'.format(sleep_length, ret)

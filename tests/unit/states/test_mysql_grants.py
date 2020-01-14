@@ -44,24 +44,24 @@ class MysqlGrantsTestCase(TestCase, LoaderModuleMockMixin):
                                                 'mysql.grant_add': mock_t}):
             comt = ('Grant None on None to None@localhost is already present')
             ret.update({'comment': comt})
-            self.assertDictEqual(mysql_grants.present(name), ret)
+            assert mysql_grants.present(name) == ret
 
             with patch.object(mysql_grants, '_get_mysql_error', mock_str):
                 ret.update({'comment': 'salt', 'result': False})
-                self.assertDictEqual(mysql_grants.present(name), ret)
+                assert mysql_grants.present(name) == ret
 
             with patch.object(mysql_grants, '_get_mysql_error', mock_none):
                 with patch.dict(mysql_grants.__opts__, {'test': True}):
                     comt = ('MySQL grant frank_exampledb is set to be created')
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(mysql_grants.present(name), ret)
+                    assert mysql_grants.present(name) == ret
 
                 with patch.dict(mysql_grants.__opts__, {'test': False}):
                     comt = ('Grant None on None to None@localhost'
                             ' has been added')
                     ret.update({'comment': comt, 'result': True,
                                 'changes': {name: 'Present'}})
-                    self.assertDictEqual(mysql_grants.present(name), ret)
+                    assert mysql_grants.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -85,29 +85,29 @@ class MysqlGrantsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(mysql_grants.__opts__, {'test': True}):
                 comt = ('MySQL grant frank_exampledb is set to be revoked')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(mysql_grants.absent(name), ret)
+                assert mysql_grants.absent(name) == ret
 
             with patch.dict(mysql_grants.__opts__, {'test': False}):
                 comt = ('Grant None on None for None@localhost'
                         ' has been revoked')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(mysql_grants.absent(name), ret)
+                assert mysql_grants.absent(name) == ret
 
                 with patch.object(mysql_grants, '_get_mysql_error', mock_str):
                     comt = ('Unable to revoke grant None on None'
                             ' for None@localhost (salt)')
                     ret.update({'comment': comt, 'result': False,
                                 'changes': {}})
-                    self.assertDictEqual(mysql_grants.absent(name), ret)
+                    assert mysql_grants.absent(name) == ret
 
                     comt = ('Unable to determine if grant None on '
                             'None for None@localhost exists (salt)')
                     ret.update({'comment': comt})
-                    self.assertDictEqual(mysql_grants.absent(name), ret)
+                    assert mysql_grants.absent(name) == ret
 
             with patch.object(mysql_grants, '_get_mysql_error', mock_none):
                 comt = ('Grant None on None to None@localhost is not present,'
                         ' so it cannot be revoked')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(mysql_grants.absent(name), ret)
+                assert mysql_grants.absent(name) == ret

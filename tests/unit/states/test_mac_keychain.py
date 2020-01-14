@@ -41,7 +41,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
             friendly_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd')
             install_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd', '/Library/Keychains/System.keychain')
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_cert(self):
         '''
@@ -67,7 +67,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
             friendly_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd')
             assert not install_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_uninstall_cert(self):
         '''
@@ -91,7 +91,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
             friendly_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd')
             uninstall_mock.assert_called_once_with('Friendly Name', '/Library/Keychains/System.keychain', None)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_uninstalled_cert(self):
         '''
@@ -115,7 +115,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
             friendly_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd')
             assert not uninstall_mock.called
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_default_keychain(self):
         '''
@@ -137,7 +137,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 out = keychain.default_keychain('/path/to/chain.keychain', 'system', 'frank')
                 get_default_mock.assert_called_once_with('frank', 'system')
                 set_mock.assert_called_once_with('/path/to/chain.keychain', 'system', 'frank')
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_default_keychain_set_already(self):
         '''
@@ -159,7 +159,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
                 out = keychain.default_keychain('/path/to/chain.keychain', 'system', 'frank')
                 get_default_mock.assert_called_once_with('frank', 'system')
                 assert not set_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_default_keychain_missing(self):
         '''
@@ -175,7 +175,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
 
             exists_mock.return_value = False
             out = keychain.default_keychain('/path/to/cert.p12', 'system', 'frank')
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_install_cert_salt_fileserver(self):
         '''
@@ -201,7 +201,7 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             list_mock.assert_called_once_with('/Library/Keychains/System.keychain')
             friendly_mock.assert_called_once_with('/tmp/path/to/cert.p12', 'passw0rd')
             install_mock.assert_called_once_with('/tmp/path/to/cert.p12', 'passw0rd', '/Library/Keychains/System.keychain')
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_installed_cert_hash_different(self):
         '''
@@ -232,4 +232,4 @@ class KeychainTestCase(TestCase, LoaderModuleMockMixin):
             install_mock.assert_called_once_with('/path/to/cert.p12', 'passw0rd', '/Library/Keychains/System.keychain')
             uninstall_mock.assert_called_once_with('Friendly Name', '/Library/Keychains/System.keychain',
                                                    keychain_password=None)
-            self.assertEqual(out, expected)
+            assert out == expected

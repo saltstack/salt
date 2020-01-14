@@ -67,19 +67,19 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(kernelpkg.__opts__, {'test': False}):
                     kernelpkg.__salt__['kernelpkg.upgrade'].reset_mock()
                     ret = kernelpkg.latest_installed(name=STATE_NAME)
-                    self.assertEqual(ret['name'], STATE_NAME)
-                    self.assertTrue(ret['result'])
-                    self.assertIsInstance(ret['changes'], dict)
-                    self.assertIsInstance(ret['comment'], six.text_type)
+                    assert ret['name'] == STATE_NAME
+                    assert ret['result']
+                    assert isinstance(ret['changes'], dict)
+                    assert isinstance(ret['comment'], six.text_type)
                     self.assert_called_once(kernelpkg.__salt__['kernelpkg.upgrade'])
 
                 with patch.dict(kernelpkg.__opts__, {'test': True}):
                     kernelpkg.__salt__['kernelpkg.upgrade'].reset_mock()
                     ret = kernelpkg.latest_installed(name=STATE_NAME)
-                    self.assertEqual(ret['name'], STATE_NAME)
-                    self.assertIsNone(ret['result'])
-                    self.assertDictEqual(ret['changes'], {})
-                    self.assertIsInstance(ret['comment'], six.text_type)
+                    assert ret['name'] == STATE_NAME
+                    assert ret['result'] is None
+                    assert ret['changes'] == {}
+                    assert isinstance(ret['comment'], six.text_type)
                     kernelpkg.__salt__['kernelpkg.upgrade'].assert_not_called()
 
     def test_latest_installed_at_latest(self):
@@ -92,18 +92,18 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(kernelpkg.__salt__, {'kernelpkg.latest_available': upgrade}):
                 with patch.dict(kernelpkg.__opts__, {'test': False}):
                     ret = kernelpkg.latest_installed(name=STATE_NAME)
-                    self.assertEqual(ret['name'], STATE_NAME)
-                    self.assertTrue(ret['result'])
-                    self.assertDictEqual(ret['changes'], {})
-                    self.assertIsInstance(ret['comment'], six.text_type)
+                    assert ret['name'] == STATE_NAME
+                    assert ret['result']
+                    assert ret['changes'] == {}
+                    assert isinstance(ret['comment'], six.text_type)
                     kernelpkg.__salt__['kernelpkg.upgrade'].assert_not_called()
 
                 with patch.dict(kernelpkg.__opts__, {'test': True}):
                     ret = kernelpkg.latest_installed(name=STATE_NAME)
-                    self.assertEqual(ret['name'], STATE_NAME)
-                    self.assertTrue(ret['result'])
-                    self.assertDictEqual(ret['changes'], {})
-                    self.assertIsInstance(ret['comment'], six.text_type)
+                    assert ret['name'] == STATE_NAME
+                    assert ret['result']
+                    assert ret['changes'] == {}
+                    assert isinstance(ret['comment'], six.text_type)
                     kernelpkg.__salt__['kernelpkg.upgrade'].assert_not_called()
 
     def test_latest_active_with_changes(self):
@@ -118,22 +118,20 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(kernelpkg.__opts__, {'test': False}):
             kernelpkg.__salt__['system.reboot'].reset_mock()
             ret = kernelpkg.latest_active(name=STATE_NAME)
-            self.assertEqual(ret['name'], STATE_NAME)
-            self.assertTrue(ret['result'])
-            self.assertIsInstance(ret['changes'], dict)
-            self.assertIsInstance(ret['comment'], six.text_type)
+            assert ret['name'] == STATE_NAME
+            assert ret['result']
+            assert isinstance(ret['changes'], dict)
+            assert isinstance(ret['comment'], six.text_type)
             self.assert_called_once(kernelpkg.__salt__['system.reboot'])
 
             with patch.dict(kernelpkg.__opts__, {'test': True}):
                 kernelpkg.__salt__['system.reboot'].reset_mock()
                 ret = kernelpkg.latest_active(name=STATE_NAME)
-                self.assertEqual(ret['name'], STATE_NAME)
-                self.assertIsNone(ret['result'])
-                self.assertDictEqual(
-                    ret['changes'],
+                assert ret['name'] == STATE_NAME
+                assert ret['result'] is None
+                assert ret['changes'] == \
                     {'kernel': {'new': 1, 'old': 0}}
-                )
-                self.assertIsInstance(ret['comment'], six.text_type)
+                assert isinstance(ret['comment'], six.text_type)
                 kernelpkg.__salt__['system.reboot'].assert_not_called()
 
     def test_latest_active_at_latest(self):
@@ -145,19 +143,19 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(kernelpkg.__opts__, {'test': False}):
                 kernelpkg.__salt__['system.reboot'].reset_mock()
                 ret = kernelpkg.latest_active(name=STATE_NAME)
-                self.assertEqual(ret['name'], STATE_NAME)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
-                self.assertIsInstance(ret['comment'], six.text_type)
+                assert ret['name'] == STATE_NAME
+                assert ret['result']
+                assert ret['changes'] == {}
+                assert isinstance(ret['comment'], six.text_type)
                 kernelpkg.__salt__['system.reboot'].assert_not_called()
 
             with patch.dict(kernelpkg.__opts__, {'test': True}):
                 kernelpkg.__salt__['system.reboot'].reset_mock()
                 ret = kernelpkg.latest_active(name=STATE_NAME)
-                self.assertEqual(ret['name'], STATE_NAME)
-                self.assertTrue(ret['result'])
-                self.assertDictEqual(ret['changes'], {})
-                self.assertIsInstance(ret['comment'], six.text_type)
+                assert ret['name'] == STATE_NAME
+                assert ret['result']
+                assert ret['changes'] == {}
+                assert isinstance(ret['comment'], six.text_type)
                 kernelpkg.__salt__['system.reboot'].assert_not_called()
 
     def test_latest_wait(self):
@@ -165,7 +163,7 @@ class KernelPkgTestCase(TestCase, LoaderModuleMockMixin):
         Test - latest_wait static results
         '''
         ret = kernelpkg.latest_wait(name=STATE_NAME)
-        self.assertEqual(ret['name'], STATE_NAME)
-        self.assertTrue(ret['result'])
-        self.assertDictEqual(ret['changes'], {})
-        self.assertIsInstance(ret['comment'], six.text_type)
+        assert ret['name'] == STATE_NAME
+        assert ret['result']
+        assert ret['changes'] == {}
+        assert isinstance(ret['comment'], six.text_type)

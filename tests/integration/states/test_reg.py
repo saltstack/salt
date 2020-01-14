@@ -74,7 +74,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': 'fake string data',
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_present_reg_sz_unicode_value(self):
         '''
@@ -107,7 +107,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': UNICODE_VALUE,
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_present_reg_sz_unicode_default_value(self):
         '''
@@ -140,7 +140,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': UNICODE_VALUE,
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_present_reg_sz_unicode_value_name(self):
         '''
@@ -174,7 +174,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': 'fake string data',
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_present_reg_binary(self):
         '''
@@ -209,7 +209,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': test_data.encode('utf-8'),
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_present_reg_multi_sz(self):
         '''
@@ -245,7 +245,7 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': ['item1', 'item2'],
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
     def test_present_32_bit(self):
         '''
@@ -283,4 +283,4 @@ class RegTest(ModuleCase, SaltReturnAssertsMixin):
             'hive': 'HKLM',
             'vdata': 'fake string data',
             'key': FAKE_KEY}
-        self.assertEqual(ret, expected)
+        assert ret == expected

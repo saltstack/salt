@@ -42,7 +42,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
         expected_ret = self.__base_webconfiguration_ret(name=name, comment='No settings to change provided.',
                                                         result=True)
         actual_ret = win_iis.webconfiguration_settings(name, settings)
-        self.assertEqual(expected_ret, actual_ret)
+        assert expected_ret == actual_ret
 
     def test_webconfiguration_settings_collection_failure(self):
         name = 'IIS:\\'
@@ -77,7 +77,7 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             'win_iis.set_webconfiguration_settings': MagicMock(return_value=True),
         }), patch.dict(win_iis.__opts__, {'test': False}):
             actual_ret = win_iis.webconfiguration_settings(name, settings)
-        self.assertEqual(expected_ret, actual_ret)
+        assert expected_ret == actual_ret
 
     def test_webconfiguration_settings_collection(self):
         name = 'IIS:\\'
@@ -108,4 +108,4 @@ class WinIisTestCase(TestCase, LoaderModuleMockMixin):
             'win_iis.set_webconfiguration_settings': MagicMock(return_value=True),
         }), patch.dict(win_iis.__opts__, {'test': False}):
             actual_ret = win_iis.webconfiguration_settings(name, settings)
-        self.assertEqual(expected_ret, actual_ret)
+        assert expected_ret == actual_ret

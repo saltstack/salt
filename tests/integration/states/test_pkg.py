@@ -133,7 +133,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
-        self.assertFalse(version)
+        assert not version
 
         ret = self.run_state('pkg.installed', name=target, refresh=False)
         self.assertSaltTrueReturn(ret)
@@ -152,7 +152,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
-        self.assertTrue(version)
+        assert version
 
         ret = self.run_state('pkg.installed',
                              name=target,
@@ -172,7 +172,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertFalse(any(version.values()))
+        assert not any(version.values())
         self.assertSaltTrueReturn(self.run_state('pkg.removed', name=None, pkgs=self._PKG_TARGETS))
 
         try:
@@ -196,7 +196,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so these
         # packages need to not be installed before we run the states below
-        self.assertTrue(bool(version))
+        assert bool(version)
 
         pkgs = [{self._PKG_TARGETS[0]: version}, self._PKG_TARGETS[1]]
 
@@ -228,7 +228,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to be able to test successful installation of packages, so
         # the target needs to not be installed before we run the states
         # below
-        self.assertFalse(version)
+        assert not version
 
         ret = self.run_state('pkg.installed',
                              name=target,
@@ -254,7 +254,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the states
         # below
-        self.assertTrue(version)
+        assert version
 
         ret = self.run_state('pkg.installed',
                              name=target,
@@ -280,7 +280,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the
         # pkg.installed state below
-        self.assertTrue(bool(version))
+        assert bool(version)
         ret = self.run_state('pkg.installed', name=target, refresh=False)
         self.assertSaltTrueReturn(ret)
         ret = self.run_state('pkg.removed', name=target)
@@ -302,7 +302,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # needs to be able to test successful installation of the package, so
         # the target needs to not be installed before we run the
         # pkg.installed state below
-        self.assertTrue(version)
+        assert version
         ret = self.run_state('pkg.installed',
                              name=target,
                              version=version,
@@ -331,7 +331,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
 
         ret = self.run_function('pkg.info_installed', [package])
-        self.assertTrue(pkgquery in six.text_type(ret))
+        assert pkgquery in six.text_type(ret)
 
     @pytest.mark.requires_salt_states('pkg.latest', 'pkg.removed')
     def test_pkg_010_latest(self):
@@ -345,7 +345,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
-        self.assertTrue(version)
+        assert version
 
         ret = self.run_state('pkg.latest', name=target, refresh=False)
         self.assertSaltTrueReturn(ret)
@@ -368,7 +368,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # so the targeted package needs to not be installed before we run the
         # state below.
         version = self.latest_version(target)
-        self.assertTrue(version)
+        assert version
 
         ret = self.run_state('pkg.latest', name=target, refresh=False, only_upgrade=True)
         self.assertSaltFalseReturn(ret)
@@ -395,13 +395,11 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
                                  only_upgrade=True)
             self.assertSaltTrueReturn(ret)
             new_version = self.run_function('pkg.version', [target])
-            self.assertEqual(new_version, updates[target])
+            assert new_version == updates[target]
             ret = self.run_state('pkg.latest', name=target, refresh=False,
                                  only_upgrade=True)
-            self.assertEqual(
-                ret['pkg_|-{0}_|-{0}_|-latest'.format(target)]['comment'],
+            assert ret['pkg_|-{0}_|-{0}_|-latest'.format(target)]['comment'] == \
                 'Package {0} is already up-to-date'.format(target)
-            )
 
     @skipIf(not _WILDCARDS_SUPPORTED, 'Wildcards in pkg.install are not supported')
     @pytest.mark.requires_salt_states('pkg.installed', 'pkg.removed')
@@ -416,7 +414,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
-        self.assertFalse(version)
+        assert not version
 
         ret = self.run_state(
             'pkg.installed',
@@ -439,7 +437,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
             'desired version'
         )
         self.assertSaltTrueReturn(ret)
-        self.assertEqual(ret[next(iter(ret))]['comment'], expected_comment)
+        assert ret[next(iter(ret))]['comment'] == expected_comment
 
         # Repeat one more time with unavailable version, test should fail
         ret = self.run_state(
@@ -467,7 +465,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
-        self.assertFalse(version)
+        assert not version
 
         latest_version = self.run_function(
             'pkg.latest_version',
@@ -485,7 +483,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
 
             # The version that was installed should be the latest available
             version = self.run_function('pkg.version', [target])
-            self.assertTrue(version, latest_version)
+            assert version, latest_version
         finally:
             # Clean up
             ret = self.run_state('pkg.removed', name=target)
@@ -505,7 +503,7 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         # If this assert fails, we need to find new targets, this test needs to
         # be able to test successful installation of packages, so this package
         # needs to not be installed before we run the states below
-        self.assertFalse(version)
+        assert not version
 
         ret = self.run_state(
             'pkg.installed',
@@ -574,13 +572,13 @@ class PkgTest(ModuleCase, SaltReturnAssertsMixin):
         try:
             tag = 'pkg_|-{0}_|-{0}_|-installed'.format(target)
             self.assertSaltTrueReturn(ret)
-            self.assertIn(tag, ret)
-            self.assertIn('changes', ret[tag])
-            self.assertIn(target, ret[tag]['changes'])
+            assert tag in ret
+            assert 'changes' in ret[tag]
+            assert target in ret[tag]['changes']
             if not target_changes:
                 self.skipTest(
                     'Test needs to be configured for {}: {}'.format(grains['os'], ret[tag]['changes'][target]))
-            self.assertEqual(ret[tag]['changes'][target], target_changes)
+            assert ret[tag]['changes'][target] == target_changes
         finally:
             # Clean up, unhold package and remove
             self.run_function('pkg.unhold', name=target)

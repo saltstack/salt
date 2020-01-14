@@ -99,7 +99,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_pki.__salt__), \
                 patch('salt.modules.win_pki._cmd_run',
                       MagicMock(return_value=JSON_STORES)):
-            self.assertEqual(win_pki.get_stores(), STORES)
+            assert win_pki.get_stores() == STORES
 
     def test_get_certs(self):
         '''
@@ -110,7 +110,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=JSON_CERTS)), \
                 patch('salt.modules.win_pki._validate_cert_path',
                       MagicMock(return_value=None)):
-            self.assertEqual(win_pki.get_certs(), CERTS)
+            assert win_pki.get_certs() == CERTS
 
     def test_get_cert_file(self):
         '''
@@ -122,7 +122,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                      MagicMock(return_value=True)), \
                 patch('salt.modules.win_pki._cmd_run',
                       MagicMock(return_value=JSON_CERTS)):
-            self.assertEqual(win_pki.get_cert_file(**kwargs), CERTS[THUMBPRINT])
+            assert win_pki.get_cert_file(**kwargs) == CERTS[THUMBPRINT]
 
     def test_import_cert(self):
         '''
@@ -139,7 +139,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=CERTS[THUMBPRINT])), \
                 patch('salt.modules.win_pki.get_certs',
                       MagicMock(return_value=CERTS)):
-            self.assertTrue(win_pki.import_cert(**kwargs))
+            assert win_pki.import_cert(**kwargs)
 
     def test_export_cert(self):
         '''
@@ -154,7 +154,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=None)), \
                 patch('salt.modules.win_pki._validate_cert_path',
                       MagicMock(return_value=None)):
-            self.assertTrue(win_pki.export_cert(**kwargs))
+            assert win_pki.export_cert(**kwargs)
 
     def test_test_cert(self):
         '''
@@ -165,7 +165,7 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value='True')), \
                 patch('salt.modules.win_pki._validate_cert_path',
                       MagicMock(return_value=None)):
-            self.assertTrue(win_pki.test_cert(thumbprint=THUMBPRINT))
+            assert win_pki.test_cert(thumbprint=THUMBPRINT)
 
     def test_remove_cert(self):
         '''
@@ -178,4 +178,4 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=None)), \
                 patch('salt.modules.win_pki.get_certs',
                       MagicMock(return_value=CERTS)):
-            self.assertTrue(win_pki.remove_cert(thumbprint=THUMBPRINT[::-1]))
+            assert win_pki.remove_cert(thumbprint=THUMBPRINT[::-1])

@@ -50,25 +50,20 @@ class MacPowerModuleTest(ModuleCase):
         '''
 
         # Normal Functionality
-        self.assertTrue(self.run_function('power.set_computer_sleep', [90]))
-        self.assertEqual(
-            self.run_function('power.get_computer_sleep'), 'after 90 minutes')
-        self.assertTrue(self.run_function('power.set_computer_sleep', ['Off']))
-        self.assertEqual(self.run_function('power.get_computer_sleep'), 'Never')
+        assert self.run_function('power.set_computer_sleep', [90])
+        assert self.run_function('power.get_computer_sleep') == 'after 90 minutes'
+        assert self.run_function('power.set_computer_sleep', ['Off'])
+        assert self.run_function('power.get_computer_sleep') == 'Never'
 
         # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Minutes',
-            self.run_function('power.set_computer_sleep', ['spongebob']))
-        self.assertIn(
-            'Invalid Integer Value for Minutes',
-            self.run_function('power.set_computer_sleep', [0]))
-        self.assertIn(
-            'Invalid Integer Value for Minutes',
-            self.run_function('power.set_computer_sleep', [181]))
-        self.assertIn(
-            'Invalid Boolean Value for Minutes',
-            self.run_function('power.set_computer_sleep', [True]))
+        assert 'Invalid String Value for Minutes' in \
+            self.run_function('power.set_computer_sleep', ['spongebob'])
+        assert 'Invalid Integer Value for Minutes' in \
+            self.run_function('power.set_computer_sleep', [0])
+        assert 'Invalid Integer Value for Minutes' in \
+            self.run_function('power.set_computer_sleep', [181])
+        assert 'Invalid Boolean Value for Minutes' in \
+            self.run_function('power.set_computer_sleep', [True])
 
     @pytest.mark.destructive_test
     def test_display_sleep(self):
@@ -78,25 +73,20 @@ class MacPowerModuleTest(ModuleCase):
         '''
 
         # Normal Functionality
-        self.assertTrue(self.run_function('power.set_display_sleep', [90]))
-        self.assertEqual(
-            self.run_function('power.get_display_sleep'), 'after 90 minutes')
-        self.assertTrue(self.run_function('power.set_display_sleep', ['Off']))
-        self.assertEqual(self.run_function('power.get_display_sleep'), 'Never')
+        assert self.run_function('power.set_display_sleep', [90])
+        assert self.run_function('power.get_display_sleep') == 'after 90 minutes'
+        assert self.run_function('power.set_display_sleep', ['Off'])
+        assert self.run_function('power.get_display_sleep') == 'Never'
 
         # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Minutes',
-            self.run_function('power.set_display_sleep', ['spongebob']))
-        self.assertIn(
-            'Invalid Integer Value for Minutes',
-            self.run_function('power.set_display_sleep', [0]))
-        self.assertIn(
-            'Invalid Integer Value for Minutes',
-            self.run_function('power.set_display_sleep', [181]))
-        self.assertIn(
-            'Invalid Boolean Value for Minutes',
-            self.run_function('power.set_display_sleep', [True]))
+        assert 'Invalid String Value for Minutes' in \
+            self.run_function('power.set_display_sleep', ['spongebob'])
+        assert 'Invalid Integer Value for Minutes' in \
+            self.run_function('power.set_display_sleep', [0])
+        assert 'Invalid Integer Value for Minutes' in \
+            self.run_function('power.set_display_sleep', [181])
+        assert 'Invalid Boolean Value for Minutes' in \
+            self.run_function('power.set_display_sleep', [True])
 
     @pytest.mark.destructive_test
     def test_harddisk_sleep(self):
@@ -106,25 +96,20 @@ class MacPowerModuleTest(ModuleCase):
         '''
 
         # Normal Functionality
-        self.assertTrue(self.run_function('power.set_harddisk_sleep', [90]))
-        self.assertEqual(
-            self.run_function('power.get_harddisk_sleep'), 'after 90 minutes')
-        self.assertTrue(self.run_function('power.set_harddisk_sleep', ['Off']))
-        self.assertEqual(self.run_function('power.get_harddisk_sleep'), 'Never')
+        assert self.run_function('power.set_harddisk_sleep', [90])
+        assert self.run_function('power.get_harddisk_sleep') == 'after 90 minutes'
+        assert self.run_function('power.set_harddisk_sleep', ['Off'])
+        assert self.run_function('power.get_harddisk_sleep') == 'Never'
 
         # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Minutes',
-            self.run_function('power.set_harddisk_sleep', ['spongebob']))
-        self.assertIn(
-            'Invalid Integer Value for Minutes',
-            self.run_function('power.set_harddisk_sleep', [0]))
-        self.assertIn(
-            'Invalid Integer Value for Minutes',
-            self.run_function('power.set_harddisk_sleep', [181]))
-        self.assertIn(
-            'Invalid Boolean Value for Minutes',
-            self.run_function('power.set_harddisk_sleep', [True]))
+        assert 'Invalid String Value for Minutes' in \
+            self.run_function('power.set_harddisk_sleep', ['spongebob'])
+        assert 'Invalid Integer Value for Minutes' in \
+            self.run_function('power.set_harddisk_sleep', [0])
+        assert 'Invalid Integer Value for Minutes' in \
+            self.run_function('power.set_harddisk_sleep', [181])
+        assert 'Invalid Boolean Value for Minutes' in \
+            self.run_function('power.set_harddisk_sleep', [True])
 
     def test_restart_freeze(self):
         '''
@@ -132,14 +117,13 @@ class MacPowerModuleTest(ModuleCase):
         Test power.set_restart_freeze
         '''
         # Normal Functionality
-        self.assertTrue(self.run_function('power.set_restart_freeze', ['on']))
-        self.assertTrue(self.run_function('power.get_restart_freeze'))
+        assert self.run_function('power.set_restart_freeze', ['on'])
+        assert self.run_function('power.get_restart_freeze')
         # This will return False because mac fails to actually make the change
-        self.assertFalse(
-            self.run_function('power.set_restart_freeze', ['off']))
+        assert not self.run_function('power.set_restart_freeze', ['off'])
         # Even setting to off returns true, it actually is never set
         # This is an apple bug
-        self.assertTrue(self.run_function('power.get_restart_freeze'))
+        assert self.run_function('power.get_restart_freeze')
 
 
 @pytest.mark.skip_if_not_root
@@ -181,16 +165,12 @@ class MacPowerModuleTestSleepOnPowerButton(ModuleCase):
         if self.SLEEP_ON_BUTTON is None:
             # Check for not available
             ret = self.run_function('power.get_sleep_on_power_button')
-            self.assertIn('Error', ret)
+            assert 'Error' in ret
         else:
-            self.assertTrue(
-                self.run_function('power.set_sleep_on_power_button', ['on']))
-            self.assertTrue(
-                self.run_function('power.get_sleep_on_power_button'))
-            self.assertTrue(
-                self.run_function('power.set_sleep_on_power_button', ['off']))
-            self.assertFalse(
-                self.run_function('power.get_sleep_on_power_button'))
+            assert self.run_function('power.set_sleep_on_power_button', ['on'])
+            assert self.run_function('power.get_sleep_on_power_button')
+            assert self.run_function('power.set_sleep_on_power_button', ['off'])
+            assert not self.run_function('power.get_sleep_on_power_button')
 
 
 @pytest.mark.skip_if_not_root
@@ -231,16 +211,12 @@ class MacPowerModuleTestRestartPowerFailure(ModuleCase):
         if self.RESTART_POWER is None:
             # Check for not available
             ret = self.run_function('power.get_restart_power_failure')
-            self.assertIn('Error', ret)
+            assert 'Error' in ret
         else:
-            self.assertTrue(
-                self.run_function('power.set_restart_power_failure', ['on']))
-            self.assertTrue(
-                self.run_function('power.get_restart_power_failure'))
-            self.assertTrue(
-                self.run_function('power.set_restart_power_failure', ['off']))
-            self.assertFalse(
-                self.run_function('power.get_restart_power_failure'))
+            assert self.run_function('power.set_restart_power_failure', ['on'])
+            assert self.run_function('power.get_restart_power_failure')
+            assert self.run_function('power.set_restart_power_failure', ['off'])
+            assert not self.run_function('power.get_restart_power_failure')
 
 
 @pytest.mark.skip_if_not_root
@@ -280,14 +256,12 @@ class MacPowerModuleTestWakeOnNet(ModuleCase):
         if self.WAKE_ON_NET is None:
             # Check for not available
             ret = self.run_function('power.get_wake_on_network')
-            self.assertIn('Error', ret)
+            assert 'Error' in ret
         else:
-            self.assertTrue(
-                self.run_function('power.set_wake_on_network', ['on']))
-            self.assertTrue(self.run_function('power.get_wake_on_network'))
-            self.assertTrue(
-                self.run_function('power.set_wake_on_network', ['off']))
-            self.assertFalse(self.run_function('power.get_wake_on_network'))
+            assert self.run_function('power.set_wake_on_network', ['on'])
+            assert self.run_function('power.get_wake_on_network')
+            assert self.run_function('power.set_wake_on_network', ['off'])
+            assert not self.run_function('power.get_wake_on_network')
 
 
 @pytest.mark.skip_if_not_root
@@ -327,11 +301,9 @@ class MacPowerModuleTestWakeOnModem(ModuleCase):
         if self.WAKE_ON_MODEM is None:
             # Check for not available
             ret = self.run_function('power.get_wake_on_modem')
-            self.assertIn('Error', ret)
+            assert 'Error' in ret
         else:
-            self.assertTrue(
-                self.run_function('power.set_wake_on_modem', ['on']))
-            self.assertTrue(self.run_function('power.get_wake_on_modem'))
-            self.assertTrue(
-                self.run_function('power.set_wake_on_modem', ['off']))
-            self.assertFalse(self.run_function('power.get_wake_on_modem'))
+            assert self.run_function('power.set_wake_on_modem', ['on'])
+            assert self.run_function('power.get_wake_on_modem')
+            assert self.run_function('power.set_wake_on_modem', ['off'])
+            assert not self.run_function('power.get_wake_on_modem')

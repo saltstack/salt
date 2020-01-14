@@ -18,6 +18,7 @@ from tests.support.mock import (
 import salt.modules.bluez_bluetooth as bluez
 from salt.exceptions import CommandExecutionError
 import salt.utils.validate.net
+import pytest
 
 
 class MockBluetooth(object):
@@ -49,9 +50,9 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="5.7")
         with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(bluez.version(),
+            assert bluez.version() == \
                                  {'PyBluez': '<= 0.18 (Unknown, but installed)',
-                                  'Bluez': '5.7'})
+                                  'Bluez': '5.7'}
 
     def test_address_(self):
         '''
@@ -59,9 +60,9 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='hci : hci0')
         with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(bluez.address_(),
+            assert bluez.address_() == \
                                  {'hci ': {'device': 'hci ',
-                                           'path': '/sys/class/bluetooth/hci '}})
+                                           'path': '/sys/class/bluetooth/hci '}}
 
     def test_power(self):
         '''
@@ -69,21 +70,22 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={})
         with patch.object(bluez, 'address_', mock):
-            self.assertRaises(CommandExecutionError, bluez.power, "hci0", "on")
+            with pytest.raises(CommandExecutionError):
+                bluez.power("hci0", "on")
 
         mock = MagicMock(return_value={'hci0':
                                        {'device': 'hci0', 'power': 'on'}})
         with patch.object(bluez, 'address_', mock):
             mock = MagicMock(return_value="")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertTrue(bluez.power("hci0", "on"))
+                assert bluez.power("hci0", "on")
 
         mock = MagicMock(return_value={'hci0':
                                        {'device': 'hci0', 'power': 'on'}})
         with patch.object(bluez, 'address_', mock):
             mock = MagicMock(return_value="")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertFalse(bluez.power("hci0", "off"))
+                assert not bluez.power("hci0", "off")
 
     def test_discoverable(self):
         '''
@@ -94,16 +96,16 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
                                       {'hci0': {'device': 'hci0',
                                                 'power': 'on'}}])
         with patch.object(bluez, 'address_', mock):
-            self.assertRaises(CommandExecutionError,
-                              bluez.discoverable, "hci0")
+            with pytest.raises(CommandExecutionError):
+                bluez.discoverable("hci0")
 
             mock = MagicMock(return_value="UP RUNNING ISCAN")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertTrue(bluez.discoverable("hci0"))
+                assert bluez.discoverable("hci0")
 
             mock = MagicMock(return_value="")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertFalse(bluez.discoverable("hci0"))
+                assert not bluez.discoverable("hci0")
 
     def test_noscan(self):
         '''
@@ -114,21 +116,22 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
                                       {'hci0': {'device': 'hci0',
                                                 'power': 'on'}}])
         with patch.object(bluez, 'address_', mock):
-            self.assertRaises(CommandExecutionError, bluez.noscan, "hci0")
+            with pytest.raises(CommandExecutionError):
+                bluez.noscan("hci0")
 
             mock = MagicMock(return_value="SCAN")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertFalse(bluez.noscan("hci0"))
+                assert not bluez.noscan("hci0")
 
             mock = MagicMock(return_value="")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertTrue(bluez.noscan("hci0"))
+                assert bluez.noscan("hci0")
 
     def test_scan(self):
         '''
             Test of scanning of bluetooth devices
         '''
-        self.assertListEqual(bluez.scan(), [{'a': 'b'}, {'d': 'e'}])
+        assert bluez.scan() == [{'a': 'b'}, {'d': 'e'}]
 
     def test_block(self):
         '''
@@ -136,12 +139,12 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
-            self.assertRaises(CommandExecutionError,
-                              bluez.block, "DE:AD:BE:EF:CA:ZE")
+            with pytest.raises(CommandExecutionError):
+                bluez.block("DE:AD:BE:EF:CA:ZE")
 
             mock = MagicMock(return_value="")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertIsNone(bluez.block("DE:AD:BE:EF:CA:FE"))
+                assert bluez.block("DE:AD:BE:EF:CA:FE") is None
 
     def test_unblock(self):
         '''
@@ -149,12 +152,12 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
-            self.assertRaises(CommandExecutionError,
-                              bluez.block, "DE:AD:BE:EF:CA:ZE")
+            with pytest.raises(CommandExecutionError):
+                bluez.block("DE:AD:BE:EF:CA:ZE")
 
             mock = MagicMock(return_value="")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertIsNone(bluez.unblock("DE:AD:BE:EF:CA:FE"))
+                assert bluez.unblock("DE:AD:BE:EF:CA:FE") is None
 
     def test_pair(self):
         '''
@@ -162,19 +165,19 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[False, True, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
-            self.assertRaises(CommandExecutionError,
-                              bluez.pair, "DE:AD:BE:EF:CA:FE", "1234")
+            with pytest.raises(CommandExecutionError):
+                bluez.pair("DE:AD:BE:EF:CA:FE", "1234")
 
-            self.assertRaises(CommandExecutionError,
-                              bluez.pair, "DE:AD:BE:EF:CA:FE", "abcd")
+            with pytest.raises(CommandExecutionError):
+                bluez.pair("DE:AD:BE:EF:CA:FE", "abcd")
 
             mock = MagicMock(return_value={'device': 'hci0'})
             with patch.object(bluez, 'address_', mock):
                 mock = MagicMock(return_value="Ok")
                 with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                    self.assertListEqual(bluez.
-                                         pair("DE:AD:BE:EF:CA:FE", "1234"),
-                                         ["Ok"])
+                    assert bluez. \
+                                         pair("DE:AD:BE:EF:CA:FE", "1234") == \
+                                         ["Ok"]
 
     def test_unpair(self):
         '''
@@ -182,12 +185,12 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[False, True])
         with patch.object(salt.utils.validate.net, 'mac', mock):
-            self.assertRaises(CommandExecutionError,
-                              bluez.unpair, "DE:AD:BE:EF:CA:FE")
+            with pytest.raises(CommandExecutionError):
+                bluez.unpair("DE:AD:BE:EF:CA:FE")
 
             mock = MagicMock(return_value="Ok")
             with patch.dict(bluez.__salt__, {'cmd.run': mock}):
-                self.assertListEqual(bluez.unpair("DE:AD:BE:EF:CA:FE"), ["Ok"])
+                assert bluez.unpair("DE:AD:BE:EF:CA:FE") == ["Ok"]
 
     def test_start(self):
         '''
@@ -195,7 +198,7 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="Ok")
         with patch.dict(bluez.__salt__, {'service.start': mock}):
-            self.assertEqual(bluez.start(), "Ok")
+            assert bluez.start() == "Ok"
 
     def test_stop(self):
         '''
@@ -203,4 +206,4 @@ class BluezTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="Ok")
         with patch.dict(bluez.__salt__, {'service.stop': mock}):
-            self.assertEqual(bluez.stop(), "Ok")
+            assert bluez.stop() == "Ok"

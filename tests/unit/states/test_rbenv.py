@@ -54,48 +54,48 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                 comt = 'Ruby {0} is set to be installed'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'result': None}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
                 name = '2.4.1'
                 comt = 'Ruby {0} is already installed'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'default': False, 'result': True}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
                 name = '2.3.4'
                 comt = 'Ruby {0} is already installed'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'default': True, 'result': True}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
             with patch.dict(rbenv.__opts__, {'test': False}):
                 name = '2.4.1'
                 comt = 'Rbenv failed to install'
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'result': False}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
                 comt = 'Requested ruby exists'
                 ret = {'name': name, 'comment': comt, 'default': False,
                        'changes': {}, 'result': True}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
                 name = '2.3.4'
                 comt = 'Requested ruby exists'
                 ret = {'name': name, 'comment': comt, 'default': True,
                        'changes': {}, 'result': True}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
                 name = '1.9.3-p551'
                 comt = 'Successfully installed ruby'
                 ret = {'name': name, 'comment': comt, 'default': False,
                        'changes': {name: 'Installed'}, 'result': True}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
                 comt = 'Failed to install ruby'
                 ret = {'name': name, 'comment': comt,
                        'changes': {}, 'result': False}
-                self.assertDictEqual(rbenv.installed(name), ret)
+                assert rbenv.installed(name) == ret
 
     # 'absent' function tests: 1
 
@@ -122,58 +122,58 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
                 comt = 'Rbenv not installed, {0} not either'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'result': True}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 comt = 'Ruby {0} is already uninstalled'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'result': True}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 name = '2.3.4'
                 comt = 'Ruby {0} is set to be uninstalled'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'default': True, 'result': None}
-                self.assertDictEqual(rbenv.absent('2.3.4'), ret)
+                assert rbenv.absent('2.3.4') == ret
 
                 name = '2.4.1'
                 comt = 'Ruby {0} is set to be uninstalled'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'default': False, 'result': None}
-                self.assertDictEqual(rbenv.absent('2.4.1'), ret)
+                assert rbenv.absent('2.4.1') == ret
 
             with patch.dict(rbenv.__opts__, {'test': False}):
                 name = '1.9.3-p551'
                 comt = 'Rbenv not installed, {0} not either'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'result': True}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 comt = 'Ruby {0} is already absent'.format(name)
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'result': True}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 name = '2.3.4'
                 comt = 'Successfully removed ruby'
                 ret = {'name': name, 'changes': {name: 'Uninstalled'},
                        'comment': comt, 'default': True, 'result': True}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 comt = 'Failed to uninstall ruby'
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'default': True, 'result': False}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 name = '2.4.1'
                 comt = 'Failed to uninstall ruby'
                 ret = {'name': name, 'changes': {}, 'comment': comt,
                        'default': False, 'result': False}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
                 comt = 'Successfully removed ruby'
                 ret = {'name': name, 'changes': {name: 'Uninstalled'},
                        'comment': comt, 'default': False, 'result': True}
-                self.assertDictEqual(rbenv.absent(name), ret)
+                assert rbenv.absent(name) == ret
 
     # 'install_rbenv' function tests: 1
 
@@ -197,21 +197,21 @@ class RbenvTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(rbenv.__opts__, {'test': True}):
                 comt = 'Rbenv is set to be installed'
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(rbenv.install_rbenv(name), ret)
+                assert rbenv.install_rbenv(name) == ret
 
                 comt = 'Rbenv is already installed'
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(rbenv.install_rbenv(name), ret)
+                assert rbenv.install_rbenv(name) == ret
 
             with patch.dict(rbenv.__opts__, {'test': False}):
                 comt = 'Rbenv is already installed'
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(rbenv.install_rbenv(name), ret)
+                assert rbenv.install_rbenv(name) == ret
 
                 comt = 'Rbenv failed to install'
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(rbenv.install_rbenv(name), ret)
+                assert rbenv.install_rbenv(name) == ret
 
                 comt = 'Rbenv installed'
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(rbenv.install_rbenv(name), ret)
+                assert rbenv.install_rbenv(name) == ret

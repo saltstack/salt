@@ -15,6 +15,7 @@ from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 # Import salt libs
 import salt.utils.files
 import salt.utils.user
+import re
 
 
 # Acl package should be installed to test linux_acl module
@@ -57,17 +58,15 @@ class LinuxAclModuleTest(ModuleCase, AdaptedConfigurationTestCaseMixin):
         super(LinuxAclModuleTest, self).tearDown()
 
     def test_version(self):
-        self.assertRegex(self.run_function('acl.version'), r'\d+\.\d+\.\d+')
+        assert re.search(r'\d+\.\d+\.\d+', self.run_function('acl.version'))
 
     def test_getfacl_w_single_file_without_acl(self):
         ret = self.run_function('acl.getfacl', arg=[self.myfile])
         user = salt.utils.user.get_user()
         group = salt.utils.user.get_default_group(user)
         self.maxDiff = None
-        self.assertEqual(
-            ret,
+        assert ret == \
             {self.myfile: {'other': [{'': {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
                            'user': [{user: {'octal': 6, 'permissions': {'read': True, 'write': True, 'execute': False}}}],
                            'group': [{group: {'octal': 4, 'permissions': {'read': True, 'write': False, 'execute': False}}}],
                            'comment': {'owner': user, 'group': group, 'file': self.myfile}}}
-        )

@@ -46,7 +46,7 @@ class CloudTest(TestCase):
             profile,
             {}
         )
-        self.assertEqual({
+        assert {
             'minion': {'master': '172.31.39.213'},
             'log_file': 'var/log/salt/cloud.log',
             'pool_size': 10,
@@ -67,4 +67,4 @@ class CloudTest(TestCase):
             'image': 'ami-0a1fbca0e5b419fd1',
             'size': 't2.micro',
             'name': 'test_vm',
-        }, vm)
+        } == vm

@@ -43,8 +43,8 @@ class PkgUtilsTestCase(TestCase):
         '''
         for test_parameter in self.test_parameters:
             oper, verstr = salt.utils.pkg.split_comparison(test_parameter[0])
-            self.assertEqual(test_parameter[1], oper)
-            self.assertEqual(test_parameter[2], verstr)
+            assert test_parameter[1] == oper
+            assert test_parameter[2] == verstr
 
 
 class PkgRPMTestCase(TestCase):

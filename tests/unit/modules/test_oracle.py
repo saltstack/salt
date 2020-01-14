@@ -33,7 +33,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(oracle, '_connect', MagicMock()) as mock_connect:
             mock_connect.cursor.execute.fetchall.return_value = True
             with patch.object(oracle, 'show_dbs', MagicMock()):
-                self.assertTrue(oracle.run_query('db', 'query'))
+                assert oracle.run_query('db', 'query')
 
     def test_show_dbs(self):
         '''
@@ -41,10 +41,10 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(oracle.__salt__, {'pillar.get':
                                           MagicMock(return_value='a')}):
-            self.assertDictEqual(oracle.show_dbs('A', 'B'),
-                                 {'A': 'a', 'B': 'a'})
+            assert oracle.show_dbs('A', 'B') == \
+                                 {'A': 'a', 'B': 'a'}
 
-            self.assertEqual(oracle.show_dbs(), 'a')
+            assert oracle.show_dbs() == 'a'
 
     def test_version(self):
         '''
@@ -53,7 +53,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(oracle.__salt__, {'pillar.get':
                                           MagicMock(return_value='a')}):
             with patch.object(oracle, 'run_query', return_value='A'):
-                self.assertDictEqual(oracle.version(), {})
+                assert oracle.version() == {}
 
     def test_client_version(self):
         '''
@@ -61,7 +61,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(oracle, 'cx_Oracle',
                           MagicMock(side_effect=MagicMock())):
-            self.assertEqual(oracle.client_version(), '')
+            assert oracle.client_version() == ''
 
     def test_show_pillar(self):
         '''
@@ -69,7 +69,7 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(oracle.__salt__, {'pillar.get':
                                           MagicMock(return_value='a')}):
-            self.assertEqual(oracle.show_pillar('item'), 'a')
+            assert oracle.show_pillar('item') == 'a'
 
     def test_show_env(self):
         '''
@@ -80,4 +80,4 @@ class OracleTestCase(TestCase, LoaderModuleMockMixin):
                                         'ORACLE_HOME': 'ORACLE_HOME',
                                         'TNS_ADMIN': 'TNS_ADMIN',
                                         'NLS_LANG': 'NLS_LANG'}):
-            self.assertDictEqual(oracle.show_env(), {})
+            assert oracle.show_env() == {}

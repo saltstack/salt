@@ -38,7 +38,7 @@ class MacDesktopTestCase(ModuleCase):
         Tests the return of get_output_volume.
         '''
         ret = self.run_function('desktop.get_output_volume')
-        self.assertIsNotNone(ret)
+        assert ret is not None
 
     def test_set_output_volume(self):
         '''
@@ -51,7 +51,7 @@ class MacDesktopTestCase(ModuleCase):
         new_vol = self.run_function('desktop.set_output_volume',
                                     [six.text_type(to_set)])
         check_vol = self.run_function('desktop.get_output_volume')
-        self.assertEqual(new_vol, check_vol)
+        assert new_vol == check_vol
 
         # Set volume back to what it was before
         self.run_function('desktop.set_output_volume', [current_vol])
@@ -60,22 +60,16 @@ class MacDesktopTestCase(ModuleCase):
         '''
         Tests the return of the screensaver function.
         '''
-        self.assertTrue(
-            self.run_function('desktop.screensaver')
-        )
+        assert self.run_function('desktop.screensaver')
 
     def test_lock(self):
         '''
         Tests the return of the lock function.
         '''
-        self.assertTrue(
-            self.run_function('desktop.lock')
-        )
+        assert self.run_function('desktop.lock')
 
     def test_say(self):
         '''
         Tests the return of the say function.
         '''
-        self.assertTrue(
-            self.run_function('desktop.say', ['hello', 'world'])
-        )
+        assert self.run_function('desktop.say', ['hello', 'world'])

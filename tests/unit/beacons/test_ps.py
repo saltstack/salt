@@ -37,16 +37,16 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = ps.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for ps beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for ps beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = ps.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for ps '
-                                      'beacon requires processes.'))
+        assert ret == (False, 'Configuration for ps '
+                                      'beacon requires processes.')
 
     def test_ps_running(self):
         with patch('salt.utils.psutil_compat.process_iter', **PATCH_OPTS) as mock_process_iter:
@@ -56,10 +56,10 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = ps.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = ps.beacon(config)
-            self.assertEqual(ret, [{'salt-master': 'Running'}])
+            assert ret == [{'salt-master': 'Running'}]
 
     def test_ps_not_running(self):
         with patch('salt.utils.psutil_compat.process_iter', **PATCH_OPTS) as mock_process_iter:
@@ -69,7 +69,7 @@ class PSBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = ps.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = ps.beacon(config)
-            self.assertEqual(ret, [{'mysql': 'Stopped'}])
+            assert ret == [{'mysql': 'Stopped'}]

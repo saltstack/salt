@@ -17,6 +17,7 @@ from tests.support.mock import (
 )
 
 from salt.exceptions import SaltException
+import pytest
 
 CONN_ARGS = {}
 CONN_ARGS['url'] = 'http://test.url'
@@ -107,47 +108,50 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         Test get_object_id function with expected result from API call
         '''
         with patch('salt.modules.zabbix.run_query', MagicMock(return_value=GETID_QUERY_RESULT_OK)):
-            self.assertEqual(zabbix.get_object_id_by_params('hostgroup', 'Databases'), '11')
+            assert zabbix.get_object_id_by_params('hostgroup', 'Databases') == '11'
 
     def test_get_obj_id_by_params_fail(self):
         '''
         Test get_object_id function with unexpected result from API call
         '''
         with patch('salt.modules.zabbix.run_query', MagicMock(return_value=GETID_QUERY_RESULT_BAD)):
-            self.assertRaises(SaltException, zabbix.get_object_id_by_params, 'hostgroup', 'Databases')
+            with pytest.raises(SaltException):
+                zabbix.get_object_id_by_params('hostgroup', 'Databases')
 
     def test_substitute_params(self):
         '''
         Test proper parameter substitution for defined input
         '''
         with patch('salt.modules.zabbix.get_object_id_by_params', MagicMock(return_value='11')):
-            self.assertEqual(zabbix.substitute_params(DEFINED_PARAMS), SUBSTITUTED_DEFINED_PARAMS)
+            assert zabbix.substitute_params(DEFINED_PARAMS) == SUBSTITUTED_DEFINED_PARAMS
 
     def test_substitute_params_fail(self):
         '''
         Test proper parameter substitution if there is needed parameter missing
         '''
-        self.assertRaises(SaltException, zabbix.substitute_params, {'groupid': {'query_object': 'hostgroup'}})
+        with pytest.raises(SaltException):
+            zabbix.substitute_params({'groupid': {'query_object': 'hostgroup'}})
 
     def test_compare_params(self):
         '''
         Test result comparison of two params structures
         '''
-        self.assertEqual(zabbix.compare_params(SUBSTITUTED_DEFINED_PARAMS, EXISTING_OBJECT_PARAMS),
-                         DIFF_PARAMS_RESULT)
+        assert zabbix.compare_params(SUBSTITUTED_DEFINED_PARAMS, EXISTING_OBJECT_PARAMS) == \
+                         DIFF_PARAMS_RESULT
 
     def test_compare_params_rollback(self):
         '''
         Test result comparison of two params structures with rollback return value option
         '''
-        self.assertEqual(zabbix.compare_params(SUBSTITUTED_DEFINED_PARAMS, EXISTING_OBJECT_PARAMS, True),
-                         DIFF_PARAMS_RESULT_WITH_ROLLBACK)
+        assert zabbix.compare_params(SUBSTITUTED_DEFINED_PARAMS, EXISTING_OBJECT_PARAMS, True) == \
+                         DIFF_PARAMS_RESULT_WITH_ROLLBACK
 
     def test_compare_params_fail(self):
         '''
         Test result comparison of two params structures where some data type mismatch exists
         '''
-        self.assertRaises(SaltException, zabbix.compare_params, {'dict': 'val'}, {'dict': ['list']})
+        with pytest.raises(SaltException):
+            zabbix.compare_params({'dict': 'val'}, {'dict': ['list']})
 
     def test_apiiinfo_version(self):
         '''
@@ -158,7 +162,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.apiinfo_version(**CONN_ARGS), module_return)
+                assert zabbix.apiinfo_version(**CONN_ARGS) == module_return
 
     def test_user_create(self):
         '''
@@ -173,8 +177,8 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_create('james', 'password007', '[7, 12]',
-                                 firstname='James Bond', **CONN_ARGS), module_return)
+                assert zabbix.user_create('james', 'password007', '[7, 12]',
+                                 firstname='James Bond', **CONN_ARGS) == module_return
 
     def test_user_delete(self):
         '''
@@ -187,7 +191,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_delete(3, **CONN_ARGS), module_return)
+                assert zabbix.user_delete(3, **CONN_ARGS) == module_return
 
     def test_user_exists(self):
         '''
@@ -206,7 +210,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_exists('Admin', **CONN_ARGS), module_return)
+                assert zabbix.user_exists('Admin', **CONN_ARGS) == module_return
 
     def test_user_get(self):
         '''
@@ -241,8 +245,8 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_get('Admin', **CONN_ARGS), module_return)
-                self.assertEqual(zabbix.user_get(userids='1', **CONN_ARGS), module_return)
+                assert zabbix.user_get('Admin', **CONN_ARGS) == module_return
+                assert zabbix.user_get(userids='1', **CONN_ARGS) == module_return
 
     def test_user_update(self):
         '''
@@ -255,7 +259,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_update('3', visible_name='James Brown', **CONN_ARGS), module_return)
+                assert zabbix.user_update('3', visible_name='James Brown', **CONN_ARGS) == module_return
 
     def test_user_getmedia(self):
         '''
@@ -281,7 +285,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_getmedia('3', **CONN_ARGS), module_return)
+                assert zabbix.user_getmedia('3', **CONN_ARGS) == module_return
 
     def test_user_addmedia(self):
         '''
@@ -296,9 +300,9 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_addmedia('1', active='0', mediatypeid='1',
+                assert zabbix.user_addmedia('1', active='0', mediatypeid='1',
                                  period='1-7,00:00-24:00', sendto='support2@example.com',
-                                 severity='63', **CONN_ARGS), module_return)
+                                 severity='63', **CONN_ARGS) == module_return
 
     def test_user_deletemedia(self):
         '''
@@ -311,7 +315,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_deletemedia('1', **CONN_ARGS), module_return)
+                assert zabbix.user_deletemedia('1', **CONN_ARGS) == module_return
 
     def test_user_list(self):
         '''
@@ -387,7 +391,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.user_list(**CONN_ARGS), module_return)
+                assert zabbix.user_list(**CONN_ARGS) == module_return
 
     def test_usergroup_create(self):
         '''
@@ -400,7 +404,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.usergroup_create('testgroup', **CONN_ARGS), module_return)
+                assert zabbix.usergroup_create('testgroup', **CONN_ARGS) == module_return
 
     def test_usergroup_delete(self):
         '''
@@ -413,7 +417,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.usergroup_delete('13', **CONN_ARGS), module_return)
+                assert zabbix.usergroup_delete('13', **CONN_ARGS) == module_return
 
     def test_usergroup_exists(self):
         '''
@@ -429,7 +433,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
             with patch.object(zabbix, '_query', return_value=query_return):
                 with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                    self.assertEqual(zabbix.usergroup_exists('testgroup', **CONN_ARGS), module_return)
+                    assert zabbix.usergroup_exists('testgroup', **CONN_ARGS) == module_return
 
     def test_usergroup_get(self):
         '''
@@ -454,7 +458,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(zabbix, 'apiinfo_version', return_value='3.2'):
             with patch.object(zabbix, '_query', return_value=query_return):
                 with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                    self.assertEqual(zabbix.usergroup_get('testgroup', **CONN_ARGS), module_return)
+                    assert zabbix.usergroup_get('testgroup', **CONN_ARGS) == module_return
 
     def test_usergroup_update(self):
         '''
@@ -467,7 +471,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.usergroup_update('13', users_status='1', **CONN_ARGS), module_return)
+                assert zabbix.usergroup_update('13', users_status='1', **CONN_ARGS) == module_return
 
     def test_usergroup_list(self):
         '''
@@ -531,7 +535,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.usergroup_list(**CONN_ARGS), module_return)
+                assert zabbix.usergroup_list(**CONN_ARGS) == module_return
 
     def test_host_inventory_get(self):
         '''
@@ -731,7 +735,7 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.host_inventory_get('12345', **CONN_ARGS), module_return)
+                assert zabbix.host_inventory_get('12345', **CONN_ARGS) == module_return
 
     def test_host_inventory_set(self):
         '''
@@ -745,5 +749,5 @@ class ZabbixTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(zabbix, '_query', return_value=query_return):
             with patch.object(zabbix, '_login', return_value=CONN_ARGS):
-                self.assertEqual(zabbix.host_inventory_set(10258, asset_tag='jml3322',
-                                 type='Xen', **CONN_ARGS), module_return)
+                assert zabbix.host_inventory_set(10258, asset_tag='jml3322',
+                                 type='Xen', **CONN_ARGS) == module_return

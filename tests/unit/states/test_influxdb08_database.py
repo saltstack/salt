@@ -45,22 +45,22 @@ class InfluxdbDatabaseTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Database {0} is absent and needs to be created'
                         .format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(influxdb08_database.present(name), ret)
+                assert influxdb08_database.present(name) == ret
 
             with patch.dict(influxdb08_database.__opts__, {'test': False}):
                 comt = ('Database {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'salt': 'Present'}})
-                self.assertDictEqual(influxdb08_database.present(name), ret)
+                assert influxdb08_database.present(name) == ret
 
                 comt = ('Failed to create database {0}'.format(name))
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(influxdb08_database.present(name), ret)
+                assert influxdb08_database.present(name) == ret
 
             comt = ('Database {0} is already present, so cannot be created'
                     .format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(influxdb08_database.present(name), ret)
+            assert influxdb08_database.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -84,19 +84,19 @@ class InfluxdbDatabaseTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Database {0} is present and needs to be removed'
                         .format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(influxdb08_database.absent(name), ret)
+                assert influxdb08_database.absent(name) == ret
 
             with patch.dict(influxdb08_database.__opts__, {'test': False}):
                 comt = ('Database {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'salt': 'Absent'}})
-                self.assertDictEqual(influxdb08_database.absent(name), ret)
+                assert influxdb08_database.absent(name) == ret
 
                 comt = ('Failed to remove database {0}'.format(name))
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(influxdb08_database.absent(name), ret)
+                assert influxdb08_database.absent(name) == ret
 
             comt = ('Database {0} is not present, so it cannot be removed'
                     .format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(influxdb08_database.absent(name), ret)
+            assert influxdb08_database.absent(name) == ret

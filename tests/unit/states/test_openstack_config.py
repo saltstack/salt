@@ -16,6 +16,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import Salt Libs
 import salt.states.openstack_config as openstack_config
+import pytest
 
 
 class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
@@ -48,16 +49,16 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
                          'openstack_config.set': mock_t}):
             comt = ('The value is already set to the correct value')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(openstack_config.present(name, filename,
-                                                          section, value), ret)
+            assert openstack_config.present(name, filename,
+                                                          section, value) == ret
 
-            self.assertRaises(CommandExecutionError, openstack_config.present,
-                              name, filename, section, value)
+            with pytest.raises(CommandExecutionError):
+                openstack_config.present(name, filename, section, value)
 
             comt = ('The value has been updated')
             ret.update({'comment': comt, 'changes': {'Value': 'Updated'}})
-            self.assertDictEqual(openstack_config.present(name, filename,
-                                                          section, value), ret)
+            assert openstack_config.present(name, filename,
+                                                          section, value) == ret
 
     # 'absent' function tests: 1
 
@@ -83,13 +84,13 @@ class OpenstackConfigTestCase(TestCase, LoaderModuleMockMixin):
                          'openstack_config.delete': mock_t}):
             comt = ('The value is already absent')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(openstack_config.absent(name, filename,
-                                                         section), ret)
+            assert openstack_config.absent(name, filename,
+                                                         section) == ret
 
-            self.assertRaises(CommandExecutionError, openstack_config.absent,
-                              name, filename, section)
+            with pytest.raises(CommandExecutionError):
+                openstack_config.absent(name, filename, section)
 
             comt = ('The value has been deleted')
             ret.update({'comment': comt, 'changes': {'Value': 'Deleted'}})
-            self.assertDictEqual(openstack_config.absent(name, filename,
-                                                         section), ret)
+            assert openstack_config.absent(name, filename,
+                                                         section) == ret

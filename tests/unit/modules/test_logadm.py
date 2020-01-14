@@ -30,7 +30,7 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
         Test for Show parsed configuration
         '''
         with patch.object(logadm, '_parse_conf', return_value=True):
-            self.assertTrue(logadm.show_conf('conf_file'))
+            assert logadm.show_conf('conf_file')
 
     def test_rotate(self):
         '''
@@ -40,15 +40,15 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
                         {'cmd.run_all':
                          MagicMock(return_value={'retcode': 1,
                                                  'stderr': 'stderr'})}):
-            self.assertEqual(logadm.rotate('name'),
+            assert logadm.rotate('name') == \
                              {'Output': 'stderr',
-                              'Error': 'Failed in adding log'})
+                              'Error': 'Failed in adding log'}
 
         with patch.dict(logadm.__salt__,
                         {'cmd.run_all':
                          MagicMock(return_value={'retcode': 0,
                                                  'stderr': 'stderr'})}):
-            self.assertEqual(logadm.rotate('name'), {'Result': 'Success'})
+            assert logadm.rotate('name') == {'Result': 'Success'}
 
     def test_remove(self):
         '''
@@ -58,13 +58,13 @@ class LogadmTestCase(TestCase, LoaderModuleMockMixin):
                         {'cmd.run_all':
                          MagicMock(return_value={'retcode': 1,
                                                  'stderr': 'stderr'})}):
-            self.assertEqual(logadm.remove('name'),
+            assert logadm.remove('name') == \
                              {'Output': 'stderr',
                               'Error': 'Failure in removing log. Possibly\
- already removed?'})
+ already removed?'}
 
         with patch.dict(logadm.__salt__,
                         {'cmd.run_all':
                          MagicMock(return_value={'retcode': 0,
                                                  'stderr': 'stderr'})}):
-            self.assertEqual(logadm.remove('name'), {'Result': 'Success'})
+            assert logadm.remove('name') == {'Result': 'Success'}

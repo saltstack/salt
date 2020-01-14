@@ -70,7 +70,7 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(solarisips, 'list_pkgs', side_effect=list_pkgs_responses), \
                 patch.dict(solarisips.__salt__, {'cmd.run_all': mock_install_cmd}):
             result = solarisips.install(name='less', refresh=False)
-            self.assertEqual(result, salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post))
+            assert result == salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post)
 
     def test_install_list_pkgs(self):
         '''
@@ -100,7 +100,7 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(solarisips, 'list_pkgs', side_effect=list_pkgs_responses), \
                 patch.dict(solarisips.__salt__, {'cmd.run_all': mock_install_cmd}):
             result = solarisips.install(pkgs=['less', 'libsasl'], refresh=False)
-            self.assertEqual(result, salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post))
+            assert result == salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post)
 
     def test_install_dict_pkgs_no_version(self):
         '''
@@ -130,7 +130,7 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(solarisips, 'list_pkgs', side_effect=list_pkgs_responses), \
                 patch.dict(solarisips.__salt__, {'cmd.run_all': mock_install_cmd}):
             result = solarisips.install(pkgs=[{'less': ''}, {'libsasl': ''}], refresh=False)
-            self.assertEqual(result, salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post))
+            assert result == salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post)
 
     def test_install_dict_pkgs_with_version(self):
         '''
@@ -162,7 +162,7 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
             result = solarisips.install(pkgs=[
                     {'less': '458,5.11-0.175.3.0.0.30.0:20150821T172730Z'},
                     {'libsasl': '0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z'}], refresh=False)
-            self.assertEqual(result, salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post))
+            assert result == salt.utils.data.compare_dicts(pkg_list_pre, pkg_list_post)
 
     def test_install_already_installed_single_pkg(self):
         '''
@@ -172,21 +172,21 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         expected_result = {}
         with patch.object(solarisips, 'is_installed', return_value=True):
             result = solarisips.install(name='less')
-        self.assertEqual(result, expected_result)
+        assert result == expected_result
 
     def test_install_dict_pkgs_with_version_validate_cmd(self):
         '''
         Test installing a list of packages
         '''
         def check_param(arg, **kwargs):
-            self.assertEqual(arg, [
+            assert arg == [
                 'pkg',
                 'install',
                 '-v',
                 '--accept',
                 'less@458,5.11-0.175.3.0.0.30.0:20150821T172730Z',
                 'libsasl@0.5.11,5.11-0.175.3.32.0.1.0:20180406T191209Z'
-            ])
+            ]
             return {
                 'pid': 1234,
                 'retcode': 0,
@@ -220,14 +220,14 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a list of packages
         '''
         def check_param(arg, **kwargs):
-            self.assertEqual(arg, [
+            assert arg == [
                 'pkg',
                 'install',
                 '-v',
                 '--accept',
                 'less',
                 'libsasl'
-            ])
+            ]
             return {
                 'pid': 1234,
                 'retcode': 0,
@@ -261,14 +261,14 @@ class IpsTestCase(TestCase, LoaderModuleMockMixin):
         Test installing a list of packages
         '''
         def check_param(arg, **kwargs):
-            self.assertEqual(arg, [
+            assert arg == [
                 'pkg',
                 'install',
                 '-v',
                 '--accept',
                 'less',
                 'libsasl'
-            ])
+            ]
             return {
                 'pid': 1234,
                 'retcode': 0,

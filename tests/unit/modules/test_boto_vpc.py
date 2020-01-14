@@ -32,6 +32,7 @@ from salt.modules.boto_vpc import _maybe_set_name_tag, _maybe_set_tags
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+import pytest
 # pylint: disable=no-name-in-module,unused-import
 try:
     import boto
@@ -288,7 +289,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(vpc_id=vpc.id, **conn_parameters)
 
-        self.assertTrue(vpc_exists_result['exists'])
+        assert vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_id_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
@@ -300,7 +301,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(vpc_id='fake', **conn_parameters)
 
-        self.assertFalse(vpc_exists_result['exists'])
+        assert not vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_name_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
@@ -311,7 +312,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(name='test', **conn_parameters)
 
-        self.assertTrue(vpc_exists_result['exists'])
+        assert vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_name_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
@@ -323,7 +324,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(name='test', **conn_parameters)
 
-        self.assertFalse(vpc_exists_result['exists'])
+        assert not vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_tags_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
@@ -334,7 +335,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(tags={'test': 'testvalue'}, **conn_parameters)
 
-        self.assertTrue(vpc_exists_result['exists'])
+        assert vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_tags_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
@@ -346,7 +347,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(tags={'test': 'testvalue'}, **conn_parameters)
 
-        self.assertFalse(vpc_exists_result['exists'])
+        assert not vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_cidr_and_a_vpc_exists_the_vpc_exists_method_returns_true(self):
@@ -357,7 +358,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(cidr=u'10.0.0.0/24', **conn_parameters)
 
-        self.assertTrue(vpc_exists_result['exists'])
+        assert vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_by_cidr_and_a_vpc_does_not_exist_the_vpc_exists_method_returns_false(
@@ -369,14 +370,14 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_exists_result = boto_vpc.exists(cidr=u'10.10.10.10/24', **conn_parameters)
 
-        self.assertFalse(vpc_exists_result['exists'])
+        assert not vpc_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_vpc_exists_but_providing_no_filters_the_vpc_exists_method_raises_a_salt_invocation_error(self):
         '''
         Tests checking vpc existence when no filters are provided
         '''
-        with self.assertRaisesRegex(SaltInvocationError, 'At least one of the following '
+        with pytest.raises(SaltInvocationError, match='At least one of the following '
                                                          'must be provided: vpc_id, vpc_name, '
                                                          'cidr or tags.'):
             boto_vpc.exists(**conn_parameters)
@@ -390,7 +391,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         get_id_result = boto_vpc.get_id(name='test', **conn_parameters)
 
-        self.assertEqual(vpc.id, get_id_result['id'])
+        assert vpc.id == get_id_result['id']
 
     @mock_ec2_deprecated
     def test_get_vpc_id_method_when_filtering_by_invalid_name(self):
@@ -401,7 +402,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         get_id_result = boto_vpc.get_id(name='test_fake', **conn_parameters)
 
-        self.assertEqual(get_id_result['id'], None)
+        assert get_id_result['id'] is None
 
     @mock_ec2_deprecated
     def test_get_vpc_id_method_when_filtering_by_cidr(self):
@@ -412,7 +413,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         get_id_result = boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
 
-        self.assertEqual(vpc.id, get_id_result['id'])
+        assert vpc.id == get_id_result['id']
 
     @mock_ec2_deprecated
     def test_get_vpc_id_method_when_filtering_by_invalid_cidr(self):
@@ -423,7 +424,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         get_id_result = boto_vpc.get_id(cidr=u'10.10.10.10/24', **conn_parameters)
 
-        self.assertEqual(get_id_result['id'], None)
+        assert get_id_result['id'] is None
 
     @mock_ec2_deprecated
     def test_get_vpc_id_method_when_filtering_by_tags(self):
@@ -434,7 +435,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         get_id_result = boto_vpc.get_id(tags={'test': 'testvalue'}, **conn_parameters)
 
-        self.assertEqual(vpc.id, get_id_result['id'])
+        assert vpc.id == get_id_result['id']
 
     @mock_ec2_deprecated
     def test_get_vpc_id_method_when_filtering_by_invalid_tags(self):
@@ -445,14 +446,14 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         get_id_result = boto_vpc.get_id(tags={'test': 'fake-testvalue'}, **conn_parameters)
 
-        self.assertEqual(get_id_result['id'], None)
+        assert get_id_result['id'] is None
 
     @mock_ec2_deprecated
     def test_get_vpc_id_method_when_not_providing_filters_raises_a_salt_invocation_error(self):
         '''
         Tests getting vpc id but providing no filters
         '''
-        with self.assertRaisesRegex(SaltInvocationError, 'At least one of the following must be provided: vpc_id, vpc_name, cidr or tags.'):
+        with pytest.raises(SaltInvocationError, match='At least one of the following must be provided: vpc_id, vpc_name, cidr or tags.'):
             boto_vpc.get_id(**conn_parameters)
 
     @mock_ec2_deprecated
@@ -463,7 +464,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         vpc1 = self._create_vpc(name='vpc-test1')
         vpc2 = self._create_vpc(name='vpc-test2')
 
-        with self.assertRaisesRegex(CommandExecutionError, 'Found more than one VPC matching the criteria.'):
+        with pytest.raises(CommandExecutionError, match='Found more than one VPC matching the criteria.'):
             boto_vpc.get_id(cidr=u'10.0.0.0/24', **conn_parameters)
 
     @mock_ec2_deprecated
@@ -473,7 +474,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         vpc_creation_result = boto_vpc.create(cidr_block, **conn_parameters)
 
-        self.assertTrue(vpc_creation_result)
+        assert vpc_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_vpc_and_specifying_a_vpc_name_succeeds_the_create_vpc_method_returns_true(self):
@@ -482,7 +483,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         vpc_creation_result = boto_vpc.create(cidr_block, vpc_name='test', **conn_parameters)
 
-        self.assertTrue(vpc_creation_result)
+        assert vpc_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_vpc_and_specifying_tags_succeeds_the_create_vpc_method_returns_true(self):
@@ -491,7 +492,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         vpc_creation_result = boto_vpc.create(cidr_block, tags={'test': 'value'}, **conn_parameters)
 
-        self.assertTrue(vpc_creation_result)
+        assert vpc_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -501,8 +502,8 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         with patch('moto.ec2.models.VPCBackend.create_vpc', side_effect=BotoServerError(400, 'Mocked error')):
             vpc_creation_result = boto_vpc.create(cidr_block, **conn_parameters)
-            self.assertFalse(vpc_creation_result['created'])
-            self.assertTrue('error' in vpc_creation_result)
+            assert not vpc_creation_result['created']
+            assert 'error' in vpc_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_deleting_an_existing_vpc_the_delete_vpc_method_returns_true(self):
@@ -513,7 +514,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         vpc_deletion_result = boto_vpc.delete(vpc.id, **conn_parameters)
 
-        self.assertTrue(vpc_deletion_result)
+        assert vpc_deletion_result
 
     @mock_ec2_deprecated
     def test_that_when_deleting_a_non_existent_vpc_the_delete_vpc_method_returns_false(self):
@@ -522,7 +523,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         delete_vpc_result = boto_vpc.delete('1234', **conn_parameters)
 
-        self.assertFalse(delete_vpc_result['deleted'])
+        assert not delete_vpc_result['deleted']
 
     @mock_ec2_deprecated
     def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_true(self):
@@ -549,7 +550,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                               region=u'us-east-1',
                               instance_tenancy=u'default')
 
-        self.assertEqual(describe_vpc, {'vpc': vpc_properties})
+        assert describe_vpc == {'vpc': vpc_properties}
 
     @mock_ec2_deprecated
     def test_that_when_describing_vpc_by_id_it_returns_the_dict_of_properties_returns_false(self):
@@ -560,7 +561,7 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         describe_vpc = boto_vpc.describe(vpc_id='vpc-fake', **conn_parameters)
 
-        self.assertFalse(describe_vpc['vpc'])
+        assert not describe_vpc['vpc']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -573,15 +574,14 @@ class BotoVpcTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         with patch('moto.ec2.models.VPCBackend.get_all_vpcs',
                 side_effect=BotoServerError(400, 'Mocked error')):
             describe_result = boto_vpc.describe(vpc_id=vpc.id, **conn_parameters)
-            self.assertTrue('error' in describe_result)
+            assert 'error' in describe_result
 
     @mock_ec2_deprecated
     def test_that_when_describing_vpc_but_providing_no_vpc_id_the_describe_method_raises_a_salt_invocation_error(self):
         '''
         Tests describing vpc without vpc id
         '''
-        with self.assertRaisesRegex(SaltInvocationError,
-                                     'A valid vpc id or name needs to be specified.'):
+        with pytest.raises(SaltInvocationError, match='A valid vpc id or name needs to be specified.'):
             boto_vpc.describe(vpc_id=None, **conn_parameters)
 
 
@@ -604,7 +604,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet = self._create_subnet(vpc.id)
         subnet_association = boto_vpc.get_subnet_association(subnets=subnet.id,
                                                              **conn_parameters)
-        self.assertEqual(vpc.id, subnet_association['vpc_id'])
+        assert vpc.id == subnet_association['vpc_id']
 
     @mock_ec2_deprecated
     def test_get_subnet_association_multiple_subnets_same_vpc(self):
@@ -617,7 +617,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_b = self._create_subnet(vpc.id, '10.0.0.128/25')
         subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
                                                              **conn_parameters)
-        self.assertEqual(vpc.id, subnet_association['vpc_id'])
+        assert vpc.id == subnet_association['vpc_id']
 
     @mock_ec2_deprecated
     def test_get_subnet_association_multiple_subnets_different_vpc(self):
@@ -631,7 +631,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_b = self._create_subnet(vpc_b.id, '10.0.0.0/24')
         subnet_association = boto_vpc.get_subnet_association([subnet_a.id, subnet_b.id],
                                                             **conn_parameters)
-        self.assertEqual(set(subnet_association['vpc_ids']), set([vpc_a.id, vpc_b.id]))
+        assert set(subnet_association['vpc_ids']) == set([vpc_a.id, vpc_b.id])
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_subnet_succeeds_the_create_subnet_method_returns_true(self):
@@ -642,8 +642,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
 
-        self.assertTrue(subnet_creation_result['created'])
-        self.assertTrue('id' in subnet_creation_result)
+        assert subnet_creation_result['created']
+        assert 'id' in subnet_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_subnet_and_specifying_a_name_succeeds_the_create_subnet_method_returns_true(self):
@@ -654,7 +654,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', subnet_name='test', **conn_parameters)
 
-        self.assertTrue(subnet_creation_result['created'])
+        assert subnet_creation_result['created']
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_subnet_and_specifying_tags_succeeds_the_create_subnet_method_returns_true(self):
@@ -666,7 +666,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', tags={'test': 'testvalue'},
                                                         **conn_parameters)
 
-        self.assertTrue(subnet_creation_result['created'])
+        assert subnet_creation_result['created']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -678,7 +678,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         with patch('moto.ec2.models.SubnetBackend.create_subnet', side_effect=BotoServerError(400, 'Mocked error')):
             subnet_creation_result = boto_vpc.create_subnet(vpc.id, '10.0.0.0/24', **conn_parameters)
-            self.assertTrue('error' in subnet_creation_result)
+            assert 'error' in subnet_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_deleting_an_existing_subnet_the_delete_subnet_method_returns_true(self):
@@ -690,7 +690,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_deletion_result = boto_vpc.delete_subnet(subnet_id=subnet.id, **conn_parameters)
 
-        self.assertTrue(subnet_deletion_result['deleted'])
+        assert subnet_deletion_result['deleted']
 
     @mock_ec2_deprecated
     def test_that_when_deleting_a_non_existent_subnet_the_delete_vpc_method_returns_false(self):
@@ -698,7 +698,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests deleting a subnet that doesn't exist
         '''
         delete_subnet_result = boto_vpc.delete_subnet(subnet_id='1234', **conn_parameters)
-        self.assertTrue('error' in delete_subnet_result)
+        assert 'error' in delete_subnet_result
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_subnet_exists_by_id_the_subnet_exists_method_returns_true(self):
@@ -710,7 +710,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_exists_result = boto_vpc.subnet_exists(subnet_id=subnet.id, **conn_parameters)
 
-        self.assertTrue(subnet_exists_result['exists'])
+        assert subnet_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_a_subnet_does_not_exist_the_subnet_exists_method_returns_false(self):
@@ -719,7 +719,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         subnet_exists_result = boto_vpc.subnet_exists('fake', **conn_parameters)
 
-        self.assertFalse(subnet_exists_result['exists'])
+        assert not subnet_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_subnet_exists_by_name_the_subnet_exists_method_returns_true(self):
@@ -731,7 +731,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_exists_result = boto_vpc.subnet_exists(name='test', **conn_parameters)
 
-        self.assertTrue(subnet_exists_result['exists'])
+        assert subnet_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_subnet_exists_by_name_the_subnet_does_not_exist_the_subnet_method_returns_false(self):
@@ -743,7 +743,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_exists_result = boto_vpc.subnet_exists(name='test', **conn_parameters)
 
-        self.assertFalse(subnet_exists_result['exists'])
+        assert not subnet_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_subnet_exists_by_tags_the_subnet_exists_method_returns_true(self):
@@ -755,7 +755,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_exists_result = boto_vpc.subnet_exists(tags={'test': 'testvalue'}, **conn_parameters)
 
-        self.assertTrue(subnet_exists_result['exists'])
+        assert subnet_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_checking_if_a_subnet_exists_by_tags_the_subnet_does_not_exist_the_subnet_method_returns_false(self):
@@ -767,7 +767,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         subnet_exists_result = boto_vpc.subnet_exists(tags={'test': 'testvalue'}, **conn_parameters)
 
-        self.assertFalse(subnet_exists_result['exists'])
+        assert not subnet_exists_result['exists']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -775,8 +775,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking subnet existence without any filters
         '''
-        with self.assertRaisesRegex(SaltInvocationError,
-                                     'At least one of the following must be specified: '
+        with pytest.raises(SaltInvocationError, match='At least one of the following must be specified: '
                                      'subnet id, cidr, subnet_name, tags, or zones.'):
             boto_vpc.subnet_exists(**conn_parameters)
 
@@ -793,8 +792,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                            key=secret_key,
                                                            keyid=access_key,
                                                            subnet_id=subnet.id)
-        self.assertEqual(set(describe_subnet_results['subnet'].keys()),
-                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
+        assert set(describe_subnet_results['subnet'].keys()) == \
+                         set(['id', 'cidr_block', 'availability_zone', 'tags'])
 
     @mock_ec2_deprecated
     def test_that_describe_subnet_by_id_for_non_existent_subnet_returns_none(self):
@@ -807,7 +806,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                            key=secret_key,
                                                            keyid=access_key,
                                                            subnet_id='subnet-a1b2c3')
-        self.assertEqual(describe_subnet_results['subnet'], None)
+        assert describe_subnet_results['subnet'] is None
 
     @skipIf(True, 'Skip these tests while investigating failures')
     @mock_ec2_deprecated
@@ -822,8 +821,8 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                            key=secret_key,
                                                            keyid=access_key,
                                                            subnet_name='test')
-        self.assertEqual(set(describe_subnet_results['subnet'].keys()),
-                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
+        assert set(describe_subnet_results['subnet'].keys()) == \
+                         set(['id', 'cidr_block', 'availability_zone', 'tags'])
 
     @mock_ec2_deprecated
     def test_that_describe_subnet_by_name_for_non_existent_subnet_returns_none(self):
@@ -836,7 +835,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                            key=secret_key,
                                                            keyid=access_key,
                                                            subnet_name='test')
-        self.assertEqual(describe_subnet_results['subnet'], None)
+        assert describe_subnet_results['subnet'] is None
 
     @skipIf(True, 'Skip these tests while investigating failures')
     @mock_ec2_deprecated
@@ -852,9 +851,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                             key=secret_key,
                                                             keyid=access_key,
                                                             subnet_ids=[subnet1.id, subnet2.id])
-        self.assertEqual(len(describe_subnet_results['subnets']), 2)
-        self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
-                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
+        assert len(describe_subnet_results['subnets']) == 2
+        assert set(describe_subnet_results['subnets'][0].keys()) == \
+                         set(['id', 'cidr_block', 'availability_zone', 'tags'])
 
     @skipIf(True, 'Skip these tests while investigating failures')
     @mock_ec2_deprecated
@@ -870,9 +869,9 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                             key=secret_key,
                                                             keyid=access_key,
                                                             subnet_names=['subnet1', 'subnet2'])
-        self.assertEqual(len(describe_subnet_results['subnets']), 2)
-        self.assertEqual(set(describe_subnet_results['subnets'][0].keys()),
-                         set(['id', 'cidr_block', 'availability_zone', 'tags']))
+        assert len(describe_subnet_results['subnets']) == 2
+        assert set(describe_subnet_results['subnets'][0].keys()) == \
+                         set(['id', 'cidr_block', 'availability_zone', 'tags'])
 
     @mock_ec2_deprecated
     def test_create_subnet_passes_availability_zone(self):
@@ -885,7 +884,7 @@ class BotoVpcSubnetsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                             key=secret_key,
                                                             keyid=access_key,
                                                             subnet_names=['subnet1'])
-        self.assertEqual(describe_subnet_results['subnets'][0]['availability_zone'], 'us-east-1a')
+        assert describe_subnet_results['subnets'][0]['availability_zone'] == 'us-east-1a'
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -904,7 +903,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         igw_creation_result = boto_vpc.create_internet_gateway(region=region,
                                                                key=secret_key,
                                                                keyid=access_key)
-        self.assertTrue(igw_creation_result.get('created'))
+        assert igw_creation_result.get('created')
 
     @mock_ec2_deprecated
     def test_that_when_creating_an_internet_gateway_with_non_existent_vpc_the_create_internet_gateway_method_returns_an_error(self):
@@ -916,7 +915,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                key=secret_key,
                                                                keyid=access_key,
                                                                vpc_name='non-existent-vpc')
-        self.assertTrue('error' in igw_creation_result)
+        assert 'error' in igw_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_an_internet_gateway_with_vpc_name_specified_the_create_internet_gateway_method_returns_true(self):
@@ -931,7 +930,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                keyid=access_key,
                                                                vpc_name='test-vpc')
 
-        self.assertTrue(igw_creation_result.get('created'))
+        assert igw_creation_result.get('created')
 
     @mock_ec2_deprecated
     def test_that_when_creating_an_internet_gateway_with_vpc_id_specified_the_create_internet_gateway_method_returns_true(self):
@@ -946,7 +945,7 @@ class BotoVpcInternetGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                keyid=access_key,
                                                                vpc_id=vpc.id)
 
-        self.assertTrue(igw_creation_result.get('created'))
+        assert igw_creation_result.get('created')
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -968,7 +967,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                           region=region,
                                                           key=secret_key,
                                                           keyid=access_key)
-        self.assertTrue(ngw_creation_result.get('created'))
+        assert ngw_creation_result.get('created')
 
     @mock_ec2_deprecated
     def test_that_when_creating_an_nat_gateway_with_non_existent_subnet_the_create_nat_gateway_method_returns_an_error(self):
@@ -980,7 +979,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                           key=secret_key,
                                                           keyid=access_key,
                                                           subnet_name='non-existent-subnet')
-        self.assertTrue('error' in ngw_creation_result)
+        assert 'error' in ngw_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_an_nat_gateway_with_subnet_name_specified_the_create_nat_gateway_method_returns_true(self):
@@ -995,7 +994,7 @@ class BotoVpcNatGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                           keyid=access_key,
                                                           subnet_name='test-subnet')
 
-        self.assertTrue(ngw_creation_result.get('created'))
+        assert ngw_creation_result.get('created')
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1012,7 +1011,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
 
         gw_creation_result = boto_vpc.create_customer_gateway('ipsec.1', '10.1.1.1', None)
-        self.assertTrue(gw_creation_result.get('created'))
+        assert gw_creation_result.get('created')
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1023,7 +1022,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         gw_creation_result = boto_vpc.create_customer_gateway('ipsec.1', '10.1.1.1', None)
         gw_exists_result = boto_vpc.customer_gateway_exists(customer_gateway_id=gw_creation_result['id'])
-        self.assertTrue(gw_exists_result['exists'])
+        assert gw_exists_result['exists']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1032,7 +1031,7 @@ class BotoVpcCustomerGatewayTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests checking if a subnet exists which doesn't exist
         '''
         gw_exists_result = boto_vpc.customer_gateway_exists('fake')
-        self.assertFalse(gw_exists_result['exists'])
+        assert not gw_exists_result['exists']
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1050,7 +1049,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
 
-        self.assertTrue(dhcp_options_creation_result['created'])
+        assert dhcp_options_creation_result['created']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1062,7 +1061,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(dhcp_options_name='test',
                                                                     **dhcp_options_parameters)
 
-        self.assertTrue(dhcp_options_creation_result['created'])
+        assert dhcp_options_creation_result['created']
 
     @mock_ec2_deprecated
     def test_that_when_creating_dhcp_options_and_specifying_tags_succeeds_the_create_dhcp_options_method_returns_true(
@@ -1073,7 +1072,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         dhcp_options_creation_result = boto_vpc.create_dhcp_options(tags={'test': 'testvalue'},
                                                                     **dhcp_options_parameters)
 
-        self.assertTrue(dhcp_options_creation_result['created'])
+        assert dhcp_options_creation_result['created']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1084,7 +1083,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
             r = dhcp_options_creation_result = boto_vpc.create_dhcp_options(**dhcp_options_parameters)
-            self.assertTrue('error' in r)
+            assert 'error' in r
 
     @mock_ec2_deprecated
     def test_that_when_associating_an_existing_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_true(
@@ -1098,7 +1097,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc(dhcp_options.id, vpc.id,
                                                                                  **conn_parameters)
 
-        self.assertTrue(dhcp_options_association_result['associated'])
+        assert dhcp_options_association_result['associated']
 
     @mock_ec2_deprecated
     def test_that_when_associating_a_non_existent_dhcp_options_set_to_an_existing_vpc_the_associate_dhcp_options_method_returns_error(
@@ -1110,7 +1109,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc('fake', vpc.id, **conn_parameters)
 
-        self.assertTrue('error' in dhcp_options_association_result)
+        assert 'error' in dhcp_options_association_result
 
     @mock_ec2_deprecated
     def test_that_when_associating_an_existing_dhcp_options_set_to_a_non_existent_vpc_the_associate_dhcp_options_method_returns_false(
@@ -1123,7 +1122,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         dhcp_options_association_result = boto_vpc.associate_dhcp_options_to_vpc(dhcp_options.id, 'fake',
                                                                                  **conn_parameters)
 
-        self.assertTrue('error' in dhcp_options_association_result)
+        assert 'error' in dhcp_options_association_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_dhcp_options_set_to_an_existing_vpc_succeeds_the_associate_new_dhcp_options_method_returns_true(
@@ -1135,7 +1134,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_creation_result = boto_vpc.create_dhcp_options(vpc_id=vpc.id, **dhcp_options_parameters)
 
-        self.assertTrue(dhcp_creation_result['created'])
+        assert dhcp_creation_result['created']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1149,7 +1148,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         with patch('moto.ec2.models.DHCPOptionsSetBackend.create_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
             r = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options_parameters)
-            self.assertTrue('error' in r)
+            assert 'error' in r
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1162,7 +1161,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         with patch('moto.ec2.models.DHCPOptionsSetBackend.associate_dhcp_options',
                    side_effect=BotoServerError(400, 'Mocked error')):
             r = boto_vpc.associate_new_dhcp_options_to_vpc(vpc.id, **dhcp_options_parameters)
-            self.assertTrue('error' in r)
+            assert 'error' in r
 
     @mock_ec2_deprecated
     def test_that_when_creating_dhcp_options_set_to_a_non_existent_vpc_the_dhcp_options_the_associate_new_dhcp_options_method_returns_false(
@@ -1172,7 +1171,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
 
         r = boto_vpc.create_dhcp_options(vpc_name='fake', **dhcp_options_parameters)
-        self.assertTrue('error' in r)
+        assert 'error' in r
 
     @mock_ec2_deprecated
     def test_that_when_dhcp_options_exists_the_dhcp_options_exists_method_returns_true(self):
@@ -1183,7 +1182,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_options_exists_result = boto_vpc.dhcp_options_exists(dhcp_options.id, **conn_parameters)
 
-        self.assertTrue(dhcp_options_exists_result['exists'])
+        assert dhcp_options_exists_result['exists']
 
     @mock_ec2_deprecated
     def test_that_when_dhcp_options_do_not_exist_the_dhcp_options_exists_method_returns_false(self):
@@ -1191,7 +1190,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         Tests existence of dhcp options failure
         '''
         r = boto_vpc.dhcp_options_exists('fake', **conn_parameters)
-        self.assertFalse(r['exists'])
+        assert not r['exists']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1199,7 +1198,7 @@ class BotoVpcDHCPOptionsTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking dhcp option existence with no filters
         '''
-        with self.assertRaisesRegex(SaltInvocationError, 'At least one of the following must be provided: id, name, or tags.'):
+        with pytest.raises(SaltInvocationError, match='At least one of the following must be provided: id, name, or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
 
@@ -1219,7 +1218,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, **conn_parameters)
 
-        self.assertTrue(network_acl_creation_result)
+        assert network_acl_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_a_name_the_create_network_acl_method_returns_true(
@@ -1231,7 +1230,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, network_acl_name='test', **conn_parameters)
 
-        self.assertTrue(network_acl_creation_result)
+        assert network_acl_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_network_acl_for_an_existing_vpc_and_specifying_tags_the_create_network_acl_method_returns_true(
@@ -1243,7 +1242,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, tags={'test': 'testvalue'}, **conn_parameters)
 
-        self.assertTrue(network_acl_creation_result)
+        assert network_acl_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_network_acl_for_a_non_existent_vpc_the_create_network_acl_method_returns_an_error(self):
@@ -1252,7 +1251,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         network_acl_creation_result = boto_vpc.create_network_acl('fake', **conn_parameters)
 
-        self.assertTrue('error' in network_acl_creation_result)
+        assert 'error' in network_acl_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1266,7 +1265,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                    side_effect=BotoServerError(400, 'Mocked error')):
             network_acl_creation_result = boto_vpc.create_network_acl(vpc.id, **conn_parameters)
 
-        self.assertFalse(network_acl_creation_result)
+        assert not network_acl_creation_result
 
     @mock_ec2_deprecated
     def test_that_when_deleting_an_existing_network_acl_the_delete_network_acl_method_returns_true(self):
@@ -1278,7 +1277,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         network_acl_deletion_result = boto_vpc.delete_network_acl(network_acl.id, **conn_parameters)
 
-        self.assertTrue(network_acl_deletion_result)
+        assert network_acl_deletion_result
 
     @mock_ec2_deprecated
     def test_that_when_deleting_a_non_existent_network_acl_the_delete_network_acl_method_returns_an_error(self):
@@ -1287,7 +1286,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         network_acl_deletion_result = boto_vpc.delete_network_acl('fake', **conn_parameters)
 
-        self.assertTrue('error' in network_acl_deletion_result)
+        assert 'error' in network_acl_deletion_result
 
     @mock_ec2_deprecated
     def test_that_when_a_network_acl_exists_the_network_acl_exists_method_returns_true(self):
@@ -1299,7 +1298,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         network_acl_deletion_result = boto_vpc.network_acl_exists(network_acl.id, **conn_parameters)
 
-        self.assertTrue(network_acl_deletion_result)
+        assert network_acl_deletion_result
 
     @mock_ec2_deprecated
     def test_that_when_a_network_acl_does_not_exist_the_network_acl_exists_method_returns_false(self):
@@ -1308,7 +1307,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         network_acl_deletion_result = boto_vpc.network_acl_exists('fake', **conn_parameters)
 
-        self.assertFalse(network_acl_deletion_result['exists'])
+        assert not network_acl_deletion_result['exists']
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1316,10 +1315,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking existence of network acl with no filters
         '''
-        with self.assertRaisesRegex(
-                SaltInvocationError,
-                'At least one of the following must be provided: id, name, or tags.'
-        ):
+        with pytest.raises(SaltInvocationError, match='At least one of the following must be provided: id, name, or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2_deprecated
@@ -1335,7 +1331,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                               *network_acl_entry_parameters,
                                                                               **conn_parameters)
 
-        self.assertTrue(network_acl_entry_creation_result)
+        assert network_acl_entry_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1347,7 +1343,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(*network_acl_entry_parameters,
                                                                               **conn_parameters)
 
-        self.assertFalse(network_acl_entry_creation_result)
+        assert not network_acl_entry_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1364,7 +1360,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                                *network_acl_entry_parameters,
                                                                                **conn_parameters)
 
-        self.assertTrue(network_acl_entry_creation_result)
+        assert network_acl_entry_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1375,7 +1371,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         network_acl_entry_creation_result = boto_vpc.create_network_acl_entry(*network_acl_entry_parameters,
                                                                               **conn_parameters)
-        self.assertFalse(network_acl_entry_creation_result)
+        assert not network_acl_entry_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1390,7 +1386,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_entry_deletion_result = boto_vpc.delete_network_acl_entry(network_acl_entry.id, 100,
                                                                               **conn_parameters)
 
-        self.assertTrue(network_acl_entry_deletion_result)
+        assert network_acl_entry_deletion_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1402,7 +1398,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_entry_deletion_result = boto_vpc.delete_network_acl_entry('fake', 100,
                                                                               **conn_parameters)
 
-        self.assertFalse(network_acl_entry_deletion_result)
+        assert not network_acl_entry_deletion_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1418,7 +1414,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_association_result = boto_vpc.associate_network_acl_to_subnet(network_acl.id, subnet.id,
                                                                                   **conn_parameters)
 
-        self.assertTrue(network_acl_association_result)
+        assert network_acl_association_result
 
     @mock_ec2_deprecated
     def test_that_when_associating_a_non_existent_network_acl_to_an_existing_subnet_the_associate_network_acl_method_returns_an_error(
@@ -1432,7 +1428,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_association_result = boto_vpc.associate_network_acl_to_subnet('fake', subnet.id,
                                                                                   **conn_parameters)
 
-        self.assertTrue('error' in network_acl_association_result)
+        assert 'error' in network_acl_association_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1447,7 +1443,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_association_result = boto_vpc.associate_network_acl_to_subnet(network_acl.id, 'fake',
                                                                                   **conn_parameters)
 
-        self.assertFalse(network_acl_association_result)
+        assert not network_acl_association_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1462,7 +1458,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, subnet.id,
                                                                                                    **conn_parameters)
 
-        self.assertTrue(network_acl_creation_and_association_result)
+        assert network_acl_creation_and_association_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1478,7 +1474,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                                                    network_acl_name='test',
                                                                                                    **conn_parameters)
 
-        self.assertTrue(network_acl_creation_and_association_result)
+        assert network_acl_creation_and_association_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1495,7 +1491,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
                                                                                                        'test': 'testvalue'},
                                                                                                    **conn_parameters)
 
-        self.assertTrue(network_acl_creation_and_association_result)
+        assert network_acl_creation_and_association_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1509,7 +1505,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         network_acl_creation_and_association_result = boto_vpc.associate_new_network_acl_to_subnet(vpc.id, 'fake',
                                                                                                    **conn_parameters)
 
-        self.assertFalse(network_acl_creation_and_association_result)
+        assert not network_acl_creation_and_association_result
 
     @mock_ec2_deprecated
     def test_that_when_creating_a_network_acl_to_a_non_existent_vpc_the_associate_new_network_acl_to_subnet_method_returns_an_error(
@@ -1522,7 +1518,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         network_acl_creation_result = boto_vpc.create_network_acl(vpc_name='fake', subnet_id=subnet.id, **conn_parameters)
 
-        self.assertTrue('error' in network_acl_creation_result)
+        assert 'error' in network_acl_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1535,7 +1531,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_disassociate_result = boto_vpc.disassociate_network_acl(subnet.id, vpc_id=vpc.id, **conn_parameters)
 
-        self.assertTrue(dhcp_disassociate_result)
+        assert dhcp_disassociate_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1549,7 +1545,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_disassociate_result = boto_vpc.disassociate_network_acl(subnet.id, vpc_id='fake', **conn_parameters)
 
-        self.assertFalse(dhcp_disassociate_result)
+        assert not dhcp_disassociate_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1562,7 +1558,7 @@ class BotoVpcNetworkACLTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_disassociate_result = boto_vpc.disassociate_network_acl('fake', vpc_id=vpc.id, **conn_parameters)
 
-        self.assertFalse(dhcp_disassociate_result)
+        assert not dhcp_disassociate_result
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1581,7 +1577,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         route_table_creation_result = boto_vpc.create_route_table(vpc.id, **conn_parameters)
 
-        self.assertTrue(route_table_creation_result)
+        assert route_table_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1591,7 +1587,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         route_table_creation_result = boto_vpc.create_route_table('fake', **conn_parameters)
 
-        self.assertTrue(route_table_creation_result)
+        assert route_table_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1604,7 +1600,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         route_table_deletion_result = boto_vpc.delete_route_table(route_table.id, **conn_parameters)
 
-        self.assertTrue(route_table_deletion_result)
+        assert route_table_deletion_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1614,7 +1610,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         route_table_deletion_result = boto_vpc.delete_route_table('fake', **conn_parameters)
 
-        self.assertFalse(route_table_deletion_result)
+        assert not route_table_deletion_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1627,7 +1623,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         route_table_existence_result = boto_vpc.route_table_exists(route_table.id, **conn_parameters)
 
-        self.assertTrue(route_table_existence_result)
+        assert route_table_existence_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1637,7 +1633,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         route_table_existence_result = boto_vpc.route_table_exists('fake', **conn_parameters)
 
-        self.assertFalse(route_table_existence_result)
+        assert not route_table_existence_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Disabled pending https://github.com/spulec/moto/issues/493')
@@ -1645,10 +1641,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         Tests checking route table without filters
         '''
-        with self.assertRaisesRegex(
-                SaltInvocationError,
-                'At least one of the following must be provided: id, name, or tags.'
-        ):
+        with pytest.raises(SaltInvocationError, match='At least one of the following must be provided: id, name, or tags.'):
             boto_vpc.dhcp_options_exists(**conn_parameters)
 
     @mock_ec2_deprecated
@@ -1664,7 +1657,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         association_id = boto_vpc.associate_route_table(route_table.id, subnet.id, **conn_parameters)
 
-        self.assertTrue(association_id)
+        assert association_id
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1678,7 +1671,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         association_id = boto_vpc.associate_route_table('fake', subnet.id, **conn_parameters)
 
-        self.assertFalse(association_id)
+        assert not association_id
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1692,7 +1685,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         association_id = boto_vpc.associate_route_table(route_table.id, 'fake', **conn_parameters)
 
-        self.assertFalse(association_id)
+        assert not association_id
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1709,7 +1702,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         dhcp_disassociate_result = boto_vpc.disassociate_route_table(association_id, **conn_parameters)
 
-        self.assertTrue(dhcp_disassociate_result)
+        assert dhcp_disassociate_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1722,7 +1715,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         route_creation_result = boto_vpc.create_route(route_table.id, cidr_block, **conn_parameters)
 
-        self.assertTrue(route_creation_result)
+        assert route_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1733,7 +1726,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         route_creation_result = boto_vpc.create_route('fake', cidr_block, **conn_parameters)
 
-        self.assertFalse(route_creation_result)
+        assert not route_creation_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1746,7 +1739,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         route_deletion_result = boto_vpc.delete_route(route_table.id, cidr_block, **conn_parameters)
 
-        self.assertTrue(route_deletion_result)
+        assert route_deletion_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1757,7 +1750,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         route_deletion_result = boto_vpc.delete_route('fake', cidr_block, **conn_parameters)
 
-        self.assertFalse(route_deletion_result)
+        assert not route_deletion_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1770,7 +1763,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
 
         route_replacing_result = boto_vpc.replace_route(route_table.id, cidr_block, **conn_parameters)
 
-        self.assertTrue(route_replacing_result)
+        assert route_replacing_result
 
     @mock_ec2_deprecated
     @skipIf(True, 'Moto has not implemented this feature. Skipping for now.')
@@ -1781,7 +1774,7 @@ class BotoVpcRouteTablesTestCase(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         route_replacing_result = boto_vpc.replace_route('fake', cidr_block, **conn_parameters)
 
-        self.assertFalse(route_replacing_result)
+        assert not route_replacing_result
 
 
 @skipIf(HAS_BOTO is False, 'The boto module must be installed.')
@@ -1800,11 +1793,11 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         my_vpc = self._create_vpc()
         other_vpc = self._create_vpc()
-        self.assertTrue('msg' in boto_vpc.request_vpc_peering_connection(
+        assert 'msg' in boto_vpc.request_vpc_peering_connection(
             name='my_peering',
             requester_vpc_id=my_vpc.id,
             peer_vpc_id=other_vpc.id,
-            **conn_parameters))
+            **conn_parameters)
 
     @mock_ec2_deprecated
     def test_raises_error_if_both_vpc_name_and_vpc_id_are_specified(self):
@@ -1813,7 +1806,7 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         '''
         my_vpc = self._create_vpc()
         other_vpc = self._create_vpc()
-        with self.assertRaises(SaltInvocationError):
+        with pytest.raises(SaltInvocationError):
             boto_vpc.request_vpc_peering_connection(name='my_peering',
                                                     requester_vpc_id=my_vpc.id,
                                                     requester_vpc_name='foobar',

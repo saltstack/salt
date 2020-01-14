@@ -39,7 +39,7 @@ class DdnsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(ddns.__opts__, {'test': True}):
             comt = ('A record "{0}" will be updated'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(ddns.present(name, zone, ttl, data), ret)
+            assert ddns.present(name, zone, ttl, data) == ret
 
             with patch.dict(ddns.__opts__, {'test': False}):
                 mock = MagicMock(return_value=None)
@@ -47,8 +47,8 @@ class DdnsTestCase(TestCase, LoaderModuleMockMixin):
                     comt = ('A record "{0}" already present with ttl of {1}'
                             .format(name, ttl))
                     ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(ddns.present(name, zone, ttl, data),
-                                         ret)
+                    assert ddns.present(name, zone, ttl, data) == \
+                                         ret
 
     # 'absent' function tests: 1
 
@@ -65,11 +65,11 @@ class DdnsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(ddns.__opts__, {'test': True}):
             comt = ('None record "{0}" will be deleted'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(ddns.absent(name, zone, data), ret)
+            assert ddns.absent(name, zone, data) == ret
 
             with patch.dict(ddns.__opts__, {'test': False}):
                 mock = MagicMock(return_value=None)
                 with patch.dict(ddns.__salt__, {'ddns.delete': mock}):
                     comt = ('No matching DNS record(s) present')
                     ret.update({'comment': comt, 'result': True})
-                    self.assertDictEqual(ddns.absent(name, zone, data), ret)
+                    assert ddns.absent(name, zone, data) == ret

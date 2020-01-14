@@ -22,6 +22,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.useradd as useradd
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class UserAddTestCase(TestCase, LoaderModuleMockMixin):
@@ -62,11 +63,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                             {'file.gid_to_group': mock_primary}):
                 mock = MagicMock(return_value={'retcode': 0})
                 with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
-                    self.assertTrue(useradd.add('Salt'))
+                    assert useradd.add('Salt')
 
                 mock = MagicMock(return_value={'retcode': 1})
                 with patch.dict(useradd.__salt__, {'cmd.run_all': mock}):
-                    self.assertFalse(useradd.add('Salt'))
+                    assert not useradd.add('Salt')
 
     # 'getent' function tests: 2
 
@@ -76,7 +77,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         Test if user.getent already have a value
         '''
         with patch('salt.modules.useradd.__context__', MagicMock(return_value='Salt')):
-            self.assertTrue(useradd.getent())
+            assert useradd.getent()
 
     @skipIf(HAS_PWD is False, 'The pwd module is not available')
     def test_getent_user(self):
@@ -97,7 +98,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                     'homephone': '',
                     'other': ''}]
             with patch('salt.modules.useradd._format_info', MagicMock(return_value=self.mock_pwall)):
-                self.assertEqual(useradd.getent(), ret)
+                assert useradd.getent() == ret
 
     # 'chuid' function tests: 1
 
@@ -107,18 +108,18 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'uid': 11})
         with patch.object(useradd, 'info', mock):
-            self.assertTrue(useradd.chuid('name', 11))
+            assert useradd.chuid('name', 11)
 
         mock_run = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock_run}):
             mock = MagicMock(side_effect=[{'uid': 11}, {'uid': 11}])
             with patch.object(useradd, 'info', mock):
-                self.assertFalse(useradd.chuid('name', 22))
+                assert not useradd.chuid('name', 22)
 
         with patch.dict(useradd.__salt__, {'cmd.run': mock_run}):
             mock = MagicMock(side_effect=[{'uid': 11}, {'uid': 22}])
             with patch.object(useradd, 'info', mock):
-                self.assertTrue(useradd.chuid('name', 11))
+                assert useradd.chuid('name', 11)
 
     # 'chgid' function tests: 1
 
@@ -128,18 +129,18 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'gid': 11})
         with patch.object(useradd, 'info', mock):
-            self.assertTrue(useradd.chgid('name', 11))
+            assert useradd.chgid('name', 11)
 
         mock_run = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock_run}):
             mock = MagicMock(side_effect=[{'gid': 22}, {'gid': 22}])
             with patch.object(useradd, 'info', mock):
-                self.assertFalse(useradd.chgid('name', 11))
+                assert not useradd.chgid('name', 11)
 
         with patch.dict(useradd.__salt__, {'cmd.run': mock_run}):
             mock = MagicMock(side_effect=[{'gid': 11}, {'gid': 22}])
             with patch.object(useradd, 'info', mock):
-                self.assertTrue(useradd.chgid('name', 11))
+                assert useradd.chgid('name', 11)
 
     # 'chshell' function tests: 1
 
@@ -149,20 +150,20 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'shell': '/bin/bash'})
         with patch.object(useradd, 'info', mock):
-            self.assertTrue(useradd.chshell('name', '/bin/bash'))
+            assert useradd.chshell('name', '/bin/bash')
 
         mock_run = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock_run}):
             mock = MagicMock(side_effect=[{'shell': '/bin/bash'},
                                           {'shell': '/bin/bash'}])
             with patch.object(useradd, 'info', mock):
-                self.assertFalse(useradd.chshell('name', '/usr/bash'))
+                assert not useradd.chshell('name', '/usr/bash')
 
         with patch.dict(useradd.__salt__, {'cmd.run': mock_run}):
             mock = MagicMock(side_effect=[{'shell': '/bin/bash'},
                                           {'shell': '/usr/bash'}])
             with patch.object(useradd, 'info', mock):
-                self.assertTrue(useradd.chshell('name', '/bin/bash'))
+                assert useradd.chshell('name', '/bin/bash')
 
     # 'chhome' function tests: 1
 
@@ -172,19 +173,19 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'home': '/root'})
         with patch.object(useradd, 'info', mock):
-            self.assertTrue(useradd.chhome('name', '/root'))
+            assert useradd.chhome('name', '/root')
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'home': '/root'}, {'home': '/root'}])
             with patch.object(useradd, 'info', mock):
-                self.assertFalse(useradd.chhome('name', '/user'))
+                assert not useradd.chhome('name', '/user')
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[{'home': '/root'}, {'home': '/root'}])
             with patch.object(useradd, 'info', mock):
-                self.assertTrue(useradd.chhome('name', '/root'))
+                assert useradd.chhome('name', '/root')
 
     # 'chgroups' function tests: 1
 
@@ -194,7 +195,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['wheel', 'root'])
         with patch.object(useradd, 'list_groups', mock):
-            self.assertTrue(useradd.chgroups('foo', 'wheel,root'))
+            assert useradd.chgroups('foo', 'wheel,root')
 
         mock = MagicMock(return_value=['wheel', 'root'])
         with patch.object(useradd, 'list_groups', mock):
@@ -202,12 +203,12 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                 mock_runall = MagicMock(return_value={'retcode': False,
                                                       'stderr': ''})
                 with patch.dict(useradd.__salt__, {'cmd.run_all': mock_runall}):
-                    self.assertTrue(useradd.chgroups('foo', 'wheel,test,root'))
+                    assert useradd.chgroups('foo', 'wheel,test,root')
 
                 mock_runall = MagicMock(return_value={'retcode': True,
                                                       'stderr': ''})
                 with patch.dict(useradd.__salt__, {'cmd.run_all': mock_runall}):
-                    self.assertFalse(useradd.chgroups('foo', 'wheel,test,root'))
+                    assert not useradd.chgroups('foo', 'wheel,test,root')
 
     # 'chfullname' function tests: 1
 
@@ -217,11 +218,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertFalse(useradd.chfullname('Salt', 'SaltStack'))
+            assert not useradd.chfullname('Salt', 'SaltStack')
 
         mock = MagicMock(return_value={'fullname': 'SaltStack'})
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertTrue(useradd.chfullname('Salt', 'SaltStack'))
+            assert useradd.chfullname('Salt', 'SaltStack')
 
         mock = MagicMock(return_value={'fullname': 'SaltStack'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -229,7 +230,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'fullname': 'SaltStack2'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chfullname('Salt', 'SaltStack1'))
+                    assert not useradd.chfullname('Salt', 'SaltStack1')
 
         mock = MagicMock(return_value={'fullname': 'SaltStack2'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -237,7 +238,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'fullname': 'SaltStack2'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chfullname('Salt', 'SaltStack1'))
+                    assert not useradd.chfullname('Salt', 'SaltStack1')
 
     # 'chroomnumber' function tests: 1
 
@@ -247,11 +248,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertFalse(useradd.chroomnumber('salt', 1))
+            assert not useradd.chroomnumber('salt', 1)
 
         mock = MagicMock(return_value={'roomnumber': '1'})
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertTrue(useradd.chroomnumber('salt', 1))
+            assert useradd.chroomnumber('salt', 1)
 
         mock = MagicMock(return_value={'roomnumber': '2'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -259,7 +260,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'roomnumber': '3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chroomnumber('salt', 1))
+                    assert not useradd.chroomnumber('salt', 1)
 
         mock = MagicMock(return_value={'roomnumber': '3'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -267,7 +268,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'roomnumber': '3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chroomnumber('salt', 1))
+                    assert not useradd.chroomnumber('salt', 1)
 
     # 'chworkphone' function tests: 1
 
@@ -277,11 +278,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertFalse(useradd.chworkphone('salt', 1))
+            assert not useradd.chworkphone('salt', 1)
 
         mock = MagicMock(return_value={'workphone': '1'})
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertTrue(useradd.chworkphone('salt', 1))
+            assert useradd.chworkphone('salt', 1)
 
         mock = MagicMock(return_value={'workphone': '2'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -289,7 +290,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'workphone': '3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chworkphone('salt', 1))
+                    assert not useradd.chworkphone('salt', 1)
 
         mock = MagicMock(return_value={'workphone': '3'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -297,7 +298,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'workphone': '3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chworkphone('salt', 1))
+                    assert not useradd.chworkphone('salt', 1)
 
     # 'chhomephone' function tests: 1
 
@@ -307,11 +308,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertFalse(useradd.chhomephone('salt', 1))
+            assert not useradd.chhomephone('salt', 1)
 
         mock = MagicMock(return_value={'homephone': '1'})
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertTrue(useradd.chhomephone('salt', 1))
+            assert useradd.chhomephone('salt', 1)
 
         mock = MagicMock(return_value={'homephone': '2'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -319,7 +320,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'homephone': '3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chhomephone('salt', 1))
+                    assert not useradd.chhomephone('salt', 1)
 
         mock = MagicMock(return_value={'homephone': '3'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -327,7 +328,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'homephone': '3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chhomephone('salt', 1))
+                    assert not useradd.chhomephone('salt', 1)
 
     # 'chother' function tests: 1
 
@@ -337,11 +338,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertFalse(useradd.chother('salt', 1))
+            assert not useradd.chother('salt', 1)
 
         mock = MagicMock(return_value={'other': 'foobar'})
         with patch.object(useradd, '_get_gecos', mock):
-            self.assertTrue(useradd.chother('salt', 'foobar'))
+            assert useradd.chother('salt', 'foobar')
 
         mock = MagicMock(return_value={'other': 'foobar2'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -349,7 +350,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'other': 'foobar3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chother('salt', 'foobar'))
+                    assert not useradd.chother('salt', 'foobar')
 
         mock = MagicMock(return_value={'other': 'foobar3'})
         with patch.object(useradd, '_get_gecos', mock):
@@ -357,7 +358,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(useradd.__salt__, {'cmd.run': mock}):
                 mock = MagicMock(return_value={'other': 'foobar3'})
                 with patch.object(useradd, 'info', mock):
-                    self.assertFalse(useradd.chother('salt', 'foobar'))
+                    assert not useradd.chother('salt', 'foobar')
 
     # 'info' function tests: 1
 
@@ -366,7 +367,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test the user information
         '''
-        self.assertEqual(useradd.info('username-that-doesnt-exist'), {})
+        assert useradd.info('username-that-doesnt-exist') == {}
 
         mock = MagicMock(return_value=pwd.struct_passwd(('_TEST_GROUP',
                                                          '*',
@@ -376,7 +377,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                                                          '/var/virusmails',
                                                          '/usr/bin/false')))
         with patch.object(pwd, 'getpwnam', mock):
-            self.assertEqual(useradd.info('username-that-doesnt-exist')['name'], '_TEST_GROUP')
+            assert useradd.info('username-that-doesnt-exist')['name'] == '_TEST_GROUP'
 
     # 'list_groups' function tests: 1
 
@@ -385,7 +386,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         Test if it return a list of groups the named user belongs to
         '''
         with patch('salt.utils.user.get_group_list', MagicMock(return_value='Salt')):
-            self.assertEqual(useradd.list_groups('name'), 'Salt')
+            assert useradd.list_groups('name') == 'Salt'
 
     # 'list_users' function tests: 1
 
@@ -394,7 +395,7 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it returns a list of all users
         '''
-        self.assertTrue(useradd.list_users())
+        assert useradd.list_users()
 
     # 'list_users' function tests: 1
 
@@ -404,25 +405,27 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=False)
         with patch.object(useradd, 'info', mock):
-            self.assertRaises(CommandExecutionError, useradd.rename, 'salt', 1)
+            with pytest.raises(CommandExecutionError):
+                useradd.rename('salt', 1)
 
         mock = MagicMock(return_value=True)
         with patch.object(useradd, 'info', mock):
-            self.assertRaises(CommandExecutionError, useradd.rename, 'salt', 1)
+            with pytest.raises(CommandExecutionError):
+                useradd.rename('salt', 1)
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[False, {'name': ''},
                                           {'name': 'salt'}])
             with patch.object(useradd, 'info', mock):
-                self.assertTrue(useradd.rename('name', 'salt'))
+                assert useradd.rename('name', 'salt')
 
         mock = MagicMock(return_value=None)
         with patch.dict(useradd.__salt__, {'cmd.run': mock}):
             mock = MagicMock(side_effect=[False, {'name': ''},
                                           {'name': ''}])
             with patch.object(useradd, 'info', mock):
-                self.assertFalse(useradd.rename('salt', 'salt'))
+                assert not useradd.rename('salt', 'salt')
 
     def test_build_gecos_field(self):
         '''
@@ -433,11 +436,11 @@ class UserAddTestCase(TestCase, LoaderModuleMockMixin):
                       'workphone': 22222,
                       'homephone': 99999}
         expected_gecos_fields = 'Testing,1234,22222,99999'
-        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        assert useradd._build_gecos(test_gecos) == expected_gecos_fields
         test_gecos.pop('roomnumber')
         test_gecos.pop('workphone')
         expected_gecos_fields = 'Testing,,,99999'
-        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        assert useradd._build_gecos(test_gecos) == expected_gecos_fields
         test_gecos.pop('homephone')
         expected_gecos_fields = 'Testing'
-        self.assertEqual(useradd._build_gecos(test_gecos), expected_gecos_fields)
+        assert useradd._build_gecos(test_gecos) == expected_gecos_fields

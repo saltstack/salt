@@ -88,8 +88,8 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         low.update(self.eauth_creds)
 
         ret = self.runner.cmd_sync(low)
-        self.assertEqual(ret['kwargs']['foo'], 'Foo!')
-        self.assertEqual(ret['kwargs']['bar'], 'Bar!')
+        assert ret['kwargs']['foo'] == 'Foo!'
+        assert ret['kwargs']['bar'] == 'Bar!'
 
     def test_wildcard_auth(self):
         low = {
@@ -106,7 +106,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         low = {'fun': 'test.arg'}
         low.update(self.eauth_creds)
         ret = self.runner.cmd_sync(low, full_return=True)
-        self.assertIn('success', ret['data'])
+        assert 'success' in ret['data']
 
     def test_cmd_sync_arg_kwarg_parsing(self):
         low = {
@@ -125,7 +125,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         low.update(self.eauth_creds)
 
         ret = self.runner.cmd_sync(low)
-        self.assertEqual(ret, {
+        assert ret == {
             'args': ['foo'],
             'kwargs': {
                 'bar': False,
@@ -135,7 +135,7 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
                 'quux': 'Quux',
                 'quuz': 'on',
             },
-        })
+        }
 
     def test_invalid_kwargs_are_ignored(self):
         low = {
@@ -146,4 +146,4 @@ class RunnerModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         low.update(self.eauth_creds)
 
         ret = self.runner.cmd_sync(low)
-        self.assertEqual(ret[0], 'foo')
+        assert ret[0] == 'foo'

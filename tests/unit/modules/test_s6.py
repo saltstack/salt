@@ -34,7 +34,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=False)
         with patch.dict(s6.__salt__, {'cmd.retcode': mock_ret}):
-            self.assertTrue(s6.start('ssh'))
+            assert s6.start('ssh')
 
     # 'stop' function tests: 1
 
@@ -44,7 +44,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=False)
         with patch.dict(s6.__salt__, {'cmd.retcode': mock_ret}):
-            self.assertTrue(s6.stop('ssh'))
+            assert s6.stop('ssh')
 
     # 'term' function tests: 1
 
@@ -54,7 +54,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=False)
         with patch.dict(s6.__salt__, {'cmd.retcode': mock_ret}):
-            self.assertTrue(s6.term('ssh'))
+            assert s6.term('ssh')
 
     # 'reload_' function tests: 1
 
@@ -64,7 +64,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=False)
         with patch.dict(s6.__salt__, {'cmd.retcode': mock_ret}):
-            self.assertTrue(s6.reload_('ssh'))
+            assert s6.reload_('ssh')
 
     # 'restart' function tests: 1
 
@@ -74,7 +74,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=False)
         with patch.dict(s6.__salt__, {'cmd.retcode': mock_ret}):
-            self.assertTrue(s6.restart('ssh'))
+            assert s6.restart('ssh')
 
     # 'full_restart' function tests: 1
 
@@ -84,7 +84,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_ret = MagicMock(return_value=False)
         with patch.dict(s6.__salt__, {'cmd.retcode': mock_ret}):
-            self.assertIsNone(s6.full_restart('ssh'))
+            assert s6.full_restart('ssh') is None
 
     # 'status' function tests: 1
 
@@ -95,7 +95,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_run = MagicMock(return_value='salt')
         with patch.dict(s6.__salt__, {'cmd.run_stdout': mock_run}):
-            self.assertEqual(s6.status('ssh'), '')
+            assert s6.status('ssh') == ''
 
     # 'available' function tests: 1
 
@@ -106,7 +106,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os, 'listdir',
                           MagicMock(return_value=['/etc/service'])):
-            self.assertTrue(s6.available('/etc/service'))
+            assert s6.available('/etc/service')
 
     # 'missing' function tests: 1
 
@@ -117,7 +117,7 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os, 'listdir',
                           MagicMock(return_value=['/etc/service'])):
-            self.assertTrue(s6.missing('foo'))
+            assert s6.missing('foo')
 
     # 'get_all' function tests: 1
 
@@ -127,4 +127,4 @@ class S6TestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os, 'listdir',
                           MagicMock(return_value=['/etc/service'])):
-            self.assertListEqual(s6.get_all(), ['/etc/service'])
+            assert s6.get_all() == ['/etc/service']

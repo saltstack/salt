@@ -139,10 +139,10 @@ class ArchiveTest(ModuleCase):
                 file_in_ret = True
 
         # Assert number of lines, reporting of source directory and file
-        self.assertTrue(len(ret) >= 1 if file_only else 2)
+        assert len(ret) >= 1 if file_only else 2
         if not file_only:
-            self.assertTrue(dir_in_ret)
-        self.assertTrue(file_in_ret)
+            assert dir_in_ret
+        assert file_in_ret
 
     @skipIf(not salt.utils.path.which('tar'), 'Cannot find tar executable')
     def test_tar_pack(self):
@@ -153,7 +153,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -168,7 +168,7 @@ class ArchiveTest(ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -182,7 +182,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.tar', ['-cvf', self.arch], sources=self.src)
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -197,7 +197,7 @@ class ArchiveTest(ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.tar', ['-xvf', self.arch], dest=self.dst)
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -212,7 +212,7 @@ class ArchiveTest(ModuleCase):
 
         # Test list archive
         ret = self.run_function('archive.list', name=self.arch)
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -226,7 +226,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.gzip', [self.src_file], options='-v')
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret, file_only=True)
 
         self._tear_down()
@@ -242,7 +242,7 @@ class ArchiveTest(ModuleCase):
 
         # Test extract archive
         ret = self.run_function('archive.gunzip', [self.src_file + '.gz'], options='-v')
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret, file_only=True)
 
         self._tear_down()
@@ -256,7 +256,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.cmd_zip', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -272,7 +272,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.cmd_unzip', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -286,7 +286,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.zip', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -301,7 +301,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.unzip', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret, unix_sep=False)
 
         self._tear_down()
@@ -315,7 +315,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.rar', [self.arch, self.src])
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()
@@ -331,7 +331,7 @@ class ArchiveTest(ModuleCase):
 
         # Test create archive
         ret = self.run_function('archive.unrar', [self.arch, self.dst])
-        self.assertTrue(isinstance(ret, list), six.text_type(ret))
+        assert isinstance(ret, list), six.text_type(ret)
         self._assert_artifacts_in_ret(ret)
 
         self._tear_down()

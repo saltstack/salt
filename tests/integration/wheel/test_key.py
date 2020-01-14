@@ -24,19 +24,16 @@ class KeyWheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
     def test_list_all(self):
         ret = self.wheel.cmd('key.list_all', print_event=False)
         for host in ['minion', 'sub_minion']:
-            self.assertIn(host, ret['minions'])
+            assert host in ret['minions']
 
     def test_gen(self):
         ret = self.wheel.cmd('key.gen', kwarg={'id_': 'soundtechniciansrock'}, print_event=False)
 
-        self.assertIn('pub', ret)
-        self.assertIn('priv', ret)
+        assert 'pub' in ret
+        assert 'priv' in ret
         try:
-            self.assertTrue(
-                ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----'))
+            assert ret.get('pub', '').startswith('-----BEGIN PUBLIC KEY-----')
         except AssertionError:
-            self.assertTrue(
-                ret.get('pub', '').startswith('-----BEGIN RSA PUBLIC KEY-----'))
+            assert ret.get('pub', '').startswith('-----BEGIN RSA PUBLIC KEY-----')
 
-        self.assertTrue(
-            ret.get('priv', '').startswith('-----BEGIN RSA PRIVATE KEY-----'))
+        assert ret.get('priv', '').startswith('-----BEGIN RSA PRIVATE KEY-----')

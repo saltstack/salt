@@ -51,12 +51,12 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
                                   return_value='tok'):
                     with patch.object(salt_transport_channel_factory, 'send',
                                       return_value=None):
-                        self.assertTrue(event.fire_master('data', 'tag', preload))
+                        assert event.fire_master('data', 'tag', preload)
 
             with patch.dict(event.__opts__, {'transport': 'A', 'local': False}):
                 with patch.object(salt.utils.event.MinionEvent, 'fire_event',
                                   side_effect=Exception('foo')):
-                    self.assertFalse(event.fire_master('data', 'tag'))
+                    assert not event.fire_master('data', 'tag')
 
     def test_fire(self):
         '''
@@ -66,11 +66,11 @@ class EventTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.utils.event') as salt_utils_event:
             with patch.object(salt_utils_event, 'get_event') as mock:
                 mock.fire_event = MagicMock(return_value=True)
-                self.assertTrue(event.fire('data', 'tag'))
+                assert event.fire('data', 'tag')
 
     def test_send(self):
         '''
         Test for Send an event to the Salt Master
         '''
         with patch.object(event, 'fire_master', return_value='B'):
-            self.assertEqual(event.send('tag'), 'B')
+            assert event.send('tag') == 'B'

@@ -31,7 +31,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
         Test for Query a resource, and decode the return data
         '''
         with patch.object(salt.utils.http, 'query', return_value='A'):
-            self.assertEqual(http.query('url'), 'A')
+            assert http.query('url') == 'A'
 
     def test_wait_for_with_interval(self):
         '''
@@ -42,7 +42,7 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(salt.utils.http, 'query', query_mock):
             with patch('time.sleep', MagicMock()) as sleep_mock:
-                self.assertEqual(http.wait_for_successful_query('url', request_interval=1), {})
+                assert http.wait_for_successful_query('url', request_interval=1) == {}
                 sleep_mock.assert_called_once_with(1)
 
     def test_wait_for_without_interval(self):
@@ -54,5 +54,5 @@ class HttpTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(salt.utils.http, 'query', query_mock):
             with patch('time.sleep', MagicMock()) as sleep_mock:
-                self.assertEqual(http.wait_for_successful_query('url'), {})
+                assert http.wait_for_successful_query('url') == {}
                 sleep_mock.assert_not_called()

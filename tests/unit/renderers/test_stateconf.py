@@ -18,6 +18,7 @@ from salt.ext.six.moves import StringIO
 
 # Import 3rd-party libs
 from salt.ext import six
+import pytest
 
 
 REQUISITES = ['require', 'require_in', 'use', 'use_in', 'watch', 'watch_in']
@@ -89,11 +90,11 @@ test:
     - name: echo name1={{sls_params.name1}} name2={{sls_params.name2}} {{extra.name}}
     - cwd: /
 ''', sls='test')
-        self.assertEqual(len(result), 3)
-        self.assertTrue('test::sls_params' in result and 'test' in result)
-        self.assertTrue('test::extra' in result)
-        self.assertEqual(result['test']['cmd.run'][0]['name'],
-                         'echo name1=value1 name2=value2 value')
+        assert len(result) == 3
+        assert 'test::sls_params' in result and 'test' in result
+        assert 'test::extra' in result
+        assert result['test']['cmd.run'][0]['name'] == \
+                         'echo name1=value1 name2=value2 value'
 
     def test_sls_dir(self):
         result = self._render_sls('''
@@ -102,9 +103,8 @@ test:
     - name: echo sls_dir={{sls_dir}}
     - cwd: /
 ''', sls='path.to.sls')
-        self.assertEqual(
-            result['test']['cmd.run'][0]['name'],
-            'echo sls_dir=path{0}to'.format(os.sep))
+        assert result['test']['cmd.run'][0]['name'] == \
+            'echo sls_dir=path{0}to'.format(os.sep)
 
     def test_states_declared_with_shorthand_no_args(self):
         result = self._render_sls('''
@@ -117,12 +117,12 @@ test1:
 test2:
   user.present
 ''')
-        self.assertEqual(len(result), 3)
+        assert len(result) == 3
         for args in (result['test1']['pkg.installed'],
                      result['test2']['user.present']):
-            self.assertTrue(isinstance(args, list))
-            self.assertEqual(len(args), 0)
-        self.assertEqual(result['test']['cmd.run'][0]['name'], 'echo testing')
+            assert isinstance(args, list)
+            assert len(args) == 0
+        assert result['test']['cmd.run'][0]['name'] == 'echo testing'
 
     def test_adding_state_name_arg_for_dot_state_id(self):
         result = self._render_sls('''
@@ -133,12 +133,8 @@ test2:
   pkg.installed:
     - name: vim
 ''', sls='test')
-        self.assertEqual(
-            result['test::test']['pkg.installed'][0]['name'], 'test'
-        )
-        self.assertEqual(
-            result['test::test2']['pkg.installed'][0]['name'], 'vim'
-        )
+        assert result['test::test']['pkg.installed'][0]['name'] == 'test'
+        assert result['test::test2']['pkg.installed'][0]['name'] == 'vim'
 
     def test_state_prefix(self):
         result = self._render_sls('''
@@ -153,9 +149,9 @@ state_id:
     - name: echo not renamed
     - cwd: /
 ''', sls='test')
-        self.assertEqual(len(result), 2)
-        self.assertTrue('test::test' in result)
-        self.assertTrue('state_id' in result)
+        assert len(result) == 2
+        assert 'test::test' in result
+        assert 'state_id' in result
 
     def test_dot_state_id_in_requisites(self):
         for req in REQUISITES:
@@ -173,12 +169,10 @@ state_id:
       - cmd: .test
 
     '''.format(req), sls='test')
-            self.assertEqual(len(result), 2)
-            self.assertTrue('test::test' in result)
-            self.assertTrue('state_id' in result)
-            self.assertEqual(
-                result['state_id']['cmd.run'][2][req][0]['cmd'], 'test::test'
-            )
+            assert len(result) == 2
+            assert 'test::test' in result
+            assert 'state_id' in result
+            assert result['state_id']['cmd.run'][2][req][0]['cmd'] == 'test::test'
 
     def test_relative_include_with_requisites(self):
         for req in REQUISITES:
@@ -194,11 +188,9 @@ state_id:
     - {0}:
       - cmd: .utils::some_state
 '''.format(req), sls='test.work')
-            self.assertEqual(result['include'][1], {'base': 'test.utils'})
-            self.assertEqual(
-                result['state_id']['cmd.run'][2][req][0]['cmd'],
+            assert result['include'][1] == {'base': 'test.utils'}
+            assert result['state_id']['cmd.run'][2][req][0]['cmd'] == \
                 'test.utils::some_state'
-            )
 
     def test_relative_include_and_extend(self):
         result = self._render_sls('''
@@ -211,7 +203,7 @@ extend:
     cmd.run:
       - name: echo overridden
     ''', sls='test.work')
-        self.assertTrue('test.utils::some_state' in result['extend'])
+        assert 'test.utils::some_state' in result['extend']
 
     def test_multilevel_relative_include_with_requisites(self):
         for req in REQUISITES:
@@ -228,17 +220,16 @@ state_id:
     - {0}:
       - cmd: ..utils::some_state
 '''.format(req), sls='test.nested.work')
-            self.assertEqual(result['include'][0],
-                             {'base': 'test.nested.shared'})
-            self.assertEqual(result['include'][1], {'base': 'test.utils'})
-            self.assertEqual(result['include'][2], {'base': 'helper'})
-            self.assertEqual(
-                result['state_id']['cmd.run'][2][req][0]['cmd'],
+            assert result['include'][0] == \
+                             {'base': 'test.nested.shared'}
+            assert result['include'][1] == {'base': 'test.utils'}
+            assert result['include'][2] == {'base': 'helper'}
+            assert result['state_id']['cmd.run'][2][req][0]['cmd'] == \
                 'test.utils::some_state'
-            )
 
     def test_multilevel_relative_include_beyond_top_level(self):
-        self.assertRaises(SaltRenderError, self._render_sls, '''
+        with pytest.raises(SaltRenderError):
+            self._render_sls('''
 include:
   - ...shared
 ''', sls='test.work')
@@ -254,11 +245,9 @@ B:
     - name: echo world
     - cwd: /
 ''', sls='test', argline='-so yaml . jinja')
-        self.assertEqual(len(result), 4)
-        self.assertEqual(
-            result['test::start']['stateconf.set'][0]['require_in'][0]['cmd'],
+        assert len(result) == 4
+        assert result['test::start']['stateconf.set'][0]['require_in'][0]['cmd'] == \
             'A'
-        )
 
     def test_goal_state_generation(self):
         result = self._render_sls('''
@@ -270,12 +259,10 @@ B:
 {% endfor %}
 
 ''', sls='test.goalstate', argline='yaml . jinja')
-        self.assertEqual(len(result), len('ABCDE') + 1)
+        assert len(result) == len('ABCDE') + 1
 
         reqs = result['test.goalstate::goal']['stateconf.set'][0]['require']
-        self.assertEqual(
-            set([next(six.itervalues(i)) for i in reqs]), set('ABCDE')
-        )
+        assert set([next(six.itervalues(i)) for i in reqs]) == set('ABCDE')
 
     def test_implicit_require_with_goal_state(self):
         result = self._render_sls('''
@@ -306,31 +293,27 @@ G:
         sids = 'ABCDEFG'[::-1]
         for i, sid in enumerate(sids):
             if i < len(sids) - 1:
-                self.assertEqual(
-                    result[sid]['cmd.run'][2]['require'][0]['cmd'],
+                assert result[sid]['cmd.run'][2]['require'][0]['cmd'] == \
                     sids[i + 1]
-                )
 
         F_args = result['F']['cmd.run']
-        self.assertEqual(len(F_args), 3)
+        assert len(F_args) == 3
         F_req = F_args[2]['require']
-        self.assertEqual(len(F_req), 3)
-        self.assertEqual(F_req[1]['cmd'], 'A')
-        self.assertEqual(F_req[2]['cmd'], 'B')
+        assert len(F_req) == 3
+        assert F_req[1]['cmd'] == 'A'
+        assert F_req[2]['cmd'] == 'B'
 
         G_args = result['G']['cmd.run']
-        self.assertEqual(len(G_args), 3)
+        assert len(G_args) == 3
         G_req = G_args[2]['require']
-        self.assertEqual(len(G_req), 3)
-        self.assertEqual(G_req[1]['cmd'], 'D')
-        self.assertEqual(G_req[2]['cmd'], 'F')
+        assert len(G_req) == 3
+        assert G_req[1]['cmd'] == 'D'
+        assert G_req[2]['cmd'] == 'F'
 
         goal_args = result['test::goal']['stateconf.set']
-        self.assertEqual(len(goal_args), 1)
-        self.assertEqual(
-            [next(six.itervalues(i)) for i in goal_args[0]['require']],
+        assert len(goal_args) == 1
+        assert [next(six.itervalues(i)) for i in goal_args[0]['require']] == \
             list('ABCDEFG')
-        )
 
     def test_slsdir(self):
         result = self._render_sls('''
@@ -341,4 +324,4 @@ formula/woot.sls:
 ''', sls='formula.woot', argline='yaml . jinja')
 
         r = result['formula/woot.sls']['cmd.run'][0]['name']
-        self.assertEqual(r, 'echo formula/woot')
+        assert r == 'echo formula/woot'

@@ -20,6 +20,7 @@ from tests.support.mock import (
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
 from salt.exceptions import CommandExecutionError
+import pytest
 
 _SYSTEMCTL_STATUS = {
     'sshd.service': {
@@ -84,12 +85,9 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
              'pid': 54321},
         ])
         with patch.dict(systemd.__salt__, {'cmd.run_all': mock}):
-            self.assertRaisesRegex(
-                CommandExecutionError,
-                'Problem performing systemctl daemon-reload: Who knows why?',
-                systemd.systemctl_reload
-            )
-            self.assertTrue(systemd.systemctl_reload())
+            with pytest.raises(CommandExecutionError, match='Problem performing systemctl daemon-reload: Who knows why?'):
+                systemd.systemctl_reload()
+            assert systemd.systemctl_reload()
 
     def test_get_enabled(self):
         '''
@@ -116,10 +114,8 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(os, 'access', side_effect=access_mock):
                         with patch.object(systemd, '_sysv_enabled',
                                           sysv_enabled_mock):
-                            self.assertListEqual(
-                                systemd.get_enabled(),
+                            assert systemd.get_enabled() == \
                                 ['baz', 'service1', 'timer1.timer']
-                            )
 
     def test_get_disabled(self):
         '''
@@ -152,10 +148,8 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
                     with patch.object(os, 'access', side_effect=access_mock):
                         with patch.object(systemd, '_sysv_enabled',
                                           sysv_enabled_mock):
-                            self.assertListEqual(
-                                systemd.get_disabled(),
+                            assert systemd.get_disabled() == \
                                 ['bar', 'service2', 'timer2.timer']
-                            )
 
     def test_get_all(self):
         '''
@@ -175,10 +169,8 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         )
         with patch.object(os, 'listdir', listdir_mock):
             with patch.object(os, 'access', side_effect=access_mock):
-                self.assertListEqual(
-                    systemd.get_all(),
+                assert systemd.get_all() == \
                     ['bar', 'foo', 'mysql', 'mytimer.timer', 'nginx']
-                )
 
     def test_available(self):
         '''
@@ -189,22 +181,22 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         # systemd < 231
         with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 230}):
             with patch.object(systemd, '_systemctl_status', mock):
-                self.assertTrue(systemd.available('sshd.service'))
-                self.assertFalse(systemd.available('foo.service'))
+                assert systemd.available('sshd.service')
+                assert not systemd.available('foo.service')
 
         # systemd >= 231
         with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 231}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
                 with patch.object(systemd, '_systemctl_status', mock):
-                    self.assertTrue(systemd.available('sshd.service'))
-                    self.assertFalse(systemd.available('bar.service'))
+                    assert systemd.available('sshd.service')
+                    assert not systemd.available('bar.service')
 
         # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
         with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 219}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
                 with patch.object(systemd, '_systemctl_status', mock):
-                    self.assertTrue(systemd.available('sshd.service'))
-                    self.assertFalse(systemd.available('bar.service'))
+                    assert systemd.available('sshd.service')
+                    assert not systemd.available('bar.service')
 
     def test_missing(self):
         '''
@@ -215,22 +207,22 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         # systemd < 231
         with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 230}):
             with patch.object(systemd, '_systemctl_status', mock):
-                self.assertFalse(systemd.missing('sshd.service'))
-                self.assertTrue(systemd.missing('foo.service'))
+                assert not systemd.missing('sshd.service')
+                assert systemd.missing('foo.service')
 
         # systemd >= 231
         with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 231}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
                 with patch.object(systemd, '_systemctl_status', mock):
-                    self.assertFalse(systemd.missing('sshd.service'))
-                    self.assertTrue(systemd.missing('bar.service'))
+                    assert not systemd.missing('sshd.service')
+                    assert systemd.missing('bar.service')
 
         # systemd < 231 with retcode/output changes backported (e.g. RHEL 7.3)
         with patch.dict(systemd.__context__, {'salt.utils.systemd.version': 219}):
             with patch.dict(_SYSTEMCTL_STATUS, _SYSTEMCTL_STATUS_GTE_231):
                 with patch.object(systemd, '_systemctl_status', mock):
-                    self.assertFalse(systemd.missing('sshd.service'))
-                    self.assertTrue(systemd.missing('bar.service'))
+                    assert not systemd.missing('sshd.service')
+                    assert systemd.missing('bar.service')
 
     def test_show(self):
         '''
@@ -239,13 +231,11 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         show_output = 'a=b\nc=d\ne={ f=g ; h=i }\nWants=foo.service bar.service\n'
         mock = MagicMock(return_value=show_output)
         with patch.dict(systemd.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(
-                systemd.show('sshd'),
+            assert systemd.show('sshd') == \
                 {'a': 'b',
                  'c': 'd',
                  'e': {'f': 'g', 'h': 'i'},
                  'Wants': ['foo.service', 'bar.service']}
-            )
 
     def test_execs(self):
         '''
@@ -256,7 +246,7 @@ class SystemdTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(systemd, 'get_all', mock):
             mock = MagicMock(return_value={'ExecStart': {'path': 'c'}})
             with patch.object(systemd, 'show', mock):
-                self.assertDictEqual(systemd.execs(), {'a': 'c', 'b': 'c'})
+                assert systemd.execs() == {'a': 'c', 'b': 'c'}
 
     def test_status(self):
         '''
@@ -391,7 +381,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                     {'config.get': self.mock_true,
                                      'cmd.run_all': self.mock_run_all_success}):
                                 ret = func(self.unit_name, no_block=no_block)
-                                self.assertTrue(ret)
+                                assert ret
                                 self.mock_run_all_success.assert_called_with(
                                     scope_prefix + systemctl_command,
                                     **assert_kwargs)
@@ -403,12 +393,10 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                      'cmd.run_all': self.mock_run_all_failure}):
                                 if action in ('stop', 'disable'):
                                     ret = func(self.unit_name, no_block=no_block)
-                                    self.assertFalse(ret)
+                                    assert not ret
                                 else:
-                                    self.assertRaises(
-                                        CommandExecutionError,
-                                        func,
-                                        self.unit_name,
+                                    with pytest.raises(CommandExecutionError):
+                                        func(self.unit_name,
                                         no_block=no_block)
                                 self.mock_run_all_failure.assert_called_with(
                                     scope_prefix + systemctl_command,
@@ -420,7 +408,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                     {'config.get': self.mock_false,
                                      'cmd.run_all': self.mock_run_all_success}):
                                 ret = func(self.unit_name, no_block=no_block)
-                                self.assertTrue(ret)
+                                assert ret
                                 self.mock_run_all_success.assert_called_with(
                                     systemctl_command,
                                     **assert_kwargs)
@@ -432,12 +420,10 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                      'cmd.run_all': self.mock_run_all_failure}):
                                 if action in ('stop', 'disable'):
                                     ret = func(self.unit_name, no_block=no_block)
-                                    self.assertFalse(ret)
+                                    assert not ret
                                 else:
-                                    self.assertRaises(
-                                        CommandExecutionError,
-                                        func,
-                                        self.unit_name,
+                                    with pytest.raises(CommandExecutionError):
+                                        func(self.unit_name,
                                         no_block=no_block)
                                 self.mock_run_all_failure.assert_called_with(
                                     systemctl_command,
@@ -458,7 +444,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                         {'config.get': scope_mock,
                                          'cmd.run_all': self.mock_run_all_success}):
                                     ret = func(self.unit_name, no_block=no_block)
-                                    self.assertTrue(ret)
+                                    assert ret
                                     self.mock_run_all_success.assert_called_with(
                                         systemctl_command,
                                         **assert_kwargs)
@@ -471,12 +457,10 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                     if action in ('stop', 'disable'):
                                         ret = func(self.unit_name,
                                                    no_block=no_block)
-                                        self.assertFalse(ret)
+                                        assert not ret
                                     else:
-                                        self.assertRaises(
-                                            CommandExecutionError,
-                                            func,
-                                            self.unit_name,
+                                        with pytest.raises(CommandExecutionError):
+                                            func(self.unit_name,
                                             no_block=no_block)
                                     self.mock_run_all_failure.assert_called_with(
                                         systemctl_command,
@@ -511,9 +495,9 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.dict(systemd.__salt__, {'cmd.run_all': mock_not_run}):
                     with patch.object(systemd, 'masked', self.mock_false):
                         # Test not masked (should take no action and return True)
-                        self.assertTrue(systemd.unmask_(self.unit_name))
+                        assert systemd.unmask_(self.unit_name)
                         # Also should not have called cmd.run_all
-                        self.assertTrue(mock_not_run.call_count == 0)
+                        assert mock_not_run.call_count == 0
 
             with patch.object(systemd, 'masked', masked_mock):
 
@@ -526,7 +510,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                             {'config.get': self.mock_true,
                              'cmd.run_all': self.mock_run_all_success}):
                         ret = func(*args)
-                        self.assertTrue(ret)
+                        assert ret
                         self.mock_run_all_success.assert_called_with(
                             scope_prefix + systemctl_command,
                             python_shell=False,
@@ -537,9 +521,8 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                             systemd.__salt__,
                             {'config.get': self.mock_true,
                              'cmd.run_all': self.mock_run_all_failure}):
-                        self.assertRaises(
-                            CommandExecutionError,
-                            func, *args)
+                        with pytest.raises(CommandExecutionError):
+                            func(*args)
                         self.mock_run_all_failure.assert_called_with(
                             scope_prefix + systemctl_command,
                             python_shell=False,
@@ -551,7 +534,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                             {'config.get': self.mock_false,
                              'cmd.run_all': self.mock_run_all_success}):
                         ret = func(*args)
-                        self.assertTrue(ret)
+                        assert ret
                         self.mock_run_all_success.assert_called_with(
                             systemctl_command,
                             python_shell=False,
@@ -562,9 +545,8 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                             systemd.__salt__,
                             {'config.get': self.mock_false,
                              'cmd.run_all': self.mock_run_all_failure}):
-                        self.assertRaises(
-                            CommandExecutionError,
-                            func, *args)
+                        with pytest.raises(CommandExecutionError):
+                            func(*args)
                         self.mock_run_all_failure.assert_called_with(
                             systemctl_command,
                             python_shell=False,
@@ -585,7 +567,7 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                 {'config.get': scope_mock,
                                  'cmd.run_all': self.mock_run_all_success}):
                             ret = func(*args)
-                            self.assertTrue(ret)
+                            assert ret
                             self.mock_run_all_success.assert_called_with(
                                 systemctl_command,
                                 python_shell=False,
@@ -596,9 +578,8 @@ class SystemdScopeTestCase(TestCase, LoaderModuleMockMixin):
                                 systemd.__salt__,
                                 {'config.get': scope_mock,
                                  'cmd.run_all': self.mock_run_all_failure}):
-                            self.assertRaises(
-                                CommandExecutionError,
-                                func, *args)
+                            with pytest.raises(CommandExecutionError):
+                                func(*args)
                             self.mock_run_all_failure.assert_called_with(
                                 systemctl_command,
                                 python_shell=False,

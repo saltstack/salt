@@ -14,6 +14,7 @@ from tests.support.mock import MagicMock, patch
 import salt.utils.platform
 import salt.modules.pip as pip
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class PipTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,11 +37,8 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
     def test_install_editable_without_egg_fails(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.install,
-                editable='git+https://github.com/saltstack/salt-testing.git'
-            )
+            with pytest.raises(CommandExecutionError):
+                pip.install(editable='git+https://github.com/saltstack/salt-testing.git')
 
     def test_install_multiple_editable(self):
         editables = [
@@ -245,34 +243,27 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         # Invalid proto raises exception
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.install,
-                '\'' + pkg + '\'',
-                find_links='sftp://pypi.crate.io'
-            )
+            with pytest.raises(CommandExecutionError):
+                pip.install('\'' + pkg + '\'',
+                find_links='sftp://pypi.crate.io')
 
     def test_install_no_index_with_index_url_or_extra_index_url_raises(self):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.install, no_index=True, index_url='http://foo.tld'
-            )
+            with pytest.raises(CommandExecutionError):
+                pip.install(no_index=True, index_url='http://foo.tld')
 
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.install, no_index=True, extra_index_url='http://foo.tld'
-            )
+            with pytest.raises(CommandExecutionError):
+                pip.install(no_index=True, extra_index_url='http://foo.tld')
 
     def test_install_failed_cached_requirements(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
             get_cached_requirements.return_value = False
             ret = pip.install(requirements='salt://my_test_reqs')
-            self.assertEqual(False, ret['result'])
-            self.assertIn('my_test_reqs', ret['comment'])
+            assert ret['result'] is False
+            assert 'my_test_reqs' in ret['comment']
 
     def test_install_cached_requirements_used(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
@@ -345,12 +336,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.exists.side_effect = IOError('Fooo!')
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(
-                    IOError,
-                    pip.install,
-                    pkg,
-                    log=log_path
-                )
+                with pytest.raises(IOError):
+                    pip.install(pkg,
+                    log=log_path)
 
     def test_install_timeout_argument_in_resulting_command(self):
         # Passing an int
@@ -382,12 +370,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         # Passing a non-int to timeout
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                ValueError,
-                pip.install,
-                pkg,
-                timeout='a'
-            )
+            with pytest.raises(ValueError):
+                pip.install(pkg,
+                timeout='a')
 
     def test_install_index_url_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -559,12 +544,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         # Test for invalid action
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                CommandExecutionError,
-                pip.install,
-                pkg,
-                exists_action='d'
-            )
+            with pytest.raises(CommandExecutionError):
+                pip.install(pkg,
+                exists_action='d')
 
     def test_install_install_options_argument_in_resulting_command(self):
         install_options = [
@@ -874,15 +856,17 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
 
-            self.assertRaises(TypeError, lambda: pip.install(
+            with pytest.raises(TypeError):
+                pip.install(
                 pkg, extra_args=[
                     {"--latest-pip-kwarg": ["param1", "param2"]},
-                ]))
+                ])
 
-            self.assertRaises(TypeError, lambda: pip.install(
+            with pytest.raises(TypeError):
+                pip.install(
                 pkg, extra_args=[
                     {"--latest-pip-kwarg": [{"--too-deep": dict()}]},
-                ]))
+                ])
 
     def test_uninstall_multiple_requirements_arguments_in_resulting_command(self):
         with patch('salt.modules.pip._get_cached_requirements') as get_cached_requirements:
@@ -1011,12 +995,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
             mock_path.exists.side_effect = IOError('Fooo!')
             mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
             with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-                self.assertRaises(
-                    IOError,
-                    pip.uninstall,
-                    pkg,
-                    log=log_path
-                )
+                with pytest.raises(IOError):
+                    pip.uninstall(pkg,
+                    log=log_path)
 
     def test_uninstall_timeout_argument_in_resulting_command(self):
         pkg = 'pep8'
@@ -1050,12 +1031,9 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
         # Passing a non-int to timeout
         mock = MagicMock(return_value={'retcode': 0, 'stdout': ''})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
-            self.assertRaises(
-                ValueError,
-                pip.uninstall,
-                pkg,
-                timeout='a'
-            )
+            with pytest.raises(ValueError):
+                pip.uninstall(pkg,
+                timeout='a')
 
     def test_freeze_command(self):
         expected = [sys.executable, '-m', 'pip', 'freeze']
@@ -1083,7 +1061,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
-                self.assertEqual(ret, eggs)
+                assert ret == eggs
 
         mock = MagicMock(
             return_value={
@@ -1104,17 +1082,15 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     env={"foo": "bar"}
                 )
-                self.assertEqual(ret, eggs)
+                assert ret == eggs
 
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             with patch('salt.modules.pip.version',
                        MagicMock(return_value='6.1.1')):
-                self.assertRaises(
-                    CommandExecutionError,
-                    pip.freeze,
-                )
+                with pytest.raises(CommandExecutionError):
+                    pip.freeze()
 
     def test_freeze_command_with_all(self):
         eggs = [
@@ -1144,17 +1120,15 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     use_vt=False,
                     python_shell=False,
                 )
-                self.assertEqual(ret, eggs)
+                assert ret == eggs
 
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             with patch('salt.modules.pip.version',
                        MagicMock(return_value='9.0.1')):
-                self.assertRaises(
-                    CommandExecutionError,
-                    pip.freeze,
-                )
+                with pytest.raises(CommandExecutionError):
+                    pip.freeze()
 
     def test_list_command(self):
         eggs = [
@@ -1178,8 +1152,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     use_vt=False,
                 )
-                self.assertEqual(
-                    ret, {
+                assert ret == {
                         'SaltTesting-dev': 'git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8',
                         'M2Crypto': '0.21.1',
                         'bbfreeze-loader': '1.1.0',
@@ -1187,17 +1160,14 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                         'pip': mock_version,
                         'pycrypto': '2.6'
                     }
-                )
 
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             with patch('salt.modules.pip.version',
                        MagicMock(return_value='6.1.1')):
-                self.assertRaises(
-                    CommandExecutionError,
-                    pip.list_,
-                )
+                with pytest.raises(CommandExecutionError):
+                    pip.list_()
 
     def test_list_command_with_all(self):
         eggs = [
@@ -1226,8 +1196,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     use_vt=False,
                 )
-                self.assertEqual(
-                    ret, {
+                assert ret == {
                         'SaltTesting-dev': 'git+git@github.com:s0undt3ch/salt-testing.git@9ed81aa2f918d59d3706e56b18f0782d1ea43bf8',
                         'M2Crypto': '0.21.1',
                         'bbfreeze-loader': '1.1.0',
@@ -1236,17 +1205,14 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                         'pycrypto': '2.6',
                         'setuptools': '20.10.1'
                     }
-                )
 
         # Non zero returncode raises exception?
         mock = MagicMock(return_value={'retcode': 1, 'stderr': 'CABOOOOMMM!'})
         with patch.dict(pip.__salt__, {'cmd.run_all': mock}):
             with patch('salt.modules.pip.version',
                        MagicMock(return_value='6.1.1')):
-                self.assertRaises(
-                    CommandExecutionError,
-                    pip.list_,
-                )
+                with pytest.raises(CommandExecutionError):
+                    pip.list_()
 
     def test_list_command_with_prefix(self):
         eggs = [
@@ -1274,12 +1240,10 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     use_vt=False,
                 )
-                self.assertEqual(
-                    ret, {
+                assert ret == {
                         'bbfreeze-loader': '1.1.0',
                         'bbfreeze': '1.1.0',
                     }
-                )
 
     def test_list_upgrades_legacy(self):
         eggs = [
@@ -1302,13 +1266,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     cwd=None,
                     runas=None,
                 )
-                self.assertEqual(
-                    ret, {
+                assert ret == {
                         'apache-libcloud': '2.2.1 [wheel]',
                         'appdirs': '1.4.3 [wheel]',
                         'awscli': '1.12.1 [sdist]'
                     }
-                )
 
     def test_list_upgrades_gt9(self):
         eggs = '''[{"latest_filetype": "wheel", "version": "1.1.0", "name": "apache-libcloud", "latest_version": "2.2.1"},
@@ -1330,13 +1292,11 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     cwd=None,
                     runas=None,
                 )
-                self.assertEqual(
-                    ret, {
+                assert ret == {
                         'apache-libcloud': '2.2.1 [wheel]',
                         'appdirs': '1.4.3 [wheel]',
                         'awscli': '1.12.1 [sdist]'
                     }
-                )
 
     def test_is_installed_true(self):
         eggs = [
@@ -1363,7 +1323,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     use_vt=False,
                 )
-                self.assertTrue(ret)
+                assert ret
 
     def test_is_installed_false(self):
         eggs = [
@@ -1390,7 +1350,7 @@ class PipTestCase(TestCase, LoaderModuleMockMixin):
                     python_shell=False,
                     use_vt=False,
                 )
-                self.assertFalse(ret)
+                assert not ret
 
     def test_install_pre_argument_in_resulting_command(self):
         pkg = 'pep8'

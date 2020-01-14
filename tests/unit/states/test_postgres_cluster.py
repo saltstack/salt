@@ -50,17 +50,17 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
                         }):
             comt = ('Cluster {0}/{1} is already present'.format(version, name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(postgres_cluster.present(version, name), ret)
+            assert postgres_cluster.present(version, name) == ret
             infos['{0}/{1}'.format(version, name)]['port'] = 5433
             comt = ('Cluster {0}/{1} has wrong parameters '
                     'which couldn\'t be changed on fly.'.format(version, name))
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(postgres_cluster.present(version, name, port=5434), ret)
+            assert postgres_cluster.present(version, name, port=5434) == ret
             infos['{0}/{1}'.format(version, name)]['datadir'] = '/tmp/'
             comt = ('Cluster {0}/{1} has wrong parameters '
                     'which couldn\'t be changed on fly.'.format(version, name))
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(postgres_cluster.present(version, name, port=5434), ret)
+            assert postgres_cluster.present(version, name, port=5434) == ret
 
         with patch.dict(postgres_cluster.__salt__,
                         {'postgres.cluster_list': mock,
@@ -71,13 +71,13 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
             ret.update({'comment': comt, 'result': True,
                         'changes': {'{0}/{1}'.format(version, name): 'Present'}
                         })
-            self.assertDictEqual(postgres_cluster.present(version, name),
-                                 ret)
+            assert postgres_cluster.present(version, name) == \
+                                 ret
             with patch.dict(postgres_cluster.__opts__, {'test': True}):
                 comt = 'Cluster {0}/{1} is set to be created'.format(version, name)
                 ret.update({'comment': comt, 'result': None, 'changes': {}})
-                self.assertDictEqual(postgres_cluster.present(version, name),
-                                     ret)
+                assert postgres_cluster.present(version, name) == \
+                                     ret
 
         with patch.dict(postgres_cluster.__salt__,
                         {'postgres.cluster_list': mock,
@@ -86,8 +86,8 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
                         }):
             comt = 'Failed to create cluster {0}/{1}'.format(version, name)
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(postgres_cluster.present(version, name),
-                                 ret)
+            assert postgres_cluster.present(version, name) == \
+                                 ret
 
     # 'absent' function tests: 1
 
@@ -111,15 +111,15 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(postgres_cluster.__opts__, {'test': True}):
                 comt = ('Cluster {0}/{1} is set to be removed'.format(version, name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(postgres_cluster.absent(version, name), ret)
+                assert postgres_cluster.absent(version, name) == ret
 
             with patch.dict(postgres_cluster.__opts__, {'test': False}):
                 comt = ('Cluster {0}/{1} has been removed'.format(version, name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {name: 'Absent'}})
-                self.assertDictEqual(postgres_cluster.absent(version, name), ret)
+                assert postgres_cluster.absent(version, name) == ret
 
                 comt = ('Cluster {0}/{1} is not present, so it cannot be removed'
                         .format(version, name))
                 ret.update({'comment': comt, 'result': True, 'changes': {}})
-                self.assertDictEqual(postgres_cluster.absent(version, name), ret)
+                assert postgres_cluster.absent(version, name) == ret

@@ -66,7 +66,7 @@ class MacUserModuleTest(ModuleCase):
         try:
             self.run_function('user.add', [ADD_USER])
             user_info = self.run_function('user.info', [ADD_USER])
-            self.assertEqual(ADD_USER, user_info['name'])
+            assert ADD_USER == user_info['name']
         except CommandExecutionError:
             self.run_function('user.delete', [ADD_USER])
             raise
@@ -83,7 +83,7 @@ class MacUserModuleTest(ModuleCase):
 
         # Now try to delete the added user
         ret = self.run_function('user.delete', [DEL_USER])
-        self.assertTrue(ret)
+        assert ret
 
     def test_mac_user_primary_group(self):
         '''
@@ -99,7 +99,7 @@ class MacUserModuleTest(ModuleCase):
             # Test mac_user.primary_group
             primary_group = self.run_function('user.primary_group', [PRIMARY_GROUP_USER])
             uid_info = self.run_function('user.info', [PRIMARY_GROUP_USER])
-            self.assertIn(primary_group, uid_info['groups'])
+            assert primary_group in uid_info['groups']
 
         except AssertionError:
             self.run_function('user.delete', [PRIMARY_GROUP_USER])
@@ -118,32 +118,32 @@ class MacUserModuleTest(ModuleCase):
             # Test mac_user.chuid
             self.run_function('user.chuid', [CHANGE_USER, 4376])
             uid_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(uid_info['uid'], 4376)
+            assert uid_info['uid'] == 4376
 
             # Test mac_user.chgid
             self.run_function('user.chgid', [CHANGE_USER, 4376])
             gid_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(gid_info['gid'], 4376)
+            assert gid_info['gid'] == 4376
 
             # Test mac.user.chshell
             self.run_function('user.chshell', [CHANGE_USER, '/bin/zsh'])
             shell_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(shell_info['shell'], '/bin/zsh')
+            assert shell_info['shell'] == '/bin/zsh'
 
             # Test mac_user.chhome
             self.run_function('user.chhome', [CHANGE_USER, '/Users/foo'])
             home_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(home_info['home'], '/Users/foo')
+            assert home_info['home'] == '/Users/foo'
 
             # Test mac_user.chfullname
             self.run_function('user.chfullname', [CHANGE_USER, 'Foo Bar'])
             fullname_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(fullname_info['fullname'], 'Foo Bar')
+            assert fullname_info['fullname'] == 'Foo Bar'
 
             # Test mac_user.chgroups
             self.run_function('user.chgroups', [CHANGE_USER, 'wheel'])
             groups_info = self.run_function('user.info', [CHANGE_USER])
-            self.assertEqual(groups_info['groups'], ['wheel'])
+            assert groups_info['groups'] == ['wheel']
 
         except AssertionError:
             self.run_function('user.delete', [CHANGE_USER])
@@ -159,17 +159,15 @@ class MacUserModuleTest(ModuleCase):
 
         try:
             # Does enable return True
-            self.assertTrue(
-                self.run_function('user.enable_auto_login',
-                                  ['Spongebob', 'Squarepants']))
+            assert self.run_function('user.enable_auto_login',
+                                  ['Spongebob', 'Squarepants'])
 
             # Did it set the user entry in the plist file
-            self.assertEqual(
-                self.run_function('user.get_auto_login'),
-                'Spongebob')
+            assert self.run_function('user.get_auto_login') == \
+                'Spongebob'
 
             # Did it generate the `/etc/kcpassword` file
-            self.assertTrue(os.path.exists('/etc/kcpassword'))
+            assert os.path.exists('/etc/kcpassword')
 
             # Are the contents of the file correct
             if six.PY2:
@@ -178,20 +176,20 @@ class MacUserModuleTest(ModuleCase):
                 test_data = b".\xc3\xb8'B\xc2\xa0\xc3\x99\xc2\xad\xc2\x8b\xc3\x8d\xc3\x8dl"
             with salt.utils.files.fopen('/etc/kcpassword', 'r' if six.PY2 else 'rb') as f:
                 file_data = f.read()
-            self.assertEqual(test_data, file_data)
+            assert test_data == file_data
 
             # Does disable return True
-            self.assertTrue(self.run_function('user.disable_auto_login'))
+            assert self.run_function('user.disable_auto_login')
 
             # Does it remove the user entry in the plist file
-            self.assertFalse(self.run_function('user.get_auto_login'))
+            assert not self.run_function('user.get_auto_login')
 
             # Is the `/etc/kcpassword` file removed
-            self.assertFalse(os.path.exists('/etc/kcpassword'))
+            assert not os.path.exists('/etc/kcpassword')
 
         finally:
             # Make sure auto_login is disabled
-            self.assertTrue(self.run_function('user.disable_auto_login'))
+            assert self.run_function('user.disable_auto_login')
 
             # Make sure autologin is disabled
             if self.run_function('user.get_auto_login'):
@@ -216,17 +214,17 @@ class MacUserModuleTest(ModuleCase):
                 raise Exception('Failed to enable auto login')
 
             # Does disable return True
-            self.assertTrue(self.run_function('user.disable_auto_login'))
+            assert self.run_function('user.disable_auto_login')
 
             # Does it remove the user entry in the plist file
-            self.assertFalse(self.run_function('user.get_auto_login'))
+            assert not self.run_function('user.get_auto_login')
 
             # Is the `/etc/kcpassword` file removed
-            self.assertFalse(os.path.exists('/etc/kcpassword'))
+            assert not os.path.exists('/etc/kcpassword')
 
         finally:
             # Make sure auto login is disabled
-            self.assertTrue(self.run_function('user.disable_auto_login'))
+            assert self.run_function('user.disable_auto_login')
 
             # Make sure auto login is disabled
             if self.run_function('user.get_auto_login'):

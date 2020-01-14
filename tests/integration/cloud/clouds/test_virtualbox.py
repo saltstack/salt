@@ -131,7 +131,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         Simply create a machine and make sure it was created
         """
         machines = self.run_cloud('-p {0} {1} --log-level=debug'.format(PROFILE_NAME, INSTANCE_NAME))
-        self.assertIn(INSTANCE_NAME, machines.keys())
+        assert INSTANCE_NAME in machines.keys()
 
     def test_cloud_list(self):
         """
@@ -141,14 +141,14 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
 
         expected_attributes = MINIMAL_MACHINE_ATTRIBUTES
         names = machines.keys()
-        self.assertGreaterEqual(len(names), 1, "No machines found")
+        assert len(names) >= 1, "No machines found"
         for name, machine in six.iteritems(machines):
             if six.PY3:
                 self.assertCountEqual(expected_attributes, machine.keys())
             else:
                 self.assertItemsEqual(expected_attributes, machine.keys())
 
-        self.assertIn(BASE_BOX_NAME, names)
+        assert BASE_BOX_NAME in names
 
     def test_cloud_list_full(self):
         """
@@ -158,11 +158,11 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         expected_minimal_attribute_count = len(MINIMAL_MACHINE_ATTRIBUTES)
 
         names = machines.keys()
-        self.assertGreaterEqual(len(names), 1, "No machines found")
+        assert len(names) >= 1, "No machines found"
         for name, machine in six.iteritems(machines):
-            self.assertGreaterEqual(len(machine.keys()), expected_minimal_attribute_count)
+            assert len(machine.keys()) >= expected_minimal_attribute_count
 
-        self.assertIn(BASE_BOX_NAME, names)
+        assert BASE_BOX_NAME in names
 
     def test_cloud_list_select(self):
         """
@@ -173,14 +173,14 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         expected_attributes = ["id"]
 
         names = machines.keys()
-        self.assertGreaterEqual(len(names), 1, "No machines found")
+        assert len(names) >= 1, "No machines found"
         for name, machine in six.iteritems(machines):
             if six.PY3:
                 self.assertCountEqual(expected_attributes, machine.keys())
             else:
                 self.assertItemsEqual(expected_attributes, machine.keys())
 
-        self.assertIn(BASE_BOX_NAME, names)
+        assert BASE_BOX_NAME in names
 
     def test_cloud_destroy(self):
         """
@@ -191,7 +191,7 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         ret = self.run_cloud_destroy(INSTANCE_NAME)
 
         # destroy the instance
-        self.assertIn(INSTANCE_NAME, ret.keys())
+        assert INSTANCE_NAME in ret.keys()
 
     def test_function_show_instance(self):
         kw_function_args = {
@@ -199,9 +199,9 @@ class VirtualboxProviderTest(VirtualboxCloudTestCase):
         }
         machines = self.run_cloud_function('show_image', kw_function_args, timeout=30)
         expected_minimal_attribute_count = len(MINIMAL_MACHINE_ATTRIBUTES)
-        self.assertIn(BASE_BOX_NAME, machines)
+        assert BASE_BOX_NAME in machines
         machine = machines[BASE_BOX_NAME]
-        self.assertGreaterEqual(len(machine.keys()), expected_minimal_attribute_count)
+        assert len(machine.keys()) >= expected_minimal_attribute_count
 
     def tearDown(self):
         """
@@ -297,30 +297,30 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 
     def test_deploy(self):
         machines = self.run_cloud('-p {0} {1} --log-level=debug'.format(DEPLOY_PROFILE_NAME, INSTANCE_NAME))
-        self.assertIn(INSTANCE_NAME, machines.keys())
+        assert INSTANCE_NAME in machines.keys()
         machine = machines[INSTANCE_NAME]
-        self.assertIn("deployed", machine)
-        self.assertTrue(machine["deployed"], "Machine wasn't deployed :(")
+        assert "deployed" in machine
+        assert machine["deployed"], "Machine wasn't deployed :("
 
     def test_start_stop_action(self):
         res = self.run_cloud_action("start", BOOTABLE_BASE_BOX_NAME, timeout=10)
         log.info(res)
 
         machine = res.get(BOOTABLE_BASE_BOX_NAME)
-        self.assertIsNotNone(machine)
+        assert machine is not None
         expected_state = "Running"
         state = machine.get("state")
-        self.assertEqual(state, expected_state)
+        assert state == expected_state
 
         res = self.run_cloud_action("stop", BOOTABLE_BASE_BOX_NAME, timeout=10)
         log.info(res)
 
         machine = res.get(BOOTABLE_BASE_BOX_NAME)
-        self.assertIsNotNone(machine)
+        assert machine is not None
 
         expected_state = "PoweredOff"
         state = machine.get("state")
-        self.assertEqual(state, expected_state)
+        assert state == expected_state
 
     def test_restart_action(self):
         pass
@@ -330,13 +330,13 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
         ip_addresses = vb_get_network_addresses(machine_name=BOOTABLE_BASE_BOX_NAME)
 
         network_count = len(ip_addresses)
-        self.assertEqual(network_count, 0)
+        assert network_count == 0
 
         # Machine is up again
         vb_start_vm(BOOTABLE_BASE_BOX_NAME)
         ip_addresses = vb_wait_for_network_address(20, machine_name=BOOTABLE_BASE_BOX_NAME)
         network_count = len(ip_addresses)
-        self.assertGreater(network_count, 0)
+        assert network_count > 0
 
         for ip_address in ip_addresses:
             self.assertIsIpAddress(ip_address)
@@ -345,7 +345,7 @@ class VirtualboxProviderHeavyTests(VirtualboxCloudTestCase):
 @skipIf(HAS_LIBS is False, 'The \'vboxapi\' library is not available')
 class BaseVirtualboxTests(TestCase):
     def test_get_manager(self):
-        self.assertIsNotNone(vb_get_box())
+        assert vb_get_box() is not None
 
 
 class CreationDestructionVirtualboxTests(VirtualboxTestCase):
@@ -377,7 +377,7 @@ class CloneVirtualboxTests(VirtualboxTestCase):
             name=vb_name,
             clone_from=self.name
         )
-        self.assertEqual(machine.get("name"), vb_name)
+        assert machine.get("name") == vb_name
         self.assertMachineExists(vb_name)
 
         vb_destroy_machine(vb_name)
@@ -391,10 +391,10 @@ class BootVirtualboxTests(VirtualboxTestCase):
     def test_start_stop(self):
         for i in range(2):
             machine = vb_start_vm(BOOTABLE_BASE_BOX_NAME, 20000)
-            self.assertEqual(machine_get_machinestate_str(machine), "Running")
+            assert machine_get_machinestate_str(machine) == "Running"
 
             machine = vb_stop_vm(BOOTABLE_BASE_BOX_NAME)
-            self.assertEqual(machine_get_machinestate_str(machine), "PoweredOff")
+            assert machine_get_machinestate_str(machine) == "PoweredOff"
 
 
 class XpcomConversionTests(TestCase):
@@ -416,7 +416,7 @@ class XpcomConversionTests(TestCase):
         xpcom = XpcomConversionTests._mock_xpcom_object()
 
         ret = vb_xpcom_to_attribute_dict(xpcom)
-        self.assertDictEqual(ret, dict())
+        assert ret == dict()
 
     def test_imachine_object_default(self):
 
@@ -426,10 +426,10 @@ class XpcomConversionTests(TestCase):
         ret = vb_xpcom_to_attribute_dict(imachine, interface_name=interface)
         expected_attributes = XPCOM_ATTRIBUTES[interface]
 
-        self.assertIsNotNone(expected_attributes, "%s is unknown")
+        assert expected_attributes is not None, "%s is unknown"
 
         for key in ret:
-            self.assertIn(key, expected_attributes)
+            assert key in expected_attributes
 
     def test_override_attributes(self):
 
@@ -442,7 +442,7 @@ class XpcomConversionTests(TestCase):
         xpc = XpcomConversionTests._mock_xpcom_object(attributes=expected_dict)
 
         ret = vb_xpcom_to_attribute_dict(xpc, attributes=expected_dict.keys())
-        self.assertDictEqual(ret, expected_dict)
+        assert ret == expected_dict
 
     def test_extra_attributes(self):
 
@@ -460,11 +460,11 @@ class XpcomConversionTests(TestCase):
             interface_name=interface,
             extra_attributes=expected_extras.keys()
         )
-        self.assertDictEqual(ret, expected_machine)
+        assert ret == expected_machine
 
         ret_keys = ret.keys()
         for key in expected_extras:
-            self.assertIn(key, ret_keys)
+            assert key in ret_keys
 
     def test_extra_nonexistent_attributes(self):
         expected_extra_dict = {
@@ -473,7 +473,7 @@ class XpcomConversionTests(TestCase):
         xpcom = XpcomConversionTests._mock_xpcom_object()
 
         ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extra_dict.keys())
-        self.assertDictEqual(ret, expected_extra_dict)
+        assert ret == expected_extra_dict
 
     def test_extra_nonexistent_attribute_with_default(self):
         expected_extras = [("nonexistent", list)]
@@ -483,4 +483,4 @@ class XpcomConversionTests(TestCase):
         xpcom = XpcomConversionTests._mock_xpcom_object()
 
         ret = vb_xpcom_to_attribute_dict(xpcom, extra_attributes=expected_extras)
-        self.assertDictEqual(ret, expected_extra_dict)
+        assert ret == expected_extra_dict

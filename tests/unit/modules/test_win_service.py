@@ -46,8 +46,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                                                {'StartType': 'Manual'},
                                                {'StartType': 'Disabled'}])
             with patch.object(win_service, 'info', mock_info):
-                self.assertListEqual(win_service.get_enabled(),
-                                     ['spongebob'])
+                assert win_service.get_enabled() == \
+                                     ['spongebob']
 
     def test_get_disabled(self):
         '''
@@ -61,8 +61,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                                                {'StartType': 'Manual'},
                                                {'StartType': 'Disabled'}])
             with patch.object(win_service, 'info', mock_info):
-                self.assertListEqual(win_service.get_disabled(),
-                                     ['patrick', 'squarepants'])
+                assert win_service.get_disabled() == \
+                                     ['patrick', 'squarepants']
 
     def test_available(self):
         '''
@@ -71,7 +71,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['c', 'a', 'b'])
         with patch.object(win_service, 'get_all', mock):
-            self.assertTrue(win_service.available("a"))
+            assert win_service.available("a")
 
     def test_missing(self):
         '''
@@ -79,7 +79,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=['c', 'a', 'b'])
         with patch.object(win_service, 'get_all', mock):
-            self.assertTrue(win_service.missing("d"))
+            assert win_service.missing("d")
 
     def test_get_all(self):
         '''
@@ -89,8 +89,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                                        {'ServiceName': 'squarepants'},
                                        {'ServiceName': 'patrick'}])
         with patch.object(win_service, '_get_services', mock):
-            self.assertListEqual(win_service.get_all(),
-                                 ['patrick', 'spongebob', 'squarepants'])
+            assert win_service.get_all() == \
+                                 ['patrick', 'spongebob', 'squarepants']
 
     def test_get_service_name(self):
         '''
@@ -104,12 +104,12 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                                        {'ServiceName': 'patrick',
                                         'DisplayName': 'Patrick the Starfish'}])
         with patch.object(win_service, '_get_services', mock):
-            self.assertDictEqual(win_service.get_service_name(),
+            assert win_service.get_service_name() == \
                                  {'Patrick the Starfish': 'patrick',
                                   'Sponge Bob': 'spongebob',
-                                  'Square Pants': 'squarepants'})
-            self.assertDictEqual(win_service.get_service_name('patrick'),
-                                 {'Patrick the Starfish': 'patrick'})
+                                  'Square Pants': 'squarepants'}
+            assert win_service.get_service_name('patrick') == \
+                                 {'Patrick the Starfish': 'patrick'}
 
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_start(self):
@@ -123,7 +123,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win32serviceutil, 'StartService', mock_true), \
                 patch.object(win_service, 'disabled', mock_false), \
                 patch.object(win_service, 'info', mock_info):
-            self.assertTrue(win_service.start('spongebob'))
+            assert win_service.start('spongebob')
 
         mock_info = MagicMock(side_effect=[{'Status': 'Stopped', 'Status_WaitHint': 0},
                                            {'Status': 'Start Pending', 'Status_WaitHint': 0},
@@ -133,7 +133,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                 patch.object(win_service, 'disabled', mock_false), \
                 patch.object(win_service, 'info', mock_info), \
                 patch.object(win_service, 'status', mock_true):
-            self.assertTrue(win_service.start('spongebob'))
+            assert win_service.start('spongebob')
 
     @skipIf(not WINAPI, 'pywintypes not available')
     def test_start_already_running(self):
@@ -149,7 +149,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win32serviceutil, 'StartService', mock_error), \
                  patch.object(win_service, 'disabled', mock_false), \
                  patch.object(win_service, '_status_wait', mock_info):
-            self.assertTrue(win_service.start('spongebob'))
+            assert win_service.start('spongebob')
 
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_stop(self):
@@ -162,7 +162,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(win32serviceutil, 'StopService', mock_true), \
                 patch.object(win_service, '_status_wait', mock_info):
-            self.assertTrue(win_service.stop('spongebob'))
+            assert win_service.stop('spongebob')
 
         mock_info = MagicMock(side_effect=[{'Status': 'Running', 'Status_WaitHint': 0},
                                            {'Status': 'Stop Pending', 'Status_WaitHint': 0},
@@ -171,7 +171,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(win32serviceutil, 'StopService', mock_true), \
                 patch.object(win_service, 'info', mock_info), \
                 patch.object(win_service, 'status', mock_false):
-            self.assertTrue(win_service.stop('spongebob'))
+            assert win_service.stop('spongebob')
 
     @skipIf(not WINAPI, 'pywintypes not available')
     def test_stop_not_running(self):
@@ -185,7 +185,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_info = MagicMock(side_effect=[{'Status': 'Stopped'}])
         with patch.object(win32serviceutil, 'StopService', mock_error), \
                 patch.object(win_service, '_status_wait', mock_info):
-            self.assertTrue(win_service.stop('spongebob'))
+            assert win_service.stop('spongebob')
 
     def test_restart(self):
         '''
@@ -196,11 +196,11 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                           mock_true):
             with patch.object(win_service, 'execute_salt_restart_task',
                               mock_true):
-                self.assertTrue(win_service.restart("salt-minion"))
+                assert win_service.restart("salt-minion")
 
         with patch.object(win_service, 'stop', mock_true):
             with patch.object(win_service, 'start', mock_true):
-                self.assertTrue(win_service.restart("salt"))
+                assert win_service.restart("salt")
 
     def test_createwin_saltrestart_task(self):
         '''
@@ -230,7 +230,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_true = MagicMock(return_value=True)
         with patch.dict(win_service.__salt__, {'task.run': mock_true}):
-            self.assertTrue(win_service.execute_salt_restart_task())
+            assert win_service.execute_salt_restart_task()
 
     @skipIf(not WINAPI, 'win32serviceutil not available')
     def test_status(self):
@@ -242,9 +242,9 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                                            {'Status': 'Stopped'}])
 
         with patch.object(win_service, 'info', mock_info):
-            self.assertTrue(win_service.status('spongebob'))
-            self.assertTrue(win_service.status('patrick'))
-            self.assertFalse(win_service.status('squidward'))
+            assert win_service.status('spongebob')
+            assert win_service.status('patrick')
+            assert not win_service.status('squidward')
 
     def test_getsid(self):
         '''
@@ -253,9 +253,9 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_info = MagicMock(side_effect=[{'sid': 'S-1-5-80-1956725871...'},
                                            {'sid': None}])
         with patch.object(win_service, 'info', mock_info):
-            self.assertEqual(win_service.getsid('spongebob'),
-                             'S-1-5-80-1956725871...')
-            self.assertEqual(win_service.getsid('plankton'), None)
+            assert win_service.getsid('spongebob') == \
+                             'S-1-5-80-1956725871...'
+            assert win_service.getsid('plankton') is None
 
     def test_enable(self):
         '''
@@ -266,7 +266,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
                                             'StartTypeDelayed': False})
         with patch.object(win_service, 'modify', mock_modify):
             with patch.object(win_service, 'info', mock_info):
-                self.assertTrue(win_service.enable('spongebob'))
+                assert win_service.enable('spongebob')
 
     def test_disable(self):
         '''
@@ -276,7 +276,7 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock_info = MagicMock(return_value={'StartType': 'Disabled'})
         with patch.object(win_service, 'modify', mock_modify):
             with patch.object(win_service, 'info', mock_info):
-                self.assertTrue(win_service.disable('spongebob'))
+                assert win_service.disable('spongebob')
 
     def test_enabled(self):
         '''
@@ -286,8 +286,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[{'StartType': 'Auto'},
                                       {'StartType': 'Disabled'}])
         with patch.object(win_service, 'info', mock):
-            self.assertTrue(win_service.enabled('spongebob'))
-            self.assertFalse(win_service.enabled('squarepants'))
+            assert win_service.enabled('spongebob')
+            assert not win_service.enabled('squarepants')
 
     def test_enabled_with_space_in_name(self):
         '''
@@ -298,8 +298,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[{'StartType': 'Auto'},
                                       {'StartType': 'Disabled'}])
         with patch.object(win_service, 'info', mock):
-            self.assertTrue(win_service.enabled('spongebob test'))
-            self.assertFalse(win_service.enabled('squarepants test'))
+            assert win_service.enabled('spongebob test')
+            assert not win_service.enabled('squarepants test')
 
     def test_disabled(self):
         '''
@@ -308,8 +308,8 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[False, True])
         with patch.object(win_service, 'enabled', mock):
-            self.assertTrue(win_service.disabled('spongebob'))
-            self.assertFalse(win_service.disabled('squarepants'))
+            assert win_service.disabled('spongebob')
+            assert not win_service.disabled('squarepants')
 
     def test_cmd_quote(self):
         '''
@@ -320,16 +320,16 @@ class WinServiceTestCase(TestCase, LoaderModuleMockMixin):
 
         # test no quotes
         bin_path = r'C:\Program Files\salt\test.exe'
-        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+        assert win_service._cmd_quote(bin_path) == expected
 
         # test single quotes
         bin_path = r"'C:\Program Files\salt\test.exe'"
-        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+        assert win_service._cmd_quote(bin_path) == expected
 
         # test double quoted single quotes
         bin_path = '"\'C:\\Program Files\\salt\\test.exe\'"'
-        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+        assert win_service._cmd_quote(bin_path) == expected
 
         # test single quoted, double quoted, single quotes
         bin_path = "\'\"\'C:\\Program Files\\salt\\test.exe\'\"\'"
-        self.assertEqual(win_service._cmd_quote(bin_path), expected)
+        assert win_service._cmd_quote(bin_path) == expected

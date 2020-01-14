@@ -92,9 +92,8 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
 
         # Check minion state
         for minion in minions:
-            self.assertEqual(
-                minion.is_running(),
-                minion_running,
+            assert minion.is_running() == \
+                minion_running, \
                 'script action "{0}" should result in minion "{1}" {2} and is not.\nSTDOUT:{3}\nSTDERR:{4}'.format(
                     action,
                     minion.name,
@@ -102,12 +101,10 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                     std_out,
                     std_err,
                 )
-            )
 
         if exitstatus is not None:
-            self.assertEqual(
-                ret[2],
-                exitstatus,
+            assert ret[2] == \
+                exitstatus, \
                 'script action "{0}" {1} exited {2}, must be {3}\nSTDOUT:{4}\nSTDERR:{5}'.format(
                     action,
                     message,
@@ -116,7 +113,6 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                     std_out,
                     std_err,
                 )
-            )
         return ret
 
     def _initscript_setup(self, minions):
@@ -212,15 +208,13 @@ class MinionTest(ShellCase, testprogram.TestProgramCase, ShellCaseCommonTestsMix
                 minfo = segs[0].split(':')
                 mpids[minfo[-1]] = int(segs[-1]) if segs[-1].isdigit() else None
             for minion in minions:
-                self.assertEqual(
-                    minion.daemon_pid,
-                    mpids[minion.name],
+                assert minion.daemon_pid == \
+                    mpids[minion.name], \
                     'PID in "{0}" is {1} and does not match status PID {2}'.format(
                         minion.abs_path(minion.pid_path),
                         minion.daemon_pid,
                         mpids[minion.name],
                     )
-                )
 
             ret = self._run_initscript(init_script, minions,     True,  'start',       0, 'when running')
             ret = self._run_initscript(init_script, minions,     True,  'condrestart', 0, 'when running')

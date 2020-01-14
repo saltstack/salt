@@ -32,6 +32,7 @@ from salt.utils.versions import LooseVersion
 
 # Import 3rd party Libs
 import salt.ext as six
+import pytest
 
 log = logging.getLogger(__name__)
 
@@ -126,7 +127,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ca_path = '/etc/tls'
         mock_opt = MagicMock(return_value=ca_path)
         with patch.dict(tls.__salt__, {'config.option': mock_opt}):
-            self.assertEqual(tls.cert_base_path(), ca_path)
+            assert tls.cert_base_path() == ca_path
 
     def test_set_ca_cert_path(self):
         '''
@@ -137,7 +138,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'ca.contextual_cert_base_path': '/tmp/ca_cert_test_path'}
         with patch.dict(tls.__salt__, {'config.option': mock_opt}):
             tls.set_ca_path(ca_path)
-            self.assertEqual(tls.__context__, ret)
+            assert tls.__context__ == ret
 
     def test_ca_exists(self):
         '''
@@ -150,7 +151,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.exists', MagicMock(return_value=False)), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertFalse(tls.ca_exists(ca_name))
+            assert not tls.ca_exists(ca_name)
 
     def test_ca_exists_true(self):
         '''
@@ -163,7 +164,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.exists', MagicMock(return_value=True)), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertTrue(tls.ca_exists(ca_name))
+            assert tls.ca_exists(ca_name)
 
     def test_get_ca_fail(self):
         '''
@@ -176,7 +177,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.exists', MagicMock(return_value=False)), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertRaises(ValueError, tls.get_ca, ca_name)
+            with pytest.raises(ValueError):
+                tls.get_ca(ca_name)
 
     def test_get_ca_text(self):
         '''
@@ -191,8 +193,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.exists', MagicMock(return_value=True)), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertEqual(tls.get_ca(ca_name, as_text=True),
-                             _TLS_TEST_DATA['ca_cert'])
+            assert tls.get_ca(ca_name, as_text=True) == \
+                             _TLS_TEST_DATA['ca_cert']
 
     def test_get_ca(self):
         '''
@@ -206,7 +208,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch('os.path.exists', MagicMock(return_value=True)), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertEqual(tls.get_ca(ca_name), certp)
+            assert tls.get_ca(ca_name) == certp
 
     def test_cert_info(self):
         '''
@@ -295,7 +297,7 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                     result = {}
 
             remove_not_in_result(ret, result)
-            self.assertEqual(result, ret)
+            assert result == ret
 
     @with_tempdir()
     def test_create_ca(self, ca_path):
@@ -313,13 +315,12 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(tls.__opts__, {'hash_type': 'sha256', 'cachedir': ca_path}), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertEqual(
-                tls.create_ca(
+            assert tls.create_ca(
                     ca_name,
                     days=365,
                     fixmode=False,
-                    **_TLS_TEST_DATA['create_ca']),
-                ret)
+                    **_TLS_TEST_DATA['create_ca']) == \
+                ret
 
     @with_tempdir()
     def test_recreate_ca(self, ca_path):
@@ -339,13 +340,12 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(tls.__opts__, {'hash_type': 'sha256', 'cachedir': ca_path}), \
                 patch.dict(_TLS_TEST_DATA['create_ca'], {'replace': True}):
             tls.create_ca(ca_name)
-            self.assertEqual(
-                tls.create_ca(
+            assert tls.create_ca(
                     ca_name,
                     days=365,
                     fixmode=False,
-                    **_TLS_TEST_DATA['create_ca']),
-                ret)
+                    **_TLS_TEST_DATA['create_ca']) == \
+                ret
 
     @with_tempdir()
     def test_create_csr(self, ca_path):
@@ -372,11 +372,10 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
             tls.create_ca(ca_name)
-            self.assertEqual(
-                tls.create_csr(
+            assert tls.create_csr(
                     ca_name,
-                    **_TLS_TEST_DATA['create_ca']),
-                ret)
+                    **_TLS_TEST_DATA['create_ca']) == \
+                ret
 
     @with_tempdir()
     def test_recreate_csr(self, ca_path):
@@ -408,11 +407,10 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=True)):
             tls.create_ca(ca_name)
             tls.create_csr(ca_name)
-            self.assertEqual(
-                tls.create_csr(
+            assert tls.create_csr(
                     ca_name,
-                    **_TLS_TEST_DATA['create_ca']),
-                ret)
+                    **_TLS_TEST_DATA['create_ca']) == \
+                ret
 
     @with_tempdir()
     def test_create_self_signed_cert(self, ca_path):
@@ -437,12 +435,11 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                                           'cachedir': ca_path}), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertEqual(
-                tls.create_self_signed_cert(
+            assert tls.create_self_signed_cert(
                     tls_dir=tls_dir,
                     days=365,
-                    **_TLS_TEST_DATA['create_ca']),
-                ret)
+                    **_TLS_TEST_DATA['create_ca']) == \
+                ret
 
     @with_tempdir()
     def test_recreate_self_signed_cert(self, ca_path):
@@ -467,12 +464,11 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                                           'cachedir': ca_path}), \
                 patch('salt.modules.tls.maybe_fix_ssl_version',
                       MagicMock(return_value=True)):
-            self.assertEqual(
-                tls.create_self_signed_cert(
+            assert tls.create_self_signed_cert(
                     tls_dir=tls_dir,
                     days=365,
-                    **_TLS_TEST_DATA['create_ca']),
-                ret)
+                    **_TLS_TEST_DATA['create_ca']) == \
+                ret
 
     @with_tempdir()
     def test_create_ca_signed_cert(self, ca_path):
@@ -498,11 +494,10 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=True)):
             tls.create_ca(ca_name)
             tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
-            self.assertEqual(
-                tls.create_ca_signed_cert(
+            assert tls.create_ca_signed_cert(
                     ca_name,
-                    _TLS_TEST_DATA['create_ca']['CN']),
-                ret)
+                    _TLS_TEST_DATA['create_ca']['CN']) == \
+                ret
 
     @with_tempdir()
     def test_recreate_ca_signed_cert(self, ca_path):
@@ -530,12 +525,11 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             tls.create_csr(ca_name)
             tls.create_ca_signed_cert(ca_name,
                                       _TLS_TEST_DATA['create_ca']['CN'])
-            self.assertEqual(
-                tls.create_ca_signed_cert(
+            assert tls.create_ca_signed_cert(
                     ca_name,
                     _TLS_TEST_DATA['create_ca']['CN'],
-                    replace=True),
-                ret)
+                    replace=True) == \
+                ret
 
     @with_tempdir()
     def test_create_pkcs12(self, ca_path):
@@ -563,11 +557,10 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             tls.create_csr(ca_name, **_TLS_TEST_DATA['create_ca'])
             tls.create_ca_signed_cert(ca_name,
                                       _TLS_TEST_DATA['create_ca']['CN'])
-            self.assertEqual(
-                tls.create_pkcs12(ca_name,
+            assert tls.create_pkcs12(ca_name,
                                   _TLS_TEST_DATA['create_ca']['CN'],
-                                  'password'),
-                ret)
+                                  'password') == \
+                ret
 
     @with_tempdir()
     def test_recreate_pkcs12(self, ca_path):
@@ -599,13 +592,12 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
             tls.create_pkcs12(ca_name,
                               _TLS_TEST_DATA['create_ca']['CN'],
                               'password')
-            self.assertEqual(
-                tls.create_pkcs12(ca_name,
+            assert tls.create_pkcs12(ca_name,
                                   _TLS_TEST_DATA[
                                       'create_ca']['CN'],
                                   'password',
-                                  replace=True),
-                ret)
+                                  replace=True) == \
+                ret
 
     def test_pyOpenSSL_version(self):
         '''
@@ -616,26 +608,28 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(tls.__dict__, {
                         'OpenSSL_version': LooseVersion('0.1.1'),
                         'X509_EXT_ENABLED': False}):
-            self.assertEqual(tls.__virtual__(),
+            assert tls.__virtual__() == \
                              (False, 'PyOpenSSL version 0.10 or later must be installed '
-                                     'before this module can be used.'))
+                                     'before this module can be used.')
             with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
-                self.assertRaises(AssertionError, tls.get_extensions, 'server')
-                self.assertRaises(AssertionError, tls.get_extensions, 'client')
+                with pytest.raises(AssertionError):
+                    tls.get_extensions('server')
+                with pytest.raises(AssertionError):
+                    tls.get_extensions('client')
         with patch.dict(tls.__dict__, {
                         'OpenSSL_version': LooseVersion('0.14.1'),
                         'X509_EXT_ENABLED': True}):
-            self.assertTrue(tls.__virtual__())
+            assert tls.__virtual__()
             with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
-                self.assertEqual(tls.get_extensions('server'), pillarval)
-                self.assertEqual(tls.get_extensions('client'), pillarval)
+                assert tls.get_extensions('server') == pillarval
+                assert tls.get_extensions('client') == pillarval
         with patch.dict(tls.__dict__, {
                         'OpenSSL_version': LooseVersion('0.15.1'),
                         'X509_EXT_ENABLED': True}):
-            self.assertTrue(tls.__virtual__())
+            assert tls.__virtual__()
             with patch.dict(tls.__salt__, {'pillar.get': mock_pgt}):
-                self.assertEqual(tls.get_extensions('server'), pillarval)
-                self.assertEqual(tls.get_extensions('client'), pillarval)
+                assert tls.get_extensions('server') == pillarval
+                assert tls.get_extensions('client') == pillarval
 
     @with_tempdir()
     def test_pyOpenSSL_version_destructive(self, ca_path):
@@ -663,35 +657,32 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                                     'OpenSSL_version':
                                         LooseVersion('0.1.1'),
                                     'X509_EXT_ENABLED': False}):
-                        self.assertEqual(
-                            tls.create_ca(
+                        assert tls.create_ca(
                                 ca_name,
                                 days=365,
                                 fixmode=False,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+                                **_TLS_TEST_DATA['create_ca']) == \
+                            ret
                     with patch.dict(tls.__dict__, {
                                     'OpenSSL_version':
                                         LooseVersion('0.14.1'),
                                     'X509_EXT_ENABLED': True}):
-                        self.assertEqual(
-                            tls.create_ca(
+                        assert tls.create_ca(
                                 ca_name,
                                 days=365,
                                 fixmode=False,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+                                **_TLS_TEST_DATA['create_ca']) == \
+                            ret
                     with patch.dict(tls.__dict__, {
                                     'OpenSSL_version':
                                         LooseVersion('0.15.1'),
                                     'X509_EXT_ENABLED': True}):
-                        self.assertEqual(
-                            tls.create_ca(
+                        assert tls.create_ca(
                                 ca_name,
                                 days=365,
                                 fixmode=False,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+                                **_TLS_TEST_DATA['create_ca']) == \
+                            ret
 
         certp = '{0}/{1}/certs/{2}.csr'.format(
             ca_path,
@@ -719,9 +710,8 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                                     'X509_EXT_ENABLED': False}):
                         tls.create_ca(ca_name)
                         tls.create_csr(ca_name)
-                        self.assertRaises(ValueError,
-                                          tls.create_csr,
-                                          ca_name,
+                        with pytest.raises(ValueError):
+                            tls.create_csr(ca_name,
                                           **_TLS_TEST_DATA['create_ca'])
                     with patch.dict(tls.__dict__, {
                                     'OpenSSL_version':
@@ -729,33 +719,27 @@ class TLSAddTestCase(TestCase, LoaderModuleMockMixin):
                                     'X509_EXT_ENABLED': True}):
                         tls.create_ca(ca_name)
                         tls.create_csr(ca_name)
-                        self.assertEqual(
-                            tls.create_csr(
+                        assert tls.create_csr(
                                 ca_name,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+                                **_TLS_TEST_DATA['create_ca']) == \
+                            ret
                     with patch.dict(tls.__dict__, {
                                     'OpenSSL_version':
                                         LooseVersion('0.15.1'),
                                     'X509_EXT_ENABLED': True}):
                         tls.create_ca(ca_name)
                         tls.create_csr(ca_name)
-                        self.assertEqual(
-                            tls.create_csr(
+                        assert tls.create_csr(
                                 ca_name,
-                                **_TLS_TEST_DATA['create_ca']),
-                            ret)
+                                **_TLS_TEST_DATA['create_ca']) == \
+                            ret
 
     def test_get_expiration_date(self):
         with patch('salt.utils.files.fopen',
                    mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
-            self.assertEqual(
-                tls.get_expiration_date('/path/to/cert'),
+            assert tls.get_expiration_date('/path/to/cert') == \
                 '2016-05-04'
-            )
         with patch('salt.utils.files.fopen',
                    mock_open(read_data=_TLS_TEST_DATA['ca_cert'])):
-            self.assertEqual(
-                tls.get_expiration_date('/path/to/cert', date_format='%d/%m/%y'),
+            assert tls.get_expiration_date('/path/to/cert', date_format='%d/%m/%y') == \
                 '04/05/16'
-            )

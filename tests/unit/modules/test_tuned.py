@@ -39,13 +39,12 @@ class TunedListTestCase(TestCase, LoaderModuleMockMixin):
 Current active profile: throughput-performance'''
         mock_cmd = MagicMock(return_value=tuned_list)
         with patch.dict(tuned.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(
-                tuned.list_(),
+            assert tuned.list_() == \
                 ['throughput-performance', 'virtual-guest',
                  'latency-performance', 'laptop-battery-powersave',
                  'laptop-ac-powersave', 'virtual-host',
                  'desktop-powersave', 'server-powersave',
-                 'spindown-disk', 'sap', 'enterprise-storage', 'default'])
+                 'spindown-disk', 'sap', 'enterprise-storage', 'default']
 
     def test_v_271(self):
         '''
@@ -66,9 +65,8 @@ Current active profile: virtual-guest
 '''
         mock_cmd = MagicMock(return_value=tuned_list)
         with patch.dict(tuned.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(
-                tuned.list_(),
+            assert tuned.list_() == \
                 ['balanced', 'desktop', 'latency-performance',
                  'network-latency', 'network-throughput', 'powersave',
                  'throughput-performance', 'virtual-guest',
-                 'virtual-host'])
+                 'virtual-host']

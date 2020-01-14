@@ -65,12 +65,12 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
                                            'win_pki.get_cert_file': mock_cert_file,
                                            'win_pki.import_cert': mock_import_cert}):
             with patch.dict(win_pki.__opts__, {'test': False}):
-                self.assertEqual(win_pki.import_cert(**kwargs), ret)
+                assert win_pki.import_cert(**kwargs) == ret
             with patch.dict(win_pki.__opts__, {'test': True}):
                 ret['comment'] = ("Certificate '{0}' will be imported into store:"
                                   " {1}").format(THUMBPRINT, STORE_PATH)
                 ret['result'] = None
-                self.assertEqual(win_pki.import_cert(**kwargs), ret)
+                assert win_pki.import_cert(**kwargs) == ret
 
     def test_remove_cert(self):
         '''
@@ -91,9 +91,9 @@ class WinPkiTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_pki.__salt__, {'win_pki.get_certs': mock_certs,
                                            'win_pki.remove_cert': mock_remove_cert}):
             with patch.dict(win_pki.__opts__, {'test': False}):
-                self.assertEqual(win_pki.remove_cert(**kwargs), ret)
+                assert win_pki.remove_cert(**kwargs) == ret
             with patch.dict(win_pki.__opts__, {'test': True}):
                 ret['comment'] = ("Certificate '{0}' will be removed from store:"
                                  " {1}").format(kwargs['thumbprint'], STORE_PATH)
                 ret['result'] = None
-                self.assertEqual(win_pki.remove_cert(**kwargs), ret)
+                assert win_pki.remove_cert(**kwargs) == ret

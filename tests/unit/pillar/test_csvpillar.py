@@ -21,7 +21,7 @@ class CSVPillarTestCase(TestCase):
         with patch('salt.utils.files.fopen', fopen_mock):
             result = csvpillar.ext_pillar(mid='minion1', pillar=None,
                                           path="/fake/path/file.csv", idkey="id", namespace=None)
-            self.assertDictEqual(fake_dict, result)
+            assert fake_dict == result
 
     def test_002_load_utf8_csv_namespc(self):
         fake_csv = "id,foo,bar\r\nminion1,foo1,bar1"
@@ -30,4 +30,4 @@ class CSVPillarTestCase(TestCase):
         with patch('salt.utils.files.fopen', fopen_mock):
             result = csvpillar.ext_pillar(mid='minion1', pillar=None,
                                           path="/fake/path/file.csv", idkey="id", namespace='baz')
-            self.assertDictEqual(fake_dict, result)
+            assert fake_dict == result

@@ -32,8 +32,8 @@ class StdTest(ModuleCase):
                 )
         for ret in cmd_iter:
             data = ret['minion']['ret']
-            self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
-            self.assertEqual(data['kwargs']['qux'], 'quux')
+            assert data['args'] == ['foo', 'bar', 'baz']
+            assert data['kwargs']['qux'] == 'quux'
 
     def test_iter(self):
         '''
@@ -47,8 +47,8 @@ class StdTest(ModuleCase):
                 )
         for ret in cmd_iter:
             data = ret['minion']['ret']
-            self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
-            self.assertEqual(data['kwargs']['qux'], 'quux')
+            assert data['args'] == ['foo', 'bar', 'baz']
+            assert data['kwargs']['qux'] == 'quux'
 
     def test_iter_no_block(self):
         '''
@@ -64,8 +64,8 @@ class StdTest(ModuleCase):
             if ret is None:
                 continue
             data = ret['minion']['ret']
-            self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
-            self.assertEqual(data['kwargs']['qux'], 'quux')
+            assert data['args'] == ['foo', 'bar', 'baz']
+            assert data['kwargs']['qux'] == 'quux'
 
     def test_full_returns(self):
         '''
@@ -79,8 +79,8 @@ class StdTest(ModuleCase):
                 kwarg={'qux': 'quux'}
                 )
         data = ret['minion']['ret']
-        self.assertEqual(data['args'], ['foo', 'bar', 'baz'])
-        self.assertEqual(data['kwargs']['qux'], 'quux')
+        assert data['args'] == ['foo', 'bar', 'baz']
+        assert data['kwargs']['qux'] == 'quux'
 
     def test_kwarg_type(self):
         '''
@@ -98,17 +98,17 @@ class StdTest(ModuleCase):
             timeout=self.TIMEOUT,
         )
         data = ret['minion']['ret']
-        self.assertIn(six.text_type.__name__, data['args'][0])
-        self.assertIn('int', data['args'][1])
-        self.assertIn('dict', data['kwargs']['outer'])
-        self.assertIn(six.text_type.__name__, data['kwargs']['inner'])
+        assert six.text_type.__name__ in data['args'][0]
+        assert 'int' in data['args'][1]
+        assert 'dict' in data['kwargs']['outer']
+        assert six.text_type.__name__ in data['kwargs']['inner']
 
     def test_full_return_kwarg(self):
         ret = self.client.cmd(
             'minion', 'test.ping', full_return=True, timeout=self.TIMEOUT,
         )
         for mid, data in ret.items():
-            self.assertIn('retcode', data)
+            assert 'retcode' in data
 
     def test_cmd_arg_kwarg_parsing(self):
         ret = self.client.cmd('minion', 'test.arg_clean',
@@ -122,7 +122,7 @@ class StdTest(ModuleCase):
             },
             timeout=self.TIMEOUT,
         )
-        self.assertEqual(ret['minion'], {
+        assert ret['minion'] == {
             'args': ['foo'],
             'kwargs': {
                 'bar': False,
@@ -131,4 +131,4 @@ class StdTest(ModuleCase):
                 },
                 'quux': 'Quux',
             },
-        })
+        }

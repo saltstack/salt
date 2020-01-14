@@ -47,16 +47,14 @@ class BotoAsgTestCase(TestCase, LoaderModuleMockMixin):
                 ret.update({'comment': comt})
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
-                    self.assertDictEqual(
-                        boto_asg.present(
+                    assert boto_asg.present(
                             name,
                             launch_config_name,
                             availability_zones,
                             min_size,
                             max_size
-                        ),
+                        ) == \
                         ret
-                    )
 
                 def magic_side_effect(value):
                     if isinstance(value, int):
@@ -83,7 +81,7 @@ class BotoAsgTestCase(TestCase, LoaderModuleMockMixin):
                             min_size,
                             max_size
                         )
-                        self.assertDictEqual(call_ret, ret)
+                        assert call_ret == ret
 
                 with patch.dict(boto_asg.__salt__,
                                 {'config.option': MagicMock(return_value={})}):
@@ -92,16 +90,14 @@ class BotoAsgTestCase(TestCase, LoaderModuleMockMixin):
                         comt = 'Autoscale group present. '
                         ret.update({'comment': comt, 'result': True})
                         ret.update({'changes': {}})
-                        self.assertDictEqual(
-                            boto_asg.present(
+                        assert boto_asg.present(
                                 name,
                                 launch_config_name,
                                 availability_zones,
                                 min_size,
                                 max_size
-                            ),
+                            ) == \
                             ret
-                        )
 
     # 'absent' function tests: 1
 
@@ -121,8 +117,8 @@ class BotoAsgTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(boto_asg.__opts__, {'test': True}):
                 comt = ('Autoscale group set to be deleted.')
                 ret.update({'comment': comt})
-                self.assertDictEqual(boto_asg.absent(name), ret)
+                assert boto_asg.absent(name) == ret
 
                 comt = ('Autoscale group does not exist.')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(boto_asg.absent(name), ret)
+                assert boto_asg.absent(name) == ret

@@ -91,11 +91,11 @@ class SSHThinTestCase(TestCase):
 
         with pytest.raises(Exception) as err:
             thin.get_ext_tops(cfg)
-        self.assertIn('Missing dependencies', str(err.value))
-        self.assertTrue(thin.log.error.called)
-        self.assertIn('Missing dependencies', thin.log.error.call_args[0][0])
-        self.assertIn('jinja2, yaml, tornado, msgpack',
-                      thin.log.error.call_args[0][0])
+        assert 'Missing dependencies' in str(err.value)
+        assert thin.log.error.called
+        assert 'Missing dependencies' in thin.log.error.call_args[0][0]
+        assert 'jinja2, yaml, tornado, msgpack' in \
+                      thin.log.error.call_args[0][0]
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -110,7 +110,7 @@ class SSHThinTestCase(TestCase):
                              'dependencies': []}}
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
-        self.assertIn('missing specific locked Python version', str(err.value))
+        assert 'missing specific locked Python version' in str(err.value)
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -127,8 +127,8 @@ class SSHThinTestCase(TestCase):
 
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
-        self.assertIn('specific locked Python version should be a list of '
-                      'major/minor version', str(err.value))
+        assert 'specific locked Python version should be a list of ' \
+                      'major/minor version' in str(err.value)
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -171,16 +171,16 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.get_ext_tops(cfg)
 
-        self.assertIn('Missing dependencies for the alternative version in the '
-                      'external configuration', str(err.value))
+        assert 'Missing dependencies for the alternative version in the ' \
+                      'external configuration' in str(err.value)
 
         messages = {}
         for cl in thin.log.warning.mock_calls:
             messages[cl[1][1]] = cl[1][0] % (cl[1][1], cl[1][2])
         for mod in ['tornado', 'yaml', 'msgpack']:
-            self.assertIn('not a Python importable module', messages[mod])
-        self.assertIn('configured with not a file or does not exist',
-                      messages['jinja2'])
+            assert 'not a Python importable module' in messages[mod]
+        assert 'configured with not a file or does not exist' in \
+                      messages['jinja2']
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -232,7 +232,7 @@ class SSHThinTestCase(TestCase):
         '''
         path = os.sep + os.path.join('path', 'to')
         expected = os.path.join(path, 'thin', 'thin.tgz')
-        self.assertEqual(thin.thin_path(path), expected)
+        assert thin.thin_path(path) == expected
 
     def test_get_salt_call_script(self):
         '''
@@ -343,8 +343,8 @@ class SSHThinTestCase(TestCase):
                    MagicMock(side_effect=[type(str('foo'), (), foo),
                                           type(str('bar'), (), bar)])):
             tops = thin.get_tops(extra_mods='foo,bar')
-        self.assertEqual(len(tops), len(base_tops))
-        self.assertListEqual(sorted(tops), sorted(base_tops))
+        assert len(tops) == len(base_tops)
+        assert sorted(tops) == sorted(base_tops)
 
     @patch('salt.utils.thin.salt', type(str('salt'), (), {'__file__': '/site-packages/salt'}))
     @patch('salt.utils.thin.jinja2', type(str('jinja2'), (), {'__file__': '/site-packages/jinja2'}))
@@ -420,8 +420,8 @@ class SSHThinTestCase(TestCase):
         with pytest.raises(salt.exceptions.SaltSystemExit) as err:
             thin.sys.exc_clear = lambda: None
             thin.gen_thin('')
-        self.assertIn('The minimum required python version to run salt-ssh is '
-                      '"2.6"', str(err.value))
+        assert 'The minimum required python version to run salt-ssh is ' \
+                      '"2.6"' in str(err.value)
 
     @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
             'Dies on Python2 on Windows')
@@ -458,17 +458,17 @@ class SSHThinTestCase(TestCase):
             salt.utils.thin.subprocess.Popen.assert_not_called()
 
             if salt.ext.six.PY2:
-                self.assertIn('DEBUG:python3 binary does not exist. Will not attempt to generate '
-                              'tops for Python 3',
-                              handler.messages)
+                assert 'DEBUG:python3 binary does not exist. Will not attempt to generate ' \
+                              'tops for Python 3' in \
+                              handler.messages
 
             if salt.ext.six.PY3:
-                self.assertIn('DEBUG:python2 binary does not exist. Will not '
-                              'detect Python 2 version',
-                              handler.messages)
-                self.assertIn('DEBUG:python2 binary does not exist. Will not attempt to generate '
-                              'tops for Python 2',
-                              handler.messages)
+                assert 'DEBUG:python2 binary does not exist. Will not ' \
+                              'detect Python 2 version' in \
+                              handler.messages
+                assert 'DEBUG:python2 binary does not exist. Will not attempt to generate ' \
+                              'tops for Python 2' in \
+                              handler.messages
 
     @skipIf(salt.utils.platform.is_windows() and thin._six.PY2,
             'Dies on Python2 on Windows')
@@ -551,11 +551,11 @@ class SSHThinTestCase(TestCase):
         '''
         thin.gen_thin('')
         arc_name, arc_mode = thin.tarfile.method_calls[0][1]
-        self.assertEqual(arc_name, ".temporary")
-        self.assertEqual(arc_mode, 'w:gz')
+        assert arc_name == ".temporary"
+        assert arc_mode == 'w:gz'
         for idx, fname in enumerate(['version', '.thin-gen-py-version', 'salt-call', 'supported-versions']):
             name = thin.tarfile.open().method_calls[idx + 4][1][0]
-            self.assertEqual(name, fname)
+            assert name == fname
         thin.tarfile.open().close.assert_called()
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
@@ -604,9 +604,9 @@ class SSHThinTestCase(TestCase):
                 files.append(os.path.join(py, 'root2', 'r{0}'.format(i)))
         for cl in thin.tarfile.open().method_calls[:-6]:
             arcname = cl[2].get('arcname')
-            self.assertIn(arcname, files)
+            assert arcname in files
             files.pop(files.index(arcname))
-        self.assertFalse(files)
+        assert not files
 
     @patch('salt.exceptions.SaltSystemExit', Exception)
     @patch('salt.utils.thin.log', MagicMock())
@@ -660,9 +660,9 @@ class SSHThinTestCase(TestCase):
 
         for idx, cl in enumerate(thin.tarfile.open().method_calls[12:-6]):
             arcname = cl[2].get('arcname')
-            self.assertIn(arcname, files)
+            assert arcname in files
             files.pop(files.index(arcname))
-        self.assertFalse(files)
+        assert not files
 
     def test_get_supported_py_config_typecheck(self):
         '''
@@ -683,9 +683,9 @@ class SSHThinTestCase(TestCase):
         ext_cfg = {}
         out = salt.utils.stringutils.to_str(thin._get_supported_py_config(
             tops=tops, extended_cfg=ext_cfg)).strip().split(os.linesep)
-        self.assertEqual(len(out), 2)
+        assert len(out) == 2
         for t_line in ['py3:3:0', 'py2:2:7']:
-            self.assertIn(t_line, out)
+            assert t_line in out
 
     def test_get_supported_py_config_ext_tops(self):
         '''
@@ -701,4 +701,4 @@ class SSHThinTestCase(TestCase):
         out = salt.utils.stringutils.to_str(thin._get_supported_py_config(
             tops=tops, extended_cfg=ext_cfg)).strip().split(os.linesep)
         for t_line in ['second-system-effect:2:7', 'solar-interference:2:6']:
-            self.assertIn(t_line, out)
+            assert t_line in out

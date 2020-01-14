@@ -41,21 +41,19 @@ class EventModuleTest(ModuleCase):
             'event.fire_master',
             ['event.fire_master: just test it!!!!', 'salttest']
         )
-        self.assertTrue(ret)
+        assert ret
 
         eventfired = events.get(block=True, timeout=10)
-        self.assertIsNotNone(eventfired)
-        self.assertIn(
-            'event.fire_master: just test it!!!!', eventfired['data']
-        )
+        assert eventfired is not None
+        assert 'event.fire_master: just test it!!!!' in eventfired['data']
 
         ret = self.run_function(
             'event.fire_master',
             ['event.fire_master: just test it!!!!', 'salttest-miss']
         )
-        self.assertTrue(ret)
+        assert ret
 
-        with self.assertRaises(Empty):
+        with pytest.raises(Empty):
             eventfired = events.get(block=True, timeout=10)
 
     def __test_event_fire(self):
@@ -73,18 +71,18 @@ class EventModuleTest(ModuleCase):
         ret = self.run_function(
             'event.fire', ['event.fire: just test it!!!!', 'salttest']
         )
-        self.assertTrue(ret)
+        assert ret
 
         eventfired = events.get(block=True, timeout=10)
-        self.assertIsNotNone(eventfired)
-        self.assertIn('event.fire: just test it!!!!', eventfired)
+        assert eventfired is not None
+        assert 'event.fire: just test it!!!!' in eventfired
 
         ret = self.run_function(
             'event.fire', ['event.fire: just test it!!!!', 'salttest-miss']
         )
-        self.assertTrue(ret)
+        assert ret
 
-        with self.assertRaises(Empty):
+        with pytest.raises(Empty):
             eventfired = events.get(block=True, timeout=10)
 
     def __test_event_fire_ipc_mode_tcp(self):
@@ -103,17 +101,17 @@ class EventModuleTest(ModuleCase):
             'event.fire', ['event.fire: just test it!!!!', 'salttest'],
             minion_tgt='sub_minion'
         )
-        self.assertTrue(ret)
+        assert ret
 
         eventfired = events.get(block=True, timeout=10)
-        self.assertIsNotNone(eventfired)
-        self.assertIn('event.fire: just test it!!!!', eventfired)
+        assert eventfired is not None
+        assert 'event.fire: just test it!!!!' in eventfired
 
         ret = self.run_function(
             'event.fire', ['event.fire: just test it!!!!', 'salttest-miss'],
             minion_tgt='sub_minion'
         )
-        self.assertTrue(ret)
+        assert ret
 
-        with self.assertRaises(Empty):
+        with pytest.raises(Empty):
             eventfired = events.get(block=True, timeout=10)

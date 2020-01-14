@@ -47,7 +47,7 @@ class MinionsTestCase(TestCase):
         for nodegroup in NODEGROUPS:
             expected = EXPECTED[nodegroup]
             ret = salt.utils.minions.nodegroup_comp(nodegroup, NODEGROUPS)
-            self.assertEqual(ret, expected)
+            assert ret == expected
 
 
 class CkMinionsTestCase(TestCase):
@@ -61,51 +61,51 @@ class CkMinionsTestCase(TestCase):
         # Test spec-only rule
         auth_list = ['@runner']
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'wheel')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.spec_check(auth_list, 'testarg', {}, 'runner')
         mock_ret = {'error': {'name': 'SaltInvocationError',
                               'message': 'A command invocation error occurred: Check syntax.'}}
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
         # Test spec in plural form
         auth_list = ['@runners']
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'wheel')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test spec with module.function restriction
         auth_list = [{'@runner': 'test.arg'}]
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'wheel')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.spec_check(auth_list, 'tes.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.spec_check(auth_list, 'test.ar', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test function name is a regex
         auth_list = [{'@runner': 'test.arg.*some'}]
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.spec_check(auth_list, 'test.argsome', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'test.arg_aaa_some', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
 
         # Test a list of funcs
         auth_list = [{'@runner': ['test.arg', 'jobs.active']}]
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'test.active', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test args-kwargs rules
         auth_list = [{
@@ -120,59 +120,59 @@ class CkMinionsTestCase(TestCase):
                     }
                 }]
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1', '2'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = {
                 'arg': ['1', '2', '3'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = {
                 'arg': ['1', '2'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd', 'zzz': 'zzz'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = {
                 'arg': ['1', '2'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddc'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1', '2'],
                 'kwarg': {'aaa': 'bbb'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1', '3'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1', '2'],
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test kwargs only
         auth_list = [{
@@ -186,13 +186,13 @@ class CkMinionsTestCase(TestCase):
                     }
                 }]
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1', '2'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
 
         # Test args only
         auth_list = [{
@@ -203,13 +203,13 @@ class CkMinionsTestCase(TestCase):
                     }
                 }]
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = {
                 'arg': ['1', '2'],
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
 
         # Test list of args
         auth_list = [{'@runner': [{'test.arg': [{'args': ['1', '2'],
@@ -229,44 +229,44 @@ class CkMinionsTestCase(TestCase):
                 'kwarg': {'aaa': 'bbb', 'ccc': 'ddd'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = {
                 'arg': ['2', '3'],
                 'kwarg': {'aaa': 'aaa', 'ccc': 'ccc'}
                 }
         ret = self.ckminions.spec_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
 
         # Test @module form
         auth_list = ['@jobs']
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'wheel')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'test.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.spec_check(auth_list, 'job.arg', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test @module: function
         auth_list = [{'@jobs': 'active'}]
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'wheel')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.active_jobs', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.activ', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test @module: [functions]
         auth_list = [{'@jobs': ['active', 'li']}]
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.list_jobs', {}, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.last_run', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test @module: function with args
         auth_list = [{'@jobs': {'active': {'args': ['1', '2'],
@@ -274,38 +274,38 @@ class CkMinionsTestCase(TestCase):
         args = {'arg': ['1', '2'],
                 'kwarg': {'a': 'b', 'c': 'd'}}
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.spec_check(auth_list, 'jobs.active', {}, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
     @patch('salt.utils.minions.CkMinions._pki_minions', MagicMock(return_value=['alpha', 'beta', 'gamma']))
     def test_auth_check(self):
         # Test function-only rule
         auth_list = ['test.ping']
         ret = self.ckminions.auth_check(auth_list, 'test.ping', None, 'alpha')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.auth_check(auth_list, 'test.arg', None, 'alpha')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test minion and function
         auth_list = [{'alpha': 'test.ping'}]
         ret = self.ckminions.auth_check(auth_list, 'test.ping', None, 'alpha')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.auth_check(auth_list, 'test.arg', None, 'alpha')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.auth_check(auth_list, 'test.ping', None, 'beta')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test function list
         auth_list = [{'*': ['test.*', 'saltutil.cmd']}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', None, 'alpha')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.auth_check(auth_list, 'test.ping', None, 'beta')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.auth_check(auth_list, 'saltutil.cmd', None, 'gamma')
-        self.assertTrue(ret)
+        assert ret
         ret = self.ckminions.auth_check(auth_list, 'saltutil.running', None, 'gamma')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test an args and kwargs rule
         auth_list = [{
@@ -320,27 +320,27 @@ class CkMinionsTestCase(TestCase):
                     }
                 }]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', None, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         ret = self.ckminions.auth_check(auth_list, 'test.arg', [], 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = ['1', '2', {'aaa': 'bbb', 'ccc': 'ddd', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = ['1', '2', '3', {'aaa': 'bbb', 'ccc': 'ddd', 'eee': 'fff', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = ['1', {'aaa': 'bbb', 'ccc': 'ddd', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = ['1', '2', {'aaa': 'bbb', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = ['1', '3', {'aaa': 'bbb', 'ccc': 'ddd', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
         args = ['1', '2', {'aaa': 'bbb', 'ccc': 'fff', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertFalse(ret)
+        assert not ret
 
         # Test kwargs only rule
         auth_list = [{
@@ -355,10 +355,10 @@ class CkMinionsTestCase(TestCase):
                 }]
         args = ['1', '2', {'aaa': 'bbb', 'ccc': 'ddd', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = [{'aaa': 'bbb', 'ccc': 'ddd', 'eee': 'fff', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
 
         # Test args only rule
         auth_list = [{
@@ -370,10 +370,10 @@ class CkMinionsTestCase(TestCase):
                 }]
         args = ['1', '2', {'aaa': 'bbb', 'ccc': 'ddd', '__kwarg__': True}]
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
         args = ['1', '2']
         ret = self.ckminions.auth_check(auth_list, 'test.arg', args, 'runner')
-        self.assertTrue(ret)
+        assert ret
 
 
 @skipIf(sys.version_info < (2, 7), 'Python 2.7 needed for dictionary equality assertions')
@@ -385,7 +385,7 @@ class TargetParseTestCase(TestCase):
         '''
         g_tgt = 'G@a:b'
         ret = salt.utils.minions.parse_target(g_tgt)
-        self.assertDictEqual(ret, {'engine': 'G', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'G', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_grains_pcre_target(self):
         '''
@@ -393,7 +393,7 @@ class TargetParseTestCase(TestCase):
         '''
         p_tgt = 'P@a:b'
         ret = salt.utils.minions.parse_target(p_tgt)
-        self.assertDictEqual(ret, {'engine': 'P', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'P', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_pillar_pcre_target(self):
         '''
@@ -401,7 +401,7 @@ class TargetParseTestCase(TestCase):
         '''
         j_tgt = 'J@a:b'
         ret = salt.utils.minions.parse_target(j_tgt)
-        self.assertDictEqual(ret, {'engine': 'J', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'J', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_list_target(self):
         '''
@@ -409,7 +409,7 @@ class TargetParseTestCase(TestCase):
         '''
         l_tgt = 'L@a:b'
         ret = salt.utils.minions.parse_target(l_tgt)
-        self.assertDictEqual(ret, {'engine': 'L', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'L', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_nodegroup_target(self):
         '''
@@ -417,7 +417,7 @@ class TargetParseTestCase(TestCase):
         '''
         n_tgt = 'N@a:b'
         ret = salt.utils.minions.parse_target(n_tgt)
-        self.assertDictEqual(ret, {'engine': 'N', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'N', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_subnet_target(self):
         '''
@@ -425,7 +425,7 @@ class TargetParseTestCase(TestCase):
         '''
         s_tgt = 'S@a:b'
         ret = salt.utils.minions.parse_target(s_tgt)
-        self.assertDictEqual(ret, {'engine': 'S', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'S', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_minion_pcre_target(self):
         '''
@@ -433,7 +433,7 @@ class TargetParseTestCase(TestCase):
         '''
         e_tgt = 'E@a:b'
         ret = salt.utils.minions.parse_target(e_tgt)
-        self.assertDictEqual(ret, {'engine': 'E', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'E', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_range_target(self):
         '''
@@ -441,7 +441,7 @@ class TargetParseTestCase(TestCase):
         '''
         r_tgt = 'R@a:b'
         ret = salt.utils.minions.parse_target(r_tgt)
-        self.assertDictEqual(ret, {'engine': 'R', 'pattern': 'a:b', 'delimiter': None})
+        assert ret == {'engine': 'R', 'pattern': 'a:b', 'delimiter': None}
 
     def test_parse_multiword_target(self):
         '''
@@ -451,7 +451,7 @@ class TargetParseTestCase(TestCase):
         '''
         mw_tgt = 'G@a:b c'
         ret = salt.utils.minions.parse_target(mw_tgt)
-        self.assertEqual(ret['pattern'], 'a:b c')
+        assert ret['pattern'] == 'a:b c'
 
 
 class NodegroupCompTest(TestCase):
@@ -468,7 +468,7 @@ class NodegroupCompTest(TestCase):
 
         ret = salt.utils.minions.nodegroup_comp('group1', simple_nodegroup)
         expected_ret = ['L@foo.domain.com,bar.domain.com,baz.domain.com', 'or', 'bl*.domain.com']
-        self.assertListEqual(ret, expected_ret)
+        assert ret == expected_ret
 
     def test_simple_expression_nodegroup(self):
         '''
@@ -478,7 +478,7 @@ class NodegroupCompTest(TestCase):
 
         ret = salt.utils.minions.nodegroup_comp('group1', simple_nodegroup)
         expected_ret = ['E@[foo,bar,baz].domain.com']
-        self.assertListEqual(ret, expected_ret)
+        assert ret == expected_ret
 
     def test_simple_recurse(self):
         '''
@@ -501,7 +501,7 @@ class NodegroupCompTest(TestCase):
                 ')',
                 ')'
                 ]
-        self.assertListEqual(ret, expected_ret)
+        assert ret == expected_ret
 
     def test_circular_nodegroup_reference(self):
         '''
@@ -515,4 +515,4 @@ class NodegroupCompTest(TestCase):
 
         # If this works, it should also print an error to the console
         ret = salt.utils.minions.nodegroup_comp('group1', referenced_nodegroups)
-        self.assertEqual(ret, [])
+        assert ret == []

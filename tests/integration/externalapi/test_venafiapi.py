@@ -50,9 +50,9 @@ class VenafiTest(ShellCase):
                                 dns_name='{0}.test.saltstack.com'.format(name),
                                 zone='Internet',
                                 password='SecretSauce')
-        self.assertEqual(ret['out'][0], '-----BEGIN RSA PRIVATE KEY-----')
-        self.assertEqual(ret['out'][1], 'Proc-Type: 4,ENCRYPTED')
-        self.assertEqual(ret['out'][-1], '-----END RSA PRIVATE KEY-----')
+        assert ret['out'][0] == '-----BEGIN RSA PRIVATE KEY-----'
+        assert ret['out'][1] == 'Proc-Type: 4,ENCRYPTED'
+        assert ret['out'][-1] == '-----END RSA PRIVATE KEY-----'
 
     @with_random_name
     def test_gen_key_without_password(self, name):
@@ -63,9 +63,9 @@ class VenafiTest(ShellCase):
                                 minion_id='{0}.test.saltstack.com'.format(name),
                                 dns_name='{0}.test.saltstack.com'.format(name),
                                 zone='Internet')
-        self.assertEqual(ret['out'][0], '-----BEGIN RSA PRIVATE KEY-----')
-        self.assertNotEqual(ret['out'][1], 'Proc-Type: 4,ENCRYPTED')
-        self.assertEqual(ret['out'][-1], '-----END RSA PRIVATE KEY-----')
+        assert ret['out'][0] == '-----BEGIN RSA PRIVATE KEY-----'
+        assert ret['out'][1] != 'Proc-Type: 4,ENCRYPTED'
+        assert ret['out'][-1] == '-----END RSA PRIVATE KEY-----'
 
     @with_random_name
     def test_gen_csr(self, name):
@@ -78,8 +78,8 @@ class VenafiTest(ShellCase):
                                 country='US', state='Utah', loc='Salt Lake City',
                                 org='Salt Stack Inc.', org_unit='Testing',
                                 zone='Internet', password='SecretSauce')
-        self.assertEqual(ret['out'][0], '-----BEGIN CERTIFICATE REQUEST-----')
-        self.assertEqual(ret['out'][-1], '-----END CERTIFICATE REQUEST-----')
+        assert ret['out'][0] == '-----BEGIN CERTIFICATE REQUEST-----'
+        assert ret['out'][-1] == '-----END CERTIFICATE REQUEST-----'
 
     @with_random_name
     def test_request(self, name):
@@ -92,4 +92,4 @@ class VenafiTest(ShellCase):
                                 country='US', state='Utah', loc='Salt Lake City',
                                 org='Salt Stack Inc.', org_unit='Testing',
                                 zone='Internet', password='SecretSauce')
-        self.assertTrue('request_id' in ret['return'])
+        assert 'request_id' in ret['return']

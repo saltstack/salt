@@ -38,16 +38,16 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = log.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for log beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for log beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = log.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for log beacon '
-                                      'must contain file option.'))
+        assert ret == (False, 'Configuration for log beacon '
+                                      'must contain file option.')
 
     def test_log_match(self):
         with patch('salt.utils.files.fopen',
@@ -58,7 +58,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = log.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             _expected_return = [{'error': '',
                                  'match': 'yes',
@@ -66,4 +66,4 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                  'tag': 'sshd'
                                  }]
             ret = log.beacon(config)
-            self.assertEqual(ret, _expected_return)
+            assert ret == _expected_return

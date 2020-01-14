@@ -31,7 +31,7 @@ class VirtualenvModuleTest(ModuleCase):
         '''
         self.run_function('virtualenv.create', [self.venv_dir])
         pip_file = os.path.join(self.venv_dir, 'bin', 'pip')
-        self.assertTrue(os.path.exists(pip_file))
+        assert os.path.exists(pip_file)
 
     def test_site_packages(self):
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
@@ -42,7 +42,7 @@ class VirtualenvModuleTest(ModuleCase):
         self.run_function('file.remove', [self.venv_dir])
         self.run_function('virtualenv.create', [self.venv_dir])
         without_site = self.run_function('pip.freeze', bin_env=pip_bin)
-        self.assertFalse(with_site == without_site)
+        assert with_site != without_site
 
     def test_clear(self):
         pip_bin = os.path.join(self.venv_dir, 'bin', 'pip')
@@ -52,7 +52,7 @@ class VirtualenvModuleTest(ModuleCase):
         packages = self.run_function(
             'pip.list', prefix='pep8', bin_env=pip_bin
         )
-        self.assertFalse('pep8' in packages)
+        assert 'pep8' not in packages
 
     def tearDown(self):
         self.run_function('file.remove', [self.venv_test_dir])

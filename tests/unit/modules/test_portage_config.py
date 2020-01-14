@@ -68,7 +68,7 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         for (atom, expected) in pairs:
-            self.assertEqual(portage_config._get_config_file('mask', atom), expected)
+            assert portage_config._get_config_file('mask', atom) == expected
 
     def test_enforce_nice_config(self):
         atoms = [
@@ -116,6 +116,6 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             for atom, file_name in atoms:
                 with salt.utils.files.fopen(base_path.format(typ) + "/" + file_name, 'r') as fh:
                     for line in fh:
-                        self.assertTrue(atom in line, msg="'{}' not in '{}'".format(addition, line))
+                        assert atom in line, "'{}' not in '{}'".format(addition, line)
                         for addition in additions:
-                            self.assertTrue(addition in line, msg="'{}' not in '{}'".format(addition, line))
+                            assert addition in line, "'{}' not in '{}'".format(addition, line)

@@ -54,11 +54,9 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
             ret, {'AAAAB3NzaC1kcQ9J5bYTEyZ==': 'New'}
         )
         with salt.utils.files.fopen(authorized_keys_file, 'r') as fhr:
-            self.assertEqual(
-                fhr.read(),
-                'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n'
+            assert fhr.read() == \
+                'ssh-rsa AAAAB3NzaC1kc3MAAACBAL0sQ9fJ5bYTEyY== root\n' \
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-            )
 
     @pytest.mark.destructive_test
     @pytest.mark.skip_if_not_root
@@ -92,10 +90,8 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, 'r') as fhr:
-            self.assertEqual(
-                fhr.read(),
+            assert fhr.read() == \
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-            )
 
         os.unlink(authorized_keys_file)
 
@@ -110,7 +106,5 @@ class SSHAuthStateTests(ModuleCase, SaltReturnAssertsMixin):
         )
         self.assertSaltTrueReturn(ret)
         with salt.utils.files.fopen(authorized_keys_file, 'r') as fhr:
-            self.assertEqual(
-                fhr.read(),
+            assert fhr.read() == \
                 'ssh-rsa AAAAB3NzaC1kcQ9J5bYTEyZ== {0}\n'.format(username)
-            )

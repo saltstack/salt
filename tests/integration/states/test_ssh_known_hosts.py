@@ -97,7 +97,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
             'ssh.get_known_host_entries', ['root', 'github.com'], config=self.known_hosts
         )[0]
         try:
-            self.assertNotIn(ret, ('', None))
+            assert ret not in ('', None)
         except AssertionError:
             raise AssertionError(
                 'Salt return \'{0}\' is in (\'\', None).'.format(ret)
@@ -106,7 +106,7 @@ class SSHKnownHostsStateTest(ModuleCase, SaltReturnAssertsMixin):
             'ssh.get_known_host_entries', ['root', GITHUB_IP], config=self.known_hosts
         )[0]
         try:
-            self.assertNotIn(ret, ('', None, {}))
+            assert ret not in ('', None, {})
         except AssertionError:
             raise AssertionError(
                 'Salt return \'{0}\' is in (\'\', None,'.format(ret) + ' {})'

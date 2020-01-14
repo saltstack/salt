@@ -42,7 +42,7 @@ class NetyangTestCase(TestCase, LoaderModuleMockMixin):
                              'napalm_yang.compliance_report': compliance_report,
                              'file.remove': file_remove}):
                 with patch.dict(netyang.__opts__, {'test': False}):
-                    self.assertDictEqual(netyang.managed('test', 'test', models=('model1',)), ret)
+                    assert netyang.managed('test', 'test', models=('model1',)) == ret
                     assert parse.called
                     assert temp_file.called
                     assert compliance_report.called
@@ -58,6 +58,6 @@ class NetyangTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(netyang.__salt__,
                             {'napalm_yang.load_config': load_config}):
                 with patch.dict(netyang.__opts__, {'test': False}):
-                    self.assertDictEqual(netyang.configured('test', 'test', models=('model1',)), ret)
+                    assert netyang.configured('test', 'test', models=('model1',)) == ret
 
                     assert load_config.called

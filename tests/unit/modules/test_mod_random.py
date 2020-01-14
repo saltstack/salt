@@ -20,6 +20,7 @@ from salt.exceptions import SaltInvocationError
 
 # Import 3rd-party libs
 from salt.ext import six
+import pytest
 
 
 def _test_hashlib():
@@ -54,26 +55,26 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for Encodes a value with the specified encoder.
         '''
-        self.assertEqual(mod_random.hash('value')[0:4], 'ec2c')
+        assert mod_random.hash('value')[0:4] == 'ec2c'
 
-        self.assertRaises(SaltInvocationError,
-                          mod_random.hash, 'value', 'algorithm')
+        with pytest.raises(SaltInvocationError):
+            mod_random.hash('value', 'algorithm')
 
     def test_str_encode(self):
         '''
         Test for The value to be encoded.
         '''
-        self.assertRaises(SaltInvocationError,
-                          mod_random.str_encode, 'None', 'abc')
+        with pytest.raises(SaltInvocationError):
+            mod_random.str_encode('None', 'abc')
 
-        self.assertRaises(SaltInvocationError,
-                          mod_random.str_encode, None)
+        with pytest.raises(SaltInvocationError):
+            mod_random.str_encode(None)
 
         if six.PY2:
-            self.assertEqual(mod_random.str_encode('A'), 'QQ==\n')
+            assert mod_random.str_encode('A') == 'QQ==\n'
         else:
             # We're using the base64 module which does not include the trailing new line
-            self.assertEqual(mod_random.str_encode('A'), 'QQ==')
+            assert mod_random.str_encode('A') == 'QQ=='
 
     def test_get_str(self):
         '''
@@ -81,7 +82,7 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pycrypto,
                           'secure_password', return_value='A'):
-            self.assertEqual(mod_random.get_str(), 'A')
+            assert mod_random.get_str() == 'A'
 
     def test_shadow_hash(self):
         '''
@@ -89,4 +90,4 @@ class ModrandomTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.pycrypto,
                           'gen_hash', return_value='A'):
-            self.assertEqual(mod_random.shadow_hash(), 'A')
+            assert mod_random.shadow_hash() == 'A'

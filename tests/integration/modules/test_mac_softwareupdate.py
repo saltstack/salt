@@ -63,8 +63,7 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         '''
         # Can't predict what will be returned, so can only test that the return
         # is the correct type, dict
-        self.assertIsInstance(
-            self.run_function('softwareupdate.list_available'), dict)
+        assert isinstance(self.run_function('softwareupdate.list_available'), dict)
 
     @pytest.mark.destructive_test
     def test_ignore(self):
@@ -74,22 +73,18 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         Test softwareupdate.reset_ignored
         '''
         # Test reset_ignored
-        self.assertTrue(self.run_function('softwareupdate.reset_ignored'))
-        self.assertEqual(self.run_function('softwareupdate.list_ignored'), [])
+        assert self.run_function('softwareupdate.reset_ignored')
+        assert self.run_function('softwareupdate.list_ignored') == []
 
         # Test ignore
-        self.assertTrue(
-            self.run_function('softwareupdate.ignore', ['spongebob']))
-        self.assertTrue(
-            self.run_function('softwareupdate.ignore', ['squidward']))
+        assert self.run_function('softwareupdate.ignore', ['spongebob'])
+        assert self.run_function('softwareupdate.ignore', ['squidward'])
 
         # Test list_ignored and verify ignore
-        self.assertIn(
-            'spongebob',
-            self.run_function('softwareupdate.list_ignored'))
-        self.assertIn(
-            'squidward',
-            self.run_function('softwareupdate.list_ignored'))
+        assert 'spongebob' in \
+            self.run_function('softwareupdate.list_ignored')
+        assert 'squidward' in \
+            self.run_function('softwareupdate.list_ignored')
 
     @pytest.mark.destructive_test
     def test_schedule(self):
@@ -98,14 +93,12 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         Test softwareupdate.schedule_enabled
         '''
         # Test enable
-        self.assertTrue(
-            self.run_function('softwareupdate.schedule_enable', [True]))
-        self.assertTrue(self.run_function('softwareupdate.schedule_enabled'))
+        assert self.run_function('softwareupdate.schedule_enable', [True])
+        assert self.run_function('softwareupdate.schedule_enabled')
 
         # Test disable in case it was already enabled
-        self.assertTrue(
-            self.run_function('softwareupdate.schedule_enable', [False]))
-        self.assertFalse(self.run_function('softwareupdate.schedule_enabled'))
+        assert self.run_function('softwareupdate.schedule_enable', [False])
+        assert not self.run_function('softwareupdate.schedule_enabled')
 
     @pytest.mark.destructive_test
     def test_update(self):
@@ -119,24 +112,20 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         '''
         # There's no way to know what the dictionary will contain, so all we can
         # check is that the return is a dictionary
-        self.assertIsInstance(
-            self.run_function('softwareupdate.update_all'), dict)
+        assert isinstance(self.run_function('softwareupdate.update_all'), dict)
 
         # Test update_available
-        self.assertFalse(
-            self.run_function('softwareupdate.update_available', ['spongebob']))
+        assert not self.run_function('softwareupdate.update_available', ['spongebob'])
 
         # Test update not available
-        self.assertIn(
-            'Update not available',
-            self.run_function('softwareupdate.update', ['spongebob']))
+        assert 'Update not available' in \
+            self.run_function('softwareupdate.update', ['spongebob'])
 
     def test_list_downloads(self):
         '''
         Test softwareupdate.list_downloads
         '''
-        self.assertIsInstance(
-            self.run_function('softwareupdate.list_downloads'), list)
+        assert isinstance(self.run_function('softwareupdate.list_downloads'), list)
 
     @pytest.mark.destructive_test
     def test_download(self):
@@ -147,17 +136,15 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         the download function
         '''
         # Test update not available
-        self.assertIn(
-            'Update not available',
-            self.run_function('softwareupdate.download', ['spongebob']))
+        assert 'Update not available' in \
+            self.run_function('softwareupdate.download', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_download_all(self):
         '''
         Test softwareupdate.download_all
         '''
-        self.assertIsInstance(
-            self.run_function('softwareupdate.download_all'), list)
+        assert isinstance(self.run_function('softwareupdate.download_all'), list)
 
     @pytest.mark.destructive_test
     def test_get_set_reset_catalog(self):
@@ -165,17 +152,15 @@ class MacSoftwareUpdateModuleTest(ModuleCase):
         Test softwareupdate.download_all
         '''
         # Reset the catalog
-        self.assertTrue(self.run_function('softwareupdate.reset_catalog'))
-        self.assertEqual(self.run_function('softwareupdate.get_catalog'),
-                         'Default')
+        assert self.run_function('softwareupdate.reset_catalog')
+        assert self.run_function('softwareupdate.get_catalog') == \
+                         'Default'
 
         # Test setting and getting the catalog
-        self.assertTrue(
-            self.run_function('softwareupdate.set_catalog', ['spongebob']))
-        self.assertEqual(
-            self.run_function('softwareupdate.get_catalog'), 'spongebob')
+        assert self.run_function('softwareupdate.set_catalog', ['spongebob'])
+        assert self.run_function('softwareupdate.get_catalog') == 'spongebob'
 
         # Test reset the catalog
-        self.assertTrue(self.run_function('softwareupdate.reset_catalog'))
-        self.assertEqual(self.run_function('softwareupdate.get_catalog'),
-                         'Default')
+        assert self.run_function('softwareupdate.reset_catalog')
+        assert self.run_function('softwareupdate.get_catalog') == \
+                         'Default'

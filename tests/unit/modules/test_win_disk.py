@@ -58,9 +58,9 @@ class WinDiskTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it return usage information for volumes mounted on this minion.
         '''
-        self.assertDictEqual(win_disk.usage(),
+        assert win_disk.usage() == \
                              {'A:\\': {'available': None,
                                        '1K-blocks': None,
                                        'used': None,
                                        'capacity': None,
-                                       'filesystem': 'A:\\'}})
+                                       'filesystem': 'A:\\'}}

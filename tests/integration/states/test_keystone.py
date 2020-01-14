@@ -42,7 +42,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              service_type='identity',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-keystone_|-keystone_|-service_present']['result'])
+        assert ret['keystone_|-keystone_|-keystone_|-service_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='keystone',
@@ -52,33 +52,33 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              adminurl='http://localhost:35357/v2.0',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-keystone_|-keystone_|-endpoint_present']['result'])
+        assert ret['keystone_|-keystone_|-keystone_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.tenant_present',
                              name='admin',
                              description='Admin Project',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-tenant_present']['result'])
+        assert ret['keystone_|-admin_|-admin_|-tenant_present']['result']
 
         ret = self.run_state('keystone.tenant_present',
                              name='demo',
                              description='Demo Project',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-tenant_present']['result'])
+        assert ret['keystone_|-demo_|-demo_|-tenant_present']['result']
 
         ret = self.run_state('keystone.role_present',
                              name='admin',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-role_present']['result'])
+        assert ret['keystone_|-admin_|-admin_|-role_present']['result']
 
         ret = self.run_state('keystone.role_present',
                              name='user',
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_present']['result'])
+        assert ret['keystone_|-user_|-user_|-role_present']['result']
 
         ret = self.run_state('keystone.user_present',
                              name='admin',
@@ -88,7 +88,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              roles={'admin': ['admin']},
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-admin_|-admin_|-user_present']['result'])
+        assert ret['keystone_|-admin_|-admin_|-user_present']['result']
 
         ret = self.run_state('keystone.user_present',
                              name='demo',
@@ -98,7 +98,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              roles={'demo': ['user']},
                              connection_endpoint=self.endpoint,
                              connection_token=self.token)
-        self.assertTrue(ret['keystone_|-demo_|-demo_|-user_present']['result'])
+        assert ret['keystone_|-demo_|-demo_|-user_present']['result']
 
     @pytest.mark.destructive_test
     def test_keystone_v2(self):
@@ -107,7 +107,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              description='Nova Service',
                              service_type='compute',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-testv2_|-testv2_|-service_present']['result'])
+        assert ret['keystone_|-testv2_|-testv2_|-service_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='nova',
@@ -117,7 +117,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              adminurl='http://localhost:8774/v2.1/%(tenant_id)s',
                              region='RegionOne',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
+        assert ret['keystone_|-nova_|-nova_|-endpoint_present']['result']
 
         # Region Two
         ret = self.run_state('keystone.endpoint_present',
@@ -128,7 +128,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              adminurl='http://localhost:8774/v2.1/%(tenant_id)s',
                              region='RegionTwo',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
+        assert ret['keystone_|-nova_|-nova_|-endpoint_present']['result']
 
         # Region One, change publicurl
         ret = self.run_state('keystone.endpoint_present',
@@ -139,25 +139,25 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              adminurl='http://localhost:8774/v2.1/%(tenant_id)s',
                              region='RegionOne',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-nova_|-nova_|-endpoint_present']['result'])
+        assert ret['keystone_|-nova_|-nova_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.endpoint_get',
                              name='nova',
                              region='RegionOne',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['publicurl'].start_with('http://127.0.0.1'))
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['publicurl'].start_with('http://127.0.0.1')
 
         ret = self.run_state('keystone.tenant_present',
                              name='test',
                              description='Test Tenant',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-test_|-test_|-tenant_present']['result'])
+        assert ret['keystone_|-test_|-test_|-tenant_present']['result']
 
         ret = self.run_state('keystone.role_present',
                              name='user',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_present']['result'])
+        assert ret['keystone_|-user_|-user_|-role_present']['result']
 
         ret = self.run_state('keystone.user_present',
                              name='test',
@@ -166,12 +166,12 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              password='testpass',
                              roles={'test': ['user']},
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-test_|-test_|-user_present']['result'])
+        assert ret['keystone_|-test_|-test_|-user_present']['result']
 
         ret = self.run_state('keystone.service_absent',
                              name='testv2',
                              profile='adminv2')
-        self.assertTrue(ret['keystone_|-testv2_|-testv2_|-service_absent']['result'])
+        assert ret['keystone_|-testv2_|-testv2_|-service_absent']['result']
 
     @pytest.mark.destructive_test
     def test_keystone_v3(self):
@@ -180,7 +180,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              description='Image Service',
                              service_type='image',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-service_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-service_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='testv3',
@@ -189,7 +189,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://localhost:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='testv3',
@@ -198,7 +198,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://localhost:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='testv3',
@@ -207,7 +207,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://localhost:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         # Region Two
         ret = self.run_state('keystone.endpoint_present',
@@ -217,7 +217,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://localhost:9292',
                              region='RegionTwo',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='testv3',
@@ -226,7 +226,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://localhost:9292',
                              region='RegionTwo',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.endpoint_present',
                              name='testv3',
@@ -235,7 +235,7 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://localhost:9292',
                              region='RegionTwo',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         # Region One, change
         ret = self.run_state('keystone.endpoint_present',
@@ -245,26 +245,26 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              url='http://127.0.0.1:9292',
                              region='RegionOne',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
 
         ret = self.run_state('keystone.endpoint_get',
                              name='testv3',
                              region='RegionOne',
                              interface='public',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result'])
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-endpoint_present']['endpoint']['url'] == 'http://127.0.0.1:9292')
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['result']
+        assert ret['keystone_|-testv3_|-testv3_|-endpoint_present']['endpoint']['url'] == 'http://127.0.0.1:9292'
 
         ret = self.run_state('keystone.project_present',
                              name='testv3',
                              description='Test v3 Tenant',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-project_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-project_present']['result']
 
         ret = self.run_state('keystone.role_present',
                              name='user',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-user_|-user_|-role_present']['result'])
+        assert ret['keystone_|-user_|-user_|-role_present']['result']
 
         ret = self.run_state('keystone.user_present',
                              name='testv3',
@@ -273,9 +273,9 @@ class KeystoneStateTest(ModuleCase, SaltReturnAssertsMixin):
                              password='testv3pass',
                              roles={'testv3': ['user']},
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-user_present']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-user_present']['result']
 
         ret = self.run_state('keystone.service_absent',
                              name='testv3',
                              profile='adminv3')
-        self.assertTrue(ret['keystone_|-testv3_|-testv3_|-service_absent']['result'])
+        assert ret['keystone_|-testv3_|-testv3_|-service_absent']['result']

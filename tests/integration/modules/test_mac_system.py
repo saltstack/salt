@@ -83,25 +83,24 @@ class MacSystemModuleTest(ModuleCase):
         Test system.set_remote_login
         '''
         # Normal Functionality
-        self.assertTrue(self.run_function('system.set_remote_login', [True]))
-        self.assertTrue(self.run_function('system.get_remote_login'))
-        self.assertTrue(self.run_function('system.set_remote_login', [False]))
-        self.assertFalse(self.run_function('system.get_remote_login'))
+        assert self.run_function('system.set_remote_login', [True])
+        assert self.run_function('system.get_remote_login')
+        assert self.run_function('system.set_remote_login', [False])
+        assert not self.run_function('system.get_remote_login')
 
         # Test valid input
-        self.assertTrue(self.run_function('system.set_remote_login', [True]))
-        self.assertTrue(self.run_function('system.set_remote_login', [False]))
-        self.assertTrue(self.run_function('system.set_remote_login', ['yes']))
-        self.assertTrue(self.run_function('system.set_remote_login', ['no']))
-        self.assertTrue(self.run_function('system.set_remote_login', ['On']))
-        self.assertTrue(self.run_function('system.set_remote_login', ['Off']))
-        self.assertTrue(self.run_function('system.set_remote_login', [1]))
-        self.assertTrue(self.run_function('system.set_remote_login', [0]))
+        assert self.run_function('system.set_remote_login', [True])
+        assert self.run_function('system.set_remote_login', [False])
+        assert self.run_function('system.set_remote_login', ['yes'])
+        assert self.run_function('system.set_remote_login', ['no'])
+        assert self.run_function('system.set_remote_login', ['On'])
+        assert self.run_function('system.set_remote_login', ['Off'])
+        assert self.run_function('system.set_remote_login', [1])
+        assert self.run_function('system.set_remote_login', [0])
 
         # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Enabled',
-            self.run_function('system.set_remote_login', ['spongebob']))
+        assert 'Invalid String Value for Enabled' in \
+            self.run_function('system.set_remote_login', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_get_set_remote_events(self):
@@ -110,25 +109,24 @@ class MacSystemModuleTest(ModuleCase):
         Test system.set_remote_events
         '''
         # Normal Functionality
-        self.assertTrue(self.run_function('system.set_remote_events', [True]))
-        self.assertTrue(self.run_function('system.get_remote_events'))
-        self.assertTrue(self.run_function('system.set_remote_events', [False]))
-        self.assertFalse(self.run_function('system.get_remote_events'))
+        assert self.run_function('system.set_remote_events', [True])
+        assert self.run_function('system.get_remote_events')
+        assert self.run_function('system.set_remote_events', [False])
+        assert not self.run_function('system.get_remote_events')
 
         # Test valid input
-        self.assertTrue(self.run_function('system.set_remote_events', [True]))
-        self.assertTrue(self.run_function('system.set_remote_events', [False]))
-        self.assertTrue(self.run_function('system.set_remote_events', ['yes']))
-        self.assertTrue(self.run_function('system.set_remote_events', ['no']))
-        self.assertTrue(self.run_function('system.set_remote_events', ['On']))
-        self.assertTrue(self.run_function('system.set_remote_events', ['Off']))
-        self.assertTrue(self.run_function('system.set_remote_events', [1]))
-        self.assertTrue(self.run_function('system.set_remote_events', [0]))
+        assert self.run_function('system.set_remote_events', [True])
+        assert self.run_function('system.set_remote_events', [False])
+        assert self.run_function('system.set_remote_events', ['yes'])
+        assert self.run_function('system.set_remote_events', ['no'])
+        assert self.run_function('system.set_remote_events', ['On'])
+        assert self.run_function('system.set_remote_events', ['Off'])
+        assert self.run_function('system.set_remote_events', [1])
+        assert self.run_function('system.set_remote_events', [0])
 
         # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Enabled',
-            self.run_function('system.set_remote_events', ['spongebob']))
+        assert 'Invalid String Value for Enabled' in \
+            self.run_function('system.set_remote_events', ['spongebob'])
 
     @pytest.mark.destructive_test
     def test_get_set_subnet_name(self):
@@ -136,11 +134,9 @@ class MacSystemModuleTest(ModuleCase):
         Test system.get_subnet_name
         Test system.set_subnet_name
         '''
-        self.assertTrue(
-            self.run_function('system.set_subnet_name', [SET_SUBNET_NAME]))
-        self.assertEqual(
-            self.run_function('system.get_subnet_name'),
-            SET_SUBNET_NAME)
+        assert self.run_function('system.set_subnet_name', [SET_SUBNET_NAME])
+        assert self.run_function('system.get_subnet_name') == \
+            SET_SUBNET_NAME
 
     def test_get_list_startup_disk(self):
         '''
@@ -151,13 +147,12 @@ class MacSystemModuleTest(ModuleCase):
         '''
         # Test list and get
         ret = self.run_function('system.list_startup_disks')
-        self.assertIsInstance(ret, list)
-        self.assertIn(self.run_function('system.get_startup_disk'), ret)
+        assert isinstance(ret, list)
+        assert self.run_function('system.get_startup_disk') in ret
 
         # Test passing set a bad disk
-        self.assertIn(
-            'Invalid value passed for path.',
-            self.run_function('system.set_startup_disk', ['spongebob']))
+        assert 'Invalid value passed for path.' in \
+            self.run_function('system.set_startup_disk', ['spongebob'])
 
     @skipIf(True, 'Skip this test until mac fixes it.')
     def test_get_set_restart_delay(self):
@@ -168,15 +163,13 @@ class MacSystemModuleTest(ModuleCase):
         may need to disable this test as we can't control the delay value
         '''
         # Normal Functionality
-        self.assertTrue(self.run_function('system.set_restart_delay', [90]))
-        self.assertEqual(
-            self.run_function('system.get_restart_delay'),
-            '90 seconds')
+        assert self.run_function('system.set_restart_delay', [90])
+        assert self.run_function('system.get_restart_delay') == \
+            '90 seconds'
 
         # Pass set bad value for seconds
-        self.assertIn(
-            'Invalid value passed for seconds.',
-            self.run_function('system.set_restart_delay', [70]))
+        assert 'Invalid value passed for seconds.' in \
+            self.run_function('system.set_restart_delay', [70])
 
     def test_get_set_disable_keyboard_on_lock(self):
         '''
@@ -184,39 +177,26 @@ class MacSystemModuleTest(ModuleCase):
         Test system.set_disable_keyboard_on_lock
         '''
         # Normal Functionality
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [True]))
-        self.assertTrue(
-            self.run_function('system.get_disable_keyboard_on_lock'))
+        assert self.run_function('system.set_disable_keyboard_on_lock', [True])
+        assert self.run_function('system.get_disable_keyboard_on_lock')
 
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [False]))
-        self.assertFalse(
-            self.run_function('system.get_disable_keyboard_on_lock'))
+        assert self.run_function('system.set_disable_keyboard_on_lock', [False])
+        assert not self.run_function('system.get_disable_keyboard_on_lock')
 
         # Test valid input
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [True]))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [False]))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['yes']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['no']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['On']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', ['Off']))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [1]))
-        self.assertTrue(
-            self.run_function('system.set_disable_keyboard_on_lock', [0]))
+        assert self.run_function('system.set_disable_keyboard_on_lock', [True])
+        assert self.run_function('system.set_disable_keyboard_on_lock', [False])
+        assert self.run_function('system.set_disable_keyboard_on_lock', ['yes'])
+        assert self.run_function('system.set_disable_keyboard_on_lock', ['no'])
+        assert self.run_function('system.set_disable_keyboard_on_lock', ['On'])
+        assert self.run_function('system.set_disable_keyboard_on_lock', ['Off'])
+        assert self.run_function('system.set_disable_keyboard_on_lock', [1])
+        assert self.run_function('system.set_disable_keyboard_on_lock', [0])
 
         # Test invalid input
-        self.assertIn(
-            'Invalid String Value for Enabled',
+        assert 'Invalid String Value for Enabled' in \
             self.run_function('system.set_disable_keyboard_on_lock',
-                              ['spongebob']))
+                              ['spongebob'])
 
     @skipIf(True, 'Skip this test until mac fixes it.')
     def test_get_set_boot_arch(self):
@@ -227,15 +207,14 @@ class MacSystemModuleTest(ModuleCase):
         may need to disable this test as we can't set the boot architecture
         '''
         # Normal Functionality
-        self.assertTrue(self.run_function('system.set_boot_arch', ['i386']))
-        self.assertEqual(self.run_function('system.get_boot_arch'), 'i386')
-        self.assertTrue(self.run_function('system.set_boot_arch', ['default']))
-        self.assertEqual(self.run_function('system.get_boot_arch'), 'default')
+        assert self.run_function('system.set_boot_arch', ['i386'])
+        assert self.run_function('system.get_boot_arch') == 'i386'
+        assert self.run_function('system.set_boot_arch', ['default'])
+        assert self.run_function('system.get_boot_arch') == 'default'
 
         # Test invalid input
-        self.assertIn(
-            'Invalid value passed for arch',
-            self.run_function('system.set_boot_arch', ['spongebob']))
+        assert 'Invalid value passed for arch' in \
+            self.run_function('system.set_boot_arch', ['spongebob'])
 
 
 @pytest.mark.skip_if_not_root
@@ -261,8 +240,6 @@ class MacSystemComputerNameTest(ModuleCase):
         Test system.set_computer_name
         '''
         log.debug("Set name is %s", SET_COMPUTER_NAME)
-        self.assertTrue(
-            self.run_function('system.set_computer_name', [SET_COMPUTER_NAME]))
-        self.assertEqual(
-            self.run_function('system.get_computer_name'),
-            SET_COMPUTER_NAME)
+        assert self.run_function('system.set_computer_name', [SET_COMPUTER_NAME])
+        assert self.run_function('system.get_computer_name') == \
+            SET_COMPUTER_NAME

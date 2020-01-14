@@ -37,7 +37,7 @@ class ModjkTestCase(TestCase):
                'changes': {}}
 
         ret.update({'comment': LIST_NOT_STR})
-        self.assertDictEqual(modjk.worker_stopped(name, 'app1'), ret)
+        assert modjk.worker_stopped(name, 'app1') == ret
 
     # 'worker_activated' function tests: 1
 
@@ -53,7 +53,7 @@ class ModjkTestCase(TestCase):
                'changes': {}}
 
         ret.update({'comment': LIST_NOT_STR})
-        self.assertDictEqual(modjk.worker_activated(name, 'app1'), ret)
+        assert modjk.worker_activated(name, 'app1') == ret
 
     # 'worker_disabled' function tests: 1
 
@@ -69,7 +69,7 @@ class ModjkTestCase(TestCase):
                'changes': {}}
 
         ret.update({'comment': LIST_NOT_STR})
-        self.assertDictEqual(modjk.worker_disabled(name, 'app1'), ret)
+        assert modjk.worker_disabled(name, 'app1') == ret
 
     # 'worker_recover' function tests: 1
 
@@ -85,4 +85,4 @@ class ModjkTestCase(TestCase):
                'changes': {}}
 
         ret.update({'comment': LIST_NOT_STR})
-        self.assertDictEqual(modjk.worker_recover(name, 'app1'), ret)
+        assert modjk.worker_recover(name, 'app1') == ret

@@ -78,12 +78,12 @@ class ZookeeperTestCase(ModuleCase, SaltReturnAssertsMixin):
             name='/test/name',
         )
         self.assertSaltTrueReturn(ret)
-        self.assertTrue(bool(ret['zookeeper_|-/test/name_|-/test/name_|-absent']['changes']))
+        assert bool(ret['zookeeper_|-/test/name_|-/test/name_|-absent']['changes'])
         ret = self.run_state(
             'zookeeper.absent',
             name='/test/name',
         )
-        self.assertFalse(bool(ret['zookeeper_|-/test/name_|-/test/name_|-absent']['changes']))
+        assert not bool(ret['zookeeper_|-/test/name_|-/test/name_|-absent']['changes'])
 
     def test_zookeeper_acls(self):
         ret = self.run_state(

@@ -35,7 +35,7 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
                'changes': {},
                'result': False,
                'comment': 'unknown is not an accepted mode'}
-        self.assertDictEqual(selinux.mode('unknown'), ret)
+        assert selinux.mode('unknown') == ret
 
         mock_en = MagicMock(return_value='Enforcing')
         mock_pr = MagicMock(side_effect=['Permissive', 'Enforcing'])
@@ -45,24 +45,24 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
                          'selinux.setenforce': mock_pr}):
             comt = ('SELinux is already in Enforcing mode')
             ret = {'name': 'Enforcing', 'comment': comt, 'result': True, 'changes': {}}
-            self.assertDictEqual(selinux.mode('Enforcing'), ret)
+            assert selinux.mode('Enforcing') == ret
 
             with patch.dict(selinux.__opts__, {'test': True}):
                 comt = ('SELinux mode is set to be changed to Permissive')
                 ret = {'name': 'Permissive', 'comment': comt,
                        'result': None, 'changes': {'new': 'Permissive', 'old': 'Enforcing'}}
-                self.assertDictEqual(selinux.mode('Permissive'), ret)
+                assert selinux.mode('Permissive') == ret
 
             with patch.dict(selinux.__opts__, {'test': False}):
                 comt = ('SELinux has been set to Permissive mode')
                 ret = {'name': 'Permissive', 'comment': comt,
                        'result': True, 'changes': {'new': 'Permissive', 'old': 'Enforcing'}}
-                self.assertDictEqual(selinux.mode('Permissive'), ret)
+                assert selinux.mode('Permissive') == ret
 
                 comt = ('Failed to set SELinux to Permissive mode')
                 ret.update({'name': 'Permissive', 'comment': comt,
                             'result': False, 'changes': {}})
-                self.assertDictEqual(selinux.mode('Permissive'), ret)
+                assert selinux.mode('Permissive') == ret
 
     # 'boolean' function tests: 1
 
@@ -82,7 +82,7 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
                         {'selinux.list_sebool': mock_en}):
             comt = ('Boolean {0} is not available'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(selinux.boolean(name, value), ret)
+            assert selinux.boolean(name, value) == ret
 
         mock_bools = MagicMock(return_value={name: {'State': 'on',
                                                     'Default': 'on'}})
@@ -90,15 +90,15 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
                         {'selinux.list_sebool': mock_bools}):
             comt = ('None is not a valid value for the boolean')
             ret.update({'comment': comt})
-            self.assertDictEqual(selinux.boolean(name, None), ret)
+            assert selinux.boolean(name, None) == ret
 
             comt = ('Boolean is in the correct state')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(selinux.boolean(name, value, True), ret)
+            assert selinux.boolean(name, value, True) == ret
 
             comt = ('Boolean is in the correct state')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(selinux.boolean(name, value), ret)
+            assert selinux.boolean(name, value) == ret
 
         mock_bools = MagicMock(return_value={name: {'State': 'off',
                                                     'Default': 'on'}})
@@ -110,16 +110,16 @@ class SelinuxTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('Boolean samba_create_home_dirs'
                         ' is set to be changed to on')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(selinux.boolean(name, value), ret)
+                assert selinux.boolean(name, value) == ret
 
             with patch.dict(selinux.__opts__, {'test': False}):
                 comt = ('Boolean samba_create_home_dirs has been set to on')
                 ret.update({'comment': comt, 'result': True})
                 ret.update({'changes': {'State': {'old': 'off', 'new': 'on'}}})
-                self.assertDictEqual(selinux.boolean(name, value), ret)
+                assert selinux.boolean(name, value) == ret
 
                 comt = ('Failed to set the boolean '
                         'samba_create_home_dirs to on')
                 ret.update({'comment': comt, 'result': False})
                 ret.update({'changes': {}})
-                self.assertDictEqual(selinux.boolean(name, value), ret)
+                assert selinux.boolean(name, value) == ret

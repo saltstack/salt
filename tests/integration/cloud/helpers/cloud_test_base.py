@@ -78,10 +78,10 @@ class CloudTest(ShellCase):
 
         # If it exists but doesn't show up in the creation_ret, there was probably an error during creation
         if creation_ret:
-            self.assertIn(instance_name, [i.strip(': ') for i in creation_ret],
+            assert instance_name in [i.strip(': ') for i in creation_ret], \
                           'An error occured during instance creation:  |\n\t{}\n\t|'.format(
                               '\n\t'.join(creation_ret)
-                          ))
+                          )
         else:
             # Verify that the instance exists via query
             query = self.query_instances()
@@ -95,9 +95,9 @@ class CloudTest(ShellCase):
                     query = self.query_instances()
 
             # Assert that the last query was successful
-            self.assertTrue(self._instance_exists(instance_name, query),
+            assert self._instance_exists(instance_name, query), \
                             'Instance "{}" was not created successfully: {}'.format(self.instance_name,
-                                                                                    ', '.join(query)))
+                                                                                    ', '.join(query))
 
             log.debug('Instance exists and was created: "{}"'.format(instance_name))
 
@@ -110,22 +110,22 @@ class CloudTest(ShellCase):
         delete_str = self.run_cloud('-d {0} --assume-yes --out=yaml'.format(instance_name), timeout=timeout)
         if delete_str:
             delete = safe_load('\n'.join(delete_str))
-            self.assertIn(self.profile_str, delete)
-            self.assertIn(self.PROVIDER, delete[self.profile_str])
-            self.assertIn(instance_name, delete[self.profile_str][self.PROVIDER])
+            assert self.profile_str in delete
+            assert self.PROVIDER in delete[self.profile_str]
+            assert instance_name in delete[self.profile_str][self.PROVIDER]
 
             delete_status = delete[self.profile_str][self.PROVIDER][instance_name]
             if isinstance(delete_status, str):
-                self.assertEqual(delete_status, 'True')
+                assert delete_status == 'True'
                 return
             elif isinstance(delete_status, dict):
                 current_state = delete_status.get('currentState')
                 if current_state:
                     if current_state.get('ACTION'):
-                        self.assertIn('.delete', current_state.get('ACTION'))
+                        assert '.delete' in current_state.get('ACTION')
                         return
                     else:
-                        self.assertEqual(current_state.get('name'), 'shutting-down')
+                        assert current_state.get('name') == 'shutting-down'
                         return
         # It's not clear from the delete string that deletion was successful, ask salt-cloud after a delay
         query = self.query_instances()
@@ -137,7 +137,7 @@ class CloudTest(ShellCase):
                           .format(instance_name, tries, query))
                 query = self.query_instances()
         # The last query should have been successful
-        self.assertNotIn(instance_name, self.query_instances())
+        assert instance_name not in self.query_instances()
 
     @property
     def instance_name(self):
@@ -267,8 +267,8 @@ class CloudTest(ShellCase):
                 success = False
                 fail_messages.append(alt_destroy_message)
                 log.error('Failed to destroy instance "{}": {}'.format(instance, alt_destroy_message))
-        self.assertTrue(success, '\n'.join(fail_messages))
-        self.assertFalse(alt_names, 'Cleanup should happen in the test, not the TearDown')
+        assert success, '\n'.join(fail_messages)
+        assert not alt_names, 'Cleanup should happen in the test, not the TearDown'
 
     @classmethod
     def tearDownClass(cls):

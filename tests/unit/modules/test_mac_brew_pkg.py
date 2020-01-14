@@ -15,6 +15,7 @@ import salt.utils.pkg
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase
 from tests.support.mock import MagicMock, Mock, patch
+import pytest
 
 TAPS_STRING = 'homebrew/dupes\nhomebrew/science\nhomebrew/x11'
 TAPS_LIST = ['homebrew/dupes', 'homebrew/science', 'homebrew/x11']
@@ -42,7 +43,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_brew.__salt__, {'file.get_user': mock_user,
                                             'cmd.run_all': mock_taps,
                                             'cmd.run': mock_cmd}):
-            self.assertEqual(mac_brew._list_taps(), TAPS_LIST)
+            assert mac_brew._list_taps() == TAPS_LIST
 
     # '_tap' function tests: 3
 
@@ -51,7 +52,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         Tests if tap argument is already installed or not
         '''
         with patch('salt.modules.mac_brew_pkg._list_taps', MagicMock(return_value=TAPS_LIST)):
-            self.assertTrue(mac_brew._tap('homebrew/science'))
+            assert mac_brew._tap('homebrew/science')
 
     def test_tap_failure(self):
         '''
@@ -66,7 +67,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                                             'file.get_user': mock_user,
                                             'cmd.run': mock_cmd}), \
                 patch('salt.modules.mac_brew_pkg._list_taps', MagicMock(return_value={})):
-            self.assertFalse(mac_brew._tap('homebrew/test'))
+            assert not mac_brew._tap('homebrew/test')
 
     def test_tap(self):
         '''
@@ -79,7 +80,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                                             'file.get_user': mock_user,
                                             'cmd.run': mock_cmd}), \
                 patch('salt.modules.mac_brew_pkg._list_taps', MagicMock(return_value=TAPS_LIST)):
-            self.assertTrue(mac_brew._tap('homebrew/test'))
+            assert mac_brew._tap('homebrew/test')
 
     # '_homebrew_bin' function tests: 1
 
@@ -89,7 +90,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_path = MagicMock(return_value='/usr/local')
         with patch.dict(mac_brew.__salt__, {'cmd.run': mock_path}):
-            self.assertEqual(mac_brew._homebrew_bin(), '/usr/local/bin/brew')
+            assert mac_brew._homebrew_bin() == '/usr/local/bin/brew'
 
     # 'list_pkgs' function tests: 2
     # Only tested a few basics
@@ -99,7 +100,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests removed implementation
         '''
-        self.assertEqual(mac_brew.list_pkgs(removed=True), {})
+        assert mac_brew.list_pkgs(removed=True) == {}
 
     def test_list_pkgs_versions_true(self):
         '''
@@ -107,8 +108,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_context = {'foo': ['bar']}
         with patch.dict(mac_brew.__context__, {'pkg.list_pkgs': mock_context}):
-            self.assertEqual(mac_brew.list_pkgs(versions_as_list=True),
-                             mock_context)
+            assert mac_brew.list_pkgs(versions_as_list=True) == \
+                             mock_context
 
     def test_list_pkgs_homebrew_cask_pakages(self):
         '''
@@ -164,8 +165,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.modules.mac_brew_pkg._call_brew', custom_call_brew),\
             patch.dict(mac_brew.__salt__, {'pkg_resource.add_pkg': custom_add_pkg,
                                            'pkg_resource.sort_pkglist': MagicMock()}):
-            self.assertEqual(mac_brew.list_pkgs(versions_as_list=True),
-                             expected_pkgs)
+            assert mac_brew.list_pkgs(versions_as_list=True) == \
+                             expected_pkgs
 
     # 'version' function tests: 1
 
@@ -175,7 +176,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_version = MagicMock(return_value='0.1.5')
         with patch.dict(mac_brew.__salt__, {'pkg_resource.version': mock_version}):
-            self.assertEqual(mac_brew.version('foo'), '0.1.5')
+            assert mac_brew.version('foo') == '0.1.5'
 
     # 'latest_version' function tests: 0
     # It has not been fully implemented
@@ -191,7 +192,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_params = MagicMock(return_value=({'foo': None}, 'repository'))
         with patch('salt.modules.mac_brew_pkg.list_pkgs', return_value={'test': '0.1.5'}), \
                 patch.dict(mac_brew.__salt__, {'pkg_resource.parse_targets': mock_params}):
-            self.assertEqual(mac_brew.remove('foo'), {})
+            assert mac_brew.remove('foo') == {}
 
     # 'refresh_db' function tests: 2
 
@@ -208,7 +209,8 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.mac_brew_pkg._homebrew_bin',
                       MagicMock(return_value=HOMEBREW_BIN)):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
-                self.assertRaises(CommandExecutionError, mac_brew.refresh_db)
+                with pytest.raises(CommandExecutionError):
+                    mac_brew.refresh_db()
 
     def test_refresh_db(self):
         '''
@@ -221,7 +223,7 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.modules.mac_brew_pkg._homebrew_bin',
                       MagicMock(return_value=HOMEBREW_BIN)):
             with patch.object(salt.utils.pkg, 'clear_rtag', Mock()):
-                self.assertTrue(mac_brew.refresh_db())
+                assert mac_brew.refresh_db()
 
     # 'install' function tests: 1
     # Only tested a few basics
@@ -234,4 +236,4 @@ class BrewTestCase(TestCase, LoaderModuleMockMixin):
         mock_params = MagicMock(return_value=[None, None])
         with patch.dict(mac_brew.__salt__,
                         {'pkg_resource.parse_targets': mock_params}):
-            self.assertEqual(mac_brew.install('name=foo'), {})
+            assert mac_brew.install('name=foo') == {}

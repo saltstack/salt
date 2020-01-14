@@ -15,6 +15,7 @@ from tests.support.runtests import RUNTIME_VARS
 from salt.ext import six
 import salt.utils.json
 import salt.utils.virtualbox
+import pytest
 
 # Create the cloud instance name to be used throughout the tests
 INSTANCE_NAME = tests.integration.cloud.helpers.random_name()
@@ -45,7 +46,8 @@ class VirtualboxTestCase(TestCase):
                 self.fail(e.message)
 
     def assertMachineDoesNotExist(self, name):
-        self.assertRaisesRegex(Exception, "Could not find a registered machine", self.vbox.findMachine, name)
+        with pytest.raises(Exception, match="Could not find a registered machine"):
+            self.vbox.findMachine(name)
 
 
 @skipIf(salt.utils.virtualbox.HAS_LIBS is False, 'salt-cloud requires virtualbox to be installed')

@@ -37,12 +37,12 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
                 'support looking up open files on the system')
         ret = {'Error': {'Unsupported File Module': '{0}'.format(err2),
                          'Unsupported Package Manager': '{0}'.format(err1)}}
-        self.assertDictEqual(introspect.running_service_owners(), ret)
+        assert introspect.running_service_owners() == ret
 
         mock = MagicMock(return_value={})
         with patch.dict(introspect.__salt__, {'pkg.owner': mock,
                         'file.open_files': mock, 'service.execs': mock}):
-            self.assertDictEqual(introspect.running_service_owners(), {})
+            assert introspect.running_service_owners() == {}
 
     # 'enabled_service_owners' function tests: 1
 
@@ -57,12 +57,12 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
                 ' support showing descriptive service data')
         ret = {'Error': {'Unsupported Service Manager': '{0}'.format(err2),
                          'Unsupported Package Manager': '{0}'.format(err1)}}
-        self.assertDictEqual(introspect.enabled_service_owners(), ret)
+        assert introspect.enabled_service_owners() == ret
 
         mock = MagicMock(return_value={})
         with patch.dict(introspect.__salt__, {'pkg.owner': mock,
                         'service.show': mock, 'service.get_enabled': mock}):
-            self.assertDictEqual(introspect.enabled_service_owners(), {})
+            assert introspect.enabled_service_owners() == {}
 
     # 'service_highstate' function tests: 1
 
@@ -74,4 +74,4 @@ class IntrospectTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value={})), \
                 patch('salt.modules.introspect.enabled_service_owners',
                       MagicMock(return_value={})):
-            self.assertDictEqual(introspect.service_highstate(), {})
+            assert introspect.service_highstate() == {}

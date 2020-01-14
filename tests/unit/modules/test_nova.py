@@ -36,7 +36,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'boot', MagicMock(return_value='A')):
-            self.assertTrue(nova.boot('name'))
+            assert nova.boot('name')
 
     def test_volume_list(self):
         '''
@@ -45,7 +45,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'volume_list', MagicMock(return_value='A')):
-            self.assertTrue(nova.volume_list())
+            assert nova.volume_list()
 
     def test_volume_show(self):
         '''
@@ -54,7 +54,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'volume_show', MagicMock(return_value='A')):
-            self.assertTrue(nova.volume_show('name'))
+            assert nova.volume_show('name')
 
     def test_volume_create(self):
         '''
@@ -63,7 +63,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'volume_create', MagicMock(return_value='A')):
-            self.assertTrue(nova.volume_create('name'))
+            assert nova.volume_create('name')
 
     def test_volume_delete(self):
         '''
@@ -72,7 +72,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'volume_delete', MagicMock(return_value='A')):
-            self.assertTrue(nova.volume_delete('name'))
+            assert nova.volume_delete('name')
 
     def test_volume_detach(self):
         '''
@@ -81,7 +81,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'volume_detach', MagicMock(return_value='A')):
-            self.assertTrue(nova.volume_detach('name'))
+            assert nova.volume_detach('name')
 
     def test_volume_attach(self):
         '''
@@ -90,7 +90,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'volume_attach', MagicMock(return_value='A')):
-            self.assertTrue(nova.volume_attach('name', 'serv_name'))
+            assert nova.volume_attach('name', 'serv_name')
 
     def test_suspend(self):
         '''
@@ -99,7 +99,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'suspend', MagicMock(return_value='A')):
-            self.assertTrue(nova.suspend('instance_id'))
+            assert nova.suspend('instance_id')
 
     def test_resume(self):
         '''
@@ -108,7 +108,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'resume', MagicMock(return_value='A')):
-            self.assertTrue(nova.resume('instance_id'))
+            assert nova.resume('instance_id')
 
     def test_lock(self):
         '''
@@ -117,7 +117,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'lock', MagicMock(return_value='A')):
-            self.assertTrue(nova.lock('instance_id'))
+            assert nova.lock('instance_id')
 
     def test_delete(self):
         '''
@@ -126,7 +126,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'delete', MagicMock(return_value='A')):
-            self.assertTrue(nova.delete('instance_id'))
+            assert nova.delete('instance_id')
 
     def test_flavor_list(self):
         '''
@@ -135,7 +135,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'flavor_list', MagicMock(return_value='A')):
-            self.assertTrue(nova.flavor_list())
+            assert nova.flavor_list()
 
     def test_flavor_create(self):
         '''
@@ -144,7 +144,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'flavor_create', MagicMock(return_value='A')):
-            self.assertTrue(nova.flavor_create('name'))
+            assert nova.flavor_create('name')
 
     def test_flavor_delete(self):
         '''
@@ -153,7 +153,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'flavor_delete', MagicMock(return_value='A')):
-            self.assertTrue(nova.flavor_delete('flavor_id'))
+            assert nova.flavor_delete('flavor_id')
 
     def test_keypair_list(self):
         '''
@@ -162,7 +162,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'keypair_list', MagicMock(return_value='A')):
-            self.assertTrue(nova.keypair_list())
+            assert nova.keypair_list()
 
     def test_keypair_add(self):
         '''
@@ -171,7 +171,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'keypair_add', MagicMock(return_value='A')):
-            self.assertTrue(nova.keypair_add('name'))
+            assert nova.keypair_add('name')
 
     def test_keypair_delete(self):
         '''
@@ -180,7 +180,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'keypair_delete', MagicMock(return_value='A')):
-            self.assertTrue(nova.keypair_delete('name'))
+            assert nova.keypair_delete('name')
 
     def test_image_list(self):
         '''
@@ -190,7 +190,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'image_list', MagicMock(return_value='A')):
-            self.assertTrue(nova.image_list())
+            assert nova.image_list()
 
     def test_image_meta_set(self):
         '''
@@ -200,7 +200,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'image_meta_set', MagicMock(return_value='A')):
-            self.assertTrue(nova.image_meta_set())
+            assert nova.image_meta_set()
 
     def test_image_meta_delete(self):
         '''
@@ -210,7 +210,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'image_meta_delete', MagicMock(return_value='A')):
-            self.assertTrue(nova.image_meta_delete())
+            assert nova.image_meta_delete()
 
     def test_list_(self):
         '''
@@ -219,7 +219,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
          the server_list function.
          '''
         with patch.object(nova, 'server_list', return_value=['A']):
-            self.assertEqual(nova.list_(), ['A'])
+            assert nova.list_() == ['A']
 
     def test_server_list(self):
         '''
@@ -228,7 +228,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'server_list', MagicMock(return_value='A')):
-            self.assertTrue(nova.server_list())
+            assert nova.server_list()
 
     def test_show(self):
         '''
@@ -237,7 +237,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
          the server_show function.
          '''
         with patch.object(nova, 'server_show', return_value=['A']):
-            self.assertEqual(nova.show('server_id'), ['A'])
+            assert nova.show('server_id') == ['A']
 
     def test_server_list_detailed(self):
         '''
@@ -246,7 +246,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'server_list_detailed', MagicMock(return_value='A')):
-            self.assertTrue(nova.server_list_detailed())
+            assert nova.server_list_detailed()
 
     def test_server_show(self):
         '''
@@ -255,7 +255,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'server_show', MagicMock(return_value='A')):
-            self.assertTrue(nova.server_show('serv_id'))
+            assert nova.server_show('serv_id')
 
     def test_secgroup_create(self):
         '''
@@ -264,7 +264,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'server_list_detailed', MagicMock(return_value='A')):
-            self.assertTrue(nova.secgroup_create('name', 'desc'))
+            assert nova.secgroup_create('name', 'desc')
 
     def test_secgroup_delete(self):
         '''
@@ -273,7 +273,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'secgroup_delete', MagicMock(return_value='A')):
-            self.assertTrue(nova.secgroup_delete('name'))
+            assert nova.secgroup_delete('name')
 
     def test_secgroup_list(self):
         '''
@@ -282,7 +282,7 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'secgroup_list', MagicMock(return_value='A')):
-            self.assertTrue(nova.secgroup_list())
+            assert nova.secgroup_list()
 
     def test_server_by_name(self):
         '''
@@ -291,4 +291,4 @@ class NovaTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_auth.side_effect = MagicMock()
         with patch.object(self.mock_auth,
                           'server_by_name', MagicMock(return_value='A')):
-            self.assertTrue(nova.server_by_name('name'))
+            assert nova.server_by_name('name')

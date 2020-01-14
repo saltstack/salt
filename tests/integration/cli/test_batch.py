@@ -33,7 +33,7 @@ class BatchTest(ShellCase):
             '"*minion" test.echo "batch testing" -b 50%',
             timeout=self.run_timeout,
         )
-        self.assertIn(ret, cmd)
+        assert ret in cmd
 
     def test_batch_run_number(self):
         '''
@@ -45,7 +45,7 @@ class BatchTest(ShellCase):
             '"*minion" test.ping --batch-size 2',
             timeout=self.run_timeout,
         )
-        self.assertIn(ret, cmd)
+        assert ret in cmd
 
     def test_batch_run_grains_targeting(self):
         '''
@@ -65,8 +65,8 @@ class BatchTest(ShellCase):
             '-C "G@os:{0} and not localhost" -b 25% test.ping'.format(os_grain),
             timeout=self.run_timeout,
         )
-        self.assertIn(sub_min_ret, cmd)
-        self.assertIn(min_ret, cmd)
+        assert sub_min_ret in cmd
+        assert min_ret in cmd
 
     def test_batch_exit_code(self):
         '''
@@ -77,7 +77,7 @@ class BatchTest(ShellCase):
             with_retcode=True,
             timeout=self.run_timeout,
         )
-        self.assertEqual(cmd[-1], 2)
+        assert cmd[-1] == 2
 
 # Test for failhard + batch. The best possible solution here was to do something like that:
 # assertRaises(StopIteration)
@@ -105,11 +105,11 @@ class BatchTest(ShellCase):
             if line.startswith('retcode'):
                 retcode = line[-1]
         # We expect to have only one minion to be run
-        self.assertEqual(1, len(minions_list))
+        assert 1 == len(minions_list)
         # We expect to find a retcode in the output
-        self.assertIsNot(None, retcode)
+        assert None is not retcode
         # We expect retcode to be non-zero
-        self.assertNotEqual(0, retcode)
+        assert 0 != retcode
 
     def test_batch_state_stopping_after_error(self):
         '''
@@ -133,8 +133,8 @@ class BatchTest(ShellCase):
             if line.startswith('retcode'):
                 retcode = line[-1]
         # We expect to have only one minion to be run
-        self.assertEqual(1, len(minions_list))
+        assert 1 == len(minions_list)
         # We expect to find a retcode in the output
-        self.assertIsNot(None, retcode)
+        assert None is not retcode
         # We expect retcode to be non-zero
-        self.assertNotEqual(0, retcode)
+        assert 0 != retcode

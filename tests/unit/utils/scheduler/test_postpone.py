@@ -50,14 +50,14 @@ class SchedulerPostponeTest(SchedulerTestsBase):
         # Run at the original time
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status('job1')
-        self.assertNotIn('_last_run', ret)
+        assert '_last_run' not in ret
 
         # Run 5 minutes later
         self.schedule.eval(now=run_time + datetime.timedelta(seconds=delay))
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time + datetime.timedelta(seconds=delay))
+        assert ret['_last_run'] == run_time + datetime.timedelta(seconds=delay)
 
         # Run 6 minutes later
         self.schedule.eval(now=run_time + datetime.timedelta(seconds=delay + 1))
         ret = self.schedule.job_status('job1')
-        self.assertEqual(ret['_last_run'], run_time + datetime.timedelta(seconds=delay))
+        assert ret['_last_run'] == run_time + datetime.timedelta(seconds=delay)

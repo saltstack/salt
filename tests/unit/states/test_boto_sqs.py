@@ -65,7 +65,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                 )]
                 ret = base_ret.copy()
                 ret.update({'result': False, 'comment': comt})
-                self.assertDictEqual(boto_sqs.present(name), ret)
+                assert boto_sqs.present(name) == ret
 
             with patch.dict(boto_sqs.__opts__, {'test': True}):
                 comt = ['SQS queue {0} is set to be created.'.format(name)]
@@ -75,7 +75,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': comt,
                     'changes': {'old': None, 'new': 'mysqs'},
                 })
-                self.assertDictEqual(boto_sqs.present(name), ret)
+                assert boto_sqs.present(name) == ret
                 diff = textwrap.dedent('''\
                     ---
                     +++
@@ -102,12 +102,12 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': comt,
                     'changes': {'attributes': {'diff': diff}},
                 })
-                self.assertDictEqual(boto_sqs.present(name, attributes), ret)
+                assert boto_sqs.present(name, attributes) == ret
 
             comt = ['SQS queue mysqs present.']
             ret = base_ret.copy()
             ret.update({'result': True, 'comment': comt})
-            self.assertDictEqual(boto_sqs.present(name), ret)
+            assert boto_sqs.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -124,7 +124,7 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('SQS queue {0} does not exist in None.'.format(name))
             ret = base_ret.copy()
             ret.update({'result': True, 'comment': comt})
-            self.assertDictEqual(boto_sqs.absent(name), ret)
+            assert boto_sqs.absent(name) == ret
 
             with patch.dict(boto_sqs.__opts__, {'test': True}):
                 comt = ('SQS queue {0} is set to be removed.'.format(name))
@@ -134,4 +134,4 @@ class BotoSqsTestCase(TestCase, LoaderModuleMockMixin):
                     'comment': comt,
                     'changes': {'old': name, 'new': None},
                 })
-                self.assertDictEqual(boto_sqs.absent(name), ret)
+                assert boto_sqs.absent(name) == ret

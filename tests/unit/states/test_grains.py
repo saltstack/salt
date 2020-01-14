@@ -65,7 +65,7 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 'grains')
         with salt.utils.files.fopen(grains_file, "r") as grf:
             grains_data = salt.utils.stringutils.to_unicode(grf.read())
-        self.assertMultiLineEqual(grains_string, grains_data)
+        assert grains_string == grains_data
 
     @contextlib.contextmanager
     def setGrains(self, grains_data):
@@ -87,24 +87,24 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
     def test_exists_missing(self):
         with self.setGrains({'a': 'aval'}):
             ret = grains.exists(name='foo')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Grain does not exist')
-            self.assertEqual(ret['changes'], {})
+            assert ret['result'] is False
+            assert ret['comment'] == 'Grain does not exist'
+            assert ret['changes'] == {}
 
     def test_exists_found(self):
         with self.setGrains({'a': 'aval', 'foo': 'bar'}):
             # Grain already set
             ret = grains.exists(name='foo')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain exists')
-            self.assertEqual(ret['changes'], {})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain exists'
+            assert ret['changes'] == {}
 
     # 'make_hashable' function tests: 1
 
     def test_make_hashable(self):
         with self.setGrains({'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}):
             hashable_list = {'cmplx_lst_grain': [{'a': 'aval'}, {'foo': 'bar'}]}
-            self.assertEqual(grains.make_hashable(grains.__grains__).issubset(grains.make_hashable(hashable_list)), True)
+            assert grains.make_hashable(grains.__grains__).issubset(grains.make_hashable(hashable_list)) is True
 
     # 'present' function tests: 12
 
@@ -112,17 +112,17 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
         # Set a non existing grain
         with self.setGrains({'a': 'aval'}):
             ret = grains.present(name='foo', value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': 'bar'})
-            self.assertEqual(grains.__grains__, {'a': 'aval', 'foo': 'bar'})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': 'bar'}
+            assert grains.__grains__ == {'a': 'aval', 'foo': 'bar'}
             self.assertGrainFileContent("a: aval\nfoo: bar\n")
 
         # Set a non existing nested grain
         with self.setGrains({'a': 'aval'}):
             ret = grains.present(name='foo:is:nested', value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': 'bar'}}})
-            self.assertEqual(grains.__grains__, {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': {'is': {'nested': 'bar'}}}
+            assert grains.__grains__ == {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
             self.assertGrainFileContent("a: aval\n"
                                         "foo:\n"
                                         "  is:\n"
@@ -134,11 +134,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is:nested',
                 value={'bar': 'is a dict'})
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'bar': 'is a dict'}}}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': {'bar': 'is a dict'}}}})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': {'is': {'nested': {'bar': 'is a dict'}}}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': {'bar': 'is a dict'}}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -152,12 +151,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:k2',
                 value='v2')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Set grain foo:k2 to v2')
-            self.assertEqual(ret['changes'], {'foo': {'k2': 'v2', 'k1': 'v1'}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'k1': 'v1', 'k2': 'v2'}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Set grain foo:k2 to v2'
+            assert ret['changes'] == {'foo': {'k2': 'v2', 'k1': 'v1'}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'k1': 'v1', 'k2': 'v2'}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  k1: v1\n"
@@ -170,36 +168,33 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain is already set')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain is already set'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': 'bar'}
 
         with self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}):
             # Nested grain already set
             ret = grains.present(
                 name='foo:is:nested',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain is already set')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain is already set'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
 
         with self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}):
             # Nested dict grain already set
             ret = grains.present(
                 name='foo:is',
                 value={'nested': 'bar'})
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain is already set')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain is already set'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
 
     def test_present_overwrite(self):
         with self.setGrains({'a': 'aval', 'foo': 'bar'}):
@@ -207,11 +202,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo',
                 value='newbar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': 'newbar'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'newbar'})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': 'newbar'}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': 'newbar'}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: newbar\n"
             )
@@ -221,11 +215,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo',
                 value=None)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': None})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': None})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': None}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': None}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: null\n"
             )
@@ -235,11 +228,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is:nested',
                 value='newbar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': 'newbar'}}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'newbar'}}})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': {'is': {'nested': 'newbar'}}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'newbar'}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -251,11 +243,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is:nested',
                 value=None)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': None}}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': None}}})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': {'is': {'nested': None}}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': None}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -268,24 +259,22 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is',
                 value='newbar')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
+            assert ret['result'] is False
+            assert ret['changes'] == {}
+            assert ret['comment'] == 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.'
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'val'}}}
 
         with self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'val'}}}):
             # Clear a grain (set to None)
             ret = grains.present(
                 name='foo:is',
                 value=None)
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'val'}}})
+            assert ret['result'] is False
+            assert ret['changes'] == {}
+            assert ret['comment'] == 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.'
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'val'}}}
 
     def test_present_fails_to_set_dict_or_list(self):
         with self.setGrains({'a': 'aval', 'foo': 'bar'}):
@@ -293,28 +282,26 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo',
                 value=['l1', 'l2'])
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'The key \'foo\' exists and the '
-                                           + 'given value is a dict or a list. '
-                                           + 'Use \'force=True\' to overwrite.')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
+            assert ret['result'] is False
+            assert ret['comment'] == 'The key \'foo\' exists and the ' \
+                                           + 'given value is a dict or a list. ' \
+                                           + 'Use \'force=True\' to overwrite.'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': 'bar'}
 
         with self.setGrains({'a': 'aval', 'foo': 'bar'}):
             # Fails setting a grain to a dict
             ret = grains.present(
                 name='foo',
                 value={'k1': 'v1'})
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'The key \'foo\' exists and the given '
-                                           + 'value is a dict or a list. Use '
-                                           + '\'force=True\' to overwrite.')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
+            assert ret['result'] is False
+            assert ret['comment'] == 'The key \'foo\' exists and the given ' \
+                                           + 'value is a dict or a list. Use ' \
+                                           + '\'force=True\' to overwrite.'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': 'bar'}
 
         with self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}):
             # Fails to overwrite a nested grain to a list
@@ -322,28 +309,26 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo,is,nested',
                 value=['l1', 'l2'],
                 delimiter=',')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(ret['comment'], 'The key \'foo:is:nested\' exists and the '
-                                           + 'given value is a dict or a list. '
-                                           + 'Use \'force=True\' to overwrite.')
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+            assert ret['result'] is False
+            assert ret['changes'] == {}
+            assert ret['comment'] == 'The key \'foo:is:nested\' exists and the ' \
+                                           + 'given value is a dict or a list. ' \
+                                           + 'Use \'force=True\' to overwrite.'
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
 
         with self.setGrains({'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}):
             # Fails setting a nested grain to a dict
             ret = grains.present(
                 name='foo:is:nested',
                 value={'k1': 'v1'})
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'The key \'foo:is:nested\' exists and the '
-                                           + 'given value is a dict or a list. '
-                                           + 'Use \'force=True\' to overwrite.')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}})
+            assert ret['result'] is False
+            assert ret['comment'] == 'The key \'foo:is:nested\' exists and the ' \
+                                           + 'given value is a dict or a list. ' \
+                                           + 'Use \'force=True\' to overwrite.'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': 'bar'}}}
 
     def test_present_fail_merge_dict(self):
         with self.setGrains({'a': 'aval', 'foo': {'k1': 'v1'}}):
@@ -351,13 +336,12 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo',
                 value={'k2': 'v2'})
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'The key \'foo\' exists but '
-                                           + 'is a dict or a list. '
-                                           + 'Use \'force=True\' to overwrite.')
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'k1': 'v1'}})
+            assert ret['result'] is False
+            assert ret['comment'] == 'The key \'foo\' exists but ' \
+                                           + 'is a dict or a list. ' \
+                                           + 'Use \'force=True\' to overwrite.'
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'k1': 'v1'}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  k1: v1\n"
@@ -370,16 +354,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo',
                 value=['l1', 'l2'],
                 force=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(
-                ret['comment'],
-                "Set grain foo to ['l1', 'l2']" if six.PY3
-                    else "Set grain foo to [u'l1', u'l2']"
-            )
-            self.assertEqual(ret['changes'], {'foo': ['l1', 'l2']})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['l1', 'l2']})
+            assert ret['result'] is True
+            assert ret['comment'] == \
+                ("Set grain foo to ['l1', 'l2']" if six.PY3
+                    else "Set grain foo to [u'l1', u'l2']")
+            assert ret['changes'] == {'foo': ['l1', 'l2']}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['l1', 'l2']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- l1\n"
@@ -392,16 +373,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo',
                 value={'k1': 'v1'},
                 force=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(
-                ret['comment'],
-                "Set grain foo to {'k1': 'v1'}" if six.PY3
-                    else "Set grain foo to {u'k1': u'v1'}"
-            )
-            self.assertEqual(ret['changes'], {'foo': {'k1': 'v1'}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'k1': 'v1'}})
+            assert ret['result'] is True
+            assert ret['comment'] == \
+                ("Set grain foo to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo to {u'k1': u'v1'}")
+            assert ret['changes'] == {'foo': {'k1': 'v1'}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'k1': 'v1'}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  k1: v1\n"
@@ -414,16 +392,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 value=['l1', 'l2'],
                 delimiter=',',
                 force=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': ['l1', 'l2']}}})
-            self.assertEqual(
-                ret['comment'],
-                "Set grain foo:is:nested to ['l1', 'l2']" if six.PY3
-                    else "Set grain foo:is:nested to [u'l1', u'l2']"
-            )
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': ['l1', 'l2']}}})
+            assert ret['result'] is True
+            assert ret['changes'] == {'foo': {'is': {'nested': ['l1', 'l2']}}}
+            assert ret['comment'] == \
+                ("Set grain foo:is:nested to ['l1', 'l2']" if six.PY3
+                    else "Set grain foo:is:nested to [u'l1', u'l2']")
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': ['l1', 'l2']}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -438,16 +413,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo:is:nested',
                 value={'k1': 'v1'},
                 force=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(
-                ret['comment'],
-                "Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
-                    else "Set grain foo:is:nested to {u'k1': u'v1'}"
-            )
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}})
+            assert ret['result'] is True
+            assert ret['comment'] == \
+                ("Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo:is:nested to {u'k1': u'v1'}")
+            assert ret['changes'] == {'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}, 'and': 'other'}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  and: other\n"
@@ -462,11 +434,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is:nested',
                 value={'k1': 'v1'})
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'The key \'foo\' value is \'bar\', '
-                                   + 'which is different from the provided '
-                                   + 'key \'is\'. Use \'force=True\' to overwrite.')
-            self.assertEqual(ret['changes'], {})
+            assert ret['result'] is False
+            assert ret['comment'] == 'The key \'foo\' value is \'bar\', ' \
+                                   + 'which is different from the provided ' \
+                                   + 'key \'is\'. Use \'force=True\' to overwrite.'
+            assert ret['changes'] == {}
 
     def test_present_overwrite_test(self):
         with patch.dict(grains.__opts__, {'test': True}):
@@ -475,11 +447,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 ret = grains.present(
                     name='foo',
                     value='newbar')
-                self.assertEqual(ret['result'], None)
-                self.assertEqual(ret['changes'], {'changed': {'foo': 'newbar'}})
-                self.assertEqual(
-                    grains.__grains__,
-                    {'a': 'aval', 'foo': 'bar'})
+                assert ret['result'] is None
+                assert ret['changes'] == {'changed': {'foo': 'newbar'}}
+                assert grains.__grains__ == \
+                    {'a': 'aval', 'foo': 'bar'}
                 self.assertGrainFileContent("a: aval\n"
                                           + "foo: bar\n"
                 )
@@ -490,16 +461,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is:nested',
                 value={'k1': 'v1'})
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(
-                ret['comment'],
-                "Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
-                    else "Set grain foo:is:nested to {u'k1': u'v1'}"
-            )
-            self.assertEqual(ret['changes'], {'foo': {'is': {'nested': {'k1': 'v1'}}}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}}})
+            assert ret['result'] is True
+            assert ret['comment'] == \
+                ("Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo:is:nested to {u'k1': u'v1'}")
+            assert ret['changes'] == {'foo': {'is': {'nested': {'k1': 'v1'}}}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': {'k1': 'v1'}}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -512,16 +480,13 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.present(
                 name='foo:is:nested',
                 value={'k1': 'v1'})
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(
-                ret['comment'],
-                "Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
-                    else "Set grain foo:is:nested to {u'k1': u'v1'}"
-            )
-            self.assertEqual(ret['changes'], {'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']})
+            assert ret['result'] is True
+            assert ret['comment'] == \
+                ("Set grain foo:is:nested to {'k1': 'v1'}" if six.PY3
+                    else "Set grain foo:is:nested to {u'k1': u'v1'}")
+            assert ret['changes'] == {'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['one', {'is': {'nested': {'k1': 'v1'}}}, 'correct']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- one\n"
@@ -539,12 +504,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 ret = grains.present(
                     name='foo',
                     value='baz')
-                self.assertEqual(ret['result'], False)
-                self.assertEqual(ret['comment'], 'Failed to set grain foo')
-                self.assertEqual(ret['changes'], {})
-                self.assertEqual(
-                    grains.__grains__,
-                    {'a': 'aval', 'foo': 'bar'})
+                assert ret['result'] is False
+                assert ret['comment'] == 'Failed to set grain foo'
+                assert ret['changes'] == {}
+                assert grains.__grains__ == \
+                    {'a': 'aval', 'foo': 'bar'}
                 self.assertGrainFileContent("a: aval\n"
                                           + "foo: bar\n"
                 )
@@ -556,24 +520,22 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
         with self.setGrains({'a': 'aval'}):
             ret = grains.absent(
                 name='foo')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo does not exist')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo does not exist'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
             self.assertGrainFileContent("a: aval\n")
 
         # Unset a non existent nested grain
         with self.setGrains({'a': 'aval'}):
             ret = grains.absent(
                 name='foo:is:nested')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo:is:nested does not exist')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo:is:nested does not exist'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
             self.assertGrainFileContent("a: aval\n")
 
     def test_absent_unset(self):
@@ -581,12 +543,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
         with self.setGrains({'a': 'aval', 'foo': 'bar'}):
             ret = grains.absent(
                 name='foo')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value for grain foo was set to None')
-            self.assertEqual(ret['changes'], {'grain': 'foo', 'value': None})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': None})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value for grain foo was set to None'
+            assert ret['changes'] == {'grain': 'foo', 'value': None}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': None}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: null\n"
             )
@@ -595,12 +556,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
         with self.setGrains({'a': 'aval', 'foo': False}):
             ret = grains.absent(
                 name='foo')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value for grain foo was set to None')
-            self.assertEqual(ret['changes'], {'grain': 'foo', 'value': None})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': None})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value for grain foo was set to None'
+            assert ret['changes'] == {'grain': 'foo', 'value': None}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': None}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: null\n"
             )
@@ -610,12 +570,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.absent(
                 name='foo,is,nested',
                 delimiter=',')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value for grain foo:is:nested was set to None')
-            self.assertEqual(ret['changes'], {'grain': 'foo:is:nested', 'value': None})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['order', {'is': {'nested': None}}, 'correct']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value for grain foo:is:nested was set to None'
+            assert ret['changes'] == {'grain': 'foo:is:nested', 'value': None}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['order', {'is': {'nested': None}}, 'correct']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- order\n"
@@ -628,12 +587,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
         with self.setGrains({'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']}):
             ret = grains.absent(
                 name='foo:is:nested')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo:is:nested does not exist')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo:is:nested does not exist'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['order', {'is': 'nested'}, 'correct']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- order\n"
@@ -646,11 +604,10 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             with self.setGrains({'a': 'aval', 'foo': 'bar'}):
                 # Overwrite an existing grain
                 ret = grains.absent(name='foo')
-                self.assertEqual(ret['result'], None)
-                self.assertEqual(ret['changes'], {'grain': 'foo', 'value': None})
-                self.assertEqual(
-                    grains.__grains__,
-                    {'a': 'aval', 'foo': 'bar'})
+                assert ret['result'] is None
+                assert ret['changes'] == {'grain': 'foo', 'value': None}
+                assert grains.__grains__ == \
+                    {'a': 'aval', 'foo': 'bar'}
                 self.assertGrainFileContent("a: aval\n"
                                           + "foo: bar\n"
                 )
@@ -660,12 +617,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
         with self.setGrains({'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}):
             ret = grains.absent(
                 name='foo:is')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']})
+            assert ret['result'] is False
+            assert ret['comment'] == 'The key \'foo:is\' exists but is a dict or a list. Use \'force=True\' to overwrite.'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['order', {'is': {'nested': 'bar'}}, 'correct']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- order\n"
@@ -680,12 +636,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.absent(
                 name='foo:is',
                 force=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value for grain foo:is was set to None')
-            self.assertEqual(ret['changes'], {'grain': 'foo:is', 'value': None})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['order', {'is': None}, 'correct']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value for grain foo:is was set to None'
+            assert ret['changes'] == {'grain': 'foo:is', 'value': None}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['order', {'is': None}, 'correct']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- order\n"
@@ -699,12 +654,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.absent(
                 name='foo',
                 destructive=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo was deleted')
-            self.assertEqual(ret['changes'], {'deleted': 'foo'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo was deleted'
+            assert ret['changes'] == {'deleted': 'foo'}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
             self.assertGrainFileContent("a: aval\n")
 
         # Delete a previously unset grain
@@ -712,12 +666,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.absent(
                 name='foo',
                 destructive=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo was deleted')
-            self.assertEqual(ret['changes'], {'deleted': 'foo'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo was deleted'
+            assert ret['changes'] == {'deleted': 'foo'}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
             self.assertGrainFileContent("a: aval\n")
 
         # Delete a nested grain
@@ -725,12 +678,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.absent(
                 name='foo:is:nested',
                 destructive=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo:is:nested was deleted')
-            self.assertEqual(ret['changes'], {'deleted': 'foo:is:nested'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['order', {'is': {'other': 'value'}}, 'correct']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo:is:nested was deleted'
+            assert ret['changes'] == {'deleted': 'foo:is:nested'}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['order', {'is': {'other': 'value'}}, 'correct']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- order\n"
@@ -747,12 +699,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.append(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
-            self.assertEqual(ret['changes'], {'added': 'baz'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['bar', 'baz']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value baz was added to grain foo'
+            assert ret['changes'] == {'added': 'baz'}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['bar', 'baz']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar\n"
@@ -766,12 +717,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo,list',
                 value='baz',
                 delimiter=',')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value baz was added to grain foo:list')
-            self.assertEqual(ret['changes'], {'added': 'baz'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'list': ['bar', 'baz']}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value baz was added to grain foo:list'
+            assert ret['changes'] == {'added': 'baz'}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'list': ['bar', 'baz']}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  list:\n"
@@ -785,13 +735,12 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.append(
                 name='foo',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value bar is already in the list '
-                                           + 'for grain foo')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['bar']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value bar is already in the list ' \
+                                           + 'for grain foo'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['bar']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar\n"
@@ -803,12 +752,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.append(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'bar': 'val'}})
+            assert ret['result'] is False
+            assert ret['comment'] == 'Grain foo is not a valid list'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'bar': 'val'}}
 
     def test_append_convert_to_list(self):
         # Append to an existing grain, converting to a list
@@ -821,12 +769,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo',
                 value='baz',
                 convert=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
-            self.assertEqual(ret['changes'], {'added': 'baz'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': [{'bar': 'val'}, 'baz']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value baz was added to grain foo'
+            assert ret['changes'] == {'added': 'baz'}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': [{'bar': 'val'}, 'baz']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar: val\n"
@@ -844,12 +791,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo',
                 value='baz',
                 convert=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
-            self.assertEqual(ret['changes'], {'added': 'baz'})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': [{'bar': 'val', 'other': 'value'}, 'baz']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value baz was added to grain foo'
+            assert ret['changes'] == {'added': 'baz'}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': [{'bar': 'val', 'other': 'value'}, 'baz']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar: val\n"
@@ -863,12 +809,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.append(
                 name='foo',
                 value='bar')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Grain foo does not exist')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is False
+            assert ret['comment'] == 'Grain foo does not exist'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
 
     def test_append_convert_to_list_empty(self):
         # Append to an existing list
@@ -876,12 +821,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.append(name='foo',
                                 value='baz',
                                 convert=True)
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value baz was added to grain foo')
-            self.assertEqual(ret['changes'], {'added': 'baz'})
-            self.assertEqual(
-                grains.__grains__,
-                {'foo': ['baz']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value baz was added to grain foo'
+            assert ret['changes'] == {'added': 'baz'}
+            assert grains.__grains__ == \
+                {'foo': ['baz']}
             self.assertGrainFileContent("foo:\n"
                                       + "- baz\n")
 
@@ -892,12 +836,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_present(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Append value baz to grain foo')
-            self.assertEqual(ret['changes'], {'new': {'foo': ['bar', 'baz']}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['bar', 'baz']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Append value baz to grain foo'
+            assert ret['changes'] == {'new': {'foo': ['bar', 'baz']}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['bar', 'baz']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar\n"
@@ -910,12 +853,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 name='foo,is,nested',
                 value='baz',
                 delimiter=',')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Append value baz to grain foo:is:nested')
-            self.assertEqual(ret['changes'], {'new': {'foo': {'is': {'nested': ['bar', 'baz']}}}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': ['bar', 'baz']}}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Append value baz to grain foo:is:nested'
+            assert ret['changes'] == {'new': {'foo': {'is': {'nested': ['bar', 'baz']}}}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': ['bar', 'baz']}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -929,12 +871,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_present(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Append value baz to grain foo')
-            self.assertEqual(ret['changes'], {'new': {'foo': ['baz']}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['baz']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Append value baz to grain foo'
+            assert ret['changes'] == {'new': {'foo': ['baz']}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['baz']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- baz\n"
@@ -945,12 +886,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_present(
                 name='foo:is:nested',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Append value baz to grain foo:is:nested')
-            self.assertEqual(ret['changes'], {'new': {'foo': {'is': {'nested': ['baz']}}}})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'is': {'nested': ['baz']}}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Append value baz to grain foo:is:nested'
+            assert ret['changes'] == {'new': {'foo': {'is': {'nested': ['baz']}}}}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'is': {'nested': ['baz']}}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  is:\n"
@@ -963,12 +903,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_present(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
+            assert ret['result'] is False
+            assert ret['comment'] == 'Grain foo is not a valid list'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': 'bar'}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: bar\n"
             )
@@ -978,12 +917,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_present(
                 name='b:foo',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value bar is already in grain b:foo')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'b': {'foo': ['bar']}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value bar is already in grain b:foo'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'b': {'foo': ['bar']}}
             self.assertGrainFileContent("a: aval\n"
                                       + "b:\n"
                                       + "  foo:\n"
@@ -995,12 +933,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_present(
                 name='foo',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value bar is already in grain foo')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['bar']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value bar is already in grain foo'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['bar']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar\n"
@@ -1014,12 +951,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
                 ret = grains.list_present(
                     name='foo',
                     value='baz')
-                self.assertEqual(ret['result'], False)
-                self.assertEqual(ret['comment'], 'Failed append value baz to grain foo')
-                self.assertEqual(ret['changes'], {})
-                self.assertEqual(
-                    grains.__grains__,
-                    {'a': 'aval', 'foo': ['bar']})
+                assert ret['result'] is False
+                assert ret['comment'] == 'Failed append value baz to grain foo'
+                assert ret['changes'] == {}
+                assert grains.__grains__ == \
+                    {'a': 'aval', 'foo': ['bar']}
                 self.assertGrainFileContent("a: aval\n"
                                           + "foo:\n"
                                           + "- bar\n"
@@ -1032,12 +968,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_absent(
                 name='foo',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value bar was deleted from grain foo')
-            self.assertEqual(ret['changes'], {'deleted': ['bar']})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': []})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value bar was deleted from grain foo'
+            assert ret['changes'] == {'deleted': ['bar']}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': []}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: []\n"
             )
@@ -1047,12 +982,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_absent(
                 name='foo:list',
                 value='bar')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value bar was deleted from grain foo:list')
-            self.assertEqual(ret['changes'], {'deleted': ['bar']})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': {'list': []}})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value bar was deleted from grain foo:list'
+            assert ret['changes'] == {'deleted': ['bar']}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': {'list': []}}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "  list: []\n"
@@ -1063,12 +997,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_absent(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo does not exist')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo does not exist'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
             self.assertGrainFileContent("a: aval\n")
 
     def test_list_absent_inexistent_nested(self):
@@ -1076,12 +1009,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_absent(
                 name='foo:list',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Grain foo:list does not exist')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval'})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Grain foo:list does not exist'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval'}
             self.assertGrainFileContent("a: aval\n")
 
     def test_list_absent_not_a_list(self):
@@ -1089,12 +1021,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_absent(
                 name='foo',
                 value='bar')
-            self.assertEqual(ret['result'], False)
-            self.assertEqual(ret['comment'], 'Grain foo is not a valid list')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': 'bar'})
+            assert ret['result'] is False
+            assert ret['comment'] == 'Grain foo is not a valid list'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': 'bar'}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo: bar\n"
             )
@@ -1104,12 +1035,11 @@ class GrainsTestCase(TestCase, LoaderModuleMockMixin):
             ret = grains.list_absent(
                 name='foo',
                 value='baz')
-            self.assertEqual(ret['result'], True)
-            self.assertEqual(ret['comment'], 'Value baz is absent from grain foo')
-            self.assertEqual(ret['changes'], {})
-            self.assertEqual(
-                grains.__grains__,
-                {'a': 'aval', 'foo': ['bar']})
+            assert ret['result'] is True
+            assert ret['comment'] == 'Value baz is absent from grain foo'
+            assert ret['changes'] == {}
+            assert grains.__grains__ == \
+                {'a': 'aval', 'foo': ['bar']}
             self.assertGrainFileContent("a: aval\n"
                                       + "foo:\n"
                                       + "- bar\n"

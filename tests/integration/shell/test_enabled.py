@@ -34,7 +34,7 @@ class EnabledTest(ModuleCase):
         '''
         enabled_ret = '3\nsaltines'  # the result of running self.cmd in a shell
         ret = self.run_function('cmd.run', [self.cmd])
-        self.assertEqual(ret.strip(), enabled_ret)
+        assert ret.strip() == enabled_ret
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_shell_disabled(self):
@@ -44,7 +44,7 @@ class EnabledTest(ModuleCase):
         disabled_ret = ('first\nsecond\nthird\n|\nwc\n-l\n;\nexport\nSALTY_VARIABLE=saltines'
                         '\n&&\necho\n$SALTY_VARIABLE\n;\necho\nduh\n&>\n/dev/null')
         ret = self.run_function('cmd.run', [self.cmd], python_shell=False)
-        self.assertEqual(ret, disabled_ret)
+        assert ret == disabled_ret
 
     @skipIf(salt.utils.platform.is_windows(), 'Skip on Windows OS')
     def test_template_shell(self):
@@ -73,7 +73,7 @@ class EnabledTest(ModuleCase):
                 '''.format(self.cmd)))
 
             ret = self.run_function('state.sls', [state_name])
-            self.assertEqual(ret[ret_key]['name'], enabled_ret)
+            assert ret[ret_key]['name'] == enabled_ret
         finally:
             os.remove(state_file)
 
@@ -103,6 +103,6 @@ class EnabledTest(ModuleCase):
                 '''.format(self.cmd)))
 
             ret = self.run_function('state.sls', [state_name])
-            self.assertEqual(ret[ret_key]['name'], disabled_ret)
+            assert ret[ret_key]['name'] == disabled_ret
         finally:
             os.remove(state_file)

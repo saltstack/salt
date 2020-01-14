@@ -28,6 +28,7 @@ from salt.exceptions import CommandExecutionError
 
 # Import 3rd-party libs
 from salt.ext import six
+import pytest
 
 
 class Assert(object):
@@ -804,14 +805,12 @@ class TranslateBase(TestCase):
         # The below is not valid input for the Docker API, but these
         # assertions confirm that we successfully skipped translation.
         for val in (True, name, [name]):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     skip_translate=val,
                     **{name: 'foo'}
-                ),
+                ) == \
                 self.apply_defaults({name: 'foo'}, skip_translate=val)
-            )
 
 
 class TranslateContainerInputTestCase(TranslateBase):
@@ -855,30 +854,24 @@ class TranslateContainerInputTestCase(TranslateBase):
         Test the "binds" kwarg. Any volumes not defined in the "volumes" kwarg
         should be added to the results.
         '''
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 binds='/srv/www:/var/www:ro',
-                volumes='/testing'),
+                volumes='/testing') == \
             {'binds': ['/srv/www:/var/www:ro'],
              'volumes': ['/testing', '/var/www']}
-        )
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 binds=['/srv/www:/var/www:ro'],
-                volumes='/testing'),
+                volumes='/testing') == \
             {'binds': ['/srv/www:/var/www:ro'],
              'volumes': ['/testing', '/var/www']}
-        )
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 binds={'/srv/www': {'bind': '/var/www', 'mode': 'ro'}},
-                volumes='/testing'),
+                volumes='/testing') == \
             {'binds': {'/srv/www': {'bind': '/var/www', 'mode': 'ro'}},
              'volumes': ['/testing', '/var/www']}
-        )
 
     @assert_int(salt.utils.docker.translate.container)
     def test_blkio_weight(self):
@@ -893,33 +886,25 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         for val in ('/dev/sda:100,/dev/sdb:200',
                     ['/dev/sda:100', '/dev/sdb:200']):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     blkio_weight_device='/dev/sda:100,/dev/sdb:200'
-                ),
+                ) == \
                 {'blkio_weight_device': [{'Path': '/dev/sda', 'Weight': 100},
                                          {'Path': '/dev/sdb', 'Weight': 200}]}
-            )
 
         # Error cases
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"'foo' contains 1 value\(s\) \(expected 2\)"):
+        with pytest.raises(CommandExecutionError, match=r"'foo' contains 1 value\(s\) \(expected 2\)"):
             salt.utils.docker.translate_input(
                 self.translator,
                 blkio_weight_device='foo'
             )
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"'foo:bar:baz' contains 3 value\(s\) \(expected 2\)"):
+        with pytest.raises(CommandExecutionError, match=r"'foo:bar:baz' contains 3 value\(s\) \(expected 2\)"):
             salt.utils.docker.translate_input(
                 self.translator,
                 blkio_weight_device='foo:bar:baz'
             )
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"Weight 'foo' for path '/dev/sdb' is not an integer"):
+        with pytest.raises(CommandExecutionError, match=r"Weight 'foo' for path '/dev/sdb' is not an integer"):
             salt.utils.docker.translate_input(
                 self.translator,
                 blkio_weight_device=['/dev/sda:100', '/dev/sdb:foo']
@@ -1033,20 +1018,16 @@ class TranslateContainerInputTestCase(TranslateBase):
         stringlist tests also do that same kind of testing.
         '''
         for val in ('8.8.8.8,8.8.4.4', ['8.8.8.8', '8.8.4.4']):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     dns=val,
                     validate_ip_addrs=True,
-                ),
+                ) == \
                 {'dns': ['8.8.8.8', '8.8.4.4']}
-            )
 
         # Error case: invalid IP address caught by validation
         for val in ('8.8.8.888,8.8.4.4', ['8.8.8.888', '8.8.4.4']):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    r"'8.8.8.888' is not a valid IP address"):
+            with pytest.raises(CommandExecutionError, match=r"'8.8.8.888' is not a valid IP address"):
                 salt.utils.docker.translate_input(
                     self.translator,
                     dns=val,
@@ -1056,14 +1037,12 @@ class TranslateContainerInputTestCase(TranslateBase):
         # This is not valid input but it will test whether or not IP address
         # validation happened.
         for val in ('foo,bar', ['foo', 'bar']):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     dns=val,
                     validate_ip_addrs=False,
-                ),
+                ) == \
                 {'dns': ['foo', 'bar']}
-            )
 
     @assert_string(salt.utils.docker.translate.container)
     def test_domainname(self):
@@ -1092,21 +1071,17 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         for val in ('web1:10.9.8.7,web2:10.9.8.8',
                     ['web1:10.9.8.7', 'web2:10.9.8.8']):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     extra_hosts=val,
                     validate_ip_addrs=True,
-                ),
+                ) == \
                 {'extra_hosts': {'web1': '10.9.8.7', 'web2': '10.9.8.8'}}
-            )
 
         # Error case: invalid IP address caught by validation
         for val in ('web1:10.9.8.299,web2:10.9.8.8',
                     ['web1:10.9.8.299', 'web2:10.9.8.8']):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    r"'10.9.8.299' is not a valid IP address"):
+            with pytest.raises(CommandExecutionError, match=r"'10.9.8.299' is not a valid IP address"):
                 salt.utils.docker.translate_input(
                     self.translator,
                     extra_hosts=val,
@@ -1116,14 +1091,12 @@ class TranslateContainerInputTestCase(TranslateBase):
         # This is not valid input but it will test whether or not IP address
         # validation happened.
         for val in ('foo:bar,baz:qux', ['foo:bar', 'baz:qux']):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     extra_hosts=val,
                     validate_ip_addrs=False,
-                ),
+                ) == \
                 {'extra_hosts': {'foo': 'bar', 'baz': 'qux'}}
-            )
 
     @assert_stringlist(salt.utils.docker.translate.container)
     def test_group_add(self):
@@ -1180,32 +1153,26 @@ class TranslateContainerInputTestCase(TranslateBase):
                     ['foo=bar', 'baz=qux'],
                     [{'foo': 'bar'}, {'baz': 'qux'}],
                     {'foo': 'bar', 'baz': 'qux'}):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     log_driver='foo',
                     log_opt='foo=bar,baz=qux'
-                ),
+                ) == \
                 {'log_config': {'Type': 'foo',
                                 'Config': {'foo': 'bar', 'baz': 'qux'}}}
-            )
 
         # Ensure passing either `log_driver` or `log_opt` alone works
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 log_driver='foo'
-            ),
+            ) == \
             {'log_config': {'Type': 'foo', 'Config': {}}}
-        )
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 log_opt={'foo': 'bar', 'baz': 'qux'}
-            ),
+            ) == \
             {'log_config': {'Type': 'none',
                             'Config': {'foo': 'bar', 'baz': 'qux'}}}
-        )
 
     @assert_key_equals_value(salt.utils.docker.translate.container)
     def test_lxc_conf(self):
@@ -1294,13 +1261,12 @@ class TranslateContainerInputTestCase(TranslateBase):
             '10.7.8.9:15505-15506:5505-5506/udp'
         )
         for val in (bindings, bindings.split(',')):
-            self.assertEqual(
-                self.normalize_ports(
+            assert self.normalize_ports(
                     salt.utils.docker.translate_input(
                         self.translator,
                         port_bindings=val,
                     )
-                ),
+                ) == \
                 {'port_bindings': {80: [('10.1.2.3', 8080),
                                         ('10.1.2.3', 8888)],
                                    3333: ('10.4.5.6', 3333),
@@ -1314,7 +1280,6 @@ class TranslateContainerInputTestCase(TranslateBase):
                  'ports': [80, 3333, 4505, 4506,
                            (81, 'udp'), (3334, 'udp'),
                            (5505, 'udp'), (5506, 'udp')]}
-            )
 
         # ip::containerPort - Bind a specific IP and an ephemeral port to a
         # specific port within the container.
@@ -1324,13 +1289,12 @@ class TranslateContainerInputTestCase(TranslateBase):
             '10.7.8.9::5505-5506/udp'
         )
         for val in (bindings, bindings.split(',')):
-            self.assertEqual(
-                self.normalize_ports(
+            assert self.normalize_ports(
                     salt.utils.docker.translate_input(
                         self.translator,
                         port_bindings=val,
                     )
-                ),
+                ) == \
                 {'port_bindings': {80: [('10.1.2.3',), ('10.1.2.3',)],
                                    3333: ('10.4.5.6',),
                                    4505: ('10.7.8.9',),
@@ -1342,7 +1306,6 @@ class TranslateContainerInputTestCase(TranslateBase):
                  'ports': [80, 3333, 4505, 4506,
                            (81, 'udp'), (3334, 'udp'),
                            (5505, 'udp'), (5506, 'udp')]}
-            )
 
         # hostPort:containerPort - Bind a specific port on all of the host's
         # interfaces to a specific port within the container.
@@ -1351,13 +1314,12 @@ class TranslateContainerInputTestCase(TranslateBase):
             '8888:81/udp,3334:3334/udp,15505-15506:5505-5506/udp'
         )
         for val in (bindings, bindings.split(',')):
-            self.assertEqual(
-                self.normalize_ports(
+            assert self.normalize_ports(
                     salt.utils.docker.translate_input(
                         self.translator,
                         port_bindings=val,
                     )
-                ),
+                ) == \
                 {'port_bindings': {80: [8080, 8888],
                                    3333: 3333,
                                    4505: 14505,
@@ -1369,19 +1331,17 @@ class TranslateContainerInputTestCase(TranslateBase):
                  'ports': [80, 3333, 4505, 4506,
                            (81, 'udp'), (3334, 'udp'),
                            (5505, 'udp'), (5506, 'udp')]}
-            )
 
         # containerPort - Bind an ephemeral port on all of the host's
         # interfaces to a specific port within the container.
         bindings = '80,3333,4505-4506,81/udp,3334/udp,5505-5506/udp'
         for val in (bindings, bindings.split(',')):
-            self.assertEqual(
-                self.normalize_ports(
+            assert self.normalize_ports(
                     salt.utils.docker.translate_input(
                         self.translator,
                         port_bindings=val,
                     )
-                ),
+                ) == \
                 {'port_bindings': {80: None,
                                    3333: None,
                                    4505: None,
@@ -1393,7 +1353,6 @@ class TranslateContainerInputTestCase(TranslateBase):
                  'ports': [80, 3333, 4505, 4506,
                            (81, 'udp'), (3334, 'udp'),
                            (5505, 'udp'), (5506, 'udp')]}
-            )
 
         # Test a mixture of different types of input
         bindings = (
@@ -1402,13 +1361,12 @@ class TranslateContainerInputTestCase(TranslateBase):
             '15505-15506:5505-5506/udp,19999-20001/udp'
         )
         for val in (bindings, bindings.split(',')):
-            self.assertEqual(
-                self.normalize_ports(
+            assert self.normalize_ports(
                     salt.utils.docker.translate_input(
                         self.translator,
                         port_bindings=val,
                     )
-                ),
+                ) == \
                 {'port_bindings': {80: ('10.1.2.3', 8080),
                                    3333: ('10.4.5.6',),
                                    4505: 14505,
@@ -1427,12 +1385,9 @@ class TranslateContainerInputTestCase(TranslateBase):
                            (81, 'udp'), (3334, 'udp'), (5505, 'udp'),
                            (5506, 'udp'), (19999, 'udp'),
                            (20000, 'udp'), (20001, 'udp')]}
-            )
 
         # Error case: too many items (max 3)
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"'10.1.2.3:8080:80:123' is an invalid port binding "
+        with pytest.raises(CommandExecutionError, match=r"'10.1.2.3:8080:80:123' is an invalid port binding "
                 r"definition \(at most 3 components are allowed, found 4\)"):
             salt.utils.docker.translate_input(
                 self.translator,
@@ -1446,9 +1401,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                     '5555-5554:1111-1112',
                     '1111-1112:5555-5554',
                     '5555-5554'):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    r"Start of port range \(5555\) cannot be greater than end "
+            with pytest.raises(CommandExecutionError, match=r"Start of port range \(5555\) cannot be greater than end "
                     r"of port range \(5554\)"):
                 salt.utils.docker.translate_input(
                     self.translator,
@@ -1462,9 +1415,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                     'foo:1111-1112',
                     '1111-1112:foo',
                     'foo'):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    "'foo' is non-numeric or an invalid port range"):
+            with pytest.raises(CommandExecutionError, match="'foo' is non-numeric or an invalid port range"):
                 salt.utils.docker.translate_input(
                     self.translator,
                     port_bindings=val,
@@ -1472,9 +1423,7 @@ class TranslateContainerInputTestCase(TranslateBase):
 
         # Error case: misatched port range
         for val in ('10.1.2.3:1111-1113:1111-1112', '1111-1113:1111-1112'):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    r'Host port range \(1111-1113\) does not have the same '
+            with pytest.raises(CommandExecutionError, match=r'Host port range \(1111-1113\) does not have the same '
                     r'number of ports as the container port range \(1111-1112\)'):
                 salt.utils.docker.translate_input(
                     self.translator,
@@ -1482,9 +1431,7 @@ class TranslateContainerInputTestCase(TranslateBase):
                 )
 
         for val in ('10.1.2.3:1111-1112:1111-1113', '1111-1112:1111-1113'):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    r'Host port range \(1111-1112\) does not have the same '
+            with pytest.raises(CommandExecutionError, match=r'Host port range \(1111-1112\) does not have the same '
                     r'number of ports as the container port range \(1111-1113\)'):
                 salt.utils.docker.translate_input(
                     self.translator,
@@ -1492,23 +1439,17 @@ class TranslateContainerInputTestCase(TranslateBase):
                 )
 
         # Error case: empty host port or container port
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                "Empty host port in port binding definition ':1111'"):
+        with pytest.raises(CommandExecutionError, match="Empty host port in port binding definition ':1111'"):
             salt.utils.docker.translate_input(
                 self.translator,
                 port_bindings=':1111'
             )
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                "Empty container port in port binding definition '1111:'"):
+        with pytest.raises(CommandExecutionError, match="Empty container port in port binding definition '1111:'"):
             salt.utils.docker.translate_input(
                 self.translator,
                 port_bindings='1111:'
             )
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                'Empty port binding definition found'):
+        with pytest.raises(CommandExecutionError, match='Empty port binding definition found'):
             salt.utils.docker.translate_input(
                 self.translator,
                 port_bindings=''
@@ -1526,30 +1467,24 @@ class TranslateContainerInputTestCase(TranslateBase):
         for val in ('1111,2222/tcp,3333/udp,4505-4506',
                     [1111, '2222/tcp', '3333/udp', '4505-4506'],
                     ['1111', '2222/tcp', '3333/udp', '4505-4506']):
-            self.assertEqual(
-                self.normalize_ports(
+            assert self.normalize_ports(
                     salt.utils.docker.translate_input(
                         self.translator,
                         ports=val,
                     )
-                ),
+                ) == \
                 {'ports': [1111, 2222, 4505, 4506, (3333, 'udp')]}
-            )
 
         # Error case: non-integer and non/string value
         for val in (1.0, [1.0]):
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    "'1.0' is not a valid port definition"):
+            with pytest.raises(CommandExecutionError, match="'1.0' is not a valid port definition"):
                 salt.utils.docker.translate_input(
                     self.translator,
                     ports=val,
                 )
 
         # Error case: port range start is greater than end
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"Start of port range \(5555\) cannot be greater than end of "
+        with pytest.raises(CommandExecutionError, match=r"Start of port range \(5555\) cannot be greater than end of "
                 r"port range \(5554\)"):
             salt.utils.docker.translate_input(
                 self.translator,
@@ -1583,25 +1518,19 @@ class TranslateContainerInputTestCase(TranslateBase):
         alias = 'restart'
         for item in (name, alias):
             # Test with retry count
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     **{item: 'on-failure:5'}
-                ),
+                ) == \
                 {name: {'Name': 'on-failure', 'MaximumRetryCount': 5}}
-            )
             # Test without retry count
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     **{item: 'on-failure'}
-                ),
+                ) == \
                 {name: {'Name': 'on-failure', 'MaximumRetryCount': 0}}
-            )
             # Error case: more than one policy passed
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    'Only one policy is permitted'):
+            with pytest.raises(CommandExecutionError, match='Only one policy is permitted'):
                 salt.utils.docker.translate_input(
                     self.translator,
                     **{item: 'on-failure,always'}
@@ -1609,17 +1538,13 @@ class TranslateContainerInputTestCase(TranslateBase):
 
         # Test collision
         test_kwargs = {name: 'on-failure:5', alias: 'always'}
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 ignore_collisions=True,
                 **test_kwargs
-            ),
+            ) == \
             {name: {'Name': 'on-failure', 'MaximumRetryCount': 5}}
-        )
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                "'restart' is an alias for 'restart_policy'"):
+        with pytest.raises(CommandExecutionError, match="'restart' is an alias for 'restart_policy'"):
             salt.utils.docker.translate_input(
                 self.translator,
                 ignore_collisions=False,
@@ -1692,19 +1617,15 @@ class TranslateContainerInputTestCase(TranslateBase):
         # Test with and without hard limit
         ulimits = 'nofile=1024:2048,nproc=50'
         for val in (ulimits, ulimits.split(',')):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     ulimits=val,
-                ),
+                ) == \
                 {'ulimits': [{'Name': 'nofile', 'Soft': 1024, 'Hard': 2048},
                              {'Name': 'nproc', 'Soft': 50, 'Hard': 50}]}
-            )
 
         # Error case: Invalid format
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"Ulimit definition 'nofile:1024:2048' is not in the format "
+        with pytest.raises(CommandExecutionError, match=r"Ulimit definition 'nofile:1024:2048' is not in the format "
                 r"type=soft_limit\[:hard_limit\]"):
             salt.utils.docker.translate_input(
                 self.translator,
@@ -1712,9 +1633,7 @@ class TranslateContainerInputTestCase(TranslateBase):
             )
 
         # Error case: Invalid format
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                r"Limit 'nofile=foo:2048' contains non-numeric value\(s\)"):
+        with pytest.raises(CommandExecutionError, match=r"Limit 'nofile=foo:2048' contains non-numeric value\(s\)"):
             salt.utils.docker.translate_input(
                 self.translator,
                 ulimits='nofile=foo:2048'
@@ -1726,35 +1645,27 @@ class TranslateContainerInputTestCase(TranslateBase):
         string (e.g. '0') should be converted to an int.
         '''
         # Username passed as string
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 user='foo'
-            ),
+            ) == \
             {'user': 'foo'}
-        )
         for val in (0, '0'):
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     user=val
-                ),
+                ) == \
                 {'user': 0}
-            )
 
         # Error case: non string/int passed
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                'Value must be a username or uid'):
+        with pytest.raises(CommandExecutionError, match='Value must be a username or uid'):
             salt.utils.docker.translate_input(
                 self.translator,
                 user=['foo']
             )
 
         # Error case: negative int passed
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                "'-1' is an invalid uid"):
+        with pytest.raises(CommandExecutionError, match="'-1' is an invalid uid"):
             salt.utils.docker.translate_input(
                 self.translator,
                 user=-1
@@ -1779,9 +1690,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         # Error case: Not an absolute path
         path = os.path.join('foo', 'bar', 'baz')
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                "'{0}' is not an absolute path".format(path.replace('\\', '\\\\'))):
+        with pytest.raises(CommandExecutionError, match="'{0}' is not an absolute path".format(path.replace('\\', '\\\\'))):
             salt.utils.docker.translate_input(
                 self.translator,
                 volumes=path
@@ -1800,9 +1709,7 @@ class TranslateContainerInputTestCase(TranslateBase):
         '''
         # Error case: Not an absolute path
         path = os.path.join('foo', 'bar', 'baz')
-        with self.assertRaisesRegex(
-                CommandExecutionError,
-                "'{0}' is not an absolute path".format(path.replace('\\', '\\\\'))):
+        with pytest.raises(CommandExecutionError, match="'{0}' is not an absolute path".format(path.replace('\\', '\\\\'))):
             salt.utils.docker.translate_input(
                 self.translator,
                 working_dir=path
@@ -1923,15 +1830,13 @@ class TranslateNetworkInputTestCase(TranslateBase):
              'aux_addresses': {'foo.bar.tld': '10.0.0.20',
                                'hello.world.tld': '999.0.0.21'}},
         ]
-        self.assertEqual(
-            salt.utils.docker.translate_input(
+        assert salt.utils.docker.translate_input(
                 self.translator,
                 ipam_pools=[good_pool],
-            ),
+            ) == \
             {'ipam_pools': [good_pool]}
-        )
         for bad_pool in bad_pools:
-            with self.assertRaisesRegex(CommandExecutionError, 'not a valid'):
+            with pytest.raises(CommandExecutionError, match='not a valid'):
                 salt.utils.docker.translate_input(
                     self.translator,
                     ipam_pools=[good_pool, bad_pool]
@@ -1954,35 +1859,29 @@ class TranslateNetworkInputTestCase(TranslateBase):
         Must be an IPv4 or IPv6 address
         '''
         for val in self.ip_addrs[True]:
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     validate_ip_addrs=True,
                     gateway=val,
-                ),
+                ) == \
                 self.apply_defaults({'gateway': val})
-            )
 
         for val in self.ip_addrs[False]:
-            with self.assertRaisesRegex(
-                    CommandExecutionError,
-                    "'{0}' is not a valid IP address".format(val)):
+            with pytest.raises(CommandExecutionError, match="'{0}' is not a valid IP address".format(val)):
                 salt.utils.docker.translate_input(
                     self.translator,
                     validate_ip_addrs=True,
                     gateway=val,
                 )
-            self.assertEqual(
-                salt.utils.docker.translate_input(
+            assert salt.utils.docker.translate_input(
                     self.translator,
                     validate_ip_addrs=False,
                     gateway=val,
-                ),
+                ) == \
                 self.apply_defaults(
                     {'gateway': val if isinstance(val, six.string_types)
                                 else six.text_type(val)}
                 )
-            )
 
     @assert_key_equals_value(salt.utils.docker.translate.network)
     def test_aux_addresses(self):
@@ -1994,33 +1893,27 @@ class TranslateNetworkInputTestCase(TranslateBase):
         for item in (name, alias):
             for val in self.ip_addrs[True]:
                 addresses = {'foo.bar.tld': val}
-                self.assertEqual(
-                    salt.utils.docker.translate_input(
+                assert salt.utils.docker.translate_input(
                         self.translator,
                         validate_ip_addrs=True,
                         **{item: addresses}
-                    ),
+                    ) == \
                     self.apply_defaults({name: addresses})
-                )
 
             for val in self.ip_addrs[False]:
                 addresses = {'foo.bar.tld': val}
-                with self.assertRaisesRegex(
-                        CommandExecutionError,
-                        "'{0}' is not a valid IP address".format(val)):
+                with pytest.raises(CommandExecutionError, match="'{0}' is not a valid IP address".format(val)):
                     salt.utils.docker.translate_input(
                         self.translator,
                         validate_ip_addrs=True,
                         **{item: addresses}
                     )
-                self.assertEqual(
-                    salt.utils.docker.translate_input(
+                assert salt.utils.docker.translate_input(
                         self.translator,
                         validate_ip_addrs=False,
                         aux_addresses=addresses,
-                    ),
+                    ) == \
                     self.apply_defaults({name: addresses})
-                )
 
 
 class DockerTranslateHelperTestCase(TestCase):
@@ -2034,23 +1927,23 @@ class DockerTranslateHelperTestCase(TestCase):
         'port_num/udp' for UDP ports).
         '''
         # Test TCP port (passed as int, no protocol passed)
-        self.assertEqual(translate_helpers.get_port_def(2222), 2222)
+        assert translate_helpers.get_port_def(2222) == 2222
         # Test TCP port (passed as str, no protocol passed)
-        self.assertEqual(translate_helpers.get_port_def('2222'), 2222)
+        assert translate_helpers.get_port_def('2222') == 2222
         # Test TCP port (passed as str, with protocol passed)
-        self.assertEqual(translate_helpers.get_port_def('2222', 'tcp'), 2222)
+        assert translate_helpers.get_port_def('2222', 'tcp') == 2222
         # Test TCP port (proto passed in port_num, with passed proto ignored).
         # This is a contrived example as we would never invoke the function in
         # this way, but it tests that we are taking the port number from the
         # port_num argument and ignoring the passed protocol.
-        self.assertEqual(translate_helpers.get_port_def('2222/tcp', 'udp'), 2222)
+        assert translate_helpers.get_port_def('2222/tcp', 'udp') == 2222
 
         # Test UDP port (passed as int)
-        self.assertEqual(translate_helpers.get_port_def(2222, 'udp'), (2222, 'udp'))
+        assert translate_helpers.get_port_def(2222, 'udp') == (2222, 'udp')
         # Test UDP port (passed as string)
-        self.assertEqual(translate_helpers.get_port_def('2222', 'udp'), (2222, 'udp'))
+        assert translate_helpers.get_port_def('2222', 'udp') == (2222, 'udp')
         # Test UDP port (proto passed in port_num
-        self.assertEqual(translate_helpers.get_port_def('2222/udp'), (2222, 'udp'))
+        assert translate_helpers.get_port_def('2222/udp') == (2222, 'udp')
 
     def test_get_port_range(self):
         '''
@@ -2058,19 +1951,15 @@ class DockerTranslateHelperTestCase(TestCase):
         expression (e.g. 4505-4506)
         '''
         # Passing a single int should return the start and end as the same value
-        self.assertEqual(translate_helpers.get_port_range(2222), (2222, 2222))
+        assert translate_helpers.get_port_range(2222) == (2222, 2222)
         # Same as above but with port number passed as a string
-        self.assertEqual(translate_helpers.get_port_range('2222'), (2222, 2222))
+        assert translate_helpers.get_port_range('2222') == (2222, 2222)
         # Passing a port range
-        self.assertEqual(translate_helpers.get_port_range('2222-2223'), (2222, 2223))
+        assert translate_helpers.get_port_range('2222-2223') == (2222, 2223)
         # Error case: port range start is greater than end
-        with self.assertRaisesRegex(
-                ValueError,
-                r'Start of port range \(2222\) cannot be greater than end of '
+        with pytest.raises(ValueError, match=r'Start of port range \(2222\) cannot be greater than end of '
                 r'port range \(2221\)'):
             translate_helpers.get_port_range('2222-2221')
         # Error case: non-numeric input
-        with self.assertRaisesRegex(
-                ValueError,
-                '\'2222-bar\' is non-numeric or an invalid port range'):
+        with pytest.raises(ValueError, match='\'2222-bar\' is non-numeric or an invalid port range'):
             translate_helpers.get_port_range('2222-bar')

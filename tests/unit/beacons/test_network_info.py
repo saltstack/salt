@@ -43,15 +43,15 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = network_info.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for network_info beacon'
-                                      ' must be a list.'))
+        assert ret == (False, 'Configuration for network_info beacon'
+                                      ' must be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = network_info.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
     def test_network_info_equal(self):
         with patch('salt.utils.psutil_compat.net_io_counters',
@@ -68,7 +68,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = network_info.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             _expected_return = [{'interface': 'eth0',
                                  'network_info': {'bytes_recv': 914626664,
@@ -81,7 +81,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                                   'packets_sent': 465694}}]
 
             ret = network_info.beacon(config)
-            self.assertEqual(ret, _expected_return)
+            assert ret == _expected_return
 
     def test_network_info_greater_than(self):
         with patch('salt.utils.psutil_compat.net_io_counters',
@@ -98,7 +98,7 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
             ret = network_info.validate(config)
 
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             _expected_return = [{'interface': 'eth0',
                                  'network_info': {'bytes_recv': 914626664,
@@ -111,4 +111,4 @@ class NetworkInfoBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                                   'packets_sent': 465694}}]
 
             ret = network_info.beacon(config)
-            self.assertEqual(ret, _expected_return)
+            assert ret == _expected_return

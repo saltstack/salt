@@ -33,24 +33,24 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'changes': {}, 'comment': '', 'name': 'salt', 'result': True}
         mock = MagicMock(return_value=True)
         with patch.object(hg, '_fail', mock):
-            self.assertTrue(hg.latest("salt"))
+            assert hg.latest("salt")
 
         mock = MagicMock(side_effect=[False, True, False, False, False, False])
         with patch.object(os.path, 'isdir', mock):
             mock = MagicMock(return_value=True)
             with patch.object(hg, '_handle_existing', mock):
-                self.assertTrue(hg.latest("salt", target="c:\\salt"))
+                assert hg.latest("salt", target="c:\\salt")
 
             with patch.dict(hg.__opts__, {'test': True}):
                 mock = MagicMock(return_value=True)
                 with patch.object(hg, '_neutral_test', mock):
-                    self.assertTrue(hg.latest("salt", target="c:\\salt"))
+                    assert hg.latest("salt", target="c:\\salt")
 
             with patch.dict(hg.__opts__, {'test': False}):
                 mock = MagicMock(return_value=True)
                 with patch.object(hg, '_clone_repo', mock):
-                    self.assertDictEqual(hg.latest("salt", target="c:\\salt"),
-                                         ret)
+                    assert hg.latest("salt", target="c:\\salt") == \
+                                         ret
 
     def test_latest_update_changes(self):
         '''
@@ -70,7 +70,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value=True)
                 with patch.dict(hg.__opts__, {'test': False}):
                     with patch.object(hg, '_clone_repo', mock):
-                        self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=True), ret)
+                        assert hg.latest("salt", target="c:\\salt", update_head=True) == ret
                         assert update_mock.called
 
     def test_latest_no_update_changes(self):
@@ -91,7 +91,7 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value=True)
                 with patch.dict(hg.__opts__, {'test': False}):
                     with patch.object(hg, '_clone_repo', mock):
-                        self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=False), ret)
+                        assert hg.latest("salt", target="c:\\salt", update_head=False) == ret
                         assert not update_mock.called
 
     def test_latest_no_update_no_changes(self):
@@ -113,5 +113,5 @@ class HgTestCase(TestCase, LoaderModuleMockMixin):
                 mock = MagicMock(return_value=True)
                 with patch.dict(hg.__opts__, {'test': False}):
                     with patch.object(hg, '_clone_repo', mock):
-                        self.assertDictEqual(hg.latest("salt", target="c:\\salt", update_head=False), ret)
+                        assert hg.latest("salt", target="c:\\salt", update_head=False) == ret
                         assert not update_mock.called

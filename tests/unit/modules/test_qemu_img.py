@@ -33,13 +33,13 @@ class QemuimgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(os.path, 'isabs',
                           MagicMock(side_effect=[False, True, True, True])):
-            self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), '')
+            assert qemu_img.make_image('location', 'size', 'fmt') == ''
 
             with patch.object(os.path, 'isdir',
                               MagicMock(side_effect=[False, True, True])):
-                self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), '')
+                assert qemu_img.make_image('location', 'size', 'fmt') == ''
 
                 with patch.dict(qemu_img.__salt__,
                                 {'cmd.retcode': MagicMock(side_effect=[False, True])}):
-                    self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), 'location')
-                    self.assertEqual(qemu_img.make_image('location', 'size', 'fmt'), '')
+                    assert qemu_img.make_image('location', 'size', 'fmt') == 'location'
+                    assert qemu_img.make_image('location', 'size', 'fmt') == ''

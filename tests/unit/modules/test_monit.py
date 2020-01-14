@@ -31,7 +31,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(monit.__salt__,
                         {'cmd.retcode': MagicMock(return_value=False)}):
-            self.assertTrue(monit.start('name'))
+            assert monit.start('name')
 
     def test_stop(self):
         '''
@@ -39,7 +39,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(monit.__salt__,
                         {'cmd.retcode': MagicMock(return_value=False)}):
-            self.assertTrue(monit.stop('name'))
+            assert monit.stop('name')
 
     def test_restart(self):
         '''
@@ -47,7 +47,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(monit.__salt__,
                         {'cmd.retcode': MagicMock(return_value=False)}):
-            self.assertTrue(monit.restart('name'))
+            assert monit.restart('name')
 
     def test_unmonitor(self):
         '''
@@ -55,7 +55,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(monit.__salt__,
                         {'cmd.retcode': MagicMock(return_value=False)}):
-            self.assertTrue(monit.unmonitor('name'))
+            assert monit.unmonitor('name')
 
     def test_monitor(self):
         '''
@@ -63,7 +63,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(monit.__salt__,
                         {'cmd.retcode': MagicMock(return_value=False)}):
-            self.assertTrue(monit.monitor('name'))
+            assert monit.monitor('name')
 
     def test_summary(self):
         '''
@@ -72,11 +72,11 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=['daemon is not running',
                                       'A\nB\nC\nD\nE'])
         with patch.dict(monit.__salt__, {'cmd.run': mock}):
-            self.assertEqual(monit.summary(),
+            assert monit.summary() == \
                              {'monit': 'daemon is not running',
-                              'result': False})
+                              'result': False}
 
-            self.assertEqual(monit.summary(), {})
+            assert monit.summary() == {}
 
     def test_status(self):
         '''
@@ -85,7 +85,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(monit.__salt__,
                         {'cmd.run':
                          MagicMock(return_value='Process')}):
-            self.assertEqual(monit.status('service'), 'No such service')
+            assert monit.status('service') == 'No such service'
 
     def test_reload(self):
         '''
@@ -93,7 +93,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(monit.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(monit.reload_())
+            assert monit.reload_()
 
     def test_version(self):
         '''
@@ -101,7 +101,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value="This is Monit version 5.14\nA\nB")
         with patch.dict(monit.__salt__, {'cmd.run': mock}):
-            self.assertEqual(monit.version(), '5.14')
+            assert monit.version() == '5.14'
 
     def test_id(self):
         '''
@@ -110,7 +110,7 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(
             return_value='Monit ID: d3b1aba48527dd599db0e86f5ad97120')
         with patch.dict(monit.__salt__, {'cmd.run': mock}):
-            self.assertEqual(monit.id_(), 'd3b1aba48527dd599db0e86f5ad97120')
+            assert monit.id_() == 'd3b1aba48527dd599db0e86f5ad97120'
 
     def test_reset_id(self):
         '''
@@ -121,8 +121,8 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=expected)
         with patch.dict(monit.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(monit.id_(reset=True),
-                             'd3b1aba48527dd599db0e86f5ad97120')
+            assert monit.id_(reset=True) == \
+                             'd3b1aba48527dd599db0e86f5ad97120'
 
     def test_configtest(self):
         '''
@@ -135,8 +135,8 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=excepted)
         with patch.dict(monit.__salt__, {'cmd.run_all': mock}):
-            self.assertTrue(monit.configtest()['result'])
-            self.assertEqual(monit.configtest()['comment'], 'Syntax OK')
+            assert monit.configtest()['result']
+            assert monit.configtest()['comment'] == 'Syntax OK'
 
     def test_validate(self):
         '''
@@ -144,4 +144,4 @@ class MonitTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=0)
         with patch.dict(monit.__salt__, {'cmd.retcode': mock}):
-            self.assertTrue(monit.validate())
+            assert monit.validate()

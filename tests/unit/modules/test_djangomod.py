@@ -35,8 +35,8 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
-            self.assertTrue(djangomod.command('DJANGO_SETTINGS_MODULE',
-                                              'validate'))
+            assert djangomod.command('DJANGO_SETTINGS_MODULE',
+                                              'validate')
 
     # 'syncdb' function tests: 1
 
@@ -46,7 +46,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
-            self.assertTrue(djangomod.syncdb('DJANGO_SETTINGS_MODULE'))
+            assert djangomod.syncdb('DJANGO_SETTINGS_MODULE')
 
     # 'migrate' function tests: 1
 
@@ -56,7 +56,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
-            self.assertTrue(djangomod.migrate('DJANGO_SETTINGS_MODULE'))
+            assert djangomod.migrate('DJANGO_SETTINGS_MODULE')
 
     # 'createsuperuser' function tests: 1
 
@@ -66,9 +66,9 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
-            self.assertTrue(djangomod.createsuperuser('DJANGO_SETTINGS_MODULE',
+            assert djangomod.createsuperuser('DJANGO_SETTINGS_MODULE',
                                                       'SALT',
-                                                      'salt@slatstack.com'))
+                                                      'salt@slatstack.com')
 
     # 'loaddata' function tests: 1
 
@@ -78,8 +78,8 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
-            self.assertTrue(djangomod.loaddata('DJANGO_SETTINGS_MODULE',
-                                               'mydata'))
+            assert djangomod.loaddata('DJANGO_SETTINGS_MODULE',
+                                               'mydata')
 
     # 'collectstatic' function tests: 1
 
@@ -90,7 +90,7 @@ class DjangomodTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(djangomod.__salt__, {'cmd.run': mock}):
-            self.assertTrue(djangomod.collectstatic('DJANGO_SETTINGS_MODULE'))
+            assert djangomod.collectstatic('DJANGO_SETTINGS_MODULE')
 
 
 class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
@@ -215,15 +215,15 @@ class DjangomodCliCommandTestCase(TestCase, LoaderModuleMockMixin):
             djangomod.createsuperuser(
                 'settings.py', 'testuser', 'user@example.com'
             )
-            self.assertEqual(mock.call_count, 1)
+            assert mock.call_count == 1
             args, kwargs = mock.call_args
             # cmdline arguments are extracted from a kwargs dict so order isn't guaranteed.
-            self.assertEqual(len(args), 1)
-            self.assertTrue(args[0].startswith('django-admin.py createsuperuser --'))
-            self.assertEqual(set(args[0].split()),
+            assert len(args) == 1
+            assert args[0].startswith('django-admin.py createsuperuser --')
+            assert set(args[0].split()) == \
                              set('django-admin.py createsuperuser --settings=settings.py --noinput '
-                                                   '--username=testuser --email=user@example.com'.split()))
-            self.assertDictEqual(kwargs, {'python_shell': False, 'env': None, 'runas': None})
+                                                   '--username=testuser --email=user@example.com'.split())
+            assert kwargs == {'python_shell': False, 'env': None, 'runas': None}
 
     def no_test_loaddata(self):
         mock = MagicMock()

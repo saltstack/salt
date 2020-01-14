@@ -32,8 +32,8 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(inspect, 'stack', MagicMock(return_value=[])), \
                 patch('salt.modules.defaults.get',
                       MagicMock(return_value={'users': {'root': [0]}})):
-            self.assertEqual(defaults.get('core:users:root'),
-                             {'users': {'root': [0]}})
+            assert defaults.get('core:users:root') == \
+                             {'users': {'root': [0]}}
 
     def test_merge_with_list_merging(self):
         '''
@@ -73,7 +73,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         defaults.merge(dest_dict, src_dict, merge_lists=True)
-        self.assertEqual(dest_dict, merged_dict)
+        assert dest_dict == merged_dict
 
     def test_merge_without_list_merging(self):
         '''
@@ -112,7 +112,7 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         defaults.merge(dest, src, merge_lists=False)
-        self.assertEqual(dest, merged)
+        assert dest == merged
 
     def test_merge_not_in_place(self):
         '''
@@ -145,8 +145,8 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         final = defaults.merge(dest, src, in_place=False)
-        self.assertEqual(dest, dest_orig)
-        self.assertEqual(final, merged)
+        assert dest == dest_orig
+        assert final == merged
 
     def test_deepcopy(self):
         '''
@@ -167,8 +167,8 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
             'C': 'C'
         }
 
-        self.assertFalse(src == dist)
-        self.assertTrue(dist == result)
+        assert src != dist
+        assert dist == result
 
     def test_update_in_place(self):
         '''
@@ -202,4 +202,4 @@ class DefaultsTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         defaults.update(group01['nodes'], group01['defaults'])
-        self.assertEqual(group01['nodes']['host01'], host01)
+        assert group01['nodes']['host01'] == host01

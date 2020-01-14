@@ -13,6 +13,7 @@ import salt.utils.files
 from tests.support.unit import TestCase
 from tests.support.helpers import with_tempdir
 from tests.support.mock import patch
+import pytest
 
 
 class CalledWith(object):
@@ -69,7 +70,7 @@ class TestLocalFS(TestCase):
             tdata=self.expected_data,
         )['token']
         actual_data = salt.tokens.localfs.get_token(opts=opts, tok=tok)
-        self.assertDictEqual(self.expected_data, actual_data)
+        assert self.expected_data == actual_data
 
     @with_tempdir()
     def test_get_token_should_raise_SaltDeserializationError_if_token_file_is_empty(self, tempdir):
@@ -80,7 +81,7 @@ class TestLocalFS(TestCase):
         )['token']
         with salt.utils.files.fopen(os.path.join(tempdir, tok), 'w') as f:
             f.truncate()
-        with self.assertRaises(salt.exceptions.SaltDeserializationError) as e:
+        with pytest.raises(salt.exceptions.SaltDeserializationError) as e:
             salt.tokens.localfs.get_token(opts=opts, tok=tok)
 
     @with_tempdir()
@@ -93,5 +94,5 @@ class TestLocalFS(TestCase):
         with salt.utils.files.fopen(os.path.join(tempdir, tok), 'w') as f:
             f.truncate()
             f.write('this is not valid msgpack data')
-        with self.assertRaises(salt.exceptions.SaltDeserializationError) as e:
+        with pytest.raises(salt.exceptions.SaltDeserializationError) as e:
             salt.tokens.localfs.get_token(opts=opts, tok=tok)

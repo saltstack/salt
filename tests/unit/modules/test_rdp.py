@@ -35,7 +35,7 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rdp.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.rdp._parse_return_code_powershell',
                       MagicMock(return_value=0)):
-            self.assertTrue(rdp.enable())
+            assert rdp.enable()
 
     # 'disable' function tests: 1
 
@@ -47,7 +47,7 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(rdp.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.rdp._parse_return_code_powershell',
                       MagicMock(return_value=0)):
-            self.assertTrue(rdp.disable())
+            assert rdp.disable()
 
     # 'status' function tests: 1
 
@@ -57,4 +57,4 @@ class RdpTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='1')
         with patch.dict(rdp.__salt__, {'cmd.run': mock}):
-            self.assertTrue(rdp.status())
+            assert rdp.status()

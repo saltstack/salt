@@ -83,15 +83,15 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
 
     def test_file_list(self):
         ret = roots.file_list({'saltenv': 'base'})
-        self.assertIn('testfile', ret)
-        self.assertIn(UNICODE_FILENAME, ret)
+        assert 'testfile' in ret
+        assert UNICODE_FILENAME in ret
 
     def test_find_file(self):
         ret = roots.find_file('testfile')
-        self.assertEqual('testfile', ret['rel'])
+        assert 'testfile' == ret['rel']
 
         full_path_to_file = os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile')
-        self.assertEqual(full_path_to_file, ret['path'])
+        assert full_path_to_file == ret['path']
 
     def test_serve_file(self):
         with patch.dict(roots.__opts__, {'file_buffer_size': 262144}):
@@ -107,18 +107,17 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                     os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
                 data = fp_.read()
 
-            self.assertDictEqual(
-                ret,
+            assert ret == \
                 {'data': data,
-                 'dest': 'testfile'})
+                 'dest': 'testfile'}
 
     def test_envs(self):
         opts = {'file_roots': copy.copy(self.opts['file_roots'])}
         opts['file_roots'][UNICODE_ENVNAME] = opts['file_roots']['base']
         with patch.dict(roots.__opts__, opts):
             ret = roots.envs()
-        self.assertIn('base', ret)
-        self.assertIn(UNICODE_ENVNAME, ret)
+        assert 'base' in ret
+        assert UNICODE_ENVNAME in ret
 
     def test_file_hash(self):
         load = {
@@ -137,17 +136,15 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 os.path.join(RUNTIME_VARS.BASE_FILES, 'testfile'), 'rb') as fp_:
             hsum = salt.utils.hashutils.sha256_digest(fp_.read())
 
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {
                 'hsum': hsum,
                 'hash_type': 'sha256'
             }
-        )
 
     def test_file_list_emptydirs(self):
         ret = roots.file_list_emptydirs({'saltenv': 'base'})
-        self.assertIn('empty_dir', ret)
+        assert 'empty_dir' in ret
 
     def test_file_list_with_slash(self):
         opts = {'file_roots': copy.copy(self.opts['file_roots'])}
@@ -157,13 +154,13 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
                 }
         with patch.dict(roots.__opts__, opts):
             ret = roots.file_list(load)
-        self.assertIn('testfile', ret)
-        self.assertIn(UNICODE_FILENAME, ret)
+        assert 'testfile' in ret
+        assert UNICODE_FILENAME in ret
 
     def test_dir_list(self):
         ret = roots.dir_list({'saltenv': 'base'})
-        self.assertIn('empty_dir', ret)
-        self.assertIn(UNICODE_DIRNAME, ret)
+        assert 'empty_dir' in ret
+        assert UNICODE_DIRNAME in ret
 
     def test_symlink_list(self):
         orig_file_roots = self.opts['file_roots']
@@ -171,7 +168,7 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = self.test_symlink_list_file_roots
             ret = roots.symlink_list({'saltenv': 'base'})
-            self.assertDictEqual(ret, {'dest_sym': 'source_sym'})
+            assert ret == {'dest_sym': 'source_sym'}
         finally:
             if self.test_symlink_list_file_roots:
                 self.opts['file_roots'] = orig_file_roots
@@ -189,6 +186,6 @@ class RootsTest(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModuleMockMix
         with patch.dict(roots.__opts__, opts):
             ret1 = roots.find_file('dynamo.sls', 'dyn')
             ret2 = roots.file_list({'saltenv': 'dyn'})
-        self.assertEqual('dynamo.sls', ret1['rel'])
-        self.assertIn('top.sls', ret2)
-        self.assertIn('dynamo.sls', ret2)
+        assert 'dynamo.sls' == ret1['rel']
+        assert 'top.sls' in ret2
+        assert 'dynamo.sls' in ret2

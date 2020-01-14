@@ -31,13 +31,13 @@ class WinDNSTest(ModuleCase):
         interface = interfaces[0]
         dns = '8.8.8.8'
         # add dns server
-        self.assertTrue(self.run_function('win_dns_client.add_dns', [dns, interface], index=42))
+        assert self.run_function('win_dns_client.add_dns', [dns, interface], index=42)
 
         srvs = self.run_function('win_dns_client.get_dns_servers', interface=interface)
-        self.assertIn(dns, srvs)
+        assert dns in srvs
 
         # remove dns server
-        self.assertTrue(self.run_function('win_dns_client.rm_dns', [dns], interface=interface))
+        assert self.run_function('win_dns_client.rm_dns', [dns], interface=interface)
 
         srvs = self.run_function('win_dns_client.get_dns_servers', interface=interface)
-        self.assertNotIn(dns, srvs)
+        assert dns not in srvs

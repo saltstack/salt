@@ -57,12 +57,12 @@ class LXCModuleTest(ModuleCase):
 
         r = self.run_function('lxc.create', [self.prefix],
                               template='sshd')
-        self.assertEqual(r, {'state': {'new': 'stopped', 'old': None},
-                             'result': True})
-        self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
+        assert r == {'state': {'new': 'stopped', 'old': None},
+                             'result': True}
+        assert self.run_function('lxc.exists', [self.prefix])
         r = self.run_function('lxc.destroy', [self.prefix])
-        self.assertEqual(r, {'state': None, 'change': True})
-        self.assertFalse(self.run_function('lxc.exists', [self.prefix]))
+        assert r == {'state': None, 'change': True}
+        assert not self.run_function('lxc.exists', [self.prefix])
 
     def test_init(self):
         '''
@@ -71,8 +71,8 @@ class LXCModuleTest(ModuleCase):
 
         r = self.run_function('lxc.init', [self.prefix],
                               profile='sshd', seed=False)
-        self.assertTrue(r.get('created', False))
-        self.assertTrue(self.run_function('lxc.exists', [self.prefix]))
+        assert r.get('created', False)
+        assert self.run_function('lxc.exists', [self.prefix])
 
     def test_macvlan(self):
         '''
@@ -97,4 +97,4 @@ class LXCModuleTest(ModuleCase):
         # truncate the config.
         self.run_function('cmd.run', ['truncate -s 0 {0}'.format(f)])
 
-        self.assertEqual(conf.get('lxc.network.type'), 'macvlan')
+        assert conf.get('lxc.network.type') == 'macvlan'

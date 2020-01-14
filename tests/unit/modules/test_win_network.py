@@ -78,7 +78,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(win_network.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_network.ping('127.0.0.1'))
+            assert win_network.ping('127.0.0.1')
 
     # 'netstat' function tests: 1
 
@@ -91,14 +91,14 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                '  UDP    127.0.0.1:1900    *:*        4240')
         mock = MagicMock(return_value=ret)
         with patch.dict(win_network.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(win_network.netstat(),
+            assert win_network.netstat() == \
                                  [{'local-address': '127.0.0.1:1434',
                                    'program': '1728', 'proto': 'TCP',
                                    'remote-address': '0.0.0.0:0',
                                    'state': 'LISTENING'},
                                   {'local-address': '127.0.0.1:1900',
                                    'program': '4240', 'proto': 'UDP',
-                                   'remote-address': '*:*', 'state': None}])
+                                   'remote-address': '*:*', 'state': None}]
 
     # 'traceroute' function tests: 1
 
@@ -111,7 +111,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                '  3     3 ms     2 ms     2 ms  121.242.4.53.s[121.242.4.53]\n')
         mock = MagicMock(return_value=ret)
         with patch.dict(win_network.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(win_network.traceroute('google.com'),
+            assert win_network.traceroute('google.com') == \
                                  [{'count': '1', 'hostname': None,
                                    'ip': '172.27.104.1', 'ms1': '1',
                                    'ms2': '<1', 'ms3': '<1'},
@@ -120,7 +120,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                                    'ms1': '1', 'ms2': '<1', 'ms3': '1'},
                                   {'count': '3', 'hostname': None,
                                    'ip': '121.242.4.53.s[121.242.4.53]',
-                                   'ms1': '3', 'ms2': '2', 'ms3': '2'}])
+                                   'ms1': '3', 'ms2': '2', 'ms3': '2'}]
 
     # 'nslookup' function tests: 1
 
@@ -136,12 +136,12 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                '216.58.196.110\n')
         mock = MagicMock(return_value=ret)
         with patch.dict(win_network.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(win_network.nslookup('google.com'),
+            assert win_network.nslookup('google.com') == \
                                  [{'Server': 'ct-dc-3-2.cybage.com'},
                                   {'Address': '172.27.172.12'},
                                   {'Name': 'google.com'},
                                   {'Addresses': ['2404:6800:4007:806::200e',
-                                                 '216.58.196.110']}])
+                                                 '216.58.196.110']}]
 
     # 'dig' function tests: 1
 
@@ -151,7 +151,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.dict(win_network.__salt__, {'cmd.run': mock}):
-            self.assertTrue(win_network.dig('google.com'))
+            assert win_network.dig('google.com')
 
     # 'interfaces_names' function tests: 1
 
@@ -166,8 +166,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                              return_value=[Mockwmi()]), \
                 patch('salt.utils', Mockwinapi), \
                 patch.object(wmi, 'WMI', Mock(return_value=self.WMI)):
-            self.assertListEqual(win_network.interfaces_names(),
-                                 ['Ethernet'])
+            assert win_network.interfaces_names() == \
+                                 ['Ethernet']
 
     # 'interfaces' function tests: 1
 
@@ -177,7 +177,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.network, 'win_interfaces',
                           MagicMock(return_value=True)):
-            self.assertTrue(win_network.interfaces())
+            assert win_network.interfaces()
 
     # 'hw_addr' function tests: 1
 
@@ -188,7 +188,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.network, 'hw_addr',
                           MagicMock(return_value='Ethernet')):
-            self.assertEqual(win_network.hw_addr('Ethernet'), 'Ethernet')
+            assert win_network.hw_addr('Ethernet') == 'Ethernet'
 
     # 'subnets' function tests: 1
 
@@ -198,7 +198,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.network, 'subnets',
                           MagicMock(return_value='10.1.1.0/24')):
-            self.assertEqual(win_network.subnets(), '10.1.1.0/24')
+            assert win_network.subnets() == '10.1.1.0/24'
 
     # 'in_subnet' function tests: 1
 
@@ -209,7 +209,7 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(salt.utils.network, 'in_subnet',
                           MagicMock(return_value=True)):
-            self.assertTrue(win_network.in_subnet('10.1.1.0/16'))
+            assert win_network.in_subnet('10.1.1.0/16')
 
     # 'get_route' function tests: 1
 
@@ -256,8 +256,8 @@ class WinNetworkTestCase(TestCase, LoaderModuleMockMixin):
                'ifIndex            : 3')
         mock = MagicMock(return_value=ret)
         with patch.dict(win_network.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(win_network.get_route('192.0.0.8'),
+            assert win_network.get_route('192.0.0.8') == \
                                  {'destination': '192.0.0.8',
                                   'gateway': '10.0.0.1',
                                   'interface': 'Wi-Fi',
-                                  'source': '10.0.0.15'})
+                                  'source': '10.0.0.15'}

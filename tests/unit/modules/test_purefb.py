@@ -29,47 +29,47 @@ class PureFBTestCase(TestCase, LoaderModuleMockMixin):
         Test for creation of a filesystem
         '''
         with patch.object(purefb, 'fs_create', return_value=True):
-            self.assertEqual(purefb.fs_create('test'), True)
+            assert purefb.fs_create('test') is True
 
     def test_fs_delete(self):
         '''
         Test for deletion of a filesystem
         '''
         with patch.object(purefb, 'fs_delete', return_value=True):
-            self.assertEqual(purefb.fs_delete('test'), True)
+            assert purefb.fs_delete('test') is True
 
     def test_fs_eradicate(self):
         '''
         Test for eradication of a filesystem
         '''
         with patch.object(purefb, 'fs_eradicate', return_value=True):
-            self.assertEqual(purefb.fs_eradicate('test'), True)
+            assert purefb.fs_eradicate('test') is True
 
     def test_fs_extend(self):
         '''
         Test for size extention of a filesystem
         '''
         with patch.object(purefb, 'fs_extend', return_value=True):
-            self.assertEqual(purefb.fs_extend('test', '33G'), True)
+            assert purefb.fs_extend('test', '33G') is True
 
     def test_snap_create(self):
         '''
         Test for creation of a filesystem snapshot
         '''
         with patch.object(purefb, 'snap_create', return_value=True):
-            self.assertEqual(purefb.snap_create('test', suffix='suffix'), True)
+            assert purefb.snap_create('test', suffix='suffix') is True
 
     def test_snap_delete(self):
         '''
         Test for deletion of a filesystem snapshot
         '''
         with patch.object(purefb, 'snap_delete', return_value=True):
-            self.assertEqual(purefb.snap_delete('test', suffix='suffix'), True)
+            assert purefb.snap_delete('test', suffix='suffix') is True
 
     def test_snap_eradicate(self):
         '''
         Test for eradication of a deleted filesystem snapshot
         '''
         with patch.object(purefb, 'snap_eradicate', return_value=True):
-            self.assertEqual(purefb.snap_eradicate('test',
-                                                   suffix='suffix'), True)
+            assert purefb.snap_eradicate('test',
+                                                   suffix='suffix') is True

@@ -19,6 +19,7 @@ from salt.exceptions import VMwareApiError, VMwareRuntimeError, \
         VMwareObjectRetrievalError
 from salt.ext.six.moves import range
 import salt.utils.pbm
+import pytest
 
 try:
     from pyVmomi import vim, vmodl, pbm  # pylint: disable=no-name-in-module
@@ -76,33 +77,33 @@ class GetProfileManagerTestCase(TestCase):
 
     def test_return_profile_manager(self):
         ret = salt.utils.pbm.get_profile_manager(self.mock_si)
-        self.assertEqual(ret, self.mock_prof_mgr)
+        assert ret == self.mock_prof_mgr
 
     def test_profile_manager_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_content).profileManager = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_profile_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_profile_manager_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_content).profileManager = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_profile_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_profile_manager_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_content).profileManager = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_profile_manager(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -150,33 +151,33 @@ class GetPlacementSolverTestCase(TestCase):
 
     def test_return_profile_manager(self):
         ret = salt.utils.pbm.get_placement_solver(self.mock_si)
-        self.assertEqual(ret, self.mock_prof_mgr)
+        assert ret == self.mock_prof_mgr
 
     def test_placement_solver_raises_no_permissions(self):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         type(self.mock_content).placementSolver = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_placement_solver(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_placement_solver_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         type(self.mock_content).placementSolver = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_placement_solver(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_placement_solver_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         type(self.mock_content).placementSolver = PropertyMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_placement_solver(self.mock_si)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -219,34 +220,34 @@ class GetCapabilityDefinitionsTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.FetchCapabilityMetadata = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_fetch_capabilities_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.FetchCapabilityMetadata = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_fetch_capabilities_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.FetchCapabilityMetadata = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_return_cap_definitions(self):
         ret = salt.utils.pbm.get_capability_definitions(self.mock_prof_mgr)
-        self.assertEqual(ret, ['fake_cap_meta1', 'fake_cap_meta2',
-                               'fake_cap_meta3'])
+        assert ret == ['fake_cap_meta1', 'fake_cap_meta2',
+                               'fake_cap_meta3']
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -271,31 +272,31 @@ class GetPoliciesByIdTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.RetrieveContent = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_retrieve_policies_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.RetrieveContent = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_retrieve_policies_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.RetrieveContent = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_return_policies(self):
         ret = salt.utils.pbm.get_policies_by_id(self.mock_prof_mgr, self.policy_ids)
-        self.assertEqual(ret, self.mock_policies)
+        assert ret == self.mock_policies
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -346,27 +347,27 @@ class GetStoragePoliciesTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.QueryProfile = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_retrieve_policy_ids_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.QueryProfile = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_retrieve_policy_ids_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.QueryProfile = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_storage_policies(self.mock_prof_mgr)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_get_policies_by_id(self):
         mock_get_policies_by_id = MagicMock(return_value=self.mock_policies)
@@ -379,12 +380,12 @@ class GetStoragePoliciesTestCase(TestCase):
     def test_return_all_policies(self):
         ret = salt.utils.pbm.get_storage_policies(self.mock_prof_mgr,
                                                   get_all_policies=True)
-        self.assertEqual(ret, self.mock_policies)
+        assert ret == self.mock_policies
 
     def test_return_filtered_policies(self):
         ret = salt.utils.pbm.get_storage_policies(
             self.mock_prof_mgr, policy_names=['fake_policy1', 'fake_policy3'])
-        self.assertEqual(ret, [self.mock_policies[1], self.mock_policies[3]])
+        assert ret == [self.mock_policies[1], self.mock_policies[3]]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -408,30 +409,30 @@ class CreateStoragePolicyTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.Create = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
                                                  self.mock_policy_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_policy_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.Create = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
                                                  self.mock_policy_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_policy_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.Create = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.create_storage_policy(self.mock_prof_mgr,
                                                  self.mock_policy_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -456,30 +457,30 @@ class UpdateStoragePolicyTestCase(TestCase):
         exc = vim.fault.NoPermission()
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.Update = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.update_storage_policy(
                 self.mock_prof_mgr, self.mock_policy, self.mock_policy_spec)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_create_policy_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.Update = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.update_storage_policy(
                 self.mock_prof_mgr, self.mock_policy, self.mock_policy_spec)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_create_policy_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.Update = MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.update_storage_policy(
                 self.mock_prof_mgr, self.mock_policy, self.mock_policy_spec)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -530,32 +531,32 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.QueryDefaultRequirementProfile = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_default_storage_policy_of_datastore(
                 self.mock_prof_mgr, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_query_default_requirement_profile_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.QueryDefaultRequirementProfile = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.get_default_storage_policy_of_datastore(
                 self.mock_prof_mgr, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_query_default_requirement_profile_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.QueryDefaultRequirementProfile = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.get_default_storage_policy_of_datastore(
                 self.mock_prof_mgr, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'
 
     def test_get_policies_by_id(self):
         mock_get_policies_by_id = MagicMock()
@@ -570,18 +571,18 @@ class GetDefaultStoragePolicyOfDatastoreTestCase(TestCase):
         mock_get_policies_by_id = MagicMock()
         with patch('salt.utils.pbm.get_policies_by_id',
                   MagicMock(return_value=None)):
-            with self.assertRaises(VMwareObjectRetrievalError) as excinfo:
+            with pytest.raises(VMwareObjectRetrievalError) as excinfo:
                 salt.utils.pbm.get_default_storage_policy_of_datastore(
                     self.mock_prof_mgr, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Storage policy with id \'fake_policy_id\' was not '
-                         'found')
+        assert excinfo.value.strerror == \
+                         'Storage policy with id \'fake_policy_id\' was not ' \
+                         'found'
 
     def test_return_policy_ref(self):
         mock_get_policies_by_id = MagicMock()
         ret = salt.utils.pbm.get_default_storage_policy_of_datastore(
             self.mock_prof_mgr, self.mock_ds)
-        self.assertEqual(ret, self.mock_policy_refs[0])
+        assert ret == self.mock_policy_refs[0]
 
 
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
@@ -627,29 +628,29 @@ class AssignDefaultStoragePolicyToDatastoreTestCase(TestCase):
         exc.privilegeId = 'Fake privilege'
         self.mock_prof_mgr.AssignDefaultRequirementProfile = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.assign_default_storage_policy_to_datastore(
                 self.mock_prof_mgr, self.mock_policy, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Not enough permissions. Required privilege: '
-                         'Fake privilege')
+        assert excinfo.value.strerror == \
+                         'Not enough permissions. Required privilege: ' \
+                         'Fake privilege'
 
     def test_assign_default_requirement_profile_raises_vim_fault(self):
         exc = vim.fault.VimFault()
         exc.msg = 'VimFault msg'
         self.mock_prof_mgr.AssignDefaultRequirementProfile = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareApiError) as excinfo:
+        with pytest.raises(VMwareApiError) as excinfo:
             salt.utils.pbm.assign_default_storage_policy_to_datastore(
                 self.mock_prof_mgr, self.mock_policy, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror, 'VimFault msg')
+        assert excinfo.value.strerror == 'VimFault msg'
 
     def test_assign_default_requirement_profile_raises_runtime_fault(self):
         exc = vmodl.RuntimeFault()
         exc.msg = 'RuntimeFault msg'
         self.mock_prof_mgr.AssignDefaultRequirementProfile = \
                 MagicMock(side_effect=exc)
-        with self.assertRaises(VMwareRuntimeError) as excinfo:
+        with pytest.raises(VMwareRuntimeError) as excinfo:
             salt.utils.pbm.assign_default_storage_policy_to_datastore(
                 self.mock_prof_mgr, self.mock_policy, self.mock_ds)
-        self.assertEqual(excinfo.exception.strerror, 'RuntimeFault msg')
+        assert excinfo.value.strerror == 'RuntimeFault msg'

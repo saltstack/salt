@@ -149,8 +149,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('error on list rules' in result.get('comment', {}))
+        assert result.get('result') is False
+        assert 'error on list rules' in result.get('comment', {})
 
     def test_present_when_failing_to_create_a_new_rule(self):
         '''
@@ -169,8 +169,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('put_rule' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'put_rule' in result.get('comment', '')
 
     def test_present_when_failing_to_describe_the_new_rule(self):
         '''
@@ -190,8 +190,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('describe_rule' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'describe_rule' in result.get('comment', '')
 
     def test_present_when_failing_to_create_a_new_rules_targets(self):
         '''
@@ -212,8 +212,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('put_targets' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'put_targets' in result.get('comment', '')
 
     def test_present_when_rule_does_not_exist(self):
         '''
@@ -234,7 +234,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), True)
+        assert result.get('result') is True
 
     def test_present_when_failing_to_update_an_existing_rule(self):
         '''
@@ -252,8 +252,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('describe_rule' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'describe_rule' in result.get('comment', '')
 
     def test_present_when_failing_to_get_targets(self):
         '''
@@ -274,8 +274,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('list_targets' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'list_targets' in result.get('comment', '')
 
     def test_present_when_failing_to_put_targets(self):
         '''
@@ -297,8 +297,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('put_targets' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'put_targets' in result.get('comment', '')
 
     def test_present_when_putting_targets(self):
         '''
@@ -320,7 +320,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), True)
+        assert result.get('result') is True
 
     def test_present_when_removing_targets(self):
         '''
@@ -342,7 +342,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                                'Arn': 'arn::::::*',
                              }],
                              **conn_parameters)
-        self.assertEqual(result.get('result'), True)
+        assert result.get('result') is True
 
     def test_absent_when_failing_to_describe_rule(self):
         '''
@@ -353,8 +353,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test present',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('error on list rules' in result.get('comment', {}))
+        assert result.get('result') is False
+        assert 'error on list rules' in result.get('comment', {})
 
     def test_absent_when_rule_does_not_exist(self):
         '''
@@ -365,8 +365,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), True)
-        self.assertEqual(result['changes'], {})
+        assert result.get('result') is True
+        assert result['changes'] == {}
 
     def test_absent_when_failing_to_list_targets(self):
         '''
@@ -378,8 +378,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('list_targets' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'list_targets' in result.get('comment', '')
 
     def test_absent_when_failing_to_remove_targets_exception(self):
         '''
@@ -392,8 +392,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('remove_targets' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'remove_targets' in result.get('comment', '')
 
     def test_absent_when_failing_to_remove_targets_nonexception(self):
         '''
@@ -406,7 +406,7 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
+        assert result.get('result') is False
 
     def test_absent_when_failing_to_delete_rule(self):
         '''
@@ -420,8 +420,8 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), False)
-        self.assertTrue('delete_rule' in result.get('comment', ''))
+        assert result.get('result') is False
+        assert 'delete_rule' in result.get('comment', '')
 
     def test_absent(self):
         '''
@@ -434,4 +434,4 @@ class BotoCloudWatchEventTestCase(BotoCloudWatchEventStateTestCaseBase, BotoClou
                              name='test absent',
                              Name=rule_name,
                              **conn_parameters)
-        self.assertEqual(result.get('result'), True)
+        assert result.get('result') is True

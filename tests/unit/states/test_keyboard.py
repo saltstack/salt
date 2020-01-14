@@ -42,22 +42,22 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
                                             'keyboard.set_sys': mock_t}):
             comt = ('System layout {0} already set'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(keyboard.system(name), ret)
+            assert keyboard.system(name) == ret
 
             with patch.dict(keyboard.__opts__, {'test': True}):
                 comt = ('System layout {0} needs to be set'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keyboard.system(name), ret)
+                assert keyboard.system(name) == ret
 
             with patch.dict(keyboard.__opts__, {'test': False}):
                 comt = ('Set system keyboard layout {0}'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'layout': name}})
-                self.assertDictEqual(keyboard.system(name), ret)
+                assert keyboard.system(name) == ret
 
                 comt = ('Failed to set system keyboard layout')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(keyboard.system(name), ret)
+                assert keyboard.system(name) == ret
 
     # 'xorg' function tests: 1
 
@@ -78,19 +78,19 @@ class KeyboardTestCase(TestCase, LoaderModuleMockMixin):
                                             'keyboard.set_x': mock_t}):
             comt = ('XOrg layout {0} already set'.format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(keyboard.xorg(name), ret)
+            assert keyboard.xorg(name) == ret
 
             with patch.dict(keyboard.__opts__, {'test': True}):
                 comt = ('XOrg layout {0} needs to be set'.format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(keyboard.xorg(name), ret)
+                assert keyboard.xorg(name) == ret
 
             with patch.dict(keyboard.__opts__, {'test': False}):
                 comt = ('Set XOrg keyboard layout {0}'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'layout': name}})
-                self.assertDictEqual(keyboard.xorg(name), ret)
+                assert keyboard.xorg(name) == ret
 
                 comt = ('Failed to set XOrg keyboard layout')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(keyboard.xorg(name), ret)
+                assert keyboard.xorg(name) == ret

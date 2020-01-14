@@ -36,7 +36,7 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(launchctl,
                               '_available_services',
                               return_value={'A': 'a', 'B': 'b'}):
-                self.assertEqual(launchctl.get_all(), ['A', 'B', 'C'])
+                assert launchctl.get_all() == ['A', 'B', 'C']
 
     def test_available(self):
         '''
@@ -44,7 +44,7 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(launchctl,
                           '_service_by_name', return_value=True):
-            self.assertTrue(launchctl.available('job_label'))
+            assert launchctl.available('job_label')
 
     def test_missing(self):
         '''
@@ -52,7 +52,7 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(launchctl,
                           '_service_by_name', return_value=True):
-            self.assertFalse(launchctl.missing('job_label'))
+            assert not launchctl.missing('job_label')
 
     def test_status(self):
         '''
@@ -88,7 +88,7 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
                 launchctl_data = salt.utils.stringutils.to_bytes(launchctl_data)
             with patch.object(launchctl, '_get_launchctl_data',
                               return_value=launchctl_data):
-                self.assertTrue(launchctl.status('job_label'))
+                assert launchctl.status('job_label')
 
     def test_stop(self):
         '''
@@ -99,12 +99,12 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
                           return_value={'file_path': 'A'}):
             with patch.dict(launchctl.__salt__,
                             {'cmd.retcode': MagicMock(return_value=False)}):
-                self.assertTrue(launchctl.stop('job_label'))
+                assert launchctl.stop('job_label')
 
         with patch.object(launchctl,
                           '_service_by_name',
                           return_value=None):
-            self.assertFalse(launchctl.stop('job_label'))
+            assert not launchctl.stop('job_label')
 
     def test_start(self):
         '''
@@ -115,12 +115,12 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
                           return_value={'file_path': 'A'}):
             with patch.dict(launchctl.__salt__,
                             {'cmd.retcode': MagicMock(return_value=False)}):
-                self.assertTrue(launchctl.start('job_label'))
+                assert launchctl.start('job_label')
 
         with patch.object(launchctl,
                           '_service_by_name',
                           return_value=None):
-            self.assertFalse(launchctl.start('job_label'))
+            assert not launchctl.start('job_label')
 
     def test_restart(self):
         '''
@@ -128,4 +128,4 @@ class LaunchctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(launchctl, 'stop', return_value=None):
             with patch.object(launchctl, 'start', return_value=True):
-                self.assertTrue(launchctl.restart('job_label'))
+                assert launchctl.restart('job_label')

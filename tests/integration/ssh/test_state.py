@@ -29,18 +29,18 @@ class SSHStateTest(SSHCase):
     testing the state system with salt-ssh
     '''
     def _check_dict_ret(self, ret, val, exp_ret, equal=True):
-        self.assertIsInstance(ret, dict)
+        assert isinstance(ret, dict)
         for key, value in ret.items():
-            self.assertIsInstance(value, dict)
+            assert isinstance(value, dict)
             if equal:
-                self.assertEqual(value[val], exp_ret)
+                assert value[val] == exp_ret
             else:
-                self.assertNotEqual(value[val], exp_ret)
+                assert value[val] != exp_ret
 
     def _check_request(self, empty=False):
         check = self.run_function('state.check_request', wipe=False)
         if empty:
-            self.assertFalse(bool(check), 'bool({0}) is not False'.format(check))
+            assert not bool(check), 'bool({0}) is not False'.format(check)
         else:
             self._check_dict_ret(ret=check['default']['test_run']['local']['return'],
                        val='__sls__', exp_ret=SSH_SLS)
@@ -53,7 +53,7 @@ class SSHStateTest(SSHCase):
         self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
 
         check_file = self.run_function('file.file_exists', ['/tmp/test'])
-        self.assertTrue(check_file)
+        assert check_file
 
     def test_state_sls_id(self):
         '''
@@ -74,7 +74,7 @@ class SSHStateTest(SSHCase):
                              exp_ret='second_id', equal=False)
 
         check_file = self.run_function('file.file_exists', ['/tmp/test'])
-        self.assertTrue(check_file)
+        assert check_file
 
     def test_state_sls_wrong_id(self):
         '''
@@ -92,14 +92,14 @@ class SSHStateTest(SSHCase):
         self._check_dict_ret(ret=ret, val='__sls__', exp_ret=SSH_SLS)
 
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
-        self.assertFalse(check_file)
+        assert not check_file
 
     def test_state_show_top(self):
         '''
         test state.show_top with salt-ssh
         '''
         ret = self.run_function('state.show_top')
-        self.assertEqual(ret, {'base': ['core', 'master_tops_test']})
+        assert ret == {'base': ['core', 'master_tops_test']}
 
     def test_state_single(self):
         '''
@@ -112,12 +112,12 @@ class SSHStateTest(SSHCase):
         single = self.run_function('state.single',
                                    ['test.succeed_with_changes name=itworked'])
 
-        self.assertIsInstance(single, dict)
+        assert isinstance(single, dict)
         for key, value in six.iteritems(single):
-            self.assertIsInstance(value, dict)
-            self.assertEqual(value['name'], ret_out['name'])
-            self.assertEqual(value['result'], ret_out['result'])
-            self.assertEqual(value['comment'], ret_out['comment'])
+            assert isinstance(value, dict)
+            assert value['name'] == ret_out['name']
+            assert value['result'] == ret_out['result']
+            assert value['comment'] == ret_out['comment']
 
     def test_show_highstate(self):
         '''
@@ -125,9 +125,9 @@ class SSHStateTest(SSHCase):
         '''
         high = self.run_function('state.show_highstate')
         destpath = os.path.join(RUNTIME_VARS.TMP, 'testfile')
-        self.assertIsInstance(high, dict)
-        self.assertIn(destpath, high)
-        self.assertEqual(high[destpath]['__env__'], 'base')
+        assert isinstance(high, dict)
+        assert destpath in high
+        assert high[destpath]['__env__'] == 'base'
 
     def test_state_high(self):
         '''
@@ -140,20 +140,20 @@ class SSHStateTest(SSHCase):
         high = self.run_function('state.high',
                                  ['"{"itworked": {"test": ["succeed_with_changes"]}}"'])
 
-        self.assertIsInstance(high, dict)
+        assert isinstance(high, dict)
         for key, value in six.iteritems(high):
-            self.assertIsInstance(value, dict)
-            self.assertEqual(value['name'], ret_out['name'])
-            self.assertEqual(value['result'], ret_out['result'])
-            self.assertEqual(value['comment'], ret_out['comment'])
+            assert isinstance(value, dict)
+            assert value['name'] == ret_out['name']
+            assert value['result'] == ret_out['result']
+            assert value['comment'] == ret_out['comment']
 
     def test_show_lowstate(self):
         '''
         state.show_lowstate with salt-ssh
         '''
         low = self.run_function('state.show_lowstate')
-        self.assertIsInstance(low, list)
-        self.assertIsInstance(low[0], dict)
+        assert isinstance(low, list)
+        assert isinstance(low[0], dict)
 
     def test_state_low(self):
         '''
@@ -167,12 +167,12 @@ class SSHStateTest(SSHCase):
                 'state.low',
                 ['"{"state": "test", "fun": "succeed_with_changes", "name": "itworked"}"'])
 
-        self.assertIsInstance(low, dict)
+        assert isinstance(low, dict)
         for key, value in six.iteritems(low):
-            self.assertIsInstance(value, dict)
-            self.assertEqual(value['name'], ret_out['name'])
-            self.assertEqual(value['result'], ret_out['result'])
-            self.assertEqual(value['comment'], ret_out['comment'])
+            assert isinstance(value, dict)
+            assert value['name'] == ret_out['name']
+            assert value['result'] == ret_out['result']
+            assert value['comment'] == ret_out['comment']
 
     def test_state_request_check_clear(self):
         '''
@@ -198,7 +198,7 @@ class SSHStateTest(SSHCase):
         run = self.run_function('state.run_request', wipe=False)
 
         check_file = self.run_function('file.file_exists', [SSH_SLS_FILE], wipe=False)
-        self.assertTrue(check_file)
+        assert check_file
 
     @pytest.mark.flaky(max_runs=4)
     def test_state_running(self):
@@ -238,7 +238,7 @@ class SSHStateTest(SSHCase):
         make sure to clean up any old ssh directories
         '''
         salt_dir = self.run_function('config.get', ['thin_dir'], wipe=False)
-        self.assertIsInstance(salt_dir, six.string_types)
+        assert isinstance(salt_dir, six.string_types)
         if os.path.exists(salt_dir):
             shutil.rmtree(salt_dir)
 

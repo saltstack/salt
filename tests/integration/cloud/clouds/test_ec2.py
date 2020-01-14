@@ -122,7 +122,7 @@ class EC2Test(CloudTest):
 
         rename_result = self.run_cloud(
             '-a rename {0} newname={1} --assume-yes'.format(self.instance_name, changed_name), timeout=TIMEOUT)
-        self.assertFalse(self._instance_exists(), 'Instance wasn\'t renamed: |\n{}'.format(rename_result))
+        assert not self._instance_exists(), 'Instance wasn\'t renamed: |\n{}'.format(rename_result)
         self.assertInstanceExists(instance_name=changed_name)
 
         self.assertDestroyInstance(changed_name)

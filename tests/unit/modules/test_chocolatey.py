@@ -58,7 +58,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(chocolatey.__context__, context):
             chocolatey._clear_context()
             # Did it clear all chocolatey items from __context__P?
-            self.assertEqual(chocolatey.__context__, {})
+            assert chocolatey.__context__ == {}
 
     def test__yes_context(self):
         '''
@@ -68,10 +68,10 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             result = chocolatey._yes()
             expected = ['--yes']
             # Did it return correctly
-            self.assertListEqual(result, expected)
+            assert result == expected
             # Did it populate __context__
-            self.assertEqual(chocolatey.__context__['chocolatey._yes'],
-                             expected)
+            assert chocolatey.__context__['chocolatey._yes'] == \
+                             expected
 
     def test__yes_version_greater(self):
         '''
@@ -82,10 +82,10 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             result = chocolatey._yes()
             expected = ['--yes']
             # Did it return correctly
-            self.assertListEqual(result, expected)
+            assert result == expected
             # Did it populate __context__
-            self.assertEqual(chocolatey.__context__['chocolatey._yes'],
-                             expected)
+            assert chocolatey.__context__['chocolatey._yes'] == \
+                             expected
 
     def test__yes_version_less_than(self):
         '''
@@ -96,10 +96,10 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             result = chocolatey._yes()
             expected = []
             # Did it return correctly
-            self.assertListEqual(result, expected)
+            assert result == expected
             # Did it populate __context__
-            self.assertEqual(chocolatey.__context__['chocolatey._yes'],
-                             expected)
+            assert chocolatey.__context__['chocolatey._yes'] == \
+                             expected
 
     def test__find_chocolatey_context(self):
         '''
@@ -109,7 +109,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
                         {'chocolatey._path': self.choco_path}):
             result = chocolatey._find_chocolatey()
             expected = self.choco_path
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test__find_chocolatey_which(self):
         '''
@@ -120,10 +120,10 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             result = chocolatey._find_chocolatey()
             expected = self.choco_path
             # Does it return the correct path
-            self.assertEqual(result, expected)
+            assert result == expected
             # Does it populate __context__
-            self.assertEqual(chocolatey.__context__['chocolatey._path'],
-                             expected)
+            assert chocolatey.__context__['chocolatey._path'] == \
+                             expected
 
     def test__find_chocolatey_programdata(self):
         '''
@@ -134,10 +134,10 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             result = chocolatey._find_chocolatey()
             expected = self.choco_path_pd
             # Does it return the correct path
-            self.assertEqual(result, expected)
+            assert result == expected
             # Does it populate __context__
-            self.assertEqual(chocolatey.__context__['chocolatey._path'],
-                             expected)
+            assert chocolatey.__context__['chocolatey._path'] == \
+                             expected
 
     def test__find_chocolatey_systemdrive(self):
         '''
@@ -148,7 +148,7 @@ class ChocolateyTestCase(TestCase, LoaderModuleMockMixin):
             result = chocolatey._find_chocolatey()
             expected = self.choco_path_sd
             # Does it return the correct path
-            self.assertEqual(result, expected)
+            assert result == expected
             # Does it populate __context__
-            self.assertEqual(chocolatey.__context__['chocolatey._path'],
-                             expected)
+            assert chocolatey.__context__['chocolatey._path'] == \
+                             expected

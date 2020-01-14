@@ -17,6 +17,7 @@ from tests.support.runtests import RUNTIME_VARS
 import salt.config
 import salt.loader
 import salt.utils.roster_matcher
+import pytest
 
 EXPECTED = {
     'host1': {
@@ -77,43 +78,43 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         """
         # We don't care about tgt and tgt_type here.
         roster_matcher = salt.utils.roster_matcher.RosterMatcher(EXPECTED, 'tgt', 'tgt_type')
-        self.assertEqual(EXPECTED['host1'], roster_matcher.get_data('host1'))
-        self.assertEqual(EXPECTED['host2'], roster_matcher.get_data('host2'))
-        self.assertEqual(EXPECTED['host3'], roster_matcher.get_data('host3'))
-        self.assertEqual({'host': EXPECTED['host4']}, roster_matcher.get_data('host4'))
+        assert EXPECTED['host1'] == roster_matcher.get_data('host1')
+        assert EXPECTED['host2'] == roster_matcher.get_data('host2')
+        assert EXPECTED['host3'] == roster_matcher.get_data('host3')
+        assert {'host': EXPECTED['host4']} == roster_matcher.get_data('host4')
 
     def test_ret_glob_minions(self):
         """
         Test that we return minions matching a glob.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, '*[245]', 'glob')
-        self.assertNotIn('host1', result)
-        self.assertIn('host2', result)
-        self.assertNotIn('host3', result)
-        self.assertIn('host4', result)
-        self.assertNotIn('host5', result)
+        assert 'host1' not in result
+        assert 'host2' in result
+        assert 'host3' not in result
+        assert 'host4' in result
+        assert 'host5' not in result
 
     def test_ret_pcre_minions(self):
         """
         Test that we return minions matching a regular expression.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, '.*[^23]$', 'pcre')
-        self.assertIn('host1', result)
-        self.assertNotIn('host2', result)
-        self.assertNotIn('host3', result)
-        self.assertIn('host4', result)
-        self.assertNotIn('host5', result)
+        assert 'host1' in result
+        assert 'host2' not in result
+        assert 'host3' not in result
+        assert 'host4' in result
+        assert 'host5' not in result
 
     def test_ret_literal_list_minions(self):
         """
         Test that we return minions that are in a literal list.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, ['host1', 'host2', 'host5'], 'list')
-        self.assertIn('host1', result)
-        self.assertIn('host2', result)
-        self.assertNotIn('host3', result)
-        self.assertNotIn('host4', result)
-        self.assertNotIn('host5', result)
+        assert 'host1' in result
+        assert 'host2' in result
+        assert 'host3' not in result
+        assert 'host4' not in result
+        assert 'host5' not in result
 
     def test_ret_comma_delimited_string_minions(self):
         """
@@ -121,11 +122,11 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         string of literal minion names.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, 'host5,host3,host2', 'list')
-        self.assertNotIn('host1', result)
-        self.assertIn('host2', result)
-        self.assertIn('host3', result)
-        self.assertNotIn('host4', result)
-        self.assertNotIn('host5', result)
+        assert 'host1' not in result
+        assert 'host2' in result
+        assert 'host3' in result
+        assert 'host4' not in result
+        assert 'host5' not in result
 
     def test_ret_oops_minions(self):
         """
@@ -133,7 +134,7 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         method that is not defined.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, None, 'xyzzy')
-        self.assertEqual({}, result)
+        assert {} == result
 
     def test_ret_literal_list_nodegroup_minions(self):
         """
@@ -141,11 +142,11 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         where the nodegroup expresses a literal list of minion names.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, 'list_nodegroup', 'nodegroup')
-        self.assertIn('host1', result)
-        self.assertIn('host2', result)
-        self.assertNotIn('host3', result)
-        self.assertNotIn('host4', result)
-        self.assertNotIn('host5', result)
+        assert 'host1' in result
+        assert 'host2' in result
+        assert 'host3' not in result
+        assert 'host4' not in result
+        assert 'host5' not in result
 
     def test_ret_comma_delimited_string_nodegroup_minions(self):
         """
@@ -154,18 +155,18 @@ class RosterMatcherTestCase(TestCase, mixins.LoaderModuleMockMixin):
         of minion names.
         """
         result = salt.utils.roster_matcher.targets(EXPECTED, 'string_nodegroup', 'nodegroup')
-        self.assertIn('host1', result)
-        self.assertNotIn('host2', result)
-        self.assertIn('host3', result)
-        self.assertIn('host4', result)
-        self.assertNotIn('host5', result)
+        assert 'host1' in result
+        assert 'host2' not in result
+        assert 'host3' in result
+        assert 'host4' in result
+        assert 'host5' not in result
 
     def test_ret_no_range_installed_minions(self):
         """
         Test that range matcher raises a Runtime Error if seco.range is not installed.
         """
         salt.utils.roster_matcher.HAS_RANGE = False
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             salt.utils.roster_matcher.targets(EXPECTED, None, 'range')
 
     @skipIf(not salt.utils.roster_matcher.HAS_RANGE, 'seco.range is not installed')

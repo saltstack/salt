@@ -19,6 +19,7 @@ from tests.support.mock import (
     patch,
     DEFAULT
 )
+import pytest
 
 
 class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
@@ -34,7 +35,7 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_cmd = MagicMock(return_value='foo')
         with patch.dict(mac_sysctl.__salt__, {'cmd.run': mock_cmd}):
-            self.assertEqual(mac_sysctl.get('kern.ostype'), 'foo')
+            assert mac_sysctl.get('kern.ostype') == 'foo'
 
     def test_assign_cmd_failed(self):
         '''
@@ -44,9 +45,8 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
                'stdout': 'net.inet.icmp.icmplim: 250 -> 50'}
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(mac_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertRaises(CommandExecutionError,
-                              mac_sysctl.assign,
-                              'net.inet.icmp.icmplim', 50)
+            with pytest.raises(CommandExecutionError):
+                mac_sysctl.assign('net.inet.icmp.icmplim', 50)
 
     def test_assign(self):
         '''
@@ -57,8 +57,8 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         ret = {'net.inet.icmp.icmplim': '50'}
         mock_cmd = MagicMock(return_value=cmd)
         with patch.dict(mac_sysctl.__salt__, {'cmd.run_all': mock_cmd}):
-            self.assertEqual(mac_sysctl.assign(
-                'net.inet.icmp.icmplim', 50), ret)
+            assert mac_sysctl.assign(
+                'net.inet.icmp.icmplim', 50) == ret
 
     def test_persist_no_conf_failure(self):
         '''
@@ -67,9 +67,8 @@ class DarwinSysctlTestCase(TestCase, LoaderModuleMockMixin):
         read_data = IOError(13, 'Permission denied', '/file')
         with patch('salt.utils.files.fopen', mock_open(read_data=read_data)), \
                 patch('os.path.isfile', MagicMock(return_value=False)):
-            self.assertRaises(CommandExecutionError,
-                              mac_sysctl.persist,
-                              'net.inet.icmp.icmplim',
+            with pytest.raises(CommandExecutionError):
+                mac_sysctl.persist('net.inet.icmp.icmplim',
                               50, config=None)
 
     def test_persist_no_conf_success(self):

@@ -80,7 +80,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         version = OPKG_VIM_INFO['vim']['Version']
         mock = MagicMock(return_value=version)
         with patch.dict(opkg.__salt__, {'pkg_resource.version': mock}):
-            self.assertEqual(opkg.version(*['vim']), version)
+            assert opkg.version(*['vim']) == version
 
     def test_upgrade_available(self):
         '''
@@ -88,7 +88,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.opkg.latest_version',
                    MagicMock(return_value='')):
-            self.assertFalse(opkg.upgrade_available('vim'))
+            assert not opkg.upgrade_available('vim')
 
     def test_file_dict(self):
         '''
@@ -98,7 +98,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         ret_value = {'stdout': std_out}
         mock = MagicMock(return_value=ret_value)
         with patch.dict(opkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(opkg.file_dict('vim'), OPKG_VIM_FILES)
+            assert opkg.file_dict('vim') == OPKG_VIM_FILES
 
     def test_file_list(self):
         '''
@@ -112,7 +112,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
             'files': OPKG_VIM_FILES['packages']['vim'],
         }
         with patch.dict(opkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(opkg.file_list('vim'), files)
+            assert opkg.file_list('vim') == files
 
     def test_owner(self):
         '''
@@ -121,7 +121,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         paths = ['/usr/bin/vimdiff']
         mock = MagicMock(return_value='vim - version - info')
         with patch.dict(opkg.__salt__, {'cmd.run_stdout': mock}):
-            self.assertEqual(opkg.owner(*paths), 'vim')
+            assert opkg.owner(*paths) == 'vim'
 
     def test_install(self):
         '''
@@ -138,7 +138,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.install('vim:7.4'), INSTALLED)
+                assert opkg.install('vim:7.4') == INSTALLED
 
     def test_install_noaction(self):
         '''
@@ -155,7 +155,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.install('vim:7.4', test=True), {})
+                assert opkg.install('vim:7.4', test=True) == {}
 
     def test_remove(self):
         '''
@@ -172,7 +172,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.remove('vim'), REMOVED)
+                assert opkg.remove('vim') == REMOVED
 
     def test_remove_noaction(self):
         '''
@@ -189,7 +189,7 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             with patch.multiple(opkg, **patch_kwargs):
-                self.assertEqual(opkg.remove('vim:7.4', test=True), {})
+                assert opkg.remove('vim:7.4', test=True) == {}
 
     def test_info_installed(self):
         '''
@@ -206,16 +206,16 @@ class OpkgTestCase(TestCase, LoaderModuleMockMixin):
         }
         mock = MagicMock(return_value=ret_value)
         with patch.dict(opkg.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(opkg.info_installed('vim'), expected_dict)
+            assert opkg.info_installed('vim') == expected_dict
 
     def test_version_clean(self):
         '''
         Test - Return the information of version_clean
         '''
-        self.assertEqual(opkg.version_clean('1.0.1'), '1.0.1')
+        assert opkg.version_clean('1.0.1') == '1.0.1'
 
     def test_check_extra_requirements(self):
         '''
         Test - Return the information of check_extra_requirements
         '''
-        self.assertEqual(opkg.check_extra_requirements('vim', '1.0.1'), True)
+        assert opkg.check_extra_requirements('vim', '1.0.1') is True

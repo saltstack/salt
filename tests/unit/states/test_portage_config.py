@@ -34,9 +34,9 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(side_effect=[True, Exception])
         with patch.dict(portage_config.__salt__,
                         {'portage_config.enforce_nice_config': mock}):
-            self.assertTrue(portage_config.mod_init(name))
+            assert portage_config.mod_init(name)
 
-            self.assertFalse(portage_config.mod_init(name))
+            assert not portage_config.mod_init(name)
 
     # 'flags' function tests: 1
 
@@ -55,22 +55,22 @@ class PortageConfigTestCase(TestCase, LoaderModuleMockMixin):
             mock = MagicMock(side_effect=Exception('error'))
             with patch.dict(portage_config.__salt__,
                             {'portage_config.get_missing_flags': mock}):
-                self.assertDictEqual(portage_config.flags(name, use='openssl'), ret)
+                assert portage_config.flags(name, use='openssl') == ret
 
-                self.assertDictEqual(portage_config.flags(name,
-                                                          accept_keywords=True),
-                                     ret)
+                assert portage_config.flags(name,
+                                                          accept_keywords=True) == \
+                                     ret
 
-                self.assertDictEqual(portage_config.flags(name, env=True), ret)
+                assert portage_config.flags(name, env=True) == ret
 
-                self.assertDictEqual(portage_config.flags(name, license=True), ret)
+                assert portage_config.flags(name, license=True) == ret
 
-                self.assertDictEqual(portage_config.flags(name, properties=True),
-                                     ret)
+                assert portage_config.flags(name, properties=True) == \
+                                     ret
 
-                self.assertDictEqual(portage_config.flags(name, mask=True), ret)
+                assert portage_config.flags(name, mask=True) == ret
 
-                self.assertDictEqual(portage_config.flags(name, unmask=True), ret)
+                assert portage_config.flags(name, unmask=True) == ret
 
                 ret.update({'comment': '', 'result': True})
-                self.assertDictEqual(portage_config.flags(name), ret)
+                assert portage_config.flags(name) == ret

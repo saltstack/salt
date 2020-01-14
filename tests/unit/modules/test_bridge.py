@@ -29,7 +29,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertTrue(bridge.show('br'))
+            assert bridge.show('br')
 
     def test_list_(self):
         '''
@@ -37,21 +37,21 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=None)
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.list_(), None)
+            assert bridge.list_() is None
 
         mock = MagicMock(return_value=['A', 'B'])
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.list_(), ['A', 'B'])
+            assert bridge.list_() == ['A', 'B']
 
     def test_interfaces(self):
         '''
         Test for Returns interfaces attached to a bridge
         '''
-        self.assertEqual(bridge.interfaces(), None)
+        assert bridge.interfaces() is None
 
         mock = MagicMock(return_value={'interfaces': 'A'})
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.interfaces('br'), 'A')
+            assert bridge.interfaces('br') == 'A'
 
     def test_find_interfaces(self):
         '''
@@ -59,11 +59,11 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=None)
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.find_interfaces(), None)
+            assert bridge.find_interfaces() is None
 
         mock = MagicMock(return_value={'interfaces': 'A'})
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.find_interfaces(), {})
+            assert bridge.find_interfaces() == {}
 
     def test_add(self):
         '''
@@ -71,7 +71,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.add(), 'A')
+            assert bridge.add() == 'A'
 
     def test_delete(self):
         '''
@@ -79,7 +79,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.delete(), 'A')
+            assert bridge.delete() == 'A'
 
     def test_addif(self):
         '''
@@ -87,7 +87,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.addif(), 'A')
+            assert bridge.addif() == 'A'
 
     def test_delif(self):
         '''
@@ -95,7 +95,7 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.object(bridge, '_os_dispatch', mock):
-            self.assertEqual(bridge.delif(), 'A')
+            assert bridge.delif() == 'A'
 
     def test_stp(self):
         '''
@@ -104,12 +104,12 @@ class BridgeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(bridge.__grains__, {'kernel': 'Linux'}):
             mock = MagicMock(return_value='Linux')
             with patch.object(bridge, '_os_dispatch', mock):
-                self.assertEqual(bridge.stp(), 'Linux')
+                assert bridge.stp() == 'Linux'
 
         with patch.dict(bridge.__grains__, {'kernel': 'FreeBSD'}):
             mock = MagicMock(return_value='FreeBSD')
             with patch.object(bridge, '_os_dispatch', mock):
-                self.assertEqual(bridge.stp(), 'FreeBSD')
+                assert bridge.stp() == 'FreeBSD'
 
         with patch.dict(bridge.__grains__, {'kernel': None}):
-            self.assertFalse(bridge.stp())
+            assert not bridge.stp()

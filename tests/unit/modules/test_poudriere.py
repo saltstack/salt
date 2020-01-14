@@ -37,9 +37,9 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertTrue(poudriere.is_jail('salt'))
+            assert poudriere.is_jail('salt')
 
-            self.assertFalse(poudriere.is_jail('SALT'))
+            assert not poudriere.is_jail('SALT')
 
     # 'make_pkgng_aware' function tests: 1
 
@@ -58,14 +58,14 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
                                              'file.write': mock_true}):
             with patch.object(os.path, 'isdir', MagicMock(return_value=False)):
                 with patch.object(os, 'makedirs', mock_true):
-                    self.assertEqual(poudriere.make_pkgng_aware('salt'), ret1)
+                    assert poudriere.make_pkgng_aware('salt') == ret1
 
             with patch.object(os.path, 'isdir', mock_true):
-                self.assertEqual(poudriere.make_pkgng_aware('salt'), ret2)
+                assert poudriere.make_pkgng_aware('salt') == ret2
 
                 with patch.object(os.path, 'isfile', mock_true):
-                    self.assertDictEqual(poudriere.make_pkgng_aware('salt'),
-                                         ret3)
+                    assert poudriere.make_pkgng_aware('salt') == \
+                                         ret3
 
     # 'parse_config' function tests: 1
 
@@ -78,10 +78,10 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
                 patch('salt.utils.files.fopen', mock_open()), \
                 patch.object(poudriere, '_check_config_exists',
                               MagicMock(side_effect=[True, False])):
-            self.assertDictEqual(poudriere.parse_config(), {})
+            assert poudriere.parse_config() == {}
 
-            self.assertEqual(poudriere.parse_config(),
-                             'Could not find /tmp/salt on file system')
+            assert poudriere.parse_config() == \
+                             'Could not find /tmp/salt on file system'
 
     # 'version' function tests: 1
 
@@ -91,7 +91,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='9.0-RELEASE')
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}):
-            self.assertEqual(poudriere.version(), '9.0-RELEASE')
+            assert poudriere.version() == '9.0-RELEASE'
 
     # 'list_jails' function tests: 1
 
@@ -103,7 +103,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertListEqual(poudriere.list_jails(), ['salt stack'])
+            assert poudriere.list_jails() == ['salt stack']
 
     # 'list_ports' function tests: 1
 
@@ -115,7 +115,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertListEqual(poudriere.list_ports(), ['salt stack'])
+            assert poudriere.list_ports() == ['salt stack']
 
     # 'create_jail' function tests: 1
 
@@ -128,12 +128,12 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock_stack}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertEqual(poudriere.create_jail('90amd64', 'amd64'),
-                             '90amd64 already exists')
+            assert poudriere.create_jail('90amd64', 'amd64') == \
+                             '90amd64 already exists'
 
             with patch.object(poudriere, 'make_pkgng_aware', mock_true):
-                self.assertEqual(poudriere.create_jail('80amd64', 'amd64'),
-                                 'Issue creating jail 80amd64')
+                assert poudriere.create_jail('80amd64', 'amd64') == \
+                                 'Issue creating jail 80amd64'
 
         with patch.object(poudriere, 'make_pkgng_aware', mock_true), \
                 patch('salt.modules.poudriere._check_config_exists',
@@ -141,8 +141,8 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(poudriere, 'is_jail',
                               MagicMock(side_effect=[False, True])):
                 with patch.dict(poudriere.__salt__, {'cmd.run': mock_stack}):
-                    self.assertEqual(poudriere.create_jail('80amd64', 'amd64'),
-                                     'Created jail 80amd64')
+                    assert poudriere.create_jail('80amd64', 'amd64') == \
+                                     'Created jail 80amd64'
 
     # 'update_jail' function tests: 1
 
@@ -154,10 +154,10 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertEqual(poudriere.update_jail('90amd64'), '90amd64 stack')
+            assert poudriere.update_jail('90amd64') == '90amd64 stack'
 
-            self.assertEqual(poudriere.update_jail('80amd64'),
-                             'Could not find jail 80amd64')
+            assert poudriere.update_jail('80amd64') == \
+                             'Could not find jail 80amd64'
 
     # 'delete_jail' function tests: 1
 
@@ -170,10 +170,10 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock_stack}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertEqual(poudriere.delete_jail('90amd64'), ret)
+            assert poudriere.delete_jail('90amd64') == ret
 
-            self.assertEqual(poudriere.delete_jail('80amd64'),
-                             'Looks like jail 80amd64 has not been created')
+            assert poudriere.delete_jail('80amd64') == \
+                             'Looks like jail 80amd64 has not been created'
 
         ret1 = 'Deleted jail "80amd64" but was unable to remove jail make file'
         with patch.object(poudriere, 'is_jail',
@@ -181,12 +181,12 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(poudriere.__salt__, {'cmd.run': mock_stack}):
                 with patch.object(poudriere, '_config_dir',
                                   MagicMock(return_value='/tmp/salt')):
-                    self.assertEqual(poudriere.delete_jail('80amd64'),
-                                     'Deleted jail 80amd64')
+                    assert poudriere.delete_jail('80amd64') == \
+                                     'Deleted jail 80amd64'
 
                     with patch.object(os.path, 'isfile',
                                       MagicMock(return_value=True)):
-                        self.assertEqual(poudriere.delete_jail('80amd64'), ret1)
+                        assert poudriere.delete_jail('80amd64') == ret1
 
     # 'create_ports_tree' function tests: 1
 
@@ -198,7 +198,7 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertEqual(poudriere.create_ports_tree(), 'salt stack')
+            assert poudriere.create_ports_tree() == 'salt stack'
 
     # 'update_ports_tree' function tests: 1
 
@@ -211,8 +211,8 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertEqual(poudriere.update_ports_tree('staging'),
-                             'salt stack')
+            assert poudriere.update_ports_tree('staging') == \
+                             'salt stack'
 
     # 'bulk_build' function tests: 1
 
@@ -225,13 +225,13 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(poudriere.__salt__, {'cmd.run': mock}), \
                 patch('salt.modules.poudriere._check_config_exists',
                       MagicMock(return_value=True)):
-            self.assertEqual(poudriere.bulk_build('90amd64', '/root/pkg_list'),
-                             ret)
+            assert poudriere.bulk_build('90amd64', '/root/pkg_list') == \
+                             ret
 
             with patch.object(os.path, 'isfile', MagicMock(return_value=True)):
-                self.assertEqual(poudriere.bulk_build('90amd64',
-                                                      '/root/pkg_list'),
-                                 'Could not find jail 90amd64')
+                assert poudriere.bulk_build('90amd64',
+                                                      '/root/pkg_list') == \
+                                 'Could not find jail 90amd64'
 
         ret = ('There may have been an issue building '
                'packages dumping output: 90amd64 stack')
@@ -240,11 +240,11 @@ class PoudriereTestCase(TestCase, LoaderModuleMockMixin):
                       MagicMock(return_value=True)):
             mock = MagicMock(return_value='90amd64 stack packages built')
             with patch.dict(poudriere.__salt__, {'cmd.run': mock}):
-                self.assertEqual(poudriere.bulk_build('90amd64',
-                                                      '/root/pkg_list'),
-                                 '90amd64 stack packages built')
+                assert poudriere.bulk_build('90amd64',
+                                                      '/root/pkg_list') == \
+                                 '90amd64 stack packages built'
 
             mock = MagicMock(return_value='90amd64 stack')
             with patch.dict(poudriere.__salt__, {'cmd.run': mock}):
-                self.assertEqual(poudriere.bulk_build('90amd64',
-                                                      '/root/pkg_list'), ret)
+                assert poudriere.bulk_build('90amd64',
+                                                      '/root/pkg_list') == ret

@@ -94,15 +94,15 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = journald.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for journald beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for journald beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = journald.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
     def test_journald_match(self):
         config = [{'services': {'sshd': {'SYSLOG_IDENTIFIER': 'sshd',
@@ -110,10 +110,10 @@ class JournaldBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
         ret = journald.validate(config)
 
-        self.assertEqual(ret, (True, 'Valid beacon configuration'))
+        assert ret == (True, 'Valid beacon configuration')
 
         _expected_return = salt.utils.data.simple_types_filter(_STUB_JOURNALD_ENTRY)
         _expected_return['tag'] = 'sshd'
 
         ret = journald.beacon(config)
-        self.assertEqual(ret, [_expected_return])
+        assert ret == [_expected_return]

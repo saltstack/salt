@@ -17,8 +17,8 @@ import salt.cloud.libcloudfuncs as libcloud
 class LibcloudTestCase(TestCase):
     def test_node_state_libcloud_020(self):
         state = libcloud.node_state(2)
-        self.assertEqual('TERMINATED', state)
+        assert 'TERMINATED' == state
 
     def test_node_state_libcloud_100(self):
         state = libcloud.node_state('terminated')
-        self.assertEqual('TERMINATED', state)
+        assert 'TERMINATED' == state

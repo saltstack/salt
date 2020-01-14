@@ -33,7 +33,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='mlocate 0.26')
         with patch.dict(locate.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(locate.version(), ['mlocate 0.26'])
+            assert locate.version() == ['mlocate 0.26']
 
     # 'stats' function tests: 1
 
@@ -55,7 +55,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(locate.__salt__,
                         {'cmd.run': MagicMock(return_value=mock_ret)}):
-            self.assertDictEqual(locate.stats(), ret)
+            assert locate.stats() == ret
 
     # 'updatedb' function tests: 1
 
@@ -65,7 +65,7 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(locate.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(locate.updatedb(), [])
+            assert locate.updatedb() == []
 
     # 'locate' function tests: 1
 
@@ -75,4 +75,4 @@ class LocateTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='')
         with patch.dict(locate.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(locate.locate('wholename', database='myfile'), [])
+            assert locate.locate('wholename', database='myfile') == []

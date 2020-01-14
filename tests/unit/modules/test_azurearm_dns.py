@@ -172,7 +172,7 @@ class AzureRmDnsTestCase(TestCase, LoaderModuleMockMixin):
             if isinstance(val, azure.mgmt.dns.models.RecordSet):
                 record_set_kwargs[key] = val.as_dict()
 
-        self.assertEqual(record_set_kwargs, expected)
+        assert record_set_kwargs == expected
 
     def test_zone_create_or_update(self):
         '''
@@ -199,4 +199,4 @@ class AzureRmDnsTestCase(TestCase, LoaderModuleMockMixin):
             if isinstance(val, azure.mgmt.dns.models.Zone):
                 zone_kwargs[key] = val.as_dict()
 
-        self.assertEqual(zone_kwargs, expected)
+        assert zone_kwargs == expected

@@ -19,6 +19,7 @@ from tests.support.mock import MagicMock, patch
 # Import Salt Libs
 import salt.modules.mac_group as mac_group
 from salt.exceptions import SaltInvocationError, CommandExecutionError
+import pytest
 
 
 @skipIf(not HAS_GRP, "Missing required library 'grp'")
@@ -38,28 +39,32 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
         with patch('salt.modules.mac_group.info', MagicMock(return_value=mock_group)):
-            self.assertRaises(CommandExecutionError, mac_group.add, 'test')
+            with pytest.raises(CommandExecutionError):
+                mac_group.add('test')
 
     def test_add_whitespace(self):
         '''
         Tests if there is whitespace in the group name
         '''
         with patch('salt.modules.mac_group.info', MagicMock(return_value={})):
-            self.assertRaises(SaltInvocationError, mac_group.add, 'white space')
+            with pytest.raises(SaltInvocationError):
+                mac_group.add('white space')
 
     def test_add_underscore(self):
         '''
         Tests if the group name starts with an underscore or not
         '''
         with patch('salt.modules.mac_group.info', MagicMock(return_value={})):
-            self.assertRaises(SaltInvocationError, mac_group.add, '_Test')
+            with pytest.raises(SaltInvocationError):
+                mac_group.add('_Test')
 
     def test_add_gid_int(self):
         '''
         Tests if the gid is an int or not
         '''
         with patch('salt.modules.mac_group.info', MagicMock(return_value={})):
-            self.assertRaises(SaltInvocationError, mac_group.add, 'foo', 'foo')
+            with pytest.raises(SaltInvocationError):
+                mac_group.add('foo', 'foo')
 
     def test_add_gid_exists(self):
         '''
@@ -67,7 +72,8 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.mac_group.info', MagicMock(return_value={})), \
                 patch('salt.modules.mac_group._list_gids', MagicMock(return_value=['3456'])):
-            self.assertRaises(CommandExecutionError, mac_group.add, 'foo', 3456)
+            with pytest.raises(CommandExecutionError):
+                mac_group.add('foo', 3456)
 
     def test_add(self):
         '''
@@ -77,7 +83,7 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_group.__salt__, {'cmd.retcode': mock_ret}), \
                 patch('salt.modules.mac_group.info', MagicMock(return_value={})), \
                 patch('salt.modules.mac_group._list_gids', MagicMock(return_value=[])):
-            self.assertTrue(mac_group.add('test', 500))
+            assert mac_group.add('test', 500)
 
     # 'delete' function tests: 4
 
@@ -85,20 +91,22 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if there is whitespace in the group name
         '''
-        self.assertRaises(SaltInvocationError, mac_group.delete, 'white space')
+        with pytest.raises(SaltInvocationError):
+            mac_group.delete('white space')
 
     def test_delete_underscore(self):
         '''
         Tests if the group name starts with an underscore or not
         '''
-        self.assertRaises(SaltInvocationError, mac_group.delete, '_Test')
+        with pytest.raises(SaltInvocationError):
+            mac_group.delete('_Test')
 
     def test_delete_group_exists(self):
         '''
         Tests if the group to be deleted exists or not
         '''
         with patch('salt.modules.mac_group.info', MagicMock(return_value={})):
-            self.assertTrue(mac_group.delete('test'))
+            assert mac_group.delete('test')
 
     def test_delete(self):
         '''
@@ -108,7 +116,7 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         mock_group = {'passwd': '*', 'gid': 0, 'name': 'test', 'members': ['root']}
         with patch.dict(mac_group.__salt__, {'cmd.retcode': mock_ret}), \
                 patch('salt.modules.mac_group.info', MagicMock(return_value=mock_group)):
-            self.assertTrue(mac_group.delete('test'))
+            assert mac_group.delete('test')
 
     # 'info' function tests: 2
 
@@ -116,7 +124,8 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if there is whitespace in the group name
         '''
-        self.assertRaises(SaltInvocationError, mac_group.info, 'white space')
+        with pytest.raises(SaltInvocationError):
+            mac_group.info('white space')
 
     def test_info(self):
         '''
@@ -125,7 +134,7 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         mock_getgrall = [grp.struct_group(('foo', '*', 20, ['test']))]
         with patch('grp.getgrall', MagicMock(return_value=mock_getgrall)):
             ret = {'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}
-            self.assertEqual(mac_group.info('foo'), ret)
+            assert mac_group.info('foo') == ret
 
     # '_format_info' function tests: 1
 
@@ -135,7 +144,7 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         data = grp.struct_group(('wheel', '*', 0, ['root']))
         ret = {'passwd': '*', 'gid': 0, 'name': 'wheel', 'members': ['root']}
-        self.assertEqual(mac_group._format_info(data), ret)
+        assert mac_group._format_info(data) == ret
 
     # 'getent' function tests: 1
 
@@ -146,7 +155,7 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         mock_getgrall = [grp.struct_group(('foo', '*', 20, ['test']))]
         with patch('grp.getgrall', MagicMock(return_value=mock_getgrall)):
             ret = [{'passwd': '*', 'gid': 20, 'name': 'foo', 'members': ['test']}]
-            self.assertEqual(mac_group.getent(), ret)
+            assert mac_group.getent() == ret
 
     # 'chgid' function tests: 4
 
@@ -154,7 +163,8 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests if gid is an integer or not
         '''
-        self.assertRaises(SaltInvocationError, mac_group.chgid, 'foo', 'foo')
+        with pytest.raises(SaltInvocationError):
+            mac_group.chgid('foo', 'foo')
 
     def test_chgid_group_exists(self):
         '''
@@ -164,8 +174,8 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_group.__salt__,
                         {'file.group_to_gid': mock_pre_gid}), \
                 patch('salt.modules.mac_group.info', MagicMock(return_value={})):
-            self.assertRaises(CommandExecutionError,
-                              mac_group.chgid, 'foo', 4376)
+            with pytest.raises(CommandExecutionError):
+                mac_group.chgid('foo', 4376)
 
     def test_chgid_gid_same(self):
         '''
@@ -176,7 +186,7 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(mac_group.__salt__,
                         {'file.group_to_gid': mock_pre_gid}), \
                 patch('salt.modules.mac_group.info', MagicMock(return_value=mock_group)):
-            self.assertTrue(mac_group.chgid('test', 0))
+            assert mac_group.chgid('test', 0)
 
     def test_chgid(self):
         '''
@@ -189,4 +199,4 @@ class MacGroupTestCase(TestCase, LoaderModuleMockMixin):
                         {'file.group_to_gid': mock_pre_gid}), \
                 patch.dict(mac_group.__salt__, {'cmd.retcode': mock_ret}), \
                 patch('salt.modules.mac_group.info', MagicMock(return_value=mock_group)):
-            self.assertTrue(mac_group.chgid('test', 500))
+            assert mac_group.chgid('test', 500)

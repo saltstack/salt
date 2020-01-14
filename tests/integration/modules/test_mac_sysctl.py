@@ -67,7 +67,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             self.run_function('sysctl.assign', [ASSIGN_CMD, rand])
             info = int(self.run_function('sysctl.get', [ASSIGN_CMD]))
             try:
-                self.assertEqual(rand, info)
+                assert rand == info
             except AssertionError:
                 self.run_function('sysctl.assign', [ASSIGN_CMD, self.val])
                 raise
@@ -86,7 +86,7 @@ class DarwinSysctlModuleTest(ModuleCase):
             self.run_function('sysctl.persist', [ASSIGN_CMD, 10])
             line = '{0}={1}'.format(ASSIGN_CMD, 10)
             found = self.__check_string(CONFIG, line)
-            self.assertTrue(found)
+            assert found
         except CommandExecutionError:
             os.remove(CONFIG)
             raise
@@ -101,7 +101,7 @@ class DarwinSysctlModuleTest(ModuleCase):
         try:
             self.run_function('sysctl.persist', [ASSIGN_CMD, 50])
             ret = self.run_function('sysctl.persist', [ASSIGN_CMD, 50])
-            self.assertEqual(ret, 'Already set')
+            assert ret == 'Already set'
         except CommandExecutionError:
             os.remove(CONFIG)
             raise
@@ -121,7 +121,7 @@ class DarwinSysctlModuleTest(ModuleCase):
                               [ASSIGN_CMD, rand],
                               apply_change=True)
             info = int(self.run_function('sysctl.get', [ASSIGN_CMD]))
-            self.assertEqual(info, rand)
+            assert info == rand
         except CommandExecutionError:
             os.remove(CONFIG)
             raise

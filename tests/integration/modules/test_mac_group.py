@@ -64,7 +64,7 @@ class MacGroupModuleTest(ModuleCase):
         try:
             self.run_function('group.add', [ADD_GROUP, 3456])
             group_info = self.run_function('group.info', [ADD_GROUP])
-            self.assertEqual(group_info['name'], ADD_GROUP)
+            assert group_info['name'] == ADD_GROUP
         except CommandExecutionError:
             self.run_function('group.delete', [ADD_GROUP])
             raise
@@ -80,7 +80,7 @@ class MacGroupModuleTest(ModuleCase):
 
         # Now try to delete the added group
         ret = self.run_function('group.delete', [DEL_GROUP])
-        self.assertTrue(ret)
+        assert ret
 
     def test_mac_group_chgid(self):
         '''
@@ -94,7 +94,7 @@ class MacGroupModuleTest(ModuleCase):
         try:
             self.run_function('group.chgid', [CHANGE_GROUP, 6789])
             group_info = self.run_function('group.info', [CHANGE_GROUP])
-            self.assertEqual(group_info['gid'], 6789)
+            assert group_info['gid'] == 6789
         except AssertionError:
             self.run_function('group.delete', [CHANGE_GROUP])
             raise
@@ -111,7 +111,7 @@ class MacGroupModuleTest(ModuleCase):
         try:
             self.run_function('group.adduser', [ADD_GROUP, ADD_USER])
             group_info = self.run_function('group.info', [ADD_GROUP])
-            self.assertEqual(ADD_USER, ''.join(group_info['members']))
+            assert ADD_USER == ''.join(group_info['members'])
         except AssertionError:
             self.run_function('group.delete', [ADD_GROUP])
             raise
@@ -127,10 +127,10 @@ class MacGroupModuleTest(ModuleCase):
             self.skipTest('Failed to create a group to manipulate')
 
         delusr = self.run_function('group.deluser', [ADD_GROUP, ADD_USER])
-        self.assertTrue(delusr)
+        assert delusr
 
         group_info = self.run_function('group.info', [ADD_GROUP])
-        self.assertNotIn(ADD_USER, ''.join(group_info['members']))
+        assert ADD_USER not in ''.join(group_info['members'])
 
     def test_mac_members(self):
         '''
@@ -145,12 +145,12 @@ class MacGroupModuleTest(ModuleCase):
 
         rep_group_mem = self.run_function('group.members',
                                           [ADD_GROUP, REP_USER_GROUP])
-        self.assertTrue(rep_group_mem)
+        assert rep_group_mem
 
         # ensure new user is added to group and previous user is removed
         group_info = self.run_function('group.info', [ADD_GROUP])
-        self.assertIn(REP_USER_GROUP, six.text_type(group_info['members']))
-        self.assertNotIn(ADD_USER, six.text_type(group_info['members']))
+        assert REP_USER_GROUP in six.text_type(group_info['members'])
+        assert ADD_USER not in six.text_type(group_info['members'])
 
     def test_mac_getent(self):
         '''
@@ -164,9 +164,9 @@ class MacGroupModuleTest(ModuleCase):
                                                  ADD_USER))
 
         getinfo = self.run_function('group.getent')
-        self.assertTrue(getinfo)
-        self.assertIn(ADD_GROUP, six.text_type(getinfo))
-        self.assertIn(ADD_USER, six.text_type(getinfo))
+        assert getinfo
+        assert ADD_GROUP in six.text_type(getinfo)
+        assert ADD_USER in six.text_type(getinfo)
 
     def tearDown(self):
         '''

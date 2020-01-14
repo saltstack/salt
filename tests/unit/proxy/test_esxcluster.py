@@ -27,6 +27,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
 )
+import pytest
 
 
 @skipIf(not HAS_JSONSCHEMA, 'jsonschema is required')
@@ -86,59 +87,59 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
         with patch('salt.proxy.esxcluster.jsonschema.validate',
                    MagicMock(side_effect=jsonschema.exceptions.ValidationError(
                        'Validation Error'))):
-            with self.assertRaises(salt.exceptions.InvalidConfigError) as \
+            with pytest.raises(salt.exceptions.InvalidConfigError) as \
                     excinfo:
                 esxcluster.init(self.opts_userpass)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Validation Error')
+        assert excinfo.value.strerror == \
+                         'Validation Error'
 
     def test_no_username(self):
         opts = self.opts_userpass.copy()
         del opts['proxy']['username']
         with patch('salt.proxy.esxcluster.merge',
                    MagicMock(return_value=opts['proxy'])):
-            with self.assertRaises(salt.exceptions.InvalidConfigError) as \
+            with pytest.raises(salt.exceptions.InvalidConfigError) as \
                     excinfo:
                 esxcluster.init(opts)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Mechanism is set to \'userpass\', but no '
-                         '\'username\' key found in proxy config.')
+        assert excinfo.value.strerror == \
+                         'Mechanism is set to \'userpass\', but no ' \
+                         '\'username\' key found in proxy config.'
 
     def test_no_passwords(self):
         opts = self.opts_userpass.copy()
         del opts['proxy']['passwords']
         with patch('salt.proxy.esxcluster.merge',
                    MagicMock(return_value=opts['proxy'])):
-            with self.assertRaises(salt.exceptions.InvalidConfigError) as \
+            with pytest.raises(salt.exceptions.InvalidConfigError) as \
                     excinfo:
                 esxcluster.init(opts)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Mechanism is set to \'userpass\', but no '
-                         '\'passwords\' key found in proxy config.')
+        assert excinfo.value.strerror == \
+                         'Mechanism is set to \'userpass\', but no ' \
+                         '\'passwords\' key found in proxy config.'
 
     def test_no_domain(self):
         opts = self.opts_sspi.copy()
         del opts['proxy']['domain']
         with patch('salt.proxy.esxcluster.merge',
                    MagicMock(return_value=opts['proxy'])):
-            with self.assertRaises(salt.exceptions.InvalidConfigError) as \
+            with pytest.raises(salt.exceptions.InvalidConfigError) as \
                     excinfo:
                 esxcluster.init(opts)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Mechanism is set to \'sspi\', but no '
-                         '\'domain\' key found in proxy config.')
+        assert excinfo.value.strerror == \
+                         'Mechanism is set to \'sspi\', but no ' \
+                         '\'domain\' key found in proxy config.'
 
     def test_no_principal(self):
         opts = self.opts_sspi.copy()
         del opts['proxy']['principal']
         with patch('salt.proxy.esxcluster.merge',
                    MagicMock(return_value=opts['proxy'])):
-            with self.assertRaises(salt.exceptions.InvalidConfigError) as \
+            with pytest.raises(salt.exceptions.InvalidConfigError) as \
                     excinfo:
                 esxcluster.init(opts)
-        self.assertEqual(excinfo.exception.strerror,
-                         'Mechanism is set to \'sspi\', but no '
-                         '\'principal\' key found in proxy config.')
+        assert excinfo.value.strerror == \
+                         'Mechanism is set to \'sspi\', but no ' \
+                         '\'principal\' key found in proxy config.'
 
     def test_find_credentials(self):
         mock_find_credentials = MagicMock(return_value=('fake_username',
@@ -158,7 +159,7 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
             with patch('salt.proxy.esxcluster.find_credentials',
                        mock_find_credentials):
                 esxcluster.init(self.opts_userpass)
-        self.assertDictEqual(esxcluster.DETAILS,
+        assert esxcluster.DETAILS == \
                              {'vcenter': 'fake_vcenter',
                               'datacenter': 'fake_dc',
                               'cluster': 'fake_cluster',
@@ -167,11 +168,11 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                               'password': 'fake_password',
                               'passwords': ['fake_password'],
                               'protocol': 'fake_protocol',
-                              'port': 100})
+                              'port': 100}
 
     def test_details_sspi(self):
         esxcluster.init(self.opts_sspi)
-        self.assertDictEqual(esxcluster.DETAILS,
+        assert esxcluster.DETAILS == \
                              {'vcenter': 'fake_vcenter',
                               'datacenter': 'fake_dc',
                               'cluster': 'fake_cluster',
@@ -179,4 +180,4 @@ class InitTestCase(TestCase, LoaderModuleMockMixin):
                               'domain': 'fake_domain',
                               'principal': 'fake_principal',
                               'protocol': 'fake_protocol',
-                              'port': 100})
+                              'port': 100}

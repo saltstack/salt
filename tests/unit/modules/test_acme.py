@@ -20,6 +20,7 @@ from tests.support.mock import MagicMock, patch
 import salt.modules.acme as acme
 import salt.utils.dictupdate
 from salt.exceptions import SaltInvocationError
+import pytest
 
 
 class AcmeTestCase(TestCase, LoaderModuleMockMixin):
@@ -38,16 +39,16 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                     'file.readdir': MagicMock(return_value=['.', '..', 'README', 'test_expired', 'test_valid'])
                 }), \
                 patch('os.path.isdir', side_effect=[False, True, True]):
-            self.assertEqual(acme.certs(), ['test_expired', 'test_valid'])
+            assert acme.certs() == ['test_expired', 'test_valid']
 
     def test_has(self):
         '''
         Test checking if certificate (does not) exist.
         '''
         with patch.dict(acme.__salt__, {'file.file_exists': MagicMock(return_value=True)}):  # pylint: disable=no-member
-            self.assertTrue(acme.has('test_expired'))
+            assert acme.has('test_expired')
         with patch.dict(acme.__salt__, {'file.file_exists': MagicMock(return_value=False)}):  # pylint: disable=no-member
-            self.assertFalse(acme.has('test_invalid'))
+            assert not acme.has('test_invalid')
 
     def test_needs_renewal(self):
         '''
@@ -58,17 +59,18 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(acme.__salt__, {  # pylint: disable=no-member
                     'tls.cert_info': MagicMock(return_value={'not_after': expired.total_seconds()})
                 }):
-            self.assertTrue(acme.needs_renewal('test_expired'))
+            assert acme.needs_renewal('test_expired')
         with patch.dict(acme.__salt__, {  # pylint: disable=no-member
                     'tls.cert_info': MagicMock(return_value={'not_after': valid.total_seconds()})
                 }):
-            self.assertFalse(acme.needs_renewal('test_valid'))
+            assert not acme.needs_renewal('test_valid')
             # Test with integer window parameter
-            self.assertTrue(acme.needs_renewal('test_valid', window=5))
+            assert acme.needs_renewal('test_valid', window=5)
             # Test with string-like window parameter
-            self.assertTrue(acme.needs_renewal('test_valid', window='5'))
+            assert acme.needs_renewal('test_valid', window='5')
             # Test with invalid window parameter
-            self.assertRaises(SaltInvocationError, acme.needs_renewal, 'test_valid', window='foo')
+            with pytest.raises(SaltInvocationError):
+                acme.needs_renewal('test_valid', window='foo')
 
     def test_expires(self):
         '''
@@ -79,10 +81,8 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(acme.__salt__, {  # pylint: disable=no-member
                     'tls.cert_info': MagicMock(return_value={'not_after': test_stamp.total_seconds()})
                 }):
-            self.assertEqual(
-                acme.expires('test_expired'),
+            assert acme.expires('test_expired') == \
                 datetime.datetime.fromtimestamp(test_stamp.total_seconds()).isoformat()
-            )
 
     def test_info(self):
         '''
@@ -128,17 +128,17 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                     'file.file_exists': MagicMock(return_value=True),
                     'tls.cert_info': MagicMock(return_value=certinfo_tls_result),
                 }):
-            self.assertEqual(acme.info('test'), certinfo_tls_result)
+            assert acme.info('test') == certinfo_tls_result
         with patch.dict(acme.__salt__, {  # pylint: disable=no-member
                     'file.file_exists': MagicMock(return_value=True),
                     'x509.read_certificate': MagicMock(return_value=certinfo_x509_result),
                 }):
-            self.assertEqual(acme.info('test'), certinfo_x509_result)
+            assert acme.info('test') == certinfo_x509_result
         with patch.dict(acme.__salt__, {  # pylint: disable=no-member
                     'file.file_exists': MagicMock(return_value=True),
                     'cmd.run': MagicMock(return_value='foo'),
                 }):
-            self.assertEqual(acme.info('test'), {'text': 'foo'})
+            assert acme.info('test') == {'text': 'foo'}
 
     def test_cert(self):
         '''
@@ -222,7 +222,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                         )
                     )
                 }):
-            self.assertEqual(acme.cert('test'), result_new_cert)
+            assert acme.cert('test') == result_new_cert
         # Test not renewing a valid certificate
         with patch('salt.modules.acme.LEA', 'certbot'), \
                 patch.dict(acme.__salt__, {  # pylint: disable=no-member
@@ -236,7 +236,7 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                         )
                     )
                 }):
-            self.assertEqual(acme.cert('test'), result_no_renew)
+            assert acme.cert('test') == result_no_renew
         # Test renewing an expired certificate
         with patch('salt.modules.acme.LEA', 'certbot'), \
                 patch.dict(acme.__salt__, {  # pylint: disable=no-member
@@ -250,4 +250,4 @@ class AcmeTestCase(TestCase, LoaderModuleMockMixin):
                         )
                     )
                 }):
-            self.assertEqual(acme.cert('test'), result_renew)
+            assert acme.cert('test') == result_renew

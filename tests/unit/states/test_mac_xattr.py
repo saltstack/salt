@@ -42,7 +42,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
                 list_mock.assert_called_once_with('/path/to/file')
                 write_mock.assert_called_once_with('/path/to/file', 'key', 'value', False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_exists_change(self):
         '''
@@ -66,7 +66,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
                 list_mock.assert_called_once_with('/path/to/file')
                 write_mock.assert_called_once_with('/path/to/file', 'key', 'other_value', False)
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_exists_already(self):
         '''
@@ -90,7 +90,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
                 list_mock.assert_called_once_with('/path/to/file')
                 assert not write_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_delete(self):
         '''
@@ -114,7 +114,7 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
                 list_mock.assert_called_once_with('/path/to/file')
                 delete_mock.assert_called_once_with('/path/to/file', 'key')
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_delete_not(self):
         '''
@@ -138,4 +138,4 @@ class XAttrTestCase(TestCase, LoaderModuleMockMixin):
 
                 list_mock.assert_called_once_with('/path/to/file')
                 assert not delete_mock.called
-                self.assertEqual(out, expected)
+                assert out == expected

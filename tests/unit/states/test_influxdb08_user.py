@@ -46,28 +46,28 @@ class InfluxdbUserTestCase(TestCase, LoaderModuleMockMixin):
                          'influxdb08.user_create': mock_t}):
             comt = ('Database mydb does not exist')
             ret.update({'comment': comt})
-            self.assertDictEqual(influxdb08_user.present(name, passwd,
-                                                       database='mydb'), ret)
+            assert influxdb08_user.present(name, passwd,
+                                                       database='mydb') == ret
 
             with patch.dict(influxdb08_user.__opts__, {'test': True}):
                 comt = ('User {0} is not present and needs to be created'
                         .format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(influxdb08_user.present(name, passwd), ret)
+                assert influxdb08_user.present(name, passwd) == ret
 
             with patch.dict(influxdb08_user.__opts__, {'test': False}):
                 comt = ('User {0} has been created'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'salt': 'Present'}})
-                self.assertDictEqual(influxdb08_user.present(name, passwd), ret)
+                assert influxdb08_user.present(name, passwd) == ret
 
                 comt = ('Failed to create user {0}'.format(name))
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(influxdb08_user.present(name, passwd), ret)
+                assert influxdb08_user.present(name, passwd) == ret
 
             comt = ('User {0} is already present'.format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(influxdb08_user.present(name, passwd), ret)
+            assert influxdb08_user.present(name, passwd) == ret
 
     # 'absent' function tests: 1
 
@@ -91,19 +91,19 @@ class InfluxdbUserTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('User {0} is present and needs to be removed'
                         .format(name))
                 ret.update({'comment': comt})
-                self.assertDictEqual(influxdb08_user.absent(name), ret)
+                assert influxdb08_user.absent(name) == ret
 
             with patch.dict(influxdb08_user.__opts__, {'test': False}):
                 comt = ('User {0} has been removed'.format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'salt': 'Absent'}})
-                self.assertDictEqual(influxdb08_user.absent(name), ret)
+                assert influxdb08_user.absent(name) == ret
 
                 comt = ('Failed to remove user {0}'.format(name))
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(influxdb08_user.absent(name), ret)
+                assert influxdb08_user.absent(name) == ret
 
             comt = ('User {0} is not present, so it cannot be removed'
                     .format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(influxdb08_user.absent(name), ret)
+            assert influxdb08_user.absent(name) == ret

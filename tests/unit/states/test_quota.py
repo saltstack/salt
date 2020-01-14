@@ -44,7 +44,7 @@ class QuotaTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(quota.__salt__, {'quota.get_mode': mock}):
             comt = ('Quota for / already set to on')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(quota.mode(name, mode, quotatype), ret)
+            assert quota.mode(name, mode, quotatype) == ret
 
         mock = MagicMock(return_value={name: {quotatype: 'off'}})
         with patch.dict(quota.__salt__, {'quota.get_mode': mock,
@@ -52,14 +52,14 @@ class QuotaTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(quota.__opts__, {'test': True}):
                 comt = ('Quota for / needs to be set to on')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(quota.mode(name, mode, quotatype), ret)
+                assert quota.mode(name, mode, quotatype) == ret
 
             with patch.dict(quota.__opts__, {'test': False}):
                 comt = ('Set quota for / to on')
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'quota': name}})
-                self.assertDictEqual(quota.mode(name, mode, quotatype), ret)
+                assert quota.mode(name, mode, quotatype) == ret
 
                 comt = ('Failed to set quota for / to on')
                 ret.update({'comment': comt, 'result': False, 'changes': {}})
-                self.assertDictEqual(quota.mode(name, mode, quotatype), ret)
+                assert quota.mode(name, mode, quotatype) == ret

@@ -483,7 +483,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         Test if it fetches tenant info in server's context for
         following quota operation
         '''
-        self.assertTrue(neutron.get_quotas_tenant(profile='openstack1'))
+        assert neutron.get_quotas_tenant(profile='openstack1')
 
     # 'list_quotas' function tests: 1
 
@@ -491,7 +491,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches all tenants quotas
         '''
-        self.assertTrue(neutron.list_quotas(profile='openstack1'))
+        assert neutron.list_quotas(profile='openstack1')
 
     # 'show_quota' function tests: 1
 
@@ -499,7 +499,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain tenant's quotas
         '''
-        self.assertTrue(neutron.show_quota('Salt', profile='openstack1'))
+        assert neutron.show_quota('Salt', profile='openstack1')
 
     # 'update_quota' function tests: 1
 
@@ -507,11 +507,11 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it update a tenant's quota
         '''
-        self.assertTrue(neutron.update_quota('Salt', subnet='40',
+        assert neutron.update_quota('Salt', subnet='40',
                                              router='50', network='10',
                                              floatingip='30', port='30',
                                              security_group='10',
-                                             security_group_rule='SS'))
+                                             security_group_rule='SS')
 
     # 'delete_quota' function tests: 1
 
@@ -519,7 +519,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete the specified tenant's quota value
         '''
-        self.assertTrue(neutron.delete_quota('Salt', profile='openstack1'))
+        assert neutron.delete_quota('Salt', profile='openstack1')
 
     # 'list_extensions' function tests: 1
 
@@ -527,7 +527,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all extensions on server side
         '''
-        self.assertTrue(neutron.list_extensions(profile='openstack1'))
+        assert neutron.list_extensions(profile='openstack1')
 
     # 'list_ports' function tests: 1
 
@@ -535,7 +535,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all networks for a tenant
         '''
-        self.assertTrue(neutron.list_ports(profile='openstack1'))
+        assert neutron.list_ports(profile='openstack1')
 
     # 'show_port' function tests: 1
 
@@ -543,7 +543,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain port
         '''
-        self.assertTrue(neutron.show_port('1080', profile='openstack1'))
+        assert neutron.show_port('1080', profile='openstack1')
 
     # 'create_port' function tests: 1
 
@@ -551,10 +551,10 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new port
         '''
-        self.assertTrue(neutron.create_port('Salt', 'SALTSTACK',
+        assert neutron.create_port('Salt', 'SALTSTACK',
                                             device_id='800',
                                             admin_state_up=True,
-                                            profile='openstack1'))
+                                            profile='openstack1')
 
     # 'update_port' function tests: 1
 
@@ -562,9 +562,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a port
         '''
-        self.assertTrue(neutron.update_port('800', 'SALTSTACK',
+        assert neutron.update_port('800', 'SALTSTACK',
                                             admin_state_up=True,
-                                            profile='openstack1'))
+                                            profile='openstack1')
 
     # 'delete_port' function tests: 1
 
@@ -572,7 +572,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified port
         '''
-        self.assertTrue(neutron.delete_port('1080', profile='openstack1'))
+        assert neutron.delete_port('1080', profile='openstack1')
 
     # 'list_networks' function tests: 1
 
@@ -580,7 +580,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all networks for a tenant
         '''
-        self.assertTrue(neutron.list_networks(profile='openstack1'))
+        assert neutron.list_networks(profile='openstack1')
 
     # 'show_network' function tests: 1
 
@@ -588,8 +588,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain network
         '''
-        self.assertTrue(neutron.show_network('SALTSTACK',
-                                             profile='openstack1'))
+        assert neutron.show_network('SALTSTACK',
+                                             profile='openstack1')
 
     # 'create_network' function tests: 1
 
@@ -597,8 +597,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new network
         '''
-        self.assertTrue(neutron.create_network('SALT',
-                                               profile='openstack1'))
+        assert neutron.create_network('SALT',
+                                               profile='openstack1')
 
     # 'update_network' function tests: 1
 
@@ -606,8 +606,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a network
         '''
-        self.assertTrue(neutron.update_network('SALT', 'SLATSTACK',
-                                               profile='openstack1'))
+        assert neutron.update_network('SALT', 'SLATSTACK',
+                                               profile='openstack1')
 
     # 'delete_network' function tests: 1
 
@@ -615,8 +615,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified network
         '''
-        self.assertTrue(neutron.delete_network('SALTSTACK',
-                                               profile='openstack1'))
+        assert neutron.delete_network('SALTSTACK',
+                                               profile='openstack1')
 
     # 'list_subnets' function tests: 1
 
@@ -624,7 +624,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all networks for a tenant
         '''
-        self.assertTrue(neutron.list_subnets(profile='openstack1'))
+        assert neutron.list_subnets(profile='openstack1')
 
     # 'show_subnet' function tests: 1
 
@@ -632,8 +632,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain subnet
         '''
-        self.assertTrue(neutron.show_subnet('SALTSTACK',
-                                            profile='openstack1'))
+        assert neutron.show_subnet('SALTSTACK',
+                                            profile='openstack1')
 
     # 'create_subnet' function tests: 1
 
@@ -641,11 +641,11 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new subnet
         '''
-        self.assertTrue(neutron.create_subnet('192.168.1.0',
+        assert neutron.create_subnet('192.168.1.0',
                                               '192.168.1.0/24',
                                               name='Salt',
                                               ip_version=4,
-                                              profile='openstack1'))
+                                              profile='openstack1')
 
     # 'update_subnet' function tests: 1
 
@@ -653,9 +653,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a subnet
         '''
-        self.assertTrue(neutron.update_subnet('255.255.255.0',
+        assert neutron.update_subnet('255.255.255.0',
                                               name='Salt',
-                                              profile='openstack1'))
+                                              profile='openstack1')
 
     # 'delete_subnet' function tests: 1
 
@@ -663,8 +663,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified subnet
         '''
-        self.assertTrue(neutron.delete_subnet('255.255.255.0',
-                                              profile='openstack1'))
+        assert neutron.delete_subnet('255.255.255.0',
+                                              profile='openstack1')
 
     # 'list_routers' function tests: 1
 
@@ -672,7 +672,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all routers for a tenant
         '''
-        self.assertTrue(neutron.list_routers(profile='openstack1'))
+        assert neutron.list_routers(profile='openstack1')
 
     # 'show_router' function tests: 1
 
@@ -680,8 +680,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain router
         '''
-        self.assertTrue(neutron.show_router('SALTSTACK',
-                                            profile='openstack1'))
+        assert neutron.show_router('SALTSTACK',
+                                            profile='openstack1')
 
     # 'create_router' function tests: 1
 
@@ -689,10 +689,10 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new router
         '''
-        self.assertTrue(neutron.create_router('SALT',
+        assert neutron.create_router('SALT',
                                               '192.168.1.0',
                                               admin_state_up=True,
-                                              profile='openstack1'))
+                                              profile='openstack1')
 
     # 'update_router' function tests: 1
 
@@ -700,9 +700,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a router
         '''
-        self.assertTrue(neutron.update_router('255.255.255.0',
+        assert neutron.update_router('255.255.255.0',
                                               name='Salt',
-                                              profile='openstack1'))
+                                              profile='openstack1')
 
     # 'delete_router' function tests: 1
 
@@ -710,8 +710,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it delete the specified router
         '''
-        self.assertTrue(neutron.delete_router('SALTSTACK',
-                                              profile='openstack1'))
+        assert neutron.delete_router('SALTSTACK',
+                                              profile='openstack1')
 
     # 'add_interface_router' function tests: 1
 
@@ -719,9 +719,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it adds an internal network interface to the specified router
         '''
-        self.assertTrue(neutron.add_interface_router('Salt',
+        assert neutron.add_interface_router('Salt',
                                                      '255.255.255.0',
-                                                     profile='openstack1'))
+                                                     profile='openstack1')
 
     # 'remove_interface_router' function tests: 1
 
@@ -730,8 +730,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         Test if it removes an internal network interface from the specified
         router
         '''
-        self.assertTrue(neutron.remove_interface_router
-                        ('Salt', '255.255.255.0', profile='openstack1'))
+        assert neutron.remove_interface_router('Salt', '255.255.255.0', profile='openstack1')
 
     # 'add_gateway_router' function tests: 1
 
@@ -739,8 +738,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it adds an external network gateway to the specified router
         '''
-        self.assertTrue(neutron.add_gateway_router
-                        ('Salt', 'SALTSTACK', profile='openstack1'))
+        assert neutron.add_gateway_router('Salt', 'SALTSTACK', profile='openstack1')
 
     # 'remove_gateway_router' function tests: 1
 
@@ -749,8 +747,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         Test if it removes an external network gateway from the specified router
         '''
 
-        self.assertTrue(neutron.remove_gateway_router('SALTSTACK',
-                                                      profile='openstack1'))
+        assert neutron.remove_gateway_router('SALTSTACK', profile='openstack1')
 
     # 'list_floatingips' function tests: 1
 
@@ -758,7 +755,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetch a list of all floatingIPs for a tenant
         '''
-        self.assertTrue(neutron.list_floatingips(profile='openstack1'))
+        assert neutron.list_floatingips(profile='openstack1')
 
     # 'show_floatingip' function tests: 1
 
@@ -766,8 +763,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain floatingIP
         '''
-        self.assertTrue(neutron.show_floatingip('SALTSTACK',
-                                                profile='openstack1'))
+        assert neutron.show_floatingip('SALTSTACK',
+                                                profile='openstack1')
 
     # 'create_floatingip' function tests: 1
 
@@ -775,8 +772,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new floatingIP
         '''
-        self.assertTrue(neutron.create_floatingip('SALTSTACK', port='800',
-                                                  profile='openstack1'))
+        assert neutron.create_floatingip('SALTSTACK', port='800',
+                                                  profile='openstack1')
 
     # 'update_floatingip' function tests: 1
 
@@ -784,8 +781,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a floatingIP
         '''
-        self.assertTrue(neutron.update_floatingip('SALTSTACK', port='800',
-                                                  profile='openstack1'))
+        assert neutron.update_floatingip('SALTSTACK', port='800',
+                                                  profile='openstack1')
 
     # 'delete_floatingip' function tests: 1
 
@@ -793,8 +790,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified floating IP
         '''
-        self.assertTrue(neutron.delete_floatingip('SALTSTACK',
-                                                  profile='openstack1'))
+        assert neutron.delete_floatingip('SALTSTACK',
+                                                  profile='openstack1')
 
     # 'list_security_groups' function tests: 1
 
@@ -802,7 +799,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all security groups for a tenant
         '''
-        self.assertTrue(neutron.list_security_groups(profile='openstack1'))
+        assert neutron.list_security_groups(profile='openstack1')
 
     # 'show_security_group' function tests: 1
 
@@ -810,8 +807,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain security group
         '''
-        self.assertTrue(neutron.show_security_group('SALTSTACK',
-                                                    profile='openstack1'))
+        assert neutron.show_security_group('SALTSTACK',
+                                                    profile='openstack1')
 
     # 'create_security_group' function tests: 1
 
@@ -819,9 +816,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new security group
         '''
-        self.assertTrue(neutron.create_security_group('SALTSTACK',
+        assert neutron.create_security_group('SALTSTACK',
                                                       'Security group',
-                                                      profile='openstack1'))
+                                                      profile='openstack1')
 
     # 'update_security_group' function tests: 1
 
@@ -829,9 +826,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a security group
         '''
-        self.assertTrue(neutron.update_security_group('SALT', 'SALTSTACK',
+        assert neutron.update_security_group('SALT', 'SALTSTACK',
                                                       'Security group',
-                                                      profile='openstack1'))
+                                                      profile='openstack1')
 
     # 'delete_security_group' function tests: 1
 
@@ -839,8 +836,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified security group
         '''
-        self.assertTrue(neutron.delete_security_group('SALT',
-                                                      profile='openstack1'))
+        assert neutron.delete_security_group('SALT',
+                                                      profile='openstack1')
 
     # 'list_security_group_rules' function tests: 1
 
@@ -848,8 +845,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all security group rules for a tenant
         '''
-        self.assertTrue(neutron.list_security_group_rules
-                        (profile='openstack1'))
+        assert neutron.list_security_group_rules(profile='openstack1')
 
     # 'show_security_group_rule' function tests: 1
 
@@ -857,8 +853,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a certain security group rule
         '''
-        self.assertTrue(neutron.show_security_group_rule
-                        ('SALTSTACK', profile='openstack1'))
+        assert neutron.show_security_group_rule('SALTSTACK', profile='openstack1')
 
     # 'create_security_group_rule' function tests: 1
 
@@ -866,8 +861,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new security group rule
         '''
-        self.assertTrue(neutron.create_security_group_rule
-                        ('SALTSTACK', profile='openstack1'))
+        assert neutron.create_security_group_rule('SALTSTACK', profile='openstack1')
 
     # 'delete_security_group_rule' function tests: 1
 
@@ -875,8 +869,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified security group rule
         '''
-        self.assertTrue(neutron.delete_security_group_rule
-                        ('SALTSTACK', profile='openstack1'))
+        assert neutron.delete_security_group_rule('SALTSTACK', profile='openstack1')
 
     # 'list_vpnservices' function tests: 1
 
@@ -884,8 +877,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all configured VPN services for a tenant
         '''
-        self.assertTrue(neutron.list_vpnservices(True,
-                                                 profile='openstack1'))
+        assert neutron.list_vpnservices(True,
+                                                 profile='openstack1')
 
     # 'show_vpnservice' function tests: 1
 
@@ -893,8 +886,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a specific VPN service
         '''
-        self.assertTrue(neutron.show_vpnservice('SALT',
-                                                profile='openstack1'))
+        assert neutron.show_vpnservice('SALT',
+                                                profile='openstack1')
 
     # 'create_vpnservice' function tests: 1
 
@@ -902,9 +895,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new VPN service
         '''
-        self.assertTrue(neutron.create_vpnservice('255.255.255.0', 'SALT',
+        assert neutron.create_vpnservice('255.255.255.0', 'SALT',
                                                   'SALTSTACK', True,
-                                                  profile='openstack1'))
+                                                  profile='openstack1')
 
     # 'update_vpnservice' function tests: 1
 
@@ -912,8 +905,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it updates a VPN service
         '''
-        self.assertTrue(neutron.update_vpnservice('SALT', 'VPN Service1',
-                                                  profile='openstack1'))
+        assert neutron.update_vpnservice('SALT', 'VPN Service1',
+                                                  profile='openstack1')
 
     # 'delete_vpnservice' function tests: 1
 
@@ -921,8 +914,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified VPN service
         '''
-        self.assertTrue(neutron.delete_vpnservice('SALT VPN Service1',
-                                                  profile='openstack1'))
+        assert neutron.delete_vpnservice('SALT VPN Service1',
+                                                  profile='openstack1')
 
     # 'list_ipsec_site_connections' function tests: 1
 
@@ -930,8 +923,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches all configured IPsec Site Connections for a tenant
         '''
-        self.assertTrue(neutron.list_ipsec_site_connections
-                        (profile='openstack1'))
+        assert neutron.list_ipsec_site_connections(profile='openstack1')
 
     # 'show_ipsec_site_connection' function tests: 1
 
@@ -939,8 +931,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a specific IPsecSiteConnection
         '''
-        self.assertTrue(neutron.show_ipsec_site_connection
-                        ('SALT', profile='openstack1'))
+        assert neutron.show_ipsec_site_connection('SALT', profile='openstack1')
 
     # 'create_ipsec_site_connection' function tests: 1
 
@@ -948,10 +939,9 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new IPsecSiteConnection
         '''
-        self.assertTrue(neutron.create_ipsec_site_connection
-                        ('SALTSTACK', 'A', 'B', 'C', '192.168.1.0/24',
-                         '192.168.1.11', '192.168.1.10', 'secret',
-                         profile='openstack1'))
+        assert neutron.create_ipsec_site_connection('SALTSTACK', 'A', 'B', 'C', '192.168.1.0/24',
+                                                    '192.168.1.11', '192.168.1.10', 'secret',
+                                                    profile='openstack1')
 
     # 'delete_ipsec_site_connection' function tests: 1
 
@@ -959,8 +949,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified IPsecSiteConnection
         '''
-        self.assertTrue(neutron.delete_ipsec_site_connection
-                        ('SALT VPN Service1', profile='openstack1'))
+        assert neutron.delete_ipsec_site_connection('SALT VPN Service1', profile='openstack1')
 
     # 'list_ikepolicies' function tests: 1
 
@@ -968,7 +957,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all configured IKEPolicies for a tenant
         '''
-        self.assertTrue(neutron.list_ikepolicies(profile='openstack1'))
+        assert neutron.list_ikepolicies(profile='openstack1')
 
     # 'show_ikepolicy' function tests: 1
 
@@ -976,8 +965,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a specific IKEPolicy
         '''
-        self.assertTrue(neutron.show_ikepolicy('SALT',
-                                               profile='openstack1'))
+        assert neutron.show_ikepolicy('SALT',
+                                               profile='openstack1')
 
     # 'create_ikepolicy' function tests: 1
 
@@ -985,8 +974,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new IKEPolicy
         '''
-        self.assertTrue(neutron.create_ikepolicy('SALTSTACK',
-                                                 profile='openstack1'))
+        assert neutron.create_ikepolicy('SALTSTACK',
+                                                 profile='openstack1')
 
     # 'delete_ikepolicy' function tests: 1
 
@@ -994,8 +983,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified IKEPolicy
         '''
-        self.assertTrue(neutron.delete_ikepolicy('SALT',
-                                                 profile='openstack1'))
+        assert neutron.delete_ikepolicy('SALT',
+                                                 profile='openstack1')
 
     # 'list_ipsecpolicies' function tests: 1
 
@@ -1003,7 +992,7 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches a list of all configured IPsecPolicies for a tenant
         '''
-        self.assertTrue(neutron.list_ipsecpolicies(profile='openstack1'))
+        assert neutron.list_ipsecpolicies(profile='openstack1')
 
     # 'show_ipsecpolicy' function tests: 1
 
@@ -1011,8 +1000,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it fetches information of a specific IPsecPolicy
         '''
-        self.assertTrue(neutron.show_ipsecpolicy('SALT',
-                                                 profile='openstack1'))
+        assert neutron.show_ipsecpolicy('SALT',
+                                                 profile='openstack1')
 
     # 'create_ipsecpolicy' function tests: 1
 
@@ -1020,8 +1009,8 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it creates a new IPsecPolicy
         '''
-        self.assertTrue(neutron.create_ipsecpolicy('SALTSTACK',
-                                                   profile='openstack1'))
+        assert neutron.create_ipsecpolicy('SALTSTACK',
+                                                   profile='openstack1')
 
     # 'delete_ipsecpolicy' function tests: 1
 
@@ -1029,5 +1018,5 @@ class NeutronTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test if it deletes the specified IPsecPolicy
         '''
-        self.assertTrue(neutron.delete_ipsecpolicy('SALT',
-                                                   profile='openstack1'))
+        assert neutron.delete_ipsecpolicy('SALT',
+                                                   profile='openstack1')

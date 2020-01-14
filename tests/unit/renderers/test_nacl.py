@@ -36,11 +36,11 @@ class NaclTestCase(TestCase, LoaderModuleMockMixin):
         crypted_list = [crypted]
 
         with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=secret)}):
-            self.assertEqual(nacl._decrypt_object(secret), secret)
-            self.assertEqual(nacl._decrypt_object(crypted), secret)
-            self.assertEqual(nacl._decrypt_object(crypted_map), secret_map)
-            self.assertEqual(nacl._decrypt_object(crypted_list), secret_list)
-            self.assertEqual(nacl._decrypt_object(None), None)
+            assert nacl._decrypt_object(secret) == secret
+            assert nacl._decrypt_object(crypted) == secret
+            assert nacl._decrypt_object(crypted_map) == secret_map
+            assert nacl._decrypt_object(crypted_list) == secret_list
+            assert nacl._decrypt_object(None) is None
 
     def test_render(self):
         '''
@@ -49,4 +49,4 @@ class NaclTestCase(TestCase, LoaderModuleMockMixin):
         secret = 'Use more salt.'
         crypted = 'NACL[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]'
         with patch.dict(nacl.__salt__, {'nacl.dec': MagicMock(return_value=secret)}):
-            self.assertEqual(nacl.render(crypted), secret)
+            assert nacl.render(crypted) == secret

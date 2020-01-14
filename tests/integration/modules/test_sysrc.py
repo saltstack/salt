@@ -21,25 +21,25 @@ class SysrcModuleTest(ModuleCase):
     @skipIf(not sys.platform.startswith('freebsd'), 'FreeBSD specific')
     def test_show(self):
         ret = self.run_function('sysrc.get')
-        self.assertIsInstance(ret, dict, 'sysrc.get returned wrong type, expecting dictionary')
-        self.assertIn('/etc/rc.conf', ret, 'sysrc.get should have an rc.conf key in it.')
+        assert isinstance(ret, dict), 'sysrc.get returned wrong type, expecting dictionary'
+        assert '/etc/rc.conf' in ret, 'sysrc.get should have an rc.conf key in it.'
 
     @skipIf(not sys.platform.startswith('freebsd'), 'FreeBSD specific')
     @pytest.mark.destructive_test
     def test_set(self):
         ret = self.run_function('sysrc.set', ['test_var', '1'])
-        self.assertIsInstance(ret, dict, 'sysrc.get returned wrong type, expecting dictionary')
-        self.assertIn('/etc/rc.conf', ret, 'sysrc.set should have an rc.conf key in it.')
-        self.assertIn('1', ret['/etc/rc.conf']['test_var'], 'sysrc.set should return the value it set.')
+        assert isinstance(ret, dict), 'sysrc.get returned wrong type, expecting dictionary'
+        assert '/etc/rc.conf' in ret, 'sysrc.set should have an rc.conf key in it.'
+        assert '1' in ret['/etc/rc.conf']['test_var'], 'sysrc.set should return the value it set.'
         ret = self.run_function('sysrc.remove', ['test_var'])
-        self.assertEqual('test_var removed', ret)
+        assert 'test_var removed' == ret
 
     @skipIf(not sys.platform.startswith('freebsd'), 'FreeBSD specific')
     @pytest.mark.destructive_test
     def test_set_bool(self):
         ret = self.run_function('sysrc.set', ['test_var', True])
-        self.assertIsInstance(ret, dict, 'sysrc.get returned wrong type, expecting dictionary')
-        self.assertIn('/etc/rc.conf', ret, 'sysrc.set should have an rc.conf key in it.')
-        self.assertIn('YES', ret['/etc/rc.conf']['test_var'], 'sysrc.set should return the value it set.')
+        assert isinstance(ret, dict), 'sysrc.get returned wrong type, expecting dictionary'
+        assert '/etc/rc.conf' in ret, 'sysrc.set should have an rc.conf key in it.'
+        assert 'YES' in ret['/etc/rc.conf']['test_var'], 'sysrc.set should return the value it set.'
         ret = self.run_function('sysrc.remove', ['test_var'])
-        self.assertEqual('test_var removed', ret)
+        assert 'test_var removed' == ret

@@ -119,7 +119,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(macpackage.__salt__, {'cmd.run': mock}):
             out = macpackage.installed_pkgs()
             mock.assert_called_once_with('pkgutil --pkgs')
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_get_pkg_id_with_files(self):
         '''
@@ -156,7 +156,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 pkg_id_pkginfo_mock.assert_has_calls(pkg_id_pkginfo_calls)
                 remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
 
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_get_pkg_id_with_dir(self):
         '''
@@ -180,7 +180,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 pkg_id_dir_mock.assert_called_once_with('/path/to/file.pkg')
                 remove_mock.assert_called_once_with('/tmp/dmg-ABCDEF')
 
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_get_mpkg_ids(self):
         '''
@@ -202,7 +202,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
                 ]
                 get_pkg_id_mock.assert_has_calls(calls)
 
-                self.assertEqual(out, expected)
+                assert out == expected
 
     def test_get_pkg_id_from_pkginfo(self):
         '''
@@ -215,7 +215,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             cmd = 'cat /tmp/dmg-X/PackageInfo | grep -Eo \'identifier="[a-zA-Z.0-9\\-]*"\' | ' \
                   'cut -c 13- | tr -d \'"\''
             mock.assert_called_once_with(cmd, python_shell=True)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_get_pkg_id_from_pkginfo_no_file(self):
         '''
@@ -228,7 +228,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             cmd = 'cat /tmp/dmg-X/PackageInfo | grep -Eo \'identifier="[a-zA-Z.0-9\\-]*"\' | ' \
                   'cut -c 13- | tr -d \'"\''
             mock.assert_called_once_with(cmd, python_shell=True)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_get_pkg_id_dir(self):
         '''
@@ -240,7 +240,7 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             out = macpackage._get_pkg_id_dir('/tmp/dmg-X/')
             cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" /tmp/dmg-X/Contents/Info.plist'
             mock.assert_called_once_with(cmd, python_shell=False)
-            self.assertEqual(out, expected)
+            assert out == expected
 
     def test_get_pkg_id_dir_wildcard(self):
         '''
@@ -252,4 +252,4 @@ class MacPackageTestCase(TestCase, LoaderModuleMockMixin):
             out = macpackage._get_pkg_id_dir('/tmp/dmg-X/*.pkg/')
             cmd = '/usr/libexec/PlistBuddy -c "print :CFBundleIdentifier" \'/tmp/dmg-X/*.pkg/Contents/Info.plist\''
             mock.assert_called_once_with(cmd, python_shell=True)
-            self.assertEqual(out, expected)
+            assert out == expected

@@ -45,36 +45,36 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                                        'lxc.state': mock_t}):
             comt = ("Clone source 'True' does not exist")
             ret.update({'comment': comt})
-            self.assertDictEqual(lxc.present(name, clone_from=True), ret)
+            assert lxc.present(name, clone_from=True) == ret
 
             with patch.dict(lxc.__opts__, {'test': True}):
                 comt = ("Container 'web01' will be cloned from True")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.present(name, clone_from=True), ret)
+                assert lxc.present(name, clone_from=True) == ret
 
                 comt = ("Container 'web01' already exists")
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(lxc.present(name, clone_from=True), ret)
+                assert lxc.present(name, clone_from=True) == ret
 
                 comt = ("Container 'web01' would be unfrozen")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.present(name, running=True,
-                                                 clone_from=True), ret)
+                assert lxc.present(name, running=True,
+                                                 clone_from=True) == ret
 
                 comt = ("Container '{0}' would be stopped".format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.present(name, running=False,
-                                                 clone_from=True), ret)
+                assert lxc.present(name, running=False,
+                                                 clone_from=True) == ret
 
                 comt = ("Container 'web01' already exists and is stopped")
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(lxc.present(name, running=False,
-                                                 clone_from=True), ret)
+                assert lxc.present(name, running=False,
+                                                 clone_from=True) == ret
 
             with patch.dict(lxc.__opts__, {'test': False}):
                 comt = ("Container 'web01' already exists")
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(lxc.present(name, clone_from=True), ret)
+                assert lxc.present(name, clone_from=True) == ret
 
     # 'absent' function tests: 1
 
@@ -95,18 +95,18 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                                        'lxc.destroy': mock_des}):
             comt = ("Container '{0}' does not exist".format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(lxc.absent(name), ret)
+            assert lxc.absent(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': True}):
                 comt = ("Container '{0}' would be destroyed".format(name))
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.absent(name), ret)
+                assert lxc.absent(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': False}):
                 comt = ("Container '{0}' was destroyed".format(name))
                 ret.update({'comment': comt, 'result': True,
                             'changes': {'state': True}})
-                self.assertDictEqual(lxc.absent(name), ret)
+                assert lxc.absent(name) == ret
 
     # 'running' function tests: 1
 
@@ -128,22 +128,22 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                                        'lxc.start': mock}):
             comt = ("Container '{0}' does not exist".format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(lxc.running(name), ret)
+            assert lxc.running(name) == ret
 
             comt = ("Container 'web01' is already running")
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(lxc.running(name), ret)
+            assert lxc.running(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': True}):
                 comt = ("Container 'web01' would be started")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.running(name), ret)
+                assert lxc.running(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': False}):
                 comt = ("Unable to start container 'web01'")
                 ret.update({'comment': comt, 'result': False, 'changes':
                             {'state': {'new': 'stop', 'old': 'start'}}})
-                self.assertDictEqual(lxc.running(name), ret)
+                assert lxc.running(name) == ret
 
     # 'frozen' function tests: 1
 
@@ -164,18 +164,18 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                                        'lxc.state': mock_t}):
             comt = ("Container '{0}' is already frozen".format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(lxc.frozen(name), ret)
+            assert lxc.frozen(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': True}):
                 comt = ("Container 'web01' would be started and frozen")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.frozen(name), ret)
+                assert lxc.frozen(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': False}):
                 comt = ("Unable to start and freeze container 'web01'")
                 ret.update({'comment': comt, 'result': False, 'changes':
                             {'state': {'new': 'stop', 'old': 'stopped'}}})
-                self.assertDictEqual(lxc.frozen(name), ret)
+                assert lxc.frozen(name) == ret
 
     # 'stopped' function tests: 1
 
@@ -196,22 +196,22 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                                        'lxc.state': mock_t}):
             comt = ("Container '{0}' does not exist".format(name))
             ret.update({'comment': comt})
-            self.assertDictEqual(lxc.stopped(name), ret)
+            assert lxc.stopped(name) == ret
 
             comt = ("Container '{0}' is already stopped".format(name))
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(lxc.stopped(name), ret)
+            assert lxc.stopped(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': True}):
                 comt = ("Container 'web01' would be stopped")
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(lxc.stopped(name), ret)
+                assert lxc.stopped(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': False}):
                 comt = ("Unable to stop container 'web01'")
                 ret.update({'comment': comt, 'result': False, 'changes':
                             {'state': {'new': 'stop', 'old': 'frozen'}}})
-                self.assertDictEqual(lxc.stopped(name), ret)
+                assert lxc.stopped(name) == ret
 
     # 'set_pass' function tests: 1
 
@@ -226,7 +226,7 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
                'result': False,
                'changes': {}}
 
-        self.assertDictEqual(lxc.set_pass('web01'), ret)
+        assert lxc.set_pass('web01') == ret
 
     # 'edited_conf' function tests: 1
 
@@ -245,10 +245,10 @@ class LxcTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.object(salt.utils.versions, 'warn_until', MagicMock()):
             with patch.dict(lxc.__opts__, {'test': True}):
-                self.assertDictEqual(lxc.edited_conf(name), ret)
+                assert lxc.edited_conf(name) == ret
 
             with patch.dict(lxc.__opts__, {'test': False}):
                 mock = MagicMock(return_value={})
                 with patch.dict(lxc.__salt__, {'lxc.update_lxc_conf': mock}):
-                    self.assertDictEqual(lxc.edited_conf(name),
-                                         {'name': 'web01'})
+                    assert lxc.edited_conf(name) == \
+                                         {'name': 'web01'}

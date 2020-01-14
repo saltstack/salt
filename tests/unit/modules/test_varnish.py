@@ -29,7 +29,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(varnish.__salt__,
                         {'cmd.run': MagicMock(return_value='(varnish-2.0)')}):
-            self.assertEqual(varnish.version(), '2.0')
+            assert varnish.version() == '2.0'
 
     def test_ban(self):
         '''
@@ -37,7 +37,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(varnish, '_run_varnishadm',
                           return_value={'retcode': 0}):
-            self.assertTrue(varnish.ban('ban_expression'))
+            assert varnish.ban('ban_expression')
 
     def test_ban_list(self):
         '''
@@ -45,19 +45,19 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(varnish, '_run_varnishadm',
                           return_value={'retcode': True}):
-            self.assertFalse(varnish.ban_list())
+            assert not varnish.ban_list()
 
         with patch.object(varnish, '_run_varnishadm',
                           return_value={'retcode': False,
                                         'stdout': 'A\nB\nC'}):
-            self.assertEqual(varnish.ban_list(), ['B', 'C'])
+            assert varnish.ban_list() == ['B', 'C']
 
     def test_purge(self):
         '''
         Test to purge the varnish cache
         '''
         with patch.object(varnish, 'ban', return_value=True):
-            self.assertTrue(varnish.purge())
+            assert varnish.purge()
 
     def test_param_set(self):
         '''
@@ -65,7 +65,7 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.object(varnish, '_run_varnishadm',
                           return_value={'retcode': 0}):
-            self.assertTrue(varnish.param_set('param', 'value'))
+            assert varnish.param_set('param', 'value')
 
     def test_param_show(self):
         '''
@@ -74,9 +74,9 @@ class VarnishTestCase(TestCase, LoaderModuleMockMixin):
         with patch.object(varnish, '_run_varnishadm',
                           return_value={'retcode': True,
                                         'stdout': 'A\nB\nC'}):
-            self.assertFalse(varnish.param_show('param'))
+            assert not varnish.param_show('param')
 
         with patch.object(varnish, '_run_varnishadm',
                           return_value={'retcode': False,
                                         'stdout': 'A .1\nB .2\n'}):
-            self.assertEqual(varnish.param_show('param'), {'A': '.1'})
+            assert varnish.param_show('param') == {'A': '.1'}

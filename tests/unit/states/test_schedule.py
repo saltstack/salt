@@ -45,16 +45,16 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                          'schedule.build_schedule_item': mock_dict,
                          'schedule.modify': mock_mod,
                          'schedule.add': mock_mod}):
-            self.assertDictEqual(schedule.present(name), ret)
+            assert schedule.present(name) == ret
 
             with patch.dict(schedule.__opts__, {'test': False}):
-                self.assertDictEqual(schedule.present(name), ret)
+                assert schedule.present(name) == ret
 
-                self.assertDictEqual(schedule.present(name), ret)
+                assert schedule.present(name) == ret
 
             with patch.dict(schedule.__opts__, {'test': True}):
                 ret.update({'result': True})
-                self.assertDictEqual(schedule.present(name), ret)
+                assert schedule.present(name) == ret
 
     # 'absent' function tests: 1
 
@@ -75,9 +75,9 @@ class ScheduleTestCase(TestCase, LoaderModuleMockMixin):
                         {'schedule.list': mock_lst,
                          'schedule.delete': mock_mod}):
             with patch.dict(schedule.__opts__, {'test': False}):
-                self.assertDictEqual(schedule.absent(name), ret)
+                assert schedule.absent(name) == ret
 
             with patch.dict(schedule.__opts__, {'test': True}):
                 comt = ('Job job1 not present in schedule')
                 ret.update({'comment': comt, 'result': True})
-                self.assertDictEqual(schedule.absent(name), ret)
+                assert schedule.absent(name) == ret

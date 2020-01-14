@@ -76,28 +76,28 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         Try and create a record that already exists
         '''
         result = libcloud_dns.record_present('www', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_present_record_does_not_exist(self):
         '''
         Try and create a record that already exists
         '''
         result = libcloud_dns.record_present('mail', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_absent_record_exists(self):
         '''
         Try and deny a record that already exists
         '''
         result = libcloud_dns.record_absent('www', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_absent_record_does_not_exist(self):
         '''
         Try and deny a record that already exists
         '''
         result = libcloud_dns.record_absent('mail', 'test.com', 'A', '127.0.0.1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_present_zone_not_found(self):
         '''
@@ -105,7 +105,7 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         it fails gracefully
         '''
         result = libcloud_dns.record_present('mail', 'notatest.com', 'A', '127.0.0.1', 'test')
-        self.assertFalse(result['result'])
+        assert not result['result']
 
     def test_absent_zone_not_found(self):
         '''
@@ -113,32 +113,32 @@ class LibcloudDnsModuleTestCase(TestCase, LoaderModuleMockMixin):
         it fails gracefully
         '''
         result = libcloud_dns.record_absent('mail', 'notatest.com', 'A', '127.0.0.1', 'test')
-        self.assertFalse(result['result'])
+        assert not result['result']
 
     def test_zone_present(self):
         '''
         Assert that a zone is present (that did not exist)
         '''
         result = libcloud_dns.zone_present('testing.com', 'master', 'test1')
-        self.assertTrue(result)
+        assert result
 
     def test_zone_already_present(self):
         '''
         Assert that a zone is present (that did exist)
         '''
         result = libcloud_dns.zone_present('test.com', 'master', 'test1')
-        self.assertTrue(result)
+        assert result
 
     def test_zone_absent(self):
         '''
         Assert that a zone that did exist is absent
         '''
         result = libcloud_dns.zone_absent('test.com', 'test1')
-        self.assertTrue(result)
+        assert result
 
     def test_zone_already_absent(self):
         '''
         Assert that a zone that did not exist is absent
         '''
         result = libcloud_dns.zone_absent('testing.com', 'test1')
-        self.assertTrue(result)
+        assert result

@@ -18,6 +18,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.linux_lvm as linux_lvm
 from salt.exceptions import CommandExecutionError
+import pytest
 
 
 class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
@@ -37,7 +38,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                              '  Driver version:  4.35.0\n'
                         )
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertEqual(linux_lvm.version(), '2.02.168(2) (2016-11-30)')
+            assert linux_lvm.version() == '2.02.168(2) (2016-11-30)'
 
     def test_fullversion(self):
         '''
@@ -49,11 +50,11 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                              '  Driver version:  4.35.0\n'
                         )
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(linux_lvm.fullversion(),
+            assert linux_lvm.fullversion() == \
                                  {'LVM version': '2.02.168(2) (2016-11-30)',
                                   'Library version': '1.03.01 (2016-11-30)',
                                   'Driver version': '4.35.0',
-                                 })
+                                 }
 
     def test_pvdisplay(self):
         '''
@@ -61,18 +62,18 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.pvdisplay(), {})
+            assert linux_lvm.pvdisplay() == {}
 
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.pvdisplay(quiet=True), {})
+            assert linux_lvm.pvdisplay(quiet=True) == {}
             mock.assert_called_with(['pvdisplay', '-c'], ignore_retcode=True,
                                     python_shell=False)
 
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'A:B:C:D:E:F:G:H:I:J:K'})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.pvdisplay(),
+            assert linux_lvm.pvdisplay() == \
                                  {'A': {'Allocated Physical Extents': 'K',
                                         'Current Logical Volumes Here': 'G',
                                         'Free Physical Extents': 'J',
@@ -83,11 +84,11 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                                         'Physical Volume Size (kB)': 'C',
                                         'Physical Volume Status': 'E',
                                         'Total Physical Extents': 'I',
-                                        'Volume Group Name': 'B'}})
+                                        'Volume Group Name': 'B'}}
 
             mockpath = MagicMock(return_value='Z')
             with patch.object(os.path, 'realpath', mockpath):
-                self.assertDictEqual(linux_lvm.pvdisplay(real=True),
+                assert linux_lvm.pvdisplay(real=True) == \
                                      {'Z': {'Allocated Physical Extents': 'K',
                                             'Current Logical Volumes Here': 'G',
                                             'Free Physical Extents': 'J',
@@ -99,7 +100,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                                             'Physical Volume Status': 'E',
                                             'Real Physical Volume Device': 'Z',
                                             'Total Physical Extents': 'I',
-                                            'Volume Group Name': 'B'}})
+                                            'Volume Group Name': 'B'}}
 
     def test_vgdisplay(self):
         '''
@@ -107,18 +108,18 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.vgdisplay(), {})
+            assert linux_lvm.vgdisplay() == {}
 
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.vgdisplay(quiet=True), {})
+            assert linux_lvm.vgdisplay(quiet=True) == {}
             mock.assert_called_with(['vgdisplay', '-c'], ignore_retcode=True,
                                     python_shell=False)
 
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'A:B:C:D:E:F:G:H:I:J:K:L:M:N:O:P:Q'})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.vgdisplay(),
+            assert linux_lvm.vgdisplay() == \
                                  {'A': {'Actual Physical Volumes': 'K',
                                         'Allocated Physical Extents': 'O',
                                         'Current Logical Volumes': 'F',
@@ -135,7 +136,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                                         'Volume Group Access': 'B',
                                         'Volume Group Name': 'A',
                                         'Volume Group Size (kB)': 'L',
-                                        'Volume Group Status': 'C'}})
+                                        'Volume Group Status': 'C'}}
 
     def test_lvdisplay(self):
         '''
@@ -143,12 +144,12 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value={'retcode': 1})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.lvdisplay(), {})
+            assert linux_lvm.lvdisplay() == {}
 
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'A:B:C:D:E:F:G:H:I:J:K:L:M'})
         with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-            self.assertDictEqual(linux_lvm.lvdisplay(),
+            assert linux_lvm.lvdisplay() == \
                                  {'A': {'Allocated Logical Extents': 'I',
                                         'Allocation Policy': 'J',
                                         'Current Logical Extents Associated': 'H',
@@ -161,16 +162,17 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                                         'Minor Device Number': 'M',
                                         'Open Logical Volumes': 'F',
                                         'Read Ahead Sectors': 'K',
-                                        'Volume Group Name': 'B'}})
+                                        'Volume Group Name': 'B'}}
 
     def test_pvcreate(self):
         '''
         Tests for set a physical device to be used as an LVM physical volume
         '''
-        self.assertEqual(linux_lvm.pvcreate(''),
-                         'Error: at least one device is required')
+        assert linux_lvm.pvcreate('') == \
+                         'Error: at least one device is required'
 
-        self.assertRaises(CommandExecutionError, linux_lvm.pvcreate, 'A')
+        with pytest.raises(CommandExecutionError):
+            linux_lvm.pvcreate('A')
 
         # pvdisplay() would be called by pvcreate() twice: firstly to check
         # whether a device is already initialized for use by LVM and then to
@@ -181,7 +183,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
                 mock = MagicMock(return_value=ret)
                 with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-                    self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000), True)
+                    assert linux_lvm.pvcreate('A', metadatasize=1000) is True
 
     def test_pvcreate_existing_pvs(self):
         '''
@@ -193,9 +195,8 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
                 cmd_mock = MagicMock(return_value=ret)
                 with patch.dict(linux_lvm.__salt__, {'cmd.run_all': cmd_mock}):
-                    self.assertEqual(linux_lvm.pvcreate('A', metadatasize=1000),
-                                     True)
-                    self.assertTrue(cmd_mock.call_count == 0)
+                    assert linux_lvm.pvcreate('A', metadatasize=1000) is True
+                    assert cmd_mock.call_count == 0
 
     def test_pvremove(self):
         '''
@@ -203,7 +204,8 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         pvdisplay = MagicMock(return_value=False)
         with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
-            self.assertRaises(CommandExecutionError, linux_lvm.pvremove, 'A', override=False)
+            with pytest.raises(CommandExecutionError):
+                linux_lvm.pvremove('A', override=False)
 
         pvdisplay = MagicMock(return_value=False)
         with patch('salt.modules.linux_lvm.pvdisplay', pvdisplay):
@@ -212,56 +214,56 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
                 ret = {'stdout': 'saltines', 'stderr': 'cheese', 'retcode': 0, 'pid': '1337'}
                 mock = MagicMock(return_value=ret)
                 with patch.dict(linux_lvm.__salt__, {'cmd.run_all': mock}):
-                    self.assertEqual(linux_lvm.pvremove('A'), True)
+                    assert linux_lvm.pvremove('A') is True
 
     def test_vgcreate(self):
         '''
         Tests create an LVM volume group
         '''
-        self.assertEqual(linux_lvm.vgcreate('', ''),
-                         'Error: vgname and device(s) are both required')
+        assert linux_lvm.vgcreate('', '') == \
+                         'Error: vgname and device(s) are both required'
 
         mock = MagicMock(return_value='A\nB')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'vgdisplay', return_value={}):
-                self.assertDictEqual(linux_lvm.vgcreate('A', 'B'),
-                                     {'Output from vgcreate': 'A'})
+                assert linux_lvm.vgcreate('A', 'B') == \
+                                     {'Output from vgcreate': 'A'}
 
     def test_vgextend(self):
         '''
         Tests add physical volumes to an LVM volume group
         '''
-        self.assertEqual(linux_lvm.vgextend('', ''),
-                         'Error: vgname and device(s) are both required')
+        assert linux_lvm.vgextend('', '') == \
+                         'Error: vgname and device(s) are both required'
 
         mock = MagicMock(return_value='A\nB')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'vgdisplay', return_value={}):
-                self.assertDictEqual(linux_lvm.vgextend('A', 'B'),
-                                     {'Output from vgextend': 'A'})
+                assert linux_lvm.vgextend('A', 'B') == \
+                                     {'Output from vgextend': 'A'}
 
     def test_lvcreate(self):
         '''
         Test create a new logical volume, with option
         for which physical volume to be used
         '''
-        self.assertEqual(linux_lvm.lvcreate(None, None, 1, 1),
-                         'Error: Please specify only one of size or extents')
+        assert linux_lvm.lvcreate(None, None, 1, 1) == \
+                         'Error: Please specify only one of size or extents'
 
-        self.assertEqual(linux_lvm.lvcreate(None, None, None, None),
-                         'Error: Either size or extents must be specified')
+        assert linux_lvm.lvcreate(None, None, None, None) == \
+                         'Error: Either size or extents must be specified'
 
-        self.assertEqual(linux_lvm.lvcreate(None, None, thinvolume=True, thinpool=True),
-                        'Error: Please set only one of thinvolume or thinpool to True')
+        assert linux_lvm.lvcreate(None, None, thinvolume=True, thinpool=True) == \
+                        'Error: Please set only one of thinvolume or thinpool to True'
 
-        self.assertEqual(linux_lvm.lvcreate(None, None, thinvolume=True, extents=1),
-                        'Error: Thin volume size cannot be specified as extents')
+        assert linux_lvm.lvcreate(None, None, thinvolume=True, extents=1) == \
+                        'Error: Thin volume size cannot be specified as extents'
 
         mock = MagicMock(return_value='A\nB')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'lvdisplay', return_value={}):
-                self.assertDictEqual(linux_lvm.lvcreate(None, None, None, 1),
-                                     {'Output from lvcreate': 'A'})
+                assert linux_lvm.lvcreate(None, None, None, 1) == \
+                                     {'Output from lvcreate': 'A'}
 
     def test_lvcreate_with_force(self):
         '''
@@ -271,12 +273,12 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='A\nB')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
             with patch.object(linux_lvm, 'lvdisplay', return_value={}):
-                self.assertDictEqual(linux_lvm.lvcreate(None,
+                assert linux_lvm.lvcreate(None,
                                                         None,
                                                         None,
                                                         1,
-                                                        force=True),
-                                     {'Output from lvcreate': 'A'})
+                                                        force=True) == \
+                                     {'Output from lvcreate': 'A'}
 
     def test_vgremove(self):
         '''
@@ -284,7 +286,7 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertEqual(linux_lvm.vgremove('A'), 'A')
+            assert linux_lvm.vgremove('A') == 'A'
 
     def test_lvremove(self):
         '''
@@ -293,19 +295,19 @@ class LinuxLVMTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='A')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertEqual(linux_lvm.lvremove('', ''), 'A')
+            assert linux_lvm.lvremove('', '') == 'A'
 
     def test_lvresize(self):
         '''
         Test to return information about the logical volume(s)
         '''
-        self.assertEqual(linux_lvm.lvresize(1, None, 1),
-                         {})
+        assert linux_lvm.lvresize(1, None, 1) == \
+                         {}
 
-        self.assertEqual(linux_lvm.lvresize(None, None, None),
-                         {})
+        assert linux_lvm.lvresize(None, None, None) == \
+                         {}
 
         mock = MagicMock(return_value='A')
         with patch.dict(linux_lvm.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(linux_lvm.lvresize('A', 1),
-                                 {'Output from lvresize': 'A'})
+            assert linux_lvm.lvresize('A', 1) == \
+                                 {'Output from lvresize': 'A'}

@@ -17,6 +17,7 @@ from tests.support.mock import (
     MagicMock,
 )
 import salt.modules.libcloud_compute as libcloud_compute
+import pytest
 
 REQUIRED_LIBCLOUD_VERSION = '2.0.0'
 try:
@@ -220,7 +221,7 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_module_creation(self):
         client = libcloud_compute._get_driver('test')
-        self.assertFalse(client is None)
+        assert client is not None
 
     def test_init(self):
         with patch('salt.utils.compat.pack_dunder', return_value=False) as dunder:
@@ -228,87 +229,87 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
             dunder.assert_called_with('salt.modules.libcloud_compute')
 
     def _validate_node(self, node):
-        self.assertEqual(node['name'], 'test_node')
-        self.assertEqual(node['id'], 'test_id')
-        self.assertEqual(node['private_ips'], ['2.3.4.5'])
-        self.assertEqual(node['public_ips'], ['1.2.3.4'])
-        self.assertEqual(node['size']['name'], 'test_size')
+        assert node['name'] == 'test_node'
+        assert node['id'] == 'test_id'
+        assert node['private_ips'] == ['2.3.4.5']
+        assert node['public_ips'] == ['1.2.3.4']
+        assert node['size']['name'] == 'test_size'
 
     def _validate_size(self, size):
-        self.assertEqual(size['id'], 'test_id')
-        self.assertEqual(size['name'], 'test_size')
-        self.assertEqual(size['ram'], 4096)
+        assert size['id'] == 'test_id'
+        assert size['name'] == 'test_size'
+        assert size['ram'] == 4096
 
     def _validate_location(self, location):
-        self.assertEqual(location['id'], 'test_location')
-        self.assertEqual(location['name'], 'location1')
-        self.assertEqual(location['country'], 'Australia')
+        assert location['id'] == 'test_location'
+        assert location['name'] == 'location1'
+        assert location['country'] == 'Australia'
 
     def _validate_volume(self, volume):
-        self.assertEqual(volume['id'], 'vol1')
-        self.assertEqual(volume['name'], 'vol_name')
-        self.assertEqual(volume['size'], 40960)
-        self.assertEqual(volume['state'], 'available')
-        self.assertEqual(volume['extra'], {'ex_key': 'ex_value'})
+        assert volume['id'] == 'vol1'
+        assert volume['name'] == 'vol_name'
+        assert volume['size'] == 40960
+        assert volume['state'] == 'available'
+        assert volume['extra'] == {'ex_key': 'ex_value'}
 
     def _validate_volume_snapshot(self, volume):
-        self.assertEqual(volume['id'], 'snap1')
-        self.assertEqual(volume['size'], 80960)
+        assert volume['id'] == 'snap1'
+        assert volume['size'] == 80960
 
     def _validate_image(self, image):
-        self.assertEqual(image['id'], 'image1')
-        self.assertEqual(image['name'], 'test_image')
-        self.assertEqual(image['extra'], {'ex_key': 'ex_value'})
+        assert image['id'] == 'image1'
+        assert image['name'] == 'test_image'
+        assert image['extra'] == {'ex_key': 'ex_value'}
 
     def _validate_key_pair(self, key):
-        self.assertEqual(key['name'], 'test_key')
-        self.assertEqual(key['fingerprint'], 'abc123')
-        self.assertEqual(key['extra'], {'ex_key': 'ex_value'})
+        assert key['name'] == 'test_key'
+        assert key['fingerprint'] == 'abc123'
+        assert key['extra'] == {'ex_key': 'ex_value'}
 
     def test_list_nodes(self):
         nodes = libcloud_compute.list_nodes('test')
-        self.assertEqual(len(nodes), 1)
+        assert len(nodes) == 1
         self._validate_node(nodes[0])
 
     def test_list_sizes(self):
         sizes = libcloud_compute.list_sizes('test')
-        self.assertEqual(len(sizes), 1)
+        assert len(sizes) == 1
         self._validate_size(sizes[0])
 
     def test_list_sizes_location(self):
         sizes = libcloud_compute.list_sizes('test', location_id='test_location')
-        self.assertEqual(len(sizes), 1)
+        assert len(sizes) == 1
         self._validate_size(sizes[0])
 
     def test_list_locations(self):
         locations = libcloud_compute.list_locations('test')
-        self.assertEqual(len(locations), 1)
+        assert len(locations) == 1
         self._validate_location(locations[0])
 
     def test_reboot_node(self):
         result = libcloud_compute.reboot_node('test_id', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_reboot_node_invalid(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             libcloud_compute.reboot_node('foo_node', 'test')
 
     def test_destroy_node(self):
         result = libcloud_compute.destroy_node('test_id', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_destroy_node_invalid(self):
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             libcloud_compute.destroy_node('foo_node', 'test')
 
     def test_list_volumes(self):
         volumes = libcloud_compute.list_volumes('test')
-        self.assertEqual(len(volumes), 1)
+        assert len(volumes) == 1
         self._validate_volume(volumes[0])
 
     def test_list_volume_snapshots(self):
         volumes = libcloud_compute.list_volume_snapshots('vol1', 'test')
-        self.assertEqual(len(volumes), 1)
+        assert len(volumes) == 1
         self._validate_volume_snapshot(volumes[0])
 
     def test_create_volume(self):
@@ -329,28 +330,28 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_attach_volume(self):
         result = libcloud_compute.attach_volume('test_id', 'vol1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_detatch_volume(self):
         result = libcloud_compute.detach_volume('vol1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_destroy_volume(self):
         result = libcloud_compute.destroy_volume('vol1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_destroy_volume_snapshot(self):
         result = libcloud_compute.destroy_volume_snapshot('vol1', 'snap1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_list_images(self):
         images = libcloud_compute.list_images('test')
-        self.assertEqual(len(images), 1)
+        assert len(images) == 1
         self._validate_image(images[0])
 
     def test_list_images_in_location(self):
         images = libcloud_compute.list_images('test', location_id='test_location')
-        self.assertEqual(len(images), 1)
+        assert len(images) == 1
         self._validate_image(images[0])
 
     def test_create_image(self):
@@ -359,7 +360,7 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete_image(self):
         result = libcloud_compute.delete_image('image1', 'test')
-        self.assertTrue(result)
+        assert result
 
     def test_get_image(self):
         image = libcloud_compute.get_image('image1', 'test')
@@ -371,7 +372,7 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_list_key_pairs(self):
         keys = libcloud_compute.list_key_pairs('test')
-        self.assertEqual(len(keys), 1)
+        assert len(keys) == 1
         self._validate_key_pair(keys[0])
 
     def test_get_key_pair(self):
@@ -392,4 +393,4 @@ class LibcloudComputeModuleTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_delete_key_pair(self):
         result = libcloud_compute.delete_key_pair('test_key', 'test')
-        self.assertTrue(result)
+        assert result

@@ -52,7 +52,7 @@ class LoaderGrainsTest(ModuleCase):
         grains = self.run_function('grains.items')
 
         # Check that custom grains are overwritten
-        self.assertEqual({'k2': 'v2'}, grains['a_custom'])
+        assert {'k2': 'v2'} == grains['a_custom']
 
 
 @skipIf(True, "needs a way to reload minion after config change")
@@ -66,7 +66,7 @@ class LoaderGrainsMergeTest(ModuleCase):
         # XXX: This seems like it should become a unit test instead
         self.opts = salt.config.minion_config(None)
         self.opts['grains_deep_merge'] = True
-        self.assertTrue(self.opts['grains_deep_merge'])
+        assert self.opts['grains_deep_merge']
         self.opts['disable_modules'] = ['pillar']
         __grains__ = salt.loader.grains(self.opts)
 
@@ -74,6 +74,6 @@ class LoaderGrainsMergeTest(ModuleCase):
         __grain__ = self.run_function('grains.item', ['a_custom'])
 
         # Check that the grain is present
-        self.assertIn('a_custom', __grain__)
+        assert 'a_custom' in __grain__
         # Check that the grains are merged
-        self.assertEqual({'k1': 'v1', 'k2': 'v2'}, __grain__['a_custom'])
+        assert {'k1': 'v1', 'k2': 'v2'} == __grain__['a_custom']

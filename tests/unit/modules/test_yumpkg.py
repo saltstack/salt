@@ -123,8 +123,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                 'util-linux': '2.23.2-33.el7',
                 'openssh': '6.6.1p1-33.el7_3',
                 'virt-what': '1.13-8.el7'}.items():
-                self.assertTrue(pkgs.get(pkg_name))
-                self.assertEqual(pkgs[pkg_name], [pkg_version])
+                assert pkgs.get(pkg_name)
+                assert pkgs[pkg_name] == [pkg_version]
 
     def test_list_pkgs_with_attr(self):
         '''
@@ -249,9 +249,8 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
                     'arch': 'x86_64',
                     'epoch': None
                 }}.items():
-
-                self.assertTrue(pkgs.get(pkg_name))
-                self.assertEqual(pkgs[pkg_name], [pkg_attr])
+                assert pkgs.get(pkg_name)
+                assert pkgs[pkg_name] == [pkg_attr]
 
     def test_list_pkgs_with_attr_multiple_versions(self):
         '''
@@ -350,15 +349,15 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(yumpkg.__grains__, {'osarch': 'x86_64'}), \
              patch.dict(yumpkg.__salt__, {'cmd.run_stdout': MagicMock(return_value=os.linesep.join(yum_out))}):
             patches = yumpkg.list_patches()
-            self.assertFalse(patches['my-fake-patch-not-installed-1234']['installed'])
-            self.assertTrue(len(patches['my-fake-patch-not-installed-1234']['summary']) == 3)
+            assert not patches['my-fake-patch-not-installed-1234']['installed']
+            assert len(patches['my-fake-patch-not-installed-1234']['summary']) == 3
             for _patch in expected_patches['my-fake-patch-not-installed-1234']['summary']:
-                self.assertTrue(_patch in patches['my-fake-patch-not-installed-1234']['summary'])
+                assert _patch in patches['my-fake-patch-not-installed-1234']['summary']
 
-            self.assertTrue(patches['my-fake-patch-installed-1234']['installed'])
-            self.assertTrue(len(patches['my-fake-patch-installed-1234']['summary']) == 2)
+            assert patches['my-fake-patch-installed-1234']['installed']
+            assert len(patches['my-fake-patch-installed-1234']['summary']) == 2
             for _patch in expected_patches['my-fake-patch-installed-1234']['summary']:
-                self.assertTrue(_patch in patches['my-fake-patch-installed-1234']['summary'])
+                assert _patch in patches['my-fake-patch-installed-1234']['summary']
 
     def test_latest_version_with_options(self):
         with patch.object(yumpkg, 'list_pkgs', MagicMock(return_value={})):
@@ -829,13 +828,13 @@ class YumTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(yumpkg.__salt__, {'lowpkg.info': MagicMock(return_value=run_out)}):
             installed = yumpkg.info_installed(all_versions=True)
             # Test overall products length
-            self.assertEqual(len(installed), 2)
+            assert len(installed) == 2
 
             # Test multiple versions for the same package
             for pkg_name, pkg_info_list in installed.items():
-                self.assertEqual(len(pkg_info_list), 2 if pkg_name == "virgo-dummy" else 1)
+                assert len(pkg_info_list) == (2 if pkg_name == "virgo-dummy" else 1)
                 for info in pkg_info_list:
-                    self.assertTrue(info['arch'] in ('x86_64', 'i686'))
+                    assert info['arch'] in ('x86_64', 'i686')
 
     @skipIf(not yumpkg.HAS_YUM, 'Could not import yum')
     def test_yum_base_error(self):

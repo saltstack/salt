@@ -37,11 +37,8 @@ class TestGemModule(TestCase, LoaderModuleMockMixin):
                          'rbenv.is_installed': rvm_mock,
                          'cmd.run_all': mock}):
             gem._gem(['install', 'rails'], gem_bin='/usr/local/bin/gem')
-            self.assertEqual(
-                False,
-                rvm_mock.called,
+            assert rvm_mock.called is False, \
                 'Should never call rvm.is_installed if gem_bin provided'
-            )
             mock.assert_called_once_with(
                 ['/usr/local/bin/gem', 'install', 'rails'],
                 runas=None,
@@ -115,16 +112,15 @@ sass (3.1.15, 3.1.7)
 '''
         mock = MagicMock(return_value=output)
         with patch.object(gem, '_gem', new=mock):
-            self.assertEqual(
-                {'actionmailer': ['2.3.14'],
+            assert {'actionmailer': ['2.3.14'],
                  'actionpack': ['2.3.14'],
                  'activerecord': ['2.3.14'],
                  'activeresource': ['2.3.14'],
                  'activesupport': ['3.0.5', '2.3.14'],
                  'rake': ['0.9.2', '0.8.7'],
                  'responds_to_parent': ['1.0.20091013'],
-                 'sass': ['3.1.15', '3.1.7']},
-                gem.list_())
+                 'sass': ['3.1.15', '3.1.7']} == \
+                gem.list_()
 
     def test_list_upgrades(self):
         output = '''
@@ -134,11 +130,9 @@ rake (10.3.2 < 10.4.2)
 '''
         mock = MagicMock(return_value=output)
         with patch.object(gem, '_gem', new=mock):
-            self.assertEqual(
-                {'arel': '6.0.0',
+            assert {'arel': '6.0.0',
                  'rails': '4.2.0',
-                 'rake': '10.4.2'}, gem.list_upgrades()
-            )
+                 'rake': '10.4.2'} == gem.list_upgrades()
 
     def test_sources_list(self):
         output = '''*** CURRENT SOURCES ***
@@ -147,5 +141,4 @@ http://rubygems.org/
 '''
         mock = MagicMock(return_value=output)
         with patch.object(gem, '_gem', new=mock):
-            self.assertEqual(
-                ['http://rubygems.org/'], gem.sources_list())
+            assert ['http://rubygems.org/'] == gem.sources_list()

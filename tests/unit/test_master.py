@@ -33,7 +33,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'TokenAuthenticationError',
                               'message': 'Authentication failure of type "token" occurred.'}}
         ret = self.clear_funcs.runner({'token': 'asdfasdfasdfasdf'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_token_authorization_error(self):
         '''
@@ -51,7 +51,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.clear_funcs.runner(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_token_salt_invocation_error(self):
         '''
@@ -68,7 +68,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.runner(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_eauth_not_authenticated(self):
         '''
@@ -78,7 +78,7 @@ class ClearFuncsTestCase(TestCase):
                               'message': 'Authentication failure of type "eauth" occurred for '
                                          'user UNKNOWN.'}}
         ret = self.clear_funcs.runner({'eauth': 'foo'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_eauth_authorization_error(self):
         '''
@@ -93,7 +93,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.clear_funcs.runner(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_eauth_salt_invocation_error(self):
         '''
@@ -107,7 +107,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.runner(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_user_not_authenticated(self):
         '''
@@ -116,7 +116,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'UserAuthenticationError',
                               'message': 'Authentication failure of type "user" occurred'}}
         ret = self.clear_funcs.runner({})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     # wheel tests
 
@@ -127,7 +127,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'TokenAuthenticationError',
                               'message': 'Authentication failure of type "token" occurred.'}}
         ret = self.clear_funcs.wheel({'token': 'asdfasdfasdfasdf'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_token_authorization_error(self):
         '''
@@ -145,7 +145,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.clear_funcs.wheel(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_token_salt_invocation_error(self):
         '''
@@ -162,7 +162,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.wheel(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_eauth_not_authenticated(self):
         '''
@@ -172,7 +172,7 @@ class ClearFuncsTestCase(TestCase):
                               'message': 'Authentication failure of type "eauth" occurred for '
                                          'user UNKNOWN.'}}
         ret = self.clear_funcs.wheel({'eauth': 'foo'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_eauth_authorization_error(self):
         '''
@@ -187,7 +187,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.clear_funcs.wheel(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_eauth_salt_invocation_error(self):
         '''
@@ -201,7 +201,7 @@ class ClearFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.clear_funcs.wheel(clear_load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_user_not_authenticated(self):
         '''
@@ -210,7 +210,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'UserAuthenticationError',
                               'message': 'Authentication failure of type "user" occurred'}}
         ret = self.clear_funcs.wheel({})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     # publish tests
 
@@ -221,7 +221,7 @@ class ClearFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'AuthorizationError',
                               'message': 'Authorization error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=True)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish({'user': 'foo', 'fun': 'test.arg'}))
+            assert mock_ret == self.clear_funcs.publish({'user': 'foo', 'fun': 'test.arg'})
 
     def test_publish_cmd_blacklisted(self):
         '''
@@ -231,7 +231,7 @@ class ClearFuncsTestCase(TestCase):
                               'message': 'Authorization error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=True)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish({'user': 'foo', 'fun': 'test.arg'}))
+            assert mock_ret == self.clear_funcs.publish({'user': 'foo', 'fun': 'test.arg'})
 
     def test_publish_token_not_authenticated(self):
         '''
@@ -243,7 +243,7 @@ class ClearFuncsTestCase(TestCase):
                 'kwargs': {'token': 'asdfasdfasdfasdf'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)
 
     def test_publish_token_authorization_error(self):
         '''
@@ -261,7 +261,7 @@ class ClearFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_token', MagicMock(return_value=mock_token)), \
                 patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)
 
     def test_publish_eauth_not_authenticated(self):
         '''
@@ -273,7 +273,7 @@ class ClearFuncsTestCase(TestCase):
                                'message': 'Authentication error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)
 
     def test_publish_eauth_authorization_error(self):
         '''
@@ -288,7 +288,7 @@ class ClearFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_eauth', MagicMock(return_value=True)), \
                 patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)
 
     def test_publish_user_not_authenticated(self):
         '''
@@ -299,7 +299,7 @@ class ClearFuncsTestCase(TestCase):
                               'message': 'Authentication error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)
 
     def test_publish_user_authenticated_missing_auth_list(self):
         '''
@@ -314,7 +314,7 @@ class ClearFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_key', MagicMock(return_value='fake-user-key')), \
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=[])):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)
 
     def test_publish_user_authorization_error(self):
         '''
@@ -330,4 +330,4 @@ class ClearFuncsTestCase(TestCase):
                 patch('salt.auth.LoadAuth.authenticate_key', MagicMock(return_value='fake-user-key')), \
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=['test'])), \
                 patch('salt.utils.minions.CkMinions.auth_check', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.clear_funcs.publish(load))
+            assert mock_ret == self.clear_funcs.publish(load)

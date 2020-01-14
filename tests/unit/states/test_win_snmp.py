@@ -48,7 +48,7 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__, {'win_snmp.get_agent_settings': mock_value_get,
                                             'win_snmp.set_agent_settings': mock_value_set}):
             with patch.dict(win_snmp.__opts__, {'test': False}):
-                self.assertEqual(win_snmp.agent_settings(**kwargs), ret)
+                assert win_snmp.agent_settings(**kwargs) == ret
 
     def test_auth_traps_enabled(self):
         '''
@@ -69,11 +69,11 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__, {'win_snmp.get_auth_traps_enabled': mock_value_get,
                                             'win_snmp.set_auth_traps_enabled': mock_value_set}):
             with patch.dict(win_snmp.__opts__, {'test': False}):
-                self.assertEqual(win_snmp.auth_traps_enabled(**kwargs), ret)
+                assert win_snmp.auth_traps_enabled(**kwargs) == ret
             with patch.dict(win_snmp.__opts__, {'test': True}):
                 ret['comment'] = 'EnableAuthenticationTraps will be changed.'
                 ret['result'] = None
-                self.assertEqual(win_snmp.auth_traps_enabled(**kwargs), ret)
+                assert win_snmp.auth_traps_enabled(**kwargs) == ret
 
     def test_community_names(self):
         '''
@@ -91,4 +91,4 @@ class WinSnmpTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(win_snmp.__salt__, {'win_snmp.get_community_names': mock_value_get,
                                             'win_snmp.set_community_names': mock_value_set}):
             with patch.dict(win_snmp.__opts__, {'test': False}):
-                self.assertEqual(win_snmp.community_names(**kwargs), ret)
+                assert win_snmp.community_names(**kwargs) == ret

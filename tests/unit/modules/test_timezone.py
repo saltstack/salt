@@ -20,6 +20,7 @@ import salt.modules.timezone as timezone
 from salt.ext import six
 import salt.utils.platform
 import salt.utils.stringutils
+import pytest
 
 GET_ZONE_FILE = 'salt.modules.timezone._get_zone_file'
 GET_LOCALTIME_PATH = 'salt.modules.timezone._get_localtime_path'
@@ -48,7 +49,7 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         with patch(GET_ZONE_FILE, lambda p: zone_path.name):
             with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
-                self.assertTrue(timezone.zone_compare('foo'))
+                assert timezone.zone_compare('foo')
 
     def test_zone_compare_nonexistent(self):
         etc_localtime = self.create_tempfile_with_contents('a')
@@ -56,7 +57,8 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         with patch(GET_ZONE_FILE, lambda p: '/foopath/nonexistent'):
             with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
-                self.assertRaises(SaltInvocationError, timezone.zone_compare, 'foo')
+                with pytest.raises(SaltInvocationError):
+                    timezone.zone_compare('foo')
 
     def test_zone_compare_unequal(self):
         etc_localtime = self.create_tempfile_with_contents('a')
@@ -65,12 +67,13 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
         with patch(GET_ZONE_FILE, lambda p: zone_path.name):
             with patch(GET_LOCALTIME_PATH, lambda: etc_localtime.name):
 
-                self.assertFalse(timezone.zone_compare('foo'))
+                assert not timezone.zone_compare('foo')
 
     def test_missing_localtime(self):
         with patch(GET_ZONE_FILE, lambda p: '/nonexisting'):
             with patch(GET_LOCALTIME_PATH, lambda: '/also-missing'):
-                self.assertRaises(CommandExecutionError, timezone.zone_compare, 'foo')
+                with pytest.raises(CommandExecutionError):
+                    timezone.zone_compare('foo')
 
     def create_tempfile_with_contents(self, contents):
         temp = NamedTemporaryFile(delete=False)
@@ -344,7 +347,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         for osfamily in ['AIX', 'NILinuxRT']:
             with patch.dict(timezone.__grains__, {'os_family': osfamily}):
-                with self.assertRaises(SaltInvocationError):
+                with pytest.raises(SaltInvocationError):
                     assert timezone.set_hwclock('forty two')
                 assert timezone.set_hwclock('UTC')
 
@@ -361,7 +364,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(timezone.__grains__, {'os_family': ['Solaris'],
                                               'cpuarch': 'x86'}):
-            with self.assertRaises(SaltInvocationError):
+            with pytest.raises(SaltInvocationError):
                 assert timezone.set_hwclock('forty two')
             assert timezone.set_hwclock('UTC')
             name, args, kwargs = timezone.__salt__['cmd.retcode'].mock_calls[0]
@@ -449,7 +452,7 @@ class TimezoneModuleTestCase(TestCase, LoaderModuleMockMixin):
         :return:
         '''
         with patch.dict(timezone.__grains__, {'os_family': ['Gentoo']}):
-            with self.assertRaises(SaltInvocationError):
+            with pytest.raises(SaltInvocationError):
                 timezone.set_hwclock('forty two')
 
             timezone.set_hwclock('UTC')

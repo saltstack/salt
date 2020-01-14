@@ -180,47 +180,47 @@ class GitfsConfigTestCase(TestCase, LoaderModuleMockMixin):
         # repo1 (branch: foo)
         # The mountpoint should take the default (from gitfs_mountpoint), while
         # ref and root should take the per-saltenv params.
-        self.assertEqual(git_fs.remotes[0].mountpoint('foo'), '')
-        self.assertEqual(git_fs.remotes[0].ref('foo'), 'foo_branch')
-        self.assertEqual(git_fs.remotes[0].root('foo'), 'foo_root')
+        assert git_fs.remotes[0].mountpoint('foo') == ''
+        assert git_fs.remotes[0].ref('foo') == 'foo_branch'
+        assert git_fs.remotes[0].root('foo') == 'foo_root'
 
         # repo1 (branch: bar)
         # The 'bar' branch does not have a per-saltenv configuration set, so
         # each of the below values should fall back to global values.
-        self.assertEqual(git_fs.remotes[0].mountpoint('bar'), '')
-        self.assertEqual(git_fs.remotes[0].ref('bar'), 'bar')
-        self.assertEqual(git_fs.remotes[0].root('bar'), 'salt')
+        assert git_fs.remotes[0].mountpoint('bar') == ''
+        assert git_fs.remotes[0].ref('bar') == 'bar'
+        assert git_fs.remotes[0].root('bar') == 'salt'
 
         # repo1 (branch: baz)
         # The 'baz' branch does not have a per-saltenv configuration set, but
         # it is defined in the gitfs_saltenv parameter, so the values
         # from that parameter should be returned.
-        self.assertEqual(git_fs.remotes[0].mountpoint('baz'), 'baz_mountpoint')
-        self.assertEqual(git_fs.remotes[0].ref('baz'), 'baz_branch')
-        self.assertEqual(git_fs.remotes[0].root('baz'), 'baz_root')
+        assert git_fs.remotes[0].mountpoint('baz') == 'baz_mountpoint'
+        assert git_fs.remotes[0].ref('baz') == 'baz_branch'
+        assert git_fs.remotes[0].root('baz') == 'baz_root'
 
         # repo2 (branch: foo)
         # The mountpoint should take the per-remote mountpoint value of
         # 'repo2', while ref and root should fall back to global values.
-        self.assertEqual(git_fs.remotes[1].mountpoint('foo'), 'repo2')
-        self.assertEqual(git_fs.remotes[1].ref('foo'), 'foo')
-        self.assertEqual(git_fs.remotes[1].root('foo'), 'salt')
+        assert git_fs.remotes[1].mountpoint('foo') == 'repo2'
+        assert git_fs.remotes[1].ref('foo') == 'foo'
+        assert git_fs.remotes[1].root('foo') == 'salt'
 
         # repo2 (branch: bar)
         # The 'bar' branch does not have a per-saltenv configuration set, so
         # the mountpoint should take the per-remote mountpoint value of
         # 'repo2', while ref and root should fall back to global values.
-        self.assertEqual(git_fs.remotes[1].mountpoint('bar'), 'repo2')
-        self.assertEqual(git_fs.remotes[1].ref('bar'), 'bar')
-        self.assertEqual(git_fs.remotes[1].root('bar'), 'salt')
+        assert git_fs.remotes[1].mountpoint('bar') == 'repo2'
+        assert git_fs.remotes[1].ref('bar') == 'bar'
+        assert git_fs.remotes[1].root('bar') == 'salt'
 
         # repo2 (branch: baz)
         # The 'baz' branch has the mountpoint configured as a per-saltenv
         # parameter. The other two should take the values defined in
         # gitfs_saltenv.
-        self.assertEqual(git_fs.remotes[1].mountpoint('baz'), 'abc')
-        self.assertEqual(git_fs.remotes[1].ref('baz'), 'baz_branch')
-        self.assertEqual(git_fs.remotes[1].root('baz'), 'baz_root')
+        assert git_fs.remotes[1].mountpoint('baz') == 'abc'
+        assert git_fs.remotes[1].ref('baz') == 'baz_branch'
+        assert git_fs.remotes[1].root('baz') == 'baz_root'
 
 
 LOAD = {'saltenv': 'base'}
@@ -248,24 +248,24 @@ class GitFSTestFuncs(object):
     def test_file_list(self):
         gitfs.update()
         ret = gitfs.file_list(LOAD)
-        self.assertIn('testfile', ret)
-        self.assertIn(UNICODE_FILENAME, ret)
+        assert 'testfile' in ret
+        assert UNICODE_FILENAME in ret
         # This function does not use os.sep, the Salt fileserver uses the
         # forward slash, hence it being explicitly used to join here.
-        self.assertIn('/'.join((UNICODE_DIRNAME, 'foo.txt')), ret)
+        assert '/'.join((UNICODE_DIRNAME, 'foo.txt')) in ret
 
     def test_dir_list(self):
         gitfs.update()
         ret = gitfs.dir_list(LOAD)
-        self.assertIn('grail', ret)
-        self.assertIn(UNICODE_DIRNAME, ret)
+        assert 'grail' in ret
+        assert UNICODE_DIRNAME in ret
 
     def test_envs(self):
         gitfs.update()
         ret = gitfs.envs(ignore_cache=True)
-        self.assertIn('base', ret)
-        self.assertIn(UNICODE_ENVNAME, ret)
-        self.assertIn(TAG_NAME, ret)
+        assert 'base' in ret
+        assert UNICODE_ENVNAME in ret
+        assert TAG_NAME in ret
 
     def test_ref_types_global(self):
         '''
@@ -276,9 +276,9 @@ class GitFSTestFuncs(object):
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to branches only, the tag should not
             # appear in the envs list.
-            self.assertIn('base', ret)
-            self.assertIn(UNICODE_ENVNAME, ret)
-            self.assertNotIn(TAG_NAME, ret)
+            assert 'base' in ret
+            assert UNICODE_ENVNAME in ret
+            assert TAG_NAME not in ret
 
     def test_ref_types_per_remote(self):
         '''
@@ -291,9 +291,9 @@ class GitFSTestFuncs(object):
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertNotIn('base', ret)
-            self.assertNotIn(UNICODE_ENVNAME, ret)
-            self.assertIn(TAG_NAME, ret)
+            assert 'base' not in ret
+            assert UNICODE_ENVNAME not in ret
+            assert TAG_NAME in ret
 
     def test_disable_saltenv_mapping_global_with_mapping_defined_globally(self):
         '''
@@ -312,7 +312,7 @@ class GitFSTestFuncs(object):
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['base', 'foo'])
+            assert ret == ['base', 'foo']
 
     def test_saltenv_blacklist(self):
         '''
@@ -378,7 +378,7 @@ class GitFSTestFuncs(object):
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['bar', 'base'])
+            assert ret == ['bar', 'base']
 
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_globally(self):
         '''
@@ -400,7 +400,7 @@ class GitFSTestFuncs(object):
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['base', 'hello'])
+            assert ret == ['base', 'hello']
 
     def test_disable_saltenv_mapping_per_remote_with_mapping_defined_per_remote(self):
         '''
@@ -421,7 +421,7 @@ class GitFSTestFuncs(object):
             ret = gitfs.envs(ignore_cache=True)
             # Since we are restricting to tags only, the tag should appear in
             # the envs list, but the branches should not.
-            self.assertEqual(ret, ['base', 'world'])
+            assert ret == ['base', 'world']
 
 
 class GitFSTestBase(object):

@@ -58,7 +58,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         mock_moduleout = MagicMock(return_value=sync_output)
         with patch.dict(saltutil_state.__salt__, {'saltutil.sync_all': mock_moduleout}):
             result = saltutil_state.sync_all(state_id, refresh=True)
-            self.assertEqual(result, state_result)
+            assert result == state_result
 
     def test_saltutil_sync_all_test(self):
         sync_output = {
@@ -92,7 +92,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         with patch.dict(saltutil_state.__salt__, {'saltutil.sync_all': mock_moduleout}):
             with patch.dict(saltutil_state.__opts__, {'test': True}):
                 result = saltutil_state.sync_all(state_id, refresh=True)
-                self.assertEqual(result, state_result)
+                assert result == state_result
 
     def test_saltutil_sync_all_change(self):
         sync_output = {
@@ -126,7 +126,7 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
         mock_moduleout = MagicMock(return_value=sync_output)
         with patch.dict(saltutil_state.__salt__, {'saltutil.sync_all': mock_moduleout}):
             result = saltutil_state.sync_all(state_id, refresh=True)
-            self.assertEqual(result, state_result)
+            assert result == state_result
 
     def test_saltutil_sync_states_should_match_saltutil_module(self):
         module_functions = [
@@ -138,8 +138,6 @@ class Saltutil(TestCase, LoaderModuleMockMixin):
             if f[0].startswith('sync_')
         ]
         for fn in module_functions:
-            self.assertIn(
-                fn,
-                state_functions,
-                msg='modules.saltutil.{} has no matching state in states.saltutil'.format(fn)
-            )
+            assert fn in \
+                state_functions, \
+                'modules.saltutil.{} has no matching state in states.saltutil'.format(fn)

@@ -132,8 +132,7 @@ class StateRunnerTest(ShellCase):
         for item in ('duration', 'start_time'):
             state_ret['ret']['minion']['test_|-test fail with changes_|-test fail with changes_|-fail_with_changes'].pop(item)
 
-        self.assertEqual(
-            state_ret,
+        assert state_ret == \
             {
                 'out': 'highstate',
                 'ret': {
@@ -155,12 +154,9 @@ class StateRunnerTest(ShellCase):
                     }
                 }
             }
-        )
 
-        self.assertEqual(
-            func_ret,
+        assert func_ret == \
             {'out': 'highstate', 'ret': {'minion': False}}
-        )
 
     def test_orchestrate_target_exists(self):
         '''
@@ -214,7 +210,7 @@ class StateRunnerTest(ShellCase):
                        '    Function: salt.wheel\n'
                        '        Name: runtests_helpers.failure\n'
                        '      Result: False'):
-            self.assertIn(result, ret)
+            assert result in ret
 
     def test_orchestrate_target_doesnt_exist(self):
         '''
@@ -320,10 +316,8 @@ class StateRunnerTest(ShellCase):
 
         assert state_result is False
 
-        self.assertEqual(
-            func_ret,
+        assert func_ret == \
             {'out': 'highstate', 'ret': {'minion': False}}
-        )
 
 
 @skipIf(salt.utils.platform.is_windows(), '*NIX-only test')
@@ -433,7 +427,7 @@ class OrchEventTest(ShellCase):
                     # data structure is different from what we expect!
                     ret = event['data']['return']['data']['master']
                     for job in ret:
-                        self.assertTrue('__jid__' in ret[job])
+                        assert '__jid__' in ret[job]
                     break
         finally:
             del listener
@@ -512,13 +506,13 @@ class OrchEventTest(ShellCase):
                     for state in ret:
                         data = ret[state]
                         # we expect each duration to be greater than 10s
-                        self.assertTrue(data['duration'] > 10000)
+                        assert data['duration'] > 10000
                     break
 
                 # self confirm that the total runtime is roughly 30s (left 10s for buffer)
-                self.assertTrue((time.time() - start_time) < 40)
+                assert (time.time() - start_time) < 40
         finally:
-            self.assertTrue(received)
+            assert received
             del listener
             signal.alarm(0)
 
@@ -578,11 +572,11 @@ class OrchEventTest(ShellCase):
                     # Don't wrap this in a try/except. We want to know if the
                     # data structure is different from what we expect!
                     ret = event['data']['return']['data']['master']
-                    self.assertNotIn('test_|-stage_two_|-stage_two_|-fail_without_changes', ret)
+                    assert 'test_|-stage_two_|-stage_two_|-fail_without_changes' not in ret
                     break
 
         finally:
-            self.assertTrue(received)
+            assert received
             del listener
             signal.alarm(0)
 
@@ -663,10 +657,10 @@ class OrchEventTest(ShellCase):
                     for state in ret:
                         data = ret[state]
                         # Each state should be successful
-                        self.assertEqual(data['comment'], 'Success!')
+                        assert data['comment'] == 'Success!'
                     break
         finally:
-            self.assertTrue(received)
+            assert received
             del listener
             signal.alarm(0)
 

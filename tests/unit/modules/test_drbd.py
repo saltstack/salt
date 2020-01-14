@@ -47,7 +47,7 @@ class DrbdTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='Salt:Stack True master/minion \
         UpToDate/UpToDate True None 50 50 666 888')
         with patch.dict(drbd.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(drbd.overview(), ret)
+            assert drbd.overview() == ret
 
         ret = {'connection state': 'True',
                'device': 'Stack',
@@ -61,4 +61,4 @@ class DrbdTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value='Salt:Stack True master/minion \
         UpToDate/partner syncbar None 50 50')
         with patch.dict(drbd.__salt__, {'cmd.run': mock}):
-            self.assertDictEqual(drbd.overview(), ret)
+            assert drbd.overview() == ret

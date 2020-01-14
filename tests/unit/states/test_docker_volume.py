@@ -44,7 +44,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             for v in volumes:
                 # present should never try to add a conflicting
                 # volume
-                self.assertNotEqual(v['Name'], name)
+                assert v['Name'] != name
             if driver is None:
                 driver = default_driver
             new = {'Name': name, 'Driver': driver}
@@ -56,7 +56,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             removed = [v for v in volumes if v['Name'] == name]
             # present should not have tried to remove a volume
             # that didn't exist
-            self.assertEqual(1, len(removed))
+            assert 1 == len(removed)
             volumes.remove(removed[0])
             return removed[0]
 
@@ -71,8 +71,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
             docker_create_volume.assert_called_with('volume_foo',
                                                     driver=None,
                                                     driver_opts=None)
-            self.assertEqual(
-                {
+            assert {
                     'name': 'volume_foo',
                     'comment': '',
                     'changes': {
@@ -82,44 +81,41 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     },
                     'result': True,
-                },
-                ret)
-            self.assertEqual(len(volumes), 1)
-            self.assertEqual(volumes[0]['Name'], 'volume_foo')
-            self.assertIs(volumes[0]['Driver'], default_driver)
+                } == \
+                ret
+            assert len(volumes) == 1
+            assert volumes[0]['Name'] == 'volume_foo'
+            assert volumes[0]['Driver'] is default_driver
 
             # run it again with the same arguments
             orig_volumes = [volumes[0].copy()]
             ret = docker_state.present('volume_foo')
-            self.assertEqual(
-                {
+            assert {
                     'name': 'volume_foo',
                     'comment': "Volume 'volume_foo' already exists.",
                     'changes': {},
                     'result': True,
-                },
-                ret)
-            self.assertEqual(orig_volumes, volumes)
+                } == \
+                ret
+            assert orig_volumes == volumes
 
             # run it again with a different driver but don't force
             ret = docker_state.present('volume_foo', driver='local')
-            self.assertEqual(
-                {
+            assert {
                     'name': 'volume_foo',
                     'comment': ("Driver for existing volume 'volume_foo'"
                                 " ('dummy_default') does not match specified"
                                 " driver ('local') and force is False"),
                     'changes': {},
                     'result': False,
-                },
-                ret)
-            self.assertEqual(orig_volumes, volumes)
+                } == \
+                ret
+            assert orig_volumes == volumes
 
             # run it again with a different driver and force
             ret = docker_state.present(
                 'volume_foo', driver='local', force=True)
-            self.assertEqual(
-                {
+            assert {
                     'name': 'volume_foo',
                     'comment': "",
                     'changes': {
@@ -133,11 +129,11 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
                         },
                     },
                     'result': True,
-                },
-                ret)
+                } == \
+                ret
             mod_orig_volumes = [orig_volumes[0].copy()]
             mod_orig_volumes[0]['Driver'] = 'local'
-            self.assertEqual(mod_orig_volumes, volumes)
+            assert mod_orig_volumes == volumes
 
     def test_present_with_another_driver(self):
         '''
@@ -162,11 +158,11 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
         docker_create_volume.assert_called_with('volume_foo',
                                                   driver='bar',
                                                   driver_opts=None)
-        self.assertEqual(ret, {'name': 'volume_foo',
+        assert ret == {'name': 'volume_foo',
                                'comment': '',
                                'changes': {'created': 'created',
                                            'removed': 'removed'},
-                               'result': True})
+                               'result': True}
 
     def test_present_wo_existing_volumes(self):
         '''
@@ -188,10 +184,10 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
         docker_create_volume.assert_called_with('volume_foo',
                                                   driver='bar',
                                                   driver_opts=None)
-        self.assertEqual(ret, {'name': 'volume_foo',
+        assert ret == {'name': 'volume_foo',
                                'comment': '',
                                'changes': {'created': 'created'},
-                               'result': True})
+                               'result': True}
 
     def test_absent(self):
         '''
@@ -208,7 +204,7 @@ class DockerVolumeTestCase(TestCase, LoaderModuleMockMixin):
                 'volume_foo',
                 )
         docker_remove_volume.assert_called_with('volume_foo')
-        self.assertEqual(ret, {'name': 'volume_foo',
+        assert ret == {'name': 'volume_foo',
                                'comment': '',
                                'changes': {'removed': 'removed'},
-                               'result': True})
+                               'result': True}

@@ -146,11 +146,9 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
 
-        self.assertEqual(ret['changes'], {'removed': True})
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes'] == {'removed': True}
+        assert ret['comment'] == \
             'Removed network \'{0}\''.format(net.name)
-        )
 
     @container_name
     @with_network(create=False)
@@ -164,28 +162,22 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
 
-        self.assertEqual(
-            ret['changes'],
+        assert ret['changes'] == \
             {
                 'removed': True,
                 'disconnected': [container_name],
             }
-        )
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Removed network \'{0}\''.format(net.name)
-        )
 
     @with_network(create=False)
     def test_absent_when_not_present(self, net):
         ret = self.run_state('docker_network.absent', name=net.name)
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
-        self.assertEqual(ret['changes'], {})
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes'] == {}
+        assert ret['comment'] == \
             'Network \'{0}\' already absent'.format(net.name)
-        )
 
     @with_network(create=False)
     def test_present(self, net):
@@ -194,11 +186,9 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         ret = ret[next(iter(ret))]
 
         # Make sure the state return is what we expect
-        self.assertEqual(ret['changes'], {'created': True})
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes'] == {'created': True}
+        assert ret['comment'] == \
             'Network \'{0}\' created'.format(net.name)
-        )
 
         # Now check to see that the network actually exists. If it doesn't,
         # this next function call will raise an exception.
@@ -214,17 +204,13 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
 
-        self.assertEqual(
-            ret['changes'],
+        assert ret['changes'] == \
             {
                 'created': True,
                 'connected': [container_name],
             }
-        )
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Network \'{0}\' created'.format(net.name)
-        )
 
         # Now check to see that the network actually exists. If it doesn't,
         # this next function call will raise an exception.
@@ -238,11 +224,9 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
 
-        self.assertEqual(ret['changes'], {'created': True})
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes'] == {'created': True}
+        assert ret['comment'] == \
             'Network \'{0}\' created'.format(net.name)
-        )
 
         # Connect the container
         self.run_function(
@@ -259,8 +243,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
         self.assertSaltTrueReturn(ret)
         ret = ret[next(iter(ret))]
 
-        self.assertEqual(
-            ret['changes'],
+        assert ret['changes'] == \
             {
                 'recreated': True,
                 'reconnected' if reconnect else 'disconnected': [container_name],
@@ -271,11 +254,8 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
                     }
                 }
             }
-        )
-        self.assertEqual(
-            ret['comment'],
+        assert ret['comment'] == \
             'Network \'{0}\' was replaced with updated config'.format(net.name)
-        )
 
     @container_name
     @with_network(create=False)
@@ -303,7 +283,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
         )
         net_info = self.run_function('docker.inspect_network', [net.name])
-        self.assertIs(net_info['Internal'], True)
+        assert net_info['Internal'] is True
 
     @with_network()
     def test_present_labels(self, net):
@@ -320,12 +300,10 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
         )
         net_info = self.run_function('docker.inspect_network', [net.name])
-        self.assertEqual(
-            net_info['Labels'],
+        assert net_info['Labels'] == \
             {'foo': '',
              'bar': 'baz',
-             'hello': 'world'},
-        )
+             'hello': 'world'}
 
     @with_network(subnet='fe3f:2180:26:1::/123')
     @with_network(subnet='10.247.197.96/27')
@@ -343,7 +321,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
         )
         net_info = self.run_function('docker.inspect_network', [net1.name])
-        self.assertIs(net_info['EnableIPv6'], True)
+        assert net_info['EnableIPv6'] is True
 
     @requires_system_grains
     @with_network()
@@ -360,7 +338,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
         )
         net_info = self.run_function('docker.inspect_network', [net.name])
-        self.assertIs(net_info['Attachable'], True)
+        assert net_info['Attachable'] is True
 
     @skipIf(True, 'Skip until we can set up docker swarm testing')
     @with_network()
@@ -373,7 +351,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
         )
         net_info = self.run_function('docker.inspect_network', [net.name])
-        self.assertIs(net_info['Scope'], 'global')
+        assert net_info['Scope'] is 'global'
 
     @skipIf(True, 'Skip until we can set up docker swarm testing')
     @with_network()
@@ -386,7 +364,7 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
             )
         )
         net_info = self.run_function('docker.inspect_network', [net.name])
-        self.assertIs(net_info['Ingress'], True)
+        assert net_info['Ingress'] is True
 
     @with_network(subnet='10.247.197.128/27')
     @with_network(subnet='10.247.197.96/27')
@@ -432,13 +410,11 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
                 }
             }
         }
-        self.assertEqual(ret['changes'], expected)
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes'] == expected
+        assert ret['comment'] == \
             'Network \'{0}\' was replaced with updated config'.format(
                 net1.name
             )
-        )
 
     @with_network(subnet='fe3f:2180:26:1::20/123')
     @with_network(subnet='fe3f:2180:26:1::/123')
@@ -497,10 +473,8 @@ class DockerNetworkTestCase(ModuleCase, SaltReturnAssertsMixin):
                 }
             }
         }
-        self.assertEqual(ret['changes'], expected)
-        self.assertEqual(
-            ret['comment'],
+        assert ret['changes'] == expected
+        assert ret['comment'] == \
             'Network \'{0}\' was replaced with updated config'.format(
                 ipv4_net.name
             )
-        )

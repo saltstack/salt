@@ -36,7 +36,7 @@ class TimezoneLinuxModuleTest(ModuleCase):
     def test_get_hwclock(self):
         timescale = ['UTC', 'localtime']
         ret = self.run_function('timezone.get_hwclock')
-        self.assertIn(ret, timescale)
+        assert ret in timescale
 
 
 class TimezoneSolarisModuleTest(ModuleCase):
@@ -52,7 +52,7 @@ class TimezoneSolarisModuleTest(ModuleCase):
     def test_get_hwclock(self):
         timescale = ['UTC', 'localtime']
         ret = self.run_function('timezone.get_hwclock')
-        self.assertIn(ret, timescale)
+        assert ret in timescale
 
 
 @skipIf(not salt.utils.platform.is_windows(), 'windows test only')
@@ -68,7 +68,7 @@ class TimezoneWindowsModuleTest(ModuleCase):
     def test_get_hwclock(self):
         timescale = ['UTC', 'localtime']
         ret = self.run_function('timezone.get_hwclock')
-        self.assertIn(ret, timescale)
+        assert ret in timescale
 
     @pytest.mark.destructive_test
     def test_get_zone(self):
@@ -93,4 +93,4 @@ class TimezoneWindowsModuleTest(ModuleCase):
         test timezone.get_offset
         '''
         ret = self.run_function('timezone.get_offset')
-        self.assertIn('-', ret)
+        assert '-' in ret

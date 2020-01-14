@@ -44,15 +44,15 @@ class SchedulerSkipTest(SchedulerTestsBase):
         # Run 11/29/2017 at 4pm
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_skip_reason'], 'skip_explicit')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert '_last_run' not in ret
+        assert ret['_skip_reason'] == 'skip_explicit'
+        assert ret['_skipped_time'] == run_time
 
         # Run 11/29/2017 at 5pm
         run_time = dateutil_parser.parse('11/29/2017 5:00pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_skip_during_range(self):
         '''
@@ -84,15 +84,15 @@ class SchedulerSkipTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 2:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert '_last_run' not in ret
+        assert ret['_skip_reason'] == 'in_skip_range'
+        assert ret['_skipped_time'] == run_time
 
         # eval at 3:30pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_skip_during_range_invalid_datestring(self):
         '''
@@ -141,7 +141,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         _expected = ('Invalid date string for start in '
                      'skip_during_range. Ignoring '
                      'job {0}.').format(job_name1)
-        self.assertEqual(ret['_error'], _expected)
+        assert ret['_error'] == _expected
 
         # Clear out schedule
         self.schedule.opts['schedule'] = {}
@@ -157,7 +157,7 @@ class SchedulerSkipTest(SchedulerTestsBase):
         _expected = ('Invalid date string for end in '
                      'skip_during_range. Ignoring '
                      'job {0}.').format(job_name2)
-        self.assertEqual(ret['_error'], _expected)
+        assert ret['_error'] == _expected
 
     def test_skip_during_range_global(self):
         '''
@@ -189,15 +189,15 @@ class SchedulerSkipTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 2:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert '_last_run' not in ret
+        assert ret['_skip_reason'] == 'in_skip_range'
+        assert ret['_skipped_time'] == run_time
 
         # eval at 3:30pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_run_after_skip_range(self):
         '''
@@ -225,15 +225,15 @@ class SchedulerSkipTest(SchedulerTestsBase):
         run_time = dateutil_parser.parse('11/29/2017 2:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertNotIn('_last_run', ret)
-        self.assertEqual(ret['_skip_reason'], 'in_skip_range')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert '_last_run' not in ret
+        assert ret['_skip_reason'] == 'in_skip_range'
+        assert ret['_skipped_time'] == run_time
 
         # eval at 3:00:01pm, will run.
         run_time = dateutil_parser.parse('11/29/2017 3:00:01pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertEqual(ret['_last_run'], run_time)
+        assert ret['_last_run'] == run_time
 
     def test_run_seconds_skip(self):
         '''
@@ -268,12 +268,12 @@ class SchedulerSkipTest(SchedulerTestsBase):
                                           'time_fmt': '%Y-%m-%dT%H:%M:%S'})
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertIn('_next_fire_time', ret)
-        self.assertEqual(ret['_skip_reason'], 'skip_explicit')
-        self.assertEqual(ret['_skipped_time'], run_time)
+        assert '_next_fire_time' in ret
+        assert ret['_skip_reason'] == 'skip_explicit'
+        assert ret['_skipped_time'] == run_time
 
         # Run at 2:00:30pm
         run_time = dateutil_parser.parse('11/29/2017 2:00:30pm')
         self.schedule.eval(now=run_time)
         ret = self.schedule.job_status(job_name)
-        self.assertIn('_last_run', ret)
+        assert '_last_run' in ret

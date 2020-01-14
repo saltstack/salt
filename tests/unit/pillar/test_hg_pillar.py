@@ -73,4 +73,4 @@ class HgPillarTestCase(TestCase, AdaptedConfigurationTestCaseMixin, LoaderModule
     def test_base(self):
         'check hg repo is imported correctly'
         mypillar = hg_pillar.ext_pillar('*', None, 'file://{0}'.format(self.hg_repo_path))
-        self.assertEqual(PILLAR_CONTENT, mypillar)
+        assert PILLAR_CONTENT == mypillar

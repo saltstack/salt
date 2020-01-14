@@ -40,15 +40,15 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(genesis.__salt__, {'file.directory_exists': mock}):
             mock = MagicMock(side_effect=Exception('foo'))
             with patch.dict(genesis.__salt__, {'file.mkdir': mock}):
-                self.assertEqual(genesis.bootstrap('platform', 'root'),
-                                 {'Error': exception_string})
+                assert genesis.bootstrap('platform', 'root') == \
+                                 {'Error': exception_string}
 
         with patch.object(genesis, '_bootstrap_yum', return_value='A'):
             with patch.dict(genesis.__salt__, {'mount.umount': MagicMock(),
                                                'file.rmdir': MagicMock(),
                                                'file.directory_exists': MagicMock()}):
                 with patch.dict(genesis.__salt__, {'disk.blkid': MagicMock(return_value={})}):
-                    self.assertEqual(genesis.bootstrap('rpm', 'root', 'dir'), None)
+                    assert genesis.bootstrap('rpm', 'root', 'dir') is None
 
         common_parms = {'platform': 'deb',
                         'root': 'root',
@@ -101,7 +101,7 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
                     with patch('salt.modules.genesis.salt.utils.validate.path.is_executable',
                                return_value=True):
                         param_set['params'].update(common_parms)
-                        self.assertEqual(genesis.bootstrap(**param_set['params']), None)
+                        assert genesis.bootstrap(**param_set['params']) is None
                         genesis.__salt__['cmd.run'].assert_any_call(param_set['cmd'], python_shell=False)
 
         with patch.object(genesis, '_bootstrap_pacman', return_value='A') as pacman_patch:
@@ -117,18 +117,18 @@ class GenesisTestCase(TestCase, LoaderModuleMockMixin):
         Test for Return which platforms are available
         '''
         with patch('salt.utils.path.which', MagicMock(return_value=False)):
-            self.assertFalse(genesis.avail_platforms()['deb'])
+            assert not genesis.avail_platforms()['deb']
 
     def test_pack(self):
         '''
         Test for Pack up a directory structure, into a specific format
         '''
         with patch.object(genesis, '_tar', return_value='tar'):
-            self.assertEqual(genesis.pack('name', 'root'), None)
+            assert genesis.pack('name', 'root') is None
 
     def test_unpack(self):
         '''
         Test for Unpack an image into a directory structure
         '''
         with patch.object(genesis, '_untar', return_value='untar'):
-            self.assertEqual(genesis.unpack('name', 'root'), None)
+            assert genesis.unpack('name', 'root') is None

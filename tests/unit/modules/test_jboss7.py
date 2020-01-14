@@ -62,8 +62,8 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
         self.org_run_operation.side_effect = cli_command_response
 
         result = jboss7.read_simple_binding(self.jboss_config, 'java:global/env')
-        self.assertEqual(result['outcome'], 'success')
-        self.assertEqual(result['result']['value'], 'DEV')
+        assert result['outcome'] == 'success'
+        assert result['result']['value'] == 'DEV'
 
     def test_create_datasource_all_properties_included(self):
         def cli_command_response(jboss_config, cli_command, fail_on_error=False):
@@ -188,11 +188,11 @@ class JBoss7TestCase(TestCase, LoaderModuleMockMixin):
         ds_result = jboss7.read_datasource(self.jboss_config, 'appDS')
         ds_properties = ds_result['result']
 
-        self.assertEqual(ds_properties['driver-name'], 'mysql')
-        self.assertEqual(ds_properties['connection-url'], 'jdbc:mysql://localhost:3306/app')
-        self.assertEqual(ds_properties['jndi-name'], 'java:jboss/datasources/appDS')
-        self.assertEqual(ds_properties['user-name'], 'app')
-        self.assertEqual(ds_properties['password'], 'app_password')
+        assert ds_properties['driver-name'] == 'mysql'
+        assert ds_properties['connection-url'] == 'jdbc:mysql://localhost:3306/app'
+        assert ds_properties['jndi-name'] == 'java:jboss/datasources/appDS'
+        assert ds_properties['user-name'] == 'app'
+        assert ds_properties['password'] == 'app_password'
 
     def test_update_datasource(self):
         datasource_properties = {'driver-name': 'mysql',

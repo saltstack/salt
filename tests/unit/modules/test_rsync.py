@@ -15,6 +15,7 @@ from tests.support.mock import (
 # Import Salt Libs
 import salt.modules.rsync as rsync
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+import pytest
 
 
 class RsyncTestCase(TestCase, LoaderModuleMockMixin):
@@ -30,16 +31,18 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch.dict(rsync.__salt__, {'config.option':
                                          MagicMock(return_value=False)}):
-            self.assertRaises(SaltInvocationError, rsync.rsync, '', '')
+            with pytest.raises(SaltInvocationError):
+                rsync.rsync('', '')
 
         with patch.dict(rsync.__salt__,
                         {'config.option': MagicMock(return_value='A'),
                          'cmd.run_all': MagicMock(side_effect=[OSError(1, 'f'),
                                                                'A'])}):
             with patch.object(rsync, '_check', return_value=['A']):
-                self.assertRaises(CommandExecutionError, rsync.rsync, 'a', 'b')
+                with pytest.raises(CommandExecutionError):
+                    rsync.rsync('a', 'b')
 
-                self.assertEqual(rsync.rsync('src', 'dst'), 'A')
+                assert rsync.rsync('src', 'dst') == 'A'
 
     def test_version(self):
         '''
@@ -47,9 +50,10 @@ class RsyncTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(side_effect=[OSError(1, 'f'), 'A B C\n'])
         with patch.dict(rsync.__salt__, {'cmd.run_stdout': mock}):
-            self.assertRaises(CommandExecutionError, rsync.version)
+            with pytest.raises(CommandExecutionError):
+                rsync.version()
 
-            self.assertEqual(rsync.version(), 'C')
+            assert rsync.version() == 'C'
 
     def test_rsync_excludes_list(self):
         '''

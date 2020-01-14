@@ -52,7 +52,7 @@ class PostgresClusterTestCase(TestCase, LoaderModuleMockMixin):
             '--port 5432 --locale fr_FR --encoding UTF-8 ' \
             '--datadir /opt/postgresql ' \
             '9.3 main'
-        self.assertEqual(cmdstr, self.cmd_run_all_mock.call_args[0][0])
+        assert cmdstr == self.cmd_run_all_mock.call_args[0][0]
 
     # XXX version should be a string but from cmdline you get a float
     # def test_cluster_create_with_float(self):
@@ -86,8 +86,7 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
     def test_parse_pg_lsclusters(self):
         stdout = LSCLUSTER
         self.maxDiff = None
-        self.assertDictEqual(
-            {('8.4/main'): {
+        assert {('8.4/main'): {
                 'port': 5432,
                 'status': 'online',
                 'user': 'postgres',
@@ -98,25 +97,25 @@ class PostgresLsClusterTestCase(TestCase, LoaderModuleMockMixin):
                  'status': 'online',
                  'user': 'postgres',
                  'datadir': '/srv/9.1/main',
-                 'log': '/var/log/postgresql/postgresql-9.1-main.log'}},
-            deb_postgres._parse_pg_lscluster(stdout))
+                 'log': '/var/log/postgresql/postgresql-9.1-main.log'}} == \
+            deb_postgres._parse_pg_lscluster(stdout)
 
     def test_cluster_list(self):
         return_list = deb_postgres.cluster_list()
-        self.assertEqual('/usr/bin/pg_lsclusters --no-header',
-                         self.cmd_run_all_mock.call_args[0][0])
+        assert '/usr/bin/pg_lsclusters --no-header' == \
+                         self.cmd_run_all_mock.call_args[0][0]
         if six.PY2:
             # Python 3 returns iterable views (dict_keys in this case) on
             # dict.keys() calls instead of lists. We should only perform
             # this check in Python 2.
-            self.assertIsInstance(return_list, list)
+            assert isinstance(return_list, list)
         return_dict = deb_postgres.cluster_list(verbose=True)
-        self.assertIsInstance(return_dict, dict)
+        assert isinstance(return_dict, dict)
 
     def test_cluster_exists(self):
-        self.assertTrue(deb_postgres.cluster_exists('8.4') is True)
-        self.assertTrue(deb_postgres.cluster_exists('8.4', 'main') is True)
-        self.assertFalse(deb_postgres.cluster_exists('3.4', 'main'))
+        assert deb_postgres.cluster_exists('8.4') is True
+        assert deb_postgres.cluster_exists('8.4', 'main') is True
+        assert not deb_postgres.cluster_exists('3.4', 'main')
 
 
 class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
@@ -140,8 +139,8 @@ class PostgresDeleteClusterTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_cluster_delete(self):
         deb_postgres.cluster_remove('9.3', 'main')
-        self.assertEqual('/usr/bin/pg_dropcluster 9.3 main',
-                         self.cmd_run_all_mock.call_args[0][0])
+        assert '/usr/bin/pg_dropcluster 9.3 main' == \
+                         self.cmd_run_all_mock.call_args[0][0]
         deb_postgres.cluster_remove('9.3', 'main', stop=True)
-        self.assertEqual('/usr/bin/pg_dropcluster --stop 9.3 main',
-                         self.cmd_run_all_mock.call_args[0][0])
+        assert '/usr/bin/pg_dropcluster --stop 9.3 main' == \
+                         self.cmd_run_all_mock.call_args[0][0]

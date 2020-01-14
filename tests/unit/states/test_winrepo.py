@@ -76,16 +76,16 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
                 patch.dict(winrepo.__opts__, {'test': True}):
             # With test=True
             expected.update({'comment': '', 'result': None})
-            self.assertDictEqual(winrepo.genrepo('salt'), expected)
+            assert winrepo.genrepo('salt') == expected
 
             with patch.dict(winrepo.__opts__, {'test': False}):
                 # With test=False
                 expected.update({'result': True})
-                self.assertDictEqual(winrepo.genrepo('salt'), expected)
+                assert winrepo.genrepo('salt') == expected
 
                 # Now with no changes, existing winrepo.p
                 expected.update({'changes': {'winrepo': []}})
-                self.assertDictEqual(winrepo.genrepo('salt', True), expected)
+                assert winrepo.genrepo('salt', True) == expected
 
     def test_genrepo_no_dir(self):
         '''
@@ -99,7 +99,7 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(winrepo.__opts__, {'test': False}), \
                 patch('os.path.exists', MagicMock(return_value=False)):
             ret = winrepo.genrepo('salt')
-            self.assertDictEqual(ret, expected)
+            assert ret == expected
 
     def test_genrepo_no_dir_force(self):
         '''
@@ -112,4 +112,4 @@ class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(winrepo.__opts__, {'test': False}), \
                 patch('os.path.exists', MagicMock(return_value=False)):
             ret = winrepo.genrepo('salt', force=True)
-            self.assertDictEqual(ret, expected)
+            assert ret == expected

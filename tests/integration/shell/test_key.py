@@ -20,6 +20,7 @@ from salt.ext import six
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.yaml
+import re
 
 USERA = 'saltdev'
 USERA_PWD = 'saltdev'
@@ -42,10 +43,10 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             add_user = self.run_call('user.add {0} createhome=False'.format(USERA))
             add_pwd = self.run_call('shadow.set_password {0} \'{1}\''.format(USERA,
                                     USERA_PWD if salt.utils.platform.is_darwin() else HASHED_USERA_PWD))
-            self.assertTrue(add_user)
-            self.assertTrue(add_pwd)
+            assert add_user
+            assert add_pwd
             user_list = self.run_call('user.list_users')
-            self.assertIn(USERA, six.text_type(user_list))
+            assert USERA in six.text_type(user_list)
         except AssertionError:
             self.run_call('user.delete {0} remove=True'.format(USERA))
             self.skipTest(
@@ -83,13 +84,13 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                      '''))
 
         check_key = self.run_key('-p {0}'.format(min_name))
-        self.assertIn('Accepted Keys:', check_key)
-        self.assertIn('minibar:  -----BEGIN PUBLIC KEY-----', check_key)
+        assert 'Accepted Keys:' in check_key
+        assert 'minibar:  -----BEGIN PUBLIC KEY-----' in check_key
 
         remove_key = self.run_key('-d {0} -y'.format(min_name))
 
         check_key = self.run_key('-p {0}'.format(min_name))
-        self.assertEqual([], check_key)
+        assert [] == check_key
 
     def test_list_accepted_args(self):
         '''
@@ -98,9 +99,9 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         for key in ('acc', 'pre', 'den', 'un', 'rej'):
             # These should not trigger any error
             data = self.run_key('-l {0}'.format(key), catch_stderr=True)
-            self.assertNotIn('error:', '\n'.join(data[1]))
+            assert 'error:' not in '\n'.join(data[1])
             data = self.run_key('-l foo-{0}'.format(key), catch_stderr=True)
-            self.assertIn('error:', '\n'.join(data[1]))
+            assert 'error:' in '\n'.join(data[1])
 
     def test_list_all(self):
         '''
@@ -117,7 +118,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                 'Unaccepted Keys:',
                 'Rejected Keys:'
             ]
-        self.assertEqual(data, expect)
+        assert data == expect
 
     def test_list_json_out(self):
         '''
@@ -137,7 +138,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        self.assertEqual(ret, expect)
+        assert ret == expect
 
     def test_list_yaml_out(self):
         '''
@@ -157,14 +158,14 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        self.assertEqual(ret, expect)
+        assert ret == expect
 
     def test_list_raw_out(self):
         '''
         test salt-key -L --raw-out
         '''
         data = self.run_key('-L --out raw')
-        self.assertEqual(len(data), 1)
+        assert len(data) == 1
 
         ret = {}
         try:
@@ -179,7 +180,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
                       'minions_denied': [],
                       'minions_pre': [],
                       'minions': ['minion', 'sub_minion']}
-        self.assertEqual(ret, expect)
+        assert ret == expect
 
     def test_list_acc(self):
         '''
@@ -187,7 +188,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_key('-l acc')
         expect = ['Accepted Keys:', 'minion', 'sub_minion']
-        self.assertEqual(data, expect)
+        assert data == expect
 
     @pytest.mark.skip_if_not_root
     @pytest.mark.destructive_test
@@ -198,7 +199,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self._add_user()
         data = self.run_key('-l acc --eauth pam --username {0} --password {1}'.format(USERA, USERA_PWD))
         expect = ['Accepted Keys:', 'minion', 'sub_minion']
-        self.assertEqual(data, expect)
+        assert data == expect
         self._remove_user()
 
     @pytest.mark.skip_if_not_root
@@ -210,7 +211,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         self._add_user()
         data = self.run_key('-l acc --eauth pam --username {0} --password wrongpassword'.format(USERA))
         expect = ['Authentication failure of type "eauth" occurred for user {0}.'.format(USERA)]
-        self.assertEqual(data, expect)
+        assert data == expect
         self._remove_user()
 
     def test_list_acc_wrong_eauth(self):
@@ -219,7 +220,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_key('-l acc --eauth wrongeauth --username {0} --password {1}'.format(USERA, USERA_PWD))
         expect = r"^The specified external authentication system \"wrongeauth\" is not available\tAvailable eauth types: auto, .*"
-        self.assertRegex("\t".join(data), expect)
+        assert re.search(expect, "\t".join(data))
 
     def test_list_un(self):
         '''
@@ -227,7 +228,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
         '''
         data = self.run_key('-l un')
         expect = ['Unaccepted Keys:']
-        self.assertEqual(data, expect)
+        assert data == expect
 
     def test_keys_generation(self):
         tempdir = tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
@@ -238,7 +239,7 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             if self.master_opts['transport'] in ('zeromq', 'tcp'):
                 key_names = ('minibar.pub', 'minibar.pem')
             for fname in key_names:
-                self.assertTrue(os.path.isfile(os.path.join(tempdir, fname)))
+                assert os.path.isfile(os.path.join(tempdir, fname))
         finally:
             for dirname, dirs, files in os.walk(tempdir):
                 for filename in files:
@@ -252,16 +253,12 @@ class KeyTest(ShellCase, ShellCaseCommonTestsMixin):
             data, error = self.run_key(
                 arg_str + ' --keysize=1024', catch_stderr=True
             )
-            self.assertIn(
-                'error: The minimum value for keysize is 2048', '\n'.join(error)
-            )
+            assert 'error: The minimum value for keysize is 2048' in '\n'.join(error)
 
             data, error = self.run_key(
                 arg_str + ' --keysize=32769', catch_stderr=True
             )
-            self.assertIn(
-                'error: The maximum value for keysize is 32768',
+            assert 'error: The maximum value for keysize is 32768' in \
                 '\n'.join(error)
-            )
         finally:
             shutil.rmtree(tempdir)

@@ -69,7 +69,7 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
                     'be invalid, or ports tree may need to be updated. '
                     'Error message: '.format(name))
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(ports.installed(name), ret)
+            assert ports.installed(name) == ret
 
         mock = MagicMock(return_value={})
         mock_lst = MagicMock(return_value={'origin': {'origin': name}})
@@ -77,19 +77,19 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
                                          'pkg.list_pkgs': mock_lst}):
             comt = ('security/nmap is already installed')
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(ports.installed(name), ret)
+            assert ports.installed(name) == ret
 
             comt = ('security/nmap does not have any build options,'
                     ' yet options were specified')
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(ports.installed(name, options), ret)
+            assert ports.installed(name, options) == ret
 
             mock_dict = MagicMock(return_value={'origin': {'origin': 'salt'}})
             with patch.dict(ports.__salt__, {'pkg.list_pkgs': mock_dict}):
                 with patch.dict(ports.__opts__, {'test': True}):
                     comt = ('{0} will be installed'.format(name))
                     ret.update({'comment': comt, 'result': None})
-                    self.assertDictEqual(ports.installed(name), ret)
+                    assert ports.installed(name) == ret
 
         mock = MagicMock(return_value={'salt': {'salt': 'salt'}})
         mock_dict = MagicMock(return_value={'origin': {'origin': 'salt'}})
@@ -103,24 +103,24 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
                 comt = ('The following options are not available'
                         ' for security/nmap: IPV6')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(ports.installed(name, options), ret)
+                assert ports.installed(name, options) == ret
 
                 comt = ('security/nmap will be installed with the '
                         'default build options')
                 ret.update({'comment': comt, 'result': None})
-                self.assertDictEqual(ports.installed(name), ret)
+                assert ports.installed(name) == ret
 
             with patch.dict(ports.__opts__, {'test': False}):
                 comt = ('Unable to set options for security/nmap')
                 ret.update({'comment': comt, 'result': False})
-                self.assertDictEqual(ports.installed(name, [{'salt': 'salt'}]),
-                                     ret)
+                assert ports.installed(name, [{'salt': 'salt'}]) == \
+                                     ret
 
                 with patch.object(os.path, 'isfile', mock_t):
                     with patch.object(os.path, 'isdir', mock_t):
                         comt = ('Unable to clear options for security/nmap')
                         ret.update({'comment': comt, 'result': False})
-                        self.assertDictEqual(ports.installed(name), ret)
+                        assert ports.installed(name) == ret
 
                 with patch.dict(ports.__salt__, {'ports.config': mock_t,
                                                  'ports.install': mock_t,
@@ -129,6 +129,6 @@ class PortsTestCase(TestCase, LoaderModuleMockMixin):
                             ' Error message:\nsalt')
                     ret.update({'comment': comt, 'result': False,
                                 'changes': True})
-                    self.assertDictEqual(ports.installed(name,
-                                                         [{'salt': 'salt'}]),
-                                         ret)
+                    assert ports.installed(name,
+                                                         [{'salt': 'salt'}]) == \
+                                         ret

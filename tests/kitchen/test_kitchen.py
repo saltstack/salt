@@ -59,24 +59,20 @@ def func_builder(testdir):
                 os.environ.get('TESTS_XML_OUTPUT_DIR'),
                 self.testdir,
             )
-        self.assertEqual(
-            cmd.retcode(
+        assert cmd.retcode(
                 'bundle exec kitchen converge -c 999 all',
                 cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
                 env=self.env,
                 use_vt=self.use_vt,
-            ),
+            ) == \
             0
-        )
-        self.assertEqual(
-            cmd.retcode(
+        assert cmd.retcode(
                 'bundle exec kitchen verify all',
                 cwd=os.path.join(CURRENT_DIR, 'tests', self.testdir),
                 env=self.env,
                 use_vt=self.use_vt,
-            ),
+            ) == \
             0
-        )
     return func
 
 

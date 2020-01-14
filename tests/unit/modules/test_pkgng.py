@@ -40,14 +40,14 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pkgng.__salt__, {'cmd.run_all': lock_cmd}):
 
             result = pkgng.lock('pkga')
-            self.assertTrue(result)
+            assert result
             lock_cmd.assert_called_with(
                 ['pkg', 'lock', '-y', '--quiet', '--show-locked', 'pkga'],
                 output_loglevel='trace', python_shell=False
             )
 
             result = pkgng.lock('dummy')
-            self.assertFalse(result)
+            assert not result
             lock_cmd.assert_called_with(
                 ['pkg', 'lock', '-y', '--quiet', '--show-locked', 'dummy'],
                 output_loglevel='trace', python_shell=False
@@ -65,14 +65,14 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pkgng.__salt__, {'cmd.run_all': unlock_cmd}):
 
             result = pkgng.unlock('pkga')
-            self.assertFalse(result)
+            assert not result
             unlock_cmd.assert_called_with(
                 ['pkg', 'unlock', '-y', '--quiet', '--show-locked', 'pkga'],
                 output_loglevel='trace', python_shell=False
             )
 
             result = pkgng.unlock('dummy')
-            self.assertTrue(result)
+            assert result
             unlock_cmd.assert_called_with(
                 ['pkg', 'unlock', '-y', '--quiet', '--show-locked', 'dummy'],
                 output_loglevel='trace', python_shell=False
@@ -90,14 +90,14 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pkgng.__salt__, {'cmd.run_all': lock_cmd}):
 
             result = pkgng.locked('pkga')
-            self.assertTrue(result)
+            assert result
             lock_cmd.assert_called_with(
                 ['pkg', 'lock', '-y', '--quiet', '--show-locked'],
                 output_loglevel='trace', python_shell=False
             )
 
             result = pkgng.locked('dummy')
-            self.assertFalse(result)
+            assert not result
             lock_cmd.assert_called_with(
                 ['pkg', 'lock', '-y', '--quiet', '--show-locked'],
                 output_loglevel='trace', python_shell=False
@@ -152,7 +152,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(pkgng.__salt__, {'cmd.run_stdout': pkg_cmd}):
 
             result = pkgng.list_upgrades(refresh=False)
-            self.assertDictEqual(result, {'pkga': '1.1', 'pkgb': '2.1', 'pkgc': '3.1', 'pkgd': '4.1'})
+            assert result == {'pkga': '1.1', 'pkgb': '2.1', 'pkgc': '3.1', 'pkgd': '4.1'}
             pkg_cmd.assert_called_with(
                 ['pkg', 'upgrade', '--dry-run', '--quiet', '--no-repo-update'],
                 output_loglevel='trace', python_shell=False, ignore_retcode=True
@@ -166,7 +166,7 @@ class PkgNgTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch.dict(pkgng.__salt__, {'cmd.run_stdout': pkg_cmd}):
             result = pkgng.list_upgrades(refresh=False)
-            self.assertDictEqual(result, {})
+            assert result == {}
             pkg_cmd.assert_called_with(
                 ['pkg', 'upgrade', '--dry-run', '--quiet', '--no-repo-update'],
                 output_loglevel='trace', python_shell=False, ignore_retcode=True

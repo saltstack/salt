@@ -29,6 +29,7 @@ from salt.utils.versions import LooseVersion, StrictVersion
 
 # Import 3rd-party libs
 from salt.ext import six
+import pytest
 
 if six.PY2:
     cmp_method = '__cmp__'
@@ -40,12 +41,12 @@ class VersionTestCase(TestCase):
 
     def test_prerelease(self):
         version = StrictVersion('1.2.3a1')
-        self.assertEqual(version.version, (1, 2, 3))
-        self.assertEqual(version.prerelease, ('a', 1))
-        self.assertEqual(six.text_type(version), '1.2.3a1')
+        assert version.version == (1, 2, 3)
+        assert version.prerelease == ('a', 1)
+        assert six.text_type(version) == '1.2.3a1'
 
         version = StrictVersion('1.2.0')
-        self.assertEqual(six.text_type(version), '1.2')
+        assert six.text_type(version) == '1.2'
 
     def test_cmp_strict(self):
         versions = (('1.5.1', '1.5.2b2', -1),
@@ -76,9 +77,9 @@ class VersionTestCase(TestCase):
                 else:
                     raise AssertionError(("cmp(%s, %s) "
                                           "shouldn't raise ValueError") % (v1, v2))
-            self.assertEqual(res, wanted,
-                             'cmp(%s, %s) should be %s, got %s' %
-                             (v1, v2, wanted, res))
+            assert res == wanted, \
+                             'cmp(%s, %s) should be %s, got %s' % \
+                             (v1, v2, wanted, res)
 
     def test_cmp(self):
         versions = (('1.5.1', '1.5.2b2', -1),
@@ -96,9 +97,9 @@ class VersionTestCase(TestCase):
 
         for v1, v2, wanted in versions:
             res = getattr(LooseVersion(v1), cmp_method)(LooseVersion(v2))
-            self.assertEqual(res, wanted,
-                             'cmp(%s, %s) should be %s, got %s' %
-                             (v1, v2, wanted, res))
+            assert res == wanted, \
+                             'cmp(%s, %s) should be %s, got %s' % \
+                             (v1, v2, wanted, res)
 
     @skipIf(not salt.utils.platform.is_linux(), 'only need to run on linux')
     def test_spelling_version_name(self):
@@ -127,28 +128,29 @@ class VersionTestCase(TestCase):
                 # work around for utils/__init__.py because
                 # it includes the warn_utils function
                 match = match + 1
-            self.assertEqual(match, int(num_cmd), msg='The file: {0} has an '
-                             'incorrect spelling for the release name in the warn_utils '
-                             'call: {1}. Expecting one of these release names: '
-                             '{2}'.format(line, ver_cmd, names))
+            assert match == int(num_cmd), 'The file: {0} has an ' \
+                             'incorrect spelling for the release name in the warn_utils ' \
+                             'call: {1}. Expecting one of these release names: ' \
+                             '{2}'.format(line, ver_cmd, names)
 
 
 class VersionFuncsTestCase(TestCase):
 
     def test_compare(self):
         ret = salt.utils.versions.compare('1.0', '==', '1.0')
-        self.assertTrue(ret)
+        assert ret
 
         ret = salt.utils.versions.compare('1.0', '!=', '1.0')
-        self.assertFalse(ret)
+        assert not ret
 
         with patch.object(salt.utils.versions, 'log') as log_mock:
             ret = salt.utils.versions.compare('1.0', 'HAH I AM NOT A COMP OPERATOR! I AM YOUR FATHER!', '1.0')
-            self.assertTrue(log_mock.error.called)
+            assert log_mock.error.called
 
     def test_kwargs_warn_until(self):
         # Test invalid version arg
-        self.assertRaises(RuntimeError, salt.utils.versions.kwargs_warn_until, {}, [])
+        with pytest.raises(RuntimeError):
+            salt.utils.versions.kwargs_warn_until({}, [])
 
     def test_warn_until_warning_raised(self):
         # We *always* want *all* warnings thrown on this module
@@ -170,16 +172,12 @@ class VersionFuncsTestCase(TestCase):
         # raise_warning should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_warning()
-            self.assertEqual(
-                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-            )
+            assert 'Deprecation Message!' == six.text_type(recorded_warnings[0].message)
 
         # raise_warning should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_named_version_warning()
-            self.assertEqual(
-                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-            )
+            assert 'Deprecation Message!' == six.text_type(recorded_warnings[0].message)
 
         # the deprecation warning is not issued because we passed
         # _dont_call_warning
@@ -188,21 +186,17 @@ class VersionFuncsTestCase(TestCase):
                 (0, 17), 'Foo', _dont_call_warnings=True,
                 _version_info_=(0, 16)
             )
-            self.assertEqual(0, len(recorded_warnings))
+            assert 0 == len(recorded_warnings)
 
         # Let's set version info to (0, 17), a RuntimeError should be raised
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'The warning triggered on filename \'(.*)test_versions.py\', '
+        with pytest.raises(RuntimeError, match=r'The warning triggered on filename \'(.*)test_versions.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
             raise_warning(_version_info_=(0, 17, 0))
 
         # Let's set version info to (0, 17), a RuntimeError should be raised
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'The warning triggered on filename \'(.*)test_versions.py\', '
+        with pytest.raises(RuntimeError, match=r'The warning triggered on filename \'(.*)test_versions.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'(.*) is released. Current version is now '
                 r'([\d.]+). Please remove the warning.'):
@@ -210,9 +204,7 @@ class VersionFuncsTestCase(TestCase):
 
         # Even though we're calling warn_until, we pass _dont_call_warnings
         # because we're only after the RuntimeError
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'The warning triggered on filename \'(.*)test_versions.py\', '
+        with pytest.raises(RuntimeError, match=r'The warning triggered on filename \'(.*)test_versions.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now '
                 r'(.*). Please remove the warning.'):
@@ -220,9 +212,7 @@ class VersionFuncsTestCase(TestCase):
                 (0, 17), 'Foo', _dont_call_warnings=True
             )
 
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'The warning triggered on filename \'(.*)test_versions.py\', '
+        with pytest.raises(RuntimeError, match=r'The warning triggered on filename \'(.*)test_versions.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'(.*) is released. Current version is now '
                 r'(.*). Please remove the warning.'):
@@ -238,10 +228,8 @@ class VersionFuncsTestCase(TestCase):
                 'Helium', 'Deprecation Message until {version}!',
                 _version_info_=(vrs.major - 1, 0)
             )
-            self.assertEqual(
-                'Deprecation Message until {0}!'.format(vrs.formatted_version),
+            assert 'Deprecation Message until {0}!'.format(vrs.formatted_version) == \
                 six.text_type(recorded_warnings[0].message)
-            )
 
     def test_kwargs_warn_until_warning_raised(self):
         # We *always* want *all* warnings thrown on this module
@@ -258,11 +246,9 @@ class VersionFuncsTestCase(TestCase):
         # raise_warning({...}) should show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             raise_warning(foo=42)  # with a kwarg
-            self.assertEqual(
-                'The following parameter(s) have been deprecated and '
-                'will be removed in \'0.17.0\': \'foo\'.',
+            assert 'The following parameter(s) have been deprecated and ' \
+                'will be removed in \'0.17.0\': \'foo\'.' == \
                 six.text_type(recorded_warnings[0].message)
-            )
         # With no **kwargs, should not show warning until version info is >= (0, 17)
         with warnings.catch_warnings(record=True) as recorded_warnings:
             salt.utils.versions.kwargs_warn_until(
@@ -270,21 +256,17 @@ class VersionFuncsTestCase(TestCase):
                 (0, 17),
                 _version_info_=(0, 16, 0)
             )
-            self.assertEqual(0, len(recorded_warnings))
+            assert 0 == len(recorded_warnings)
 
         # Let's set version info to (0, 17), a RuntimeError should be raised
         # regardless of whether or not we pass any **kwargs.
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'The warning triggered on filename \'(.*)test_versions.py\', '
+        with pytest.raises(RuntimeError, match=r'The warning triggered on filename \'(.*)test_versions.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
             raise_warning(_version_info_=(0, 17))  # no kwargs
 
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'The warning triggered on filename \'(.*)test_versions.py\', '
+        with pytest.raises(RuntimeError, match=r'The warning triggered on filename \'(.*)test_versions.py\', '
                 r'line number ([\d]+), is supposed to be shown until version '
                 r'0.17.0 is released. Current version is now 0.17.0. '
                 r'Please remove the warning.'):
@@ -303,9 +285,7 @@ class VersionFuncsTestCase(TestCase):
                 'Deprecation Message!',
                 _current_date=_current_date
             )
-            self.assertEqual(
-                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-            )
+            assert 'Deprecation Message!' == six.text_type(recorded_warnings[0].message)
 
         # Test warning with datetime.datetime instance
         with warnings.catch_warnings(record=True) as recorded_warnings:
@@ -314,9 +294,7 @@ class VersionFuncsTestCase(TestCase):
                 'Deprecation Message!',
                 _current_date=_current_date
             )
-            self.assertEqual(
-                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-            )
+            assert 'Deprecation Message!' == six.text_type(recorded_warnings[0].message)
 
         # Test warning with date as a string
         with warnings.catch_warnings(record=True) as recorded_warnings:
@@ -325,9 +303,7 @@ class VersionFuncsTestCase(TestCase):
                 'Deprecation Message!',
                 _current_date=_current_date
             )
-            self.assertEqual(
-                'Deprecation Message!', six.text_type(recorded_warnings[0].message)
-            )
+            assert 'Deprecation Message!' == six.text_type(recorded_warnings[0].message)
 
         # the deprecation warning is not issued because we passed
         # _dont_call_warning
@@ -338,12 +314,10 @@ class VersionFuncsTestCase(TestCase):
                 _dont_call_warnings=True,
                 _current_date=_current_date
             )
-            self.assertEqual(0, len(recorded_warnings))
+            assert 0 == len(recorded_warnings)
 
         # Let's test for RuntimeError raise
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'Deprecation Message! This warning\(now exception\) triggered on '
+        with pytest.raises(RuntimeError, match=r'Deprecation Message! This warning\(now exception\) triggered on '
                 r'filename \'(.*)test_versions.py\', line number ([\d]+), is '
                 r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
                 r'Please remove the warning.'):
@@ -351,9 +325,7 @@ class VersionFuncsTestCase(TestCase):
 
         # Even though we're calling warn_until_date, we pass _dont_call_warnings
         # because we're only after the RuntimeError
-        with self.assertRaisesRegex(
-                RuntimeError,
-                r'Deprecation Message! This warning\(now exception\) triggered on '
+        with pytest.raises(RuntimeError, match=r'Deprecation Message! This warning\(now exception\) triggered on '
                 r'filename \'(.*)test_versions.py\', line number ([\d]+), is '
                 r'supposed to be shown until ([\d-]+). Today is ([\d-]+). '
                 r'Please remove the warning.'):
@@ -369,7 +341,5 @@ class VersionFuncsTestCase(TestCase):
         warnings.filterwarnings('always', '', DeprecationWarning, __name__)
 
         # Let's test for RuntimeError raise
-        with self.assertRaisesRegex(
-                ValueError,
-                'time data \'0022\' does not match format \'%Y%m%d\''):
+        with pytest.raises(ValueError, match='time data \'0022\' does not match format \'%Y%m%d\''):
             salt.utils.versions.warn_until_date('0022', 'Deprecation Message!')

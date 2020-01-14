@@ -81,7 +81,7 @@ class AutoKeyTest(TestCase):
         Assert that all files are accepted on windows
         '''
         self.stats['testfile'] = {'mode': gen_permissions('rwx', 'rwx', 'rwx'), 'gid': 2}
-        self.assertTrue(self.auto_key.check_permissions('testfile'))
+        assert self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions(permissive_pki=True)
     def test_check_permissions_others_can_write(self):
@@ -90,9 +90,9 @@ class AutoKeyTest(TestCase):
         '''
         self.stats['testfile'] = {'mode': gen_permissions('', '', 'w'), 'gid': 1}
         if salt.utils.platform.is_windows():
-            self.assertTrue(self.auto_key.check_permissions('testfile'))
+            assert self.auto_key.check_permissions('testfile')
         else:
-            self.assertFalse(self.auto_key.check_permissions('testfile'))
+            assert not self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions()
     def test_check_permissions_group_can_write_not_permissive(self):
@@ -101,9 +101,9 @@ class AutoKeyTest(TestCase):
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
         if salt.utils.platform.is_windows():
-            self.assertTrue(self.auto_key.check_permissions('testfile'))
+            assert self.auto_key.check_permissions('testfile')
         else:
-            self.assertFalse(self.auto_key.check_permissions('testfile'))
+            assert not self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions(permissive_pki=True)
     def test_check_permissions_group_can_write_permissive(self):
@@ -111,7 +111,7 @@ class AutoKeyTest(TestCase):
         Assert that a file is accepted, when group can write to it and perkissive_pki_access=True
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
-        self.assertTrue(self.auto_key.check_permissions('testfile'))
+        assert self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions(uid=0, permissive_pki=True)
     def test_check_permissions_group_can_write_permissive_root_in_group(self):
@@ -120,7 +120,7 @@ class AutoKeyTest(TestCase):
         salt is root and in the file owning group
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 0}
-        self.assertTrue(self.auto_key.check_permissions('testfile'))
+        assert self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions(uid=0, permissive_pki=True)
     def test_check_permissions_group_can_write_permissive_root_not_in_group(self):
@@ -130,9 +130,9 @@ class AutoKeyTest(TestCase):
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', 'w', ''), 'gid': 1}
         if salt.utils.platform.is_windows():
-            self.assertTrue(self.auto_key.check_permissions('testfile'))
+            assert self.auto_key.check_permissions('testfile')
         else:
-            self.assertFalse(self.auto_key.check_permissions('testfile'))
+            assert not self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions()
     def test_check_permissions_only_owner_can_write(self):
@@ -140,7 +140,7 @@ class AutoKeyTest(TestCase):
         Assert that a file is accepted, when only the owner can write to it
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', '', ''), 'gid': 1}
-        self.assertTrue(self.auto_key.check_permissions('testfile'))
+        assert self.auto_key.check_permissions('testfile')
 
     @patch_check_permissions(uid=0)
     def test_check_permissions_only_owner_can_write_root(self):
@@ -148,7 +148,7 @@ class AutoKeyTest(TestCase):
         Assert that a file is accepted, when only the owner can write to it and salt is root
         '''
         self.stats['testfile'] = {'mode': gen_permissions('w', '', ''), 'gid': 0}
-        self.assertTrue(self.auto_key.check_permissions('testfile'))
+        assert self.auto_key.check_permissions('testfile')
 
     def _test_check_autosign_grains(self,
                                     test_func,
@@ -180,15 +180,15 @@ class AutoKeyTest(TestCase):
         Asserts that autosigning from grains fails when no grain values are passed.
         '''
         def test_func(mock_walk, mock_open, mock_permissions):
-            self.assertFalse(self.auto_key.check_autosign_grains(None))
-            self.assertEqual(mock_walk.call_count, 0)
-            self.assertEqual(mock_open.call_count, 0)
-            self.assertEqual(mock_permissions.call_count, 0)
+            assert not self.auto_key.check_autosign_grains(None)
+            assert mock_walk.call_count == 0
+            assert mock_open.call_count == 0
+            assert mock_permissions.call_count == 0
 
-            self.assertFalse(self.auto_key.check_autosign_grains({}))
-            self.assertEqual(mock_walk.call_count, 0)
-            self.assertEqual(mock_open.call_count, 0)
-            self.assertEqual(mock_permissions.call_count, 0)
+            assert not self.auto_key.check_autosign_grains({})
+            assert mock_walk.call_count == 0
+            assert mock_open.call_count == 0
+            assert mock_permissions.call_count == 0
 
         self._test_check_autosign_grains(test_func)
 
@@ -198,10 +198,10 @@ class AutoKeyTest(TestCase):
         is undefined.
         '''
         def test_func(mock_walk, mock_open, mock_permissions):
-            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
-            self.assertEqual(mock_walk.call_count, 0)
-            self.assertEqual(mock_open.call_count, 0)
-            self.assertEqual(mock_permissions.call_count, 0)
+            assert not self.auto_key.check_autosign_grains({'test_grain': 'test_value'})
+            assert mock_walk.call_count == 0
+            assert mock_open.call_count == 0
+            assert mock_permissions.call_count == 0
 
         self._test_check_autosign_grains(test_func, autosign_grains_dir=None)
 
@@ -211,7 +211,7 @@ class AutoKeyTest(TestCase):
         autosign_grain file.
         '''
         def test_func(*args):
-            self.assertTrue(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
+            assert self.auto_key.check_autosign_grains({'test_grain': 'test_value'})
 
         file_content = '#test_ignore\ntest_value'
         self._test_check_autosign_grains(test_func, file_content=file_content)
@@ -222,7 +222,7 @@ class AutoKeyTest(TestCase):
         autosign_grain files.
         '''
         def test_func(*args):
-            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_invalid'}))
+            assert not self.auto_key.check_autosign_grains({'test_grain': 'test_invalid'})
 
         file_content = '#test_invalid\ntest_value'
         self._test_check_autosign_grains(test_func, file_content=file_content)
@@ -232,7 +232,7 @@ class AutoKeyTest(TestCase):
         Asserts that autosigning from grains fails when the grain file has the wrong permissions.
         '''
         def test_func(*args):
-            self.assertFalse(self.auto_key.check_autosign_grains({'test_grain': 'test_value'}))
+            assert not self.auto_key.check_autosign_grains({'test_grain': 'test_value'})
 
         file_content = '#test_ignore\ntest_value'
         self._test_check_autosign_grains(test_func, file_content=file_content, permissions_ret=False)
@@ -256,7 +256,7 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'TokenAuthenticationError',
                               'message': 'Authentication failure of type "token" occurred.'}}
         ret = self.local_funcs.runner({'token': 'asdfasdfasdfasdf'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_token_authorization_error(self):
         '''
@@ -274,7 +274,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.local_funcs.runner(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_token_salt_invocation_error(self):
         '''
@@ -291,7 +291,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.local_funcs.runner(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_eauth_not_authenticated(self):
         '''
@@ -301,7 +301,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authentication failure of type "eauth" occurred for '
                                          'user UNKNOWN.'}}
         ret = self.local_funcs.runner({'eauth': 'foo'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_eauth_authorization_error(self):
         '''
@@ -316,7 +316,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.local_funcs.runner(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_runner_eauth_salt_invocation_error(self):
         '''
@@ -330,7 +330,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.local_funcs.runner(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     # wheel tests
 
@@ -341,7 +341,7 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'TokenAuthenticationError',
                               'message': 'Authentication failure of type "token" occurred.'}}
         ret = self.local_funcs.wheel({'token': 'asdfasdfasdfasdf'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_token_authorization_error(self):
         '''
@@ -359,7 +359,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.local_funcs.wheel(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_token_salt_invocation_error(self):
         '''
@@ -376,7 +376,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.local_funcs.wheel(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_eauth_not_authenticated(self):
         '''
@@ -386,7 +386,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authentication failure of type "eauth" occurred for '
                                          'user UNKNOWN.'}}
         ret = self.local_funcs.wheel({'eauth': 'foo'})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_eauth_authorization_error(self):
         '''
@@ -401,7 +401,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
             ret = self.local_funcs.wheel(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_eauth_salt_invocation_error(self):
         '''
@@ -415,7 +415,7 @@ class LocalFuncsTestCase(TestCase):
              patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=['testing'])):
             ret = self.local_funcs.wheel(load)
 
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     def test_wheel_user_not_authenticated(self):
         '''
@@ -425,7 +425,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authentication failure of type "user" occurred for '
                                          'user UNKNOWN.'}}
         ret = self.local_funcs.wheel({})
-        self.assertDictEqual(mock_ret, ret)
+        assert mock_ret == ret
 
     # publish tests
 
@@ -436,7 +436,7 @@ class LocalFuncsTestCase(TestCase):
         mock_ret = {'error': {'name': 'AuthorizationError',
                               'message': 'Authorization error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=True)):
-            self.assertEqual(mock_ret, self.local_funcs.publish({'user': 'foo', 'fun': 'test.arg'}))
+            assert mock_ret == self.local_funcs.publish({'user': 'foo', 'fun': 'test.arg'})
 
     def test_publish_cmd_blacklisted(self):
         '''
@@ -446,7 +446,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authorization error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=True)):
-            self.assertEqual(mock_ret, self.local_funcs.publish({'user': 'foo', 'fun': 'test.arg'}))
+            assert mock_ret == self.local_funcs.publish({'user': 'foo', 'fun': 'test.arg'})
 
     def test_publish_token_not_authenticated(self):
         '''
@@ -458,7 +458,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authentication error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
     def test_publish_token_authorization_error(self):
         '''
@@ -476,7 +476,7 @@ class LocalFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_token', MagicMock(return_value=mock_token)), \
                 patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
     def test_publish_eauth_not_authenticated(self):
         '''
@@ -488,7 +488,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authentication error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
     def test_publish_eauth_authorization_error(self):
         '''
@@ -503,7 +503,7 @@ class LocalFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_eauth', MagicMock(return_value=True)), \
                 patch('salt.auth.LoadAuth.get_auth_list', MagicMock(return_value=[])):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
     def test_publish_user_not_authenticated(self):
         '''
@@ -514,7 +514,7 @@ class LocalFuncsTestCase(TestCase):
                               'message': 'Authentication error occurred.'}}
         with patch('salt.acl.PublisherACL.user_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
     def test_publish_user_authenticated_missing_auth_list(self):
         '''
@@ -529,7 +529,7 @@ class LocalFuncsTestCase(TestCase):
                 patch('salt.acl.PublisherACL.cmd_is_blacklisted', MagicMock(return_value=False)), \
                 patch('salt.auth.LoadAuth.authenticate_key', MagicMock(return_value='fake-user-key')), \
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=[])):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
     def test_publish_user_authorization_error(self):
         '''
@@ -545,7 +545,7 @@ class LocalFuncsTestCase(TestCase):
                 patch('salt.auth.LoadAuth.authenticate_key', MagicMock(return_value='fake-user-key')), \
                 patch('salt.utils.master.get_values_of_matching_keys', MagicMock(return_value=['test'])), \
                 patch('salt.utils.minions.CkMinions.auth_check', MagicMock(return_value=False)):
-            self.assertEqual(mock_ret, self.local_funcs.publish(load))
+            assert mock_ret == self.local_funcs.publish(load)
 
 
 class FakeCache(object):
@@ -593,7 +593,7 @@ class RemoteFuncsTestCase(TestCase):
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(ret, dict(webserver='2001:db8::1:3'))
+        assert ret == dict(webserver='2001:db8::1:3')
 
     def test_mine_get_pre_nitrogen_compat(self):
         '''
@@ -627,7 +627,7 @@ class RemoteFuncsTestCase(TestCase):
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
+        assert ret == dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1'))
 
     def test_mine_get_dict_list(self, tgt_type_key='tgt_type'):
         '''
@@ -653,7 +653,7 @@ class RemoteFuncsTestCase(TestCase):
                     tgt_type_key: 'compound',
                 }
             )
-        self.assertDictEqual(ret, dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1')))
+        assert ret == dict(ip_addr=dict(webserver='2001:db8::1:3'), ip4_addr=dict(webserver='127.0.0.1'))
 
     def test_mine_get_acl_allowed(self):
         '''
@@ -689,10 +689,8 @@ class RemoteFuncsTestCase(TestCase):
                     'fun': ['ip_addr'],
                 }
             )
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {'ip_addr': {'webserver': '2001:db8::1:4'}}
-        )
 
     def test_mine_get_acl_rejected(self):
         '''
@@ -729,7 +727,5 @@ class RemoteFuncsTestCase(TestCase):
                     'fun': ['ip_addr'],
                 }
             )
-        self.assertDictEqual(
-            ret,
+        assert ret == \
             {}
-        )

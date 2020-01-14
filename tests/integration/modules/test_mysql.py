@@ -90,22 +90,16 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
             name=db_name,
             **kwargs
         )
-        self.assertEqual(
-            True,
-            ret,
+        assert ret is True, \
             'Problem while creating db for db name: \'{0}\''.format(db_name)
-        )
         # test db exists
         ret = self.run_function(
             'mysql.db_exists',
             name=db_name,
             **kwargs
         )
-        self.assertEqual(
-            True,
-            ret,
+        assert ret is True, \
             'Problem while testing db exists for db name: \'{0}\''.format(db_name)
-        )
         # List db names to ensure db is created with the right utf8 string
         ret = self.run_function(
             'mysql.db_list',
@@ -119,14 +113,13 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                          db_name
                     )
                 )
-        self.assertIn(
-            returning_name,
-            ret,
+        assert returning_name in \
+            ret, \
             ('Problem while testing presence of db name in db lists'
              ' for db name: \'{0}\' in list \'{1}\'').format(
                           db_name,
                           ret
-        ))
+        )
 
         if test_conn:
             # test connections on database with root user
@@ -143,7 +136,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                         repr(db_name)
                     )
                 )
-            self.assertEqual([['1']], ret['results'])
+            assert [['1']] == ret['results']
 
         # Now remove database
         ret = self.run_function(
@@ -151,11 +144,8 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
             name=db_name,
             **kwargs
         )
-        self.assertEqual(
-            True,
-            ret,
+        assert ret is True, \
             'Problem while removing db for db name: \'{0}\''.format(db_name)
-        )
 
     @pytest.mark.destructive_test
     def test_database_creation_level1(self):
@@ -182,7 +172,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         # test db exists
         ret = self.run_function(
           'mysql.db_exists',
@@ -190,7 +180,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         # redoing the same should fail
         # even with other character sets or collations
         ret = self.run_function(
@@ -201,7 +191,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(False, ret)
+        assert ret is False
         # redoing the same should fail
         ret = self.run_function(
           'mysql.db_create',
@@ -211,7 +201,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(False, ret)
+        assert ret is False
         # Now remove database
         ret = self.run_function(
           'mysql.db_remove',
@@ -219,7 +209,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
 
         # '''''''
         # create
@@ -271,42 +261,42 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         ret = self.run_function(
           'mysql.db_create',
           name=db_name2,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         ret = self.run_function(
           'mysql.db_remove',
           name=db_name1,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         ret = self.run_function(
             'mysql.db_exists',
             name=db_name1,
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(False, ret)
+        assert ret is False
         ret = self.run_function(
             'mysql.db_exists',
             name=db_name2,
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         ret = self.run_function(
           'mysql.db_remove',
           name=db_name2,
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
 
     @pytest.mark.destructive_test
     def test_database_creation_utf8(self):
@@ -383,7 +373,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         # test db exists
         ret = self.run_function(
           'mysql.db_exists',
@@ -391,7 +381,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
         # Create 3 tables
         tablenames = {'A%table "`1': 'MYISAM',
                       'B%table \'`2': 'InnoDB',
@@ -434,7 +424,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                          ret,
                     )
                 )
-            self.assertEqual(ret['rows affected'], 0)
+            assert ret['rows affected'] == 0
             log.info('Populating table \'%s\'', tablename)
             ret = self.run_function(
               'mysql.query',
@@ -451,7 +441,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                          ret,
                     )
                 )
-            self.assertEqual(ret['rows affected'], 101)
+            assert ret['rows affected'] == 101
             log.info('Removing some rows on table\'%s\'', tablename)
             ret = self.run_function(
               'mysql.query',
@@ -468,7 +458,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                          ret,
                     )
                 )
-            self.assertEqual(ret['rows affected'], 50)
+            assert ret['rows affected'] == 50
         # test check/repair/opimize on 1 table
         tablename = 'A%table "`1'
         ret = self.run_function(
@@ -479,11 +469,10 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename,
+        assert ret == [{'Table': dbname+'.'+tablename,
                                 'Msg_text': 'OK',
                                 'Msg_type': 'status',
                                 'Op': 'check'}]
-        )
         ret = self.run_function(
           'mysql.db_repair',
           name=dbname,
@@ -492,11 +481,10 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename,
+        assert ret == [{'Table': dbname+'.'+tablename,
                                 'Msg_text': 'OK',
                                 'Msg_type': 'status',
                                 'Op': 'repair'}]
-        )
         ret = self.run_function(
           'mysql.db_optimize',
           name=dbname,
@@ -505,11 +493,10 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_pass=self.password
         )
         # Note that returned result does not quote_identifier of table and db
-        self.assertEqual(ret, [{'Table': dbname+'.'+tablename,
+        assert ret == [{'Table': dbname+'.'+tablename,
                                 'Msg_text': 'OK',
                                 'Msg_type': 'status',
                                 'Op': 'optimize'}]
-        )
 
         # test check/repair/opimize on all tables
         ret = self.run_function(
@@ -535,7 +522,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                     'Msg_type': 'status',
                     'Op': 'check'
                 }])
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         ret = self.run_function(
           'mysql.db_repair',
@@ -560,7 +547,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                     'Msg_type': 'note',
                     'Op': 'repair'
                 }])
-        self.assertEqual(ret, expected)
+        assert ret == expected
 
         ret = self.run_function(
           'mysql.db_optimize',
@@ -600,7 +587,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
                     'Msg_type': 'note',
                     'Op': 'optimize'
                 }])
-        self.assertEqual(ret, expected)
+        assert ret == expected
         # Teardown, remove database
         ret = self.run_function(
           'mysql.db_remove',
@@ -608,7 +595,7 @@ class MysqlModuleDbTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertEqual(True, ret)
+        assert ret is True
 
 
 @skipIf(
@@ -683,11 +670,11 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             password=password,
             **kwargs
         )
-        self.assertEqual(True, ret, ('Calling user_create on'
+        assert ret is True, ('Calling user_create on'
             ' user \'{0}\' did not return True: {1}').format(
             uname,
             repr(ret)
-        ))
+        )
         # double creation failure
         ret = self.run_function(
             'mysql.user_create',
@@ -696,11 +683,11 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             password=password,
             **kwargs
         )
-        self.assertEqual(False, ret, ('Calling user_create a second time on'
+        assert ret is False, ('Calling user_create a second time on'
             ' user \'{0}\' did not return False: {1}').format(
             uname,
             repr(ret)
-        ))
+        )
         # Alter password
         if new_password is not None or new_password_hash is not None:
             ret = self.run_function(
@@ -714,11 +701,11 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
                 connection_charset='utf8',
                 saltenv={"LC_ALL": "en_US.utf8"}
             )
-            self.assertEqual(True, ret, ('Calling user_chpass on'
+            assert ret is True, ('Calling user_chpass on'
                 ' user \'{0}\' did not return True: {1}').format(
                 uname,
                 repr(ret)
-            ))
+            )
 
     def _chck_userinfo(self, user, host, check_user, check_hash):
         '''
@@ -738,9 +725,9 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
                 'Unexpected result while retrieving user_info for '
                 '\'{0}\''.format(user)
             )
-        self.assertEqual(ret['Host'], host)
-        self.assertEqual(ret['Password'], check_hash)
-        self.assertEqual(ret['User'], check_user)
+        assert ret['Host'] == host
+        assert ret['Password'] == check_hash
+        assert ret['User'] == check_user
 
     def _chk_remove_user(self, user, host, **kwargs):
         '''
@@ -752,12 +739,12 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             host=host,
             **kwargs
         )
-        self.assertEqual(True, ret, ('Assertion failed  while removing user'
+        assert ret is True, ('Assertion failed  while removing user'
             ' \'{0}\' on host \'{1}\': {2}').format(
             user,
             host,
             repr(ret)
-        ))
+        )
 
     @pytest.mark.destructive_test
     def test_user_management(self):
@@ -816,9 +803,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' existence failed').format(user1, 'localhost')
-        )
 
         self._userCreationLoop(
             uname=user2,
@@ -865,9 +851,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' failed').format(user2, 'localhost')
-        )
         ret = self.run_function(
             'mysql.user_exists',
             user=user2,
@@ -878,9 +863,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' without password failed').format(user2, '10.0.0.1')
-        )
         ret = self.run_function(
             'mysql.user_exists',
             user=user2,
@@ -892,9 +876,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' without password failed').format(user2, '10.0.0.2')
-        )
 
         # Empty password is not passwordless (or is it a bug?)
         self._userCreationLoop(
@@ -922,9 +905,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' without empty password failed').format(user3, 'localhost')
-        )
         ret = self.run_function(
             'mysql.user_exists',
             user=user3,
@@ -933,9 +915,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' with password failed').format(user3, '%')
-        )
 
         # check unicode name, and password > password_hash
         self._userCreationLoop(
@@ -960,10 +941,9 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' with password take from password and not password_hash'
             ' failed').format(user4_utf8, '%')
-        )
         self._userCreationLoop(
             uname=user5,
             host='localhost',
@@ -985,9 +965,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' with utf8 password failed').format(user5_utf8, 'localhost')
-        )
         # for this one we give password in unicode and check it in utf-8
         self._userCreationLoop(
             uname=user6,
@@ -1010,9 +989,8 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertEqual(True, ret, ('Testing final user \'{0}\' on host \'{1}\''
+        assert ret is True, ('Testing final user \'{0}\' on host \'{1}\''
             ' with unicode password failed').format(user6_utf8, '10.0.0.1')
-        )
         # Final result should be:
         # mysql> select Host, User, Password from user where user like 'user%';
         # +--------------------+-----------+-------------------------------+
@@ -1081,15 +1059,15 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertIn({'Host': 'localhost', 'User': user1}, ret)
-        self.assertIn({'Host': 'localhost', 'User': user2}, ret)
-        self.assertIn({'Host': '10.0.0.1', 'User': user2}, ret)
-        self.assertIn({'Host': '10.0.0.2', 'User': user2}, ret)
-        self.assertIn({'Host': '%', 'User': user3}, ret)
-        self.assertIn({'Host': 'localhost', 'User': user3}, ret)
-        self.assertIn({'Host': '%', 'User': user4_utf8}, ret)
-        self.assertIn({'Host': 'localhost', 'User': user5_utf8}, ret)
-        self.assertIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
+        assert {'Host': 'localhost', 'User': user1} in ret
+        assert {'Host': 'localhost', 'User': user2} in ret
+        assert {'Host': '10.0.0.1', 'User': user2} in ret
+        assert {'Host': '10.0.0.2', 'User': user2} in ret
+        assert {'Host': '%', 'User': user3} in ret
+        assert {'Host': 'localhost', 'User': user3} in ret
+        assert {'Host': '%', 'User': user4_utf8} in ret
+        assert {'Host': 'localhost', 'User': user5_utf8} in ret
+        assert {'Host': '10.0.0.1', 'User': user6_utf8} in ret
 
         # And finally, test connections on MySQL with theses users
         ret = self.run_function(
@@ -1108,7 +1086,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
                     repr(ret)
                 )
             )
-        self.assertEqual([['1']], ret['results'])
+        assert [['1']] == ret['results']
 
         # FIXME: still failing, but works by hand...
         # mysql --user="user \"2'標" --password="user \"2'標b" information_schema
@@ -1151,7 +1129,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
                     repr(ret)
                 )
             )
-        self.assertEqual([['1']], ret['results'])
+        assert [['1']] == ret['results']
         # FIXME: Failing
         #ret = self.run_function(
         #    'mysql.query',
@@ -1190,7 +1168,7 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
                    repr(ret)
                 )
             )
-        self.assertEqual([['1']], ret['results'])
+        assert [['1']] == ret['results']
 
         # Teardown by deleting with user_remove
         self._chk_remove_user(user=user2,
@@ -1254,15 +1232,15 @@ class MysqlModuleUserTest(ModuleCase, SaltReturnAssertsMixin):
             connection_charset='utf8',
             saltenv={"LC_ALL": "en_US.utf8"}
         )
-        self.assertNotIn({'Host': 'localhost', 'User': user1}, ret)
-        self.assertNotIn({'Host': 'localhost', 'User': user2}, ret)
-        self.assertNotIn({'Host': '10.0.0.1', 'User': user2}, ret)
-        self.assertNotIn({'Host': '10.0.0.2', 'User': user2}, ret)
-        self.assertNotIn({'Host': '%', 'User': user3}, ret)
-        self.assertNotIn({'Host': 'localhost', 'User': user3}, ret)
-        self.assertNotIn({'Host': '%', 'User': user4_utf8}, ret)
-        self.assertNotIn({'Host': 'localhost', 'User': user5_utf8}, ret)
-        self.assertNotIn({'Host': '10.0.0.1', 'User': user6_utf8}, ret)
+        assert {'Host': 'localhost', 'User': user1} not in ret
+        assert {'Host': 'localhost', 'User': user2} not in ret
+        assert {'Host': '10.0.0.1', 'User': user2} not in ret
+        assert {'Host': '10.0.0.2', 'User': user2} not in ret
+        assert {'Host': '%', 'User': user3} not in ret
+        assert {'Host': 'localhost', 'User': user3} not in ret
+        assert {'Host': '%', 'User': user4_utf8} not in ret
+        assert {'Host': 'localhost', 'User': user5_utf8} not in ret
+        assert {'Host': '10.0.0.1', 'User': user6_utf8} not in ret
 
 
 @skipIf(
@@ -1461,12 +1439,12 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             escape=escape,
             **kwargs
         )
-        self.assertEqual(True, ret, ('Calling grant_add on'
+        assert ret is True, ('Calling grant_add on'
             ' user \'{0}\' and grants \'{1}\' did not return True: {2}').format(
             user,
             grant,
             repr(ret)
-        ))
+        )
         ret = self.run_function(
             'mysql.grant_exists',
             grant=grant,
@@ -1476,12 +1454,12 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             escape=escape,
             **kwargs
         )
-        self.assertEqual(True, ret, ('Calling grant_exists on'
+        assert ret is True, ('Calling grant_exists on'
             ' user \'{0}\' and grants \'{1}\' did not return True: {2}').format(
             user,
             grant,
             repr(ret)
-        ))
+        )
 
     @pytest.mark.destructive_test
     def testGrants(self):
@@ -1572,13 +1550,13 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(ret, [
+        assert ret == [
             "GRANT USAGE ON *.* TO 'foo'@'localhost'",
             ('GRANT SELECT, INSERT, UPDATE, CREATE ON '
              '`tes.t\'"saltdb`.* TO \'foo\'@\'localhost\' WITH GRANT OPTION'),
             ("GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo`"
              " TO 'foo'@'localhost' WITH GRANT OPTION")
-        ])
+        ]
 
         ret = self.run_function(
             'mysql.user_grants',
@@ -1587,12 +1565,12 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(ret, [
+        assert ret == [
             'GRANT USAGE ON *.* TO \'user ";--,?:&/\\\'@\'localhost\'',
             ('GRANT SELECT, UPDATE, DELETE, CREATE TEMPORARY TABLES ON `tes.t\''
              '"saltdb`.* TO \'user ";--,?:&/\\\'@\'localhost\''
              ' WITH GRANT OPTION')
-        ])
+        ]
 
         ret = self.run_function(
             'mysql.user_grants',
@@ -1601,12 +1579,12 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(ret, [
+        assert ret == [
             "GRANT USAGE ON *.* TO 'user( @ )=foobar'@'localhost'",
             ('GRANT SELECT, ALTER, CREATE TEMPORARY TABLES, EXECUTE ON '
              '`tes.t\'"saltdb`.* TO \'user( @ )=foobar\'@\'localhost\' '
              'WITH GRANT OPTION')
-        ])
+        ]
 
         ret = self.run_function(
             'mysql.user_grants',
@@ -1616,7 +1594,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             connection_pass=self.password,
             connection_charset='utf8'
         )
-        self.assertEqual(ret, [
+        assert ret == [
             "GRANT USAGE ON *.* TO 'user \xe6\xa8\x99'@'localhost'",
             (r"GRANT CREATE ON `t\_st ``(:=salt\%b)`.* TO "
              "'user \xe6\xa8\x99'@'localhost'"),
@@ -1624,7 +1602,7 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
              "'user \xe6\xa8\x99'@'localhost'"),
             ("GRANT SELECT, INSERT ON `t_st ``(:=salt%b)`.`foo` TO "
              "'user \xe6\xa8\x99'@'localhost'"),
-        ])
+        ]
 
         ret = self.run_function(
             'mysql.user_grants',
@@ -1633,10 +1611,10 @@ class MysqlModuleUserGrantTest(ModuleCase, SaltReturnAssertsMixin):
             connection_user=self.user,
             connection_pass=self.password
         )
-        self.assertEqual(ret, [
+        assert ret == [
             "GRANT USAGE ON *.* TO ''@'localhost'",
             "GRANT DELETE ON `test ``(:=salteeb)`.* TO ''@'localhost'"
-        ])
+        ]
 
 
 @skipIf(
@@ -1722,9 +1700,9 @@ class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
           connection_user=self.user,
           connection_pass=self.password
         )
-        self.assertTrue('query time' in ret)
+        assert 'query time' in ret
         ret.pop('query time')
-        self.assertEqual(ret, {'rows affected': 2})
+        assert ret == {'rows affected': 2}
 
     @pytest.mark.destructive_test
     def test_select_file_query(self):
@@ -1755,6 +1733,6 @@ class MysqlModuleFileQueryTest(ModuleCase, SaltReturnAssertsMixin):
                 ['a']
             ],
         }
-        self.assertTrue('query time' in ret)
+        assert 'query time' in ret
         ret.pop('query time')
-        self.assertEqual(ret, expected)
+        assert ret == expected

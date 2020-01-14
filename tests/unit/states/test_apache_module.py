@@ -44,18 +44,18 @@ class ApacheModuleTestCase(TestCase, LoaderModuleMockMixin):
                          'apache.a2enmod': mock_str}):
             comt = '{0} already enabled.'.format(name)
             ret.update({'comment': comt})
-            self.assertDictEqual(apache_module.enabled(name), ret)
+            assert apache_module.enabled(name) == ret
 
             comt = 'Apache module {0} is set to be enabled.'.format(name)
             ret.update({'comment': comt, 'result': None,
                         'changes': {'new': 'cgi', 'old': None}})
             with patch.dict(apache_module.__opts__, {'test': True}):
-                self.assertDictEqual(apache_module.enabled(name), ret)
+                assert apache_module.enabled(name) == ret
 
             comt = 'Failed to enable {0} Apache module'.format(name)
             ret.update({'comment': comt, 'result': False, 'changes': {}})
             with patch.dict(apache_module.__opts__, {'test': False}):
-                self.assertDictEqual(apache_module.enabled(name), ret)
+                assert apache_module.enabled(name) == ret
 
     # 'disabled' function tests: 1
 
@@ -78,14 +78,14 @@ class ApacheModuleTestCase(TestCase, LoaderModuleMockMixin):
             comt = 'Apache module {0} is set to be disabled.'.format(name)
             ret.update({'comment': comt, 'changes': {'new': None, 'old': 'cgi'}})
             with patch.dict(apache_module.__opts__, {'test': True}):
-                self.assertDictEqual(apache_module.disabled(name), ret)
+                assert apache_module.disabled(name) == ret
 
             comt = 'Failed to disable {0} Apache module'.format(name)
             ret.update({'comment': comt, 'result': False,
                         'changes': {}})
             with patch.dict(apache_module.__opts__, {'test': False}):
-                self.assertDictEqual(apache_module.disabled(name), ret)
+                assert apache_module.disabled(name) == ret
 
             comt = '{0} already disabled.'.format(name)
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(apache_module.disabled(name), ret)
+            assert apache_module.disabled(name) == ret

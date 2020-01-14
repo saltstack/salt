@@ -17,6 +17,7 @@ from tests.support.unit import TestCase
 
 # Import salt libs
 import salt.utils.immutabletypes as immutabletypes
+import pytest
 
 
 class ImmutableTypesTestCase(TestCase):
@@ -25,24 +26,24 @@ class ImmutableTypesTestCase(TestCase):
         lst = [4, 5, 6]
         imt = immutabletypes.ImmutableList([1, 2, 3])
         __add__ = imt + lst
-        self.assertEqual(__add__, [1, 2, 3, 4, 5, 6])
+        assert __add__ == [1, 2, 3, 4, 5, 6]
         __radd__ = lst + imt
-        self.assertEqual(__radd__, [4, 5, 6, 1, 2, 3])
+        assert __radd__ == [4, 5, 6, 1, 2, 3]
 
     def test_freeze_list_sum(self):
         lst = [4, 5, 6]
         imt = immutabletypes.freeze([1, 2, 3])
         __add__ = imt + lst
-        self.assertEqual(__add__, [1, 2, 3, 4, 5, 6])
+        assert __add__ == [1, 2, 3, 4, 5, 6]
         __radd__ = lst + imt
-        self.assertEqual(__radd__, [4, 5, 6, 1, 2, 3])
+        assert __radd__ == [4, 5, 6, 1, 2, 3]
 
     def test_immutablelist_imutability(self):
         frozen = immutabletypes.freeze([1, 2, 3])
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             frozen[1] = 2
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             frozen[1:-1] = 5
 
     def test_immutabledict_imutability(self):
@@ -61,23 +62,23 @@ class ImmutableTypesTestCase(TestCase):
             4: [4.1, 4.2, 4.3]
         }
         frozen = immutabletypes.freeze(data)
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             frozen[1] = 2
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             fdict = frozen[3]
             fdict[3.1] = 5
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             fdict = frozen[3]
             fdict[3.4] = 3.4
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             frozen[3][3.3][3.32] = 3.99
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             frozen[3][3.3][3.33][0] = 5
 
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             flist = frozen[4]
             flist[0] = 5

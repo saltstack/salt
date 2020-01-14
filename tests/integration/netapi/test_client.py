@@ -41,7 +41,7 @@ class NetapiClientTest(TestCase):
         # runner's proxy minion is running, and we're not testing proxy
         # minions here anyway, just remove it from the response.
         ret.pop('proxytest', None)
-        self.assertEqual(ret, {'minion': True, 'sub_minion': True})
+        assert ret == {'minion': True, 'sub_minion': True}
 
     def test_local_batch(self):
         low = {'client': 'local_batch', 'tgt': '*', 'fun': 'test.ping', 'timeout': 300}
@@ -51,8 +51,8 @@ class NetapiClientTest(TestCase):
         rets = []
         for _ret in ret:
             rets.append(_ret)
-        self.assertIn({'sub_minion': True}, rets)
-        self.assertIn({'minion': True}, rets)
+        assert {'sub_minion': True} in rets
+        assert {'minion': True} in rets
 
     def test_local_async(self):
         low = {'client': 'local_async', 'tgt': '*', 'fun': 'test.ping'}
@@ -61,7 +61,7 @@ class NetapiClientTest(TestCase):
         ret = self.netapi.run(low)
 
         # Remove all the volatile values before doing the compare.
-        self.assertIn('jid', ret)
+        assert 'jid' in ret
         ret.pop('jid', None)
         ret['minions'] = sorted(ret['minions'])
         try:
@@ -72,7 +72,7 @@ class NetapiClientTest(TestCase):
             ret['minions'].remove('proxytest')
         except ValueError:
             pass
-        self.assertEqual(ret, {'minions': sorted(['minion', 'sub_minion'])})
+        assert ret == {'minions': sorted(['minion', 'sub_minion'])}
 
     def test_wheel(self):
         low = {'client': 'wheel', 'fun': 'key.list_all'}
@@ -81,21 +81,21 @@ class NetapiClientTest(TestCase):
         ret = self.netapi.run(low)
 
         # Remove all the volatile values before doing the compare.
-        self.assertIn('tag', ret)
+        assert 'tag' in ret
         ret.pop('tag')
 
         data = ret.get('data', {})
-        self.assertIn('jid', data)
+        assert 'jid' in data
         data.pop('jid', None)
 
-        self.assertIn('tag', data)
+        assert 'tag' in data
         data.pop('tag', None)
 
         ret.pop('_stamp', None)
         data.pop('_stamp', None)
 
         self.maxDiff = None
-        self.assertTrue(set(['master.pem', 'master.pub']).issubset(set(ret['data']['return']['local'])))
+        assert set(['master.pem', 'master.pub']).issubset(set(ret['data']['return']['local']))
 
     def test_wheel_async(self):
         # Give this test a little breathing room
@@ -104,8 +104,8 @@ class NetapiClientTest(TestCase):
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
-        self.assertIn('jid', ret)
-        self.assertIn('tag', ret)
+        assert 'jid' in ret
+        assert 'tag' in ret
 
     @skipIf(True, 'This is not testing anything. Skipping for now.')
     def test_runner(self):

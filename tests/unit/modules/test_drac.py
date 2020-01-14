@@ -33,7 +33,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(drac.__salt__, {'cmd.run_all': mock}):
             mock = MagicMock(return_value='ABC')
             with patch.object(drac, '__parse_drac', mock):
-                self.assertEqual(drac.system_info(), 'ABC')
+                assert drac.system_info() == 'ABC'
 
     def test_network_info(self):
         '''
@@ -43,21 +43,21 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(drac.__salt__, {'cmd.run_all': mock}):
             mock = MagicMock(return_value='ABC')
             with patch.object(drac, '__parse_drac', mock):
-                self.assertEqual(drac.network_info(), 'ABC')
+                assert drac.network_info() == 'ABC'
 
     def test_nameservers(self):
         '''
         tests for configure the nameservers on the DRAC
         '''
-        self.assertFalse(drac.nameservers('a', 'b', 'c'))
+        assert not drac.nameservers('a', 'b', 'c')
 
         mock = MagicMock(return_value=False)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertFalse(drac.nameservers('a'))
+            assert not drac.nameservers('a')
 
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.nameservers('a'))
+            assert drac.nameservers('a')
 
     def test_syslog(self):
         '''
@@ -68,11 +68,11 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.syslog('server'))
+            assert drac.syslog('server')
 
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.syslog('server', False))
+            assert drac.syslog('server', False)
 
     def test_email_alerts(self):
         '''
@@ -80,11 +80,11 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.email_alerts(True))
+            assert drac.email_alerts(True)
 
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.email_alerts(False))
+            assert drac.email_alerts(False)
 
     def test_list_users(self):
         '''
@@ -93,7 +93,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={'retcode': 0,
                                        'stdout': 'cfgUserAdminUserName=value'})
         with patch.dict(drac.__salt__, {'cmd.run_all': mock}):
-            self.assertEqual(drac.list_users(), {'value': {'index': 16}})
+            assert drac.list_users() == {'value': {'index': 16}}
 
     def test_delete_user(self):
         '''
@@ -101,9 +101,9 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='ABC')
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertEqual(drac.delete_user('username', 1), 'ABC')
+            assert drac.delete_user('username', 1) == 'ABC'
 
-        self.assertFalse(drac.delete_user('username', False))
+        assert not drac.delete_user('username', False)
 
     def test_change_password(self):
         '''
@@ -111,26 +111,26 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value='ABC')
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertEqual(drac.change_password('username',
-                                                  'password', 1), 'ABC')
+            assert drac.change_password('username',
+                                                  'password', 1) == 'ABC'
 
-        self.assertFalse(drac.change_password('username',
-                                              'password', False), False)
+        assert not drac.change_password('username',
+                                              'password', False), False
 
     def test_create_user(self):
         '''
         Tests to create user accounts
         '''
-        self.assertFalse(drac.create_user('username', 'password',
-                                          'permissions', {'username': None}))
+        assert not drac.create_user('username', 'password',
+                                          'permissions', {'username': None})
 
         mock = MagicMock(return_value=False)
         with patch.object(drac, '__execute_cmd', mock):
             mock = MagicMock(return_value=None)
             with patch.object(drac, 'delete_user', mock):
-                self.assertFalse(drac.create_user('username', 'password',
+                assert not drac.create_user('username', 'password',
                                                   'permissions',
-                                                  {'username1': {'index': 1}}))
+                                                  {'username1': {'index': 1}})
 
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
@@ -138,10 +138,10 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(drac, 'set_permissions', mock):
                 mock = MagicMock(return_value=None)
                 with patch.object(drac, 'delete_user', mock):
-                    self.assertFalse(drac.create_user('username', 'password',
+                    assert not drac.create_user('username', 'password',
                                                       'permissions',
                                                       {'username1':
-                                                       {'index': 1}}))
+                                                       {'index': 1}})
 
             mock = MagicMock(return_value=True)
             with patch.object(drac, 'set_permissions', mock):
@@ -149,11 +149,11 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(drac, 'change_password', mock):
                     mock = MagicMock(return_value=None)
                     with patch.object(drac, 'delete_user', mock):
-                        self.assertFalse(drac.create_user('username',
+                        assert not drac.create_user('username',
                                                           'password',
                                                           'permissions',
                                                           {'username1':
-                                                           {'index': 1}}))
+                                                           {'index': 1}})
 
         mock = MagicMock(side_effect=[True, False])
         with patch.object(drac, '__execute_cmd', mock):
@@ -163,11 +163,11 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(drac, 'change_password', mock):
                     mock = MagicMock(return_value=None)
                     with patch.object(drac, 'delete_user', mock):
-                        self.assertFalse(drac.create_user('username',
+                        assert not drac.create_user('username',
                                                           'password',
                                                           'permissions',
                                                           {'username1':
-                                                           {'index': 1}}))
+                                                           {'index': 1}})
 
         mock = MagicMock(side_effect=[True, True])
         with patch.object(drac, '__execute_cmd', mock):
@@ -177,11 +177,11 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
                 with patch.object(drac, 'change_password', mock):
                     mock = MagicMock(return_value=None)
                     with patch.object(drac, 'delete_user', mock):
-                        self.assertTrue(drac.create_user('username',
+                        assert drac.create_user('username',
                                                          'password',
                                                          'permissions',
                                                          {'username1':
-                                                          {'index': 1}}))
+                                                          {'index': 1}})
 
     def test_set_permissions(self):
         '''
@@ -189,7 +189,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.set_permissions('username', 'A,B,C', 1))
+            assert drac.set_permissions('username', 'A,B,C', 1)
 
     def test_set_snmp(self):
         '''
@@ -197,7 +197,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.set_snmp('username'))
+            assert drac.set_snmp('username')
 
     def test_set_network(self):
         '''
@@ -205,7 +205,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.set_network('ip', 'netmask', 'gateway'))
+            assert drac.set_network('ip', 'netmask', 'gateway')
 
     def test_server_reboot(self):
         '''
@@ -215,7 +215,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.server_reboot())
+            assert drac.server_reboot()
 
     def test_server_poweroff(self):
         '''
@@ -223,7 +223,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.server_poweroff())
+            assert drac.server_poweroff()
 
     def test_server_poweron(self):
         '''
@@ -231,7 +231,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.server_poweron())
+            assert drac.server_poweron()
 
     def test_server_hardreset(self):
         '''
@@ -239,7 +239,7 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.server_hardreset())
+            assert drac.server_hardreset()
 
     def test_server_pxe(self):
         '''
@@ -247,12 +247,12 @@ class DracTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=True)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertTrue(drac.server_pxe())
+            assert drac.server_pxe()
 
         mock = MagicMock(side_effect=[True, False])
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertFalse(drac.server_pxe())
+            assert not drac.server_pxe()
 
         mock = MagicMock(return_value=False)
         with patch.object(drac, '__execute_cmd', mock):
-            self.assertFalse(drac.server_pxe())
+            assert not drac.server_pxe()

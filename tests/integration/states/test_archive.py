@@ -70,7 +70,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         function to check if file was extracted
         '''
         log.debug('Checking for extracted file: %s', path)
-        self.assertTrue(os.path.isfile(path))
+        assert os.path.isfile(path)
 
     def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(ArchiveTest, self).run_function(*args, **kwargs)

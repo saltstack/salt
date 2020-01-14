@@ -115,9 +115,7 @@ class AuthTest(ShellCase):
                '--username {0} --password {1}'.format(self.userA, password))
         resp = self.run_salt(cmd)
         log.debug('resp = %s', resp)
-        self.assertTrue(
-            'minion:' in resp
-        )
+        assert 'minion:' in resp
 
     def test_pam_auth_invalid_user(self):
         '''
@@ -126,9 +124,7 @@ class AuthTest(ShellCase):
         cmd = ('-a pam "*" test.ping '
                '--username nouser --password {0}'.format('abcd1234'))
         resp = self.run_salt(cmd)
-        self.assertTrue(
-            'Authentication error occurred.' in ''.join(resp)
-        )
+        assert 'Authentication error occurred.' in ''.join(resp)
 
     def test_pam_auth_valid_group(self):
         '''
@@ -148,6 +144,4 @@ class AuthTest(ShellCase):
         cmd = ('-a pam "*" test.ping '
                '--username {0} --password {1}'.format(self.userB, password))
         resp = self.run_salt(cmd)
-        self.assertTrue(
-            'minion:' in resp
-        )
+        assert 'minion:' in resp

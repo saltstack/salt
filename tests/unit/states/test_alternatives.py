@@ -59,37 +59,37 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                          'alternatives.show_link': mock_link}):
             comt = 'Alternative {0} for {1} is already registered'.format(path, name)
             ret.update({'comment': comt, 'result': True})
-            self.assertDictEqual(alternatives.install(name, link, path,
-                                                      priority), ret)
+            assert alternatives.install(name, link, path,
+                                                      priority) == ret
 
             comt = 'Alternative will be set for {0} to {1} with priority {2}'.format(name, path, priority)
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
-                self.assertDictEqual(alternatives.install(name, link, path,
-                                                          priority), ret)
+                assert alternatives.install(name, link, path,
+                                                          priority) == ret
 
             comt = 'Alternative for {0} set to path {1} with priority {2}'.format(name, path, priority)
             ret.update({'comment': comt, 'result': True,
                         'changes': {'name': name, 'link': link, 'path': path,
                                     'priority': priority}})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.install(name, link, path,
-                                                          priority), ret)
+                assert alternatives.install(name, link, path,
+                                                          priority) == ret
 
             comt = 'Alternative for {0} not installed: {1}'.format(name, err)
             ret.update({'comment': comt, 'result': False,
                         'changes': {}, 'link': bad_link})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.install(name, bad_link, path,
-                                                          priority), ret)
+                assert alternatives.install(name, bad_link, path,
+                                                          priority) == ret
 
             comt = 'Alternative {0} for {1} registered with priority {2} and not set to default'.format(path, name, priority)
             ret.update({'comment': comt, 'result': True,
                 'changes': {'name': name, 'link': link, 'path': path,
                             'priority': priority}, 'link': link})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.install(name, link, path,
-                                                          priority), ret)
+                assert alternatives.install(name, link, path,
+                                                          priority) == ret
 
     # 'remove' function tests: 1
 
@@ -117,26 +117,26 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
             comt = 'Alternative for {0} will be removed'.format(name)
             ret.update({'comment': comt})
             with patch.dict(alternatives.__opts__, {'test': True}):
-                self.assertDictEqual(alternatives.remove(name, path), ret)
+                assert alternatives.remove(name, path) == ret
 
             comt = 'Alternative for {0} removed'.format(name)
             ret.update({'comment': comt, 'result': True})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.remove(name, path), ret)
+                assert alternatives.remove(name, path) == ret
 
             comt = ('Alternative for pager removed. Falling back to path True')
             ret.update({'comment': comt, 'result': True,
                         'changes': {'path': True}})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.remove(name, path), ret)
+                assert alternatives.remove(name, path) == ret
 
             comt = 'Alternative for {0} is set to it\'s default path True'.format(name)
             ret.update({'comment': comt, 'result': True, 'changes': {}})
-            self.assertDictEqual(alternatives.remove(name, path), ret)
+            assert alternatives.remove(name, path) == ret
 
             comt = 'Alternative for {0} doesn\'t exist'.format(name)
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(alternatives.remove(name, path), ret)
+            assert alternatives.remove(name, path) == ret
 
     # 'auto' function tests: 1
 
@@ -159,17 +159,17 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                          'alternatives.auto': mock_auto}):
             comt = '{0} already in auto mode'.format(name)
             ret.update({'comment': comt})
-            self.assertDictEqual(alternatives.auto(name), ret)
+            assert alternatives.auto(name) == ret
 
             comt = '{0} will be put in auto mode'.format(name)
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
-                self.assertDictEqual(alternatives.auto(name), ret)
+                assert alternatives.auto(name) == ret
 
             ret.update({'comment': '', 'result': True,
                         'changes': {'result': True}})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.auto(name), ret)
+                assert alternatives.auto(name) == ret
 
     # 'set_' function tests: 1
 
@@ -196,18 +196,18 @@ class AlternativesTestCase(TestCase, LoaderModuleMockMixin):
                          'alternatives.set': mock_bool}):
             comt = 'Alternative for {0} already set to {1}'.format(name, path)
             ret.update({'comment': comt})
-            self.assertDictEqual(alternatives.set_(name, path), ret)
+            assert alternatives.set_(name, path) == ret
 
             comt = 'Alternative for {0} will be set to path /usr/bin/less'.format(name)
             ret.update({'comment': comt, 'result': None})
             with patch.dict(alternatives.__opts__, {'test': True}):
-                self.assertDictEqual(alternatives.set_(name, path), ret)
+                assert alternatives.set_(name, path) == ret
 
             comt = 'Alternative for {0} not updated'.format(name)
             ret.update({'comment': comt, 'result': True})
             with patch.dict(alternatives.__opts__, {'test': False}):
-                self.assertDictEqual(alternatives.set_(name, path), ret)
+                assert alternatives.set_(name, path) == ret
 
             comt = 'Alternative {0} for {1} doesn\'t exist'.format(path, name)
             ret.update({'comment': comt, 'result': False})
-            self.assertDictEqual(alternatives.set_(name, path), ret)
+            assert alternatives.set_(name, path) == ret

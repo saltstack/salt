@@ -22,16 +22,16 @@ class StateUtilTestCase(TestCase):
     Test case for state util.
     '''
     def test_check_result(self):
-        self.assertFalse(salt.utils.state.check_result(None),
-                         'Failed to handle None as an invalid data type.')
-        self.assertFalse(salt.utils.state.check_result([]),
-                         'Failed to handle an invalid data type.')
-        self.assertFalse(salt.utils.state.check_result({}),
-                         'Failed to handle an empty dictionary.')
-        self.assertFalse(salt.utils.state.check_result({'host1': []}),
-                         'Failed to handle an invalid host data structure.')
+        assert not salt.utils.state.check_result(None), \
+                         'Failed to handle None as an invalid data type.'
+        assert not salt.utils.state.check_result([]), \
+                         'Failed to handle an invalid data type.'
+        assert not salt.utils.state.check_result({}), \
+                         'Failed to handle an empty dictionary.'
+        assert not salt.utils.state.check_result({'host1': []}), \
+                         'Failed to handle an invalid host data structure.'
         test_valid_state = {'host1': {'test_state': {'result': 'We have liftoff!'}}}
-        self.assertTrue(salt.utils.state.check_result(test_valid_state))
+        assert salt.utils.state.check_result(test_valid_state)
         test_valid_false_states = {
             'test1': salt.utils.odict.OrderedDict([
                 ('host1',
@@ -79,9 +79,8 @@ class StateUtilTestCase(TestCase):
             ])
         }
         for test, data in six.iteritems(test_valid_false_states):
-            self.assertFalse(
-                salt.utils.state.check_result(data),
-                msg='{0} failed'.format(test))
+            assert not salt.utils.state.check_result(data), \
+                '{0} failed'.format(test)
         test_valid_true_states = {
             'test1': salt.utils.odict.OrderedDict([
                 ('host1',
@@ -130,9 +129,8 @@ class StateUtilTestCase(TestCase):
             ])
         }
         for test, data in six.iteritems(test_valid_true_states):
-            self.assertTrue(
-                salt.utils.state.check_result(data),
-                msg='{0} failed'.format(test))
+            assert salt.utils.state.check_result(data), \
+                '{0} failed'.format(test)
         test_invalid_true_ht_states = {
             'test_onfail_simple2': (
                 salt.utils.odict.OrderedDict([
@@ -306,9 +304,8 @@ class StateUtilTestCase(TestCase):
                 if '_|-' in t_:
                     t_ = t_.split('_|-')[1]
                 tdata['__id__'] = t_
-            self.assertFalse(
-                salt.utils.state.check_result(data, highstate=ht),
-                msg='{0} failed'.format(test))
+            assert not salt.utils.state.check_result(data, highstate=ht), \
+                '{0} failed'.format(test)
 
         test_valid_true_ht_states = {
             'test_onfail_integ': (
@@ -440,11 +437,10 @@ class StateUtilTestCase(TestCase):
                 if '_|-' in t_:
                     t_ = t_.split('_|-')[1]
                 tdata['__id__'] = t_
-            self.assertTrue(
-                salt.utils.state.check_result(data, highstate=ht),
-                msg='{0} failed'.format(test))
+            assert salt.utils.state.check_result(data, highstate=ht), \
+                '{0} failed'.format(test)
         test_valid_false_state = {'host1': {'test_state': {'result': False}}}
-        self.assertFalse(salt.utils.state.check_result(test_valid_false_state))
+        assert not salt.utils.state.check_result(test_valid_false_state)
 
 
 class UtilStateMergeSubreturnTestcase(TestCase):
@@ -471,7 +467,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             s = copy.deepcopy(self.sub_ret)
             s['result'] = no_effect_result
             res = salt.utils.state.merge_subreturn(m, s)
-            self.assertNotIn('result', res)
+            assert 'result' not in res
 
         # False subresult is propagated to existing result
         for original_result in [True, None, False]:
@@ -480,7 +476,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             s = copy.deepcopy(self.sub_ret)
             s['result'] = False
             res = salt.utils.state.merge_subreturn(m, s)
-            self.assertFalse(res['result'])
+            assert not res['result']
 
         # False result cannot be overridden
         for any_result in [True, None, False]:
@@ -489,7 +485,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
             s = copy.deepcopy(self.sub_ret)
             s['result'] = any_result
             res = salt.utils.state.merge_subreturn(m, s)
-            self.assertFalse(res['result'])
+            assert not res['result']
 
     def test_merge_changes(self):
         # The main changes dict should always already exist,
@@ -501,7 +497,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         m = copy.deepcopy(self.main_ret)
         s = copy.deepcopy(self.sub_ret)
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['changes'], {})
+        assert res['changes'] == {}
 
         # New changes don't get rid of existing changes
         m = copy.deepcopy(self.main_ret)
@@ -509,11 +505,11 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['changes'] = copy.deepcopy(secondary_changes)
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertDictEqual(res['changes'], {
+        assert res['changes'] == {
             'old': None,
             'new': 'my_resource',
             'secondary': secondary_changes,
-        })
+        }
 
         # The subkey parameter is respected
         m = copy.deepcopy(self.main_ret)
@@ -521,11 +517,11 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['changes'] = copy.deepcopy(secondary_changes)
         res = salt.utils.state.merge_subreturn(m, s, subkey='alarms')
-        self.assertDictEqual(res['changes'], {
+        assert res['changes'] == {
             'old': None,
             'new': 'my_resource',
             'alarms': secondary_changes,
-        })
+        }
 
     def test_merge_comments(self):
         main_comment_1 = 'First primary comment.'
@@ -549,7 +545,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertMultiLineEqual(res['comment'], final_comment)
+        assert res['comment'] == final_comment
 
         # Joining string and a list
         m = copy.deepcopy(self.main_ret)
@@ -557,7 +553,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = [sub_comment_1, sub_comment_2]
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertMultiLineEqual(res['comment'], final_comment)
+        assert res['comment'] == final_comment
 
         # For tests where output is a list,
         # also test that final joined output will match
@@ -567,12 +563,12 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertEqual(res['comment'], [
+        assert res['comment'] == [
             main_comment_1,
             main_comment_2,
             sub_comment_1 + '\n' + sub_comment_2,
-        ])
-        self.assertMultiLineEqual('\n'.join(res['comment']), final_comment)
+        ]
+        assert '\n'.join(res['comment']) == final_comment
 
         # Joining two lists
         m = copy.deepcopy(self.main_ret)
@@ -580,13 +576,13 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = [sub_comment_1, sub_comment_2]
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertEqual(res['comment'], [
+        assert res['comment'] == [
             main_comment_1,
             main_comment_2,
             sub_comment_1,
             sub_comment_2,
-        ])
-        self.assertMultiLineEqual('\n'.join(res['comment']), final_comment)
+        ]
+        assert '\n'.join(res['comment']) == final_comment
 
     def test_merge_empty_comments(self):
         # Since the primarysalt.utils.state is in progress,
@@ -607,7 +603,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertEqual(res['comment'], final_comment)
+        assert res['comment'] == final_comment
 
         # Joining empty string and a list
         m = copy.deepcopy(self.main_ret)
@@ -615,7 +611,7 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = [sub_comment_1, sub_comment_2]
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertEqual(res['comment'], final_comment)
+        assert res['comment'] == final_comment
 
         # For tests where output is a list,
         # also test that final joined output will match
@@ -625,8 +621,8 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = sub_comment_1 + '\n' + sub_comment_2
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertEqual(res['comment'], [final_comment])
-        self.assertEqual('\n'.join(res['comment']), final_comment)
+        assert res['comment'] == [final_comment]
+        assert '\n'.join(res['comment']) == final_comment
 
         # Joining empty list and a list
         m = copy.deepcopy(self.main_ret)
@@ -634,5 +630,5 @@ class UtilStateMergeSubreturnTestcase(TestCase):
         s = copy.deepcopy(self.sub_ret)
         s['comment'] = [sub_comment_1, sub_comment_2]
         res = salt.utils.state.merge_subreturn(m, s)
-        self.assertEqual(res['comment'], [sub_comment_1, sub_comment_2])
-        self.assertEqual('\n'.join(res['comment']), final_comment)
+        assert res['comment'] == [sub_comment_1, sub_comment_2]
+        assert '\n'.join(res['comment']) == final_comment

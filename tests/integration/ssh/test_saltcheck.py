@@ -25,7 +25,7 @@ class SSHSaltcheckTest(SSHCase):
                         "expected-return": "Test Works",
                         "args": ["Test Works"]}
         ret = self.run_function('saltcheck.run_test', test=saltcheck_test)
-        self.assertDictContainsSubset({'status': 'Pass'}, ret)
+        assert dict(ret, **{'status': 'Pass'}) == ret
 
     def test_saltcheck_state(self):
         '''
@@ -33,4 +33,4 @@ class SSHSaltcheckTest(SSHCase):
         '''
         saltcheck_test = 'validate-saltcheck'
         ret = self.run_function('saltcheck.run_state_tests', [saltcheck_test])
-        self.assertDictContainsSubset({'status': 'Pass'}, ret[0]['validate-saltcheck']['echo_test_hello'])
+        assert dict(ret[0]['validate-saltcheck']['echo_test_hello'], **{'status': 'Pass'}) == ret[0]['validate-saltcheck']['echo_test_hello']

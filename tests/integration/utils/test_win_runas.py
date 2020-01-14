@@ -291,51 +291,51 @@ class RunAsTest(ModuleCase):
                       password=PASSWORD)
     def test_runas(self, username):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, PASSWORD)
-        self.assertEqual(ret['stdout'], '')
-        self.assertEqual(ret['stderr'], NOPRIV_STDERR)
-        self.assertEqual(ret['retcode'], 1)
+        assert ret['stdout'] == ''
+        assert ret['stderr'] == NOPRIV_STDERR
+        assert ret['retcode'] == 1
 
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
     def test_runas_no_pass(self, username):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)
-        self.assertEqual(ret['stdout'], '')
-        self.assertEqual(ret['stderr'], NOPRIV_STDERR)
-        self.assertEqual(ret['retcode'], 1)
+        assert ret['stdout'] == ''
+        assert ret['stderr'] == NOPRIV_STDERR
+        assert ret['retcode'] == 1
 
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
     def test_runas_admin(self, username):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username, PASSWORD)
-        self.assertEqual(ret['stdout'], PRIV_STDOUT)
-        self.assertEqual(ret['stderr'], '')
-        self.assertEqual(ret['retcode'], 0)
+        assert ret['stdout'] == PRIV_STDOUT
+        assert ret['stderr'] == ''
+        assert ret['retcode'] == 0
 
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
     def test_runas_admin_no_pass(self, username):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', username)
-        self.assertEqual(ret['stdout'], PRIV_STDOUT)
-        self.assertEqual(ret['stderr'], '')
-        self.assertEqual(ret['retcode'], 0)
+        assert ret['stdout'] == PRIV_STDOUT
+        assert ret['stderr'] == ''
+        assert ret['retcode'] == 0
 
     def test_runas_system_user(self):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'SYSTEM')
-        self.assertEqual(ret['stdout'], PRIV_STDOUT)
-        self.assertEqual(ret['stderr'], '')
-        self.assertEqual(ret['retcode'], 0)
+        assert ret['stdout'] == PRIV_STDOUT
+        assert ret['stderr'] == ''
+        assert ret['retcode'] == 0
 
     def test_runas_network_service(self):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'NETWORK SERVICE')
-        self.assertEqual(ret['stdout'], '')
-        self.assertEqual(ret['stderr'], NOPRIV_STDERR)
-        self.assertEqual(ret['retcode'], 1)
+        assert ret['stdout'] == ''
+        assert ret['stderr'] == NOPRIV_STDERR
+        assert ret['retcode'] == 1
 
     def test_runas_local_service(self):
         ret = salt.utils.win_runas.runas('cmd.exe /C OPENFILES', 'LOCAL SERVICE')
-        self.assertEqual(ret['stdout'], '')
-        self.assertEqual(ret['stderr'], NOPRIV_STDERR)
-        self.assertEqual(ret['retcode'], 1)
+        assert ret['stdout'] == ''
+        assert ret['stderr'] == NOPRIV_STDERR
+        assert ret['retcode'] == 1
 
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
@@ -351,7 +351,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 1)
+        assert ret == 1
 
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
@@ -366,7 +366,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 1)
+        assert ret == 1
 
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
@@ -382,7 +382,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
@@ -397,7 +397,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     def test_runas_winrs_system_user(self):
         runaspy = textwrap.dedent('''
@@ -409,7 +409,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     def test_runas_winrs_network_service_user(self):
         runaspy = textwrap.dedent('''
@@ -421,7 +421,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 1)
+        assert ret == 1
 
     def test_runas_winrs_local_service_user(self):
         runaspy = textwrap.dedent('''
@@ -433,7 +433,7 @@ class RunAsTest(ModuleCase):
             fp.write(runaspy)
         ret = subprocess.call("cmd.exe /C winrs /r:{} python {}".format(
             self.hostname, RUNAS_PATH), shell=True)
-        self.assertEqual(ret, 1)
+        assert ret == 1
 
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
@@ -455,7 +455,7 @@ class RunAsTest(ModuleCase):
             psrp_wrap.format(self.hostname, cmd),
             shell=True
         )
-        self.assertEqual(ret, 1)
+        assert ret == 1
 
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
@@ -476,7 +476,7 @@ class RunAsTest(ModuleCase):
             psrp_wrap.format(self.hostname, cmd),
             shell=True
         )
-        self.assertEqual(ret, 1)
+        assert ret == 1
 
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
@@ -499,7 +499,7 @@ class RunAsTest(ModuleCase):
             psrp_wrap.format(self.hostname, cmd),
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     @with_system_user('test-runas-admin', on_existing='delete', delete=True,
                       password=PASSWORD, groups=['Administrators'])
@@ -520,7 +520,7 @@ class RunAsTest(ModuleCase):
             psrp_wrap.format(self.hostname, cmd),
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
 
     @with_system_user('test-runas', on_existing='delete', delete=True,
                       password=PASSWORD)
@@ -536,7 +536,7 @@ class RunAsTest(ModuleCase):
             cmd,
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
         with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
@@ -557,7 +557,7 @@ class RunAsTest(ModuleCase):
             cmd,
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
         with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
@@ -578,7 +578,7 @@ class RunAsTest(ModuleCase):
             cmd,
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
         with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
@@ -599,7 +599,7 @@ class RunAsTest(ModuleCase):
             cmd,
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
         with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:
@@ -618,7 +618,7 @@ class RunAsTest(ModuleCase):
             cmd,
             shell=True
         )
-        self.assertEqual(ret, 0)
+        assert ret == 0
         win32serviceutil.StartService('test service')
         wait_for_service('test service')
         with salt.utils.files.fopen(RUNAS_OUT, 'r') as fp:

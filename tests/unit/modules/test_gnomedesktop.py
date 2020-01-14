@@ -27,7 +27,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test for A test to ensure the GNOME module is loaded
         '''
-        self.assertTrue(gnomedesktop.ping())
+        assert gnomedesktop.ping()
 
     def test_getidledelay(self):
         '''
@@ -35,7 +35,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.getIdleDelay())
+                assert gnomedesktop.getIdleDelay()
 
     def test_setidledelay(self):
         '''
@@ -43,7 +43,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_set', return_value=True):
-                self.assertTrue(gnomedesktop.setIdleDelay(5))
+                assert gnomedesktop.setIdleDelay(5)
 
     def test_getclockformat(self):
         '''
@@ -51,7 +51,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.getClockFormat())
+                assert gnomedesktop.getClockFormat()
 
     def test_setclockformat(self):
         '''
@@ -59,9 +59,9 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_set', return_value=True):
-                self.assertTrue(gnomedesktop.setClockFormat('12h'))
+                assert gnomedesktop.setClockFormat('12h')
 
-            self.assertFalse(gnomedesktop.setClockFormat('a'))
+            assert not gnomedesktop.setClockFormat('a')
 
     def test_getclockshowdate(self):
         '''
@@ -69,17 +69,17 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.getClockShowDate())
+                assert gnomedesktop.getClockShowDate()
 
     def test_setclockshowdate(self):
         '''
         Test for Set whether the date is visible in the clock
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
-            self.assertFalse(gnomedesktop.setClockShowDate('kvalue'))
+            assert not gnomedesktop.setClockShowDate('kvalue')
 
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.setClockShowDate(True))
+                assert gnomedesktop.setClockShowDate(True)
 
     def test_getidleactivation(self):
         '''
@@ -87,17 +87,17 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.getIdleActivation())
+                assert gnomedesktop.getIdleActivation()
 
     def test_setidleactivation(self):
         '''
         Test for Set whether the idle activation is enabled
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
-            self.assertFalse(gnomedesktop.setIdleActivation('kvalue'))
+            assert not gnomedesktop.setIdleActivation('kvalue')
 
             with patch.object(gsettings_mock, '_set', return_value=True):
-                self.assertTrue(gnomedesktop.setIdleActivation(True))
+                assert gnomedesktop.setIdleActivation(True)
 
     def test_get(self):
         '''
@@ -105,7 +105,7 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.get())
+                assert gnomedesktop.get()
 
     def test_set_(self):
         '''
@@ -113,4 +113,4 @@ class GnomedesktopTestCase(TestCase, LoaderModuleMockMixin):
         '''
         with patch('salt.modules.gnomedesktop._GSettings') as gsettings_mock:
             with patch.object(gsettings_mock, '_get', return_value=True):
-                self.assertTrue(gnomedesktop.set_())
+                assert gnomedesktop.set_()

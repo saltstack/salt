@@ -11,6 +11,7 @@ from tests.support.mock import Mock
 # Import salt libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.uptime as uptime
+import pytest
 
 
 class RequestMock(Mock):
@@ -68,21 +69,21 @@ class UptimeTestCase(TestCase, LoaderModuleMockMixin):
 
     def test_checks_list(self):
         ret = uptime.checks_list()
-        self.assertListEqual(ret, ['http://example.org'])
+        assert ret == ['http://example.org']
 
     def test_checks_exists(self):
-        self.assertTrue(uptime.check_exists('http://example.org') is True)
+        assert uptime.check_exists('http://example.org') is True
 
     def test_checks_create(self):
-        self.assertRaises(CommandExecutionError, uptime.create,
-                          'http://example.org')
-        self.assertEqual(4321, uptime.create('http://example.com'))
-        self.assertEqual(('http://localhost:5000/api/checks',),
-                         REQUEST_MOCK.args)
+        with pytest.raises(CommandExecutionError):
+            uptime.create('http://example.org')
+        assert 4321 == uptime.create('http://example.com')
+        assert ('http://localhost:5000/api/checks',) == \
+                         REQUEST_MOCK.args
 
     def test_checks_delete(self):
-        self.assertRaises(CommandExecutionError, uptime.delete,
-                          'http://example.com')
-        self.assertTrue(uptime.delete('http://example.org') is True)
-        self.assertEqual(('http://localhost:5000/api/checks/1234',),
-                         REQUEST_MOCK.args)
+        with pytest.raises(CommandExecutionError):
+            uptime.delete('http://example.com')
+        assert uptime.delete('http://example.org') is True
+        assert ('http://localhost:5000/api/checks/1234',) == \
+                         REQUEST_MOCK.args

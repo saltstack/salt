@@ -105,7 +105,7 @@ class WheelModuleTest(TestCase, AdaptedConfigurationTestCaseMixin):
         low.update(self.eauth_creds)
 
         ret = self.wheel.cmd_sync(low)
-        self.assertIn('return', ret.get('data', {}))
+        assert 'return' in ret.get('data', {})
 
     def test_wildcard_auth(self):
         low = {

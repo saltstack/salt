@@ -31,6 +31,7 @@ from salt.exceptions import CommandExecutionError
 from salt.ext import six
 # pylint: disable=import-error
 from salt.ext.six.moves import range  # pylint: disable=redefined-builtin
+import pytest
 
 # pylint: disable=invalid-name,protected-access,attribute-defined-outside-init,too-many-public-methods,unused-argument
 
@@ -99,8 +100,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         userdisks = [{'name': 'data', 'size': 16384, 'format': 'raw'}]
 
         disks = virt._disk_profile('default', 'kvm', userdisks, 'myvm', image='/path/to/image')
-        self.assertEqual(
-            [{'name': 'system',
+        assert [{'name': 'system',
               'device': 'disk',
               'size': 8192,
               'format': 'qcow2',
@@ -114,9 +114,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
               'format': 'raw',
               'model': 'virtio',
               'filename': 'myvm_data.raw',
-              'source_file': '{0}{1}myvm_data.raw'.format(root_dir, os.sep)}],
+              'source_file': '{0}{1}myvm_data.raw'.format(root_dir, os.sep)}] == \
             disks
-        )
 
     def test_boot_default_dev(self):
         '''
@@ -135,9 +134,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'x86_64'
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('os/boot').attrib['dev'], 'hd')
-        self.assertEqual(root.find('os/type').attrib['arch'], 'x86_64')
-        self.assertEqual(root.find('os/type').text, 'hvm')
+        assert root.find('os/boot').attrib['dev'] == 'hd'
+        assert root.find('os/type').attrib['arch'] == 'x86_64'
+        assert root.find('os/type').text == 'hvm'
 
     def test_boot_custom_dev(self):
         '''
@@ -157,7 +156,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             boot_dev='cdrom'
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('os/boot').attrib['dev'], 'cdrom')
+        assert root.find('os/boot').attrib['dev'] == 'cdrom'
 
     def test_boot_multiple_devs(self):
         '''
@@ -178,7 +177,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
         root = ET.fromstring(xml_data)
         devs = root.findall('.//boot')
-        self.assertTrue(len(devs) == 2)
+        assert len(devs) == 2
 
     def test_gen_xml_no_nic(self):
         '''
@@ -199,8 +198,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             console=True
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
-        self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
+        assert root.find('devices/serial').attrib['type'] == 'pty'
+        assert root.find('devices/console').attrib['type'] == 'pty'
 
     def test_gen_xml_for_serial_console(self):
         '''
@@ -221,8 +220,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             console=True
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
-        self.assertEqual(root.find('devices/console').attrib['type'], 'pty')
+        assert root.find('devices/serial').attrib['type'] == 'pty'
+        assert root.find('devices/console').attrib['type'] == 'pty'
 
     def test_gen_xml_for_telnet_console(self):
         '''
@@ -244,9 +243,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             telnet_port=22223
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
-        self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
-        self.assertEqual(root.find('devices/console/source').attrib['service'], '22223')
+        assert root.find('devices/serial').attrib['type'] == 'tcp'
+        assert root.find('devices/console').attrib['type'] == 'tcp'
+        assert root.find('devices/console/source').attrib['service'] == '22223'
 
     def test_gen_xml_for_telnet_console_unspecified_port(self):
         '''
@@ -267,9 +266,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             console=True
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
-        self.assertEqual(root.find('devices/console').attrib['type'], 'tcp')
-        self.assertIsInstance(int(root.find('devices/console/source').attrib['service']), int)
+        assert root.find('devices/serial').attrib['type'] == 'tcp'
+        assert root.find('devices/console').attrib['type'] == 'tcp'
+        assert isinstance(int(root.find('devices/console/source').attrib['service']), int)
 
     def test_gen_xml_for_serial_no_console(self):
         '''
@@ -290,8 +289,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             console=False
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/serial').attrib['type'], 'pty')
-        self.assertEqual(root.find('devices/console'), None)
+        assert root.find('devices/serial').attrib['type'] == 'pty'
+        assert root.find('devices/console') is None
 
     def test_gen_xml_for_telnet_no_console(self):
         '''
@@ -312,8 +311,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             console=False,
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/serial').attrib['type'], 'tcp')
-        self.assertEqual(root.find('devices/console'), None)
+        assert root.find('devices/serial').attrib['type'] == 'tcp'
+        assert root.find('devices/console') is None
 
     def test_gen_xml_nographics_default(self):
         '''
@@ -332,7 +331,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'x86_64'
             )
         root = ET.fromstring(xml_data)
-        self.assertIsNone(root.find('devices/graphics'))
+        assert root.find('devices/graphics') is None
 
     def test_gen_xml_vnc_default(self):
         '''
@@ -353,13 +352,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                       'listen': {'type': 'address', 'address': 'myhost'}},
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/graphics').attrib['type'], 'vnc')
-        self.assertEqual(root.find('devices/graphics').attrib['autoport'], 'no')
-        self.assertEqual(root.find('devices/graphics').attrib['port'], '1234')
-        self.assertFalse('tlsPort' in root.find('devices/graphics').attrib)
-        self.assertEqual(root.find('devices/graphics').attrib['listen'], 'myhost')
-        self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'address')
-        self.assertEqual(root.find('devices/graphics/listen').attrib['address'], 'myhost')
+        assert root.find('devices/graphics').attrib['type'] == 'vnc'
+        assert root.find('devices/graphics').attrib['autoport'] == 'no'
+        assert root.find('devices/graphics').attrib['port'] == '1234'
+        assert 'tlsPort' not in root.find('devices/graphics').attrib
+        assert root.find('devices/graphics').attrib['listen'] == 'myhost'
+        assert root.find('devices/graphics/listen').attrib['type'] == 'address'
+        assert root.find('devices/graphics/listen').attrib['address'] == 'myhost'
 
     def test_gen_xml_spice_default(self):
         '''
@@ -379,11 +378,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             graphics={'type': 'spice'},
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/graphics').attrib['type'], 'spice')
-        self.assertEqual(root.find('devices/graphics').attrib['autoport'], 'yes')
-        self.assertEqual(root.find('devices/graphics').attrib['listen'], '0.0.0.0')
-        self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'address')
-        self.assertEqual(root.find('devices/graphics/listen').attrib['address'], '0.0.0.0')
+        assert root.find('devices/graphics').attrib['type'] == 'spice'
+        assert root.find('devices/graphics').attrib['autoport'] == 'yes'
+        assert root.find('devices/graphics').attrib['listen'] == '0.0.0.0'
+        assert root.find('devices/graphics/listen').attrib['type'] == 'address'
+        assert root.find('devices/graphics/listen').attrib['address'] == '0.0.0.0'
 
     def test_gen_xml_spice(self):
         '''
@@ -403,13 +402,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             graphics={'type': 'spice', 'port': 1234, 'tls_port': 5678, 'listen': {'type': 'none'}},
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('devices/graphics').attrib['type'], 'spice')
-        self.assertEqual(root.find('devices/graphics').attrib['autoport'], 'no')
-        self.assertEqual(root.find('devices/graphics').attrib['port'], '1234')
-        self.assertEqual(root.find('devices/graphics').attrib['tlsPort'], '5678')
-        self.assertFalse('listen' in root.find('devices/graphics').attrib)
-        self.assertEqual(root.find('devices/graphics/listen').attrib['type'], 'none')
-        self.assertFalse('address' in root.find('devices/graphics/listen').attrib)
+        assert root.find('devices/graphics').attrib['type'] == 'spice'
+        assert root.find('devices/graphics').attrib['autoport'] == 'no'
+        assert root.find('devices/graphics').attrib['port'] == '1234'
+        assert root.find('devices/graphics').attrib['tlsPort'] == '5678'
+        assert 'listen' not in root.find('devices/graphics').attrib
+        assert root.find('devices/graphics/listen').attrib['type'] == 'none'
+        assert 'address' not in root.find('devices/graphics/listen').attrib
 
     def test_default_disk_profile_hypervisor_esxi(self):
         '''
@@ -418,13 +417,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._disk_profile('nonexistent', 'vmware')
-            self.assertTrue(len(ret) == 1)
+            assert len(ret) == 1
             found = [disk for disk in ret if disk['name'] == 'system']
-            self.assertTrue(bool(found))
+            assert bool(found)
             system = found[0]
-            self.assertEqual(system['format'], 'vmdk')
-            self.assertEqual(system['model'], 'scsi')
-            self.assertTrue(int(system['size']) >= 1)
+            assert system['format'] == 'vmdk'
+            assert system['model'] == 'scsi'
+            assert int(system['size']) >= 1
 
     def test_default_disk_profile_hypervisor_kvm(self):
         '''
@@ -433,13 +432,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._disk_profile('nonexistent', 'kvm')
-            self.assertTrue(len(ret) == 1)
+            assert len(ret) == 1
             found = [disk for disk in ret if disk['name'] == 'system']
-            self.assertTrue(bool(found))
+            assert bool(found)
             system = found[0]
-            self.assertEqual(system['format'], 'qcow2')
-            self.assertEqual(system['model'], 'virtio')
-            self.assertTrue(int(system['size']) >= 1)
+            assert system['format'] == 'qcow2'
+            assert system['model'] == 'virtio'
+            assert int(system['size']) >= 1
 
     def test_default_disk_profile_hypervisor_xen(self):
         '''
@@ -448,13 +447,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._disk_profile('nonexistent', 'xen')
-            self.assertTrue(len(ret) == 1)
+            assert len(ret) == 1
             found = [disk for disk in ret if disk['name'] == 'system']
-            self.assertTrue(bool(found))
+            assert bool(found)
             system = found[0]
-            self.assertEqual(system['format'], 'qcow2')
-            self.assertEqual(system['model'], 'xen')
-            self.assertTrue(int(system['size']) >= 1)
+            assert system['format'] == 'qcow2'
+            assert system['model'] == 'xen'
+            assert int(system['size']) >= 1
 
     def test_default_nic_profile_hypervisor_esxi(self):
         '''
@@ -463,12 +462,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._nic_profile('nonexistent', 'vmware')
-            self.assertTrue(len(ret) == 1)
+            assert len(ret) == 1
             eth0 = ret[0]
-            self.assertEqual(eth0['name'], 'eth0')
-            self.assertEqual(eth0['type'], 'bridge')
-            self.assertEqual(eth0['source'], 'DEFAULT')
-            self.assertEqual(eth0['model'], 'e1000')
+            assert eth0['name'] == 'eth0'
+            assert eth0['type'] == 'bridge'
+            assert eth0['source'] == 'DEFAULT'
+            assert eth0['model'] == 'e1000'
 
     def test_default_nic_profile_hypervisor_kvm(self):
         '''
@@ -477,12 +476,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._nic_profile('nonexistent', 'kvm')
-            self.assertTrue(len(ret) == 1)
+            assert len(ret) == 1
             eth0 = ret[0]
-            self.assertEqual(eth0['name'], 'eth0')
-            self.assertEqual(eth0['type'], 'bridge')
-            self.assertEqual(eth0['source'], 'br0')
-            self.assertEqual(eth0['model'], 'virtio')
+            assert eth0['name'] == 'eth0'
+            assert eth0['type'] == 'bridge'
+            assert eth0['source'] == 'br0'
+            assert eth0['model'] == 'virtio'
 
     def test_default_nic_profile_hypervisor_xen(self):
         '''
@@ -491,12 +490,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock = MagicMock(return_value={})
         with patch.dict(virt.__salt__, {'config.get': mock}):  # pylint: disable=no-member
             ret = virt._nic_profile('nonexistent', 'xen')
-            self.assertTrue(len(ret) == 1)
+            assert len(ret) == 1
             eth0 = ret[0]
-            self.assertEqual(eth0['name'], 'eth0')
-            self.assertEqual(eth0['type'], 'bridge')
-            self.assertEqual(eth0['source'], 'br0')
-            self.assertFalse(eth0['model'])
+            assert eth0['name'] == 'eth0'
+            assert eth0['type'] == 'bridge'
+            assert eth0['source'] == 'br0'
+            assert not eth0['model']
 
     def test_gen_vol_xml(self):
         '''
@@ -504,10 +503,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         xml_data = virt._gen_vol_xml('vmname', 'system', 'qcow2', 8192, '/path/to/image/')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'vmname/system.qcow2')
-        self.assertEqual(root.find('key').text, 'vmname/system')
-        self.assertEqual(root.find('capacity').attrib['unit'], 'KiB')
-        self.assertEqual(root.find('capacity').text, six.text_type(8192 * 1024))
+        assert root.find('name').text == 'vmname/system.qcow2'
+        assert root.find('key').text == 'vmname/system'
+        assert root.find('capacity').attrib['unit'] == 'KiB'
+        assert root.find('capacity').text == six.text_type(8192 * 1024)
 
     def test_gen_xml_for_kvm_default_profile(self):
         '''
@@ -526,32 +525,31 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'x86_64',
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.attrib['type'], 'kvm')
-        self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
-        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+        assert root.attrib['type'] == 'kvm'
+        assert root.find('vcpu').text == '1'
+        assert root.find('memory').text == six.text_type(512 * 1024)
+        assert root.find('memory').attrib['unit'] == 'KiB'
 
         disks = root.findall('.//disk')
-        self.assertEqual(len(disks), 1)
+        assert len(disks) == 1
         disk = disks[0]
         root_dir = salt.config.DEFAULT_MINION_OPTS.get('root_dir')
-        self.assertTrue(disk.find('source').attrib['file'].startswith(root_dir))
-        self.assertTrue('hello_system' in disk.find('source').attrib['file'])
-        self.assertEqual(disk.find('target').attrib['dev'], 'vda')
-        self.assertEqual(disk.find('target').attrib['bus'], 'virtio')
-        self.assertEqual(disk.find('driver').attrib['name'], 'qemu')
-        self.assertEqual(disk.find('driver').attrib['type'], 'qcow2')
+        assert disk.find('source').attrib['file'].startswith(root_dir)
+        assert 'hello_system' in disk.find('source').attrib['file']
+        assert disk.find('target').attrib['dev'] == 'vda'
+        assert disk.find('target').attrib['bus'] == 'virtio'
+        assert disk.find('driver').attrib['name'] == 'qemu'
+        assert disk.find('driver').attrib['type'] == 'qcow2'
 
         interfaces = root.findall('.//interface')
-        self.assertEqual(len(interfaces), 1)
+        assert len(interfaces) == 1
         iface = interfaces[0]
-        self.assertEqual(iface.attrib['type'], 'bridge')
-        self.assertEqual(iface.find('source').attrib['bridge'], 'br0')
-        self.assertEqual(iface.find('model').attrib['type'], 'virtio')
+        assert iface.attrib['type'] == 'bridge'
+        assert iface.find('source').attrib['bridge'] == 'br0'
+        assert iface.find('model').attrib['type'] == 'virtio'
 
         mac = iface.find('mac').attrib['address']
-        self.assertTrue(
-              re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
+        assert re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I)
 
     def test_gen_xml_for_esxi_default_profile(self):
         '''
@@ -570,30 +568,29 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'x86_64',
             )
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.attrib['type'], 'vmware')
-        self.assertEqual(root.find('vcpu').text, '1')
-        self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
-        self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
+        assert root.attrib['type'] == 'vmware'
+        assert root.find('vcpu').text == '1'
+        assert root.find('memory').text == six.text_type(512 * 1024)
+        assert root.find('memory').attrib['unit'] == 'KiB'
 
         disks = root.findall('.//disk')
-        self.assertEqual(len(disks), 1)
+        assert len(disks) == 1
         disk = disks[0]
-        self.assertTrue('[0]' in disk.find('source').attrib['file'])
-        self.assertTrue('hello_system' in disk.find('source').attrib['file'])
-        self.assertEqual(disk.find('target').attrib['dev'], 'sda')
-        self.assertEqual(disk.find('target').attrib['bus'], 'scsi')
-        self.assertEqual(disk.find('address').attrib['unit'], '0')
+        assert '[0]' in disk.find('source').attrib['file']
+        assert 'hello_system' in disk.find('source').attrib['file']
+        assert disk.find('target').attrib['dev'] == 'sda'
+        assert disk.find('target').attrib['bus'] == 'scsi'
+        assert disk.find('address').attrib['unit'] == '0'
 
         interfaces = root.findall('.//interface')
-        self.assertEqual(len(interfaces), 1)
+        assert len(interfaces) == 1
         iface = interfaces[0]
-        self.assertEqual(iface.attrib['type'], 'bridge')
-        self.assertEqual(iface.find('source').attrib['bridge'], 'DEFAULT')
-        self.assertEqual(iface.find('model').attrib['type'], 'e1000')
+        assert iface.attrib['type'] == 'bridge'
+        assert iface.find('source').attrib['bridge'] == 'DEFAULT'
+        assert iface.find('model').attrib['type'] == 'e1000'
 
         mac = iface.find('mac').attrib['address']
-        self.assertTrue(
-              re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I))
+        assert re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$', mac, re.I)
 
     def test_gen_xml_for_xen_default_profile(self):
         '''
@@ -614,29 +611,29 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 boot=None
                 )
             root = ET.fromstring(xml_data)
-            self.assertEqual(root.attrib['type'], 'xen')
-            self.assertEqual(root.find('vcpu').text, '1')
-            self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
-            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-            self.assertEqual(root.find('.//kernel').text, '/usr/lib/grub2/x86_64-xen/grub.xen')
+            assert root.attrib['type'] == 'xen'
+            assert root.find('vcpu').text == '1'
+            assert root.find('memory').text == six.text_type(512 * 1024)
+            assert root.find('memory').attrib['unit'] == 'KiB'
+            assert root.find('.//kernel').text == '/usr/lib/grub2/x86_64-xen/grub.xen'
 
             disks = root.findall('.//disk')
-            self.assertEqual(len(disks), 1)
+            assert len(disks) == 1
             disk = disks[0]
             root_dir = salt.config.DEFAULT_MINION_OPTS.get('root_dir')
-            self.assertTrue(disk.find('source').attrib['file'].startswith(root_dir))
-            self.assertTrue('hello_system' in disk.find('source').attrib['file'])
-            self.assertEqual(disk.find('target').attrib['dev'], 'xvda')
-            self.assertEqual(disk.find('target').attrib['bus'], 'xen')
-            self.assertEqual(disk.find('driver').attrib['name'], 'qemu')
-            self.assertEqual(disk.find('driver').attrib['type'], 'qcow2')
+            assert disk.find('source').attrib['file'].startswith(root_dir)
+            assert 'hello_system' in disk.find('source').attrib['file']
+            assert disk.find('target').attrib['dev'] == 'xvda'
+            assert disk.find('target').attrib['bus'] == 'xen'
+            assert disk.find('driver').attrib['name'] == 'qemu'
+            assert disk.find('driver').attrib['type'] == 'qcow2'
 
             interfaces = root.findall('.//interface')
-            self.assertEqual(len(interfaces), 1)
+            assert len(interfaces) == 1
             iface = interfaces[0]
-            self.assertEqual(iface.attrib['type'], 'bridge')
-            self.assertEqual(iface.find('source').attrib['bridge'], 'br0')
-            self.assertIsNone(iface.find('model'))
+            assert iface.attrib['type'] == 'bridge'
+            assert iface.find('source').attrib['bridge'] == 'br0'
+            assert iface.find('model') is None
 
     def test_gen_xml_for_esxi_custom_profile(self):
         '''
@@ -669,12 +666,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'x86_64',
                 )
             root = ET.fromstring(xml_data)
-            self.assertEqual(root.attrib['type'], 'vmware')
-            self.assertEqual(root.find('vcpu').text, '1')
-            self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
-            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-            self.assertTrue(len(root.findall('.//disk')) == 2)
-            self.assertTrue(len(root.findall('.//interface')) == 2)
+            assert root.attrib['type'] == 'vmware'
+            assert root.find('vcpu').text == '1'
+            assert root.find('memory').text == six.text_type(512 * 1024)
+            assert root.find('memory').attrib['unit'] == 'KiB'
+            assert len(root.findall('.//disk')) == 2
+            assert len(root.findall('.//interface')) == 2
 
     def test_gen_xml_for_kvm_custom_profile(self):
         '''
@@ -707,12 +704,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'x86_64',
                 )
             root = ET.fromstring(xml_data)
-            self.assertEqual(root.attrib['type'], 'kvm')
-            self.assertEqual(root.find('vcpu').text, '1')
-            self.assertEqual(root.find('memory').text, six.text_type(512 * 1024))
-            self.assertEqual(root.find('memory').attrib['unit'], 'KiB')
-            self.assertTrue(len(root.findall('.//disk')) == 2)
-            self.assertTrue(len(root.findall('.//interface')) == 2)
+            assert root.attrib['type'] == 'kvm'
+            assert root.find('vcpu').text == '1'
+            assert root.find('memory').text == six.text_type(512 * 1024)
+            assert root.find('memory').attrib['unit'] == 'KiB'
+            assert len(root.findall('.//disk')) == 2
+            assert len(root.findall('.//interface')) == 2
 
     @patch('salt.modules.virt.pool_info',
            return_value={'mypool': {'target_path': os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool')}})
@@ -737,9 +734,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             pools_path = os.path.join(salt.syspaths.ROOT_DIR, 'pools', 'mypool') + os.sep
             default_path = os.path.join(salt.syspaths.ROOT_DIR, 'default', 'path') + os.sep
 
-            self.assertEqual(len(diskp), 2)
-            self.assertTrue(diskp[0]['source_file'].startswith(pools_path))
-            self.assertTrue(diskp[1]['source_file'].startswith(default_path))
+            assert len(diskp) == 2
+            assert diskp[0]['source_file'].startswith(pools_path)
+            assert diskp[1]['source_file'].startswith(default_path)
         # pylint: enable=no-member
 
     def test_disk_profile_kvm_disk_external_image(self):
@@ -752,8 +749,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'source_file': '/path/to/my/image.qcow2'
             }], 'hello')
 
-        self.assertEqual(len(diskp), 1)
-        self.assertEqual(diskp[0]['source_file'], ('/path/to/my/image.qcow2'))
+        assert len(diskp) == 1
+        assert diskp[0]['source_file'] == ('/path/to/my/image.qcow2')
 
     @patch('salt.modules.virt.pool_info', return_value={})
     def test_disk_profile_kvm_disk_pool_notfound(self, mock_poolinfo):
@@ -767,7 +764,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
                 disks, "/default/path/"])}):
-            with self.assertRaises(CommandExecutionError):
+            with pytest.raises(CommandExecutionError):
                 virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
     @patch('salt.modules.virt.pool_info', return_value={'target_path': '/dev/disk/by-path'})
@@ -782,7 +779,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         }
         with patch.dict(virt.__salt__, {'config.get': MagicMock(side_effect=[  # pylint: disable=no-member
                 disks, "/default/path/"])}):
-            with self.assertRaises(CommandExecutionError):
+            with pytest.raises(CommandExecutionError):
                 virt._disk_profile('noeffect', 'kvm', [], 'hello')
 
     def test_gen_xml_cdrom(self):
@@ -807,8 +804,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
         root = ET.fromstring(xml_data)
         disk = root.findall('.//disk')[0]
-        self.assertEqual(disk.attrib['device'], 'cdrom')
-        self.assertIsNone(disk.find('source'))
+        assert disk.attrib['device'] == 'cdrom'
+        assert disk.find('source') is None
 
     def test_controller_for_esxi(self):
         '''
@@ -828,9 +825,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             )
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
-        self.assertTrue(len(controllers) == 1)
+        assert len(controllers) == 1
         controller = controllers[0]
-        self.assertEqual(controller.attrib['model'], 'lsilogic')
+        assert controller.attrib['model'] == 'lsilogic'
 
     def test_controller_for_kvm(self):
         '''
@@ -851,9 +848,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         root = ET.fromstring(xml_data)
         controllers = root.findall('.//devices/controller')
         # There should be no controller
-        self.assertTrue(len(controllers) == 0)
+        assert len(controllers) == 0
         # kvm mac address shoud start with 52:54:00
-        self.assertTrue("mac address='52:54:00" in xml_data)
+        assert "mac address='52:54:00" in xml_data
 
     def test_diff_disks(self):
         '''
@@ -903,27 +900,27 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </devices>
         ''').findall('disk')
         ret = virt._diff_disk_lists(old_disks, new_disks)
-        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
-                          for disk in ret['unchanged']], [])
-        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
-                          for disk in ret['new']],
-                         ['/path/to/img3.qcow2', '/path/to/img0.qcow2', '/path/to/img4.qcow2', None])
-        self.assertEqual([disk.find('target').get('dev') for disk in ret['sorted']],
-                         ['vda', 'vdb', 'vdc', 'hda'])
-        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
-                          for disk in ret['sorted']],
+        assert [disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['unchanged']] == []
+        assert [disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['new']] == \
+                         ['/path/to/img3.qcow2', '/path/to/img0.qcow2', '/path/to/img4.qcow2', None]
+        assert [disk.find('target').get('dev') for disk in ret['sorted']] == \
+                         ['vda', 'vdb', 'vdc', 'hda']
+        assert [disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['sorted']] == \
                          ['/path/to/img3.qcow2',
                           '/path/to/img0.qcow2',
                           '/path/to/img4.qcow2',
-                          None])
-        self.assertEqual(ret['new'][1].find('target').get('bus'), 'virtio')
-        self.assertEqual([disk.find('source').get('file') if disk.find('source') is not None else None
-                          for disk in ret['deleted']],
+                          None]
+        assert ret['new'][1].find('target').get('bus') == 'virtio'
+        assert [disk.find('source').get('file') if disk.find('source') is not None else None
+                          for disk in ret['deleted']] == \
                          ['/path/to/img0.qcow2',
                           '/path/to/img1.qcow2',
                           '/path/to/img2.qcow2',
                           '/path/to/img4.qcow2',
-                          None])
+                          None]
 
     def test_diff_nics(self):
         '''
@@ -972,12 +969,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </devices>
         ''').findall('interface')
         ret = virt._diff_interface_lists(old_nics, new_nics)
-        self.assertEqual([nic.find('mac').get('address') for nic in ret['unchanged']],
-                         ['52:54:00:39:02:b1'])
-        self.assertEqual([nic.find('mac').get('address') for nic in ret['new']],
-                         ['52:54:00:39:02:b2', '52:54:00:39:02:b4'])
-        self.assertEqual([nic.find('mac').get('address') for nic in ret['deleted']],
-                         ['52:54:00:39:02:b2', '52:54:00:39:02:b3'])
+        assert [nic.find('mac').get('address') for nic in ret['unchanged']] == \
+                         ['52:54:00:39:02:b1']
+        assert [nic.find('mac').get('address') for nic in ret['new']] == \
+                         ['52:54:00:39:02:b2', '52:54:00:39:02:b4']
+        assert [nic.find('mac').get('address') for nic in ret['deleted']] == \
+                         ['52:54:00:39:02:b2', '52:54:00:39:02:b3']
 
     def test_init(self):
         '''
@@ -1122,8 +1119,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                           seed=False,
                           start=False)
                 definition = defineMock.call_args_list[0][0][0]
-                self.assertFalse('<interface' in definition)
-                self.assertFalse('<disk' in definition)
+                assert '<interface' not in definition
+                assert '<disk' not in definition
 
                 # Ensure the init() function allows creating VM without NIC and
                 # disk but with boot parameters.
@@ -1145,10 +1142,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                    start=False,
                                    boot=boot)
                 definition = defineMock.call_args_list[0][0][0]
-                self.assertEqual('<kernel' in definition, True)
-                self.assertEqual('<initrd' in definition, True)
-                self.assertEqual('<cmdline' in definition, True)
-                self.assertEqual(retval, True)
+                assert ('<kernel' in definition) is True
+                assert ('<initrd' in definition) is True
+                assert ('<cmdline' in definition) is True
+                assert retval is True
 
                 # Verify that remote paths are downloaded and the xml has been
                 # modified
@@ -1182,7 +1179,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                                start=False,
                                                boot=boot)
                             definition = defineMock.call_args_list[0][0][0]
-                            self.assertEqual(cache_dir in definition, True)
+                            assert (cache_dir in definition) is True
 
                     shutil.rmtree(cache_dir)
 
@@ -1204,10 +1201,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 disk_sources = [disk.find('source').get('file') if disk.find('source') is not None else None
                                 for disk in definition.findall('./devices/disk')]
                 expected_disk_path = os.path.join(root_dir, 'test vm_system.qcow2')
-                self.assertEqual(disk_sources, [expected_disk_path, None])
-                self.assertEqual(mock_run.call_args[0][0],
-                                 'qemu-img create -f qcow2 "{0}" 10240M'.format(expected_disk_path))
-                self.assertEqual(mock_chmod.call_args[0][0], expected_disk_path)
+                assert disk_sources == [expected_disk_path, None]
+                assert mock_run.call_args[0][0] == \
+                                 'qemu-img create -f qcow2 "{0}" 10240M'.format(expected_disk_path)
+                assert mock_chmod.call_args[0][0] == expected_disk_path
 
     def test_update(self):
         '''
@@ -1275,15 +1272,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # Update vcpus case
         setvcpus_mock = MagicMock(return_value=0)
         domain_mock.setVcpusFlags = setvcpus_mock
-        self.assertEqual({
+        assert {
                 'definition': True,
                 'cpu': True,
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', cpu=2))
+            } == virt.update('my vm', cpu=2)
         setxml = ET.fromstring(define_mock.call_args[0][0])
-        self.assertEqual(setxml.find('vcpu').text, '2')
-        self.assertEqual(setvcpus_mock.call_args[0][0], 2)
+        assert setxml.find('vcpu').text == '2'
+        assert setvcpus_mock.call_args[0][0] == 2
 
         boot = {
             'kernel': '/root/f8-i386-vmlinuz',
@@ -1293,26 +1290,26 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         }
 
         # Update with boot parameter case
-        self.assertEqual({
+        assert {
                 'definition': True,
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', boot=boot))
+            } == virt.update('my vm', boot=boot)
 
         # Update memory case
         setmem_mock = MagicMock(return_value=0)
         domain_mock.setMemoryFlags = setmem_mock
 
-        self.assertEqual({
+        assert {
                 'definition': True,
                 'mem': True,
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', mem=2048))
+            } == virt.update('my vm', mem=2048)
         setxml = ET.fromstring(define_mock.call_args[0][0])
-        self.assertEqual(setxml.find('memory').text, '2048')
-        self.assertEqual(setxml.find('memory').get('unit'), 'MiB')
-        self.assertEqual(setmem_mock.call_args[0][0], 2048 * 1024)
+        assert setxml.find('memory').text == '2048'
+        assert setxml.find('memory').get('unit') == 'MiB'
+        assert setmem_mock.call_args[0][0] == 2048 * 1024
 
         # Update disks case
         devattach_mock = MagicMock(return_value=0)
@@ -1328,18 +1325,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     {'name': 'added', 'size': 2048}])
                 added_disk_path = os.path.join(
                         virt.__salt__['config.get']('virt:images'), 'my vm_added.qcow2')  # pylint: disable=no-member
-                self.assertEqual(mock_run.call_args[0][0],
-                                 'qemu-img create -f qcow2 "{0}" 2048M'.format(added_disk_path))
-                self.assertEqual(mock_chmod.call_args[0][0], added_disk_path)
-                self.assertListEqual(
-                    [None, os.path.join(root_dir, 'my vm_added.qcow2')],
+                assert mock_run.call_args[0][0] == \
+                                 'qemu-img create -f qcow2 "{0}" 2048M'.format(added_disk_path)
+                assert mock_chmod.call_args[0][0] == added_disk_path
+                assert [None, os.path.join(root_dir, 'my vm_added.qcow2')] == \
                     [ET.fromstring(disk).find('source').get('file') if str(disk).find('<source') > -1 else None
-                     for disk in ret['disk']['attached']])
+                     for disk in ret['disk']['attached']]
 
-                self.assertListEqual(
-                    [os.path.join(root_dir, 'my vm_data.qcow2')],
-                    [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']])
-                self.assertEqual(devattach_mock.call_count, 2)
+                assert [os.path.join(root_dir, 'my vm_data.qcow2')] == \
+                    [ET.fromstring(disk).find('source').get('file') for disk in ret['disk']['detached']]
+                assert devattach_mock.call_count == 2
                 devdetach_mock.assert_called_once()
 
         # Update nics case
@@ -1358,10 +1353,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                               interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default',
                                            'mac': '52:54:00:39:02:b1'},
                                           {'name': 'eth1', 'type': 'network', 'source': 'newnet'}])
-            self.assertEqual(['newnet'],
-                             [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['attached']])
-            self.assertEqual(['oldnet'],
-                             [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['detached']])
+            assert ['newnet'] == \
+                             [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['attached']]
+            assert ['oldnet'] == \
+                             [ET.fromstring(nic).find('source').get('network') for nic in ret['interface']['detached']]
             devattach_mock.assert_called_once()
             devdetach_mock.assert_called_once()
 
@@ -1369,8 +1364,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update('my vm', nic_profile=None, interfaces=[])
-        self.assertEqual([], ret['interface']['attached'])
-        self.assertEqual(2, len(ret['interface']['detached']))
+        assert [] == ret['interface']['attached']
+        assert 2 == len(ret['interface']['detached'])
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
 
@@ -1378,26 +1373,26 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         devattach_mock.reset_mock()
         devdetach_mock.reset_mock()
         ret = virt.update('my vm', disk_profile=None, disks=[])
-        self.assertEqual([], ret['disk']['attached'])
-        self.assertEqual(2, len(ret['disk']['detached']))
+        assert [] == ret['disk']['attached']
+        assert 2 == len(ret['disk']['detached'])
         devattach_mock.assert_not_called()
         devdetach_mock.assert_called()
 
         # Graphics change test case
-        self.assertEqual({
+        assert {
                 'definition': True,
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', graphics={'type': 'vnc'}))
+            } == virt.update('my vm', graphics={'type': 'vnc'})
         setxml = ET.fromstring(define_mock.call_args[0][0])
-        self.assertEqual('vnc', setxml.find('devices/graphics').get('type'))
+        assert 'vnc' == setxml.find('devices/graphics').get('type')
 
         # Update with no diff case
-        self.assertEqual({
+        assert {
                 'definition': False,
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', cpu=1, mem=1024,
+            } == virt.update('my vm', cpu=1, mem=1024,
                            disk_profile='default', disks=[{'name': 'data', 'size': 2048}],
                            nic_profile='myprofile',
                            interfaces=[{'name': 'eth0', 'type': 'network', 'source': 'default',
@@ -1405,32 +1400,32 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                        {'name': 'eth1', 'type': 'network', 'source': 'oldnet',
                                         'mac': '52:54:00:39:02:b2'}],
                            graphics={'type': 'spice',
-                                     'listen': {'type': 'address', 'address': '127.0.0.1'}}))
+                                     'listen': {'type': 'address', 'address': '127.0.0.1'}})
 
         # Failed XML description update case
         self.mock_conn.defineXML.side_effect = self.mock_libvirt.libvirtError("Test error")
         setmem_mock.reset_mock()
-        with self.assertRaises(self.mock_libvirt.libvirtError):
+        with pytest.raises(self.mock_libvirt.libvirtError):
             virt.update('my vm', mem=2048)
 
         # Failed single update failure case
         self.mock_conn.defineXML = MagicMock(return_value=True)
         setmem_mock.side_effect = self.mock_libvirt.libvirtError("Failed to live change memory")
-        self.assertEqual({
+        assert {
                 'definition': True,
                 'errors': ['Failed to live change memory'],
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', mem=2048))
+            } == virt.update('my vm', mem=2048)
 
         # Failed multiple updates failure case
-        self.assertEqual({
+        assert {
                 'definition': True,
                 'errors': ['Failed to live change memory'],
                 'cpu': True,
                 'disk': {'attached': [], 'detached': []},
                 'interface': {'attached': [], 'detached': []}
-            }, virt.update('my vm', cpu=4, mem=2048))
+            } == virt.update('my vm', cpu=4, mem=2048)
 
     def test_mixed_dict_and_list_as_profile_objects(self):
         '''
@@ -1464,18 +1459,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
             for name in six.iterkeys(mock_config['virt']['nic']):
                 profile = salt.modules.virt._nic_profile(name, 'kvm')
-                self.assertEqual(len(profile), 2)
+                assert len(profile) == 2
 
                 interface_attrs = profile[0]
-                self.assertIn('source', interface_attrs)
-                self.assertIn('type', interface_attrs)
-                self.assertIn('name', interface_attrs)
-                self.assertIn('model', interface_attrs)
-                self.assertEqual(interface_attrs['model'], 'virtio')
-                self.assertIn('mac', interface_attrs)
-                self.assertTrue(
-                    re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
-                             interface_attrs['mac'], re.I))
+                assert 'source' in interface_attrs
+                assert 'type' in interface_attrs
+                assert 'name' in interface_attrs
+                assert 'model' in interface_attrs
+                assert interface_attrs['model'] == 'virtio'
+                assert 'mac' in interface_attrs
+                assert re.match('^([0-9A-F]{2}[:-]){5}([0-9A-F]{2})$',
+                             interface_attrs['mac'], re.I)
 
     def test_get_xml(self):
         '''
@@ -1491,8 +1485,8 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             </domain>
         '''
         domain = self.set_mock_vm("test-vm", xml)
-        self.assertEqual(xml, virt.get_xml('test-vm'))
-        self.assertEqual(xml, virt.get_xml(domain))
+        assert xml == virt.get_xml('test-vm')
+        assert xml == virt.get_xml(domain)
 
     def test_parse_qemu_img_info(self):
         '''
@@ -1574,8 +1568,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             "dirty-flag": false
         }]'''
 
-        self.assertEqual(
-            {
+        assert {
                 'file': '/disks/test.qcow2',
                 'file format': 'qcow2',
                 'backing file': {
@@ -1613,7 +1606,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'vmclock': '00:00:00'
                     }
                 ],
-            }, virt._parse_qemu_img_info(qemu_infos))
+            } == virt._parse_qemu_img_info(qemu_infos)
 
     @patch('salt.modules.virt.stop', return_value=True)
     @patch('salt.modules.virt.undefine')
@@ -1662,7 +1655,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
         res = virt.purge('test-vm')
-        self.assertTrue(res)
+        assert res
         mock_remove.assert_any_call('/disks/test.qcow2')
         mock_remove.assert_any_call('/disks/test-cdrom.iso')
 
@@ -1719,7 +1712,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_popen.communicate.return_value = [qemu_infos]  # pylint: disable=no-member
 
         res = virt.purge('test-vm', removables=False)
-        self.assertTrue(res)
+        assert res
         mock_remove.assert_called_once()
         mock_remove.assert_any_call('/disks/test.qcow2')
 
@@ -2003,7 +1996,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             ]
         }
 
-        self.assertEqual(expected, caps)
+        assert expected == caps
 
     def test_network(self):
         '''
@@ -2011,10 +2004,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'network')
-        self.assertEqual(root.find('bridge').attrib['name'], 'main')
-        self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
-        self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
+        assert root.find('name').text == 'network'
+        assert root.find('bridge').attrib['name'] == 'main'
+        assert root.find('forward').attrib['mode'] == 'bridge'
+        assert root.find('virtualport').attrib['type'] == 'openvswitch'
 
     def test_network_nat(self):
         '''
@@ -2030,17 +2023,15 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             }
         ])
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'network')
-        self.assertEqual(root.find('bridge').attrib['name'], 'main')
-        self.assertEqual(root.find('forward').attrib['mode'], 'nat')
-        self.assertEqual(root.find("./ip[@address='192.168.2.0']").attrib['prefix'], '24')
-        self.assertEqual(root.find("./ip[@address='192.168.2.0']").attrib['family'], 'ipv4')
-        self.assertEqual(
-                root.find("./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.10']").attrib['end'],
-                '192.168.2.25')
-        self.assertEqual(
-                root.find("./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.110']").attrib['end'],
-                '192.168.2.125')
+        assert root.find('name').text == 'network'
+        assert root.find('bridge').attrib['name'] == 'main'
+        assert root.find('forward').attrib['mode'] == 'nat'
+        assert root.find("./ip[@address='192.168.2.0']").attrib['prefix'] == '24'
+        assert root.find("./ip[@address='192.168.2.0']").attrib['family'] == 'ipv4'
+        assert root.find("./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.10']").attrib['end'] == \
+                '192.168.2.25'
+        assert root.find("./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.110']").attrib['end'] == \
+                '192.168.2.125'
 
     def test_domain_capabilities(self):
         '''
@@ -2214,7 +2205,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             }
         }
 
-        self.assertEqual(expected, caps)
+        assert expected == caps
 
     def test_network_tag(self):
         '''
@@ -2222,11 +2213,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         xml_data = virt._gen_net_xml('network', 'main', 'bridge', 'openvswitch', 1001)
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'network')
-        self.assertEqual(root.find('bridge').attrib['name'], 'main')
-        self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
-        self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
-        self.assertEqual(root.find('vlan/tag').attrib['id'], '1001')
+        assert root.find('name').text == 'network'
+        assert root.find('bridge').attrib['name'] == 'main'
+        assert root.find('forward').attrib['mode'] == 'bridge'
+        assert root.find('virtualport').attrib['type'] == 'openvswitch'
+        assert root.find('vlan/tag').attrib['id'] == '1001'
 
     def test_list_networks(self):
         '''
@@ -2239,7 +2230,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.mock_conn.listAllNetworks.return_value = net_mocks  # pylint: disable=no-member
         actual = virt.list_networks()
-        self.assertEqual(names, actual)
+        assert names == actual
 
     def test_network_info(self):
         '''
@@ -2274,7 +2265,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
 
         net = virt.network_info('foo')
-        self.assertEqual({'foo': {
+        assert {'foo': {
             'uuid': 'some-uuid',
             'bridge': 'br0',
             'autostart': True,
@@ -2292,7 +2283,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     'clientid': '01:52:54:00:01:71:bd',
                     'iaid': None
                 }
-            ]}}, net)
+            ]}} == net
 
     def test_network_info_all(self):
         '''
@@ -2318,7 +2309,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
 
         net = virt.network_info()
-        self.assertEqual({
+        assert {
             'net0':
             {
                 'uuid': 'some-uuid',
@@ -2336,7 +2327,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'persistent': True,
                 'leases': []
             }
-        }, net)
+        } == net
 
     def test_network_info_notfound(self):
         '''
@@ -2346,7 +2337,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.listAllNetworks.return_value = []
         # pylint: enable=no-member
         net = virt.network_info('foo')
-        self.assertEqual({}, net)
+        assert {} == net
 
     def test_network_get_xml(self):
         '''
@@ -2356,7 +2347,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         network_mock.XMLDesc.return_value = '<net>Raw XML</net>'
         self.mock_conn.networkLookupByName.return_value = network_mock
 
-        self.assertEqual('<net>Raw XML</net>', virt.network_get_xml('default'))
+        assert '<net>Raw XML</net>' == virt.network_get_xml('default')
 
     def test_pool(self):
         '''
@@ -2364,9 +2355,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         xml_data = virt._gen_pool_xml('pool', 'logical', '/dev/base')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'pool')
-        self.assertEqual(root.attrib['type'], 'logical')
-        self.assertEqual(root.find('target/path').text, '/dev/base')
+        assert root.find('name').text == 'pool'
+        assert root.attrib['type'] == 'logical'
+        assert root.find('target/path').text == '/dev/base'
 
     def test_pool_with_source(self):
         '''
@@ -2374,10 +2365,10 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         xml_data = virt._gen_pool_xml('pool', 'logical', '/dev/base', source_devices=[{'path': '/dev/sda'}])
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'pool')
-        self.assertEqual(root.attrib['type'], 'logical')
-        self.assertEqual(root.find('target/path').text, '/dev/base')
-        self.assertEqual(root.find('source/device').attrib['path'], '/dev/sda')
+        assert root.find('name').text == 'pool'
+        assert root.attrib['type'] == 'logical'
+        assert root.find('target/path').text == '/dev/base'
+        assert root.find('source/device').attrib['path'] == '/dev/sda'
 
     def test_pool_with_scsi(self):
         '''
@@ -2401,17 +2392,17 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                       },
                                       source_name='srcname')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'pool')
-        self.assertEqual(root.attrib['type'], 'scsi')
-        self.assertEqual(root.find('target/path').text, '/dev/disk/by-path')
-        self.assertEqual(root.find('source/device'), None)
-        self.assertEqual(root.find('source/name'), None)
-        self.assertEqual(root.find('source/adapter').attrib['type'], 'scsi_host')
-        self.assertEqual(root.find('source/adapter/parentaddr').attrib['unique_id'], '5')
-        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['domain'], '0x0000')
-        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['bus'], '0x00')
-        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['slot'], '0x1f')
-        self.assertEqual(root.find('source/adapter/parentaddr/address').attrib['function'], '0x2')
+        assert root.find('name').text == 'pool'
+        assert root.attrib['type'] == 'scsi'
+        assert root.find('target/path').text == '/dev/disk/by-path'
+        assert root.find('source/device') is None
+        assert root.find('source/name') is None
+        assert root.find('source/adapter').attrib['type'] == 'scsi_host'
+        assert root.find('source/adapter/parentaddr').attrib['unique_id'] == '5'
+        assert root.find('source/adapter/parentaddr/address').attrib['domain'] == '0x0000'
+        assert root.find('source/adapter/parentaddr/address').attrib['bus'] == '0x00'
+        assert root.find('source/adapter/parentaddr/address').attrib['slot'] == '0x1f'
+        assert root.find('source/adapter/parentaddr/address').attrib['function'] == '0x2'
 
     def test_pool_with_rbd(self):
         '''
@@ -2434,21 +2425,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                       source_dir='/some/dir',
                                       source_format='fmt')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'pool')
-        self.assertEqual(root.attrib['type'], 'rbd')
-        self.assertEqual(root.find('target'), None)
-        self.assertEqual(root.find('source/device'), None)
-        self.assertEqual(root.find('source/name').text, 'srcname')
-        self.assertEqual(root.find('source/adapter'), None)
-        self.assertEqual(root.find('source/dir'), None)
-        self.assertEqual(root.find('source/format'), None)
-        self.assertEqual(root.findall('source/host')[0].attrib['name'], '1.2.3.4')
-        self.assertTrue('port' not in root.findall('source/host')[0].attrib)
-        self.assertEqual(root.findall('source/host')[1].attrib['name'], 'my.ceph.monitor')
-        self.assertEqual(root.findall('source/host')[1].attrib['port'], '69')
-        self.assertEqual(root.find('source/auth').attrib['type'], 'ceph')
-        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
-        self.assertEqual(root.find('source/auth/secret').attrib['uuid'], 'someuuid')
+        assert root.find('name').text == 'pool'
+        assert root.attrib['type'] == 'rbd'
+        assert root.find('target') is None
+        assert root.find('source/device') is None
+        assert root.find('source/name').text == 'srcname'
+        assert root.find('source/adapter') is None
+        assert root.find('source/dir') is None
+        assert root.find('source/format') is None
+        assert root.findall('source/host')[0].attrib['name'] == '1.2.3.4'
+        assert 'port' not in root.findall('source/host')[0].attrib
+        assert root.findall('source/host')[1].attrib['name'] == 'my.ceph.monitor'
+        assert root.findall('source/host')[1].attrib['port'] == '69'
+        assert root.find('source/auth').attrib['type'] == 'ceph'
+        assert root.find('source/auth').attrib['username'] == 'admin'
+        assert root.find('source/auth/secret').attrib['uuid'] == 'someuuid'
 
     def test_pool_with_netfs(self):
         '''
@@ -2470,20 +2461,20 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                       source_dir='/some/dir',
                                       source_format='nfs')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'pool')
-        self.assertEqual(root.attrib['type'], 'netfs')
-        self.assertEqual(root.find('target/path').text, '/path/to/target')
-        self.assertEqual(root.find('target/permissions/mode').text, '0770')
-        self.assertEqual(root.find('target/permissions/owner').text, '1000')
-        self.assertEqual(root.find('target/permissions/group').text, '100')
-        self.assertEqual(root.find('target/permissions/label').text, 'seclabel')
-        self.assertEqual(root.find('source/device'), None)
-        self.assertEqual(root.find('source/name'), None)
-        self.assertEqual(root.find('source/adapter'), None)
-        self.assertEqual(root.find('source/dir').attrib['path'], '/some/dir')
-        self.assertEqual(root.find('source/format').attrib['type'], 'nfs')
-        self.assertEqual(root.find('source/host').attrib['name'], 'nfs.host')
-        self.assertEqual(root.find('source/auth'), None)
+        assert root.find('name').text == 'pool'
+        assert root.attrib['type'] == 'netfs'
+        assert root.find('target/path').text == '/path/to/target'
+        assert root.find('target/permissions/mode').text == '0770'
+        assert root.find('target/permissions/owner').text == '1000'
+        assert root.find('target/permissions/group').text == '100'
+        assert root.find('target/permissions/label').text == 'seclabel'
+        assert root.find('source/device') is None
+        assert root.find('source/name') is None
+        assert root.find('source/adapter') is None
+        assert root.find('source/dir').attrib['path'] == '/some/dir'
+        assert root.find('source/format').attrib['type'] == 'nfs'
+        assert root.find('source/host').attrib['name'] == 'nfs.host'
+        assert root.find('source/auth') is None
 
     def test_pool_with_iscsi_direct(self):
         '''
@@ -2495,12 +2486,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                       source_devices=[{'path': 'iqn.2013-06.com.example:iscsi-pool'}],
                                       source_initiator='iqn.2013-06.com.example:iscsi-initiator')
         root = ET.fromstring(xml_data)
-        self.assertEqual(root.find('name').text, 'pool')
-        self.assertEqual(root.attrib['type'], 'iscsi-direct')
-        self.assertEqual(root.find('target'), None)
-        self.assertEqual(root.find('source/device').attrib['path'], 'iqn.2013-06.com.example:iscsi-pool')
-        self.assertEqual(root.findall('source/host')[0].attrib['name'], 'iscsi.example.com')
-        self.assertEqual(root.find('source/initiator/iqn').attrib['name'], 'iqn.2013-06.com.example:iscsi-initiator')
+        assert root.find('name').text == 'pool'
+        assert root.attrib['type'] == 'iscsi-direct'
+        assert root.find('target') is None
+        assert root.find('source/device').attrib['path'] == 'iqn.2013-06.com.example:iscsi-pool'
+        assert root.findall('source/host')[0].attrib['name'] == 'iscsi.example.com'
+        assert root.find('source/initiator/iqn').attrib['name'] == 'iqn.2013-06.com.example:iscsi-initiator'
 
     def test_pool_define(self):
         '''
@@ -2517,7 +2508,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 self.mock_conn.secretDefineXML, self.mock_conn.storagePoolDefineXML]
 
         # Test case with already defined secret and permanent pool
-        self.assertTrue(virt.pool_define('default',
+        assert virt.pool_define('default',
                                          'rbd',
                                          source_hosts=['one.example.com', 'two.example.com'],
                                          source_name='rbdvol',
@@ -2528,7 +2519,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                                 'type': 'uuid',
                                                 'value': 'someuuid'
                                             }
-                                         }))
+                                         })
         self.mock_conn.storagePoolDefineXML.assert_called_once()
         self.mock_conn.storagePoolCreateXML.assert_not_called()
         mock_pool.create.assert_called_once()
@@ -2537,7 +2528,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # Test case with Ceph secret to be defined and transient pool
         for mock in mocks:
             mock.reset_mock()
-        self.assertTrue(virt.pool_define('default',
+        assert virt.pool_define('default',
                                          'rbd',
                                          transient=True,
                                          source_hosts=['one.example.com', 'two.example.com'],
@@ -2545,28 +2536,28 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                          source_auth={
                                             'username': 'admin',
                                             'password': 'c2VjcmV0'
-                                         }))
+                                         })
         self.mock_conn.storagePoolDefineXML.assert_not_called()
 
         pool_xml = self.mock_conn.storagePoolCreateXML.call_args[0][0]
         root = ET.fromstring(pool_xml)
-        self.assertEqual(root.find('source/auth').attrib['type'], 'ceph')
-        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
-        self.assertEqual(root.find('source/auth/secret').attrib['usage'], 'pool_default')
+        assert root.find('source/auth').attrib['type'] == 'ceph'
+        assert root.find('source/auth').attrib['username'] == 'admin'
+        assert root.find('source/auth/secret').attrib['usage'] == 'pool_default'
         mock_pool.create.assert_not_called()
         mock_secret.setValue.assert_called_once_with(b'secret')
 
         secret_xml = mock_secret_define.call_args[0][0]
         root = ET.fromstring(secret_xml)
-        self.assertEqual(root.find('usage/name').text, 'pool_default')
-        self.assertEqual(root.find('usage').attrib['type'], 'ceph')
-        self.assertEqual(root.attrib['private'], 'yes')
-        self.assertEqual(root.find('description').text, 'Passphrase for default pool created by Salt')
+        assert root.find('usage/name').text == 'pool_default'
+        assert root.find('usage').attrib['type'] == 'ceph'
+        assert root.attrib['private'] == 'yes'
+        assert root.find('description').text == 'Passphrase for default pool created by Salt'
 
         # Test case with iscsi secret not starting
         for mock in mocks:
             mock.reset_mock()
-        self.assertTrue(virt.pool_define('default',
+        assert virt.pool_define('default',
                                          'iscsi',
                                          target='/dev/disk/by-path',
                                          source_hosts=['iscsi.example.com'],
@@ -2575,23 +2566,23 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                                             'username': 'admin',
                                             'password': 'secret'
                                          },
-                                         start=False))
+                                         start=False)
         self.mock_conn.storagePoolCreateXML.assert_not_called()
 
         pool_xml = self.mock_conn.storagePoolDefineXML.call_args[0][0]
         root = ET.fromstring(pool_xml)
-        self.assertEqual(root.find('source/auth').attrib['type'], 'chap')
-        self.assertEqual(root.find('source/auth').attrib['username'], 'admin')
-        self.assertEqual(root.find('source/auth/secret').attrib['usage'], 'pool_default')
+        assert root.find('source/auth').attrib['type'] == 'chap'
+        assert root.find('source/auth').attrib['username'] == 'admin'
+        assert root.find('source/auth/secret').attrib['usage'] == 'pool_default'
         mock_pool.create.assert_not_called()
         mock_secret.setValue.assert_called_once_with('secret')
 
         secret_xml = mock_secret_define.call_args[0][0]
         root = ET.fromstring(secret_xml)
-        self.assertEqual(root.find('usage/target').text, 'pool_default')
-        self.assertEqual(root.find('usage').attrib['type'], 'iscsi')
-        self.assertEqual(root.attrib['private'], 'yes')
-        self.assertEqual(root.find('description').text, 'Passphrase for default pool created by Salt')
+        assert root.find('usage/target').text == 'pool_default'
+        assert root.find('usage').attrib['type'] == 'iscsi'
+        assert root.attrib['private'] == 'yes'
+        assert root.find('description').text == 'Passphrase for default pool created by Salt'
 
     def test_list_pools(self):
         '''
@@ -2604,7 +2595,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         self.mock_conn.listAllStoragePools.return_value = pool_mocks  # pylint: disable=no-member
         actual = virt.list_pools()
-        self.assertEqual(names, actual)
+        assert names == actual
 
     def test_pool_info(self):
         '''
@@ -2638,7 +2629,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
 
         pool = virt.pool_info('foo')
-        self.assertEqual({'foo': {
+        assert {'foo': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 1234,
@@ -2647,7 +2638,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'dir',
-            'target_path': '/srv/vms'}}, pool)
+            'target_path': '/srv/vms'}} == pool
 
     def test_pool_info_notarget(self):
         '''
@@ -2679,7 +2670,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
 
         pool = virt.pool_info('ceph')
-        self.assertEqual({'ceph': {
+        assert {'ceph': {
             'uuid': 'some-uuid',
             'state': 'inactive',
             'capacity': 0,
@@ -2688,7 +2679,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
             'autostart': True,
             'persistent': True,
             'type': 'rbd',
-            'target_path': None}}, pool)
+            'target_path': None}} == pool
 
     def test_pool_info_notfound(self):
         '''
@@ -2698,7 +2689,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.listAllStoragePools.return_value = []
         # pylint: enable=no-member
         pool = virt.pool_info('foo')
-        self.assertEqual({}, pool)
+        assert {} == pool
 
     def test_pool_info_all(self):
         '''
@@ -2735,7 +2726,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
 
         pool = virt.pool_info()
-        self.assertEqual({
+        assert {
             'pool0':
             {
                 'uuid': 'some-uuid-0',
@@ -2758,7 +2749,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'type': 'dir',
                 'target_path': '/srv/vms'
             }
-        }, pool)
+        } == pool
 
     def test_pool_get_xml(self):
         '''
@@ -2768,7 +2759,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         pool_mock.XMLDesc.return_value = '<pool>Raw XML</pool>'
         self.mock_conn.storagePoolLookupByName.return_value = pool_mock
 
-        self.assertEqual('<pool>Raw XML</pool>', virt.pool_get_xml('default'))
+        assert '<pool>Raw XML</pool>' == virt.pool_get_xml('default')
 
     def test_pool_list_volumes(self):
         '''
@@ -2780,7 +2771,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         mock_pool.listVolumes.return_value = names
         self.mock_conn.storagePoolLookupByName.return_value = mock_pool
         # pylint: enable=no-member
-        self.assertEqual(names, virt.pool_list_volumes('default'))
+        assert names == virt.pool_list_volumes('default')
 
     @patch('salt.modules.virt._is_kvm_hyper', return_value=True)
     @patch('salt.modules.virt._is_xen_hyper', return_value=False)
@@ -2788,13 +2779,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         '''
         test the virt.get_hypervisor() function
         '''
-        self.assertEqual('kvm', virt.get_hypervisor())
+        assert 'kvm' == virt.get_hypervisor()
 
         iskvm_mock.return_value = False
-        self.assertIsNone(virt.get_hypervisor())
+        assert virt.get_hypervisor() is None
 
         isxen_mock.return_value = True
-        self.assertEqual('xen', virt.get_hypervisor())
+        assert 'xen' == virt.get_hypervisor()
 
     def test_pool_delete(self):
         '''
@@ -2805,7 +2796,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mock_pool)
 
         res = virt.pool_delete('test-pool')
-        self.assertTrue(res)
+        assert res
 
         self.mock_conn.storagePoolLookupByName.assert_called_once_with('test-pool')
 
@@ -2894,53 +2885,53 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         # Check that qemu-img was called with the proper parameters
         qemu_img_call = [call for call in self.mock_subprocess.Popen.call_args_list if 'qemu-img' in call[0][0]][0]
-        self.assertIn('info', qemu_img_call[0][0])
-        self.assertIn('-U', qemu_img_call[0][0])
+        assert 'info' in qemu_img_call[0][0]
+        assert '-U' in qemu_img_call[0][0]
 
         # Test the hypervisor infos
-        self.assertEqual(2816, actual['freemem'])
-        self.assertEqual(6, actual['freecpu'])
-        self.assertEqual(4, actual['node_info']['cpucores'])
-        self.assertEqual(2712, actual['node_info']['cpumhz'])
-        self.assertEqual('x86_64', actual['node_info']['cpumodel'])
-        self.assertEqual(8, actual['node_info']['cpus'])
-        self.assertEqual(2, actual['node_info']['cputhreads'])
-        self.assertEqual(1, actual['node_info']['numanodes'])
-        self.assertEqual(4096, actual['node_info']['phymemory'])
-        self.assertEqual(2, actual['node_info']['sockets'])
+        assert 2816 == actual['freemem']
+        assert 6 == actual['freecpu']
+        assert 4 == actual['node_info']['cpucores']
+        assert 2712 == actual['node_info']['cpumhz']
+        assert 'x86_64' == actual['node_info']['cpumodel']
+        assert 8 == actual['node_info']['cpus']
+        assert 2 == actual['node_info']['cputhreads']
+        assert 1 == actual['node_info']['numanodes']
+        assert 4096 == actual['node_info']['phymemory']
+        assert 2 == actual['node_info']['sockets']
 
         # Test the vm_info output:
-        self.assertEqual(2, actual['vm_info']['test-vm']['cpu'])
-        self.assertEqual(1234, actual['vm_info']['test-vm']['cputime'])
-        self.assertEqual(1024 * 1024, actual['vm_info']['test-vm']['mem'])
-        self.assertEqual(2048 * 1024, actual['vm_info']['test-vm']['maxMem'])
-        self.assertEqual('shutdown', actual['vm_info']['test-vm']['state'])
-        self.assertEqual('28deee33-4859-4f23-891c-ee239cffec94', actual['vm_info']['test-vm']['uuid'])
-        self.assertEqual('destroy', actual['vm_info']['test-vm']['on_crash'])
-        self.assertEqual('restart', actual['vm_info']['test-vm']['on_reboot'])
-        self.assertEqual('destroy', actual['vm_info']['test-vm']['on_poweroff'])
+        assert 2 == actual['vm_info']['test-vm']['cpu']
+        assert 1234 == actual['vm_info']['test-vm']['cputime']
+        assert 1024 * 1024 == actual['vm_info']['test-vm']['mem']
+        assert 2048 * 1024 == actual['vm_info']['test-vm']['maxMem']
+        assert 'shutdown' == actual['vm_info']['test-vm']['state']
+        assert '28deee33-4859-4f23-891c-ee239cffec94' == actual['vm_info']['test-vm']['uuid']
+        assert 'destroy' == actual['vm_info']['test-vm']['on_crash']
+        assert 'restart' == actual['vm_info']['test-vm']['on_reboot']
+        assert 'destroy' == actual['vm_info']['test-vm']['on_poweroff']
 
         # Test the nics
         nic = actual['vm_info']['test-vm']['nics']['ac:de:48:b6:8b:59']
-        self.assertEqual('bridge', nic['type'])
-        self.assertEqual('ac:de:48:b6:8b:59', nic['mac'])
+        assert 'bridge' == nic['type']
+        assert 'ac:de:48:b6:8b:59' == nic['mac']
 
         # Test the disks
         disks = actual['vm_info']['test-vm']['disks']
         disk = disks.get('vda')
-        self.assertEqual('/disks/test.qcow2', disk['file'])
-        self.assertEqual('disk', disk['type'])
-        self.assertEqual('/disks/mybacking.qcow2', disk['backing file']['file'])
+        assert '/disks/test.qcow2' == disk['file']
+        assert 'disk' == disk['type']
+        assert '/disks/mybacking.qcow2' == disk['backing file']['file']
         cdrom = disks.get('hda')
-        self.assertEqual('/disks/test-cdrom.iso', cdrom['file'])
-        self.assertEqual('cdrom', cdrom['type'])
-        self.assertFalse('backing file' in cdrom.keys())
+        assert '/disks/test-cdrom.iso' == cdrom['file']
+        assert 'cdrom' == cdrom['type']
+        assert 'backing file' not in cdrom.keys()
 
         # Test the graphics
         graphics = actual['vm_info']['test-vm']['graphics']
-        self.assertEqual('vnc', graphics['type'])
-        self.assertEqual('5900', graphics['port'])
-        self.assertEqual('0.0.0.0', graphics['listen'])
+        assert 'vnc' == graphics['type']
+        assert '5900' == graphics['port']
+        assert '0.0.0.0' == graphics['listen']
 
     def test_pool_update(self):
         '''
@@ -2991,14 +2982,13 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
         self.mock_conn.storagePoolDefineXML = MagicMock()
 
-        self.assertTrue(
-            virt.pool_update('default',
+        assert virt.pool_update('default',
                              'netfs',
                              target='/mnt/cifs',
                              permissions={'mode': '0774', 'owner': '1234', 'group': '123'},
                              source_format='cifs',
                              source_dir='samba_share',
-                             source_hosts=['one.example.com', 'two.example.com']))
+                             source_hosts=['one.example.com', 'two.example.com'])
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
 
     def test_pool_update_nochange(self):
@@ -3029,12 +3019,11 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
         self.mock_conn.storagePoolDefineXML = MagicMock()
 
-        self.assertFalse(
-            virt.pool_update('default',
+        assert not virt.pool_update('default',
                              'dir',
                              target='/path/to/pool',
                              permissions={'mode': '0775', 'owner': '0', 'group': '100'},
-                             test=True))
+                             test=True)
         self.mock_conn.storagePoolDefineXML.assert_not_called()
 
     def test_pool_update_password(self):
@@ -3081,13 +3070,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
         self.mock_conn.storagePoolDefineXML = MagicMock()
 
-        self.assertTrue(
-            virt.pool_update('default',
+        assert virt.pool_update('default',
                              'rbd',
                              source_name='iscsi-images',
                              source_hosts=['ses4.tf.local', 'ses5.tf.local'],
                              source_auth={'username': 'libvirt',
-                                          'password': 'c2VjcmV0'}))
+                                          'password': 'c2VjcmV0'})
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
         mock_secret.setValue.assert_called_once_with(b'secret')
 
@@ -3132,13 +3120,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.storagePoolLookupByName = MagicMock(return_value=mocked_pool)
         self.mock_conn.storagePoolDefineXML = MagicMock()
 
-        self.assertTrue(
-            virt.pool_update('default',
+        assert virt.pool_update('default',
                              'rbd',
                              source_name='iscsi-images',
                              source_hosts=['ses4.tf.local', 'ses5.tf.local'],
                              source_auth={'username': 'libvirt',
-                                          'password': 'c2VjcmV0'}))
+                                          'password': 'c2VjcmV0'})
         self.mock_conn.storagePoolDefineXML.assert_called_once_with(expected_xml)
         mock_secret.setValue.assert_called_once_with(b'secret')
 
@@ -3273,16 +3260,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         with patch('salt.modules.virt._get_domain', MagicMock(return_value=mock_vms)):
             actual = virt.volume_infos('pool0', 'vol0')
-            self.assertEqual(1, len(actual.keys()))
-            self.assertEqual(1, len(actual['pool0'].keys()))
-            self.assertEqual(['vm0', 'vm2'], sorted(actual['pool0']['vol0']['used_by']))
-            self.assertEqual('/path/to/vol0.qcow2', actual['pool0']['vol0']['path'])
-            self.assertEqual('file', actual['pool0']['vol0']['type'])
-            self.assertEqual('/key/of/vol0', actual['pool0']['vol0']['key'])
-            self.assertEqual(123456789, actual['pool0']['vol0']['capacity'])
-            self.assertEqual(123456, actual['pool0']['vol0']['allocation'])
+            assert 1 == len(actual.keys())
+            assert 1 == len(actual['pool0'].keys())
+            assert ['vm0', 'vm2'] == sorted(actual['pool0']['vol0']['used_by'])
+            assert '/path/to/vol0.qcow2' == actual['pool0']['vol0']['path']
+            assert 'file' == actual['pool0']['vol0']['type']
+            assert '/key/of/vol0' == actual['pool0']['vol0']['key']
+            assert 123456789 == actual['pool0']['vol0']['capacity']
+            assert 123456 == actual['pool0']['vol0']['allocation']
 
-            self.assertEqual(virt.volume_infos('pool1', None), {
+            assert virt.volume_infos('pool1', None) == {
                 'pool1': {
                     'vol1': {
                         'type': 'file',
@@ -3301,9 +3288,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'used_by': ['vm2'],
                     }
                 }
-            })
+            }
 
-            self.assertEqual(virt.volume_infos(None, 'vol2'), {
+            assert virt.volume_infos(None, 'vol2') == {
                 'pool1': {
                     'vol2': {
                         'type': 'file',
@@ -3314,21 +3301,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'used_by': ['vm2'],
                     }
                 }
-            })
+            }
 
         # Single VM test
         with patch('salt.modules.virt._get_domain', MagicMock(return_value=mock_vms[0])):
             actual = virt.volume_infos('pool0', 'vol0')
-            self.assertEqual(1, len(actual.keys()))
-            self.assertEqual(1, len(actual['pool0'].keys()))
-            self.assertEqual(['vm0'], sorted(actual['pool0']['vol0']['used_by']))
-            self.assertEqual('/path/to/vol0.qcow2', actual['pool0']['vol0']['path'])
-            self.assertEqual('file', actual['pool0']['vol0']['type'])
-            self.assertEqual('/key/of/vol0', actual['pool0']['vol0']['key'])
-            self.assertEqual(123456789, actual['pool0']['vol0']['capacity'])
-            self.assertEqual(123456, actual['pool0']['vol0']['allocation'])
+            assert 1 == len(actual.keys())
+            assert 1 == len(actual['pool0'].keys())
+            assert ['vm0'] == sorted(actual['pool0']['vol0']['used_by'])
+            assert '/path/to/vol0.qcow2' == actual['pool0']['vol0']['path']
+            assert 'file' == actual['pool0']['vol0']['type']
+            assert '/key/of/vol0' == actual['pool0']['vol0']['key']
+            assert 123456789 == actual['pool0']['vol0']['capacity']
+            assert 123456 == actual['pool0']['vol0']['allocation']
 
-            self.assertEqual(virt.volume_infos('pool1', None), {
+            assert virt.volume_infos('pool1', None) == {
                 'pool1': {
                     'vol1': {
                         'type': 'file',
@@ -3347,9 +3334,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'used_by': [],
                     }
                 }
-            })
+            }
 
-            self.assertEqual(virt.volume_infos(None, 'vol2'), {
+            assert virt.volume_infos(None, 'vol2') == {
                 'pool1': {
                     'vol2': {
                         'type': 'file',
@@ -3360,21 +3347,21 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'used_by': [],
                     }
                 }
-            })
+            }
 
         # No VM test
         with patch('salt.modules.virt._get_domain', MagicMock(side_effect=CommandExecutionError('no VM'))):
             actual = virt.volume_infos('pool0', 'vol0')
-            self.assertEqual(1, len(actual.keys()))
-            self.assertEqual(1, len(actual['pool0'].keys()))
-            self.assertEqual([], sorted(actual['pool0']['vol0']['used_by']))
-            self.assertEqual('/path/to/vol0.qcow2', actual['pool0']['vol0']['path'])
-            self.assertEqual('file', actual['pool0']['vol0']['type'])
-            self.assertEqual('/key/of/vol0', actual['pool0']['vol0']['key'])
-            self.assertEqual(123456789, actual['pool0']['vol0']['capacity'])
-            self.assertEqual(123456, actual['pool0']['vol0']['allocation'])
+            assert 1 == len(actual.keys())
+            assert 1 == len(actual['pool0'].keys())
+            assert [] == sorted(actual['pool0']['vol0']['used_by'])
+            assert '/path/to/vol0.qcow2' == actual['pool0']['vol0']['path']
+            assert 'file' == actual['pool0']['vol0']['type']
+            assert '/key/of/vol0' == actual['pool0']['vol0']['key']
+            assert 123456789 == actual['pool0']['vol0']['capacity']
+            assert 123456 == actual['pool0']['vol0']['allocation']
 
-            self.assertEqual(virt.volume_infos('pool1', None), {
+            assert virt.volume_infos('pool1', None) == {
                 'pool1': {
                     'vol1': {
                         'type': 'file',
@@ -3393,9 +3380,9 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'used_by': [],
                     }
                 }
-            })
+            }
 
-            self.assertEqual(virt.volume_infos(None, 'vol2'), {
+            assert virt.volume_infos(None, 'vol2') == {
                 'pool1': {
                     'vol2': {
                         'type': 'file',
@@ -3406,7 +3393,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                         'used_by': [],
                     }
                 }
-            })
+            }
 
     def test_volume_delete(self):
         '''
@@ -3431,12 +3418,12 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         ]
 
         # pylint: enable=no-member
-        self.assertTrue(virt.volume_delete('default', 'test_volume'))
-        self.assertFalse(virt.volume_delete('default', 'test_volume'))
-        with self.assertRaises(self.mock_libvirt.libvirtError):
+        assert virt.volume_delete('default', 'test_volume')
+        assert not virt.volume_delete('default', 'test_volume')
+        with pytest.raises(self.mock_libvirt.libvirtError):
             virt.volume_delete('default', 'missing')
             virt.volume_delete('missing', 'test_volume')
-        self.assertEqual(mock_delete.call_count, 2)
+        assert mock_delete.call_count == 2
 
     def test_pool_capabilities(self):
         '''
@@ -3477,7 +3464,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.mock_conn.getStoragePoolCapabilities = MagicMock(return_value=xml_caps)
 
         actual = virt.pool_capabilities()
-        self.assertEqual({
+        assert {
             'computed': False,
             'pool_types': [{
                 'name': 'disk',
@@ -3511,7 +3498,7 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'name': 'sheepdog',
                 'supported': False,
             },
-        ]}, actual)
+        ]} == actual
 
     @patch('salt.modules.virt.get_hypervisor', return_value='kvm')
     def test_pool_capabilities_computed(self, mock_get_hypervisor):
@@ -3523,29 +3510,29 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
 
         actual = virt.pool_capabilities()
 
-        self.assertTrue(actual['computed'])
+        assert actual['computed']
         backends = actual['pool_types']
 
         # libvirt version matching check
-        self.assertFalse([backend for backend in backends if backend['name'] == 'iscsi-direct'][0]['supported'])
-        self.assertTrue([backend for backend in backends if backend['name'] == 'gluster'][0]['supported'])
-        self.assertFalse([backend for backend in backends if backend['name'] == 'zfs'][0]['supported'])
+        assert not [backend for backend in backends if backend['name'] == 'iscsi-direct'][0]['supported']
+        assert [backend for backend in backends if backend['name'] == 'gluster'][0]['supported']
+        assert not [backend for backend in backends if backend['name'] == 'zfs'][0]['supported']
 
         # test case matching other hypervisors
         mock_get_hypervisor.return_value = 'xen'
         backends = virt.pool_capabilities()['pool_types']
-        self.assertFalse([backend for backend in backends if backend['name'] == 'gluster'][0]['supported'])
+        assert not [backend for backend in backends if backend['name'] == 'gluster'][0]['supported']
 
         mock_get_hypervisor.return_value = 'bhyve'
         backends = virt.pool_capabilities()['pool_types']
-        self.assertFalse([backend for backend in backends if backend['name'] == 'gluster'][0]['supported'])
-        self.assertTrue([backend for backend in backends if backend['name'] == 'zfs'][0]['supported'])
+        assert not [backend for backend in backends if backend['name'] == 'gluster'][0]['supported']
+        assert [backend for backend in backends if backend['name'] == 'zfs'][0]['supported']
 
         # Test options output
-        self.assertNotIn('options', [backend for backend in backends if backend['name'] == 'iscsi'][0])
-        self.assertNotIn('pool', [backend for backend in backends if backend['name'] == 'dir'][0]['options'])
-        self.assertNotIn('volume', [backend for backend in backends if backend['name'] == 'logical'][0]['options'])
-        self.assertEqual({
+        assert 'options' not in [backend for backend in backends if backend['name'] == 'iscsi'][0]
+        assert 'pool' not in [backend for backend in backends if backend['name'] == 'dir'][0]['options']
+        assert 'volume' not in [backend for backend in backends if backend['name'] == 'logical'][0]['options']
+        assert {
                 'pool': {
                     'default_format': 'auto',
                     'sourceFormatType': ['auto', 'nfs', 'glusterfs', 'cifs']
@@ -3555,5 +3542,5 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                     'targetFormatType': ['none', 'raw', 'dir', 'bochs', 'cloop', 'dmg', 'iso', 'vpc', 'vdi',
                           'fat', 'vhd', 'ploop', 'cow', 'qcow', 'qcow2', 'qed', 'vmdk']
                 }
-            },
-            [backend for backend in backends if backend['name'] == 'netfs'][0]['options'])
+            } == \
+            [backend for backend in backends if backend['name'] == 'netfs'][0]['options']

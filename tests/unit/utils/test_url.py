@@ -13,6 +13,7 @@ from tests.support.mock import (
     MagicMock,
     patch,
 )
+import pytest
 
 
 class UrlTestCase(TestCase):
@@ -28,7 +29,7 @@ class UrlTestCase(TestCase):
         '''
         path = 'interesting?/path&.conf:and other things'
 
-        self.assertEqual(salt.utils.url.parse(path), (path, None))
+        assert salt.utils.url.parse(path) == (path, None)
 
     def test_parse_salt_url(self):
         '''
@@ -39,7 +40,7 @@ class UrlTestCase(TestCase):
         if salt.utils.platform.is_windows():
             path = '_funny/path with {interesting_chars}'
 
-        self.assertEqual(salt.utils.url.parse(url), (path, None))
+        assert salt.utils.url.parse(url) == (path, None)
 
     def test_parse_salt_saltenv(self):
         '''
@@ -51,7 +52,7 @@ class UrlTestCase(TestCase):
         if salt.utils.platform.is_windows():
             path = '_funny/path&with {interesting_chars}'
 
-        self.assertEqual(salt.utils.url.parse(url), (path, saltenv))
+        assert salt.utils.url.parse(url) == (path, saltenv)
 
     # create tests
 
@@ -64,7 +65,7 @@ class UrlTestCase(TestCase):
         if salt.utils.platform.is_windows():
             url = 'salt://_ interesting/&path.filetype'
 
-        self.assertEqual(salt.utils.url.create(path), url)
+        assert salt.utils.url.create(path) == url
 
     def test_create_url_saltenv(self):
         '''
@@ -77,7 +78,7 @@ class UrlTestCase(TestCase):
 
         url = 'salt://' + path + '?saltenv=' + saltenv
 
-        self.assertEqual(salt.utils.url.create(path, saltenv), url)
+        assert salt.utils.url.create(path, saltenv) == url
 
     # is_escaped tests
 
@@ -88,7 +89,7 @@ class UrlTestCase(TestCase):
         url = 'salt://dir/file.ini'
 
         with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
-            self.assertFalse(salt.utils.url.is_escaped(url))
+            assert not salt.utils.url.is_escaped(url)
 
     def test_is_escaped_escaped_path(self):
         '''
@@ -96,7 +97,7 @@ class UrlTestCase(TestCase):
         '''
         path = '|dir/file.conf?saltenv=basic'
 
-        self.assertTrue(salt.utils.url.is_escaped(path))
+        assert salt.utils.url.is_escaped(path)
 
     def test_is_escaped_unescaped_path(self):
         '''
@@ -104,7 +105,7 @@ class UrlTestCase(TestCase):
         '''
         path = 'dir/file.conf'
 
-        self.assertFalse(salt.utils.url.is_escaped(path))
+        assert not salt.utils.url.is_escaped(path)
 
     def test_is_escaped_escaped_url(self):
         '''
@@ -112,7 +113,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://|dir/file.conf?saltenv=basic'
 
-        self.assertTrue(salt.utils.url.is_escaped(url))
+        assert salt.utils.url.is_escaped(url)
 
     def test_is_escaped_unescaped_url(self):
         '''
@@ -120,7 +121,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://dir/file.conf'
 
-        self.assertFalse(salt.utils.url.is_escaped(url))
+        assert not salt.utils.url.is_escaped(url)
 
     def test_is_escaped_generic_url(self):
         '''
@@ -128,7 +129,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'https://gentoo.org/'
 
-        self.assertFalse(salt.utils.url.is_escaped(url))
+        assert not salt.utils.url.is_escaped(url)
 
     # escape tests
 
@@ -139,7 +140,7 @@ class UrlTestCase(TestCase):
         url = 'salt://dir/file.ini'
 
         with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
-            self.assertEqual(salt.utils.url.escape(url), url)
+            assert salt.utils.url.escape(url) == url
 
     def test_escape_escaped_path(self):
         '''
@@ -147,7 +148,7 @@ class UrlTestCase(TestCase):
         '''
         resource = '|dir/file.conf?saltenv=basic'
 
-        self.assertEqual(salt.utils.url.escape(resource), resource)
+        assert salt.utils.url.escape(resource) == resource
 
     def test_escape_unescaped_path(self):
         '''
@@ -158,7 +159,7 @@ class UrlTestCase(TestCase):
         if salt.utils.platform.is_windows():
             escaped_path = path
 
-        self.assertEqual(salt.utils.url.escape(path), escaped_path)
+        assert salt.utils.url.escape(path) == escaped_path
 
     def test_escape_escaped_url(self):
         '''
@@ -166,7 +167,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://|dir/file.conf?saltenv=basic'
 
-        self.assertEqual(salt.utils.url.escape(url), url)
+        assert salt.utils.url.escape(url) == url
 
     def test_escape_unescaped_url(self):
         '''
@@ -178,7 +179,7 @@ class UrlTestCase(TestCase):
         if salt.utils.platform.is_windows():
             escaped_url = url
 
-        self.assertEqual(salt.utils.url.escape(url), escaped_url)
+        assert salt.utils.url.escape(url) == escaped_url
 
     def test_escape_generic_url(self):
         '''
@@ -186,7 +187,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'https://gentoo.org/'
 
-        self.assertEqual(salt.utils.url.escape(url), url)
+        assert salt.utils.url.escape(url) == url
 
     # unescape tests
 
@@ -197,7 +198,7 @@ class UrlTestCase(TestCase):
         url = 'salt://dir/file.ini'
 
         with patch('salt.utils.platform.is_windows', MagicMock(return_value=True)):
-            self.assertEqual(salt.utils.url.unescape(url), url)
+            assert salt.utils.url.unescape(url) == url
 
     def test_unescape_escaped_path(self):
         '''
@@ -206,7 +207,7 @@ class UrlTestCase(TestCase):
         resource = 'dir/file.conf?saltenv=basic'
         escaped_path = '|' + resource
 
-        self.assertEqual(salt.utils.url.unescape(escaped_path), resource)
+        assert salt.utils.url.unescape(escaped_path) == resource
 
     def test_unescape_unescaped_path(self):
         '''
@@ -214,7 +215,7 @@ class UrlTestCase(TestCase):
         '''
         path = 'dir/file.conf'
 
-        self.assertEqual(salt.utils.url.unescape(path), path)
+        assert salt.utils.url.unescape(path) == path
 
     def test_unescape_escaped_url(self):
         '''
@@ -224,7 +225,7 @@ class UrlTestCase(TestCase):
         url = 'salt://' + resource
         escaped_url = 'salt://|' + resource
 
-        self.assertEqual(salt.utils.url.unescape(escaped_url), url)
+        assert salt.utils.url.unescape(escaped_url) == url
 
     def test_unescape_unescaped_url(self):
         '''
@@ -232,7 +233,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'salt://dir/file.conf'
 
-        self.assertEqual(salt.utils.url.unescape(url), url)
+        assert salt.utils.url.unescape(url) == url
 
     def test_unescape_generic_url(self):
         '''
@@ -240,7 +241,7 @@ class UrlTestCase(TestCase):
         '''
         url = 'https://gentoo.org/'
 
-        self.assertEqual(salt.utils.url.unescape(url), url)
+        assert salt.utils.url.unescape(url) == url
 
     # add_env tests
 
@@ -251,7 +252,7 @@ class UrlTestCase(TestCase):
         saltenv = 'higgs'
         url = 'https://pdg.lbl.gov/'
 
-        self.assertEqual(salt.utils.url.add_env(url, saltenv), url)
+        assert salt.utils.url.add_env(url, saltenv) == url
 
     def test_add_env(self):
         '''
@@ -261,7 +262,7 @@ class UrlTestCase(TestCase):
         url = 'salt://salted/file.conf'
         url_env = url + '?saltenv=' + saltenv
 
-        self.assertEqual(salt.utils.url.add_env(url, saltenv), url_env)
+        assert salt.utils.url.add_env(url, saltenv) == url_env
 
     # split_env tests
 
@@ -272,7 +273,7 @@ class UrlTestCase(TestCase):
         saltenv = 'gravitodynamics'
         url = 'https://arxiv.org/find/all/?' + saltenv
 
-        self.assertEqual(salt.utils.url.split_env(url), (url, None))
+        assert salt.utils.url.split_env(url) == (url, None)
 
     def test_split_env(self):
         '''
@@ -282,7 +283,7 @@ class UrlTestCase(TestCase):
         url = 'salt://salted/file.conf'
         url_env = url + '?saltenv=' + saltenv
 
-        self.assertEqual(salt.utils.url.split_env(url_env), (url, saltenv))
+        assert salt.utils.url.split_env(url_env) == (url, saltenv)
 
     # validate tests
 
@@ -293,7 +294,7 @@ class UrlTestCase(TestCase):
         url = 'salt://config/file.name?saltenv=vapid'
         protos = ['salt', 'pepper', 'cinnamon', 'melange']
 
-        self.assertTrue(salt.utils.url.validate(url, protos))
+        assert salt.utils.url.validate(url, protos)
 
     def test_validate_invalid(self):
         '''
@@ -302,7 +303,7 @@ class UrlTestCase(TestCase):
         url = 'cumin://config/file.name?saltenv=vapid'
         protos = ['salt', 'pepper', 'cinnamon', 'melange']
 
-        self.assertFalse(salt.utils.url.validate(url, protos))
+        assert not salt.utils.url.validate(url, protos)
 
     # strip tests
 
@@ -314,7 +315,7 @@ class UrlTestCase(TestCase):
         resource = 'all/the/things.stuff;parameter?query=I guess'
         url = scheme + resource
 
-        self.assertEqual(salt.utils.url.strip_proto(url), resource)
+        assert salt.utils.url.strip_proto(url) == resource
 
     def test_strip_url_without_scheme(self):
         '''
@@ -322,7 +323,7 @@ class UrlTestCase(TestCase):
         '''
         resource = 'all/the/things.stuff;parameter?query=I guess'
 
-        self.assertEqual(salt.utils.url.strip_proto(resource), resource)
+        assert salt.utils.url.strip_proto(resource) == resource
 
     def test_http_basic_auth(self):
         '''
@@ -342,12 +343,12 @@ class UrlTestCase(TestCase):
             }
             # Test http
             result = salt.utils.url.add_http_basic_auth(**kwargs)
-            self.assertEqual(result, expected)
+            assert result == expected
             # Test https
             kwargs['url'] = kwargs['url'].replace('http://', 'https://', 1)
             expected = expected.replace('http://', 'https://', 1)
             result = salt.utils.url.add_http_basic_auth(**kwargs)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_http_basic_auth_https_only(self):
         '''
@@ -360,11 +361,8 @@ class UrlTestCase(TestCase):
             'password': 'bar',
             'https_only': True,
         }
-        self.assertRaises(
-            ValueError,
-            salt.utils.url.add_http_basic_auth,
-            **kwargs
-        )
+        with pytest.raises(ValueError):
+            salt.utils.url.add_http_basic_auth(**kwargs)
 
     def test_redact_http_basic_auth(self):
         sensitive_outputs = (
@@ -374,11 +372,9 @@ class UrlTestCase(TestCase):
         sanitized = 'https://<redacted>@example.com'
         for sensitive_output in sensitive_outputs:
             result = salt.utils.url.redact_http_basic_auth(sensitive_output)
-            self.assertEqual(result, sanitized)
+            assert result == sanitized
 
     def test_redact_non_auth_output(self):
         non_auth_output = 'This is just normal output'
-        self.assertEqual(
-            non_auth_output,
+        assert non_auth_output == \
             salt.utils.url.redact_http_basic_auth(non_auth_output)
-        )

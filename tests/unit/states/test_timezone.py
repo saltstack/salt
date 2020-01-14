@@ -42,18 +42,18 @@ class TimezoneTestCase(TestCase, LoaderModuleMockMixin):
                                             "timezone.set_hwclock": mock2}):
             ret.update({'comment': "Unable to compare desired timezone"
                         " 'salt' to system timezone: ", 'result': False})
-            self.assertDictEqual(timezone.system('salt'), ret)
+            assert timezone.system('salt') == ret
 
             ret.update({'comment': 'Timezone salt already set,'
                         ' UTC already set to salt', 'result': True})
-            self.assertDictEqual(timezone.system('salt'), ret)
+            assert timezone.system('salt') == ret
 
             with patch.dict(timezone.__opts__, {"test": True}):
                 ret.update({'comment': 'UTC needs to be set to True',
                             'result': None})
-                self.assertDictEqual(timezone.system('salt'), ret)
+                assert timezone.system('salt') == ret
 
             with patch.dict(timezone.__opts__, {"test": False}):
                 ret.update({'comment': 'Failed to set UTC to True',
                             'result': False})
-                self.assertDictEqual(timezone.system('salt'), ret)
+                assert timezone.system('salt') == ret

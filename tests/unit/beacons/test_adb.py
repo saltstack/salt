@@ -32,7 +32,7 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.__virtual__()
 
             mock.assert_called_once_with('adb')
-            self.assertFalse(ret)
+            assert not ret
 
     def test_with_adb_command(self):
         with patch('salt.utils.path.which') as mock:
@@ -41,34 +41,34 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
             ret = adb.__virtual__()
 
             mock.assert_called_once_with('adb')
-            self.assertEqual(ret, 'adb')
+            assert ret == 'adb'
 
     def test_non_list_config(self):
         config = {}
 
         ret = adb.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for adb beacon must'
-                                      ' be a list.'))
+        assert ret == (False, 'Configuration for adb beacon must'
+                                      ' be a list.')
 
     def test_empty_config(self):
         config = [{}]
 
         ret = adb.validate(config)
 
-        self.assertEqual(ret, (False, 'Configuration for adb beacon must'
-                                      ' include a states array.'))
+        assert ret == (False, 'Configuration for adb beacon must'
+                                      ' include a states array.')
 
     def test_invalid_states(self):
         config = [{'states': ['Random', 'Failings']}]
 
         ret = adb.validate(config)
 
-        self.assertEqual(ret, (False, 'Need a one of the following'
+        assert ret == (False, 'Need a one of the following'
                                       ' adb states: offline, bootloader,'
                                       ' device, host, recovery, no'
                                       ' permissions, sideload,'
-                                      ' unauthorized, unknown, missing'))
+                                      ' unauthorized, unknown, missing')
 
     def test_device_state(self):
         config = [{'states': ['device']}]
@@ -77,12 +77,12 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
     def test_device_state_change(self):
         config = [{'states': ['offline']}]
@@ -96,15 +96,15 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'offline',
-                                    'tag': 'offline'}])
+                                    'tag': 'offline'}]
 
     def test_multiple_devices(self):
         config = [{'states': ['offline', 'device']}]
@@ -118,18 +118,18 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [
+            assert ret == [
                 {'device': 'HTC', 'state': 'offline', 'tag': 'offline'},
                 {'device': 'Nexus', 'state': 'device', 'tag': 'device'}
-            ])
+            ]
 
     def test_no_devices_with_different_states(self):
         config = [{'states': ['offline'], 'no_devices_event': True}]
@@ -138,10 +138,10 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_no_devices_no_repeat(self):
         config = [{'states': ['offline', 'device'], 'no_devices_event': True}]
@@ -156,18 +156,18 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'tag': 'no_devices'}])
+            assert ret == [{'tag': 'no_devices'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_no_devices(self):
         config = [{'states': ['offline', 'device'], 'no_devices_event': True}]
@@ -181,13 +181,13 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'tag': 'no_devices'}])
+            assert ret == [{'tag': 'no_devices'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_device_missing(self):
         config = [{'states': ['device', 'missing']}]
@@ -203,25 +203,25 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
 
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'missing',
-                                    'tag': 'missing'}])
+                                    'tag': 'missing'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_with_startup(self):
         config = [{'states': ['device']}]
@@ -229,12 +229,12 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(return_value='* daemon started successfully *\nList of devices attached\nHTC\tdevice',)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
     def test_with_user(self):
         config = [{'states': ['device'], 'user': 'fred'}]
@@ -242,13 +242,13 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(return_value='* daemon started successfully *\nList of devices attached\nHTC\tdevice')
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
             mock.assert_called_once_with('adb devices', runas='fred')
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
     def test_device_low_battery(self):
         config = [{'states': ['device'], 'battery_low': 30}]
@@ -260,11 +260,11 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
-                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
     def test_device_no_repeat(self):
         config = [{'states': ['device'], 'battery_low': 30}]
@@ -278,14 +278,14 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
-                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_device_no_repeat_capacity_increase(self):
         config = [{'states': ['device'], 'battery_low': 75}]
@@ -299,14 +299,14 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
-                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_device_no_repeat_with_not_found_state(self):
         config = [{'states': ['offline'], 'battery_low': 30}]
@@ -320,13 +320,13 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_device_battery_charged(self):
         config = [{'states': ['device'], 'battery_low': 30}]
@@ -338,12 +338,12 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC',
+            assert ret == [{'device': 'HTC',
                                     'state': 'device',
-                                    'tag': 'device'}])
+                                    'tag': 'device'}]
 
     def test_device_low_battery_equal(self):
         config = [{'states': ['device'], 'battery_low': 25}]
@@ -355,11 +355,11 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
-                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
     def test_device_battery_not_found(self):
         config = [{'states': ['device'], 'battery_low': 25}]
@@ -371,10 +371,10 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'}]
 
     def test_device_repeat_multi(self):
         config = [{'states': ['offline'], 'battery_low': 35}]
@@ -392,19 +392,19 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [])
+            assert ret == []
 
     def test_weird_batteries(self):
         config = [{'states': ['device'], 'battery_low': 25}]
@@ -416,10 +416,10 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'}]
 
     def test_multiple_batteries(self):
         config = [{'states': ['device'], 'battery_low': 30}]
@@ -431,11 +431,11 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
-                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]
 
     def test_multiple_low_batteries(self):
         config = [{'states': ['device'], 'battery_low': 30}]
@@ -447,8 +447,8 @@ class ADBBeaconTestCase(TestCase, LoaderModuleMockMixin):
         mock = Mock(side_effect=out)
         with patch.dict(adb.__salt__, {'cmd.run': mock}):
             ret = adb.validate(config)
-            self.assertEqual(ret, (True, 'Valid beacon configuration'))
+            assert ret == (True, 'Valid beacon configuration')
 
             ret = adb.beacon(config)
-            self.assertEqual(ret, [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
-                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}])
+            assert ret == [{'device': 'HTC', 'state': 'device', 'tag': 'device'},
+                                   {'device': 'HTC', 'battery_level': 25, 'tag': 'battery_low'}]

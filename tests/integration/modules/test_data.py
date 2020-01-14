@@ -23,19 +23,19 @@ class DataModuleTest(ModuleCase):
         data.load
         data.dump
         '''
-        self.assertTrue(self.run_function('data.dump', ['{"foo": "bar"}']))
-        self.assertEqual(self.run_function('data.load'), {'foo': 'bar'})
+        assert self.run_function('data.dump', ['{"foo": "bar"}'])
+        assert self.run_function('data.load') == {'foo': 'bar'}
 
     def test_get_update(self):
         '''
         data.get
         data.update
         '''
-        self.assertTrue(self.run_function('data.update', ['spam', 'eggs']))
-        self.assertEqual(self.run_function('data.get', ['spam']), 'eggs')
+        assert self.run_function('data.update', ['spam', 'eggs'])
+        assert self.run_function('data.get', ['spam']) == 'eggs'
 
-        self.assertTrue(self.run_function('data.update', ['unladen', 'swallow']))
-        self.assertEqual(self.run_function('data.get', [["spam", "unladen"]]), ['eggs', 'swallow'])
+        assert self.run_function('data.update', ['unladen', 'swallow'])
+        assert self.run_function('data.get', [["spam", "unladen"]]) == ['eggs', 'swallow']
 
     def test_cas_update(self):
         '''
@@ -43,6 +43,6 @@ class DataModuleTest(ModuleCase):
         data.cas
         data.get
         '''
-        self.assertTrue(self.run_function('data.update', ['spam', 'eggs']))
-        self.assertTrue(self.run_function('data.cas', ['spam', 'green', 'eggs']))
-        self.assertEqual(self.run_function('data.get', ['spam']), 'green')
+        assert self.run_function('data.update', ['spam', 'eggs'])
+        assert self.run_function('data.cas', ['spam', 'green', 'eggs'])
+        assert self.run_function('data.get', ['spam']) == 'green'

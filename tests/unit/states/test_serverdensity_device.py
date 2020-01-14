@@ -52,11 +52,11 @@ class ServerdensityDeviceTestCase(TestCase, LoaderModuleMockMixin):
             comt = ('Such server name already exists in this'
                     ' Server Density account. And sd-agent is installed')
             ret.update({'comment': comt})
-            self.assertDictEqual(serverdensity_device.monitored(name), ret)
+            assert serverdensity_device.monitored(name) == ret
 
             comt = ('Successfully installed agent and created'
                     ' device in Server Density db.')
             ret.update({'comment': comt, 'changes': {'created_device':
                                                      {'agentKey': True},
                                                      'installed_agent': True}})
-            self.assertDictEqual(serverdensity_device.monitored(name), ret)
+            assert serverdensity_device.monitored(name) == ret

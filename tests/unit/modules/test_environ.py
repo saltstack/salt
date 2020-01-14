@@ -32,18 +32,18 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock = MagicMock(return_value=None)
         with patch.dict(os.environ, {}):
-            self.assertEqual(environ.setval('key', False, True), None)
+            assert environ.setval('key', False, True) is None
 
         mock = MagicMock(side_effect=Exception())
         with patch.dict(os.environ, {}):
-            self.assertFalse(environ.setval('key', False, True))
+            assert not environ.setval('key', False, True)
 
         mock_environ = {}
         with patch.dict(os.environ, mock_environ):
-            self.assertEqual(environ.setval('key', False), '')
+            assert environ.setval('key', False) == ''
 
         with patch.dict(os.environ, mock_environ):
-            self.assertFalse(environ.setval('key', True))
+            assert not environ.setval('key', True)
 
     def test_set_val_permanent(self):
         with patch.dict(os.environ, {}), \
@@ -69,27 +69,26 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_environ = {'KEY': 'value'}
         with patch.dict(os.environ, mock_environ):
-            self.assertFalse(environ.setenv('environ'))
+            assert not environ.setenv('environ')
 
         with patch.dict(os.environ, mock_environ):
-            self.assertFalse(environ.setenv({'A': True},
+            assert not environ.setenv({'A': True},
                                             False,
                                             True,
-                                            False))
+                                            False)
 
         with patch.dict(os.environ, mock_environ):
             mock_setval = MagicMock(return_value=None)
             with patch.object(environ, 'setval', mock_setval):
-                self.assertEqual(environ.setenv({}, False, True, False)['KEY'],
-                                 None)
+                assert environ.setenv({}, False, True, False)['KEY'] is None
 
     def test_get(self):
         '''
         Get a single salt process environment variable.
         '''
-        self.assertFalse(environ.get(True))
+        assert not environ.get(True)
 
-        self.assertEqual(environ.get('key'), '')
+        assert environ.get('key') == ''
 
     def test_has_value(self):
         '''
@@ -99,28 +98,28 @@ class EnvironTestCase(TestCase, LoaderModuleMockMixin):
         '''
         mock_environ = {}
         with patch.dict(os.environ, mock_environ):
-            self.assertFalse(environ.has_value(True))
+            assert not environ.has_value(True)
 
             os.environ['salty'] = 'yes'
-            self.assertTrue(environ.has_value('salty', 'yes'))
+            assert environ.has_value('salty', 'yes')
 
             os.environ['too_salty'] = 'no'
-            self.assertFalse(environ.has_value('too_salty', 'yes'))
+            assert not environ.has_value('too_salty', 'yes')
 
-            self.assertFalse(environ.has_value('key', 'value'))
+            assert not environ.has_value('key', 'value')
 
             os.environ['key'] = 'value'
-            self.assertTrue(environ.has_value('key'))
+            assert environ.has_value('key')
 
     def test_item(self):
         '''
         Get one or more salt process environment variables.
         Returns a dict.
         '''
-        self.assertEqual(environ.item(None), {})
+        assert environ.item(None) == {}
 
     def test_items(self):
         '''
         Return a dict of the entire environment set for the salt process
         '''
-        self.assertNotEqual(list(environ.items()), [])
+        assert list(environ.items()) != []

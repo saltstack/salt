@@ -15,6 +15,7 @@ from tests.support.mock import MagicMock, patch
 
 from salt.exceptions import CommandExecutionError
 import salt.modules.freezer as freezer
+import pytest
 
 
 class FreezerTestCase(TestCase, LoaderModuleMockMixin):
@@ -36,10 +37,10 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         Test if a frozen state exist.
         '''
         isfile.side_effect = (True, True)
-        self.assertTrue(freezer.status())
+        assert freezer.status()
 
         isfile.side_effect = (True, False)
-        self.assertFalse(freezer.status())
+        assert not freezer.status()
 
     @patch('os.listdir')
     @patch('os.path.isdir')
@@ -49,12 +50,12 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # There is no freezer directory
         isdir.return_value = False
-        self.assertEqual(freezer.list_(), [])
+        assert freezer.list_() == []
 
         # There is freezer directory, but is empty
         isdir.return_value = True
         listdir.return_value = []
-        self.assertEqual(freezer.list_(), [])
+        assert freezer.list_() == []
 
         # There is freezer directory with states
         isdir.return_value = True
@@ -63,7 +64,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'state-pkgs.yml', 'state-reps.yml',
             'random-file'
         ]
-        self.assertEqual(freezer.list_(), ['freezer', 'state'])
+        assert freezer.list_() == ['freezer', 'state']
 
     @patch('os.makedirs')
     def test_freeze_fails_cache(self, makedirs):
@@ -72,7 +73,8 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # Fails when creating the freeze cache directory
         makedirs.side_effect = OSError()
-        self.assertRaises(CommandExecutionError, freezer.freeze)
+        with pytest.raises(CommandExecutionError):
+            freezer.freeze()
 
     @patch('salt.modules.freezer.status')
     @patch('os.makedirs')
@@ -82,7 +84,8 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # Fails when there is already a frozen state
         status.return_value = True
-        self.assertRaises(CommandExecutionError, freezer.freeze)
+        with pytest.raises(CommandExecutionError):
+            freezer.freeze()
         makedirs.assert_called_once()
 
     @patch('salt.utils.json.dump')
@@ -100,12 +103,12 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.list_repos': MagicMock(return_value={}),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertTrue(freezer.freeze('one'))
-            self.assertTrue(freezer.freeze('two'))
+            assert freezer.freeze('one')
+            assert freezer.freeze('two')
 
-            self.assertEqual(makedirs.call_count, 2)
-            self.assertEqual(salt_mock['pkg.list_pkgs'].call_count, 2)
-            self.assertEqual(salt_mock['pkg.list_repos'].call_count, 2)
+            assert makedirs.call_count == 2
+            assert salt_mock['pkg.list_pkgs'].call_count == 2
+            assert salt_mock['pkg.list_repos'].call_count == 2
             fopen.assert_called()
             dump.assert_called()
 
@@ -124,7 +127,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.list_repos': MagicMock(return_value={}),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertTrue(freezer.freeze())
+            assert freezer.freeze()
             makedirs.assert_called_once()
             salt_mock['pkg.list_pkgs'].assert_called_once()
             salt_mock['pkg.list_repos'].assert_called_once()
@@ -146,7 +149,7 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.list_repos': MagicMock(return_value={}),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertTrue(freezer.freeze(force=True))
+            assert freezer.freeze(force=True)
             makedirs.assert_called_once()
             salt_mock['pkg.list_pkgs'].assert_called_once()
             salt_mock['pkg.list_repos'].assert_called_once()
@@ -160,7 +163,8 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
         '''
         # Fails if the state is not found
         status.return_value = False
-        self.assertRaises(CommandExecutionError, freezer.restore)
+        with pytest.raises(CommandExecutionError):
+            freezer.restore()
 
     @patch('salt.utils.json.load')
     @patch('salt.modules.freezer.fopen')
@@ -178,11 +182,11 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.mod_repo': MagicMock(),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertEqual(freezer.restore(), {
+            assert freezer.restore() == {
                 'pkgs': {'add': [], 'remove': []},
                 'repos': {'add': ['missing-repo'], 'remove': []},
                 'comment': [],
-            })
+            }
             salt_mock['pkg.list_pkgs'].assert_called()
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.mod_repo'].assert_called_once()
@@ -205,11 +209,11 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.install': MagicMock(),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertEqual(freezer.restore(), {
+            assert freezer.restore() == {
                 'pkgs': {'add': ['missing-package'], 'remove': []},
                 'repos': {'add': [], 'remove': []},
                 'comment': [],
-            })
+            }
             salt_mock['pkg.list_pkgs'].assert_called()
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.install'].assert_called_once()
@@ -232,11 +236,11 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.remove': MagicMock(),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertEqual(freezer.restore(), {
+            assert freezer.restore() == {
                 'pkgs': {'add': [], 'remove': ['extra-package']},
                 'repos': {'add': [], 'remove': []},
                 'comment': [],
-            })
+            }
             salt_mock['pkg.list_pkgs'].assert_called()
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.remove'].assert_called_once()
@@ -259,11 +263,11 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.del_repo': MagicMock(),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertEqual(freezer.restore(), {
+            assert freezer.restore() == {
                 'pkgs': {'add': [], 'remove': []},
                 'repos': {'add': [], 'remove': ['extra-repo']},
                 'comment': [],
-            })
+            }
             salt_mock['pkg.list_pkgs'].assert_called()
             salt_mock['pkg.list_repos'].assert_called()
             salt_mock['pkg.del_repo'].assert_called_once()
@@ -285,13 +289,13 @@ class FreezerTestCase(TestCase, LoaderModuleMockMixin):
             'pkg.install': MagicMock(),
         }
         with patch.dict(freezer.__salt__, salt_mock):
-            self.assertEqual(freezer.restore(clean=True), {
+            assert freezer.restore(clean=True) == {
                 'pkgs': {'add': [], 'remove': []},
                 'repos': {'add': [], 'remove': []},
                 'comment': [],
-            })
+            }
             salt_mock['pkg.list_pkgs'].assert_called()
             salt_mock['pkg.list_repos'].assert_called()
             fopen.assert_called()
             load.assert_called()
-            self.assertEqual(remove.call_count, 2)
+            assert remove.call_count == 2

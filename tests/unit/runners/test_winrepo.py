@@ -107,4 +107,4 @@ class WinrepoTest(TestCase, LoaderModuleMockMixin):
         # Add a winrepo SLS file
         with salt.utils.files.fopen(sls_file, 'w') as fp_:
             fp_.write(salt.utils.stringutils.to_str(_WINREPO_SLS))
-        self.assertEqual(winrepo.genrepo(), _WINREPO_GENREPO_DATA)
+        assert winrepo.genrepo() == _WINREPO_GENREPO_DATA

@@ -38,7 +38,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
 
         has_target = MagicMock(return_value=True)
         with patch.dict(alias.__salt__, {'aliases.has_target': has_target}):
-            self.assertEqual(alias.present(name, target), ret)
+            assert alias.present(name, target) == ret
 
     def test_present_has_not_target_test(self):
         '''
@@ -54,7 +54,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         has_target = MagicMock(return_value=False)
         with patch.dict(alias.__salt__, {'aliases.has_target': has_target}):
             with patch.dict(alias.__opts__, {'test': True}):
-                self.assertEqual(alias.present(name, target), ret)
+                assert alias.present(name, target) == ret
 
     def test_present_set_target(self):
         '''
@@ -72,7 +72,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(alias.__salt__, {'aliases.has_target': has_target}):
             with patch.dict(alias.__opts__, {'test': False}):
                 with patch.dict(alias.__salt__, {'aliases.set_target': set_target}):
-                    self.assertEqual(alias.present(name, target), ret)
+                    assert alias.present(name, target) == ret
 
     def test_present_set_target_failed(self):
         '''
@@ -90,7 +90,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(alias.__salt__, {'aliases.has_target': has_target}):
             with patch.dict(alias.__opts__, {'test': False}):
                 with patch.dict(alias.__salt__, {'aliases.set_target': set_target}):
-                    self.assertEqual(alias.present(name, target), ret)
+                    assert alias.present(name, target) == ret
 
     def test_absent_already_gone(self):
         '''
@@ -105,7 +105,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
 
         get_target = MagicMock(return_value=False)
         with patch.dict(alias.__salt__, {'aliases.get_target': get_target}):
-            self.assertEqual(alias.absent(name), ret)
+            assert alias.absent(name) == ret
 
     def test_absent_not_gone_test(self):
         '''
@@ -121,7 +121,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         get_target = MagicMock(return_value=True)
         with patch.dict(alias.__salt__, {'aliases.get_target': get_target}):
             with patch.dict(alias.__opts__, {'test': True}):
-                self.assertEqual(alias.absent(name), ret)
+                assert alias.absent(name) == ret
 
     def test_absent_rm_alias(self):
         '''
@@ -139,7 +139,7 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(alias.__salt__, {'aliases.get_target': get_target}):
             with patch.dict(alias.__opts__, {'test': False}):
                 with patch.dict(alias.__salt__, {'aliases.rm_alias': rm_alias}):
-                    self.assertEqual(alias.absent(name), ret)
+                    assert alias.absent(name) == ret
 
     def test_absent_rm_alias_failed(self):
         '''
@@ -157,4 +157,4 @@ class AliasTest(TestCase, LoaderModuleMockMixin):
         with patch.dict(alias.__salt__, {'aliases.get_target': get_target}):
             with patch.dict(alias.__opts__, {'test': False}):
                 with patch.dict(alias.__salt__, {'aliases.rm_alias': rm_alias}):
-                    self.assertEqual(alias.absent(name), ret)
+                    assert alias.absent(name) == ret
