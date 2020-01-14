@@ -100,6 +100,7 @@ class VaultTestCase(ModuleCase):
         assert self.run_function('vault.write_secret', path='secret/my/secret', user='foo', password='bar') is True
         assert self.run_function('vault.list_secrets', arg=['secret/my/']) == {'keys': ['secret']}
 
+
 @destructiveTest
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 @skipIf(not salt.utils.path.which('vault'), 'Vault not installed')
