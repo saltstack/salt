@@ -8217,10 +8217,8 @@ def _get_policy_adm_setting(admx_policy,
                                 configured_elements[this_element_name] = True
                                 log.trace('element %s is configured true',
                                           child_item.attrib['id'])
-                    elif etree.QName(child_item).localname == 'decimal' \
-                        or etree.QName(child_item).localname == 'text' \
-                        or etree.QName(child_item).localname == 'longDecimal' \
-                        or etree.QName(child_item).localname == 'multiText':
+                    elif etree.QName(child_item).localname in [
+                            'decimal', 'text', 'longDecimal', 'multiText']:
                         # https://msdn.microsoft.com/en-us/library/dn605987(v=vs.85).aspx
                         if _regexSearchRegPolData(
                                 re.escape(_processValueItem(
@@ -8292,10 +8290,12 @@ def _get_policy_adm_setting(admx_policy,
                                             configured_elements[this_element_name] = _getAdmlDisplayName(
                                                 adml_xml_data=adml_policy_resources,
                                                 display_name=enum_item.attrib['displayName'])
+                                            break
                                     else:
                                         configured_elements[this_element_name] = _getAdmlDisplayName(
                                             adml_xml_data=adml_policy_resources,
                                             display_name=enum_item.attrib['displayName'])
+                                        break
                     elif etree.QName(child_item).localname == 'list':
                         return_value_name = False
                         if 'explicitValue' in child_item.attrib \
