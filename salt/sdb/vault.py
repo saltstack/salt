@@ -60,18 +60,18 @@ def set_(key, value, profile=None):
         path, key = key.split('?')
     else:
         path, key = key.rsplit('/', 1)
+    data = {key: value}
 
     version2 = __utils__['vault.is_v2'](path)
     if version2['v2']:
         path = version2['data']
+        data = {'data': data}
 
     try:
         url = 'v1/{0}'.format(path)
-        data = {key: value}
         response = __utils__['vault.make_request'](
             'POST',
             url,
-            profile,
             json=data)
 
         if response.status_code != 204:
