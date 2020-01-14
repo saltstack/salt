@@ -194,7 +194,8 @@ def create_sminion(minion_id=None,
                    sminion_cls=salt.minion.SMinion,
                    minion_opts_overrides=None,
                    skip_cached_minion=False,
-                   cache_sminion=True):
+                   cache_sminion=True,
+                   context_dict=None):
     if minion_id is None:
         minion_id = DEFAULT_SMINION_ID
     if skip_cached_minion is False:
@@ -212,7 +213,7 @@ def create_sminion(minion_id=None,
                                     skip_cached_opts=skip_cached_minion,
                                     cache_opts=cache_sminion)
     log.info('Instantiating a testing %s(%s)', sminion_cls.__name__, minion_id)
-    sminion = sminion_cls(minion_opts)
+    sminion = sminion_cls(minion_opts, context=context_dict)
     if cache_sminion:
         try:
             minions_cache = create_sminion.__cached_minions__
