@@ -337,7 +337,7 @@ def version_cmp(pkg1, pkg2, ignore_epoch=False):
             return 0
         elif LooseVersion(pkg1) > LooseVersion(pkg2):
             return 1
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception(exc)
     return None
 

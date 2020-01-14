@@ -9,12 +9,10 @@ import os
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -39,7 +37,6 @@ class MockRunnerClient(object):
             '''
                 init method
             '''
-            pass
 
         @staticmethod
         def cmd(arg1, arg2):
@@ -51,7 +48,6 @@ class MockRunnerClient(object):
             return []
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinrepoTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Validate the winrepo state

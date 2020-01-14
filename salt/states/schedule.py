@@ -136,8 +136,9 @@ def present(name,
         Requires python-croniter.
 
     run_on_start
-        Whether the job will run when Salt minion start.  Value should be
-        a boolean.
+        Whether the job will run when Salt minion starts, or the job will be
+        skipped **once** and run at the next scheduled run.  Value should be a
+        boolean.
 
     function
         The function that should be executed by the scheduled job.

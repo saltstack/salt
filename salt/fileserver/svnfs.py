@@ -471,13 +471,13 @@ def update():
 
     # if there is a change, fire an event
     if __opts__.get('fileserver_events', False):
-        event = salt.utils.event.get_event(
+        with salt.utils.event.get_event(
                 'master',
                 __opts__['sock_dir'],
                 __opts__['transport'],
                 opts=__opts__,
-                listen=False)
-        event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
+                listen=False) as event:
+            event.fire_event(data, tagify(['svnfs', 'update'], prefix='fileserver'))
     try:
         salt.fileserver.reap_fileserver_cache_dir(
             os.path.join(__opts__['cachedir'], 'svnfs/hash'),
@@ -493,30 +493,10 @@ def _env_is_exposed(env):
     Check if an environment is exposed by comparing it against a whitelist and
     blacklist.
     '''
-    if __opts__['svnfs_env_whitelist']:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The svnfs_env_whitelist config option has been renamed to '
-            'svnfs_saltenv_whitelist. Please update your configuration.'
-        )
-        whitelist = __opts__['svnfs_env_whitelist']
-    else:
-        whitelist = __opts__['svnfs_saltenv_whitelist']
-
-    if __opts__['svnfs_env_blacklist']:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The svnfs_env_blacklist config option has been renamed to '
-            'svnfs_saltenv_blacklist. Please update your configuration.'
-        )
-        blacklist = __opts__['svnfs_env_blacklist']
-    else:
-        blacklist = __opts__['svnfs_saltenv_blacklist']
-
     return salt.utils.stringutils.check_whitelist_blacklist(
         env,
-        whitelist=whitelist,
-        blacklist=blacklist,
+        whitelist=__opts__['svnfs_saltenv_whitelist'],
+        blacklist=__opts__['svnfs_saltenv_blacklist'],
     )
 
 
@@ -629,7 +609,7 @@ def find_file(path, tgt_env='base', **kwargs):  # pylint: disable=W0613
                 # 8 => st_mtime=1456338235
                 # 9 => st_ctime=1456338235
                 fnd['stat'] = list(os.stat(full))
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             return fnd
     return fnd

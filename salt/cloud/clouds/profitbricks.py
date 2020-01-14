@@ -117,6 +117,7 @@ from salt.exceptions import (
 # Import 3rd-party libs
 from salt.ext import six
 try:
+    # pylint: disable=no-name-in-module
     import profitbricks
     from profitbricks.client import (
         ProfitBricksService, Server,
@@ -124,6 +125,7 @@ try:
         Datacenter, LoadBalancer, LAN,
         PBNotFoundError, PBError
     )
+    # pylint: enable=no-name-in-module
     HAS_PROFITBRICKS = True
 except ImportError:
     HAS_PROFITBRICKS = False
@@ -748,7 +750,7 @@ def set_public_lan(lan_id):
                             lan_id=lan_id,
                             public=True)
         return lan['id']
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         lan = conn.create_lan(datacenter_id,
                               LAN(public=True,
                                   name='Public LAN'))
@@ -896,7 +898,7 @@ def create(vm_):
                 'Loaded node data for %s:\nname: %s\nstate: %s',
                 vm_['name'], pprint.pformat(data['name']), data['state']
             )
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error(
                 'Failed to get nodes list: %s', err,
                 # Show the trackback if the debug logging level is enabled

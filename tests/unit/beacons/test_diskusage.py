@@ -5,8 +5,8 @@ from __future__ import absolute_import
 from collections import namedtuple
 
 # Salt testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, patch, MagicMock, Mock
+from tests.support.unit import TestCase
+from tests.support.mock import patch, MagicMock, Mock
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
@@ -48,7 +48,6 @@ WINDOWS_STUB_DISK_USAGE = namedtuple('usage',
                                                                 50)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DiskUsageBeaconTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test case for salt.beacons.adb

@@ -79,7 +79,7 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
     enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
@@ -1642,7 +1642,7 @@ def install(name=None,
                         # Failed to unhold package
                         errors.append(unheld_pkg)
                 yield
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 errors.append(
                     'Error encountered unholding packages {0}: {1}'
                     .format(', '.join(to_unhold), exc)
@@ -3180,12 +3180,18 @@ def _get_patches(installed_only=False):
     for line in salt.utils.itertools.split(ret, os.linesep):
         inst, advisory_id, sev, pkg = re.match(r'([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
                                                line).groups()
-        if inst != 'i' and installed_only:
-            continue
-        patches[advisory_id] = {
-            'installed': True if inst == 'i' else False,
-            'summary': pkg
-        }
+        if advisory_id not in patches:
+            patches[advisory_id] = {
+                'installed': True if inst == 'i' else False,
+                'summary': [pkg]
+            }
+        else:
+            patches[advisory_id]['summary'].append(pkg)
+            if inst != 'i':
+                patches[advisory_id]['installed'] = False
+
+    if installed_only:
+        patches = {k: v for k, v in patches.items() if v['installed']}
     return patches
 
 
