@@ -140,13 +140,7 @@ For openSUSE 13.2 run the following as root:
 SUSE Linux Enterprise
 ---------------------
 
-For SLE 15 run the following as root:
-
-.. code-block:: bash
-
-    zypper install salt salt-minion salt-master
-
-For SLE 15 SP1 run the following as root:
+For SLE 15 and above run the following as root:
 
 .. code-block:: bash
 
