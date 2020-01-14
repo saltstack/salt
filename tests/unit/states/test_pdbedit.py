@@ -5,6 +5,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Libs
 import salt.states.pdbedit as pdbedit
+import salt.modules.pdbedit as pdbedit_mod
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -18,7 +19,8 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
     '''
 
     def setup_loader_modules(self):
-        return {pdbedit: {}}
+        return {pdbedit: {},
+                pdbedit_mod: {}}
 
     def test_generate_absent(self):
         '''
@@ -26,6 +28,10 @@ class PdbeditTestCase(TestCase, LoaderModuleMockMixin):
         user is already absent
         '''
         name = 'testname'
-        with patch.object(pdbedit, '__salt__', return_value=MagicMock()):
-            ret = pdbedit.absent(name)
+        cmd_ret = {'pid': 13172, 'retcode': 0, 'stdout': '', 'stderr': ''}
+        with patch.dict(pdbedit.__salt__, {'pdbedit.list':
+                                           pdbedit_mod.list_users}):
+            with patch.dict(pdbedit_mod.__salt__, {'cmd.run_all':
+                                                   MagicMock(return_value=cmd_ret)}):
+                ret = pdbedit.absent(name)
         assert ret['comment'] == 'account {0} is absent'.format(name)
