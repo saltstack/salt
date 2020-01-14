@@ -2223,6 +2223,21 @@ class BotoVpcPeeringConnectionsTest(BotoVpcTestCaseBase, BotoVpcTestCaseMixin):
         )
 
     @mock_ec2_deprecated
+    def test_request_vpc_peering_peer_region(self):
+        '''
+        Run with 2 vpc ids with peer_region set
+        and returns a message
+        '''
+        my_vpc = self._create_vpc()
+        other_vpc = self._create_vpc()
+        assert 'msg' in boto_vpc.request_vpc_peering_connection(
+            name='my_peering',
+            requester_vpc_id=my_vpc.id,
+            peer_vpc_id=other_vpc.id,
+            peer_region='test_region',
+            **conn_parameters)
+
+    @mock_ec2_deprecated
     def test_raises_error_if_both_vpc_name_and_vpc_id_are_specified(self):
         """
         Must specify only one
