@@ -479,9 +479,6 @@ def _init_nxapi(opts):
     proxy_dict = opts.get('proxy', {})
     conn_args = copy.deepcopy(proxy_dict)
     conn_args.pop('proxytype', None)
-    opts['multiprocessing'] = conn_args.pop('multiprocessing', True)
-    # This is not a SSH-based proxy, so it should be safe to enable
-    # multiprocessing.
     try:
         rpc_reply = __utils__['nxos.nxapi_request']('show clock', **conn_args)
         # Execute a very simple command to confirm we are able to connect properly
