@@ -4867,7 +4867,7 @@ def check_managed_changes(
                 except Exception as exc:  # pylint: disable=broad-except
                     log.warning('Unable to stat %s: %s', sfn, exc)
     changes = check_file_meta(name, sfn, source, source_sum, user,
-                              group, mode, attrs, saltenv, contents)
+                              group, mode, attrs, saltenv, contents, hide_comments=hide_comments)
     __clean_tmp(sfn)
     return changes
 
@@ -4933,6 +4933,14 @@ def check_file_meta(
 
     contents
         File contents
+
+    hide_comments
+        Comment types to hide, as a dictionary; specify line comment string,
+        and/or multiline_begin and multiline_end.
+
+        .. code-block :: yaml
+
+            {'line': '//', 'multiline_begin': '/*', 'multiline_end': '*/'}+}
     '''
     changes = {}
     if not source_sum:
@@ -4958,7 +4966,7 @@ def check_file_meta(
             if sfn:
                 try:
                     changes['diff'] = get_diff(
-                        name, sfn, template=True, show_filenames=False, hide_comments=hide_comments)
+                        name, sfn, template=True, show_filenames=False)
                 except CommandExecutionError as exc:
                     changes['diff'] = exc.strerror
             else:
@@ -4976,6 +4984,10 @@ def check_file_meta(
         # Compare the static contents with the named file
         try:
             differences = get_diff(name, tmp, show_filenames=False)
+            if hide_comments is not None:
+                # diff again without comments to return to the user
+                no_comment_diff = get_diff(name, tmp, show_filenames=False,
+                                           hide_comments=hide_comments)
         except CommandExecutionError as exc:
             log.error('Failed to diff files: {0}'.format(exc))
             differences = exc.strerror
@@ -4984,9 +4996,7 @@ def check_file_meta(
             if __salt__['config.option']('obfuscate_templates'):
                 changes['diff'] = '<Obfuscated Template>'
             elif hide_comments is not None:
-                # diff again without comments to return to the user
-                changes['diff'] = get_diff(name, tmp, show_filenames=False,
-                                           hide_comments=hide_comments)
+                changes['diff'] = no_comment_diff
             else:
                 changes['diff'] = differences
 
