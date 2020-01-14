@@ -2190,6 +2190,7 @@ def managed(name,
             win_deny_perms=None,
             win_inheritance=True,
             win_perms_reset=False,
+            hide_comments=None,
             **kwargs):
     r'''
     Manage a given file, this function allows for a file to be downloaded from
@@ -2747,6 +2748,14 @@ def managed(name,
                 fred_snuffy:
                   perms: full_control
             - win_inheritance: False
+
+    hide_comments
+        Comment types to hide, as a dictionary; specify line comment string,
+        and/or multiline_begin and multiline_end.
+
+        .. code-block :: yaml
+
+            {'line': '//', 'multiline_begin': '/*', 'multiline_end': '*/'}+}
     '''
     if 'env' in kwargs:
         # "env" is not supported; Use "saltenv".
@@ -3034,6 +3043,7 @@ def managed(name,
                     contents,
                     skip_verify,
                     keep_mode,
+                    hide_comments=hide_comments,
                     **kwargs
                 )
 
