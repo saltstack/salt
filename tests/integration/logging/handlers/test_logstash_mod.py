@@ -9,7 +9,6 @@ import zmq
 
 import salt.utils.stringutils
 from salt.log.handlers.logstash_mod import DatagramLogstashHandler, ZMQLogstashHander
-from tests.support.helpers import get_unused_localhost_port
 from tests.support.unit import TestCase
 
 log = logging.getLogger(__name__)
@@ -20,7 +19,7 @@ log = logging.getLogger(__name__)
 class DatagramLogstashHandlerTest(TestCase):
     def setUp(self):
         self.test_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        port = get_unused_localhost_port()
+        port = 39556
         self.test_server.bind(("127.0.0.1", port))
         self.test_server.settimeout(2)
         self.logger = logging.getLogger("test_logstash_logger")
@@ -51,7 +50,7 @@ class DatagramLogstashHandlerTest(TestCase):
 class ZMQLogstashHanderTest(TestCase):
     def setUp(self):
         self.context = zmq.Context()
-        port = get_unused_localhost_port()
+        port = 39556
 
         self.zmq_server = self.context.socket(zmq.SUB)
         self.zmq_server.setsockopt(zmq.SUBSCRIBE, b"")
