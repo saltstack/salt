@@ -5095,7 +5095,7 @@ def get_diff(file1,
 
         .. code-block :: yaml
 
-            {'line': '//', 'multiline_begin': '/*', 'multiline_end': '*/'}+}
+            {'line': '//', 'multiline_begin': '/*', 'multiline_end': '*/'}
 
     CLI Examples:
 
@@ -5154,6 +5154,8 @@ def get_diff(file1,
         elif not show_changes:
             ret = '<show_changes=False>'
         else:
+            # Remove comments from both sides before diff
+            # If hide_comments is not set, this is a no-op
             args = suppress_comments(args, hide_comments)
             bdiff = _binary_replace(*paths)  # pylint: disable=no-value-for-parameter
             if bdiff:
