@@ -295,7 +295,7 @@ def save_config():
     try:
         vol_d = dict([(line.split()[1], line) for line in scan])
         for vol in vol_d:
-            pattern = r'^ARRAY\s+{0}.*$'.format(re.escape(vol))
+            pattern = r'^ARRAY\s+{0}\s+.*$'.format(re.escape(vol))
             __salt__['file.replace'](cfg_file, pattern, vol_d[vol], append_if_not_found=True)
     except SaltInvocationError:  # File is missing
         __salt__['file.write'](cfg_file, args=scan)
