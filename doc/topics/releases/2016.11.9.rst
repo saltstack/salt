@@ -1304,7 +1304,7 @@ Changelog for v2016.11.8..v2016.11.9
 
   * 3c429299f9 Merge pull request `#43456`_ from rallytime/43445_follow_up
 
-  * 35c1d8898d Add 3000 to version list
+  * 35c1d8898d Add Neon to version list
 
 * **PR** `#43441`_: (`meaksh`_) Use $HOME to get the user home directory instead using '~' char
   @ *2017-09-11 21:25:20 UTC*
