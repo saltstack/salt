@@ -145,7 +145,9 @@ class PsTestCase(TestCase):
     def test_pgrep(self):
         with patch('salt.utils.psutil_compat.process_iter',
                    MagicMock(return_value=[self.mocked_proc])):
-            assert _get_proc_pid(self.mocked_proc) in ps.pgrep(_get_proc_name(self.mocked_proc))
+            ret = ps.pgrep(_get_proc_name(self.mocked_proc))
+            assert ret is not None
+            assert _get_proc_pid(self.mocked_proc) in ret  # pylint: disable=unsupported-membership-test
 
     def test_cpu_percent(self):
         with patch('salt.utils.psutil_compat.cpu_percent',
