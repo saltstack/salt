@@ -150,7 +150,7 @@ class VaultTestCaseCurrent(ModuleCase):
         '''
         def count_tests(funcobj):
             return inspect.ismethod(funcobj) and funcobj.__name__.startswith('test_')
-        numtests = len(inspect.getmembers(VaultTestCase, predicate=count_tests))
+        numtests = len(inspect.getmembers(VaultTestCaseCurrent, predicate=count_tests))
         if self.count >= numtests:
             self.run_state('docker_container.stopped', name='vault')
             self.run_state('docker_container.absent', name='vault')

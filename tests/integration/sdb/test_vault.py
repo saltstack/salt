@@ -137,7 +137,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
         '''
         SetUp vault container
         '''
-        if VaultTestCase.count == 0:
+        if self.count == 0:
             config = '{"backend": {"file": {"path": "/vault/file"}}, "default_lease_ttl": "168h", "max_lease_ttl": "720h"}'
             self.run_state('docker_image.present', name='vault', tag='1.3.1')
             self.run_state(
@@ -189,7 +189,7 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             )
             if ret != 0:
                 self.skipTest('unable to assign policy to vault')
-        VaultTestCase.count += 1
+        self.count += 1
 
     def tearDown(self):
         '''
@@ -199,8 +199,8 @@ class VaultTestCaseCurrent(ModuleCase, ShellCase):
             return inspect.ismethod(funcobj) or \
                 inspect.isfunction(funcobj) and \
                 funcobj.__name__.startswith('test_')
-        numtests = len(inspect.getmembers(VaultTestCase, predicate=count_tests))
-        if VaultTestCase.count >= numtests:
+        numtests = len(inspect.getmembers(VaultTestCaseCurrent, predicate=count_tests))
+        if self.count >= numtests:
             self.run_state('docker_container.stopped', name='vault')
             self.run_state('docker_container.absent', name='vault')
             self.run_state('docker_image.absent', name='vault', force=True)
