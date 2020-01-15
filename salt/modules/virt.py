@@ -1351,7 +1351,7 @@ def init(name,
                 'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
             }
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
 
     .. _init-nic-def:
 
@@ -1833,7 +1833,7 @@ def update(name,
                 'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
             }
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
 
     :return:
 
@@ -4429,7 +4429,7 @@ def network_define(name,
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
 
-        ..versionadded:: Neon
+        ..versionadded:: 3000
     :type ipv4_config: dict or None
 
     :param ipv6_config: IP v6 configuration
@@ -4437,7 +4437,7 @@ def network_define(name,
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
 
-        ..versionadded:: Neon
+        ..versionadded:: 3000
     :type ipv6_config: dict or None
 
     :param connection: libvirt connection URI, overriding defaults
@@ -4593,7 +4593,7 @@ def network_get_xml(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -4751,7 +4751,7 @@ def pool_capabilities(**kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -4909,7 +4909,7 @@ def pool_define(name,
     :param source_initiator:
         Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -4956,7 +4956,7 @@ def pool_define(name,
                 }
             }
 
-        Since neon, instead the source authentication can only contain ``username``
+        Since 3000, instead the source authentication can only contain ``username``
         and ``password`` properties. In this case the libvirt secret will be defined and used.
         For Ceph authentications a base64 encoded key is expected.
 
@@ -5129,7 +5129,7 @@ def pool_update(name,
     :param source_initiator:
         Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
 
-        .. versionadded:: neon
+        .. versionadded:: 3000
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -5176,7 +5176,7 @@ def pool_update(name,
                 }
             }
 
-        Since neon, instead the source authentication can only contain ``username``
+        Since 3000, instead the source authentication can only contain ``username``
         and ``password`` properties. In this case the libvirt secret will be defined and used.
         For Ceph authentications a base64 encoded key is expected.
 
@@ -5207,7 +5207,7 @@ def pool_update(name,
         salt '*' virt.pool_update myshare netfs source_format=cifs \
                                   source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
 
-    .. versionadded:: neon
+    .. versionadded:: 3000
     '''
     # Get the current definition to compare the two
     conn = __get_conn(**kwargs)
@@ -5361,7 +5361,7 @@ def pool_get_xml(name, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -5636,7 +5636,7 @@ def volume_infos(pool=None, volume=None, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
@@ -5708,7 +5708,7 @@ def volume_delete(pool, volume, **kwargs):
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     CLI Example:
 
