@@ -183,7 +183,6 @@ __virtualname__ = 'nxos'
 # Globals used to maintain state for ssh and nxapi proxy minions
 DEVICE_DETAILS = {'grains_cache': {}}
 CONNECTION = 'ssh'
-COPY_RS = 'copy running-config startup-config'
 
 
 def __virtual__():
@@ -335,6 +334,8 @@ def proxy_config(commands, **kwargs):
         salt '*' nxos.cmd proxy_config 'feature bgp' no_save_config=True
         salt '*' nxos.cmd proxy_config 'feature bgp'
     '''
+    COPY_RS = 'copy running-config startup-config'
+
     no_save_config = DEVICE_DETAILS['no_save_config']
     no_save_config = kwargs.get('no_save_config', no_save_config)
     if not isinstance(commands, list):
