@@ -1141,9 +1141,19 @@ class LowDataAdapter(object):
     }
 
     def __init__(self):
-        self.opts = cherrypy.config['saltopts']
-        self.apiopts = cherrypy.config['apiopts']
         self.api = salt.netapi.NetapiClient(self.opts)
+
+    @property
+    def opts(self):
+        return cherrypy.config['saltopts']
+
+    @property
+    def apiopts(self):
+        return cherrypy.config['apiopts']
+
+    @property
+    def api(self):
+        return salt.netapi.NetapiClient(self.opts)
 
     def exec_lowstate(self, client=None, token=None):
         '''
@@ -1299,6 +1309,45 @@ class LowDataAdapter(object):
             'return': list(self.exec_lowstate(
                 token=cherrypy.session.get('token')))
         }
+
+class Flush(LowDataAdapter):
+    '''
+    Flush Config for api server
+    '''
+    _cp_config = dict(LowDataAdapter._cp_config, **{
+        'tools.salt_auth.on': True,
+    })
+
+    def GET(self):
+        '''
+        Access this url when the configuration file is modified.
+
+        ..http:get:: /flush
+            :reqheader X-Auth-Token: |req_token|
+            :reqheader Accept: |req_accept|
+
+            :status 200: |200|
+            :status 401: |401|
+            :status 406: |406|
+
+        **Example request:**
+
+        .. code-block:: bash
+
+            curl -i localhost:8000/flush
+
+        .. code-block:: text
+
+            GET /flush HTTP/1.1
+            Host: localhost:8000
+
+        '''
+        opts = salt.config.client_config(
+            os.environ.get('SALT_MASTER_CONFIG', '/etc/salt/master'))
+        apiopts = opts.get(__name__.rsplit('.', 2)[-2], {})
+        cherrypy.config['saltopts'] = opts
+        cherrypy.config['apiopts'] = apiopts
+        return {'return':'flush successful'}
 
 
 class Minions(LowDataAdapter):
@@ -2808,6 +2857,7 @@ class API(object):
         'keys': Keys,
         'events': Events,
         'stats': Stats,
+        'flush': Flush,
     }
 
     def _setattr_url_map(self):
