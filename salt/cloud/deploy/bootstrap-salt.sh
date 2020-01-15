@@ -1304,7 +1304,7 @@ __ubuntu_derivatives_translation() {
     linuxmint_19_ubuntu_base="18.04"
     linaro_12_ubuntu_base="12.04"
     elementary_os_02_ubuntu_base="12.04"
-    neon="16.04"
+    neon_16_ubuntu_base="16.04"
 
     # Translate Ubuntu derivatives to their base Ubuntu version
     match=$(echo "$DISTRO_NAME_L" | grep -E ${UBUNTU_DERIVATIVES})
