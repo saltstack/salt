@@ -574,10 +574,13 @@ def _fix_cask_namespace(name=None, pkgs=None):
     if pkgs:
         pkgs_ = []
         for pkg in pkgs:
-            if pkg.startswith('caskroom/cask/'):
+            if isinstance(pkg, str) and pkg.startswith('caskroom/cask/'):
                 show_warning = True
                 pkg = pkg.replace("caskroom/cask/", "homebrew/cask/")
-            pkgs_.append(pkg)
+                pkgs_.append(pkg)
+            else:
+                pkgs_.append(pkg)
+                continue
         pkgs = pkgs_
 
     if show_warning:
