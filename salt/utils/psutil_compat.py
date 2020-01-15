@@ -59,6 +59,7 @@ else:
 
     class Process(psutil.Process):  # pylint: disable=no-init
         # Reimplement overloaded getters/setters
+        # pylint: disable=arguments-differ
         def cpu_affinity(self, *args, **kwargs):
             if args or kwargs:
                 return self.set_cpu_affinity(*args, **kwargs)
@@ -88,6 +89,7 @@ else:
                     return self.get_rlimit()
             else:
                 pass
+        # pylint: enable=arguments-differ
 
     # Alias renamed Process functions
     _PROCESS_FUNCTION_MAP = {

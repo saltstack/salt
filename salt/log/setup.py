@@ -484,6 +484,9 @@ def get_multiprocessing_logging_queue():
     global __MP_LOGGING_QUEUE
     from salt.utils.platform import is_darwin
 
+    if __MP_LOGGING_QUEUE is not None:
+        return __MP_LOGGING_QUEUE
+
     if __MP_IN_MAINPROCESS is False:
         # We're not in the MainProcess, return! No Queue shall be instantiated
         return __MP_LOGGING_QUEUE
@@ -785,7 +788,7 @@ def __process_multiprocessing_logging_queue(opts, queue):
         except Exception as exc:  # pylint: disable=broad-except
             logging.getLogger(__name__).warning(
                 'An exception occurred in the multiprocessing logging '
-                'queue thread: %s', exc, exc_info_on_loglevel=logging.DEBUG
+                'queue thread: %r', exc, exc_info_on_loglevel=logging.DEBUG
             )
 
 

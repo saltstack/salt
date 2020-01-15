@@ -152,6 +152,13 @@ def _linux_cpudata():
                 val = comps[1].strip()
                 if key == 'processor':
                     grains['num_cpus'] = int(val) + 1
+                # head -2 /proc/cpuinfo
+                # vendor_id       : IBM/S390
+                # # processors    : 2
+                elif key == '# processors':
+                    grains['num_cpus'] = int(val)
+                elif key == 'vendor_id':
+                    grains['cpu_model'] = val
                 elif key == 'model name':
                     grains['cpu_model'] = val
                 elif key == 'flags':
@@ -629,7 +636,7 @@ def _windows_virtual(osdata):
     if osdata['kernel'] != 'Windows':
         return grains
 
-    grains['virtual'] = 'physical'
+    grains['virtual'] = osdata.get('virtual', 'physical')
 
     # It is possible that the 'manufacturer' and/or 'productname' grains
     # exist but have a value of None.
@@ -1009,17 +1016,17 @@ def _virtual(osdata):
             if maker.startswith('Bochs'):
                 grains['virtual'] = 'kvm'
         if sysctl:
-            hv_vendor = __salt__['cmd.run']('{0} hw.hv_vendor'.format(sysctl))
-            model = __salt__['cmd.run']('{0} hw.model'.format(sysctl))
+            hv_vendor = __salt__['cmd.run']('{0} -n hw.hv_vendor'.format(sysctl))
+            model = __salt__['cmd.run']('{0} -n hw.model'.format(sysctl))
             jail = __salt__['cmd.run'](
                 '{0} -n security.jail.jailed'.format(sysctl)
             )
             if 'bhyve' in hv_vendor:
                 grains['virtual'] = 'bhyve'
+            elif 'QEMU Virtual CPU' in model:
+                grains['virtual'] = 'kvm'
             if jail == '1':
                 grains['virtual_subtype'] = 'jail'
-            if 'QEMU Virtual CPU' in model:
-                grains['virtual'] = 'kvm'
     elif osdata['kernel'] == 'OpenBSD':
         if 'manufacturer' in osdata:
             if osdata['manufacturer'] in ['QEMU', 'Red Hat', 'Joyent']:
@@ -2051,6 +2058,7 @@ def os_data():
     else:
         grains['os'] = grains['kernel']
     if grains['kernel'] == 'FreeBSD':
+        grains['osfullname'] = grains['os']
         try:
             grains['osrelease'] = __salt__['cmd.run']('freebsd-version -u').split('-')[0]
         except salt.exceptions.CommandExecutionError:
@@ -2142,7 +2150,7 @@ def locale_info():
             grains['locale_info']['defaultlanguage'],
             grains['locale_info']['defaultencoding']
         ) = locale.getdefaultlocale()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # locale.getdefaultlocale can ValueError!! Catch anything else it
         # might do, per #2205
         grains['locale_info']['defaultlanguage'] = 'unknown'
@@ -2772,26 +2780,6 @@ def _hw_data(osdata):
         else:
             log.error('The \'prtconf\' binary was not found in $PATH.')
 
-    elif osdata['kernel'] == 'AIX':
-        cmd = salt.utils.path.which('prtconf')
-        if data:
-            data = __salt__['cmd.run']('{0}'.format(cmd)) + os.linesep
-            for dest, regstring in (('serialnumber', r'(?im)^\s*Machine\s+Serial\s+Number:\s+(\S+)'),
-                                    ('systemfirmware', r'(?im)^\s*Firmware\s+Version:\s+(.*)')):
-                for regex in [re.compile(r) for r in [regstring]]:
-                    res = regex.search(data)
-                    if res and len(res.groups()) >= 1:
-                        grains[dest] = res.group(1).strip().replace("'", '')
-
-            product_regexes = [re.compile(r'(?im)^\s*System\s+Model:\s+(\S+)')]
-            for regex in product_regexes:
-                res = regex.search(data)
-                if res and len(res.groups()) >= 1:
-                    grains['manufacturer'], grains['productname'] = res.group(1).strip().replace("'", "").split(",")
-                    break
-        else:
-            log.error('The \'prtconf\' binary was not found in $PATH.')
-
     return grains
 
 
@@ -2882,6 +2870,6 @@ def default_gateway():
                         if via == 'via':
                             grains['ip{0}_gw'.format(ip_version)] = gw_ip
                     break
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
     return grains

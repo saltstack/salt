@@ -29,9 +29,9 @@ master config.
 
         engines:
           - logentries:
-            endpoint: data.logentries.com
-            port: 10000
-            token: 057af3e2-1c05-47c5-882a-5cd644655dbf
+              endpoint: data.logentries.com
+              port: 10000
+              token: 057af3e2-1c05-47c5-882a-5cd644655dbf
 
 The 'token' can be obtained from the Logentries service.
 
@@ -109,7 +109,7 @@ class PlainTextSocketAppender(object):
             try:
                 self.open_connection()
                 return
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 if self.verbose:
                     log.warning('Unable to connect to Logentries')
 
@@ -121,7 +121,7 @@ class PlainTextSocketAppender(object):
 
             try:
                 time.sleep(wait_for)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt:  # pylint: disable=try-except-raise
                 raise
 
     def close_connection(self):

@@ -23,6 +23,7 @@ import salt.crypt
 import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.verify
@@ -55,7 +56,6 @@ else:
 # pylint: enable=import-error,no-name-in-module
 
 # Import third party libs
-import msgpack
 try:
     from M2Crypto import RSA
     HAS_M2 = True
@@ -532,7 +532,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                 req_channel.send(load, timeout=60)
             except salt.exceptions.SaltReqTimeoutError:
                 log.info('fire_master failed: master could not be contacted. Request timed out.')
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 log.info('fire_master failed: %s', traceback.format_exc())
             finally:
                 # SyncWrapper will call either close() or destroy(), whichever is available
@@ -557,9 +557,16 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not self.auth.authenticated:
                 yield self.auth.authenticate()
             if self.auth.authenticated:
+                # if this is changed from the default, we assume it was intentional
+                if int(self.opts.get('publish_port', 4506)) != 4506:
+                    self.publish_port = self.opts.get('publish_port')
+                # else take the relayed publish_port master reports
+                else:
+                    self.publish_port = self.auth.creds['publish_port']
+
                 self.message_client = SaltMessageClientPool(
                     self.opts,
-                    args=(self.opts, self.opts['master_ip'], int(self.auth.creds['publish_port']),),
+                    args=(self.opts, self.opts['master_ip'], int(self.publish_port),),
                     kwargs={'io_loop': self.io_loop,
                             'connect_callback': self.connect_callback,
                             'disconnect_callback': self.disconnect_callback,
@@ -568,9 +575,9 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
                 yield self.message_client.connect()  # wait for the client to be connected
                 self.connected = True
         # TODO: better exception handling...
-        except KeyboardInterrupt:
+        except KeyboardInterrupt:  # pylint: disable=try-except-raise
             raise
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             if '-|RETRY|-' not in six.text_type(exc):
                 raise SaltClientError('Unable to sign_in to master: {0}'.format(exc))  # TODO: better error message
 
@@ -586,7 +593,7 @@ class AsyncTCPPubChannel(salt.transport.mixins.auth.AESPubClientMixin, salt.tran
             if not isinstance(body, dict):
                 # TODO: For some reason we need to decode here for things
                 #       to work. Fix this.
-                body = msgpack.loads(body)
+                body = salt.utils.msgpack.loads(body)
                 if six.PY3:
                     body = salt.transport.frame.decode_embedded_strs(body)
             ret = yield self._decode_payload(body)
@@ -622,7 +629,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         if hasattr(self.req_server, 'shutdown'):
             try:
                 self.req_server.shutdown()
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception('TCPReqServerChannel close generated an exception: %s', str(exc))
         elif hasattr(self.req_server, 'stop'):
             try:
@@ -691,7 +698,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
         try:
             try:
                 payload = self._decode_payload(payload)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 stream.write(salt.transport.frame.frame_msg('bad load', header=header))
                 raise tornado.gen.Return()
 
@@ -722,7 +729,7 @@ class TCPReqServerChannel(salt.transport.mixins.auth.AESReqServerMixin, salt.tra
             # TODO: test
             try:
                 ret, req_opts = yield self.payload_handler(payload)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 # always attempt to return an error to the minion
                 stream.write('Some exception handling minion payload')
                 log.error('Some exception handling a payload from minion', exc_info=True)
@@ -778,7 +785,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         '''
         log.trace('Req client %s connected', address)
         self.clients.append((stream, address))
-        unpacker = msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker()
         try:
             while True:
                 wire_bytes = yield stream.read_bytes(4096, partial=True)
@@ -794,7 +801,7 @@ class SaltMessageServer(tornado.tcpserver.TCPServer, object):
         except tornado.iostream.StreamClosedError:
             log.trace('req client disconnected %s', address)
             self.remove_client((stream, address))
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.trace('other master-side exception: %s', e)
             self.remove_client((stream, address))
             stream.close()
@@ -869,7 +876,7 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         self.opts = opts
         super(TCPClientKeepAlive, self).__init__(resolver=resolver)
 
-    def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument
+    def _create_stream(self, max_buffer_size, af, addr, **kwargs):  # pylint: disable=unused-argument,arguments-differ
         '''
         Override _create_stream() in TCPClient.
 
@@ -1001,7 +1008,7 @@ class SaltMessageClient(object):
                             lambda future: self._stop_io_loop()
                         )
                         self.io_loop.start()
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.info('Exception caught in SaltMessageClient.close: %s', str(e))
             finally:
                 orig_loop.make_current()
@@ -1065,7 +1072,7 @@ class SaltMessageClient(object):
                                                                   **kwargs)
                 self._connecting_future.set_result(True)
                 break
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.warn('TCP Message Client encountered an exception %r', exc)
                 yield tornado.gen.sleep(1)  # TODO: backoff
                 #self._connecting_future.set_exception(e)
@@ -1077,7 +1084,7 @@ class SaltMessageClient(object):
                     not self._connecting_future.done() or
                     self._connecting_future.result() is not True):
                 yield self._connecting_future
-            unpacker = msgpack.Unpacker()
+            unpacker = salt.utils.msgpack.Unpacker()
             while not self._closing:
                 try:
                     self._read_until_future = self._stream.read_bytes(4096, partial=True)
@@ -1120,7 +1127,7 @@ class SaltMessageClient(object):
                                  'attempting to fallback to another transport')
                     else:
                         raise SaltClientError
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-except
                     log.error('Exception parsing response', exc_info=True)
                     for future in six.itervalues(self.send_future_map):
                         future.set_exception(e)
@@ -1357,7 +1364,7 @@ class PubServer(tornado.tcpserver.TCPServer, object):
 
     @tornado.gen.coroutine
     def _stream_read(self, client):
-        unpacker = msgpack.Unpacker()
+        unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
                 client._read_until_future = client.stream.read_bytes(4096, partial=True)
@@ -1386,8 +1393,8 @@ class PubServer(tornado.tcpserver.TCPServer, object):
                 self._remove_client_present(client)
                 self.clients.discard(client)
                 break
-            except Exception as e:
-                log.error('Exception parsing response', exc_info=True)
+            except Exception as e:  # pylint: disable=broad-except
+                log.error('Exception parsing response from %s', client.address, exc_info=True)
                 continue
 
     def handle_stream(self, stream, address):
@@ -1544,7 +1551,7 @@ class TCPPubServerChannel(salt.transport.server.PubServerChannel):
         int_payload = {'payload': self.serial.dumps(payload)}
 
         # add some targeting stuff for lists only (for now)
-        if load['tgt_type'] == 'list':
+        if load['tgt_type'] == 'list' and not self.opts.get("order_masters", False):
             if isinstance(load['tgt'], six.string_types):
                 # Fetch a list of minions that match
                 _res = self.ckminions.check_minions(load['tgt'],

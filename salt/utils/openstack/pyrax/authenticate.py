@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals, print_function
 
-try:
-    import pyrax
-except ImportError:
-    raise
+import pyrax  # pylint: disable=3rd-party-module-not-gated
 
 
 class Authenticate(object):

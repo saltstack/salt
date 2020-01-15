@@ -42,6 +42,7 @@ get the process started by running the following:
 
 While those commands are running, finish reading the rest of this guide.
 
+
 Pre-commit
 ----------
 
@@ -280,9 +281,17 @@ To be able to merge code:
 
 The SaltStack employee that reviews your pull request might request changes or deny the pull request for various reasons.
 
+Salt uses a typical branch strategy - ``master`` is the next expected release.
+Code should only make it to ``master`` once it's production ready. This means
+that typical changes (fixes, features) should have accompanying tests.\
+
+Closing GitHub issues from commits
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 SaltStack encourages using `the magic keywords to close a GitHub issue <Closing
 issues via commit message_>`_. These should appear in the commit message text
 directly.
+
 
 Release Naming Convention
 -------------------------
@@ -297,6 +306,9 @@ Handling CVE
 
 If a CVE is discovered, Salt will create a new release that **only** contains the tests and patch for the CVE.
 This method should improve the upgrade process by reducing the chances of breaking something.
+
+.. _backporting-pull-requests:
+
 
 Backporting Pull Requests
 -------------------------

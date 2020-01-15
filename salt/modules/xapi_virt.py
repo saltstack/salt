@@ -96,7 +96,7 @@ def _get_xapi_session():
         session.xenapi.login_with_password(xapi_login, xapi_password)
 
         yield session.xenapi
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError('Failed to connect to XenAPI socket.')
     finally:
         session.xenapi.session.logout()
@@ -134,7 +134,7 @@ def _get_label_uuid(xapi, rectype, label):
     '''
     try:
         return getattr(xapi, rectype).get_by_name_label(label)[0]
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -450,7 +450,7 @@ def setmem(vm_, memory):
             xapi.VM.set_memory_dynamic_max_live(vm_uuid, mem_target)
             xapi.VM.set_memory_dynamic_min_live(vm_uuid, mem_target)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -473,7 +473,7 @@ def setvcpus(vm_, vcpus):
         try:
             xapi.VM.set_VCPUs_number_live(vm_uuid, vcpus)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -526,7 +526,7 @@ def vcpu_pin(vm_, vcpu, cpus):
         # a bug which makes the client call fail.
         # That code is accurate for all others XenAPI implementations, but
         # for that particular one, fallback to xm / xl instead.
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return __salt__['cmd.run'](
                     '{0} vcpu-pin {1} {2} {3}'.format(_get_xtool(), vm_, vcpu, cpus),
                     python_shell=False)
@@ -590,7 +590,7 @@ def shutdown(vm_):
         try:
             xapi.VM.clean_shutdown(vm_uuid)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -611,7 +611,7 @@ def pause(vm_):
         try:
             xapi.VM.pause(vm_uuid)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -632,7 +632,7 @@ def resume(vm_):
         try:
             xapi.VM.unpause(vm_uuid)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -670,7 +670,7 @@ def reboot(vm_):
         try:
             xapi.VM.clean_reboot(vm_uuid)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -691,7 +691,7 @@ def reset(vm_):
         try:
             xapi.VM.hard_reboot(vm_uuid)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -732,7 +732,7 @@ def migrate(vm_, target,
         try:
             xapi.VM.migrate(vm_uuid, target, bool(live), other_config)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 
@@ -754,7 +754,7 @@ def stop(vm_):
         try:
             xapi.VM.hard_shutdown(vm_uuid)
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return False
 
 

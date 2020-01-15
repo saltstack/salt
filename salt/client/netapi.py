@@ -61,7 +61,7 @@ class NetapiClient(object):
         '''
         Load and start all available api modules
         '''
-        if not len(self.netapi):
+        if not self.netapi:
             log.error("Did not find any netapi configurations, nothing to start")
 
         kwargs = {}

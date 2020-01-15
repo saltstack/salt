@@ -5,7 +5,7 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import patch, MagicMock, NO_MOCK, NO_MOCK_REASON
+from tests.support.mock import patch, MagicMock
 
 # Import Salt Libs
 import salt.utils.platform
@@ -23,7 +23,6 @@ except ImportError:
     HAS_WIN32 = False
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class WinFunctionsTestCase(TestCase):
     '''
     Test cases for salt.utils.win_functions
@@ -92,6 +91,30 @@ class WinFunctionsTestCase(TestCase):
         groups = ['SYSTEM']
         with patch('win32net.NetUserGetLocalGroups', return_value=groups):
             ret = win_functions.get_user_groups('SYSTEM')
+            self.assertListEqual(groups, ret)
+
+    @skipIf(not salt.utils.platform.is_windows(),
+            'WinDLL only available on Windows')
+    @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
+    def test_get_user_groups_unavailable_dc(self):
+        groups = ['Administrators', 'Users']
+        win_error = WinError()
+        win_error.winerror = 1722
+        effect = [win_error, groups]
+        with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
+            ret = win_functions.get_user_groups('Administrator')
+            self.assertListEqual(groups, ret)
+
+    @skipIf(not salt.utils.platform.is_windows(),
+            'WinDLL only available on Windows')
+    @skipIf(not HAS_WIN32, 'Requires pywin32 libraries')
+    def test_get_user_groups_unknown_dc(self):
+        groups = ['Administrators', 'Users']
+        win_error = WinError()
+        win_error.winerror = 2453
+        effect = [win_error, groups]
+        with patch('win32net.NetUserGetLocalGroups', side_effect=effect):
+            ret = win_functions.get_user_groups('Administrator')
             self.assertListEqual(groups, ret)
 
     @skipIf(not salt.utils.platform.is_windows(),

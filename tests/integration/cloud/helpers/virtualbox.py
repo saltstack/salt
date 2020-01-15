@@ -38,7 +38,7 @@ class VirtualboxTestCase(TestCase):
     def assertMachineExists(self, name, msg=None):
         try:
             self.vbox.findMachine(name)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if msg:
                 self.fail(msg)
             else:

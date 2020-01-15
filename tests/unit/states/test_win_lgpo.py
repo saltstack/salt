@@ -7,12 +7,14 @@
 from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
-from tests.support.unit import TestCase
+from tests.support.unit import TestCase, skipIf
+import salt.utils.platform
 
 # Import Salt Libs
 import salt.states.win_lgpo as win_lgpo
 
 
+@skipIf(not salt.utils.platform.is_windows(), 'LGPO not applicable')
 class WinSystemTestCase(TestCase):
     '''
     Test cases for the win_lgpo state
@@ -97,4 +99,31 @@ class WinSystemTestCase(TestCase):
         # None
         self.assertFalse(
             win_lgpo._compare_policies(compare_dict, None)
+        )
+
+    def test__compare_policies_integer(self):
+        '''
+        ``_compare_policies`` should only return ``True`` when the integer
+        values are the same. All other scenarios should return ``False``
+        '''
+        compare_integer = 1
+        # Same
+        self.assertTrue(
+            win_lgpo._compare_policies(compare_integer, compare_integer)
+        )
+        # Different
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, 0)
+        )
+        # List
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, ['item1', 'item2'])
+        )
+        # Dict
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, {'key': 'value'})
+        )
+        # None
+        self.assertFalse(
+            win_lgpo._compare_policies(compare_integer, None)
         )

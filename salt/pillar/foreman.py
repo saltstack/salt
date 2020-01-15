@@ -129,7 +129,7 @@ def ext_pillar(minion_id,
         if only:
             result = dict((k, result[k]) for k in only if k in result)
 
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.exception(
             'Could not fetch host data via Foreman API:'
         )

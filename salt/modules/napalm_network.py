@@ -152,7 +152,7 @@ def _explicit_close(napalm_device):
         # or regular minion
         try:
             napalm_device['DRIVER'].close()
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error('Unable to close the temp connection with the device:')
             log.error(err)
             log.error('Please report.')
