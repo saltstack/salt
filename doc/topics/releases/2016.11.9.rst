@@ -1297,14 +1297,14 @@ Changelog for v2016.11.8..v2016.11.9
 
 * **ISSUE** `#43223`_: (`rallytime`_) Properly deprecate describe_route_table function in boto_vpc module (refs: `#43445`_)
 
-* **PR** `#43456`_: (`rallytime`_) Add Neon to version list
+* **PR** `#43456`_: (`rallytime`_) Add 3000 to version list
   @ *2017-09-12 15:00:27 UTC*
 
   * **PR** `#43445`_: (`rallytime`_) Bump deprecation warning for boto_vpc.describe_route_table (refs: `#43456`_)
 
   * 3c429299f9 Merge pull request `#43456`_ from rallytime/43445_follow_up
 
-  * 35c1d8898d Add Neon to version list
+  * 35c1d8898d Add 3000 to version list
 
 * **PR** `#43441`_: (`meaksh`_) Use $HOME to get the user home directory instead using '~' char
   @ *2017-09-11 21:25:20 UTC*

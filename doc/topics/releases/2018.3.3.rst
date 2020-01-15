@@ -1296,12 +1296,12 @@ Changelog for v2018.3.2..v2018.3.3
 
   * fb7885315c Wrap ElementTree.tostring to make strs, not bytes
 
-* **PR** `#48824`_: (`rallytime`_) Bump deprecation in win_servermanager state to Neon
+* **PR** `#48824`_: (`rallytime`_) Bump deprecation in win_servermanager state to 3000
   @ *2018-08-02 18:01:34 UTC*
 
   * 1fb7d9431b Merge pull request `#48824`_ from rallytime/win_servermanager_deprecations
 
-  * 6ef5412528 Bump deprecation in win_servermanager state to Neon
+  * 6ef5412528 Bump deprecation in win_servermanager state to 3000
 
 * **ISSUE** `#37512`_: (`ChristianBeer`_) What's the precedence if multiple master configurations are specified? (refs: `#48888`_)
 

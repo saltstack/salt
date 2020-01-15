@@ -1440,7 +1440,7 @@ _OS_NAME_MAP = {
     'void': 'Void',
     'slesexpand': 'RES',
     'linuxmint': 'Mint',
-    'neon': 'KDE neon',
+    '3000': 'KDE 3000',
 }
 
 # Map the 'os' grain to the 'os_family' grain
@@ -1503,11 +1503,11 @@ _OS_FAMILY_MAP = {
     'Devuan': 'Debian',
     'antiX': 'Debian',
     'Kali': 'Debian',
-    'neon': 'Debian',
+    '3000': 'Debian',
     'Cumulus': 'Debian',
     'Deepin': 'Debian',
     'NILinuxRT': 'NILinuxRT',
-    'KDE neon': 'Debian',
+    'KDE 3000': 'Debian',
     'Void': 'Void',
     'IDMS': 'Debian',
     'Funtoo': 'Gentoo',

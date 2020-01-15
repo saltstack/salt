@@ -2123,7 +2123,7 @@ Changelog for v2018.3.0..v2018.3.1
 
   * 5fcda3eff8 Merge branch '2018.3' into testing_jinja_filters_avaiable_via_salt_ssh
 
-  * 0adfee9b11 Updating a couple tests.  Fixing check_whitelist_blacklist to work with PY3 when non-iterables are passed.  Adding warning about lst_avg results being wrong and future updates in Neon.
+  * 0adfee9b11 Updating a couple tests.  Fixing check_whitelist_blacklist to work with PY3 when non-iterables are passed.  Adding warning about lst_avg results being wrong and future updates in 3000.
 
   * f3f42146ca Removing expected from strftime and hashsum tests since the results are always different and we are only concerned about the filter being available.
 
@@ -2897,14 +2897,14 @@ Changelog for v2018.3.0..v2018.3.1
 
 * **ISSUE** `#46334`_: (`sjorge`_) [2018.3.0rc1] Stacktrace on call to nacl.dec (refs: `#46426`_)
 
-* **PR** `#46720`_: (`rallytime`_) Bump deprecation notices in nacl module & runner to Neon
+* **PR** `#46720`_: (`rallytime`_) Bump deprecation notices in nacl module & runner to 3000
   @ *2018-03-27 21:15:46 UTC*
 
   * **PR** `#46426`_: (`garethgreenaway`_) [2018.3.0rc1] fixes to nacl module & runner (refs: `#46639`_, `#46720`_)
 
   * 65bb37effd Merge pull request `#46720`_ from rallytime/bump-nacl-deprecation
 
-  * 5102c0310c Bump deprecation notices in nacl module & runner to Neon
+  * 5102c0310c Bump deprecation notices in nacl module & runner to 3000
 
 * **PR** `#46733`_: (`rallytime`_) [2018.3] Merge forward from 2018.3.0rc1 to 2018.3
   @ *2018-03-27 18:46:43 UTC*

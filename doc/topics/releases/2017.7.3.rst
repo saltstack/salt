@@ -3938,7 +3938,7 @@ Changelog for v2017.7.2..v2017.7.3
 
     * 3c429299f9 Merge pull request `#43456`_ from rallytime/43445_follow_up
 
-      * 35c1d8898d Add Neon to version list
+      * 35c1d8898d Add 3000 to version list
 
     * 6db7a721c0 Merge pull request `#43441`_ from meaksh/2016.11-salt-bash-completion-fix
 
