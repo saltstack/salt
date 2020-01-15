@@ -78,12 +78,12 @@ Fork a Repo Guide_>`_ and is well worth reading.
         git fetch upstream
         git checkout -b fix-broken-thing upstream/2016.11
 
-    If you're working on a feature, create your branch from the |repo_primary_branch| branch.
+    If you're working on a feature, create your branch from the master branch.
 
     .. code-block:: bash
 
         git fetch upstream
-        git checkout -b add-cool-feature upstream/|repo_primary_branch|
+        git checkout -b add-cool-feature upstream/master
 
 #.  Edit and commit changes to your branch.
 
@@ -187,7 +187,7 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
         If your branch is a feature, choose ``|repo_primary_branch|`` as the base branch,
 
-        https://github.com/my-account/salt/compare/saltstack:|repo_primary_branch|...add-cool-feature
+        https://github.com/my-account/salt/compare/saltstack:master...add-cool-feature
 
     #.  Review that the proposed changes are what you expect.
     #.  Write a descriptive comment.  Include links to related issues (e.g.
