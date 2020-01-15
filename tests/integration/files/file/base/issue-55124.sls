@@ -1,5 +1,5 @@
 #!issue55124|jinja -s|yaml
 
-Display current time:
+'Who am I?':
   cmd.run:
-    - name: echo {{ salt.cmd.run('date') }}
+    - name: echo {{ salt.cmd.run('whoami') }}
