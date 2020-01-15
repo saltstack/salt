@@ -4,39 +4,82 @@
 Contributing
 ============
 
-There is a great need for contributions to Salt and patches are welcome! The goal
-here is to make contributions clear, make sure there is a trail for where the code
-has come from, and most importantly, to give credit where credit is due!
+There is a great need for contributions to Salt and patches are welcome! The
+goal here is to make contributions clear, make sure there is a trail for where
+the code has come from, and most importantly, to give credit where credit is
+due!
 
-There are a number of ways to contribute to Salt development.
+There are a number of ways to contribute to Salt development, including (but
+not limited to):
 
-For details on how to contribute documentation improvements please review
-:ref:`Writing Salt Documentation <salt-docs>`.
+* filing well-written bug reports
+* enhancing the documentation
+* providing workarounds, patches, and other code without tests
+* engaging in constructive discussion
+* helping out in `#salt on Freenode <#salt on freenode_>`_,
+  the `Community Slack <SaltStack Community Slack_>`_,
+  the `salt-users <salt-users_>`_ mailing list,
+  a `SaltStack meetup <saltstack meetup_>`_,
+  or `Server Fault <saltstack on serverfault_>`_.
+* telling others about problems you solved with Salt
+
+If this or other Salt documentation is unclear, please review :ref:`Writing
+Salt Documentation <salt-docs>`. PRs are welcome!
+
+
+Quickstart
+----------
+
+If you just want to get started before reading the rest of this guide, you can
+get the process started by running the following:
+
+.. code-block:: bash
+
+    python3 -m pip install --user pre-commit
+    git clone --origin upstream https://github.com/saltstack/salt.git
+    cd salt
+    pre-commit install
+
+While those commands are running, finish reading the rest of this guide.
+
+Pre-commit
+----------
+
+To reduce friction during the development process, SaltStack uses `pre-commit
+<pre-commit_>`_. This tool adds pre-commit hooks to git to automate several
+processes that used to be manual. Rather than having to remember to run several
+different tools before you commit, you only have to run ``git commit``, and you
+will be notified about style and lint issues before you ever open a PR.
 
 
 Salt Coding Style
 -----------------
 
-SaltStack has its own coding style guide that informs contributors on various coding
-approaches. Please review the :ref:`Salt Coding Style <coding-style>` documentation
-for information about Salt's particular coding patterns.
+After the Neon release, SaltStack is `joining the ranks <SEP 15_>`_ of projects
+in adopting the `Black code formatter <Black_>`_ in order to ease the adoption
+of a unified code formatting style.
+
+Where Black is silent, SaltStack has its own coding style guide that informs
+contributors on various style points. Please review the :ref:`Salt Coding Style
+<coding-style>` documentation for information about Salt's particular coding
+patterns.
 
 Within the :ref:`Salt Coding Style <coding-style>` documentation, there is a
 section about running Salt's ``.testing.pylintrc`` file. SaltStack recommends
 running the ``.testing.pylintrc`` file on any files you are changing with your
-code contribution before submitting a pull request to Salt's repository. Please
-see the :ref:`Linting<pylint-instructions>` documentation for more information.
+code contribution before submitting a pull request to Salt's repository.
 
-.. note::
+If you've installed ``pre-commit``, this will automatically happen before each
+commit.  Otherwise, see the :ref:`Linting<pylint-instructions>` documentation
+for more information.
 
-    There are two pylint files in the ``salt`` directory. One is the
-    ``.pylintrc`` file and the other is the ``.testing.pylintrc`` file. The
-    tests that run in Jenkins against GitHub Pull Requests use
-    ``.testing.pylintrc``. The ``testing.pylintrc`` file is a little less
-    strict than the ``.pylintrc`` and is used to make it easier for contributors
-    to submit changes. The ``.pylintrc`` file can be used for linting, but the
-    ``testing.pylintrc`` is the source of truth when submitting pull requests.
 
+Copyright Headers
+-----------------
+
+Copyright headers are not needed for files in the Salt project. Files that have
+existing copyright headers should be considered legacy and not an example to
+follow.
 
 .. _github-pull-request:
 
@@ -48,7 +91,8 @@ contributions. The workflow advice below mirrors `GitHub's own guide <GitHub
 Fork a Repo Guide_>`_ and is well worth reading.
 
 #.  `Fork saltstack/salt`_ on GitHub.
-#.  Make a local clone of your fork.
+#.  Make a local clone of your fork. (Skip this step if you followed
+    the Quickstart)
 
     .. code-block:: bash
 
@@ -61,6 +105,12 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
          git remote add upstream https://github.com/saltstack/salt.git
 
+    If you followed the Quickstart, you'll add your own remote instead
+
+    .. code-block:: bash
+
+         git remote add my-account git@github.com:my-account/salt.git
+
 #.  Create a new branch in your clone.
 
     .. note::
@@ -69,46 +119,33 @@ Fork a Repo Guide_>`_ and is well worth reading.
         feature Y".  Multiple unrelated fixes and/or features should be
         isolated into separate branches.
 
-    If you're working on a bug or documentation fix, create your branch from
-    the oldest **supported** main release branch that contains the bug or requires the documentation
-    update. See :ref:`Which Salt Branch? <which-salt-branch>`.
-
     .. code-block:: bash
 
         git fetch upstream
-        git checkout -b fix-broken-thing upstream/2016.11
-
-    If you're working on a feature, create your branch from the master branch.
-
-    .. code-block:: bash
-
-        git fetch upstream
-        git checkout -b add-cool-feature upstream/master
+        git checkout -b fix-broken-thing upstream/master
 
 #.  Edit and commit changes to your branch.
 
     .. code-block:: bash
 
-        vim path/to/file1 path/to/file2
+        vim path/to/file1 path/to/file2 tests/test_file1.py tests/test_file2.py
         git diff
         git add path/to/file1 path/to/file2
         git commit
 
     Write a short, descriptive commit title and a longer commit message if
-    necessary.
+    necessary. Use an imperative style for the title.
 
-    .. note::
+    GOOD
 
-        If your change fixes a bug or implements a feature already filed in the
-        `issue tracker`_, be sure to
-	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
-        number in the commit message body.
-
-    .. code-block:: bash
+    .. code-block::
 
         Fix broken things in file1 and file2
 
         Fixes #31337
+
+        We needed to make this change because the underlying dependency
+        changed. Now this uses the up-to-date API.
 
         # Please enter the commit message for your changes. Lines starting
         # with '#' will be ignored, and an empty message aborts the commit.
@@ -117,6 +154,30 @@ Fork a Repo Guide_>`_ and is well worth reading.
         #       modified:   path/to/file1
         #       modified:   path/to/file2
 
+    BAD
+
+    .. code-block::
+
+        Fixes broken things
+
+        # Please enter the commit message for your changes. Lines starting
+        # with '#' will be ignored, and an empty message aborts the commit.
+        # On branch fix-broken-thing
+        # Changes to be committed:
+        #       modified:   path/to/file1
+        #       modified:   path/to/file2
+
+    Taking a few moments to explain *why* you made a change will save time
+    and effort in the future when others come to investigate a change. A
+    clear explanation of why something changed can help future developers
+    avoid introducing bugs, or breaking an edge case.
+
+    .. note::
+
+        If your change fixes a bug or implements a feature already filed in the
+        `issue tracker`_, be sure to
+	`reference the issue <https://help.github.com/en/articles/closing-issues-using-keywords>`_
+        number in the commit message body.
 
     If you get stuck, there are many introductory Git resources on
     http://help.github.com.
@@ -141,16 +202,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
         .. code-block:: bash
 
             git fetch upstream
-            git rebase upstream/2016.11 fix-broken-thing
+            git rebase upstream/master fix-broken-thing
             git push -u origin fix-broken-thing
-
-        or
-
-        .. code-block:: bash
-
-            git fetch upstream
-            git rebase upstream/|repo_primary_branch| add-cool-feature
-            git push -u origin add-cool-feature
 
         If you do rebase, and the push is rejected with a
         ``(non-fast-forward)`` comment, then run ``git status``. You will
@@ -180,18 +233,11 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     https://github.com/my-account/salt/pull/new/fix-broken-thing
 
-    #.  If your branch is a fix for a release branch, choose that as the base
-        branch (e.g. ``2016.11``),
-
-        https://github.com/my-account/salt/compare/saltstack:2016.11...fix-broken-thing
-
-        If your branch is a feature, choose ``|repo_primary_branch|`` as the base branch,
-
-        https://github.com/my-account/salt/compare/saltstack:master...add-cool-feature
-
+    #.  Choose ``master`` as the base Salt branch.
     #.  Review that the proposed changes are what you expect.
-    #.  Write a descriptive comment.  Include links to related issues (e.g.
-        'Fixes #31337.') in the comment field.
+    #.  Write a descriptive comment. If you added good information to your git
+        commit message, they will already be present here. Include links to
+        related issues (e.g. 'Fixes #31337.') in the comment field.
     #.  Click ``Create pull request``.
 
 #.  Salt project members will review your pull request and automated tests will
@@ -209,8 +255,8 @@ Fork a Repo Guide_>`_ and is well worth reading.
 
     Pull request against `saltstack/salt`_ are automatically tested on a
     variety of operating systems and configurations. On average these tests
-    take 30 minutes.  Depending on your GitHub notification settings you may
-    also receive an email message about the test results.
+    take a couple of hours.  Depending on your GitHub notification settings
+    you may also receive an email message about the test results.
 
     Test progress and results can be found at http://jenkins.saltstack.com/.
 
@@ -219,17 +265,24 @@ Fork a Repo Guide_>`_ and is well worth reading.
 Salt's Branch Topology
 ----------------------
 
-Salt will only be active on one branch which is master.
+Salt will only have one active branch - ``master``.
 This will include bug fixes, features and CVE “Common Vulnerabilities and Exposures”.
 
-When the time comes for a new release which should be every 3 to 4 months
-the release will be cut from the master.
+The release will be cut from the master when the time comes for a new release,
+which should be every 3 to 4 months.
 
-To be able to merge code. The code must have well written test.
-Please note you are only expected to write test for what you did not the whole modules or function.
-All tests must also pass.
-The salt stack employee that reviews your pull request might
-request changes or deny the pull request for various reasons.
+To be able to merge code:
+
+    #. The code must have a well-written test.
+       Note that you are only expected to write tests for what you did, not the whole modules or function.
+
+    #. All tests must pass.
+
+The SaltStack employee that reviews your pull request might request changes or deny the pull request for various reasons.
+
+SaltStack encourages using `the magic keywords to close a GitHub issue <Closing
+issues via commit message_>`_. These should appear in the commit message text
+directly.
 
 Release Naming Convention
 -------------------------
@@ -237,24 +290,29 @@ Release Naming Convention
 A new convention will start when Salt releases Salt 3000.
 Every new release name will increment by one ‘Salt last_release_number + 1’.
 
-This is very different from past releases which was 'year, month, dot release'.
-For example 2019.2 and 2019.2.3.
+This naming convention is very different from past releases, which was 'YYYY.MM.PATCH'.
 
-Handling CVE’s
+Handling CVE
 --------------
 
-Salt will make a new release identical to its last.
-The only difference will be the path/fix for the CVE.
-This should make the upgrade process a lot smoother for people
-because the odds of something breaking is a lot smaller.
+If a CVE is discovered, Salt will create a new release that **only** contains the tests and patch for the CVE.
+This method should improve the upgrade process by reducing the chances of breaking something.
+
+Backporting Pull Requests
+-------------------------
+
+On rare occasions, a serious bug will be found in the middle of a release
+cycle. These bugs will require a point release. Contributors should still
+submit fixes directly to ``master``, but they should also call attention to the
+fact that it addresses a critical issue and will need to be back-ported.
 
 Keeping Salt Forks in Sync
 --------------------------
 
-Salt advances quickly. It is therefore critical to pull upstream changes
-from upstream into your fork on a regular basis. Nothing is worse than putting
-hard work into a pull request only to see bunches of merge conflicts because it
-has diverged too far from upstream.
+Salt advances quickly. It is therefore critical to pull upstream changes from
+upstream into your fork on a regular basis. Nothing is worse than putting hard
+work into a pull request only to see bunches of merge conflicts because it has
+diverged too far from upstream.
 
 .. seealso:: `GitHub Fork a Repo Guide`_
 
@@ -283,20 +341,20 @@ the name of the main `saltstack/salt`_ repository.
 
         git fetch upstream
 
-#.  Update your copy of the ``|repo_primary_branch|`` branch.
+#.  Update your copy of the ``master`` branch.
 
     .. code-block:: bash
 
-        git checkout |repo_primary_branch|
-        git merge --ff-only upstream/|repo_primary_branch|
+        git checkout master
+        git merge --ff-only upstream/master
 
     If Git complains that a fast-forward merge is not possible, you have local
     commits.
 
-    * Run ``git pull --rebase origin |repo_primary_branch|`` to rebase your changes on top of
+    * Run ``git pull --rebase origin master`` to rebase your changes on top of
       the upstream changes.
     * Or, run ``git branch <branch-name>`` to create a new branch with your
-      commits. You will then need to reset your ``|repo_primary_branch|`` branch before
+      commits. You will then need to reset your ``master`` branch before
       updating it with the changes from upstream.
 
     If Git complains that local files will be overwritten, you have changes to
@@ -307,7 +365,7 @@ the name of the main `saltstack/salt`_ repository.
 
     .. code-block:: bash
 
-        git push origin |repo_primary_branch|
+        git push origin master
 
 #.  Repeat the previous two steps for any other branches you work with, such as
     the current release branch.
@@ -338,28 +396,6 @@ If you do not wish to receive these notifications, please add your GitHub
 handle to the blacklist line in the ``.mention-bot`` file located in the
 root of the Salt repository.
 
-.. _probot-gpg-verification:
-
-GPG Verification
-----------------
-
-SaltStack has enabled `GPG Probot`_ to enforce GPG signatures for all
-commits included in a Pull Request.
-
-In order for the GPG verification status check to pass, *every* contributor in
-the pull request must:
-
-- Set up a GPG key on local machine
-- Sign all commits in the pull request with key
-- Link key with GitHub account
-
-This applies to all commits in the pull request.
-
-GitHub hosts a number of `help articles`_ for creating a GPG key, using the
-GPG key with ``git`` locally, and linking the GPG key to your GitHub account.
-Once these steps are completed, the commit signing verification will look like
-the example in GitHub's `GPG Signature Verification feature announcement`_.
-
 Bootstrap Script Changes
 ------------------------
 
@@ -384,6 +420,13 @@ Script, see the Bootstrap Script's `Contributing Guidelines`_.
 .. _GPG Probot: https://probot.github.io/apps/gpg/
 .. _help articles: https://help.github.com/articles/signing-commits-with-gpg/
 .. _GPG Signature Verification feature announcement: https://github.com/blog/2144-gpg-signature-verification
-.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/|repo_primary_branch|/salt/cloud/deploy/bootstrap-salt.sh
+.. _bootstrap-salt.sh: https://github.com/saltstack/salt/blob/master/salt/cloud/deploy/bootstrap-salt.sh
 .. _salt-bootstrap repo: https://github.com/saltstack/salt-bootstrap
 .. _Contributing Guidelines: https://github.com/saltstack/salt-bootstrap/blob/develop/CONTRIBUTING.md
+.. _`Black`: https://pypi.org/project/black/
+.. _`SEP 15`: https://github.com/saltstack/salt-enhancement-proposals/pull/21
+.. _`pre-commit`: https://pre-commit.com/
+.. _`SaltStack Community Slack`: https://saltstackcommunity.herokuapp.com/
+.. _`#salt on freenode`: http://webchat.freenode.net/?channels=salt&uio=Mj10cnVlJjk9dHJ1ZSYxMD10cnVl83
+.. _`saltstack meetup`: https://www.meetup.com/pro/saltstack/
+.. _`saltstack on serverfault`: https://serverfault.com/questions/tagged/saltstack
