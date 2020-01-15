@@ -10,7 +10,7 @@ import time
 
 # Import Salt Testing Libs
 from tests.support.unit import skipIf
-from tests.support.case import ModuleCase, ShellCase
+from tests.support.case import ModuleCase
 from tests.support.helpers import destructiveTest, flaky
 from tests.support.paths import FILES
 
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 @destructiveTest
 @skipIf(not salt.utils.path.which('dockerd'), 'Docker not installed')
 @skipIf(not salt.utils.path.which('vault'), 'Vault not installed')
-class VaultTestCase(ModuleCase, ShellCase):
+class VaultTestCase(ModuleCase):
     '''
     Test vault module
     '''
