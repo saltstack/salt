@@ -19,7 +19,7 @@ The builds should include the latest version of the OS that is currently availab
 
 .. note::
 
-    Follow the instructions on https://repo.saltstack.com/ for
+    Follow the instructions on https://repo.saltstack.com/,
     but insert ``salt_rc/`` into the URL between the hostname
     and the remainder of the path.
 
