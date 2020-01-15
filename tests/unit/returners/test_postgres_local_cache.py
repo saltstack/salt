@@ -24,6 +24,7 @@ from tests.support.mock import (
 
 # Import Salt libs
 import salt.returners.postgres_local_cache as postgres_local_cache
+import salt.utils.data
 import salt.utils.stringutils
 from salt.ext import six
 
@@ -90,7 +91,11 @@ class PostgresLocalCacheTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Tests that the returner function
         '''
-        return_val = 'Tr\xfce'.encode('utf-8')
+        if six.PY2:
+            return_val = salt.utils.data.encode('Trüe', 'utf-8')
+        else:
+            return_val = 'Trüe'
+
         load = {'tgt_type': 'glob',
                 'fun_args': [],
                 'jid': '20200108221839189167',
