@@ -125,7 +125,7 @@ class CloudUtilsTestCase(TestCase):
         with pytest.raises(Exception) as context:
             cloud.sftp_file("/tmp/test", "ТЕСТ test content")
         # we successful pass the place with os.write(tmpfd, ...
-        assert "a bytes-like object is required, not 'str'" != six.text_type(context.exception)
+        assert "a bytes-like object is required, not 'str'" != six.text_type(context.value)
 
     @skipIf(salt.utils.platform.is_windows(), 'Not applicable to Windows')
     def test_check_key_path_and_mode(self):

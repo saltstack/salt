@@ -488,7 +488,7 @@ class WaitForTaskTestCase(TestCase):
             salt.utils.vmware.wait_for_task(mock_task,
                                             'fake_instance_name',
                                             'task_type')
-        assert six.text_type(excinfo.exception) == 'error exc'
+        assert six.text_type(excinfo.value) == 'error exc'
 
     def test_info_error_no_permission(self):
         exc = vim.fault.NoPermission()

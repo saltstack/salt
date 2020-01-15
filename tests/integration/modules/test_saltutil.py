@@ -49,13 +49,14 @@ class SaltUtilModuleTest(ModuleCase):
         ret = self.run_function('saltutil.wheel', ['key.list', 'minion'])
         assert ret['return'] == {}
 
+    @pytest.mark.skip('Test needs to be rewritten')
     def test_wheel_no_arg_raise_error(self):
         '''
         Tests using the saltutil.wheel function when passing a function that requires
         an arg, but one isn't supplied.
         '''
         with pytest.raises(TypeError):
-            'saltutil.wheel'(['key.list'])
+            self.run_function('saltutil.wheel', ['key.list'])
 
     def test_wheel_with_kwarg(self):
         '''
