@@ -832,9 +832,9 @@ class AsyncAuth(object):
                     element = self.opts['grains'].get(grain, None)
                 # Else try to traverse grains structure based on key
                 else:
-                    current_level = self.opts['grains']
                     log.trace('Autosign Grains - grain %s - Not Found in grain root', grain)
                     element = traverse_dict_and_list(self.opts['grains'], grain, default=None)
+                
                 if element is not None:
                     log.trace('Autosign Grains - grain %s - FOUND - %s', grain, element)
                 else:
