@@ -12,9 +12,8 @@ from tests.support.unit import TestCase, skipIf
 # Import Salt Libs
 import salt.modules.reg as reg
 import salt.utils.stringutils
-import salt.utils.win_reg as win_reg
+import salt.utils.win_reg
 from salt.exceptions import CommandExecutionError
-from salt.ext import six
 
 try:
     import win32api
@@ -31,7 +30,7 @@ FAKE_KEY = '\\'.join(['SOFTWARE', generate_random_name('SaltTesting-')])
 @skipIf(not HAS_WIN32, 'Tests require win32 libraries')
 class WinFunctionsTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.utils.win_reg
+    Test cases for salt.modules.reg
     '''
     def setup_loader_modules(self):
         return {
