@@ -341,6 +341,22 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         finally:
             minion.destroy()
 
+    def test_when_other_events_fired_and_start_event_grains_are_set(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts['start_event_grains'] = ["os"]
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+        try:
+            minion.tok = MagicMock()
+            minion._send_req_sync = MagicMock()
+            minion._fire_master('Custm_event_fired', 'custom_event')
+            load = minion._send_req_sync.call_args[0][0]
+
+            self.assertTrue('grains' not in load)
+        finally:
+            minion.destroy()
+
     def test_minion_retry_dns_count(self):
         '''
         Tests that the resolve_dns will retry dns look ups for a maximum of

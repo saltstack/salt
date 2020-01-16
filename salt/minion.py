@@ -1450,7 +1450,7 @@ class Minion(MinionBase):
         else:
             return
 
-        if include_startup_grains :
+        if include_startup_grains:
             grains_to_add = dict(
                 [(k, v) for k, v in six.iteritems(self.opts.get('grains', {})) if k in self.opts['start_event_grains']])
             load['grains'] = grains_to_add
@@ -2158,7 +2158,7 @@ class Minion(MinionBase):
                 time.asctime()
                 ),
                 'minion_start',
-                include_startup_grains = include_grains
+                include_startup_grains=include_grains
             )
         # send name spaced event
         self._fire_master(
