@@ -27,7 +27,7 @@ import tornado.gen
 # Import third party libs
 from salt.ext.six.moves import zip  # pylint: disable=import-error,redefined-builtin
 from salt.ext import six
-
+from salt.utils.data import traverse_dict_and_list
 try:
     from M2Crypto import RSA, EVP, BIO
     HAS_M2 = True
@@ -826,31 +826,15 @@ class AsyncAuth(object):
                 autosign_grains[grain] = None
                 # If the autosign_grain directly accessible use it
                 # it avoid issue if the grain key contains itself columns
+                element = None
                 if grain in self.opts['grains']:
                     log.trace('Autosign Grains - grain %s - Found in grain root', grain)
                     element = self.opts['grains'].get(grain, None)
-                # Else try to split the the grain key with column
-                # In every case if the autosign_grain could not be found anywhere return None
+                # Else try to traverse grains structure based on key
                 else:
                     current_level = self.opts['grains']
                     log.trace('Autosign Grains - grain %s - Not Found in grain root', grain)
-                    try:
-                        for subkey in grain.strip(":").split(":"):
-                            log.trace('Autosign Grains - grain %s - Trying to find %s subkey', grain, subkey)
-                            # If the current level is a list try to convert the key to an index
-                            if isinstance(current_level, list):
-                                log.trace('Autosign Grains - grain %s - Current level is a list', grain)
-                                index = int(subkey)
-                                current_level = current_level[index]
-                            # Else try to get the next level
-                            elif isinstance(current_level, dict):
-                                log.trace('Autosign Grains - grain %s - Current level is a dict', grain)
-                                current_level = current_level.get(subkey, None)
-                            element = current_level
-                    except IndexError:
-                        # We should go here only if the level provide in grain key is out of bound
-                        log.trace('Autosign Grains - grain %s - Out of bound for list', grain)
-                        element = None
+                    element = traverse_dict_and_list(self.opts['grains'], grain, default=None)
                 if element is not None:
                     log.trace('Autosign Grains - grain %s - FOUND - %s', grain, element)
                 else:
