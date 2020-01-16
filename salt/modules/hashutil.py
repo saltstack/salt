@@ -265,7 +265,7 @@ def hmac_signature(string, shared_secret, challenge_hmac):
 
 def hmac_compute(string, shared_secret):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Compute a HMAC SHA256 digest using a string and secret.
 
