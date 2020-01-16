@@ -123,6 +123,37 @@ def key_exists(hive, key, use_32bit_registry=False):
                                        use_32bit_registry=use_32bit_registry)
 
 
+def value_exists(hive, key, vname, use_32bit_registry=False):
+    r'''
+    Check that the value/data pair is found in the registry.
+
+    .. version-added:: 3000
+
+    Args:
+
+        hive (str): The hive to connect to
+
+        key (str): The key to check in
+
+        vname (str): The name of the value/data pair you're checking
+
+        use_32bit_registry (bool): Look in the 32bit portion of the registry
+
+    Returns:
+        bool: True if exists, otherwise False
+
+    CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' reg.value_exists HKLM SOFTWARE\Microsoft\Windows\CurrentVersion CommonFilesDir
+    '''
+    return __utils__['reg.value_exists'](hive=hive,
+                                         key=key,
+                                         vname=vname,
+                                         use_32bit_registry=use_32bit_registry)
+
+
 def broadcast_change():
     '''
     Refresh the windows environment.
