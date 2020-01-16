@@ -113,7 +113,7 @@ For example, listing buckets in the Google Storage platform:
                 anthonypjshaw
 
 
-The Apache Libcloud storage module can be used to syncronize files between multiple storage clouds,
+The Apache Libcloud storage module can be used to synchronize files between multiple storage clouds,
 such as Google Storage, S3 and OpenStack Swift
 
 .. code-block:: bash
