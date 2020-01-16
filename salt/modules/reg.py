@@ -127,7 +127,7 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
     r'''
     Check that the value/data pair is found in the registry.
 
-    .. version-added:: Neon
+    .. versionadded:: Neon
 
     Args:
 
