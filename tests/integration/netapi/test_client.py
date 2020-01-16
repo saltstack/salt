@@ -175,6 +175,9 @@ class NetapiSSHClientTest(SSHCase):
         opts = salt.config.client_config(os.path.join(TMP_CONF_DIR, 'master'))
         self.netapi = salt.netapi.NetapiClient(opts)
 
+        self.priv_file = os.path.join(RUNTIME_VARS.TMP_CONF_DIR, 'key_test')
+        self.rosters = os.path.join(RUNTIME_VARS.TMP_CONF_DIR)
+
         # Initialize salt-ssh
         self.run_function('test.ping')
 
@@ -194,12 +197,20 @@ class NetapiSSHClientTest(SSHCase):
         del cls.post_webserver
 
     def test_ssh(self):
-        low = {'client': 'ssh', 'tgt': 'localhost', 'fun': 'test.ping'}
+        low = {'client': 'ssh',
+               'tgt': 'localhost',
+               'fun': 'test.ping',
+               'ignore_host_keys': True,
+               'roster_file': 'roster',
+               'rosters': [self.rosters],
+               'ssh_priv': self.priv_file}
+
         low.update(self.eauth_creds)
 
         ret = self.netapi.run(low)
 
         self.assertIn('localhost', ret)
+        self.assertIn('return', ret['localhost'])
         self.assertEqual(ret['localhost']['return'], True)
         self.assertEqual(ret['localhost']['id'], 'localhost')
         self.assertEqual(ret['localhost']['fun'], 'test.ping')
