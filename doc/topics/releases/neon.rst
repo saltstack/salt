@@ -423,6 +423,26 @@ Module Changes
 - The :py:func:`chocolatey.unbootstrap <salt.modules.chocolatey.unbootstrap>` function
   has been added to uninstall Chocolatey.
 
+Enhancements to Engines
+=======================
+
+Multiple copies of a particular Salt engine can be configured by including
+the ``engine_module`` parameter in the engine configuration.
+
+.. code-block:: yaml
+
+   engines:
+     - production_logstash:
+         host: production_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+     - develop_logstash:
+         host: develop_log.my_network.com
+         port: 5959
+         proto: tcp
+         engine_module: logstash
+
 Runner Changes
 ==============
 

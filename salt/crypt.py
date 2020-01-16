@@ -824,8 +824,8 @@ class AsyncAuth(object):
             for grain in self.opts['autosign_grains']:
                 log.trace('Autosign Grains - grain %s - Looking for value', grain)
                 autosign_grains[grain] = None
-                # If the autosign_grain directly accessible use it
-                # it avoid issue if the grain key contains itself columns
+                # If the autosign_grain is directly accessible, use it.
+                # it avoids issues if the grain key itself contains columns
                 element = None
                 if grain in self.opts['grains']:
                     log.trace('Autosign Grains - grain %s - Found in grain root', grain)
