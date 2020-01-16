@@ -4429,7 +4429,7 @@ def network_define(name,
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
 
-        ..versionadded:: 3000
+        .. versionadded:: 3000
     :type ipv4_config: dict or None
 
     :param ipv6_config: IP v6 configuration
@@ -4437,7 +4437,7 @@ def network_define(name,
         a possible DHCP configuration. The structure is documented
         in net-define-ip_.
 
-        ..versionadded:: 3000
+        .. versionadded:: 3000
     :type ipv6_config: dict or None
 
     :param connection: libvirt connection URI, overriding defaults
