@@ -318,7 +318,7 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
         try:
             minion.tok = MagicMock()
             minion._send_req_sync = MagicMock()
-            minion._fire_master('Minion has started', 'minion_start')
+            minion._fire_master('Minion has started', 'minion_start', include_startup_grains=True)
             load = minion._send_req_sync.call_args[0][0]
 
             self.assertTrue('grains' in load)

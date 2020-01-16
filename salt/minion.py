@@ -1431,7 +1431,7 @@ class Minion(MinionBase):
             ret = yield channel.send(load, timeout=timeout)
             raise tornado.gen.Return(ret)
 
-    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None):
+    def _fire_master(self, data=None, tag=None, events=None, pretag=None, timeout=60, sync=True, timeout_handler=None, include_startup_grains=False):
         '''
         Fire an event on the master, or drop message if unable to send.
         '''
@@ -1450,7 +1450,7 @@ class Minion(MinionBase):
         else:
             return
 
-        if self.opts['start_event_grains']:
+        if include_startup_grains :
             grains_to_add = dict(
                 [(k, v) for k, v in six.iteritems(self.opts.get('grains', {})) if k in self.opts['start_event_grains']])
             load['grains'] = grains_to_add
@@ -2146,6 +2146,9 @@ class Minion(MinionBase):
             })
 
     def _fire_master_minion_start(self):
+        include_grains = False
+        if self.opts['start_event_grains']:
+            include_grains = True
         # Send an event to the master that the minion is live
         if self.opts['enable_legacy_startup_events']:
             # Old style event. Defaults to False in Sodium release.
@@ -2154,7 +2157,8 @@ class Minion(MinionBase):
                 self.opts['id'],
                 time.asctime()
                 ),
-                'minion_start'
+                'minion_start',
+                include_startup_grains = include_grains
             )
         # send name spaced event
         self._fire_master(
@@ -2163,6 +2167,7 @@ class Minion(MinionBase):
             time.asctime()
             ),
             tagify([self.opts['id'], 'start'], 'minion'),
+            include_startup_grains=include_grains
         )
 
     def module_refresh(self, force_refresh=False, notify=False):
