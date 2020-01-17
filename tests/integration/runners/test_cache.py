@@ -72,7 +72,46 @@ class ManageTest(ShellCase):
             tgt='minion'
         )
 
-        self.assertIn('minion', ret['return'])
+        assert 'minion' in ret['return']
+        assert 'sub_minion' not in ret['return']
+
+    def test_pillar_no_tgt(self):
+        '''
+        Test cache.pillar when no tgt is
+        supplied. This should return pillar
+        data for all minions
+        '''
+        # Store the data
+        ret = self.run_run_plus(
+            'cache.pillar',
+        )
+
+        assert all(x in ret['return'] for x in ['minion', 'sub_minion'])
+
+    def test_pillar_minion_noexist(self):
+        '''
+        Test cache.pillar when the target does not exist
+        '''
+        ret = self.run_run_plus(
+            'cache.pillar',
+            tgt='doesnotexist'
+        )
+
+        assert 'minion' not in ret['return']
+        assert 'sub_minion' not in ret['return']
+
+    def test_pillar_minion_tgt_type_pillar(self):
+        '''
+        Test cache.pillar when the target exists
+        and tgt_type is pillar
+        '''
+        ret = self.run_run_plus(
+            'cache.pillar',
+            tgt='monty:python',
+            tgt_type='pillar',
+        )
+
+        assert all(x in ret['return'] for x in ['minion', 'sub_minion'])
 
     def test_mine(self):
         '''
