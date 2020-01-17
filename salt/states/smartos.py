@@ -246,6 +246,11 @@ def _parse_vmconfig(config, instances):
                     ## some property are lowercase
                     if 'mac' in instance_config:
                         instance_config['mac'] = instance_config['mac'].lower()
+                    ## calculate mac from vrrp_vrid
+                    if 'vrrp_vrid' in instance_config:
+                        instance_config['mac'] = "00:00:5e:00:01:{0}".format(
+                            hex(int(instance_config['vrrp_vrid'])).split('x')[-1].zfill(2),
+                        )
                     vmconfig[prop].append(instance_config)
     else:
         log.error('smartos.vm_present::parse_vmconfig - failed to parse')
@@ -768,7 +773,8 @@ def vm_present(name, vmconfig, config=None):
         'instance': {
             'nics': 'mac',
             'disks': 'path',
-            'filesystems': 'target'
+            'filesystems': 'target',
+            'pci_devices': 'path',
         },
         'create_only': [
             'filesystems'
