@@ -12,11 +12,12 @@ import re
 import salt.loader
 import salt.utils.event
 import salt.utils.minion
-import salt.log.setup
 from salt.ext.six.moves import map
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
+trace = log.trace
+trace('testing that trace is here')
 
 
 class Beacon(object):
