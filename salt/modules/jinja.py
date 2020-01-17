@@ -3,7 +3,7 @@
 Module for checking jinja maps and verifying the result of loading JSON/YAML
 files
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 

@@ -1526,6 +1526,25 @@ class Webserver(object):
         self.server_thread.join()
 
 
+class SaveRequestsPostHandler(tornado.web.RequestHandler):
+    '''
+    Save all requests sent to the server.
+    '''
+    received_requests = []
+
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        self.received_requests.append(self.request)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
+
+
 class MirrorPostHandler(tornado.web.RequestHandler):
     '''
     Mirror a POST body back to the client
