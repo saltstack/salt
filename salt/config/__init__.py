@@ -141,6 +141,9 @@ VALID_OPTS = immutabletypes.freeze({
     # is interrupted and try another master in the list.
     'master_alive_interval': int,
 
+    # The strategy to use when returning results back to the master.
+    'master_return_strategy': six.string_types,
+
     # When in multi-master failover mode, fail back to the first master in the list if it's back
     # online.
     'master_failback': bool,
@@ -1208,6 +1211,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'master_alive_interval': 0,
     'master_failback': False,
     'master_failback_interval': 0,
+    'master_return_strategy: 'source',
     'verify_master_pubkey_sign': False,
     'sign_pub_messages': False,
     'always_verify_signature': False,

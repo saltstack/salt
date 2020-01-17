@@ -969,8 +969,20 @@ class MinionManager(MinionBase):
 
     @tornado.gen.coroutine
     def handle_event(self, package):
-        for minion in self.minions:
-            minion.handle_event(package)
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+        if tag == 'master_return':
+            connected_minions = [minion for minion in self.minions if minion.connected]
+            master_return_strategy = self.opts['master_return_strategy']
+
+            # send to the 1st connected minion
+            if connected_minions and master_return_strategy == 'any':
+                minion = connected_minions[0]
+                minion.handle_event(package)
+            else:
+                raise tornado.gen.Return()
+        else:
+            for minion in self.minions:
+                minion.handle_event(package)
 
     def _create_minion_object(self, opts, timeout, safe,
                               io_loop=None, loaded_base_name=None,
@@ -2008,7 +2020,12 @@ class Minion(MinionBase):
                 ret_val = self._send_req_sync(load, timeout=timeout)
             except SaltReqTimeoutError:
                 timeout_handler()
-                return ''
+                if self.opts['master_return_strategy'] == 'any':
+                    log.info('Attempting to return the job information for job %s to another master.', jid)
+                    evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+                    ret_val = evt.fire_event(load, tag='master_return')
+                else:
+                    return ''
         else:
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
@@ -2094,7 +2111,12 @@ class Minion(MinionBase):
                 ret_val = self._send_req_sync(load, timeout=timeout)
             except SaltReqTimeoutError:
                 timeout_handler()
-                return ''
+                if self.opts['master_return_strategy'] == 'any':
+                    log.info('Attempting to return the job information for job %s to another master.', jid)
+                    evt = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+                    ret_val = evt.fire_event(load, tag='master_return')
+                else:
+                    return ''
         else:
             with tornado.stack_context.ExceptionStackContext(timeout_handler):
                 ret_val = self._send_req_async(load, timeout=timeout, callback=lambda f: None)  # pylint: disable=unexpected-keyword-arg
@@ -2400,6 +2422,9 @@ class Minion(MinionBase):
             if self.connected:
                 log.debug('Forwarding master event tag=%s', data['tag'])
                 self._fire_master(data['data'], data['tag'], data['events'], data['pretag'], sync=False)
+        elif tag.startswith('master_return'):
+            log.debug('Returning results for jid=%s to %s', data.get('jid'), self.opts['master'])
+            self._return_pub(data)
         elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
             if tag.startswith(master_event(type='disconnected')) and data['master'] != self.opts['master']:
