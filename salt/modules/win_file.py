@@ -17,7 +17,10 @@ import os.path
 import logging
 # pylint: disable=W0611
 import operator  # do not remove
-from collections import Iterable, Mapping  # do not remove
+try:
+    from collections.abc import Iterable, Mapping  # do not remove
+except ImportError:
+    from collections import Iterable, Mapping  # do not remove
 from functools import reduce  # do not remove
 import datetime  # do not remove.
 import tempfile  # do not remove. Used in salt.modules.file.__clean_tmp

@@ -13,7 +13,10 @@
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 import copy
-from collections import Mapping
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 from salt.ext import six
 
 

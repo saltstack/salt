@@ -29,7 +29,11 @@ import time
 import glob
 import hashlib
 import mmap
-from collections import Iterable, Mapping, namedtuple
+try:
+    from collections.abc import Iterable, Mapping
+except ImportError:
+    from collections import Iterable, Mapping
+from collections import namedtuple
 from functools import reduce  # pylint: disable=redefined-builtin
 
 # pylint: disable=import-error,no-name-in-module,redefined-builtin
