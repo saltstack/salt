@@ -1140,9 +1140,6 @@ class LowDataAdapter(object):
         'tools.salt_ip_verify.on': True,
     }
 
-    def __init__(self):
-        self.api = salt.netapi.NetapiClient(self.opts)
-
     @property
     def opts(self):
         return cherrypy.config['saltopts']
@@ -1310,6 +1307,7 @@ class LowDataAdapter(object):
                 token=cherrypy.session.get('token')))
         }
 
+
 class Flush(LowDataAdapter):
     '''
     Flush Config for api server
@@ -1347,7 +1345,7 @@ class Flush(LowDataAdapter):
         apiopts = opts.get(__name__.rsplit('.', 2)[-2], {})
         cherrypy.config['saltopts'] = opts
         cherrypy.config['apiopts'] = apiopts
-        return {'return':'flush successful'}
+        return {'return': 'flush successful'}
 
 
 class Minions(LowDataAdapter):
