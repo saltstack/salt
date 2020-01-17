@@ -938,7 +938,7 @@ For example:
 In the above case, ``some_check`` will be run prior to _each_ name -- once for
 ``first_deploy_cmd`` and a second time for ``second_deploy_cmd``.
 
-.. versionchanged:: Neon
+.. versionchanged:: 3000
     The ``unless`` requisite can take a module as a dictionary field in unless.
     The dictionary must contain an argument ``fun`` which is the module that is
     being run, and everything else must be passed in under the args key or will
@@ -1006,7 +1006,7 @@ concept of ``True`` and ``False``.
 The above example ensures that the stop_volume and delete modules only run
 if the gluster commands return a 0 ret value.
 
-.. versionchanged:: Neon
+.. versionchanged:: 3000
     The ``onlyif`` requisite can take a module as a dictionary field in onlyif.
     The dictionary must contain an argument ``fun`` which is the module that is
     being run, and everything else must be passed in under the args key or will

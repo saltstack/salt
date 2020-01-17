@@ -1609,10 +1609,10 @@ def symlink(
     Create a symbolic link (symlink, soft link)
 
     If the file already exists and is a symlink pointing to any location other
-    than the specified target, the symlink will be replaced. If the symlink is
-    a regular file or directory then the state will return False. If the
-    regular file or directory is desired to be replaced with a symlink pass
-    force: True, if it is to be renamed, pass a backupname.
+    than the specified target, the symlink will be replaced. If an entry with
+    the same name exists then the state will return False. If the existing
+    entry is desired to be replaced with a symlink pass force: True, if it is
+    to be renamed, pass a backupname.
 
     name
         The location of the symlink to create
@@ -1623,9 +1623,13 @@ def symlink(
     force
         If the name of the symlink exists and is not a symlink and
         force is set to False, the state will fail. If force is set to
-        True, the file or directory in the way of the symlink file
+        True, the existing entry in the way of the symlink file
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
+
+        .. versionchanged:: 3000
+            Force will now remove all types of existing file system entries,
+            not just files, directories and symlinks.
 
     backupname
         If the name of the symlink exists and is not a symlink, it will be
@@ -1845,8 +1849,8 @@ def symlink(
                             '{1}:{2}'.format(name, user, group))
             return ret
 
-    elif os.path.isfile(name) or os.path.isdir(name):
-        # It is not a link, but a file or dir
+    elif os.path.exists(name):
+        # It is not a link, but a file, dir, socket, FIFO etc.
         if backupname is not None:
             if not os.path.isabs(backupname):
                 if backupname == os.path.basename(backupname):
@@ -1883,14 +1887,12 @@ def symlink(
                 __salt__['file.remove'](name)
         else:
             # Otherwise throw an error
-            if os.path.isfile(name):
-                return _error(ret,
-                              ('File exists where the symlink {0} should be'
-                               .format(name)))
-            else:
-                return _error(ret, ((
-                                        'Directory exists where the symlink {0} should be'
-                                    ).format(name)))
+            fs_entry_type = 'File' if os.path.isfile(name) else \
+                'Directory' if os.path.isdir(name) else \
+                'File system entry'
+            return _error(ret,
+                          ('{0} exists where the symlink {1} should be'
+                           .format(fs_entry_type, name)))
 
     if not os.path.exists(name):
         # The link is not present, make it
@@ -5186,15 +5188,9 @@ def comment(name, regex, char='#', backup='.bak'):
 
     comment_regex = char + unanchor_regex
 
-    # Check if the line is already commented
-    if __salt__['file.search'](name, comment_regex, multiline=True):
-        commented = True
-    else:
-        commented = False
-
     # Make sure the pattern appears in the file before continuing
-    if commented or not __salt__['file.search'](name, regex, multiline=True):
-        if __salt__['file.search'](name, unanchor_regex, multiline=True):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, comment_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -5293,17 +5289,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Make sure the pattern appears in the file
     if __salt__['file.search'](
             name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
+        # Line exists and is commented
+        pass
+    elif __salt__['file.search'](
+            name,
             '^[ \t]*{0}'.format(regex.lstrip('^')),
             multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.search'](
-            name,
-            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
-            multiline=True):
-        # Line exists and is commented
-        pass
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
@@ -5798,19 +5794,23 @@ def prepend(name,
 
     if makedirs is True:
         dirname = os.path.dirname(name)
-        if not __salt__['file.directory_exists'](dirname):
-            try:
-                _makedirs(name=name)
-            except CommandExecutionError as exc:
-                return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
+        if __opts__['test']:
+            ret['comment'] = 'Directory {0} is set to be updated'.format(dirname)
+            ret['result'] = None
+        else:
+            if not __salt__['file.directory_exists'](dirname):
+                try:
+                    _makedirs(name=name)
+                except CommandExecutionError as exc:
+                    return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            check_res, check_msg, check_changes = _check_directory_win(dirname) \
-                if salt.utils.platform.is_windows() \
-                else _check_directory(dirname)
+                check_res, check_msg, check_changes = _check_directory_win(dirname) \
+                    if salt.utils.platform.is_windows() \
+                    else _check_directory(dirname)
 
-            if not check_res:
-                ret['changes'] = check_changes
-                return _error(ret, check_msg)
+                if not check_res:
+                    ret['changes'] = check_changes
+                    return _error(ret, check_msg)
 
     check_res, check_msg = _check_file(name)
     if not check_res:

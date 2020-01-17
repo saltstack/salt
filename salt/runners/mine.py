@@ -8,7 +8,7 @@ from __future__ import absolute_import, print_function, unicode_literals
 import logging
 
 # Import salt libs
-import salt.utils.minions
+import salt.daemons.masterapi
 
 log = logging.getLevelName(__name__)
 
@@ -24,7 +24,14 @@ def get(tgt, fun, tgt_type='glob'):
 
         salt-run mine.get '*' network.interfaces
     '''
-    ret = salt.utils.minions.mine_get(tgt, fun, tgt_type, __opts__)
+    masterapi = salt.daemons.masterapi.RemoteFuncs(__opts__)
+    load = {
+        'id': __opts__['id'],
+        'fun': fun,
+        'tgt': tgt,
+        'tgt_type': tgt_type,
+    }
+    ret = masterapi._mine_get(load)
     return ret
 
 

@@ -2,7 +2,7 @@
 '''
 Grains for NVMe Qualified Names (NQN).
 
-.. versionadded:: Flourine
+.. versionadded:: 3000
 
 To enable these grains set `nvme_grains: True`.
 

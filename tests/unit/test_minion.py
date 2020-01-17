@@ -21,6 +21,8 @@ import salt.syspaths
 import tornado
 import tornado.testing
 from salt.ext.six.moves import range
+import salt.utils.crypt
+import salt.utils.process
 
 
 class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
@@ -307,6 +309,38 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             finally:
                 minion.destroy()
 
+    def test_when_passed_start_event_grains(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts['start_event_grains'] = ["os"]
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+        try:
+            minion.tok = MagicMock()
+            minion._send_req_sync = MagicMock()
+            minion._fire_master('Minion has started', 'minion_start')
+            load = minion._send_req_sync.call_args[0][0]
+
+            self.assertTrue('grains' in load)
+            self.assertTrue('os' in load['grains'])
+        finally:
+            minion.destroy()
+
+    def test_when_not_passed_start_event_grains(self):
+        mock_opts = self.get_config('minion', from_scratch=True)
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+        try:
+            minion.tok = MagicMock()
+            minion._send_req_sync = MagicMock()
+            minion._fire_master('Minion has started', 'minion_start')
+            load = minion._send_req_sync.call_args[0][0]
+
+            self.assertTrue('grains' not in load)
+        finally:
+            minion.destroy()
+
     def test_minion_retry_dns_count(self):
         '''
         Tests that the resolve_dns will retry dns look ups for a maximum of
@@ -338,6 +372,26 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             assert execmock.called_with(minion.opts, minion.functions)
         finally:
             minion.destroy()
+
+    @patch('salt.utils.process.default_signals')
+    def test_reinit_crypto_on_fork(self, def_mock):
+        '''
+        Ensure salt.utils.crypt.reinit_crypto() is executed when forking for new job
+        '''
+        mock_opts = self.get_config('minion', from_scratch=True)
+        mock_opts["multiprocessing"] = True
+
+        io_loop = tornado.ioloop.IOLoop()
+        io_loop.make_current()
+        minion = salt.minion.Minion(mock_opts, io_loop=io_loop)
+
+        job_data = {"jid": "test-jid", "fun": "test.ping"}
+
+        def mock_start(self):
+            assert len([x for x in self._after_fork_methods if x[0] == salt.utils.crypt.reinit_crypto]) == 1  # pylint: disable=comparison-with-callable
+
+        with patch.object(salt.utils.process.SignalHandlingProcess, 'start', mock_start):
+            io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
 
 class MinionAsyncTestCase(TestCase, AdaptedConfigurationTestCaseMixin, tornado.testing.AsyncTestCase):
