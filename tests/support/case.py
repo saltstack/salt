@@ -185,6 +185,16 @@ class ShellTestCase(TestCase, AdaptedConfigurationTestCaseMixin, ScriptPathMixin
                                catch_stderr=catch_stderr,
                                timeout=timeout)
 
+    def assertRunCall(self, arg_str, **kwargs):
+        '''
+        Assert no error code was returned with run_call, give stderr as error message
+        '''
+        stdout, stderr, retcode = self.run_call(arg_str, catch_stderr=True, with_retcode=True, **kwargs)
+        if stderr:
+            log.warning(stderr)
+        self.assertFalse(retcode, stderr)
+        return stdout
+
     def run_cloud(self, arg_str, catch_stderr=False, timeout=None):
         '''
         Execute salt-cloud
