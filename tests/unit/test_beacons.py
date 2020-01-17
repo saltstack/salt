@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 '''
-unit tests for the Salt engines
+unit tests for the beacon_module parameter
 '''
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
@@ -14,13 +14,10 @@ from tests.support.mock import patch
 import salt.beacons as beacons
 import salt.config
 
-import logging
-log = logging.getLogger(__name__)
-
 
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     '''
-    Test cases for salt.engine.sqs_events
+    Test cases for salt beacon_module parameter
     '''
 
     def setup_loader_modules(self):
