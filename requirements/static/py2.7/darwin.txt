@@ -121,7 +121,7 @@ strict-rfc3339==0.7
 supervisor==3.3.5 ; python_version < "3"
 tempora==1.14.1           # via portend
 timelib==0.2.4
-tornado==4.5.3 ; python_version < "3"
+#tornado==4.5.3 ; python_version < "3"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
 vultr==1.0.1
