@@ -521,7 +521,7 @@ def manage(
         fingerprint_hash_type=None,
         **kwargs):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Ensures that only the specified ssh_keys are present for the specified user
 

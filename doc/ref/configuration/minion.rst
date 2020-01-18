@@ -657,7 +657,7 @@ FQDN (for instance, Solaris).
 ``minion_id_remove_domain``
 ---------------------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Default: ``False``
 
@@ -813,7 +813,7 @@ matches, and regular expressions are supported.
     Some states and execution modules depend on grains. Filtering may cause
     them to be unavailable or run unreliably.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 .. code-block:: yaml
 
@@ -2080,6 +2080,21 @@ List of states to run when the minion starts up if ``startup_states`` is set to 
     sls_list:
       - edit.vim
       - hyper
+
+.. conf_minion:: start_event_grains
+
+``start_event_grains``
+----------------------
+
+Default: ``[]``
+
+List of grains to pass in start event when minion starts up.
+
+.. code-block:: yaml
+
+    start_event_grains:
+      - machine_id
+      - uuid
 
 .. conf_minion:: top_file
 
