@@ -266,6 +266,7 @@ class TestDaemon(object):
                 ' * {LIGHT_YELLOW}Starting salt-master ... {ENDC}'.format(**self.colors)
             )
             sys.stdout.flush()
+            print("WTF 1")
             self.master_process = start_daemon(
                 daemon_name='salt-master',
                 daemon_id=self.master_opts['id'],
@@ -278,6 +279,7 @@ class TestDaemon(object):
                 fail_hard=True,
                 event_listener_config_dir=RUNTIME_VARS.TMP_CONF_DIR,
                 start_timeout=120)
+            print("WTF 2")
             sys.stdout.write(
                 '\r{0}\r'.format(
                     ' ' * getattr(self.parser.options, 'output_columns', PNUM)
