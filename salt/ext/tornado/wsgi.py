@@ -28,7 +28,7 @@ provides WSGI support in two ways:
   Tornado HTTP server.  For example, with this class you can mix Django
   and Tornado handlers in a single server.
 """
-#pylint: disable-file
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

@@ -66,7 +66,7 @@ Here are a few rules of thumb for when it's necessary:
   `ExceptionStackContext`), and make your asynchronous calls in a ``with``
   block that references your `StackContext`.
 """
-#pylint: disable-file
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

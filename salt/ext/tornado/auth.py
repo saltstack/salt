@@ -64,7 +64,7 @@ Example usage for Google OAuth:
    terminate the request on their own.  This change also ensures that
    errors are more consistently reported through the ``Future`` interfaces.
 """
-#pylint: disable-file
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

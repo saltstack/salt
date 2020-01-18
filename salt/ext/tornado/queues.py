@@ -21,7 +21,7 @@
    use `.IOLoop.add_callback` to transfer control to the `.IOLoop` thread
    before calling any queue methods.
 """
-#pylint: disable-file
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

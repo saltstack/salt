@@ -9,7 +9,7 @@
 * `main()`: A simple test runner (wrapper around unittest.main()) with support
   for the tornado.autoreload module to rerun the tests when code changes.
 """
-#pylint: disable-file
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

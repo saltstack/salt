@@ -15,7 +15,7 @@
 # under the License.
 
 """A non-blocking, single-threaded TCP server."""
-#pylint: disable-file
+# pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
 import errno
