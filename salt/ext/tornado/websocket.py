@@ -25,8 +25,8 @@ import collections
 import hashlib
 import os
 import struct
-import tornado_escape
-import tornado_web
+import tornado.escape as tornado_escape
+import tornado.web as tornado_web
 import zlib
 
 from salt.ext.tornado.concurrent import TracebackFuture
