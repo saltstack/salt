@@ -25,6 +25,7 @@ case.
 In addition to I/O events, the `IOLoop` can also schedule time-based events.
 `IOLoop.add_timeout` is a non-blocking alternative to `time.sleep`.
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 
@@ -604,14 +605,15 @@ class IOLoop(Configurable):
         try:
             ret = callback()
             if ret is not None:
-                from salt.ext.tornado import gen
+                #from salt.ext.tornado import gen
+                import salt.ext.tornado.gen
                 # Functions that return Futures typically swallow all
                 # exceptions and store them in the Future.  If a Future
                 # makes it out to the IOLoop, ensure its exception (if any)
                 # gets logged too.
                 try:
-                    ret = gen.convert_yielded(ret)
-                except gen.BadYieldError:
+                    ret = salt.ext.tornado.gen.convert_yielded(ret)
+                except salt.ext.tornado.gen.BadYieldError:
                     # It's not unusual for add_callback to be used with
                     # methods returning a non-None and non-yieldable
                     # result, which should just be ignored.

@@ -16,6 +16,7 @@
 # under the License.
 
 """Data used by the tornado.locale module."""
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

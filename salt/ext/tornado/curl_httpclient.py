@@ -15,6 +15,7 @@
 # under the License.
 
 """Non-blocking HTTP client implementation using pycurl."""
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

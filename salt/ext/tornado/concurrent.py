@@ -21,6 +21,7 @@ a mostly-compatible `Future` class designed for use from coroutines,
 as well as some utility functions for interacting with the
 `concurrent.futures` package.
 """
+#pylint: disable-file
 from __future__ import absolute_import, division, print_function
 
 import functools

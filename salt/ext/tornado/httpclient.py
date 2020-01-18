@@ -37,6 +37,7 @@ To select ``curl_httpclient``, call `AsyncHTTPClient.configure` at startup::
 
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

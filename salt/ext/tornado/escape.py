@@ -19,6 +19,7 @@
 Also includes a few other miscellaneous string manipulation functions that
 have crept in over time.
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

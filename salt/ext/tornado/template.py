@@ -195,6 +195,7 @@ if you need to include a literal ``{{``, ``{%``, or ``{#`` in the output.
     (or until the next ``{% whitespace %}`` directive). See
     `filter_whitespace` for available options. New in Tornado 4.3.
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

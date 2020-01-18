@@ -174,6 +174,7 @@ For more information on application-level routing see docs for `~.web.Applicatio
 .. versionadded:: 4.5
 
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

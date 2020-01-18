@@ -15,6 +15,7 @@ the protocol (known as "draft 76") and are not compatible with this module.
 .. versionchanged:: 4.0
    Removed support for the draft 76 protocol version.
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 # Author: Jacob Kristhammar, 2010

@@ -74,6 +74,7 @@ See the `convert_yielded` function to extend this mechanism.
    via ``singledispatch``.
 
 """
+#pylint: disable-file
 from __future__ import absolute_import, division, print_function
 
 import collections

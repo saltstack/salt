@@ -38,6 +38,7 @@ CSV format) or `load_gettext_translations` (which uses the ``.mo`` format
 supported by `gettext` and related tools).  If neither method is called,
 the `Locale.translate` method will simply return the original string.
 """
+#pylint: disable-file
 
 from __future__ import absolute_import, division, print_function
 

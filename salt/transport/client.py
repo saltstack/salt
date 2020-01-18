@@ -91,8 +91,9 @@ class AsyncChannel(object):
 
     @classmethod
     def _config_resolver(cls, num_threads=10):
-        from salt.ext.tornado.netutil import Resolver
-        Resolver.configure(
+        #from salt.ext.tornado.netutil import Resolver
+        import salt.ext.tornado.netutil
+        salt.ext.tornado.netutil.Resolver.configure(
                 'tornado.netutil.ThreadedResolver',
                 num_threads=num_threads)
         cls._resolver_configured = True
