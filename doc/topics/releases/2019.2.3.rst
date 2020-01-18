@@ -1,8 +1,8 @@
 ===========================
-Salt 2018.3.5 Release Notes
+Salt 2019.2.3 Release Notes
 ===========================
 
-Version 2018.3.5 is a CVE-fix release for :ref:`2018.3.0 <release-2018-3-0>`.
+Version 2019.2.3 is a CVE-fix release for :ref:`2019.2.0 <release-2019-2-0>`.
 
 Security Fix
 ============
