@@ -85,6 +85,7 @@ import textwrap
 import types
 import weakref
 
+import salt.ext.tornado as tornado
 from salt.ext.tornado.concurrent import Future, TracebackFuture, is_future, chain_future
 from salt.ext.tornado.ioloop import IOLoop
 from salt.ext.tornado.log import app_log
