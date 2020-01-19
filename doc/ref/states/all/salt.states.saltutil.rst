@@ -1,5 +1,6 @@
-salt.states.saltutil module
-===========================
+====================
+salt.states.saltutil
+====================
 
 .. automodule:: salt.states.saltutil
     :members:
