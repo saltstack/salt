@@ -2,7 +2,7 @@
 '''
 Access Salt's elemental release code-names.
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Salt's feature release schedule is based on the Periodic Table, as described
 in the :ref:`Version Numbers <version-numbers>` documentation.

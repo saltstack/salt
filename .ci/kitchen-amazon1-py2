@@ -11,6 +11,6 @@ runTestSuite(
     nox_passthrough_opts: '--ssh-tests',
     python_version: 'py2',
     testrun_timeout: 7,
-    use_spot_instances: true)
+    use_spot_instances: false)
 
 // vim: ft=groovy
