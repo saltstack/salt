@@ -220,7 +220,6 @@ state modules
     nexus
     nfs_export
     nftables
-    nova
     npm
     ntp
     nxos
