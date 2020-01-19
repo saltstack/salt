@@ -148,7 +148,7 @@ def _yum():
            and int(__grains__['osrelease']) >= 22):
             __context__[contextkey] = 'dnf'
         elif ('centos' in __grains__['os'].lower()
-           and int(float(__grains__['osrelease'])) > 7):
+           and int(__grains__['osrelease'].split('.')[0]) > 7):
             __context__[contextkey] = 'dnf'
         else:
             __context__[contextkey] = 'yum'
