@@ -50,6 +50,7 @@ except ImportError:
 
 # Import Tornado Libs
 import salt.ext.tornado
+import salt.ext.tornado.ioloop
 import salt.ext.tornado.gen
 import salt.ext.tornado.concurrent
 
@@ -1122,8 +1123,9 @@ class AsyncReqMessageClient(object):
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            install_zmq()
-            ZMQDefaultLoop.current()
+            #install_zmq()
+            #ZMQDefaultLoop.current()
+            self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop
 

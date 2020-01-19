@@ -37,6 +37,7 @@ import salt.transport.client
 import salt.exceptions
 from salt.ext.six.moves import range
 from salt.transport.zeromq import AsyncReqMessageClientPool
+import salt.ext.tornado.ioloop
 
 # Import test support libs
 from tests.support.runtests import RUNTIME_VARS
@@ -92,7 +93,7 @@ class BaseZMQReqCase(TestCase, AdaptedConfigurationTestCaseMixin):
         cls.server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.server_channel.pre_fork(cls.process_manager)
 
-        cls.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        cls.io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.evt = threading.Event()
         cls.server_channel.post_fork(cls._handle_payload, io_loop=cls.io_loop)
         cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls.io_loop, cls.evt))
@@ -237,7 +238,7 @@ class BaseZMQPubCase(AsyncTestCase, AdaptedConfigurationTestCaseMixin):
         cls.req_server_channel = salt.transport.server.ReqServerChannel.factory(cls.master_config)
         cls.req_server_channel.pre_fork(cls.process_manager)
 
-        cls._server_io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        cls._server_io_loop = salt.ext.tornado.ioloop.IOLoop()
         cls.evt = threading.Event()
         cls.req_server_channel.post_fork(cls._handle_payload, io_loop=cls._server_io_loop)
         cls.server_thread = threading.Thread(target=run_loop_in_thread, args=(cls._server_io_loop, cls.evt))
@@ -288,7 +289,7 @@ class AsyncPubChannelTest(BaseZMQPubCase, PubChannelMixin):
     Tests around the publish system
     '''
     def get_new_ioloop(self):
-        return zmq.eventloop.ioloop.ZMQIOLoop()
+        return salt.ext.tornado.ioloop.IOLoop()
 
 
 class AsyncReqMessageClientPoolTest(TestCase):
@@ -419,7 +420,7 @@ class PubServerChannel(TestCase, AdaptedConfigurationTestCaseMixin):
         # Start the event loop, even though we dont directly use this with
         # ZeroMQPubServerChannel, having it running seems to increase the
         # likely hood of dropped messages.
-        self.io_loop = zmq.eventloop.ioloop.ZMQIOLoop()
+        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.io_loop_thread = threading.Thread(target=self.io_loop.start)
         self.io_loop_thread.start()
