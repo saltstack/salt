@@ -7,11 +7,11 @@ extension-pkg-whitelist=
 
 # Add files or directories to the blacklist. They should be base names, not
 # paths.
-ignore=CVS,ext,ext/tornado/platform,ext/tornado/tests
+ignore=CVS,ext,salt/ext/tornado/(platform,tests)/
 
 # Add files or directories matching the regex patterns to the blacklist. The
 # regex matches against base names, not paths.
-ignore-patterns=.*ext\/tornado.*,.*ext\/tornado\/.*\/.*
+ignore-patterns=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
