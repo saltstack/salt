@@ -115,7 +115,7 @@ class DocTestCase(TestCase):
                 if module_name not in skip_module_files:
                     module_files.append(module_name)
 
-        # Build list of beacon documentation files
+        # Build list of documentation files
         module_docs = []
         skip_doc_files = doc_skip
         full_module_doc_dir = os.path.join(salt_dir, *module_doc_dir)
@@ -128,12 +128,22 @@ class DocTestCase(TestCase):
                 if doc_name not in skip_doc_files:
                     module_docs.append(doc_name)
 
-        # Check that every beacon has associated documentaiton file
+        # Check that every module has associated documentation file
         for module in module_files:
             self.assertIn(module,
                           module_docs,
                           'module file {0} is missing documentation in {1}'.format(module,
                                                                                    full_module_doc_dir))
+
+            # Check if .rst file for this module contains the text
+            # ".. _virtual" indicating it is a virtual doc page
+            full_module_doc_name = os.path.join(full_module_doc_dir, doc_prefix + module + '.rst')
+            with open(full_module_doc_name) as rst_file:
+                rst_text = rst_file.read()
+                virtual_string = 'module file "{0}" is also a virtual doc page {1} and is not accessible'
+                self.assertNotIn('.. _virtual',
+                                 rst_text,
+                                 virtual_string.format(module, doc_prefix + module + '.rst'))
 
         for doc_file in module_docs:
             self.assertIn(doc_file,
