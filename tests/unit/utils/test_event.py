@@ -27,6 +27,7 @@ import salt.utils.stringutils
 
 # Import 3rd-+arty libs
 from salt.ext.tornado.testing import AsyncTestCase
+import salt.ext.tornado.ioloop
 import zmq
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
@@ -298,7 +299,7 @@ class TestSaltEvent(TestCase):
 
 class TestAsyncEventPublisher(AsyncTestCase):
     def get_new_ioloop(self):
-        return zmq.eventloop.ioloop.ZMQIOLoop()
+        return salt.ext.tornado.ioloop.IOLoop()
 
     def setUp(self):
         super(TestAsyncEventPublisher, self).setUp()
