@@ -26,7 +26,7 @@ import salt.utils.event
 import salt.utils.stringutils
 
 # Import 3rd-+arty libs
-from tornado.testing import AsyncTestCase
+from salt.ext.tornado.testing import AsyncTestCase
 import zmq
 import zmq.eventloop.ioloop
 # support pyzmq 13.0.x, TODO: remove once we force people to 14.0.x
