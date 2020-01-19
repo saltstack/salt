@@ -52,6 +52,7 @@ ZYPP_HOME = '/etc/zypp'
 LOCKS = '{0}/locks'.format(ZYPP_HOME)
 REPOS = '{0}/repos.d'.format(ZYPP_HOME)
 DEFAULT_PRIORITY = 99
+PKG_ARCH_SEPARATOR = '.'
 
 # Define the module's virtual name
 __virtualname__ = 'pkg'
@@ -298,7 +299,7 @@ class _Zypper(object):
             if self.__systemd_scope:
                 cmd.extend(['systemd-run', '--scope'])
             cmd.extend(self.__cmd)
-            log.debug("Calling Zypper: " + ' '.join(cmd))
+            log.debug("Calling Zypper: %s", ' '.join(cmd))
             self.__call_result = __salt__['cmd.run_all'](cmd, **kwargs)
             if self._check_result():
                 break
@@ -312,7 +313,7 @@ class _Zypper(object):
                         data['info'] = 'Blocking process created at {0}.'.format(
                             datetime.datetime.utcfromtimestamp(data['create_time']).isoformat())
                         data['success'] = True
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     data = {'info': 'Unable to retrieve information about blocking process: {0}'.format(err.message),
                             'success': False}
             else:
@@ -331,7 +332,7 @@ class _Zypper(object):
                 was_blocked = True
 
         if was_blocked:
-            __salt__['event.fire_master']({'success': not len(self.error_msg),
+            __salt__['event.fire_master']({'success': not self.error_msg,
                                            'info': self.error_msg or 'Zypper has been released'},
                                           self.TAG_RELEASED)
         if self.error_msg and not self.__no_raise and not self.__ignore_repo_failure:
@@ -461,10 +462,12 @@ def list_upgrades(refresh=True, **kwargs):
     ret = dict()
     cmd = ['list-updates']
     if 'fromrepo' in kwargs:
-        repo_name = kwargs['fromrepo']
-        if not isinstance(repo_name, six.string_types):
-            repo_name = six.text_type(repo_name)
-        cmd.extend(['--repo', repo_name])
+        repos = kwargs['fromrepo']
+        if isinstance(repos, six.string_types):
+            repos = [repos]
+        for repo in repos:
+            cmd.extend(['--repo', repo if isinstance(repo, six.string_types) else six.text_type(repo)])
+        log.debug('Targeting repos: %s', repos)
     for update_node in __zypper__.nolock.xml.call(*cmd).getElementsByTagName('update'):
         if update_node.getAttribute('kind') == 'package':
             ret[update_node.getAttribute('name')] = update_node.getAttribute('edition')
@@ -589,6 +592,30 @@ def info_available(*names, **kwargs):
     return ret
 
 
+def parse_arch(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch zsh.x86_64
+    '''
+    _name, _arch = None, None
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        pass
+    if _arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+        _name = name
+        _arch = None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
+
+
 def latest_version(*names, **kwargs):
     '''
     Return the latest version of the named package available for upgrade or
@@ -626,7 +653,7 @@ def latest_version(*names, **kwargs):
             ret[name] = ''
 
     # Return a string if only one package name passed
-    if len(names) == 1 and len(ret):
+    if len(names) == 1 and ret:
         return ret[names[0]]
 
     return ret
@@ -759,8 +786,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             if pkginfo:
                 # see rpm version string rules available at https://goo.gl/UGKPNd
                 pkgver = pkginfo.version
-                epoch = ''
-                release = ''
+                epoch = None
+                release = None
                 if ':' in pkgver:
                     epoch, pkgver = pkgver.split(":", 1)
                 if '-' in pkgver:
@@ -1471,8 +1498,8 @@ def upgrade(refresh=True,
     .. code-block:: bash
 
         salt '*' pkg.upgrade
-        salt '*' pkg.upgrade dist-upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
-        salt '*' pkg.upgrade dist-upgrade=True dryrun=True
+        salt '*' pkg.upgrade dist_upgrade=True fromrepo='["MyRepoName"]' novendorchange=True
+        salt '*' pkg.upgrade dist_upgrade=True dryrun=True
     '''
     cmd_update = (['dist-upgrade'] if dist_upgrade else ['update']) + ['--auto-agree-with-licenses']
 
@@ -1486,12 +1513,14 @@ def upgrade(refresh=True,
     if dryrun:
         cmd_update.append('--dry-run')
 
-    if dist_upgrade:
-        if fromrepo:
-            for repo in fromrepo:
-                cmd_update.extend(['--from', repo])
-            log.info('Targeting repos: %s', fromrepo)
+    if fromrepo:
+        if isinstance(fromrepo, six.string_types):
+            fromrepo = [fromrepo]
+        for repo in fromrepo:
+            cmd_update.extend(['--from' if dist_upgrade else '--repo', repo])
+        log.info('Targeting repos: %s', fromrepo)
 
+    if dist_upgrade:
         if novendorchange:
             # TODO: Grains validation should be moved to Zypper class
             if __grains__['osrelease_info'][0] > 11:
