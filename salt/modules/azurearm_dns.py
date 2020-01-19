@@ -2,7 +2,7 @@
 '''
 Azure (ARM) DNS Execution Module
 
-.. versionadded:: Sodium
+.. versionadded:: 3000
 
 :maintainer: <devops@eitr.tech>
 :maturity: new
@@ -85,7 +85,7 @@ def __virtual__():
 
 def record_set_create_or_update(name, zone_name, resource_group, record_type, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Creates or updates a record set within a DNS zone.
 
@@ -138,7 +138,7 @@ def record_set_create_or_update(name, zone_name, resource_group, record_type, **
 
 def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Deletes a record set from a DNS zone. This operation cannot be undone.
 
@@ -179,7 +179,7 @@ def record_set_delete(name, zone_name, resource_group, record_type, **kwargs):
 
 def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Get a dictionary representing a record set's properties.
 
@@ -219,7 +219,7 @@ def record_set_get(name, zone_name, resource_group, record_type, **kwargs):
 
 def record_sets_list_by_type(zone_name, resource_group, record_type, top=None, recordsetnamesuffix=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Lists the record sets of a specified type in a DNS zone.
 
@@ -270,7 +270,7 @@ def record_sets_list_by_type(zone_name, resource_group, record_type, top=None, r
 
 def record_sets_list_by_dns_zone(zone_name, resource_group, top=None, recordsetnamesuffix=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Lists all record sets in a DNS zone.
 
@@ -316,7 +316,7 @@ def record_sets_list_by_dns_zone(zone_name, resource_group, top=None, recordsetn
 
 def zone_create_or_update(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Creates or updates a DNS zone. Does not modify DNS records within the zone.
 
@@ -369,7 +369,7 @@ def zone_create_or_update(name, resource_group, **kwargs):
 
 def zone_delete(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Delete a DNS zone within a resource group.
 
@@ -402,7 +402,7 @@ def zone_delete(name, resource_group, **kwargs):
 
 def zone_get(name, resource_group, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Get a dictionary representing a DNS zone's properties, but not the
     record sets within the zone.
@@ -435,7 +435,7 @@ def zone_get(name, resource_group, **kwargs):
 
 def zones_list_by_resource_group(resource_group, top=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Lists the DNS zones in a resource group.
 
@@ -473,7 +473,7 @@ def zones_list_by_resource_group(resource_group, top=None, **kwargs):
 
 def zones_list(top=None, **kwargs):
     '''
-    .. versionadded:: Sodium
+    .. versionadded:: 3000
 
     Lists the DNS zones in all resource groups in a subscription.
 

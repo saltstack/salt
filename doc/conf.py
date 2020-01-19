@@ -255,9 +255,9 @@ on_saltstack = 'SALT_ON_SALTSTACK' in os.environ
 project = 'Salt'
 repo_primary_branch = 'master'  # This is the default branch on GitHub for the Salt project
 version = salt.version.__version__
-latest_release = '2019.2.2'  # latest release
-previous_release = '2018.3.4'  # latest release from previous branch
-previous_release_dir = '2018.3'  # path on web server for previous branch
+latest_release = os.environ.get('LATEST_RELEASE', 'latest_release')  # latest release (2019.2.3)
+previous_release = os.environ.get('PREVIOUS_RELEASE', 'previous_release')  # latest release from previous branch (2018.3.5)
+previous_release_dir = os.environ.get('PREVIOUS_RELEASE_DIR', 'previous_release_dir')  # path on web server for previous branch (2018.3)
 next_release = ''  # next release
 next_release_dir = ''  # path on web server for next release branch
 
@@ -268,7 +268,7 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = repo_primary_branch # latest, previous, master, next
+build_type = os.environ.get('BUILD_TYPE', repo_primary_branch) # latest, previous, master, next
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
@@ -282,7 +282,11 @@ elif build_type == 'next':
     search_cx = '011515552685726825874:ht0p8miksrm' # latest
 elif build_type == 'previous':
     release = previous_release
-    if release.startswith('2018.3'):
+    if release.startswith('3000'):
+        search_cx = '011515552685726825874:3skhaozjtyn' # 3000
+    elif release.startswith('2019.2'):
+        search_cx = '011515552685726825874:huvjhlpptnm' # 2019.2
+    elif release.startswith('2018.3'):
         search_cx = '011515552685726825874:vadptdpvyyu' # 2018.3
     elif release.startswith('2017.7'):
         search_cx = '011515552685726825874:w-hxmnbcpou' # 2017.7

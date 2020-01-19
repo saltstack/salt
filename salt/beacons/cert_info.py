@@ -2,7 +2,7 @@
 '''
 Beacon to monitor certificate expiration dates from files on the filesystem.
 
-.. versionadded:: Sodium
+.. versionadded:: 3000
 
 :maintainer: <devops@eitr.tech>
 :maturity: new

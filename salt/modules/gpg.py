@@ -1066,7 +1066,7 @@ def verify(text=None,
           - always
           - auto
 
-        .. versionadded:: fluorine
+        .. versionadded:: 2019.2.0
 
     CLI Example:
 
