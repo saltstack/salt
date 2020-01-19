@@ -105,13 +105,13 @@ class SaltStackVersion(object):
         'Nitrogen'      : (2017, 7),
         'Oxygen'        : (2018, 3),
         'Fluorine'      : (2019, 2),
-        'Neon'          : (MAX_SIZE - 99, 0),
+        'Neon'          : (3000, 0),
         'Sodium'        : (MAX_SIZE - 98, 0),
         'Magnesium'     : (MAX_SIZE - 97, 0),
         'Aluminium'     : (MAX_SIZE - 96, 0),
+        'Silicon'      : (MAX_SIZE - 95, 0),
+        'Phosphorus'   : (MAX_SIZE - 94, 0),
         # pylint: disable=E8265
-        #'Silicon'      : (MAX_SIZE - 95, 0),
-        #'Phosphorus'   : (MAX_SIZE - 94, 0),
         #'Sulfur'       : (MAX_SIZE - 93, 0),
         #'Chlorine'     : (MAX_SIZE - 92, 0),
         #'Argon'        : (MAX_SIZE - 91, 0),
@@ -684,8 +684,8 @@ def system_information():
                     version = item
             release = version
 
-        _, ver, _sp, extra = platform.win32_ver()
-        version = ' '.join([release, ver, _sp, extra])
+        _, ver, service_pack, extra = platform.win32_ver()
+        version = ' '.join([release, ver, service_pack, extra])
     else:
         version = system_version()
         release = platform.release()

@@ -302,7 +302,7 @@ syndic_user: salt
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
 
-# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# If the autosign_grains_dir is specified, incoming keys from minions with grain
 # values matching those defined in files in this directory will be accepted
 # automatically. This is insecure. Minions need to be configured to send the grains.
 #autosign_grains_dir: /etc/salt/autosign_grains

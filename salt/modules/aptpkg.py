@@ -18,6 +18,9 @@ import os
 import re
 import logging
 import time
+import fnmatch
+import datetime
+
 
 # Import third party libs
 # pylint: disable=no-name-in-module,import-error,redefined-builtin
@@ -73,6 +76,7 @@ except ImportError:
 # pylint: enable=import-error
 
 APT_LISTS_PATH = "/var/lib/apt/lists"
+PKG_ARCH_SEPARATOR = ':'
 
 # Source format for urllib fallback on PPA handling
 LP_SRC_FORMAT = 'deb http://ppa.launchpad.net/{0}/{1}/ubuntu {2} main'
@@ -183,6 +187,43 @@ def _warn_software_properties(repo):
                 'For more accurate support of PPA repositories, you should '
                 'install this package.')
     log.warning('Best guess at ppa format: %s', repo)
+
+
+def normalize_name(name):
+    '''
+    Strips the architecture from the specified package name, if necessary.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.normalize_name zsh:amd64
+    '''
+    try:
+        name, arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        return name
+    return name
+
+
+def parse_arch(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch zsh:amd64
+    '''
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        _name, _arch = name, None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
 
 
 def latest_version(*names, **kwargs):
@@ -384,6 +425,7 @@ def install(name=None,
             pkgs=None,
             sources=None,
             reinstall=False,
+            downloadonly=False,
             ignore_epoch=False,
             **kwargs):
     '''
@@ -729,6 +771,9 @@ def install(name=None,
             cmd.insert(-1, '--force-yes')
         cmd.extend(downgrade)
         cmds.append(cmd)
+
+    if downloadonly:
+        cmd.append("--download-only")
 
     if to_reinstall:
         all_pkgs.extend(to_reinstall)
@@ -2287,6 +2332,8 @@ def mod_repo(repo, saltenv='base', **kwargs):
 
     if 'disabled' in kwargs:
         kwargs['disabled'] = salt.utils.data.is_true(kwargs['disabled'])
+    elif 'enabled' in kwargs:
+        kwargs['disabled'] = not salt.utils.data.is_true(kwargs['enabled'])
 
     kw_type = kwargs.get('type')
     kw_dist = kwargs.get('dist')
@@ -2846,3 +2893,37 @@ def _get_http_proxy_url():
             )
 
     return http_proxy_url
+
+
+def list_downloaded(root=None, **kwargs):
+    '''
+    .. versionadded:: 3000?
+
+    List prefetched packages downloaded by apt in the local disk.
+
+    root
+        operate on a different root directory.
+
+    CLI example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.list_downloaded
+    '''
+    CACHE_DIR = '/var/cache/apt'
+    if root:
+        CACHE_DIR = os.path.join(root, os.path.relpath(CACHE_DIR, os.path.sep))
+
+    ret = {}
+    for root, dirnames, filenames in salt.utils.path.os_walk(CACHE_DIR):
+        for filename in fnmatch.filter(filenames, '*.deb'):
+            package_path = os.path.join(root, filename)
+            pkg_info = __salt__['lowpkg.bin_pkg_info'](package_path)
+            pkg_timestamp = int(os.path.getctime(package_path))
+            ret.setdefault(pkg_info['name'], {})[pkg_info['version']] = {
+                'path': package_path,
+                'size': os.path.getsize(package_path),
+                'creation_date_time_t': pkg_timestamp,
+                'creation_date_time': datetime.datetime.utcfromtimestamp(pkg_timestamp).isoformat(),
+            }
+    return ret
