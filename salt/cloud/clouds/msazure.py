@@ -554,7 +554,7 @@ def create(vm_):
         conn.create_hosted_service(**service_kwargs)
     except AzureConflictHttpError:
         log.debug('Cloud service already exists')
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         error = 'The hosted service name is invalid.'
         if error in six.text_type(exc):
             log.error(
@@ -588,7 +588,7 @@ def create(vm_):
         del vm_kwargs['virtual_network_name']
         result = conn.add_role(**vm_kwargs)
         _wait_for_async(conn, result.request_id)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         error = 'The hosted service name is invalid.'
         if error in six.text_type(exc):
             log.error(

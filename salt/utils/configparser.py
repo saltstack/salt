@@ -48,7 +48,7 @@ class GitConfigParser(RawConfigParser, object):  # pylint: disable=undefined-var
     DEFAULTSECT = 'DEFAULT'
     SPACEINDENT = ' ' * 8
 
-    def __init__(self, defaults=None, dict_type=_default_dict,
+    def __init__(self, defaults=None, dict_type=_default_dict,  # pylint: disable=useless-super-delegation
                  allow_no_value=True):
         '''
         Changes default value for allow_no_value from False to True

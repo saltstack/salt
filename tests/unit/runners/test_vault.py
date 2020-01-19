@@ -9,13 +9,11 @@ import logging
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     Mock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
     ANY,
     call
 )
@@ -113,7 +111,6 @@ class VaultTest(TestCase, LoaderModuleMockMixin):
                     log.debug('Difference:\n\t%s', diff)
                 self.assertEqual(output, correct_output)
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_get_policies(self):
         '''
         Ensure _get_policies works as intended, including expansion of lists

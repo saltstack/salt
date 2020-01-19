@@ -41,9 +41,11 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
     client = 'runner'
     tag_prefix = 'run'
 
-    def __init__(self, opts):
+    def __init__(self, opts, context=None):
         self.opts = opts
-        self.context = {}
+        if context is None:
+            context = {}
+        self.context = context
 
     @property
     def functions(self):
@@ -144,7 +146,7 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin, object):
         reformatted_low = self._reformat_low(low)
         return mixins.SyncClientMixin.cmd_sync(self, reformatted_low, timeout, full_return)
 
-    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):
+    def cmd(self, fun, arg=None, pub_data=None, kwarg=None, print_event=True, full_return=False):  # pylint: disable=useless-super-delegation
         '''
         Execute a function
         '''
@@ -160,9 +162,9 @@ class Runner(RunnerClient):
     '''
     Execute the salt runner interface
     '''
-    def __init__(self, opts):
-        super(Runner, self).__init__(opts)
-        self.returners = salt.loader.returners(opts, self.functions)
+    def __init__(self, opts, context=None):
+        super(Runner, self).__init__(opts, context=context)
+        self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
 
     def print_docs(self):
@@ -270,14 +272,14 @@ class Runner(RunnerClient):
                                               async_pub['jid'],
                                               daemonize=False)
             except salt.exceptions.SaltException as exc:
-                evt = salt.utils.event.get_event('master', opts=self.opts)
-                evt.fire_event({'success': False,
-                                'return': '{0}'.format(exc),
-                                'retcode': 254,
-                                'fun': self.opts['fun'],
-                                'fun_args': fun_args,
-                                'jid': self.jid},
-                               tag='salt/run/{0}/ret'.format(self.jid))
+                with salt.utils.event.get_event('master', opts=self.opts) as evt:
+                    evt.fire_event({'success': False,
+                                    'return': '{0}'.format(exc),
+                                    'retcode': 254,
+                                    'fun': self.opts['fun'],
+                                    'fun_args': fun_args,
+                                    'jid': self.jid},
+                                   tag='salt/run/{0}/ret'.format(self.jid))
                 # Attempt to grab documentation
                 if 'fun' in low:
                     ret = self.get_docs('{0}*'.format(low['fun']))

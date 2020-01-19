@@ -7,11 +7,9 @@ from __future__ import absolute_import, unicode_literals, print_function
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
-    NO_MOCK,
-    NO_MOCK_REASON,
     patch
 )
 
@@ -19,7 +17,6 @@ from tests.support.mock import (
 import salt.modules.s3 as s3
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class S3TestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):

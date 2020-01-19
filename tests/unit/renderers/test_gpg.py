@@ -7,10 +7,8 @@ from textwrap import dedent
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import skipIf, TestCase
+from tests.support.unit import TestCase
 from tests.support.mock import (
-    NO_MOCK,
-    NO_MOCK_REASON,
     MagicMock,
     patch
 )
@@ -20,7 +18,6 @@ import salt.renderers.gpg as gpg
 from salt.exceptions import SaltRenderError
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GPGTestCase(TestCase, LoaderModuleMockMixin):
     '''
     unit test GPG renderer

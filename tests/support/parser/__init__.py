@@ -30,7 +30,7 @@ from functools import partial
 from collections import namedtuple
 
 import tests.support.paths
-from tests.support import helpers
+from tests.support import processes
 from tests.support.unit import TestLoader, TextTestRunner
 from tests.support.xmlunit import HAS_XMLRUNNER, XMLTestRunner
 
@@ -416,7 +416,7 @@ class SaltTestingParser(optparse.OptionParser):
             try:
                 with salt.utils.files.fopen(self.options.filename_map) as fp_:
                     filename_map = salt.utils.yaml.safe_load(fp_)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 raise RuntimeError(
                     'Failed to load filename map: {0}'.format(exc)
                 )
@@ -598,12 +598,12 @@ class SaltTestingParser(optparse.OptionParser):
 
         self.validate_options()
 
-        if self.support_destructive_tests_selection:
+        if self.support_destructive_tests_selection and not os.environ.get('DESTRUCTIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # destructive tests should be executed or not.
             os.environ['DESTRUCTIVE_TESTS'] = str(self.options.run_destructive)
 
-        if self.support_expensive_tests_selection:
+        if self.support_expensive_tests_selection and not os.environ.get('EXPENSIVE_TESTS', None):
             # Set the required environment variable in order to know if
             # expensive tests should be executed or not.
             os.environ['EXPENSIVE_TESTS'] = str(self.options.run_expensive)
@@ -860,18 +860,18 @@ class SaltTestingParser(optparse.OptionParser):
         Run the finalization procedures. Show report, clean-up file-system, etc
         '''
         # Collect any child processes still laying around
-        children = helpers.collect_child_processes(os.getpid())
+        children = processes.collect_child_processes(os.getpid())
         if self.options.no_report is False:
             self.print_overall_testsuite_report()
         self.post_execution_cleanup()
         # Brute force approach to terminate this process and its children
         if children:
             log.info('Terminating test suite child processes: %s', children)
-            helpers.terminate_process(children=children, kill_children=True)
-            children = helpers.collect_child_processes(os.getpid())
+            processes.terminate_process(children=children, kill_children=True)
+            children = processes.collect_child_processes(os.getpid())
             if children:
                 log.info('Second run at terminating test suite child processes: %s', children)
-                helpers.terminate_process(children=children, kill_children=True)
+                processes.terminate_process(children=children, kill_children=True)
         exit_msg = 'Test suite execution finalized with exit code: {}'.format(exit_code)
         log.info(exit_msg)
         self.exit(status=exit_code, msg=exit_msg + '\n')

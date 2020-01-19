@@ -9,12 +9,10 @@ import yaml
 
 # Import Salt Testing Libs
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -24,7 +22,6 @@ import salt.modules.pkg_resource as pkg_resource
 from salt.ext import six
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PkgresTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.pkg_resource
@@ -128,6 +125,122 @@ class PkgresTestCase(TestCase, LoaderModuleMockMixin):
             to one another.
         '''
         self.assertIsNone(pkg_resource.sort_pkglist({}))
+
+    def test_format_pkg_list_no_attr(self):
+        '''
+            Test to output format of the package list with no attr parameter.
+        '''
+        packages = {
+            'glibc': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'x86_64'}],
+            'glibc.i686': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'i686'}],
+            'foobar': [
+                {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
+                {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
+            ],
+            'foobar.something': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}],
+            'foobar.': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}]
+        }
+        expected_pkg_list = {
+            'glibc': '2.12-1.212.el6',
+            'glibc.i686': '2.12-1.212.el6',
+            'foobar': '2:1.2.0-7,2:1.2.3-27',
+            'foobar.something': '3:1.1-23.1',
+            'foobar.': '3:1.1-23.1',
+        }
+        if six.PY3:
+            self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
+        else:
+            self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, None), expected_pkg_list)
+
+    def test_format_pkg_list_with_attr(self):
+        '''
+            Test to output format of the package list with attr parameter.
+            In this case, any redundant "arch" reference will be removed from the package name since it's
+            include as part of the requested attr.
+        '''
+        NAME_ARCH_MAPPING = {
+            'glibc': {
+                'name': 'glibc',
+                'arch': None
+            },
+            'glibc.i686': {
+                'name': 'glibc',
+                'arch': 'i686'
+            },
+            'foobar': {
+                'name': 'foobar',
+                'arch': None
+            },
+            'foobar.something': {
+                'name': 'foobar.something',
+                'arch': None
+            },
+            'foobar.': {
+                'name': 'foobar.',
+                'arch': None
+            }
+        }
+        packages = {
+            'glibc': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'x86_64'}],
+            'glibc.i686': [{'version': '2.12', 'epoch': None, 'release': '1.212.el6', 'arch': 'i686'}],
+            'foobar': [
+                {'version': '1.2.0', 'epoch': '2', 'release': '7', 'arch': 'x86_64'},
+                {'version': '1.2.3', 'epoch': '2', 'release': '27', 'arch': 'x86_64'},
+            ],
+            'foobar.something': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}],
+            'foobar.': [{'version': '1.1', 'epoch': '3', 'release': '23.1', 'arch': 'i686'}]
+        }
+        expected_pkg_list = {
+            'glibc': [
+                {
+                    'arch': 'x86_64',
+                    'release': '1.212.el6',
+                    'epoch': None,
+                    'version': '2.12'
+                },
+                {
+                    'arch': 'i686',
+                    'release': '1.212.el6',
+                    'epoch': None,
+                    'version': '2.12'
+                }
+             ],
+            'foobar': [
+                {
+                    'arch': 'x86_64',
+                    'release': '7',
+                    'epoch': '2',
+                    'version': '1.2.0'
+                },
+                {
+                    'arch': 'x86_64',
+                    'release': '27',
+                    'epoch': '2',
+                    'version': '1.2.3'
+                }
+            ],
+            'foobar.': [
+                {
+                    'arch': 'i686',
+                    'release': '23.1',
+                    'epoch': '3',
+                    'version': '1.1'
+                }
+            ],
+            'foobar.something': [
+                {
+                    'arch': 'i686',
+                    'release': '23.1',
+                    'epoch': '3',
+                    'version': '1.1'
+                }
+            ]
+        }
+        with patch.dict(pkg_resource.__salt__, {'pkg.parse_arch': NAME_ARCH_MAPPING.get}):
+            if six.PY3:
+                self.assertCountEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
+            else:
+                self.assertItemsEqual(pkg_resource.format_pkg_list(packages, False, attr=['epoch', 'release']), expected_pkg_list)
 
     def test_stringify(self):
         '''

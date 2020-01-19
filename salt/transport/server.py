@@ -46,7 +46,6 @@ class ReqServerChannel(object):
         Do anything necessary pre-fork. Since this is on the master side this will
         primarily be bind and listen (or the equivalent for your network library)
         '''
-        pass
 
     def post_fork(self, payload_handler, io_loop):
         '''
@@ -54,7 +53,6 @@ class ReqServerChannel(object):
         and call payload_handler. You will also be passed io_loop, for all of your
         asynchronous needs
         '''
-        pass
 
 
 class PubServerChannel(object):
@@ -92,7 +90,6 @@ class PubServerChannel(object):
         primarily be used to create IPC channels and create our daemon process to
         do the actual publishing
         '''
-        pass
 
     def publish(self, load):
         '''

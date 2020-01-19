@@ -122,7 +122,15 @@ def shutdown(at_time=None):
 
         salt '*' system.shutdown 5
     '''
-    cmd = ['shutdown', '-h', ('{0}'.format(at_time) if at_time else 'now')]
+    if (salt.utils.platform.is_freebsd() or
+            salt.utils.platform.is_netbsd() or
+            salt.utils.platform.is_openbsd()):
+        # these platforms don't power off by default when halted
+        flag = '-p'
+    else:
+        flag = '-h'
+
+    cmd = ['shutdown', flag, ('{0}'.format(at_time) if at_time else 'now')]
     ret = __salt__['cmd.run'](cmd, python_shell=False)
     return ret
 
@@ -471,7 +479,7 @@ class _FixedOffset(tzinfo):
     '''
 
     def __init__(self, offset):
-        super(self.__class__, self).__init__()
+        super(_FixedOffset, self).__init__()
         self.__offset = timedelta(minutes=offset)
 
     def utcoffset(self, dt):  # pylint: disable=W0613

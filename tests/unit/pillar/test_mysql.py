@@ -5,13 +5,11 @@ from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase, skipIf
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON
 
 # Import Salt Libs
 import salt.pillar.mysql as mysql
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(mysql.MySQLdb is None, 'MySQL-python module not installed')
 class MysqlPillarTestCase(TestCase):
     maxDiff = None
