@@ -318,7 +318,6 @@ execution modules
     neutron
     neutronng
     nexus
-    nxos_upgrade
     nfs3
     nftables
     nginx
