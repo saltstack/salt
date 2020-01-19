@@ -71,7 +71,7 @@ The profile can be realized now with a salt command:
 
 .. code-block:: bash
 
-    # salt-cloud -p centos7 my-centos7-clone
+    salt-cloud -p centos7 my-centos7-clone
 
 This will create an instance named ``my-centos7-clone`` on the cloud host. Also
 the minion id will be set to ``my-centos7-clone``.
@@ -84,7 +84,7 @@ it can be verified with Salt:
 
 .. code-block:: bash
 
-    # salt my-centos7-clone test.version
+    salt my-centos7-clone test.version
 
 
 Required Settings
@@ -109,8 +109,10 @@ that the qemu-agent is installed and configured to run at startup in the base do
 SSH Key Authentication
 ======================
 Instead of specifying a password, an authorized key can be used for the minion setup. Ensure that
-the root user of your base image has the public key you want to use in .ssh/authorized_keys, then
-specify the private key in your config:
+the ssh user of your base image has the public key you want to use in ~/.ssh/authorized_keys.  If
+you want to use a non-root user you will likely want to configure salt-cloud to use sudo.
+
+An example using root:
 
 .. code-block:: yaml
 
@@ -121,17 +123,52 @@ specify the private key in your config:
       ssh_username: root
       private_key: /path/to/private/key
 
+An example using a non-root user:
+
+.. code-block:: yaml
+
+    centos7:
+      provider: local-kvm
+      # the domain to clone
+      base_domain: base-centos7-64
+      ssh_username: ubuntu
+      private_key: /path/to/private/key
+      sudo: True
+      sudo_password: "--redacted--"
+
 Optional Settings
 =================
 
 .. code-block:: yaml
 
-    # Username and password
-    ssh_username: root
-    password: my-secret-password
+    centos7:
+      # ssh settings
+      has_ssh_agent: True
+      ssh_port: 4910
 
-    # Cloning strategy: full or quick
-    clone_strategy: quick
+      # credentials
+      ssh_username: root
+      password: my-secret-password
+      private_key: /path/to/private/key
+      sudo: True
+      sudo_password: "--redacted--"
+
+      # bootstrap options
+      deploy_command: sh /tmp/.saltcloud/deploy.sh
+      script_args: -F
+
+      # minion config
+      grains:
+        sushi: more tasty
+      # point at the another master at another port
+      minion:
+        master: 192.168.16.1
+        master_port: 5506
+
+      # libvirt settings
+      validate_xml: no
+      # clone_strategy = [ quick | full ]
+      clone_strategy: quick
 
 The ``clone_strategy`` controls how the clone is done. In case of ``full`` the disks
 are copied creating a standalone clone. If ``quick`` is used the disks of the base domain
@@ -141,3 +178,5 @@ the expense of slower write performance. The quick strategy has a number of requ
 * The disks must be of type qcow2
 * The base domain must be turned off
 * The base domain must not change after creating the clone
+
+See also :mod:`salt.cloud.clouds.libvirt`
