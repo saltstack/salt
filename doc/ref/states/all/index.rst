@@ -246,7 +246,6 @@ state modules
     ports
     postgres_cluster
     postgres_database
-    postgres_default_privileges
     postgres_extension
     postgres_group
     postgres_initdb
