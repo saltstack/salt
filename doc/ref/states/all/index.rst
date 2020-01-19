@@ -345,7 +345,6 @@ state modules
     zabbix_hostgroup
     zabbix_mediatype
     zabbix_template
-    zabbix_service
     zabbix_user
     zabbix_usergroup
     zabbix_usermacro
