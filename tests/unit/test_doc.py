@@ -77,6 +77,7 @@ class DocTestCase(TestCase):
             if 'man' in key \
                     or '.tox{}'.format(os.sep) in key \
                     or '.nox{}'.format(os.sep) in key \
+                    or 'ext{}'.format(os.sep) in key \
                     or 'artifacts{}'.format(os.sep) in key \
                     or key.endswith('test_doc.py') \
                     or key.endswith(os.sep.join(['doc', 'conf.py'])) \
