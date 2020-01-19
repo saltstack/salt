@@ -17,6 +17,7 @@ from tests.support.runtests import RUNTIME_VARS
 # Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.platform
+import salt.utils.files
 
 
 log = logging.getLogger(__name__)
@@ -138,7 +139,7 @@ class DocTestCase(TestCase):
             # Check if .rst file for this module contains the text
             # ".. _virtual" indicating it is a virtual doc page
             full_module_doc_name = os.path.join(full_module_doc_dir, doc_prefix + module + '.rst')
-            with open(full_module_doc_name) as rst_file:
+            with salt.utils.files.fopen(full_module_doc_name) as rst_file:
                 rst_text = rst_file.read()
                 virtual_string = 'module file "{0}" is also a virtual doc page {1} and is not accessible'
                 self.assertNotIn('.. _virtual',
