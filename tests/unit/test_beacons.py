@@ -14,6 +14,9 @@ from tests.support.mock import patch
 import salt.beacons as beacons
 import salt.config
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     '''
