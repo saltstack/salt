@@ -11,6 +11,7 @@ import salt.utils.yaml
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skip_if_not_root
 ]
 
 
@@ -144,3 +145,51 @@ def test_salt_run_with_wrong_eauth(salt_run_cli, salt_eauth_account):
         r" available\nAvailable eauth types: auto, .*",
         ret.stdout.replace("\r\n", "\n"),
     )
+
+def test_salt_run_timeout_success(self):
+    '''
+    test salt-run with defined timeout (waiting for job results)
+    It should simply succeed, as the timeout is greater than the executed sleep period
+    '''
+    run_cmd = self.run_run('--timeout=5 salt.cmd test.sleep 1')
+    expect = ['True']
+    self.assertEqual(expect, run_cmd)
+
+def test_salt_run_timeout_failure(self):
+    '''
+    test salt-run with defined timeout (waiting for job results)
+    It should result in a timeout, as the executed sleep period is greater than the timeout
+    '''
+    run_cmd = self.run_run('--timeout=1 salt.cmd test.sleep 5')
+    expect = r"^RunnerClient job '[0-9]+' timed out"
+    self.assertRegex(run_cmd[0], expect)
+
+@pytest.mark.skip_if_not_root
+def test_salt_run_timeout_success_with_eauth(self):
+    '''
+    test salt-run with defined timeout (waiting for job results).
+    It should succeed, as the timeout is greater than the executed sleep period.
+    The codepath for handling timeouts is different for eauth enabled, that's why
+    this is additionally tested.
+    '''
+    self._add_user()
+    run_cmd = self.run_run('-a pam --username {0} --password {1}\
+                           --timeout=5 salt.cmd test.sleep 3'.format(USERA, USERA_PWD))
+    expect = ['True']
+    self.assertEqual(expect, run_cmd)
+    self._remove_user()
+
+@pytest.mark.skip_if_not_root
+def test_salt_run_timeout_failure_with_eauth(self):
+    '''
+    test salt-run with defined timeout (waiting for job results)
+    It should result in a timeout, as the executed sleep period is greater than the timeout.
+    The codepath for handling timeouts is different for eauth enabled, that's why
+    this is additionally tested.
+    '''
+    self._add_user()
+    run_cmd = self.run_run('-a pam --username {0} --password {1}\
+                           --timeout=1 salt.cmd test.sleep 5'.format(USERA, USERA_PWD))
+    expect = r"^RunnerClient job '[0-9]+' timed out"
+    self.assertRegex(run_cmd[0], expect)
+    self._remove_user()
