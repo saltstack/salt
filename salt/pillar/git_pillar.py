@@ -355,7 +355,7 @@ When ``__env__`` is specified as the branch name, ``all_saltenvs`` per-remote co
 git_pillar_update_interval
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. versionadded:: neon
+.. versionadded:: 3000
 
 This option defines the default update interval (in seconds) for git_pillar
 remotes. The update is handled within the global loop, hence
