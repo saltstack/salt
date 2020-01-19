@@ -218,7 +218,6 @@ execution modules
     jenkinsmod
     jinja
     jira_mod
-    jsonnet
     junos
     k8s
     kapacitor
@@ -332,7 +331,6 @@ execution modules
     nxos
     nxos_api
     omapi
-    onyx
     openbsd_sysctl
     openbsdpkg
     openbsdrcctl_service

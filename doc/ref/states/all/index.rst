@@ -66,7 +66,6 @@ state modules
     boto_sqs
     boto_vpc
     bower
-    btrfs
     cabal
     ceph
     chef
@@ -90,7 +89,6 @@ state modules
     docker_network
     docker_volume
     drac
-    dracr
     dvs
     elasticsearch
     elasticsearch_index
@@ -226,11 +224,8 @@ state modules
     npm
     ntp
     nxos
-    nxos_upgrade
-    onyx
     openstack_config
     openvswitch_bridge
-    openvswitch_db
     openvswitch_port
     opsgenie
     pagerduty
@@ -341,7 +336,6 @@ state modules
     win_smtp_server
     win_snmp
     win_system
-    win_task
     win_wua
     win_wusa
     winrepo

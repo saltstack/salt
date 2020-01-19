@@ -28,7 +28,6 @@ grains modules
     napalm
     nvme
     nxos
-    onyx
     opts
     panos
     philips_hue
