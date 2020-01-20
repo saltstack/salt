@@ -1506,7 +1506,7 @@ class EventsSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
 
         .. code-block:: javascript
 
-            # Note, you must be authenticated!
+            <!-- Note, you must be authenticated! -->
             var source = new EventSource('/events');
             source.onopen = function() { console.debug('opening') };
             source.onerror = function(e) { console.debug('error!', e) };
@@ -1619,7 +1619,7 @@ class WebhookSaltAPIHandler(SaltAPIHandler):  # pylint: disable=W0223
         after_success:
             - 'curl -sS http://saltapi-url.example.com:8000/hook/travis/build/success -d branch="${TRAVIS_BRANCH}" -d commit="${TRAVIS_COMMIT}"'
 
-    .. seealso:: :ref:`events`, :ref:`reactor`
+    .. seealso:: :ref:`Events <events>`, :ref:`Reactor <reactor>`
     '''
     def post(self, tag_suffix=None):  # pylint: disable=W0221
         '''
