@@ -131,6 +131,7 @@ class BadTestModuleNamesTestCase(TestCase):
             'integration.loader.test_ext_grains',
             'integration.loader.test_ext_modules',
             'integration.logging.test_jid_logging',
+            'integration.logging.handlers.test_logstash_mod',
             'integration.master.test_event_return',
             'integration.minion.test_blackout',
             'integration.minion.test_pillar',
