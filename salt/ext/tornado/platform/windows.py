@@ -1,5 +1,6 @@
 # NOTE: win32 support is currently experimental, and not recommended
 # for production use.
+# pylint: skip-file
 
 
 from __future__ import absolute_import, division, print_function

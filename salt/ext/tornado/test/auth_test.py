@@ -2,6 +2,7 @@
 # of the openid/oauth protocols, they just exercise the major code paths
 # and ensure that it doesn't blow up (e.g. with unicode/bytes issues in
 # python 3)
+# pylint: skip-file
 
 
 from __future__ import absolute_import, division, print_function

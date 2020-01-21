@@ -15,6 +15,7 @@
 # under the License.
 
 """Posix implementations of platform-specific functionality."""
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

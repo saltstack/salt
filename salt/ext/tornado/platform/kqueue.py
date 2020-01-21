@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 """KQueue-based IOLoop implementation for BSD/Mac systems."""
+# pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
 import select

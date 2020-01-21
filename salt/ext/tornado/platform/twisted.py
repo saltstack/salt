@@ -20,6 +20,7 @@ depending on which library's underlying event loop you want to use.
 
 This module has been tested with Twisted versions 11.0.0 and newer.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

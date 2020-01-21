@@ -1,4 +1,5 @@
 """Lowest-common-denominator implementations of platform functionality."""
+# pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
 import errno
