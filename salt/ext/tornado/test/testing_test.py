@@ -2,10 +2,10 @@
 
 from __future__ import absolute_import, division, print_function
 
-from tornado import gen, ioloop
-from tornado.log import app_log
-from tornado.testing import AsyncTestCase, gen_test, ExpectLog
-from tornado.test.util import unittest, skipBefore35, exec_test
+from salt.ext.tornado import gen, ioloop
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.testing import AsyncTestCase, gen_test, ExpectLog
+from salt.ext.tornado.test.util import unittest, skipBefore35, exec_test
 import contextlib
 import os
 import traceback

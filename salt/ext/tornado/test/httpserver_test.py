@@ -2,19 +2,19 @@
 
 
 from __future__ import absolute_import, division, print_function
-from tornado import netutil
-from tornado.escape import json_decode, json_encode, utf8, _unicode, recursive_unicode, native_str
-from tornado import gen
-from tornado.http1connection import HTTP1Connection
-from tornado.httpserver import HTTPServer
-from tornado.httputil import HTTPHeaders, HTTPMessageDelegate, HTTPServerConnectionDelegate, ResponseStartLine
-from tornado.iostream import IOStream
-from tornado.log import gen_log
-from tornado.netutil import ssl_options_to_context
-from tornado.simple_httpclient import SimpleAsyncHTTPClient
-from tornado.testing import AsyncHTTPTestCase, AsyncHTTPSTestCase, AsyncTestCase, ExpectLog, gen_test
-from tornado.test.util import unittest, skipOnTravis
-from tornado.web import Application, RequestHandler, asynchronous, stream_request_body
+from salt.ext.tornado import netutil
+from salt.ext.tornado.escape import json_decode, json_encode, utf8, _unicode, recursive_unicode, native_str
+from salt.ext.tornado import gen
+from salt.ext.tornado.http1connection import HTTP1Connection
+from salt.ext.tornado.httpserver import HTTPServer
+from salt.ext.tornado.httputil import HTTPHeaders, HTTPMessageDelegate, HTTPServerConnectionDelegate, ResponseStartLine
+from salt.ext.tornado.iostream import IOStream
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.netutil import ssl_options_to_context
+from salt.ext.tornado.simple_httpclient import SimpleAsyncHTTPClient
+from salt.ext.tornado.testing import AsyncHTTPTestCase, AsyncHTTPSTestCase, AsyncTestCase, ExpectLog, gen_test
+from salt.ext.tornado.test.util import unittest, skipOnTravis
+from salt.ext.tornado.web import Application, RequestHandler, asynchronous, stream_request_body
 from contextlib import closing
 import datetime
 import gzip

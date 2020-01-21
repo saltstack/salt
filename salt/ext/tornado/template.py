@@ -205,9 +205,9 @@ import posixpath
 import re
 import threading
 
-from tornado import escape
-from tornado.log import app_log
-from tornado.util import ObjectDict, exec_in, unicode_type, PY3
+from salt.ext.tornado import escape
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.util import ObjectDict, exec_in, unicode_type, PY3
 
 if PY3:
     from io import StringIO

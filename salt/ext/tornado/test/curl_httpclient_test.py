@@ -3,13 +3,13 @@ from __future__ import absolute_import, division, print_function
 
 from hashlib import md5
 
-from tornado.escape import utf8
-from tornado.httpclient import HTTPRequest
-from tornado.stack_context import ExceptionStackContext
-from tornado.testing import AsyncHTTPTestCase
-from tornado.test import httpclient_test
-from tornado.test.util import unittest
-from tornado.web import Application, RequestHandler
+from salt.ext.tornado.escape import utf8
+from salt.ext.tornado.httpclient import HTTPRequest
+from salt.ext.tornado.stack_context import ExceptionStackContext
+from salt.ext.tornado.testing import AsyncHTTPTestCase
+from salt.ext.tornado.test import httpclient_test
+from salt.ext.tornado.test.util import unittest
+from salt.ext.tornado.web import Application, RequestHandler
 
 
 try:
@@ -18,7 +18,7 @@ except ImportError:
     pycurl = None
 
 if pycurl is not None:
-    from tornado.curl_httpclient import CurlAsyncHTTPClient
+    from salt.ext.tornado.curl_httpclient import CurlAsyncHTTPClient
 
 
 @unittest.skipIf(pycurl is None, "pycurl module not present")

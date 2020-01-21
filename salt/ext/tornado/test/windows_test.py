@@ -4,7 +4,7 @@ import os
 import socket
 import unittest
 
-from tornado.platform.auto import set_close_exec
+from salt.ext.tornado.platform.auto import set_close_exec
 
 skipIfNonWindows = unittest.skipIf(os.name != 'nt', 'non-windows platform')
 

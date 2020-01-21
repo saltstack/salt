@@ -23,14 +23,14 @@ from __future__ import absolute_import, division, print_function
 
 import re
 
-from tornado.concurrent import Future
-from tornado.escape import native_str, utf8
-from tornado import gen
-from tornado import httputil
-from tornado import iostream
-from tornado.log import gen_log, app_log
-from tornado import stack_context
-from tornado.util import GzipDecompressor, PY3
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado.escape import native_str, utf8
+from salt.ext.tornado import gen
+from salt.ext.tornado import httputil
+from salt.ext.tornado import iostream
+from salt.ext.tornado.log import gen_log, app_log
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.util import GzipDecompressor, PY3
 
 
 class _QuietException(Exception):

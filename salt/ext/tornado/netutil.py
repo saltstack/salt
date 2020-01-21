@@ -24,10 +24,10 @@ import sys
 import socket
 import stat
 
-from tornado.concurrent import dummy_executor, run_on_executor
-from tornado.ioloop import IOLoop
-from tornado.platform.auto import set_close_exec
-from tornado.util import PY3, Configurable, errno_from_exception
+from salt.ext.tornado.concurrent import dummy_executor, run_on_executor
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.platform.auto import set_close_exec
+from salt.ext.tornado.util import PY3, Configurable, errno_from_exception
 
 try:
     import ssl

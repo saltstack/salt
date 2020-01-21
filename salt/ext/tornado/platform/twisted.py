@@ -42,15 +42,15 @@ import twisted.names.resolve  # type: ignore
 
 from zope.interface import implementer  # type: ignore
 
-from tornado.concurrent import Future
-from tornado.escape import utf8
-from tornado import gen
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado.escape import utf8
+from salt.ext.tornado import gen
 import tornado.ioloop
-from tornado.log import app_log
-from tornado.netutil import Resolver
-from tornado.stack_context import NullContext, wrap
-from tornado.ioloop import IOLoop
-from tornado.util import timedelta_to_seconds
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.netutil import Resolver
+from salt.ext.tornado.stack_context import NullContext, wrap
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.util import timedelta_to_seconds
 
 
 @implementer(IDelayedCall)
@@ -394,7 +394,7 @@ class TwistedIOLoop(tornado.ioloop.IOLoop):
     `TwistedIOLoop` implements the Tornado IOLoop interface on top of
     the Twisted reactor. Recommended usage::
 
-        from tornado.platform.twisted import TwistedIOLoop
+        from salt.ext.tornado.platform.twisted import TwistedIOLoop
         from twisted.internet import reactor
         TwistedIOLoop().install()
         # Set up your tornado application as usual using `IOLoop.instance`

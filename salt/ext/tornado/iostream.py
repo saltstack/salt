@@ -34,15 +34,15 @@ import socket
 import sys
 import re
 
-from tornado.concurrent import TracebackFuture
-from tornado import ioloop
-from tornado.log import gen_log, app_log
-from tornado.netutil import ssl_wrap_socket, ssl_match_hostname, SSLCertificateError, _client_ssl_defaults, _server_ssl_defaults
-from tornado import stack_context
-from tornado.util import errno_from_exception
+from salt.ext.tornado.concurrent import TracebackFuture
+from salt.ext.tornado import ioloop
+from salt.ext.tornado.log import gen_log, app_log
+from salt.ext.tornado.netutil import ssl_wrap_socket, ssl_match_hostname, SSLCertificateError, _client_ssl_defaults, _server_ssl_defaults
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.util import errno_from_exception
 
 try:
-    from tornado.platform.posix import _set_nonblocking
+    from salt.ext.tornado.platform.posix import _set_nonblocking
 except ImportError:
     _set_nonblocking = None
 

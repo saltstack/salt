@@ -25,7 +25,7 @@ from __future__ import absolute_import, division, print_function
 import json
 import re
 
-from tornado.util import PY3, unicode_type, basestring_type
+from salt.ext.tornado.util import PY3, unicode_type, basestring_type
 
 if PY3:
     from urllib.parse import parse_qs as _parse_qs

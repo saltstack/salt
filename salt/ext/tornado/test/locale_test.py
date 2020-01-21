@@ -6,9 +6,9 @@ import shutil
 import tempfile
 
 import tornado.locale
-from tornado.escape import utf8, to_unicode
-from tornado.test.util import unittest, skipOnAppEngine
-from tornado.util import unicode_type
+from salt.ext.tornado.escape import utf8, to_unicode
+from salt.ext.tornado.test.util import unittest, skipOnAppEngine
+from salt.ext.tornado.util import unicode_type
 
 
 class TranslationLoaderTest(unittest.TestCase):

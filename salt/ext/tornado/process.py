@@ -29,13 +29,13 @@ import time
 
 from binascii import hexlify
 
-from tornado.concurrent import Future
-from tornado import ioloop
-from tornado.iostream import PipeIOStream
-from tornado.log import gen_log
-from tornado.platform.auto import set_close_exec
-from tornado import stack_context
-from tornado.util import errno_from_exception, PY3
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado import ioloop
+from salt.ext.tornado.iostream import PipeIOStream
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.platform.auto import set_close_exec
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.util import errno_from_exception, PY3
 
 try:
     import multiprocessing

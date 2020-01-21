@@ -20,7 +20,7 @@ For each function or class described in `tornado.platform.interface`,
 the appropriate platform-specific implementation exists in this module.
 Most code that needs access to this functionality should do e.g.::
 
-    from tornado.platform.auto import set_close_exec
+    from salt.ext.tornado.platform.auto import set_close_exec
 """
 
 from __future__ import absolute_import, division, print_function
@@ -28,15 +28,15 @@ from __future__ import absolute_import, division, print_function
 import os
 
 if 'APPENGINE_RUNTIME' in os.environ:
-    from tornado.platform.common import Waker
+    from salt.ext.tornado.platform.common import Waker
 
     def set_close_exec(fd):
         pass
 elif os.name == 'nt':
-    from tornado.platform.common import Waker
-    from tornado.platform.windows import set_close_exec
+    from salt.ext.tornado.platform.common import Waker
+    from salt.ext.tornado.platform.windows import set_close_exec
 else:
-    from tornado.platform.posix import set_close_exec, Waker
+    from salt.ext.tornado.platform.posix import set_close_exec, Waker
 
 try:
     # monotime monkey-patches the time module to have a monotonic function

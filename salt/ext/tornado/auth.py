@@ -75,14 +75,14 @@ import hmac
 import time
 import uuid
 
-from tornado.concurrent import TracebackFuture, return_future, chain_future
-from tornado import gen
-from tornado import httpclient
-from tornado import escape
-from tornado.httputil import url_concat
-from tornado.log import gen_log
-from tornado.stack_context import ExceptionStackContext
-from tornado.util import unicode_type, ArgReplacer, PY3
+from salt.ext.tornado.concurrent import TracebackFuture, return_future, chain_future
+from salt.ext.tornado import gen
+from salt.ext.tornado import httpclient
+from salt.ext.tornado import escape
+from salt.ext.tornado.httputil import url_concat
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.stack_context import ExceptionStackContext
+from salt.ext.tornado.util import unicode_type, ArgReplacer, PY3
 
 if PY3:
     import urllib.parse as urlparse

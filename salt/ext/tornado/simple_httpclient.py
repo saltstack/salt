@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, division, print_function
 
-from tornado.escape import utf8, _unicode
-from tornado import gen
-from tornado.httpclient import HTTPResponse, HTTPError, AsyncHTTPClient, main, _RequestProxy
-from tornado import httputil
-from tornado.http1connection import HTTP1Connection, HTTP1ConnectionParameters
-from tornado.iostream import StreamClosedError
-from tornado.netutil import Resolver, OverrideResolver, _client_ssl_defaults
-from tornado.log import gen_log
-from tornado import stack_context
-from tornado.tcpclient import TCPClient
-from tornado.util import PY3
+from salt.ext.tornado.escape import utf8, _unicode
+from salt.ext.tornado import gen
+from salt.ext.tornado.httpclient import HTTPResponse, HTTPError, AsyncHTTPClient, main, _RequestProxy
+from salt.ext.tornado import httputil
+from salt.ext.tornado.http1connection import HTTP1Connection, HTTP1ConnectionParameters
+from salt.ext.tornado.iostream import StreamClosedError
+from salt.ext.tornado.netutil import Resolver, OverrideResolver, _client_ssl_defaults
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.tcpclient import TCPClient
+from salt.ext.tornado.util import PY3
 
 import base64
 import collections

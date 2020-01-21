@@ -5,9 +5,9 @@ import sys
 import datetime
 
 import tornado.escape
-from tornado.escape import utf8
-from tornado.util import raise_exc_info, Configurable, exec_in, ArgReplacer, timedelta_to_seconds, import_object, re_unescape, is_finalizing, PY3
-from tornado.test.util import unittest
+from salt.ext.tornado.escape import utf8
+from salt.ext.tornado.util import raise_exc_info, Configurable, exec_in, ArgReplacer, timedelta_to_seconds, import_object, re_unescape, is_finalizing, PY3
+from salt.ext.tornado.test.util import unittest
 
 if PY3:
     from io import StringIO

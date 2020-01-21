@@ -7,15 +7,15 @@ import os
 import signal
 import subprocess
 import sys
-from tornado.httpclient import HTTPClient, HTTPError
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-from tornado.log import gen_log
-from tornado.process import fork_processes, task_id, Subprocess
-from tornado.simple_httpclient import SimpleAsyncHTTPClient
-from tornado.testing import bind_unused_port, ExpectLog, AsyncTestCase, gen_test
-from tornado.test.util import unittest, skipIfNonUnix
-from tornado.web import RequestHandler, Application
+from salt.ext.tornado.httpclient import HTTPClient, HTTPError
+from salt.ext.tornado.httpserver import HTTPServer
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.process import fork_processes, task_id, Subprocess
+from salt.ext.tornado.simple_httpclient import SimpleAsyncHTTPClient
+from salt.ext.tornado.testing import bind_unused_port, ExpectLog, AsyncTestCase, gen_test
+from salt.ext.tornado.test.util import unittest, skipIfNonUnix
+from salt.ext.tornado.web import RequestHandler, Application
 
 
 def skip_if_twisted():

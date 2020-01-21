@@ -13,13 +13,13 @@
 from __future__ import absolute_import, division, print_function
 
 try:
-    from tornado import gen
-    from tornado.httpclient import AsyncHTTPClient
-    from tornado.httpserver import HTTPServer
-    from tornado.simple_httpclient import SimpleAsyncHTTPClient
-    from tornado.ioloop import IOLoop, TimeoutError
-    from tornado import netutil
-    from tornado.process import Subprocess
+    from salt.ext.tornado import gen
+    from salt.ext.tornado.httpclient import AsyncHTTPClient
+    from salt.ext.tornado.httpserver import HTTPServer
+    from salt.ext.tornado.simple_httpclient import SimpleAsyncHTTPClient
+    from salt.ext.tornado.ioloop import IOLoop, TimeoutError
+    from salt.ext.tornado import netutil
+    from salt.ext.tornado.process import Subprocess
 except ImportError:
     # These modules are not importable on app engine.  Parts of this module
     # won't work, but e.g. LogTrapTestCase and main() will.
@@ -30,9 +30,9 @@ except ImportError:
     netutil = None  # type: ignore
     SimpleAsyncHTTPClient = None  # type: ignore
     Subprocess = None  # type: ignore
-from tornado.log import gen_log, app_log
-from tornado.stack_context import ExceptionStackContext
-from tornado.util import raise_exc_info, basestring_type, PY3
+from salt.ext.tornado.log import gen_log, app_log
+from salt.ext.tornado.stack_context import ExceptionStackContext
+from salt.ext.tornado.util import raise_exc_info, basestring_type, PY3
 import functools
 import inspect
 import logging
@@ -685,7 +685,7 @@ def main(**kwargs):
     See http://docs.python.org/library/unittest.html#unittest.main
     for full argument list.
     """
-    from tornado.options import define, options, parse_command_line
+    from salt.ext.tornado.options import define, options, parse_command_line
 
     define('exception_on_interrupt', type=bool, default=True,
            help=("If true (default), ctrl-c raises a KeyboardInterrupt "

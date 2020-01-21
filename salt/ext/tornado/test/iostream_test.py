@@ -1,16 +1,16 @@
 from __future__ import absolute_import, division, print_function
-from tornado.concurrent import Future
-from tornado import gen
-from tornado import netutil
-from tornado.iostream import IOStream, SSLIOStream, PipeIOStream, StreamClosedError
-from tornado.httputil import HTTPHeaders
-from tornado.log import gen_log, app_log
-from tornado.netutil import ssl_wrap_socket
-from tornado.stack_context import NullContext
-from tornado.tcpserver import TCPServer
-from tornado.testing import AsyncHTTPTestCase, AsyncHTTPSTestCase, AsyncTestCase, bind_unused_port, ExpectLog, gen_test
-from tornado.test.util import unittest, skipIfNonUnix, refusing_port, skipPypy3V58
-from tornado.web import RequestHandler, Application
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado import gen
+from salt.ext.tornado import netutil
+from salt.ext.tornado.iostream import IOStream, SSLIOStream, PipeIOStream, StreamClosedError
+from salt.ext.tornado.httputil import HTTPHeaders
+from salt.ext.tornado.log import gen_log, app_log
+from salt.ext.tornado.netutil import ssl_wrap_socket
+from salt.ext.tornado.stack_context import NullContext
+from salt.ext.tornado.tcpserver import TCPServer
+from salt.ext.tornado.testing import AsyncHTTPTestCase, AsyncHTTPSTestCase, AsyncTestCase, bind_unused_port, ExpectLog, gen_test
+from salt.ext.tornado.test.util import unittest, skipIfNonUnix, refusing_port, skipPypy3V58
+from salt.ext.tornado.web import RequestHandler, Application
 import errno
 import logging
 import os

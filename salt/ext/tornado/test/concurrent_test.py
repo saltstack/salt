@@ -22,15 +22,15 @@ import socket
 import sys
 import traceback
 
-from tornado.concurrent import Future, return_future, ReturnValueIgnoredError, run_on_executor
-from tornado.escape import utf8, to_unicode
-from tornado import gen
-from tornado.iostream import IOStream
-from tornado.log import app_log
-from tornado import stack_context
-from tornado.tcpserver import TCPServer
-from tornado.testing import AsyncTestCase, ExpectLog, LogTrapTestCase, bind_unused_port, gen_test
-from tornado.test.util import unittest
+from salt.ext.tornado.concurrent import Future, return_future, ReturnValueIgnoredError, run_on_executor
+from salt.ext.tornado.escape import utf8, to_unicode
+from salt.ext.tornado import gen
+from salt.ext.tornado.iostream import IOStream
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.tcpserver import TCPServer
+from salt.ext.tornado.testing import AsyncTestCase, ExpectLog, LogTrapTestCase, bind_unused_port, gen_test
+from salt.ext.tornado.test.util import unittest
 
 
 try:

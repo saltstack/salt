@@ -90,10 +90,10 @@ import types
 import subprocess
 import weakref
 
-from tornado import ioloop
-from tornado.log import gen_log
-from tornado import process
-from tornado.util import exec_in
+from salt.ext.tornado import ioloop
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado import process
+from salt.ext.tornado.util import exec_in
 
 try:
     import signal

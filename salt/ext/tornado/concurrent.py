@@ -29,9 +29,9 @@ import textwrap
 import traceback
 import sys
 
-from tornado.log import app_log
-from tornado.stack_context import ExceptionStackContext, wrap
-from tornado.util import raise_exc_info, ArgReplacer, is_finalizing
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.stack_context import ExceptionStackContext, wrap
+from salt.ext.tornado.util import raise_exc_info, ArgReplacer, is_finalizing
 
 try:
     from concurrent import futures

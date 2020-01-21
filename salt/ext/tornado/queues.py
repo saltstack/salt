@@ -27,9 +27,9 @@ from __future__ import absolute_import, division, print_function
 import collections
 import heapq
 
-from tornado import gen, ioloop
-from tornado.concurrent import Future
-from tornado.locks import Event
+from salt.ext.tornado import gen, ioloop
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado.locks import Event
 
 __all__ = ['Queue', 'PriorityQueue', 'LifoQueue', 'QueueFull', 'QueueEmpty']
 
@@ -69,9 +69,9 @@ class Queue(object):
 
     .. testcode::
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.queues import Queue
+        from salt.ext.tornado import gen
+        from salt.ext.tornado.ioloop import IOLoop
+        from salt.ext.tornado.queues import Queue
 
         q = Queue(maxsize=2)
 
@@ -308,7 +308,7 @@ class PriorityQueue(Queue):
 
     .. testcode::
 
-        from tornado.queues import PriorityQueue
+        from salt.ext.tornado.queues import PriorityQueue
 
         q = PriorityQueue()
         q.put((1, 'medium-priority item'))
@@ -340,7 +340,7 @@ class LifoQueue(Queue):
 
     .. testcode::
 
-        from tornado.queues import LifoQueue
+        from salt.ext.tornado.queues import LifoQueue
 
         q = LifoQueue()
         q.put(3)

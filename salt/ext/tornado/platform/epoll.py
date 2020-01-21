@@ -18,7 +18,7 @@ from __future__ import absolute_import, division, print_function
 
 import select
 
-from tornado.ioloop import PollIOLoop
+from salt.ext.tornado.ioloop import PollIOLoop
 
 
 class EPollIOLoop(PollIOLoop):

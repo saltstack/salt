@@ -25,11 +25,11 @@ import sys
 import tempfile
 import warnings
 
-from tornado.escape import utf8
-from tornado.log import LogFormatter, define_logging_options, enable_pretty_logging
-from tornado.options import OptionParser
-from tornado.test.util import unittest
-from tornado.util import basestring_type
+from salt.ext.tornado.escape import utf8
+from salt.ext.tornado.log import LogFormatter, define_logging_options, enable_pretty_logging
+from salt.ext.tornado.options import OptionParser
+from salt.ext.tornado.test.util import unittest
+from salt.ext.tornado.util import basestring_type
 
 
 @contextlib.contextmanager
@@ -202,7 +202,7 @@ class LoggingOptionTest(unittest.TestCase):
         # logging module by default, but Tornado turns it on by default
         # so it is the easiest way to tell whether tornado's logging hooks
         # ran.
-        IMPORT = 'from tornado.options import options, parse_command_line'
+        IMPORT = 'from salt.ext.tornado.options import options, parse_command_line'
         LOG_INFO = 'import logging; logging.info("hello")'
         program = ';'.join([IMPORT, statement, LOG_INFO])
         proc = subprocess.Popen(

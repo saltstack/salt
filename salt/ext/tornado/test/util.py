@@ -7,17 +7,17 @@ import socket
 import sys
 import textwrap
 
-from tornado.testing import bind_unused_port
+from salt.ext.tornado.testing import bind_unused_port
 
 # Encapsulate the choice of unittest or unittest2 here.
-# To be used as 'from tornado.test.util import unittest'.
+# To be used as 'from salt.ext.tornado.test.util import unittest'.
 if sys.version_info < (2, 7):
     # In py26, we must always use unittest2.
     import unittest2 as unittest  # type: ignore
 else:
     # Otherwise, use whichever version of unittest was imported in
     # tornado.testing.
-    from tornado.testing import unittest
+    from salt.ext.tornado.testing import unittest
 
 skipIfNonUnix = unittest.skipIf(os.name != 'posix' or sys.platform == 'cygwin',
                                 "non-unix platform")

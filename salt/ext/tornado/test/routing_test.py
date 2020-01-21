@@ -13,11 +13,11 @@
 
 from __future__ import absolute_import, division, print_function
 
-from tornado.httputil import HTTPHeaders, HTTPMessageDelegate, HTTPServerConnectionDelegate, ResponseStartLine
-from tornado.routing import HostMatches, PathMatches, ReversibleRouter, Router, Rule, RuleRouter
-from tornado.testing import AsyncHTTPTestCase
-from tornado.web import Application, HTTPError, RequestHandler
-from tornado.wsgi import WSGIContainer
+from salt.ext.tornado.httputil import HTTPHeaders, HTTPMessageDelegate, HTTPServerConnectionDelegate, ResponseStartLine
+from salt.ext.tornado.routing import HostMatches, PathMatches, ReversibleRouter, Router, Rule, RuleRouter
+from salt.ext.tornado.testing import AsyncHTTPTestCase
+from salt.ext.tornado.web import Application, HTTPError, RequestHandler
+from salt.ext.tornado.wsgi import WSGIContainer
 
 
 class BasicRouter(Router):

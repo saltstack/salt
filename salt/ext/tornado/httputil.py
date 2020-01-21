@@ -31,9 +31,9 @@ import numbers
 import re
 import time
 
-from tornado.escape import native_str, parse_qs_bytes, utf8
-from tornado.log import gen_log
-from tornado.util import ObjectDict, PY3
+from salt.ext.tornado.escape import native_str, parse_qs_bytes, utf8
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.util import ObjectDict, PY3
 
 if PY3:
     import http.cookies as Cookie

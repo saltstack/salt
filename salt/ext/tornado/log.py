@@ -34,8 +34,8 @@ import logging
 import logging.handlers
 import sys
 
-from tornado.escape import _unicode
-from tornado.util import unicode_type, basestring_type
+from salt.ext.tornado.escape import _unicode
+from salt.ext.tornado.util import unicode_type, basestring_type
 
 try:
     import colorama
@@ -212,8 +212,8 @@ def enable_pretty_logging(options=None, logger=None):
     and `tornado.options.parse_config_file`.
     """
     if options is None:
-        import tornado.options
-        options = tornado.options.options
+        import salt.ext.tornado.options
+        options = salt.ext.tornado.options.options
     if options.logging is None or options.logging.lower() == 'none':
         return
     if logger is None:
@@ -258,8 +258,8 @@ def define_logging_options(options=None):
     """
     if options is None:
         # late import to prevent cycle
-        import tornado.options
-        options = tornado.options.options
+        import salt.ext.tornado.options
+        options = salt.ext.tornado.options.options
     options.define("logging", default="info",
                    help=("Set the Python log level. If 'none', tornado won't touch the "
                          "logging configuration."),

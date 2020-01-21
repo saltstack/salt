@@ -44,11 +44,11 @@ import time
 import traceback
 import math
 
-from tornado.concurrent import TracebackFuture, is_future
-from tornado.log import app_log, gen_log
-from tornado.platform.auto import set_close_exec, Waker
-from tornado import stack_context
-from tornado.util import PY3, Configurable, errno_from_exception, timedelta_to_seconds
+from salt.ext.tornado.concurrent import TracebackFuture, is_future
+from salt.ext.tornado.log import app_log, gen_log
+from salt.ext.tornado.platform.auto import set_close_exec, Waker
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.util import PY3, Configurable, errno_from_exception, timedelta_to_seconds
 
 try:
     import signal
@@ -240,13 +240,13 @@ class IOLoop(Configurable):
     @classmethod
     def configurable_default(cls):
         if hasattr(select, "epoll"):
-            from tornado.platform.epoll import EPollIOLoop
+            from salt.ext.tornado.platform.epoll import EPollIOLoop
             return EPollIOLoop
         if hasattr(select, "kqueue"):
             # Python 2.6+ on BSD or Mac
-            from tornado.platform.kqueue import KQueueIOLoop
+            from salt.ext.tornado.platform.kqueue import KQueueIOLoop
             return KQueueIOLoop
-        from tornado.platform.select import SelectIOLoop
+        from salt.ext.tornado.platform.select import SelectIOLoop
         return SelectIOLoop
 
     def initialize(self, make_current=None):
@@ -435,7 +435,7 @@ class IOLoop(Configurable):
             try:
                 result = func()
                 if result is not None:
-                    from tornado.gen import convert_yielded
+                    from salt.ext.tornado.gen import convert_yielded
                     result = convert_yielded(result)
             except Exception:
                 future_cell[0] = TracebackFuture()
@@ -604,14 +604,15 @@ class IOLoop(Configurable):
         try:
             ret = callback()
             if ret is not None:
-                from tornado import gen
+                #from salt.ext.tornado import gen
+                import salt.ext.tornado.gen
                 # Functions that return Futures typically swallow all
                 # exceptions and store them in the Future.  If a Future
                 # makes it out to the IOLoop, ensure its exception (if any)
                 # gets logged too.
                 try:
-                    ret = gen.convert_yielded(ret)
-                except gen.BadYieldError:
+                    ret = salt.ext.tornado.gen.convert_yielded(ret)
+                except salt.ext.tornado.gen.BadYieldError:
                     # It's not unusual for add_callback to be used with
                     # methods returning a non-None and non-yieldable
                     # result, which should just be ignored.

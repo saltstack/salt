@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function
 import fcntl
 import os
 
-from tornado.platform import common, interface
+from salt.ext.tornado.platform import common, interface
 
 
 def set_close_exec(fd):

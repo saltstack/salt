@@ -74,26 +74,26 @@ import stat
 import sys
 import threading
 import time
-import tornado
+import salt.ext.tornado as tornado
 import traceback
 import types
 from inspect import isclass
 from io import BytesIO
 
-from tornado.concurrent import Future
-from tornado import escape
-from tornado import gen
-from tornado import httputil
-from tornado import iostream
-from tornado import locale
-from tornado.log import access_log, app_log, gen_log
-from tornado import stack_context
-from tornado import template
-from tornado.escape import utf8, _unicode
-from tornado.routing import (AnyMatches, DefaultHostMatches, HostMatches,
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado import escape
+from salt.ext.tornado import gen
+from salt.ext.tornado import httputil
+from salt.ext.tornado import iostream
+from salt.ext.tornado import locale
+from salt.ext.tornado.log import access_log, app_log, gen_log
+from salt.ext.tornado import stack_context
+from salt.ext.tornado import template
+from salt.ext.tornado.escape import utf8, _unicode
+from salt.ext.tornado.routing import (AnyMatches, DefaultHostMatches, HostMatches,
                              ReversibleRouter, Rule, ReversibleRuleRouter,
                              URLSpec)
-from tornado.util import (ObjectDict, raise_exc_info,
+from salt.ext.tornado.util import (ObjectDict, raise_exc_info,
                           unicode_type, _websocket_mask, PY3)
 
 url = URLSpec
@@ -1660,7 +1660,7 @@ def asynchronous(method):
        is an error. Such return values were previously ignored silently.
     """
     # Delay the IOLoop import because it's not available on app engine.
-    from tornado.ioloop import IOLoop
+    from salt.ext.tornado.ioloop import IOLoop
 
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
@@ -1915,7 +1915,7 @@ class Application(ReversibleRouter):
 
         # Automatically reload modified modules
         if self.settings.get('autoreload'):
-            from tornado import autoreload
+            from salt.ext.tornado import autoreload
             autoreload.start()
 
     def listen(self, port, address="", **kwargs):
@@ -1939,7 +1939,7 @@ class Application(ReversibleRouter):
         """
         # import is here rather than top level because HTTPServer
         # is not importable on appengine
-        from tornado.httpserver import HTTPServer
+        from salt.ext.tornado.httpserver import HTTPServer
         server = HTTPServer(self, **kwargs)
         server.listen(port, address)
         return server

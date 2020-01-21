@@ -49,11 +49,11 @@ import numbers
 import os
 import re
 
-from tornado import escape
-from tornado.log import gen_log
-from tornado.util import PY3
+from salt.ext.tornado import escape
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.util import PY3
 
-from tornado._locale_data import LOCALE_NAMES
+from salt.ext.tornado._locale_data import LOCALE_NAMES
 
 _default_locale = "en_US"
 _translations = {}  # type: dict

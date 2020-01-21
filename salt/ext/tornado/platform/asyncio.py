@@ -23,9 +23,9 @@ from __future__ import absolute_import, division, print_function
 import functools
 
 import tornado.concurrent
-from tornado.gen import convert_yielded
-from tornado.ioloop import IOLoop
-from tornado import stack_context
+from salt.ext.tornado.gen import convert_yielded
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado import stack_context
 
 try:
     # Import the real asyncio module for py33+ first.  Older versions of the
@@ -156,7 +156,7 @@ class AsyncIOMainLoop(BaseAsyncIOLoop):
     current ``asyncio`` event loop (i.e. the one returned by
     ``asyncio.get_event_loop()``).  Recommended usage::
 
-        from tornado.platform.asyncio import AsyncIOMainLoop
+        from salt.ext.tornado.platform.asyncio import AsyncIOMainLoop
         import asyncio
         AsyncIOMainLoop().install()
         asyncio.get_event_loop().run_forever()
@@ -175,7 +175,7 @@ class AsyncIOLoop(BaseAsyncIOLoop):
     ``IOLoops``; these loops are not necessarily related to the
     ``asyncio`` default event loop.  Recommended usage::
 
-        from tornado.ioloop import IOLoop
+        from salt.ext.tornado.ioloop import IOLoop
         IOLoop.configure('tornado.platform.asyncio.AsyncIOLoop')
         IOLoop.current().start()
 

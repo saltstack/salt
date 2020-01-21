@@ -14,10 +14,10 @@
 from __future__ import absolute_import, division, print_function
 from datetime import timedelta
 
-from tornado import gen, locks
-from tornado.gen import TimeoutError
-from tornado.testing import gen_test, AsyncTestCase
-from tornado.test.util import unittest, skipBefore35, exec_test
+from salt.ext.tornado import gen, locks
+from salt.ext.tornado.gen import TimeoutError
+from salt.ext.tornado.testing import gen_test, AsyncTestCase
+from salt.ext.tornado.test.util import unittest, skipBefore35, exec_test
 
 
 class ConditionTest(AsyncTestCase):

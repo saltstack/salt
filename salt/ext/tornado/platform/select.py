@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function
 
 import select
 
-from tornado.ioloop import IOLoop, PollIOLoop
+from salt.ext.tornado.ioloop import IOLoop, PollIOLoop
 
 
 class _Select(object):

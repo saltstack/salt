@@ -463,7 +463,7 @@ if (os.environ.get('TORNADO_NO_EXTENSION') or
     _websocket_mask = _websocket_mask_python
 else:
     try:
-        from tornado.speedups import websocket_mask as _websocket_mask
+        from salt.ext.tornado.speedups import websocket_mask as _websocket_mask
     except ImportError:
         if os.environ.get('TORNADO_EXTENSION') == '1':
             raise

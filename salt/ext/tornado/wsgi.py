@@ -33,15 +33,15 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 from io import BytesIO
-import tornado
+import salt.ext.tornado as tornado
 
-from tornado.concurrent import Future
-from tornado import escape
-from tornado import httputil
-from tornado.log import access_log
-from tornado import web
-from tornado.escape import native_str
-from tornado.util import unicode_type, PY3
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado import escape
+from salt.ext.tornado import httputil
+from salt.ext.tornado.log import access_log
+from salt.ext.tornado import web
+from salt.ext.tornado.escape import native_str
+from salt.ext.tornado.util import unicode_type, PY3
 
 
 if PY3:

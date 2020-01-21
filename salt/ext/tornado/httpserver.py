@@ -30,14 +30,14 @@ from __future__ import absolute_import, division, print_function
 
 import socket
 
-from tornado.escape import native_str
-from tornado.http1connection import HTTP1ServerConnection, HTTP1ConnectionParameters
-from tornado import gen
-from tornado import httputil
-from tornado import iostream
-from tornado import netutil
-from tornado.tcpserver import TCPServer
-from tornado.util import Configurable
+from salt.ext.tornado.escape import native_str
+from salt.ext.tornado.http1connection import HTTP1ServerConnection, HTTP1ConnectionParameters
+from salt.ext.tornado import gen
+from salt.ext.tornado import httputil
+from salt.ext.tornado import iostream
+from salt.ext.tornado import netutil
+from salt.ext.tornado.tcpserver import TCPServer
+from salt.ext.tornado.util import Configurable
 
 
 class HTTPServer(TCPServer, Configurable,

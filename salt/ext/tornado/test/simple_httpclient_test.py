@@ -11,20 +11,20 @@ import socket
 import ssl
 import sys
 
-from tornado.escape import to_unicode
-from tornado import gen
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httputil import HTTPHeaders, ResponseStartLine
-from tornado.ioloop import IOLoop
-from tornado.log import gen_log
-from tornado.concurrent import Future
-from tornado.netutil import Resolver, bind_sockets
-from tornado.simple_httpclient import SimpleAsyncHTTPClient
-from tornado.test.httpclient_test import ChunkHandler, CountdownHandler, HelloWorldHandler, RedirectHandler
-from tornado.test import httpclient_test
-from tornado.testing import AsyncHTTPTestCase, AsyncHTTPSTestCase, AsyncTestCase, ExpectLog
-from tornado.test.util import skipOnTravis, skipIfNoIPv6, refusing_port, unittest, skipBefore35, exec_test
-from tornado.web import RequestHandler, Application, asynchronous, url, stream_request_body
+from salt.ext.tornado.escape import to_unicode
+from salt.ext.tornado import gen
+from salt.ext.tornado.httpclient import AsyncHTTPClient
+from salt.ext.tornado.httputil import HTTPHeaders, ResponseStartLine
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado.netutil import Resolver, bind_sockets
+from salt.ext.tornado.simple_httpclient import SimpleAsyncHTTPClient
+from salt.ext.tornado.test.httpclient_test import ChunkHandler, CountdownHandler, HelloWorldHandler, RedirectHandler
+from salt.ext.tornado.test import httpclient_test
+from salt.ext.tornado.testing import AsyncHTTPTestCase, AsyncHTTPSTestCase, AsyncTestCase, ExpectLog
+from salt.ext.tornado.test.util import skipOnTravis, skipIfNoIPv6, refusing_port, unittest, skipBefore35, exec_test
+from salt.ext.tornado.web import RequestHandler, Application, asynchronous, url, stream_request_body
 
 
 class SimpleHTTPClientCommonTestCase(httpclient_test.HTTPClientCommonTestCase):

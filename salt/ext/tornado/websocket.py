@@ -24,19 +24,19 @@ import collections
 import hashlib
 import os
 import struct
-import tornado.escape
-import tornado.web
+import salt.ext.tornado.escape as tornado_escape
+import salt.ext.tornado.web as tornado_web
 import zlib
 
-from tornado.concurrent import TracebackFuture
-from tornado.escape import utf8, native_str, to_unicode
-from tornado import gen, httpclient, httputil
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.iostream import StreamClosedError
-from tornado.log import gen_log, app_log
-from tornado import simple_httpclient
-from tornado.tcpclient import TCPClient
-from tornado.util import _websocket_mask, PY3
+from salt.ext.tornado.concurrent import TracebackFuture
+from salt.ext.tornado.escape import utf8, native_str, to_unicode
+from salt.ext.tornado import gen, httpclient, httputil
+from salt.ext.tornado.ioloop import IOLoop, PeriodicCallback
+from salt.ext.tornado.iostream import StreamClosedError
+from salt.ext.tornado.log import gen_log, app_log
+from salt.ext.tornado import simple_httpclient
+from salt.ext.tornado.tcpclient import TCPClient
+from salt.ext.tornado.util import _websocket_mask, PY3
 
 if PY3:
     from urllib.parse import urlparse  # py2
@@ -57,7 +57,7 @@ class WebSocketClosedError(WebSocketError):
     pass
 
 
-class WebSocketHandler(tornado.web.RequestHandler):
+class WebSocketHandler(tornado_web.RequestHandler):
     """Subclass this class to create a basic WebSocket handler.
 
     Override `on_message` to handle incoming messages, and use
@@ -146,7 +146,7 @@ class WebSocketHandler(tornado.web.RequestHandler):
         self.stream = None
         self._on_close_called = False
 
-    @tornado.web.asynchronous
+    @tornado_web.asynchronous
     def get(self, *args, **kwargs):
         self.open_args = args
         self.open_kwargs = kwargs
@@ -248,7 +248,7 @@ class WebSocketHandler(tornado.web.RequestHandler):
         if self.ws_connection is None:
             raise WebSocketClosedError()
         if isinstance(message, dict):
-            message = tornado.escape.json_encode(message)
+            message = tornado_escape.json_encode(message)
         return self.ws_connection.write_message(message, binary=binary)
 
     def select_subprotocol(self, subprotocols):
@@ -524,7 +524,7 @@ class _PerMessageDeflateCompressor(object):
         self._max_wbits = max_wbits
 
         if compression_options is None or 'compression_level' not in compression_options:
-            self._compression_level = tornado.web.GZipContentEncoding.GZIP_LEVEL
+            self._compression_level = tornado_web.GZipContentEncoding.GZIP_LEVEL
         else:
             self._compression_level = compression_options['compression_level']
 
@@ -783,7 +783,7 @@ class WebSocketProtocol13(WebSocketProtocol):
             opcode = 0x2
         else:
             opcode = 0x1
-        message = tornado.escape.utf8(message)
+        message = tornado_escape.utf8(message)
         assert isinstance(message, bytes)
         self._message_bytes_out += len(message)
         flags = 0

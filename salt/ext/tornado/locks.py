@@ -16,8 +16,8 @@ from __future__ import absolute_import, division, print_function
 
 import collections
 
-from tornado import gen, ioloop
-from tornado.concurrent import Future
+from salt.ext.tornado import gen, ioloop
+from salt.ext.tornado.concurrent import Future
 
 __all__ = ['Condition', 'Event', 'Semaphore', 'BoundedSemaphore', 'Lock']
 
@@ -54,9 +54,9 @@ class Condition(_TimeoutGarbageCollector):
 
     .. testcode::
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.locks import Condition
+        from salt.ext.tornado import gen
+        from salt.ext.tornado.ioloop import IOLoop
+        from salt.ext.tornado.locks import Condition
 
         condition = Condition()
 
@@ -158,9 +158,9 @@ class Event(object):
 
     .. testcode::
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.locks import Event
+        from salt.ext.tornado import gen
+        from salt.ext.tornado.ioloop import IOLoop
+        from salt.ext.tornado.locks import Event
 
         event = Event()
 
@@ -262,9 +262,9 @@ class Semaphore(_TimeoutGarbageCollector):
 
        from collections import deque
 
-       from tornado import gen
-       from tornado.ioloop import IOLoop
-       from tornado.concurrent import Future
+       from salt.ext.tornado import gen
+       from salt.ext.tornado.ioloop import IOLoop
+       from salt.ext.tornado.concurrent import Future
 
        # Ensure reliable doctest output: resolve Futures one at a time.
        futures_q = deque([Future() for _ in range(3)])
@@ -282,9 +282,9 @@ class Semaphore(_TimeoutGarbageCollector):
 
     .. testcode:: semaphore
 
-        from tornado import gen
-        from tornado.ioloop import IOLoop
-        from tornado.locks import Semaphore
+        from salt.ext.tornado import gen
+        from salt.ext.tornado.ioloop import IOLoop
+        from salt.ext.tornado.locks import Semaphore
 
         sem = Semaphore(2)
 
@@ -442,7 +442,7 @@ class Lock(object):
 
     `acquire` supports the context manager protocol in all Python versions:
 
-    >>> from tornado import gen, locks
+    >>> from salt.ext.tornado import gen, locks
     >>> lock = locks.Lock()
     >>>
     >>> @gen.coroutine

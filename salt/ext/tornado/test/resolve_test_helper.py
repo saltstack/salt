@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
-from tornado.ioloop import IOLoop
-from tornado.netutil import ThreadedResolver
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.netutil import ThreadedResolver
 
 # When this module is imported, it runs getaddrinfo on a thread. Since
 # the hostname is unicode, getaddrinfo attempts to import encodings.idna

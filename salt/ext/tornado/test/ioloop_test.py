@@ -11,13 +11,13 @@ import threading
 import time
 import types
 
-from tornado import gen
-from tornado.ioloop import IOLoop, TimeoutError, PollIOLoop, PeriodicCallback
-from tornado.log import app_log
-from tornado.platform.select import _Select
-from tornado.stack_context import ExceptionStackContext, StackContext, wrap, NullContext
-from tornado.testing import AsyncTestCase, bind_unused_port, ExpectLog
-from tornado.test.util import unittest, skipIfNonUnix, skipOnTravis, skipBefore35, exec_test
+from salt.ext.tornado import gen
+from salt.ext.tornado.ioloop import IOLoop, TimeoutError, PollIOLoop, PeriodicCallback
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.platform.select import _Select
+from salt.ext.tornado.stack_context import ExceptionStackContext, StackContext, wrap, NullContext
+from salt.ext.tornado.testing import AsyncTestCase, bind_unused_port, ExpectLog
+from salt.ext.tornado.test.util import unittest, skipIfNonUnix, skipOnTravis, skipBefore35, exec_test
 
 try:
     from concurrent import futures

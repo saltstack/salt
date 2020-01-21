@@ -8,10 +8,10 @@ from subprocess import Popen
 import sys
 import time
 
-from tornado.netutil import BlockingResolver, ThreadedResolver, is_valid_ip, bind_sockets
-from tornado.stack_context import ExceptionStackContext
-from tornado.testing import AsyncTestCase, gen_test, bind_unused_port
-from tornado.test.util import unittest, skipIfNoNetwork
+from salt.ext.tornado.netutil import BlockingResolver, ThreadedResolver, is_valid_ip, bind_sockets
+from salt.ext.tornado.stack_context import ExceptionStackContext
+from salt.ext.tornado.testing import AsyncTestCase, gen_test, bind_unused_port
+from salt.ext.tornado.test.util import unittest, skipIfNoNetwork
 
 try:
     from concurrent import futures
@@ -23,7 +23,7 @@ try:
 except ImportError:
     pycares = None
 else:
-    from tornado.platform.caresresolver import CaresResolver
+    from salt.ext.tornado.platform.caresresolver import CaresResolver
 
 try:
     import twisted  # type: ignore
@@ -31,7 +31,7 @@ try:
 except ImportError:
     twisted = None
 else:
-    from tornado.platform.twisted import TwistedResolver
+    from salt.ext.tornado.platform.twisted import TwistedResolver
 
 
 class _ResolverTestMixin(object):

@@ -1,6 +1,6 @@
 # flake8: noqa
 from __future__ import absolute_import, division, print_function
-from tornado.test.util import unittest
+from salt.ext.tornado.test.util import unittest
 
 
 class ImportTest(unittest.TestCase):

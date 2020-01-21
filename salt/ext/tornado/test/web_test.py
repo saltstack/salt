@@ -1,18 +1,18 @@
 from __future__ import absolute_import, division, print_function
-from tornado.concurrent import Future
-from tornado import gen
-from tornado.escape import json_decode, utf8, to_unicode, recursive_unicode, native_str, to_basestring
-from tornado.httputil import format_timestamp
-from tornado.ioloop import IOLoop
-from tornado.iostream import IOStream
-from tornado import locale
-from tornado.log import app_log, gen_log
-from tornado.simple_httpclient import SimpleAsyncHTTPClient
-from tornado.template import DictLoader
-from tornado.testing import AsyncHTTPTestCase, AsyncTestCase, ExpectLog, gen_test
-from tornado.test.util import unittest, skipBefore35, exec_test
-from tornado.util import ObjectDict, unicode_type, timedelta_to_seconds, PY3
-from tornado.web import RequestHandler, authenticated, Application, asynchronous, url, HTTPError, StaticFileHandler, _create_signature_v1, create_signed_value, decode_signed_value, ErrorHandler, UIModule, MissingArgumentError, stream_request_body, Finish, removeslash, addslash, RedirectHandler as WebRedirectHandler, get_signature_key_version, GZipContentEncoding
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado import gen
+from salt.ext.tornado.escape import json_decode, utf8, to_unicode, recursive_unicode, native_str, to_basestring
+from salt.ext.tornado.httputil import format_timestamp
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.iostream import IOStream
+from salt.ext.tornado import locale
+from salt.ext.tornado.log import app_log, gen_log
+from salt.ext.tornado.simple_httpclient import SimpleAsyncHTTPClient
+from salt.ext.tornado.template import DictLoader
+from salt.ext.tornado.testing import AsyncHTTPTestCase, AsyncTestCase, ExpectLog, gen_test
+from salt.ext.tornado.test.util import unittest, skipBefore35, exec_test
+from salt.ext.tornado.util import ObjectDict, unicode_type, timedelta_to_seconds, PY3
+from salt.ext.tornado.web import RequestHandler, authenticated, Application, asynchronous, url, HTTPError, StaticFileHandler, _create_signature_v1, create_signed_value, decode_signed_value, ErrorHandler, UIModule, MissingArgumentError, stream_request_body, Finish, removeslash, addslash, RedirectHandler as WebRedirectHandler, get_signature_key_version, GZipContentEncoding
 
 import binascii
 import contextlib
@@ -1784,7 +1784,7 @@ class MultipleExceptionTest(SimpleHandlerTestCase):
 
         @asynchronous
         def get(self):
-            from tornado.ioloop import IOLoop
+            from salt.ext.tornado.ioloop import IOLoop
             IOLoop.current().add_callback(lambda: 1 / 0)
             IOLoop.current().add_callback(lambda: 1 / 0)
 

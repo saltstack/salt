@@ -180,11 +180,11 @@ from __future__ import absolute_import, division, print_function
 import re
 from functools import partial
 
-from tornado import httputil
-from tornado.httpserver import _CallableAdapter
-from tornado.escape import url_escape, url_unescape, utf8
-from tornado.log import app_log
-from tornado.util import basestring_type, import_object, re_unescape, unicode_type
+from salt.ext.tornado import httputil
+from salt.ext.tornado.httpserver import _CallableAdapter
+from salt.ext.tornado.escape import url_escape, url_unescape, utf8
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.util import basestring_type, import_object, re_unescape, unicode_type
 
 try:
     import typing  # noqa

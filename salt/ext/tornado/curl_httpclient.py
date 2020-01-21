@@ -26,12 +26,12 @@ import threading
 import time
 from io import BytesIO
 
-from tornado import httputil
-from tornado import ioloop
-from tornado import stack_context
+from salt.ext.tornado import httputil
+from salt.ext.tornado import ioloop
+from salt.ext.tornado import stack_context
 
-from tornado.escape import utf8, native_str
-from tornado.httpclient import HTTPResponse, HTTPError, AsyncHTTPClient, main
+from salt.ext.tornado.escape import utf8, native_str
+from salt.ext.tornado.httpclient import HTTPResponse, HTTPError, AsyncHTTPClient, main
 
 curl_log = logging.getLogger('tornado.curl_httpclient')
 

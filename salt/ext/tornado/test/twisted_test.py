@@ -28,17 +28,17 @@ import tempfile
 import threading
 import warnings
 
-from tornado.escape import utf8
-from tornado import gen
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-from tornado.platform.auto import set_close_exec
-from tornado.platform.select import SelectIOLoop
-from tornado.testing import bind_unused_port
-from tornado.test.util import unittest
-from tornado.util import import_object, PY3
-from tornado.web import RequestHandler, Application
+from salt.ext.tornado.escape import utf8
+from salt.ext.tornado import gen
+from salt.ext.tornado.httpclient import AsyncHTTPClient
+from salt.ext.tornado.httpserver import HTTPServer
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.platform.auto import set_close_exec
+from salt.ext.tornado.platform.select import SelectIOLoop
+from salt.ext.tornado.testing import bind_unused_port
+from salt.ext.tornado.test.util import unittest
+from salt.ext.tornado.util import import_object, PY3
+from salt.ext.tornado.web import RequestHandler, Application
 
 try:
     import fcntl
@@ -46,7 +46,7 @@ try:
     from twisted.internet.interfaces import IReadDescriptor, IWriteDescriptor  # type: ignore
     from twisted.internet.protocol import Protocol  # type: ignore
     from twisted.python import log  # type: ignore
-    from tornado.platform.twisted import TornadoReactor, TwistedIOLoop
+    from salt.ext.tornado.platform.twisted import TornadoReactor, TwistedIOLoop
     from zope.interface import implementer  # type: ignore
     have_twisted = True
 except ImportError:
@@ -382,7 +382,7 @@ class CompatibilityTests(unittest.TestCase):
     def start_tornado_server(self):
         class HelloHandler(RequestHandler):
             def get(self):
-                self.write("Hello from tornado!")
+                self.write("Hello from salt.ext.tornado!")
         app = Application([('/', HelloHandler)],
                           log_function=lambda x: None)
         server = HTTPServer(app, io_loop=self.io_loop)
@@ -486,20 +486,20 @@ class CompatibilityTests(unittest.TestCase):
         self.start_tornado_server()
         response = self.twisted_fetch(
             'http://127.0.0.1:%d' % self.tornado_port, self.run_ioloop)
-        self.assertEqual(response, 'Hello from tornado!')
+        self.assertEqual(response, 'Hello from salt.ext.tornado!')
 
     def testTornadoServerTwistedClientReactor(self):
         self.start_tornado_server()
         response = self.twisted_fetch(
             'http://127.0.0.1:%d' % self.tornado_port, self.run_reactor)
-        self.assertEqual(response, 'Hello from tornado!')
+        self.assertEqual(response, 'Hello from salt.ext.tornado!')
 
     @skipIfPy26
     def testTornadoServerTwistedCoroutineClientIOLoop(self):
         self.start_tornado_server()
         response = self.twisted_coroutine_fetch(
             'http://127.0.0.1:%d' % self.tornado_port, self.run_ioloop)
-        self.assertEqual(response, 'Hello from tornado!')
+        self.assertEqual(response, 'Hello from salt.ext.tornado!')
 
 
 @skipIfNoTwisted

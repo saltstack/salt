@@ -12,19 +12,19 @@ import threading
 import datetime
 from io import BytesIO
 
-from tornado.escape import utf8, native_str
-from tornado import gen
-from tornado.httpclient import HTTPRequest, HTTPResponse, _RequestProxy, HTTPError, HTTPClient
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-from tornado.iostream import IOStream
-from tornado.log import gen_log
-from tornado import netutil
-from tornado.stack_context import ExceptionStackContext, NullContext
-from tornado.testing import AsyncHTTPTestCase, bind_unused_port, gen_test, ExpectLog
-from tornado.test.util import unittest, skipOnTravis
-from tornado.web import Application, RequestHandler, url
-from tornado.httputil import format_timestamp, HTTPHeaders
+from salt.ext.tornado.escape import utf8, native_str
+from salt.ext.tornado import gen
+from salt.ext.tornado.httpclient import HTTPRequest, HTTPResponse, _RequestProxy, HTTPError, HTTPClient
+from salt.ext.tornado.httpserver import HTTPServer
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.iostream import IOStream
+from salt.ext.tornado.log import gen_log
+from salt.ext.tornado import netutil
+from salt.ext.tornado.stack_context import ExceptionStackContext, NullContext
+from salt.ext.tornado.testing import AsyncHTTPTestCase, bind_unused_port, gen_test, ExpectLog
+from salt.ext.tornado.test.util import unittest, skipOnTravis
+from salt.ext.tornado.web import Application, RequestHandler, url
+from salt.ext.tornado.httputil import format_timestamp, HTTPHeaders
 
 
 class HelloWorldHandler(RequestHandler):

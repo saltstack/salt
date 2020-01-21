@@ -7,12 +7,12 @@ import logging
 import operator
 import textwrap
 import sys
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpserver import HTTPServer
-from tornado.ioloop import IOLoop
-from tornado.netutil import Resolver
-from tornado.options import define, options, add_parse_callback
-from tornado.test.util import unittest
+from salt.ext.tornado.httpclient import AsyncHTTPClient
+from salt.ext.tornado.httpserver import HTTPServer
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.netutil import Resolver
+from salt.ext.tornado.options import define, options, add_parse_callback
+from salt.ext.tornado.test.util import unittest
 
 try:
     reduce  # py2
@@ -152,7 +152,7 @@ def main():
     def configure_ioloop():
         kwargs = {}
         if options.ioloop_time_monotonic:
-            from tornado.platform.auto import monotonic_time
+            from salt.ext.tornado.platform.auto import monotonic_time
             if monotonic_time is None:
                 raise RuntimeError("monotonic clock not found")
             kwargs['time_func'] = monotonic_time

@@ -21,13 +21,13 @@ import errno
 import os
 import socket
 
-from tornado import gen
-from tornado.log import app_log
-from tornado.ioloop import IOLoop
-from tornado.iostream import IOStream, SSLIOStream
-from tornado.netutil import bind_sockets, add_accept_handler, ssl_wrap_socket
-from tornado import process
-from tornado.util import errno_from_exception
+from salt.ext.tornado import gen
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.iostream import IOStream, SSLIOStream
+from salt.ext.tornado.netutil import bind_sockets, add_accept_handler, ssl_wrap_socket
+from salt.ext.tornado import process
+from salt.ext.tornado.util import errno_from_exception
 
 try:
     import ssl
@@ -42,9 +42,9 @@ class TCPServer(object):
     To use `TCPServer`, define a subclass which overrides the `handle_stream`
     method. For example, a simple echo server could be defined like this::
 
-      from tornado.tcpserver import TCPServer
-      from tornado.iostream import StreamClosedError
-      from tornado import gen
+      from salt.ext.tornado.tcpserver import TCPServer
+      from salt.ext.tornado.iostream import StreamClosedError
+      from salt.ext.tornado import gen
 
       class EchoServer(TCPServer):
           @gen.coroutine

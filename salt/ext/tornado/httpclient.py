@@ -44,11 +44,11 @@ import functools
 import time
 import weakref
 
-from tornado.concurrent import TracebackFuture
-from tornado.escape import utf8, native_str
-from tornado import httputil, stack_context
-from tornado.ioloop import IOLoop
-from tornado.util import Configurable
+from salt.ext.tornado.concurrent import TracebackFuture
+from salt.ext.tornado.escape import utf8, native_str
+from salt.ext.tornado import httputil, stack_context
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.util import Configurable
 
 
 class HTTPClient(object):
@@ -146,7 +146,7 @@ class AsyncHTTPClient(Configurable):
 
     @classmethod
     def configurable_default(cls):
-        from tornado.simple_httpclient import SimpleAsyncHTTPClient
+        from salt.ext.tornado.simple_httpclient import SimpleAsyncHTTPClient
         return SimpleAsyncHTTPClient
 
     @classmethod
@@ -649,7 +649,7 @@ class _RequestProxy(object):
 
 
 def main():
-    from tornado.options import define, options, parse_command_line
+    from salt.ext.tornado.options import define, options, parse_command_line
     define("print_headers", type=bool, default=False)
     define("print_body", type=bool, default=True)
     define("follow_redirects", type=bool, default=True)

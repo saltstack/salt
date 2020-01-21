@@ -85,11 +85,12 @@ import textwrap
 import types
 import weakref
 
-from tornado.concurrent import Future, TracebackFuture, is_future, chain_future
-from tornado.ioloop import IOLoop
-from tornado.log import app_log
-from tornado import stack_context
-from tornado.util import PY3, raise_exc_info
+import salt.ext.tornado as tornado
+from salt.ext.tornado.concurrent import Future, TracebackFuture, is_future, chain_future
+from salt.ext.tornado.ioloop import IOLoop
+from salt.ext.tornado.log import app_log
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.util import PY3, raise_exc_info
 
 try:
     try:
@@ -1295,7 +1296,7 @@ if singledispatch is not None:
         # to work unless the application also configures AsyncIOLoop,
         # but at least the error messages in that case are more
         # comprehensible than a stack overflow.
-        import tornado.platform.asyncio
+        import salt.ext.tornado.platform.asyncio
     except ImportError:
         pass
     else:

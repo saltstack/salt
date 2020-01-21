@@ -4,18 +4,18 @@ import functools
 import sys
 import traceback
 
-from tornado.concurrent import Future
-from tornado import gen
-from tornado.httpclient import HTTPError, HTTPRequest
-from tornado.log import gen_log, app_log
-from tornado.template import DictLoader
-from tornado.testing import AsyncHTTPTestCase, gen_test, bind_unused_port, ExpectLog
-from tornado.test.util import unittest, skipBefore35, exec_test
-from tornado.web import Application, RequestHandler
+from salt.ext.tornado.concurrent import Future
+from salt.ext.tornado import gen
+from salt.ext.tornado.httpclient import HTTPError, HTTPRequest
+from salt.ext.tornado.log import gen_log, app_log
+from salt.ext.tornado.template import DictLoader
+from salt.ext.tornado.testing import AsyncHTTPTestCase, gen_test, bind_unused_port, ExpectLog
+from salt.ext.tornado.test.util import unittest, skipBefore35, exec_test
+from salt.ext.tornado.web import Application, RequestHandler
 
 try:
     import tornado.websocket  # noqa
-    from tornado.util import _websocket_mask_python
+    from salt.ext.tornado.util import _websocket_mask_python
 except ImportError:
     # The unittest module presents misleading errors on ImportError
     # (it acts as if websocket_test could not be found, hiding the underlying
@@ -24,10 +24,10 @@ except ImportError:
     traceback.print_exc()
     raise
 
-from tornado.websocket import WebSocketHandler, websocket_connect, WebSocketError
+from salt.ext.tornado.websocket import WebSocketHandler, websocket_connect, WebSocketError
 
 try:
-    from tornado import speedups
+    from salt.ext.tornado import speedups
 except ImportError:
     speedups = None
 

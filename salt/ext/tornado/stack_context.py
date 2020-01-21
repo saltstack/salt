@@ -72,7 +72,7 @@ from __future__ import absolute_import, division, print_function
 import sys
 import threading
 
-from tornado.util import raise_exc_info
+from salt.ext.tornado.util import raise_exc_info
 
 
 class StackContextInconsistentError(Exception):

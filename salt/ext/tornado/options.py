@@ -19,7 +19,7 @@
 Each module defines its own options which are added to the global
 option namespace, e.g.::
 
-    from tornado.options import define, options
+    from salt.ext.tornado.options import define, options
 
     define("mysql_host", default="127.0.0.1:3306", help="Main user DB")
     define("memcache_hosts", default="127.0.0.1:11011", multiple=True,
@@ -71,7 +71,7 @@ instances to define isolated sets of options, such as for subcommands.
    alone so you can manage it yourself, either pass ``--logging=none``
    on the command line or do the following to disable it in code::
 
-       from tornado.options import options, parse_command_line
+       from salt.ext.tornado.options import options, parse_command_line
        options.logging = None
        parse_command_line()
 
@@ -91,10 +91,10 @@ import sys
 import os
 import textwrap
 
-from tornado.escape import _unicode, native_str
-from tornado.log import define_logging_options
-from tornado import stack_context
-from tornado.util import basestring_type, exec_in
+from salt.ext.tornado.escape import _unicode, native_str
+from salt.ext.tornado.log import define_logging_options
+from salt.ext.tornado import stack_context
+from salt.ext.tornado.util import basestring_type, exec_in
 
 
 class Error(Exception):
@@ -162,7 +162,7 @@ class OptionParser(object):
 
         Useful for copying options into Application settings::
 
-            from tornado.options import define, parse_command_line, options
+            from salt.ext.tornado.options import define, parse_command_line, options
 
             define('template_path', group='application')
             define('static_path', group='application')
