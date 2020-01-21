@@ -9,10 +9,10 @@ from tests.support.mock import patch, mock_open
 from tests.support.mixins import LoaderModuleMockMixin
 
 # Salt libs
-import salt.beacons.log as log
+import salt.beacons.log_beacon as log_beacon
 
 import logging
-_log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 _STUB_LOG_ENTRY = 'Jun 29 12:58:51 hostname sshd[6536]: ' \
@@ -27,7 +27,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
         return {
-            log: {
+            log_beacon: {
                 '__context__': {'log.loc': 2},
                 '__salt__': {},
             }
@@ -36,7 +36,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_non_list_config(self):
         config = {}
 
-        ret = log.validate(config)
+        ret = log_beacon.validate(config)
 
         self.assertEqual(ret, (False, 'Configuration for log beacon must'
                                       ' be a list.'))
@@ -44,7 +44,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
     def test_empty_config(self):
         config = [{}]
 
-        ret = log.validate(config)
+        ret = log_beacon.validate(config)
 
         self.assertEqual(ret, (False, 'Configuration for log beacon '
                                       'must contain file option.'))
@@ -56,7 +56,7 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
                        'tags': {'sshd': {'regex': '.*sshd.*'}}
                        }]
 
-            ret = log.validate(config)
+            ret = log_beacon.validate(config)
 
             self.assertEqual(ret, (True, 'Valid beacon configuration'))
 
@@ -65,5 +65,5 @@ class LogBeaconTestCase(TestCase, LoaderModuleMockMixin):
                                  'raw': _STUB_LOG_ENTRY.rstrip('\n'),
                                  'tag': 'sshd'
                                  }]
-            ret = log.beacon(config)
+            ret = log_beacon.beacon(config)
             self.assertEqual(ret, _expected_return)
