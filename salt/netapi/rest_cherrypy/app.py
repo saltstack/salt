@@ -1345,7 +1345,7 @@ class Flush(LowDataAdapter):
         apiopts = opts.get(__name__.rsplit('.', 2)[-2], {})
         cherrypy.config['saltopts'] = opts
         cherrypy.config['apiopts'] = apiopts
-        return {'return': 'flush successful'}
+        return {'return': [{"info": 'flush successful', 'status': True}]}
 
 
 class Minions(LowDataAdapter):
