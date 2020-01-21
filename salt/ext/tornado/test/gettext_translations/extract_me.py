@@ -7,6 +7,7 @@
 # 2) Edit tornado_test.po, setting CHARSET, Plural-Forms and setting msgstr
 # 3) msgfmt tornado_test.po -o tornado_test.mo
 # 4) Put the file in the proper location: $LANG/LC_MESSAGES
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 _("school")

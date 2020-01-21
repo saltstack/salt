@@ -347,7 +347,7 @@ class EventListener(object):
         future = Future()
         if callback is not None:
             def handle_future(future):
-                salt.ext.tornado.ioloop.IOLoop.current().add_callback(callback, future)
+                salt.ext.tornado.ioloop.IOLoop.current().add_callback(callback, future)  # pylint: disable=E1102
             future.add_done_callback(handle_future)
         # add this tag and future to the callbacks
         self.tag_map[(tag, matcher)].append(future)
