@@ -1211,7 +1211,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'master_alive_interval': 0,
     'master_failback': False,
     'master_failback_interval': 0,
-    'master_return_strategy: 'source',
+    'master_return_strategy': 'source',
     'verify_master_pubkey_sign': False,
     'sign_pub_messages': False,
     'always_verify_signature': False,
