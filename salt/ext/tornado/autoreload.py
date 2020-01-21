@@ -44,6 +44,7 @@ Additionally, modifying these variables will cause reloading to behave
 incorrectly.
 
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
 from salt.ext.tornado.escape import utf8, _unicode

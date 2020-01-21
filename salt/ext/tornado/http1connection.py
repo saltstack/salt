@@ -18,6 +18,7 @@
 
 .. versionadded:: 4.0
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

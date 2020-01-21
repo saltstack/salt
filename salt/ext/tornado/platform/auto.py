@@ -22,6 +22,7 @@ Most code that needs access to this functionality should do e.g.::
 
     from salt.ext.tornado.platform.auto import set_close_exec
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

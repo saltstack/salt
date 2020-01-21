@@ -1,3 +1,4 @@
+# pylint: skip-file
 from __future__ import absolute_import, division, print_function
 from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado import gen

@@ -20,6 +20,7 @@ This module exists primarily for documentation purposes and as base classes
 for other tornado.platform modules.  Most code should import the appropriate
 implementation from `tornado.platform.auto`.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

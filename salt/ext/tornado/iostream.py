@@ -23,6 +23,7 @@ Contents:
 * `SSLIOStream`: SSL-aware version of IOStream.
 * `PipeIOStream`: Pipe-based IOStream implementation.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

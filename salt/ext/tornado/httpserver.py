@@ -25,6 +25,7 @@ class except to start a server at the beginning of the process
    The ``HTTPRequest`` class that used to live in this module has been moved
    to `tornado.httputil.HTTPServerRequest`.  The old name remains as an alias.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

@@ -81,6 +81,7 @@ instances to define isolated sets of options, such as for subcommands.
    Dashes are typical for command-line usage while config files require
    underscores.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

@@ -55,6 +55,7 @@ to transfer control back to the main thread before finishing the
 request.
 
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

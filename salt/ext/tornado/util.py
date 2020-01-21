@@ -9,6 +9,7 @@ and its `~Configurable.configure` method, which becomes a part of the
 interface of its subclasses, including `.AsyncHTTPClient`, `.IOLoop`,
 and `.Resolver`.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

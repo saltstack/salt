@@ -25,6 +25,7 @@ case.
 In addition to I/O events, the `IOLoop` can also schedule time-based events.
 `IOLoop.add_timeout` is a non-blocking alternative to `time.sleep`.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 

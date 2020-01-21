@@ -18,6 +18,7 @@ loops.
    methods, so it is not compatible with the `~asyncio.ProactorEventLoop` on
    Windows. Use the `~asyncio.SelectorEventLoop` instead.
 """
+# pylint: skip-file
 
 from __future__ import absolute_import, division, print_function
 import functools
