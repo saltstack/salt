@@ -74,6 +74,11 @@ key and when configured via the "etcd.ttl" or "keep_jobs" will have the ttl
 applied to it. When this file is expired via the ttl or explicitly removed by
 the administrator, the job will then be scheduled for removal.
 
+A third key was introduced called ".endtime". This is written alongside both the
+load and the lock when the "update_endtime" function is used to store the time
+when a job has completed. Similar to the local_cache returner, this job-completion
+time can be fetched using the "get_endtime" function.
+
 event
 +++++
 This key is essentially a namespace for all of the events (packages) that are
