@@ -222,7 +222,7 @@ def returner(ret):
         data = salt.utils.json.dumps(ret[field])
         try:
             res = client.write(fieldp, data)
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <returner> unable to set field {field:s} for job {jid:s} at {path:s} to {result} due to exception ({exception})".format(field=field, jid=ret['jid'], path=fieldp, result=ret[field], exception=E))
             exceptions.append((E, field, ret[field]))
             continue
@@ -268,7 +268,7 @@ def save_load(jid, load, minions=None):
 
     # If we failed here, it's okay because the lock won't get written so this
     # essentially means the job will get scheduled for deletion.
-    except Exception as E:
+    except Exception as E:  # pylint: disable=broad-except
         log.trace("sdstack_etcd returner <save_load> unable to store load for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=loadp, exception=E))
         return
 
@@ -281,7 +281,7 @@ def save_load(jid, load, minions=None):
             j1, j2 = salt.utils.json.dumps(res.value, sort_keys=True), salt.utils.json.dumps(res._prev_node.value, sort_keys=True)
             if j1 != j2:
                 log.warning("sdstack_etcd returner <save_load> overwrote the load data for job {jid:s} at {path:s} with {data}. Old data was {old}".format(jid=jid, path=res.key, data=d1, old=d2))
-    except Exception as E:
+    except Exception as E:  # pylint: disable=broad-except
         log.debug("sdstack_etcd returner <save_load> unable to compare load data for job {jid:s} at {path:s} due to exception ({exception}) being raised".format(jid=jid, path=loadp, exception=E))
         if not res.newKey:
             log.trace("sdstack_etcd returner <save_load> -- old load data for job {jid:s}: {data}".format(jid=jid, data=res._prev_node.value))
@@ -297,13 +297,13 @@ def save_load(jid, load, minions=None):
         if res.ttl is not None:
             log.trace('sdstack_etcd returner <save_load> job {jid:s} at {path:s} will expire in {ttl:d} seconds'.format(jid=jid, path=res.key, ttl=res.ttl))
 
-    except Exception as E:
+    except Exception as E:  # pylint: disable=broad-except
         log.trace("sdstack_etcd returner <save_load> unable to write lock for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=lockp, exception=E))
 
     return
 
 
-def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None): # pylint: disable=unused-argument
     '''
     Save/update the minion list for a given jid. The syndic_id argument is
     included for API compatibility only.
@@ -354,7 +354,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
             node.value = jid
             client.update(node)
 
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <save_minions> unable to write job id {jid:s} for minion {minion:s} to {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path=minionp, exception=E))
             exceptions.append((E, 'job', minion))
 
@@ -366,7 +366,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         try:
             res = client.write('/'.join([resultp, 'jid']), jid)
 
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <save_minions> unable to write job id {jid:s} to the result for the minion {minion:s} at {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path='/'.join([resultp, 'jid']), exception=E))
             exceptions.append((E, 'result.jid', minion))
 
@@ -374,7 +374,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
         try:
             res = client.write('/'.join([resultp, 'id']), minion)
 
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <save_minions> unable to write minion id {minion:s} to the result for job {jid:s} at {path:s} due to exception ({exception})".format(jid=jid, minion=minion, path='/'.join([resultp, 'id']), exception=E))
             exceptions.append((E, 'result.id', minion))
 
@@ -383,7 +383,7 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
             if syndic_id is not None:
                 res = client.write('/'.join([resultp, 'master_id']), syndic_id)
 
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <save_minions> unable to write master_id {syndic:s} to the result for job {jid:s} at {path:s} due to exception ({exception})".format(jid=jid, path='/'.join([resultp, 'master_id']), syndic=syndic_id, exception=E))
             exceptions.append((E, 'result.master_id', minion))
 
@@ -671,7 +671,7 @@ def get_jid(jid):
 
             # We use a general exception here instead of ValueError jic someone
             # changes the semantics of salt.utils.json.loads out from underneath us
-            except Exception as E:
+            except Exception as E:  # pylint: disable=broad-except
                 log.warning("sdstack_etcd returner <get_jid> unable to decode field {name:s} from minion {minion:s} for job {jid:s} at {path:s}".format(minion=comps[-1], jid=jid, path=item.key, name=name))
                 res[name] = item.value
             continue
@@ -776,7 +776,7 @@ def get_jids():
             data = salt.utils.json.loads(res.value)
 
         # If we can't decode the json, then we're screwed so log it in case the user cares
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.error("sdstack_etcd returner <get_jids> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data}".format(jid=jid, path=loadp, exception=E, data=res.value))
             continue
 
@@ -819,7 +819,7 @@ def get_minions():
     return ret
 
 
-def prep_jid(nocache=False, passed_jid=None):  # pylint: disable=unused-argument
+def prep_jid(nocache=False, passed_jid=None):   # pylint: disable=unused-argument
     '''
     Do any work necessary to prepare a JID, including sending a custom id.
     '''
@@ -874,7 +874,7 @@ def event_return(events):
             node.value = json
             res = client.update(node)
 
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <event_return> unable to write event with the tag {name:s} into {path:s} due to exception ({exception}) being raised".format(name=package['tag'], path=packagep, exception=E))
             exceptions.append((E, package))
             continue
@@ -919,7 +919,7 @@ def event_return(events):
             log.trace("sdstack_etcd returner <event_return> updating event {event:d} at {path:s} with tag {name:s}".format(path=tagp, event=event, name=package['tag']))
             client.write(tagp, package['tag'])
 
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.trace("sdstack_etcd returner <event_return> unable to update event {event:d} at {path:s} with tag {name:s} due to exception ({exception}) being raised".format(path=tagp, name=package['tag'], event=event, exception=E))
             exceptions.append((E, package))
             continue
@@ -932,7 +932,7 @@ def event_return(events):
 
         # If we can't write the lock, it's fine because the maintenance thread
         # will purge this event from the cache anyways if it's not written.
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.error("sdstack_etcd returner <event_return> unable to write lock for event {event:d} with the tag {name:s} to {path:s} due to exception ({exception}) being raised".format(path=lockp, name=package['tag'], event=event, exception=E))
             exceptions.append((E, package))
 
@@ -993,7 +993,7 @@ def get_jids_filter(count, filter_find_job=True):
             data = salt.utils.json.loads(res.value)
 
         # If we can't decode the json, then we're screwed so log it in case the user cares
-        except Exception as E:
+        except Exception as E:  # pylint: disable=broad-except
             log.error("sdstack_etcd returner <get_jids_filter> could not decode data for job {jid:s} at the path {path:s} due to exception ({exception}) being raised. Data was {data}".format(jid=jid, path=loadp, exception=E, data=res.value))
             continue
 
@@ -1002,6 +1002,7 @@ def get_jids_filter(count, filter_find_job=True):
 
         ret.append(salt.utils.jid.format_jid_instance_ext(jid, data))
     return ret
+
 
 def update_endtime(jid, time):
     '''
@@ -1036,10 +1037,11 @@ def update_endtime(jid, time):
 
     # If we failed here, it's okay because the lock won't get written so this
     # essentially means the job will get scheduled for deletion.
-    except Exception as E:
+    except Exception as E:  # pylint: disable=broad-except
         log.trace("sdstack_etcd returner <update_endtime> unable to store endtime for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=timep, exception=E))
         return
     log.trace("sdstack_etcd returner <update_endtime> successfully wrote endtime for job {jid:s} to the path {path:s} with {data}".format(jid=jid, path=timep, data=time))
+
 
 def get_endtime(jid):
     '''
