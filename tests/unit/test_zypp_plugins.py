@@ -36,6 +36,8 @@ class ZyppPluginsTestCase(TestCase):
     '''
     Test shipped libzypp plugins.
     '''
+    @skipIf(not os.path.exists(ZYPPNOTIFY_FILE),
+            'Required file {} does not exist.'.format(ZYPPNOTIFY_FILE))
     def test_drift_detector(self):
         '''
         Test drift detector for a correct cookie file.
