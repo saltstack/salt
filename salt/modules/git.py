@@ -3056,7 +3056,7 @@ def merge(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
-        .. versionadded:: 2018.3.5,2019.2.1,Neon
+        .. versionadded:: 2018.3.5,2019.2.1,3000
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
@@ -4245,7 +4245,7 @@ def reset(cwd,
 
             .. _`sshd(8)`: http://www.man7.org/linux/man-pages/man8/sshd.8.html#AUTHORIZED_KEYS_FILE_FORMAT
 
-        .. versionadded:: 2018.3.5,2019.2.1,Neon
+        .. versionadded:: 2018.3.5,2019.2.1,3000
 
     ignore_retcode : False
         If ``True``, do not log an error to the minion log if the git command
