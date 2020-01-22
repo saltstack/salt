@@ -997,3 +997,65 @@ def get_jids_filter(count, filter_find_job=True):
 
         ret.append(salt.utils.jid.format_jid_instance_ext(jid, data))
     return ret
+
+def update_endtime(jid, time):
+    '''
+    Update (or store) the end time for a given job
+
+    Endtime is stored as a plain text string
+    '''
+    write_profile = __opts__.get('etcd.returner_write_profile')
+    client, path, ttl = _get_conn(__opts__, write_profile)
+
+    # Check if the specified jid is 'req', as only incorrect code will do this
+    if jid == 'req':
+        log.debug('sdstack_etcd returner <update_endtime> was called using a request job id ({jid:s}) with {data}'.format(jid=jid, data=time))
+
+    # Build the path that we'll use to update the endtime
+    timep = '/'.join([path, Schema['job-cache'], jid, '.endtime'])
+
+    ## Now we can simply update it
+    json = salt.utils.json.dumps(time)
+
+    log.debug('sdstack_etcd returner <update_endtime> storing endtime for job {jid:s} to {path:s} with {data}'.format(jid=jid, path=timep, data=time))
+    try:
+        res = client.write(timep, json, prevExist=False)
+
+    # If the key already exists, then warn the user but still update the key.
+    except etcd.EtcdAlreadyExist as E:
+        node = client.read(timep)
+        node.value = json
+
+        log.debug('sdstack_etcd returner <update_endtime> updating endtime for job {jid:s} at {path:s} with {data}'.format(jid=jid, path=timep, data=time))
+        res = client.update(node)
+
+    # If we failed here, it's okay because the lock won't get written so this
+    # essentially means the job will get scheduled for deletion.
+    except Exception as E:
+        log.trace("sdstack_etcd returner <update_endtime> unable to store endtime for job {jid:s} to the path {path:s} due to exception ({exception}) being raised".format(jid=jid, path=timep, exception=E))
+        return
+    log.trace("sdstack_etcd returner <update_endtime> successfully wrote endtime for job {jid:s} to the path {path:s} with {data}".format(jid=jid, path=timep, data=time))
+
+def get_endtime(jid):
+    '''
+    Retrieve the stored endtime for a given job
+
+    Returns False if no endtime is present
+    '''
+    read_profile = __opts__.get('etcd.returner_read_profile')
+    client, path, _ = _get_conn(__opts__, read_profile)
+
+    # Figure out the path that our endtime should be at
+    timep = '/'.join([path, Schema['job-cache'], jid, '.endtime'])
+
+    # Read it. If EtcdKeyNotFound was raised then the key doesn't exist and so
+    # we need to return False, because that's what salt.returners.local_cache
+    # returns when the endtime hasn't been written..
+    log.debug('sdstack_etcd returner <get_endtime> reading endtime for job {jid:s} from {path:s}'.format(jid=jid, path=timep))
+    try:
+        res = client.read(timep)
+    except etcd.EtcdKeyNotFound as E:
+        log.error("sdstack_etcd returner <get_endtime> could not find endtime for job {jid:s} at the path {path:s}".format(jid=jid, path=timep))
+        return None
+    log.debug('sdstack_etcd returner <get_endtime> found endtime for job {jid:s} at {path:s} with value {data}'.format(jid=jid, path=res.key, data=res.value))
+    return salt.utils.json.loads(res.value)
