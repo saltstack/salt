@@ -1,2 +1,3 @@
-pywin32==224
+pythonnet==2.4.0
+pywin32==227
 WMI==1.4.9
