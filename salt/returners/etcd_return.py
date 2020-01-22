@@ -1062,7 +1062,7 @@ def get_endtime(jid):
     try:
         res = client.read(timep)
     except etcd.EtcdKeyNotFound as E:
-        log.error("sdstack_etcd returner <get_endtime> could not find endtime for job {jid:s} at the path {path:s}".format(jid=jid, path=timep))
-        return None
+        log.debug("sdstack_etcd returner <get_endtime> could not find endtime for job {jid:s} at the path {path:s}".format(jid=jid, path=timep))
+        return False
     log.debug('sdstack_etcd returner <get_endtime> found endtime for job {jid:s} at {path:s} with value {data}'.format(jid=jid, path=res.key, data=res.value))
     return salt.utils.json.loads(res.value)
