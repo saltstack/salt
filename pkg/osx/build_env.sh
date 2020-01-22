@@ -177,8 +177,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: libsodium: download\007"
 
-PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.17.tar.gz"
-PKGDIR="libsodium-1.0.17"
+PKGURL="https://download.libsodium.org/libsodium/releases/libsodium-1.0.18.tar.gz"
+PKGDIR="libsodium-1.0.18"
 
 download $PKGURL
 
@@ -200,8 +200,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: zeromq: download\007"
 
-PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.6/zeromq-4.1.6.tar.gz"
-PKGDIR="zeromq-4.1.6"
+PKGURL="https://github.com/zeromq/zeromq4-1/releases/download/v4.1.7/zeromq-4.1.7.tar.gz"
+PKGDIR="zeromq-4.1.7"
 
 download $PKGURL
 
@@ -223,8 +223,8 @@ $MAKE install
 ############################################################################
 echo -n -e "\033]0;Build_Env: OpenSSL: download\007"
 
-PKGURL="http://openssl.org/source/openssl-1.0.2q.tar.gz"
-PKGDIR="openssl-1.0.2q"
+PKGURL="http://openssl.org/source/openssl-1.0.2u.tar.gz"
+PKGDIR="openssl-1.0.2u"
 
 download $PKGURL
 
@@ -247,8 +247,8 @@ $MAKE install
 echo -n -e "\033]0;Build_Env: Python: download\007"
 
 if [ "$PYVER" == "2" ]; then
-    PKGURL="https://www.python.org/ftp/python/2.7.15/Python-2.7.15.tar.xz"
-    PKGDIR="Python-2.7.15"
+    PKGURL="https://www.python.org/ftp/python/2.7.16/Python-2.7.16.tar.xz"
+    PKGDIR="Python-2.7.16"
 else
     PKGURL="https://www.python.org/ftp/python/3.5.4/Python-3.5.4.tar.xz"
     PKGDIR="Python-3.5.4"
