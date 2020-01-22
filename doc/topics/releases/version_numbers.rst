@@ -36,7 +36,7 @@ Assigned codenames:
 - Nitrogen: ``2017.7.0``
 - Oxygen: ``2018.3.0``
 - Fluorine: ``2019.2.0``
-- Neon: ``TBD``
+- Neon: ``3000``
 - Sodium: ``TBD``
 
 Example

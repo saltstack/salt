@@ -46,10 +46,22 @@ def start_engines(opts, proc_mgr, proxy=None):
             engine, engine_opts = next(iter(engine.items()))
         else:
             engine_opts = None
-        fun = '{0}.start'.format(engine)
+        engine_name = None
+        if engine_opts is not None and 'engine_module' in engine_opts:
+            fun = '{0}.start'.format(engine_opts['engine_module'])
+            engine_name = engine
+            del engine_opts['engine_module']
+        else:
+            fun = '{0}.start'.format(engine)
         if fun in engines:
             start_func = engines[fun]
-            name = '{0}.Engine({1})'.format(__name__, start_func.__module__)
+            if engine_name:
+                name = '{0}.Engine({1}-{2})'.format(__name__,
+                                                    start_func.__module__,
+                                                    engine_name)
+            else:
+                name = '{0}.Engine({1})'.format(__name__,
+                                                start_func.__module__)
             log.info('Starting Engine %s', name)
             proc_mgr.add_process(
                     Engine,
