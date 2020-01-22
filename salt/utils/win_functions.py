@@ -171,7 +171,7 @@ def get_sam_name(username):
     backslash with the computer name. If the user does not exist, a SAM
     compatible name will be returned using the local hostname as the domain.
 
-    i.e. salt.utils.get_same_name('Administrator') would return 'DOMAIN.COM\Administrator'
+    i.e. salt.utils.get_sam_name('Administrator') would return 'DOMAIN.COM\Administrator'
 
     .. note:: Long computer names are truncated to 15 characters
     """
