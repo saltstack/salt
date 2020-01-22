@@ -1,7 +1,9 @@
 import copy
 import logging
+import multiprocessing
 import os
 import random
+import time
 
 import salt.config
 import salt.syspaths
@@ -10,6 +12,7 @@ from salt.exceptions import SaltClientError
 
 log = logging.getLogger(__name__)
 
+_LOCK = multiprocessing.Lock()
 
 class SSHClient:
     """
@@ -54,7 +57,11 @@ class SSHClient:
         opts["selected_target_option"] = tgt_type
         opts["tgt"] = tgt
         opts["arg"] = arg
-        return salt.client.ssh.SSH(opts)
+        _LOCK.acquire()
+        ret = salt.client.ssh.SSH(opts)
+        time.sleep(0.01)
+        _LOCK.release()
+        return ret
 
     def cmd_iter(
         self,

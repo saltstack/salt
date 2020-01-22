@@ -2,10 +2,10 @@
 Wrap the cp module allowing for managed ssh file transfers
 """
 
-import logging
 import os
 
 import salt.client.ssh
+import salt.log.setup as logging
 import salt.utils.files
 import salt.utils.stringutils
 import salt.utils.templates

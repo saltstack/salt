@@ -23,6 +23,7 @@ PROFILE = logging.PROFILE = 15
 TRACE = logging.TRACE = 5
 GARBAGE = logging.GARBAGE = 1
 QUIET = logging.QUIET = 1000
+DEBUG = logging.DEBUG = 10
 
 # Import Salt libs
 from salt._logging.handlers import StreamHandler  # isort:skip
@@ -196,11 +197,11 @@ class SaltLoggingClass(
         """
         instance = super(SaltLoggingClass, cls).__new__(cls)
 
-        try:
-            max_logger_length = len(
-                max(list(logging.Logger.manager.loggerDict), key=len)
-            )
-            for handler in logging.root.handlers:
+        max_logger_length = len(
+            max(list(logging.Logger.manager.loggerDict), key=len)
+        )
+        for handler in logging.root.handlers:
+            try:
                 if handler in (
                     LOGGING_NULL_HANDLER,
                     LOGGING_STORE_HANDLER,
@@ -221,18 +222,15 @@ class SaltLoggingClass(
                 match = MODNAME_PATTERN.search(fmt)
                 if not match:
                     # Not matched. Release handler and return.
-                    handler.release()
                     return instance
 
                 if "digits" not in match.groupdict():
                     # No digits group. Release handler and return.
-                    handler.release()
                     return instance
 
                 digits = match.group("digits")
                 if not digits or not (digits and digits.isdigit()):
                     # No valid digits. Release handler and return.
-                    handler.release()
                     return instance
 
                 if int(digits) < max_logger_length:
@@ -243,9 +241,14 @@ class SaltLoggingClass(
                     )
                     handler.setFormatter(formatter)
                 handler.release()
-        except ValueError:
-            # There are no registered loggers yet
-            pass
+            except ValueError:
+                # There are no registered loggers yet
+                pass
+            finally:
+                try:
+                    handler.release()
+                except:
+                    pass
         return instance
 
     def _log(
@@ -295,31 +298,37 @@ class SaltLoggingClass(
         else:
             extra["exc_info_on_loglevel"] = exc_info_on_loglevel
 
-        if sys.version_info < (3,):
-            LOGGING_LOGGER_CLASS._log(
-                self, level, msg, args, exc_info=exc_info, extra=extra
-            )
-        elif sys.version_info < (3, 8):
-            LOGGING_LOGGER_CLASS._log(
-                self,
-                level,
-                msg,
-                args,
-                exc_info=exc_info,
-                extra=extra,
-                stack_info=stack_info,
-            )
-        else:
-            LOGGING_LOGGER_CLASS._log(
-                self,
-                level,
-                msg,
-                args,
-                exc_info=exc_info,
-                extra=extra,
-                stack_info=stack_info,
-                stacklevel=stacklevel,
-            )
+        try:
+            logging._acquireLock()
+            if sys.version_info < (3,):
+                LOGGING_LOGGER_CLASS._log(
+                    self, level, msg, args, exc_info=exc_info, extra=extra
+                )
+            elif sys.version_info < (3, 8):
+                LOGGING_LOGGER_CLASS._log(
+                    self,
+                    level,
+                    msg,
+                    args,
+                    exc_info=exc_info,
+                    extra=extra,
+                    stack_info=stack_info,
+                )
+            else:
+                LOGGING_LOGGER_CLASS._log(
+                    self,
+                    level,
+                    msg,
+                    args,
+                    exc_info=exc_info,
+                    extra=extra,
+                    stack_info=stack_info,
+                    stacklevel=stacklevel,
+                )
+        except:
+            pass
+        finally:
+            logging._releaseLock()
 
     def makeRecord(
         self,
@@ -419,6 +428,7 @@ if logging.getLoggerClass() is not SaltLoggingClass:
     logging.addLevelName(PROFILE, "PROFILE")
     logging.addLevelName(TRACE, "TRACE")
     logging.addLevelName(GARBAGE, "GARBAGE")
+    logging.addLevelName(DEBUG, "DEBUG")
 
     # ----- REMOVE ON REFACTORING COMPLETE -------------------------------------------------------------------------->
     if not logging.root.handlers:

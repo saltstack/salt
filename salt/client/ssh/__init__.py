@@ -532,7 +532,9 @@ class SSH:
             **target
         )
         ret = {"id": single.id}
+        logging._acquireLock()
         stdout, stderr, retcode = single.run()
+        logging._releaseLock()
         # This job is done, yield
         try:
             data = salt.utils.json.find_json(stdout)
@@ -600,8 +602,16 @@ class SSH:
                     self.targets[host],
                     mine,
                 )
-                routine = Process(target=self.handle_routine, args=args)
-                routine.start()
+                try:
+                    logging._acquireLock()
+                    routine = Process(
+                                    target=self.handle_routine,
+                                    args=args)
+                    routine.start()
+                except:
+                    pass
+                finally:
+                    logging._releaseLock()
                 running[host] = {"thread": routine}
                 continue
             ret = {}

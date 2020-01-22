@@ -6,9 +6,10 @@ Lazily-evaluated data structures, primarily used by Salt's loader
 # Import Python Libs
 from __future__ import absolute_import, unicode_literals
 
-import logging
 from collections.abc import MutableMapping
+import time
 
+import salt.log.setup as logging
 import salt.exceptions
 
 log = logging.getLogger(__name__)
@@ -100,11 +101,13 @@ class LazyDict(MutableMapping):
             # load the item
             if self._load(key):
                 log.debug("LazyLoaded %s", key)
+                time.sleep(0.0001)
                 return self._dict[key]
             else:
                 log.debug(
                     "Could not LazyLoad %s: %s", key, self.missing_fun_string(key)
                 )
+                time.sleep(0.0001)
                 raise KeyError(key)
         else:
             return self._dict[key]

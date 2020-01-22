@@ -10,7 +10,6 @@ import functools
 import importlib.machinery  # pylint: disable=no-name-in-module,import-error
 import importlib.util  # pylint: disable=no-name-in-module,import-error
 import inspect
-import logging
 import os
 import re
 import sys
@@ -26,6 +25,7 @@ import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader_context
+import salt.log.setup as logging
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
