@@ -229,7 +229,7 @@ def set_probes(probes, test=False, commit=True, **kwargs):  # pylint: disable=un
         }
         set_probes(probes)
 
-    CLI Example - to push cahnges on the fly (not recommended):
+    CLI Example - to push changes on the fly (not recommended):
 
     .. code-block:: bash
 
