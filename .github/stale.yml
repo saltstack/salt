@@ -10,10 +10,13 @@ daysUntilClose: 7
 # Issues with these labels will never be considered stale
 exemptLabels:
   - Confirmed
-  - Blocker
+  - Release Blocker
   - Critical
   - P1
   - P2
+  - Bug
+  - Feature
+  - Test Failure
 
 # Label to use when marking an issue as stale
 staleLabel: stale
