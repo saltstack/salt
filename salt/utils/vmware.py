@@ -124,7 +124,7 @@ def __virtual__():
 
 def esxcli(host, user, pwd, cmd, protocol=None, port=None, esxi_host=None, credstore=None):
     '''
-    Shell out and call the specified esxcli commmand, parse the result
+    Shell out and call the specified esxcli command, parse the result
     and return something sane.
 
     :param host: ESXi or vCenter host to connect to
