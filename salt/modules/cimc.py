@@ -344,7 +344,7 @@ def get_memory_unit():
 
 def get_network_adapters():
     '''
-    Get the list of network adapaters and configuration details.
+    Get the list of network adapters and configuration details.
 
     CLI Example:
 
