@@ -4,7 +4,6 @@ Send events from webhook api
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-# import tornado library
 import salt.ext.tornado.httpserver
 import salt.ext.tornado.ioloop
 import salt.ext.tornado.web
