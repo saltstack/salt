@@ -62,8 +62,8 @@ from salt.utils.process import (default_signals,
                                 SignalHandlingProcess)
 
 
-import tornado.gen  # pylint: disable=F0401
-import tornado.ioloop  # pylint: disable=F0401
+import salt.ext.tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.ioloop  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
@@ -321,7 +321,7 @@ def target(cls, minion_instance, opts, data, connected):
                 salt.minion.get_proc_dir(opts['cachedir'], uid=uid)
             )
 
-    with tornado.stack_context.StackContext(minion_instance.ctx):
+    with salt.ext.tornado.stack_context.StackContext(minion_instance.ctx):
         if isinstance(data['fun'], tuple) or isinstance(data['fun'], list):
             ProxyMinion._thread_multi_return(minion_instance, opts, data)
         else:
@@ -710,7 +710,7 @@ def handle_decoded_payload(self, data):
         process_count = len(salt.utils.minion.running(self.opts))
         while process_count >= process_count_max:
             log.warning("Maximum number of processes reached while executing jid {0}, waiting...".format(data['jid']))
-            yield tornado.gen.sleep(10)
+            yield salt.ext.tornado.gen.sleep(10)
             process_count = len(salt.utils.minion.running(self.opts))
 
     # We stash an instance references to allow for the socket
