@@ -733,8 +733,6 @@ def swap(name, persist=True, config='/etc/fstab'):
         real_swap_device = __salt__['file.readlink'](name)
         if not real_swap_device.startswith('/'):
             real_swap_device = '/dev/{0}'.format(os.path.basename(real_swap_device))
-        else:
-            real_swap_device = real_swap_device
     else:
         real_swap_device = name
 
