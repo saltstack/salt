@@ -43,12 +43,6 @@ import re
 from salt.exceptions import (
     SaltInvocationError
     )
-
-from salt.version import (
-    __version__,
-    SaltStackVersion
-    )
-
 from salt.ext import six
 
 # pylint: disable=import-error
