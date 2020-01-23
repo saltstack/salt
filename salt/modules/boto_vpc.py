@@ -2235,7 +2235,7 @@ def associate_route_table(route_table_id=None, subnet_id=None,
 
 def disassociate_route_table(association_id, region=None, key=None, keyid=None, profile=None):
     '''
-    Dissassociates a route table.
+    Disassociates a route table.
 
     association_id
         The Route Table Association ID to disassociate
