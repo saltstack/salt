@@ -2376,7 +2376,7 @@ def get_storage_system(service_instance, host_ref, hostname=None):
 
 def _get_partition_info(storage_system, device_path):
     """
-    Returns partition informations for a device path, of type
+    Returns partition information for a device path, of type
     vim.HostDiskPartitionInfo
     """
     try:

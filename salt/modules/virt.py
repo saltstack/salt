@@ -4539,7 +4539,7 @@ def list_networks(**kwargs):
 
 def network_info(name=None, **kwargs):
     """
-    Return informations on a virtual network provided its name.
+    Return information on a virtual network provided its name.
 
     :param name: virtual network name
     :param connection: libvirt connection URI, overriding defaults
@@ -4976,7 +4976,7 @@ def pool_define(
         keys. The path is the qualified name for iSCSI devices.
 
         Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
-        for more informations on the use of ``part_separator``
+        for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
@@ -5199,7 +5199,7 @@ def pool_update(
         keys. The path is the qualified name for iSCSI devices.
 
         Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
-        for more informations on the use of ``part_separator``
+        for more information on the use of ``part_separator``
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
@@ -5388,7 +5388,7 @@ def list_pools(**kwargs):
 
 def pool_info(name=None, **kwargs):
     """
-    Return informations on a storage pool provided its name.
+    Return information on a storage pool provided its name.
 
     :param name: libvirt storage pool name
     :param connection: libvirt connection URI, overriding defaults

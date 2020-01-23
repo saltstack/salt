@@ -508,7 +508,7 @@ def container_list(
 
     CLI Examples:
 
-    Full dict with all available informations:
+    Full dict with all available information:
 
     .. code-block:: bash
 
