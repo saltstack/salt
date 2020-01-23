@@ -516,7 +516,7 @@ def container_list(list_names=False, remote_addr=None,
 
     CLI Examples:
 
-    Full dict with all available informations:
+    Full dict with all available information:
 
     .. code-block:: bash
 
