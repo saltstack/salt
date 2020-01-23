@@ -178,7 +178,7 @@ def absent(name,
         Database to act on
 
     db_user
-        Database username if different from config or defaul
+        Database username if different from config or default
 
     db_password
         User password if any password for a specified user

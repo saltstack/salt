@@ -5,7 +5,7 @@ Send a message to Hipchat
 
 This state is useful for sending messages to Hipchat during state runs.
 
-The property api_url is optional. By defaul will use the public HipChat API at https://api.hipchat.com
+The property api_url is optional. By default will use the public HipChat API at https://api.hipchat.com
 
 .. versionadded:: 2015.5.0
 
