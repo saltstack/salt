@@ -51,12 +51,6 @@ from salt.version import (
 
 from salt.ext import six
 
-# is there not SaltStackVersion.current() to get
-# the version of the salt running this code??
-_version_ary = __version__.split('.')
-CUR_VER = SaltStackVersion(_version_ary[0], _version_ary[1])
-BORON = SaltStackVersion.from_name('Boron')
-
 # pylint: disable=import-error
 HAS_GLANCE = False
 try:
@@ -399,7 +393,7 @@ def image_list(id=None, profile=None, name=None):  # pylint: disable=C0103
                 _add_image(ret, image)
                 return ret
             if name == image.name:
-                if name in ret and CUR_VER < BORON:
+                if name in ret and __salt__['salt_version.less_than']('Boron'):
                     # Not really worth an exception
                     return {
                         'result': False,

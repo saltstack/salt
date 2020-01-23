@@ -68,15 +68,18 @@ class SaltStackVersion(object):
 
     __slots__ = ('name', 'major', 'minor', 'bugfix', 'mbugfix', 'pre_type', 'pre_num', 'noc', 'sha')
 
+    git_sha_regex = r'(?P<sha>g?[a-f0-9]{7,40})'
+
     git_describe_regex = re.compile(
         r'(?:[^\d]+)?(?P<major>[\d]{1,4})'
         r'(?:\.(?P<minor>[\d]{1,2}))?'
         r'(?:\.(?P<bugfix>[\d]{0,2}))?'
         r'(?:\.(?P<mbugfix>[\d]{0,2}))?'
         r'(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]{1}))?'
-        r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-(?P<sha>[a-z0-9]{8}))?'
+        r'(?:(?:.*)-(?P<noc>(?:[\d]+|n/a))-' + git_sha_regex + r')?'
     )
-    git_sha_regex = r'(?P<sha>[a-z0-9]{7})'
+    git_sha_regex = r'^' + git_sha_regex
+
     if six.PY2:
         git_sha_regex = git_sha_regex.decode(__salt_system_encoding__)
     git_sha_regex = re.compile(git_sha_regex)
@@ -535,15 +538,13 @@ def __discover_version(saltstack_version):
         if not out or err:
             return saltstack_version
 
-        try:
-            return SaltStackVersion.parse(out)
-        except ValueError:
-            if not SaltStackVersion.git_sha_regex.match(out):
-                raise
-
+        if SaltStackVersion.git_sha_regex.match(out):
             # We only define the parsed SHA and set NOC as ??? (unknown)
             saltstack_version.sha = out.strip()
             saltstack_version.noc = -1
+            return saltstack_version
+
+        return SaltStackVersion.parse(out)
 
     except OSError as os_err:
         if os_err.errno != 2:

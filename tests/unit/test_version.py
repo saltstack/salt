@@ -33,9 +33,10 @@ class VersionTestCase(TestCase):
             ('0.17.0rc1', (0, 17, 0, 0, 'rc', 1, 0, None), None),
             ('v0.17.0rc1-1-g52ebdfd', (0, 17, 0, 0, 'rc', 1, 1, 'g52ebdfd'), None),
             ('v2014.1.4.1', (2014, 1, 4, 1, '', 0, 0, None), None),
-            ('v2014.1.4.1rc3-n/a-abcdefgh', (2014, 1, 4, 1, 'rc', 3, -1, 'abcdefgh'), None),
+            ('v2014.1.4.1rc3-n/a-abcdefff', (2014, 1, 4, 1, 'rc', 3, -1, 'abcdefff'), None),
             ('v3.4.1.1', (3, 4, 1, 1, '', 0, 0, None), None),
-            ('v3000', (3000, None, None, 0, '', 0, 0, None), None)
+            ('v3000', (3000, None, None, 0, '', 0, 0, None), '3000'),
+            ('v3000rc1', (3000, None, None, 0, 'rc', 1, 0, None), '3000rc1'),
 
         )
 
@@ -56,8 +57,8 @@ class VersionTestCase(TestCase):
             ('v0.17.0', 'v0.17.0rc1'),
             ('Hydrogen', '0.17.0'),
             ('Helium', 'Hydrogen'),
-            ('v2014.1.4.1-n/a-abcdefgh', 'v2014.1.4.1rc3-n/a-abcdefgh'),
-            ('v2014.1.4.1-1-abcdefgh', 'v2014.1.4.1-n/a-abcdefgh'),
+            ('v2014.1.4.1-n/a-abcdefff', 'v2014.1.4.1rc3-n/a-abcdefff'),
+            ('v2014.1.4.1-1-abcdefff', 'v2014.1.4.1-n/a-abcdefff'),
             ('v2016.12.0rc1', 'v2016.12.0b1'),
             ('v2016.12.0beta1', 'v2016.12.0alpha1'),
             ('v2016.12.0alpha1', 'v2016.12.0alpha0'),
@@ -85,6 +86,23 @@ class VersionTestCase(TestCase):
 
         with self.assertRaises(ValueError):
             SaltStackVersion.parse('Drunk')
+
+    def test_sha(self):
+        '''
+        test matching sha's
+        '''
+        exp_ret = (
+            ('d6cd1e2bd19e03a81132a23b2025920577f84e37', True),
+            ('2880105', True),
+            ('v3000.0.1', False),
+            ('v0.12.0-85-g2880105', False)
+        )
+        for commit, exp in exp_ret:
+            ret = SaltStackVersion.git_sha_regex.match(commit)
+            if exp:
+                assert ret
+            else:
+                assert not ret
 
     def test_version_report_lines(self):
         '''
