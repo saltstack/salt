@@ -1829,7 +1829,7 @@ def create(name,
             options='{"dist": "centos", "release": "6", "arch": "amd64"}'
 
         For available template options, refer to the lxc template scripts
-        which are ususally located under ``/usr/share/lxc/templates``,
+        which are usually located under ``/usr/share/lxc/templates``,
         or run ``lxc-create -t <template> -h``.
 
     image
