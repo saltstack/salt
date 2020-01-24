@@ -15,9 +15,11 @@ import re
 
 # Import Salt Testing libs
 from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 from salt.version import SaltStackVersion, versions_report
+import salt.version
 
 
 class VersionTestCase(TestCase):
@@ -151,3 +153,29 @@ class VersionTestCase(TestCase):
         ver = SaltStackVersion(major=maj_ver, minor=min_ver)
         assert ver.bugfix == 0
         assert ver.string == '{0}.{1}.0'.format(maj_ver, min_ver)
+
+    def test_discover_version(self):
+        '''
+        Test call to __discover_version
+        when using different versions
+        '''
+        version = {('3000', None):
+            {(b'v3000.0rc2-12-g44fe283a77\n', '3000rc2-12-g44fe283a77'),
+            (b'v3000', '3000'),
+            (b'1234567', '3000-n/a-1234567'), },
+            (2019, 2):
+            {(b'v2019.2.0rc2-12-g44fe283a77\n', '2019.2.0rc2-12-g44fe283a77'),
+            (b'v2019.2.0', '2019.2.0'),
+            (b'afc9830198dj', '2019.2.0-n/a-afc9830198dj'), },
+        }
+        for maj_min, test_v in version.items():
+            for tag_ver, exp in version[maj_min]:
+                salt_ver = SaltStackVersion(major=maj_min[0], minor=maj_min[1], bugfix=None)
+                attrs = {'communicate.return_value': (tag_ver, b''),
+                         'returncode.return_value': 0}
+                proc_ret = MagicMock(**attrs)
+                proc_mock = patch('subprocess.Popen', return_value=proc_ret)
+
+                with proc_mock:
+                    ret = getattr(salt.version, '__discover_version')(salt_ver)
+                assert ret == exp
