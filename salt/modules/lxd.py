@@ -807,7 +807,7 @@ def container_rename(
         Name of the container to Rename
 
     newname :
-        The new name of the contianer
+        The new name of the container
 
     remote_addr :
         An URL to a remote Server, you also have to give cert and key if
