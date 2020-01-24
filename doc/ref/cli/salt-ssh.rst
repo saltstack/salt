@@ -174,6 +174,12 @@ Scan Roster Options
 
 .. include:: _includes/output-options.rst
 
+.. note::
+    If using ``--out=json``, you will probably want ``--static`` as well.
+    Without the static option, you will get a separate JSON string per minion
+    which makes JSON output invalid as a whole.
+    This is due to using an iterative outputter. So if you want to feed it
+    to a JSON parser, use ``--static`` as well.
 
 See also
 ========

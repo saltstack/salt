@@ -31,7 +31,7 @@ class MinionTimeoutTestCase(ShellCase):
             popen_kwargs = None
         ret = self.run_salt(
             'minion test.sleep {0}'.format(sleep_length),
-            timeout=45,
+            timeout=90,
             catch_stderr=True,
             popen_kwargs=popen_kwargs,
         )
