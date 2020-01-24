@@ -295,10 +295,10 @@ def ntp(name, servers):
         log.error(err)
         return ret
     except Exception as err:
-            ret['result'] = False
-            ret['comment'] = "Error setting NTP configuration."
-            log.error(err)
-            return ret
+        ret['result'] = False
+        ret['comment'] = "Error setting NTP configuration."
+        log.error(err)
+        return ret
 
     if req_change:
         try:

@@ -1184,8 +1184,8 @@ def set_syslog_server(server=None, type="primary"):
     ret = __proxy__['cimc.set_config_modify'](dn, inconfig, False)
 
     return ret
-    
-    
+
+
 def set_user(uid=None, username=None, password=None, priv=None, status=None):
     '''
     Sets a CIMC user with specified configurations.
@@ -1200,7 +1200,7 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
         password(str): The clear text password of the user.
 
         priv(str): The privilege level of the user.
-        
+
         status(str): The account status of the user.
 
     CLI Example:
@@ -1217,13 +1217,13 @@ def set_user(uid=None, username=None, password=None, priv=None, status=None):
 
     if status:
         conf += ' accountStatus="{0}"'.format(status)
-        
+
     if username:
         conf += ' name="{0}"'.format(username)
 
     if priv:
         conf += ' priv="{0}"'.format(priv)
-        
+
     if password:
         conf += ' pwd="{0}"'.format(password)
 
