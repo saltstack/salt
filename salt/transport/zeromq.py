@@ -1123,8 +1123,6 @@ class AsyncReqMessageClient(object):
         self.addr = addr
         self.linger = linger
         if io_loop is None:
-            #install_zmq()
-            #ZMQDefaultLoop.current()
             self.io_loop = salt.ext.tornado.ioloop.IOLoop.current()
         else:
             self.io_loop = io_loop

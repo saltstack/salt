@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 @skipIf(not salt.utils.path.which('bash'), 'Bash needed for this test')
 class VendorTornadoTest(TestCase):
     '''
-    Ensure we are no using any non vendor'ed tornado
+    Ensure we are not using any non vendor'ed tornado
     '''
 
     def test_vendored_tornado_import(self):
