@@ -63,7 +63,7 @@ log = logging.getLogger(__name__)
 # Import third party libs
 try:
     import elasticsearch
-    from elasticsearch import RequestsHttpConnection
+    from elasticsearch import RequestsHttpConnection  # pylint: disable=no-name-in-module
     logging.getLogger('elasticsearch').setLevel(logging.CRITICAL)
     HAS_ELASTICSEARCH = True
 except ImportError:
