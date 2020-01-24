@@ -287,7 +287,7 @@ def config_get(key):
 #######################
 def pylxd_client_get(remote_addr=None, cert=None, key=None, verify_cert=True):
     """
-    Get an pyxld client, this is not ment to be runned over the CLI.
+    Get an pyxld client, this is not meant to be runned over the CLI.
 
     remote_addr :
         An URL to a remote Server, you also have to give cert and key if you
