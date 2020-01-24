@@ -43,6 +43,80 @@ def _default_ret(name):
     return ret
 
 
+def dns_servers(name, preferred=None, alternate=None):
+    '''
+    Ensures that the DNS servers on the Cisco UCS device matches the defined servers.
+
+    name: The name of the module function to execute.
+
+    preferred(str): The IPv4 address of the preferred DNS server.
+
+    alternate(str): The IPv4 address of the alternate DNS server.
+
+    SLS Example:
+
+    .. code-block:: yaml
+
+        set_dns:
+          cimc.dns_servers:
+            - preferred: 10.0.0.1
+            - alternate: 10.0.0.2
+
+    '''
+
+    ret = _default_ret(name)
+
+    current = __salt__['cimc.get_dns_servers']()
+
+    req_change = False
+
+    try:
+
+        if preferred:
+            if 'preferred' not in current:
+                req_change = True
+            elif current['preferred'] != preferred:
+                req_change = True
+
+        if alternate:
+            if 'alternate' not in current:
+                req_change = True
+            elif current['alternate'] != alternate:
+                req_change = True
+
+        if req_change:
+
+            if preferred and alternate:
+                update = __salt__['cimc.set_dns_servers'](preferred, alternate)
+            elif preferred:
+                update = __salt__['cimc.set_dns_servers'](preferred)
+            elif alternate:
+                update = __salt__['cimc.set_dns_servers'](None, alternate)
+
+            if not update:
+                ret['result'] = False
+                ret['comment'] = "Error setting DNS servers."
+                return ret
+
+            post = __salt__['cimc.get_dns_servers']()
+
+            ret['changes']['before'] = current
+            ret['changes']['after'] = post
+            ret['comment'] = "DNS servers modified."
+        else:
+            ret['comment'] = "DNS servers already configured. No changes required."
+
+    except Exception as err:
+        ret['result'] = False
+        ret['comment'] = "Error occurred setting DNS servers."
+        log.error(err)
+        return ret
+
+    ret['result'] = True
+
+    return
+
+
 def hostname(name, hostname=None):
     '''
     Ensures that the hostname is set to the specified value.
@@ -132,16 +206,19 @@ def logging_levels(name, remote=None, local=None):
     req_change = False
 
     try:
-        syslog_dict = syslog_conf['outConfigs']['commSyslog'][0]
+        current_remote = syslog_conf['outConfigs']['commSyslog'][0]['remoteSeverity']
+        current_local = syslog_conf['outConfigs']['commSyslog'][0]['localSeverity']
 
-        if remote and syslog_dict['remoteSeverity'] != remote:
+        if remote and current_remote != remote:
+            current_remote = remote
             req_change = True
-        elif local and syslog_dict['localSeverity'] != local:
+        elif local and current_local != local:
+            current_local = local
             req_change = True
 
         if req_change:
 
-            update = __salt__['cimc.set_logging_levels'](remote, local)
+            update = __salt__['cimc.set_logging_levels'](current_remote, current_local)
 
             if update['outConfig']['commSyslog'][0]['status'] != 'modified':
                 ret['result'] = False
@@ -153,7 +230,6 @@ def logging_levels(name, remote=None, local=None):
             ret['comment'] = "Logging level settings modified."
         else:
             ret['comment'] = "Logging level already configured. No changes required."
-
     except Exception as err:
         ret['result'] = False
         ret['comment'] = "Error occurred setting logging level settings."
@@ -218,9 +294,13 @@ def ntp(name, servers):
         ret['comment'] = "Unable to confirm current NTP settings."
         log.error(err)
         return ret
+    except Exception as err:
+            ret['result'] = False
+            ret['comment'] = "Error setting NTP configuration."
+            log.error(err)
+            return ret
 
     if req_change:
-
         try:
             update = __salt__['cimc.set_ntp_server'](ntp_servers[0],
                                                      ntp_servers[1],
@@ -336,7 +416,6 @@ def power_configuration(name, policy=None, delayType=None, delayValue=None):
             ret['comment'] = "Power settings modified."
         else:
             ret['comment'] = "Power settings already configured. No changes required."
-
     except Exception as err:
         ret['result'] = False
         ret['comment'] = "Error occurred setting power settings."

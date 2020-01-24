@@ -102,7 +102,7 @@ def _validate_response_code(response_code_to_check, cookie_to_logout=None):
     if formatted_response_code not in ['200', '201', '202', '204']:
         if cookie_to_logout:
             logout(cookie_to_logout)
-        log.error("Received error HTTP status code: %s", formatted_response_code)
+        log.warning("Received error HTTP status code: {0}" .format(formatted_response_code))
         raise salt.exceptions.CommandExecutionError(
             "Did not receive a valid response from host.")
 
@@ -134,7 +134,7 @@ def init(opts):
     # Ensure connectivity to the device
     log.debug("Attempting to connect to cimc proxy host.")
     get_config_resolver_class("computeRackUnit")
-    log.debug("Successfully connected to cimc proxy host.")
+    log.info("Successfully connected to cimc proxy host {0}.".format(DETAILS['host']))
 
     DETAILS['initialized'] = True
 
@@ -153,6 +153,7 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
 
     payload = '<configConfMo cookie="{0}" inHierarchical="{1}" dn="{2}">' \
               '<inConfig>{3}</inConfig></configConfMo>'.format(cookie, h, dn, inconfig)
+    log.debug("Sending configConfMo payload: {0}".format(payload))
     r = __utils__['http.query'](DETAILS['url'],
                                 data=payload,
                                 method='POST',
@@ -164,7 +165,7 @@ def set_config_modify(dn=None, inconfig=None, hierarchical=False):
                                 headers=DETAILS['headers'])
 
     _validate_response_code(r['status'], cookie)
-
+    log.debug("Received configConfMo response: {0}".format(r['text']))
     answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     logout(cookie)
@@ -186,6 +187,7 @@ def get_config_resolver_class(cid=None, hierarchical=False):
         h = "true"
 
     payload = '<configResolveClass cookie="{0}" inHierarchical="{1}" classId="{2}"/>'.format(cookie, h, cid)
+    log.debug("Sending configResolveClass payload: {0}".format(payload))
     r = __utils__['http.query'](DETAILS['url'],
                                 data=payload,
                                 method='POST',
@@ -197,7 +199,7 @@ def get_config_resolver_class(cid=None, hierarchical=False):
                                 headers=DETAILS['headers'])
 
     _validate_response_code(r['status'], cookie)
-
+    log.debug("Received configResolveClass response: {0}".format(r['text']))
     answer = re.findall(r'(<[\s\S.]*>)', r['text'])[0]
     items = ET.fromstring(answer)
     logout(cookie)
