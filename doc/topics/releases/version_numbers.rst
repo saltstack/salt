@@ -53,7 +53,7 @@ An example might help clarify how this all works.
 
 The current code name is ``Iodine``. A release is ready to be cut and the previous
 release was ``3053``. This would make the new release number ``3054``. After three
-patch releases, the release number would be ``3053.3``.
+patch releases, the release number would be ``3054.3``.
 
 After the release is cut, new features would be worked on under the ``Xenon``
 code name and the process repeats itself.
