@@ -3132,7 +3132,7 @@ def set_dns(name, dnsservers=None, searchdomains=None, path=None):
     # We need to handle that case with care:
     #  - we create the resolv.conf runtime directory (the
     #   linked directory) as anyway it will be shadowed when the real
-    #   runned tmpfs mountpoint will be mounted.
+    #   run tmpfs mountpoint will be mounted.
     #   ( /etc/resolv.conf -> ../run/resolvconf/resolv.conf)
     #   Indeed, it can save us in any other case (running, eg, in a
     #   bare chroot when repairing or preparing the container for
