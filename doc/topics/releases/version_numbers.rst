@@ -70,7 +70,7 @@ Example arguments for ``git checkout``:
   +------------+----------------------------------------------------------------------------+
   |  Argument  |                                           Comment                          |
   +============+============================================================================+
-  | master     | **Master branch** Actively developed new features                          |
+  | master     | **Master branch** Actively developed bug-fixes and new features            |
   +------------+----------------------------------------------------------------------------+
   | v3000      | Tag signaling the commit for 3000 release.                                 |
   +------------+----------------------------------------------------------------------------+
@@ -85,21 +85,21 @@ Influence of the ``git checkout`` argument on ``git describe``:
   +------------+----------------------------+-----------------------------------------------+
   | Checkout   | Describe                   |               Comment                         |
   +============+============================+===============================================+
-  | v3000      | 3000                       | (tag is fixed point in time)                  |
+  | v3000      | v3000                      | (tag is fixed point in time)                  |
   +------------+----------------------------+-----------------------------------------------+
-  | v3000.1    | 3000.1                     | (tag is fixed point in time)                  |
+  | v3000.1    | v3000.1                    | (tag is fixed point in time)                  |
   +------------+----------------------------+-----------------------------------------------+
   | master     | v3000.1-9-g10d5dec         | Commit of most recent tag in master           |
   +------------+----------------------------+-----------------------------------------------+
 
-Some details of v2016.11.1-220-g9a1550d (from ``git describe`` after ``git checkout 2016.11``):
+Some details of v3000.1-9-g10d5dec (from ``git describe`` after ``git checkout master``):
 
   +---------------+-------------------------------------------------------------------------+
   |     Part      |                       Comment                                           |
   +===============+=========================================================================+
   |v3000.1        | git describe finds the most recent tag on the 2016.11 branch            |
   +---------------+-------------------------------------------------------------------------+
-  |220            | Commits on top of the most recent tag, relative to your local git fetch |
+  |9              | Commits on top of the most recent tag, relative to your local git fetch |
   +---------------+-------------------------------------------------------------------------+
   |gf2eb3dc       | 'g' + git SHA ("abbreviated name") of the most recent commit            |
   +---------------+-------------------------------------------------------------------------+
