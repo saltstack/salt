@@ -711,10 +711,14 @@ def set_fstab(
         config='/etc/fstab',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
     CLI Example:
 
@@ -796,7 +800,7 @@ def set_fstab(
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
-                        if entry.match(line):
+                        if entry.match(line) or not_change:
                             lines.append(line)
                         else:
                             ret = 'change'
@@ -840,11 +844,15 @@ def set_vfstab(
         config='/etc/vfstab',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     ..verionadded:: 2016.3.2
     Verify that this mount is represented in the fstab, change the mount
     to match the data passed, or add the mount if it is not present.
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
     CLI Example:
 
@@ -925,7 +933,7 @@ def set_vfstab(
                         # Note: If ret isn't None here,
                         # we've matched multiple lines
                         ret = 'present'
-                        if entry.match(line):
+                        if entry.match(line) or not_change:
                             lines.append(line)
                         else:
                             ret = 'change'
@@ -1026,6 +1034,7 @@ def set_automaster(
         opts='',
         config='/etc/auto_salt',
         test=False,
+        not_change=False,
         **kwargs):
     '''
     Verify that this mount is represented in the auto_salt, change the mount
@@ -1074,9 +1083,11 @@ def set_automaster(
                     lines.append(line)
                     continue
                 if comps[0] == name or comps[2] == device_fmt:
+                    present = True
+                    if not_change:
+                        continue
                     # check to see if there are changes
                     # and fix them if there are any
-                    present = True
                     if comps[0] != name:
                         change = True
                         comps[0] = name
@@ -1675,12 +1686,16 @@ def set_filesystems(
         config='/etc/filesystems',
         test=False,
         match_on='auto',
+        not_change=False,
         **kwargs):
     '''
     .. versionadded:: 2018.3.3
 
     Verify that this mount is represented in the filesystems, change the mount
     to match the data passed, or add the mount if it is not present on AIX
+
+    If the entry is found via `match_on` and `not_change` is True, the
+    current line will be preserved.
 
         Provide information if the path is mounted
 
@@ -1781,7 +1796,7 @@ def set_filesystems(
         for fsys_view in six.viewitems(fsys_filedict):
             if criteria.match(fsys_view):
                 ret = 'present'
-                if entry_ip.match(fsys_view):
+                if entry_ip.match(fsys_view) or not_change:
                     view_lines.append(fsys_view)
                 else:
                     ret = 'change'

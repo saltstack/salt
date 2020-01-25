@@ -10,12 +10,10 @@ import os
 # Import Salt Testing Libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.mixins import LoaderModuleMockMixin
-from tests.support.unit import TestCase, skipIf
+from tests.support.unit import TestCase
 from tests.support.mock import (
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON
 )
 
 # Import Salt Libs
@@ -23,7 +21,6 @@ import salt.modules.beacons as beacons
 from salt.utils.event import SaltEvent
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Test cases for salt.modules.beacons
@@ -131,4 +128,67 @@ class BeaconsTestCase(TestCase, LoaderModuleMockMixin):
             with patch.dict(beacons.__salt__, {'event.fire': mock}):
                 with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
                     self.assertDictEqual(beacons.enable(),
+                                         {'comment': comm1, 'result': True})
+
+    def test_add_beacon_module(self):
+        '''
+        Test adding a beacon
+        '''
+        comm1 = 'Added beacon: watch_salt_master.'
+        event_returns = [{'complete': True,
+                          'tag': '/salt/minion/minion_beacons_list_complete',
+                          'beacons': {}},
+                         {'complete': True,
+                          'tag': '/salt/minion/minion_beacons_list_available_complete',
+                          'beacons': ['ps']},
+                         {'complete': True,
+                          'valid': True,
+                          'vcomment': '',
+                          'tag': '/salt/minion/minion_beacons_list_complete'},
+                         {'complete': True,
+                          'tag': '/salt/minion/minion_beacon_add_complete',
+                          'beacons': {'watch_salt_master': [{'processes': {'salt-master': 'stopped'}},
+                                                            {'beacon_module': 'ps'}]}}]
+
+        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': self.sock_dir}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(beacons.__salt__, {'event.fire': mock}):
+                with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
+                    self.assertDictEqual(beacons.add('watch_salt_master', [{'processes': {'salt-master': 'stopped'}}, {'beacon_module': 'ps'}]),
+                                         {'comment': comm1, 'result': True})
+
+    def test_enable_beacon_module(self):
+        '''
+        Test enabling beacons
+        '''
+        comm1 = 'Enabled beacons on minion.'
+        event_returns = [{'complete': True,
+                          'tag': '/salt/minion/minion_beacon_enabled_complete',
+                          'beacons': {'enabled': True,
+                                      'watch_salt_master': [{'processes': {'salt-master': 'stopped'}},
+                                                            {'beacon_module': 'ps'}]}}]
+
+        with patch.dict(beacons.__opts__, {'beacons': {}, 'sock_dir': self.sock_dir}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(beacons.__salt__, {'event.fire': mock}):
+                with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
+                    self.assertDictEqual(beacons.enable(),
+                                         {'comment': comm1, 'result': True})
+
+    def test_delete_beacon_module(self):
+        '''
+        Test deleting a beacon.
+        '''
+        comm1 = 'Deleted beacon: watch_salt_master.'
+        event_returns = [
+                         {'complete': True,
+                          'tag': '/salt/minion/minion_beacons_delete_complete',
+                          'beacons': {}},
+                        ]
+
+        with patch.dict(beacons.__opts__, {'beacons': {'watch_salt_master': [{'processes': {'salt-master': 'stopped'}}, {'beacon_module': 'ps'}]}, 'sock_dir': self.sock_dir}):
+            mock = MagicMock(return_value=True)
+            with patch.dict(beacons.__salt__, {'event.fire': mock}):
+                with patch.object(SaltEvent, 'get_event', side_effect=event_returns):
+                    self.assertDictEqual(beacons.delete('watch_salt_master'),
                                          {'comment': comm1, 'result': True})

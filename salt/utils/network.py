@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
 '''
 Define some generic socket functions for network modules
 '''
@@ -19,12 +20,6 @@ from string import ascii_letters, digits
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-# Attempt to import wmi
-try:
-    import wmi
-    import salt.utils.winapi
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils.args
@@ -38,9 +33,11 @@ from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
-# inet_pton does not exist in Windows, this is a workaround
 if salt.utils.platform.is_windows():
+    # inet_pton does not exist in Windows, this is a workaround
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
+    # Attempt to import win_network
+    import salt.utils.win_network
 
 log = logging.getLogger(__name__)
 
@@ -51,8 +48,6 @@ try:
     RES_INIT = LIBC.__res_init
 except (ImportError, OSError, AttributeError, TypeError):
     pass
-
-# pylint: disable=C0103
 
 
 def sanitize_host(host):
@@ -93,7 +88,7 @@ def host_to_ips(host):
             ips.append(ip)
         if not ips:
             ips = None
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ips = None
     return ips
 
@@ -120,7 +115,7 @@ def _generate_minion_id():
 
         def append(self, p_object):
             if p_object and p_object not in self and not self.filter(p_object):
-                super(self.__class__, self).append(p_object)
+                super(DistinctList, self).append(p_object)
             return self
 
         def extend(self, iterable):
@@ -226,12 +221,10 @@ def ip_to_host(ip):
     '''
     try:
         hostname, aliaslist, ipaddrlist = socket.gethostbyaddr(ip)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.debug('salt.utils.network.ip_to_host(%r) failed: %s', ip, exc)
         hostname = None
     return hostname
-
-# pylint: enable=C0103
 
 
 def is_reachable_host(entity_name):
@@ -289,7 +282,7 @@ def is_ipv4_subnet(cidr):
     '''
     try:
         return '/' in cidr and bool(ipaddress.IPv4Network(cidr))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -299,7 +292,7 @@ def is_ipv6_subnet(cidr):
     '''
     try:
         return '/' in cidr and bool(ipaddress.IPv6Network(cidr))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
 
@@ -623,7 +616,7 @@ def cidr_to_ipv4_netmask(cidr_bits):
     return netmask
 
 
-def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
+def _number_of_set_bits_to_ipv4_netmask(set_bits):
     '''
     Returns an IPv4 netmask from the integer representation of that mask.
 
@@ -632,7 +625,6 @@ def _number_of_set_bits_to_ipv4_netmask(set_bits):  # pylint: disable=C0103
     return cidr_to_ipv4_netmask(_number_of_set_bits(set_bits))
 
 
-# pylint: disable=C0103
 def _number_of_set_bits(x):
     '''
     Returns the number of bits that are set in a 32bit int
@@ -644,8 +636,6 @@ def _number_of_set_bits(x):
     x += x >> 8
     x += x >> 16
     return x & 0x0000003f
-
-# pylint: enable=C0103
 
 
 def _interfaces_ip(out):
@@ -663,9 +653,9 @@ def _interfaces_ip(out):
         brd = None
         scope = None
         if '/' in value:  # we have a CIDR in this address
-            ip, cidr = value.split('/')  # pylint: disable=C0103
+            ip, cidr = value.split('/')
         else:
-            ip = value  # pylint: disable=C0103
+            ip = value
             cidr = 32
 
         if type_ == 'inet':
@@ -969,7 +959,7 @@ def _interfaces_ipconfig(out):
         if line.startswith('Ethernet'):
             iface = ifaces[adapter_iface_regex.search(line).group(1)]
             iface['up'] = True
-            addr = None
+            addr = {}
             continue
         if iface:
             key, val = line.split(',', 1)
@@ -1003,46 +993,7 @@ def win_interfaces():
     '''
     Obtain interface information for Windows systems
     '''
-    with salt.utils.winapi.Com():
-        c = wmi.WMI()
-        ifaces = {}
-        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
-            ifaces[iface.Description] = dict()
-            if iface.MACAddress:
-                ifaces[iface.Description]['hwaddr'] = iface.MACAddress
-            if iface.IPEnabled:
-                ifaces[iface.Description]['up'] = True
-                for ip in iface.IPAddress:
-                    if '.' in ip:
-                        if 'inet' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet'] = []
-                        item = {'address': ip,
-                                'label': iface.Description}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if '.' in i), '')
-                            if broadcast:
-                                item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if '.' in i), '')
-                            if netmask:
-                                item['netmask'] = netmask
-                        ifaces[iface.Description]['inet'].append(item)
-                    if ':' in ip:
-                        if 'inet6' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet6'] = []
-                        item = {'address': ip}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if ':' in i), '')
-                            if broadcast:
-                                item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if ':' in i), '')
-                            if netmask:
-                                item['netmask'] = netmask
-                        ifaces[iface.Description]['inet6'].append(item)
-            else:
-                ifaces[iface.Description]['up'] = False
-    return ifaces
+    return salt.utils.win_network.get_interface_info()
 
 
 def interfaces():
@@ -1354,7 +1305,7 @@ def mac2eui64(mac, prefix=None):
             net = ipaddress.ip_network(prefix, strict=False)
             euil = int('0x{0}'.format(eui64), 16)
             return '{0}/{1}'.format(net[euil], net.prefixlen)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             return
 
 
@@ -1460,7 +1411,7 @@ def _parse_tcp_line(line):
 
 def _netlink_tool_remote_on(port, which_end):
     '''
-    Returns set of ipv4 host addresses of remote established connections
+    Returns set of IPv4/IPv6 host addresses of remote established connections
     on local or remote tcp port.
 
     Parses output of shell 'ss' to get connections
@@ -1470,6 +1421,7 @@ def _netlink_tool_remote_on(port, which_end):
     LISTEN     0      511                              *:80                              *:*
     LISTEN     0      128                              *:22                              *:*
     ESTAB      0      0                      127.0.0.1:56726                  127.0.0.1:4505
+    ESTAB      0      0             [::ffff:127.0.0.1]:41323         [::ffff:127.0.0.1]:4505
     '''
     remotes = set()
     valid = False
@@ -1492,7 +1444,7 @@ def _netlink_tool_remote_on(port, which_end):
         chunks = line.split()
         remote_host, remote_port = chunks[4].rsplit(':', 1)
 
-        remotes.add(remote_host)
+        remotes.add(remote_host.strip("[]"))
 
     if valid is False:
         remotes = None

@@ -66,6 +66,8 @@ log = logging.getLogger(__name__)
 
 __HOLD_PATTERN = r'[\w+]+(?:[.-][^-]+)*'
 
+PKG_ARCH_SEPARATOR = '.'
+
 # Define the module's virtual name
 __virtualname__ = 'pkg'
 
@@ -79,7 +81,7 @@ def __virtual__():
     try:
         os_grain = __grains__['os'].lower()
         os_family = __grains__['os_family'].lower()
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return (False, "Module yumpkg: no yum based system detected")
 
     enabled = ('amazon', 'xcp', 'xenserver', 'virtuozzolinux', 'virtuozzo')
@@ -429,7 +431,7 @@ def normalize_name(name):
         salt '*' pkg.normalize_name zsh.x86_64
     '''
     try:
-        arch = name.rsplit('.', 1)[-1]
+        arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)[-1]
         if arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
             return name
     except ValueError:
@@ -438,6 +440,30 @@ def normalize_name(name):
             or salt.utils.pkg.rpm.check_32(arch, osarch=__grains__['osarch']):
         return name[:-(len(arch) + 1)]
     return name
+
+
+def parse_arch(name):
+    '''
+    Parse name and architecture from the specified package name.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.parse_arch zsh.x86_64
+    '''
+    _name, _arch = None, None
+    try:
+        _name, _arch = name.rsplit(PKG_ARCH_SEPARATOR, 1)
+    except ValueError:
+        pass
+    if _arch not in salt.utils.pkg.rpm.ARCHES + ('noarch',):
+        _name = name
+        _arch = None
+    return {
+        'name': _name,
+        'arch': _arch
+    }
 
 
 def latest_version(*names, **kwargs):
@@ -676,8 +702,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
             if pkginfo is not None:
                 # see rpm version string rules available at https://goo.gl/UGKPNd
                 pkgver = pkginfo.version
-                epoch = ''
-                release = ''
+                epoch = None
+                release = None
                 if ':' in pkgver:
                     epoch, pkgver = pkgver.split(":", 1)
                 if '-' in pkgver:
@@ -1642,7 +1668,7 @@ def install(name=None,
                         # Failed to unhold package
                         errors.append(unheld_pkg)
                 yield
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 errors.append(
                     'Error encountered unholding packages {0}: {1}'
                     .format(', '.join(to_unhold), exc)
@@ -2733,7 +2759,12 @@ def del_repo(repo, basedir=None, **kwargs):  # pylint: disable=W0613
             del filerepos[stanza]['comments']
         content += '\n[{0}]'.format(stanza)
         for line in filerepos[stanza]:
-            content += '\n{0}={1}'.format(line, filerepos[stanza][line])
+            # A whitespace is needed at the begining of the new line in order
+            # to avoid breaking multiple line values allowed on repo files.
+            value = filerepos[stanza][line]
+            if isinstance(value, six.string_types) and '\n' in value:
+                value = '\n '.join(value.split('\n'))
+            content += '\n{0}={1}'.format(line, value)
         content += '\n{0}\n'.format(comments)
 
     with salt.utils.files.fopen(repofile, 'w') as fileout:
@@ -2868,11 +2899,14 @@ def mod_repo(repo, basedir=None, **kwargs):
         )
         content += '[{0}]\n'.format(stanza)
         for line in six.iterkeys(filerepos[stanza]):
+            # A whitespace is needed at the begining of the new line in order
+            # to avoid breaking multiple line values allowed on repo files.
+            value = filerepos[stanza][line]
+            if isinstance(value, six.string_types) and '\n' in value:
+                value = '\n '.join(value.split('\n'))
             content += '{0}={1}\n'.format(
                 line,
-                filerepos[stanza][line]
-                    if not isinstance(filerepos[stanza][line], bool)
-                    else _bool_to_str(filerepos[stanza][line])
+                value if not isinstance(value, bool) else _bool_to_str(value)
             )
         content += comments + '\n'
 
@@ -3180,12 +3214,18 @@ def _get_patches(installed_only=False):
     for line in salt.utils.itertools.split(ret, os.linesep):
         inst, advisory_id, sev, pkg = re.match(r'([i|\s]) ([^\s]+) +([^\s]+) +([^\s]+)',
                                                line).groups()
-        if inst != 'i' and installed_only:
-            continue
-        patches[advisory_id] = {
-            'installed': True if inst == 'i' else False,
-            'summary': pkg
-        }
+        if advisory_id not in patches:
+            patches[advisory_id] = {
+                'installed': True if inst == 'i' else False,
+                'summary': [pkg]
+            }
+        else:
+            patches[advisory_id]['summary'].append(pkg)
+            if inst != 'i':
+                patches[advisory_id]['installed'] = False
+
+    if installed_only:
+        patches = {k: v for k, v in patches.items() if v['installed']}
     return patches
 
 

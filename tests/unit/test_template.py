@@ -7,8 +7,8 @@
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import Salt Testing libs
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock
 
 # Import Salt libs
 from salt import template
@@ -28,7 +28,6 @@ class TemplateTestCase(TestCase):
         ret = template.compile_template(['1', '2', '3'], None, None, None, None)
         self.assertDictEqual(ret, {})
 
-    @skipIf(NO_MOCK, NO_MOCK_REASON)
     def test_compile_template_preserves_windows_newlines(self):
         '''
         Test to ensure that a file with Windows newlines, when rendered by a

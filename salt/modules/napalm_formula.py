@@ -21,10 +21,7 @@ import salt.utils.napalm
 import salt.ext.six as six
 import salt.utils.dictupdate
 from salt.defaults import DEFAULT_TARGET_DELIM
-try:
-    from salt.utils.data import traverse_dict_and_list as _traverse_dict_and_list
-except ImportError:
-    from salt.utils import traverse_dict_and_list as _traverse_dict_and_list
+from salt.utils.data import traverse_dict_and_list as _traverse_dict_and_list
 
 __proxyenabled__ = ['*']
 __virtualname__ = 'napalm_formula'

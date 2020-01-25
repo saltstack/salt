@@ -74,6 +74,7 @@ The calls not using the libvirt connection setup are:
 
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import base64
 import copy
 import os
 import re
@@ -106,9 +107,12 @@ import salt.utils.templates
 import salt.utils.validate.net
 import salt.utils.versions
 import salt.utils.yaml
+
+from salt.utils.virt import check_remote, download_remote
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
+from salt._compat import ipaddress
 
 log = logging.getLogger(__name__)
 
@@ -118,6 +122,8 @@ JINJA = jinja2.Environment(
         os.path.join(salt.utils.templates.TEMPLATE_DIRNAME, 'virt')
     )
 )
+
+CACHE_DIR = '/var/lib/libvirt/saltinst'
 
 VIRT_STATE_NAME_MAP = {0: 'running',
                        1: 'running',
@@ -231,7 +237,7 @@ def __get_conn(**kwargs):
                       libvirt.VIR_CRED_PASSPHRASE,
                       libvirt.VIR_CRED_EXTERNAL]
         conn = libvirt.openAuth(conn_str, [auth_types, __get_request_auth(username, password), None], 0)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         raise CommandExecutionError(
             'Sorry, {0} failed to open a connection to the hypervisor '
             'software at {1}'.format(
@@ -458,7 +464,7 @@ def _get_disks(dom):
             if driver is not None and driver.get('type') == 'qcow2':
                 try:
                     stdout = subprocess.Popen(
-                                ['qemu-img', 'info', '--output', 'json', '--backing-chain', disk['file']],
+                                ['qemu-img', 'info', '-U', '--output', 'json', '--backing-chain', disk['file']],
                                 shell=False,
                                 stdout=subprocess.PIPE).communicate()[0]
                     qemu_output = salt.utils.stringutils.to_str(stdout)
@@ -532,6 +538,7 @@ def _gen_xml(name,
              os_type,
              arch,
              graphics=None,
+             boot=None,
              **kwargs):
     '''
     Generate the XML string to define a libvirt VM
@@ -568,11 +575,15 @@ def _gen_xml(name,
     else:
         context['boot_dev'] = ['hd']
 
+    context['boot'] = boot if boot else {}
+
     if os_type == 'xen':
         # Compute the Xen PV boot method
         if __grains__['os_family'] == 'Suse':
-            context['kernel'] = '/usr/lib/grub2/x86_64-xen/grub.xen'
-            context['boot_dev'] = []
+            if not boot or not boot.get('kernel', None):
+                context['boot']['kernel'] = \
+                        '/usr/lib/grub2/x86_64-xen/grub.xen'
+                context['boot_dev'] = []
 
     if 'serial_type' in kwargs:
         context['serial_type'] = kwargs['serial_type']
@@ -653,7 +664,8 @@ def _gen_net_xml(name,
                  bridge,
                  forward,
                  vport,
-                 tag=None):
+                 tag=None,
+                 ip_configs=None):
     '''
     Generate the XML string to define a libvirt network
     '''
@@ -663,6 +675,10 @@ def _gen_net_xml(name,
         'forward': forward,
         'vport': vport,
         'tag': tag,
+        'ip_configs': [{
+            'address': ipaddress.ip_network(config['cidr']),
+            'dhcp_ranges': config.get('dhcp_ranges', []),
+        } for config in ip_configs or []],
     }
     fn_ = 'libvirt_network.jinja'
     try:
@@ -683,26 +699,51 @@ def _gen_pool_xml(name,
                   source_hosts=None,
                   source_auth=None,
                   source_name=None,
-                  source_format=None):
+                  source_format=None,
+                  source_initiator=None):
     '''
     Generate the XML string to define a libvirt storage pool
     '''
     hosts = [host.split(':') for host in source_hosts or []]
-    context = {
-        'name': name,
-        'ptype': ptype,
-        'target': {'path': target, 'permissions': permissions},
-        'source': {
+    source = None
+    if any([source_devices, source_dir, source_adapter, hosts, source_auth, source_name, source_format,
+            source_initiator]):
+        source = {
             'devices': source_devices or [],
-            'dir': source_dir,
+            'dir': source_dir if source_format != 'cifs' or not source_dir else source_dir.lstrip('/'),
             'adapter': source_adapter,
             'hosts': [{'name': host[0], 'port': host[1] if len(host) > 1 else None} for host in hosts],
             'auth': source_auth,
             'name': source_name,
-            'format': source_format
+            'format': source_format,
+            'initiator': source_initiator,
         }
+
+    context = {
+        'name': name,
+        'ptype': ptype,
+        'target': {'path': target, 'permissions': permissions},
+        'source': source
     }
     fn_ = 'libvirt_pool.jinja'
+    try:
+        template = JINJA.get_template(fn_)
+    except jinja2.exceptions.TemplateNotFound:
+        log.error('Could not load template %s', fn_)
+        return ''
+    return template.render(**context)
+
+
+def _gen_secret_xml(auth_type, usage, description):
+    '''
+    Generate a libvirt secret definition XML
+    '''
+    context = {
+        'type': auth_type,
+        'usage': usage,
+        'description': description,
+    }
+    fn_ = 'libvirt_secret.jinja'
     try:
         template = JINJA.get_template(fn_)
     except jinja2.exceptions.TemplateNotFound:
@@ -1115,6 +1156,34 @@ def _get_merged_nics(hypervisor, profile, interfaces=None, dmac=None):
     return nicp
 
 
+def _handle_remote_boot_params(orig_boot):
+    """
+    Checks if the boot parameters contain a remote path. If so, it will copy
+    the parameters, download the files specified in the remote path, and return
+    a new dictionary with updated paths containing the canonical path to the
+    kernel and/or initrd
+
+    :param orig_boot: The original boot parameters passed to the init or update
+    functions.
+    """
+    saltinst_dir = None
+    new_boot = orig_boot.copy()
+
+    try:
+        for key in ['kernel', 'initrd']:
+            if check_remote(orig_boot.get(key)):
+                if saltinst_dir is None:
+                    os.makedirs(CACHE_DIR)
+                    saltinst_dir = CACHE_DIR
+
+                new_boot[key] = download_remote(orig_boot.get(key),
+                                                saltinst_dir)
+
+        return new_boot
+    except Exception as err:  # pylint: disable=broad-except
+        raise err
+
+
 def init(name,
          cpu,
          mem,
@@ -1136,6 +1205,7 @@ def init(name,
          graphics=None,
          os_type=None,
          arch=None,
+         boot=None,
          **kwargs):
     '''
     Initialize a new vm
@@ -1266,6 +1336,22 @@ def init(name,
     :param password: password to connect with, overriding defaults
 
                      .. versionadded:: 2019.2.0
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+        .. versionadded:: 3000
 
     .. _init-nic-def:
 
@@ -1513,7 +1599,11 @@ def init(name,
     if arch is None:
         arch = 'x86_64' if 'x86_64' in arches else arches[0]
 
-    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch, graphics, **kwargs)
+    if boot is not None:
+        boot = _handle_remote_boot_params(boot)
+
+    vm_xml = _gen_xml(name, cpu, mem, diskp, nicp, hypervisor, os_type, arch,
+                      graphics, boot, **kwargs)
     conn = __get_conn(**kwargs)
     try:
         conn.defineXML(vm_xml)
@@ -1692,6 +1782,7 @@ def update(name,
            interfaces=None,
            graphics=None,
            live=True,
+           boot=None,
            **kwargs):
     '''
     Update the definition of an existing domain.
@@ -1726,6 +1817,23 @@ def update(name,
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    :param boot:
+        Specifies kernel for the virtual machine, as well as boot parameters
+        for the virtual machine. This is an optionl parameter, and all of the
+        keys are optional within the dictionary. If a remote path is provided
+        to kernel or initrd, salt will handle the downloading of the specified
+        remote fild, and will modify the XML accordingly.
+
+        .. code-block:: python
+
+            {
+                'kernel': '/root/f8-i386-vmlinuz',
+                'initrd': '/root/f8-i386-initrd',
+                'cmdline': 'console=ttyS0 ks=http://example.com/f8-i386/os/'
+            }
+
+        .. versionadded:: 3000
 
     :return:
 
@@ -1767,6 +1875,10 @@ def update(name,
     # Compute the XML to get the disks, interfaces and graphics
     hypervisor = desc.get('type')
     all_disks = _disk_profile(disk_profile, hypervisor, disks, name, **kwargs)
+
+    if boot is not None:
+        boot = _handle_remote_boot_params(boot)
+
     new_desc = ElementTree.fromstring(_gen_xml(name,
                                                cpu,
                                                mem,
@@ -1776,6 +1888,7 @@ def update(name,
                                                domain.OSType(),
                                                desc.find('.//os/type').get('arch'),
                                                graphics,
+                                               boot,
                                                **kwargs))
 
     # Update the cpu
@@ -1784,6 +1897,48 @@ def update(name,
         cpu_node.text = six.text_type(cpu)
         cpu_node.set('current', six.text_type(cpu))
         need_update = True
+
+    # Update the kernel boot parameters
+    boot_tags = ['kernel', 'initrd', 'cmdline']
+    parent_tag = desc.find('os')
+
+    # We need to search for each possible subelement, and update it.
+    for tag in boot_tags:
+        # The Existing Tag...
+        found_tag = desc.find(tag)
+
+        # The new value
+        boot_tag_value = boot.get(tag, None) if boot else None
+
+        # Existing tag is found and values don't match
+        if found_tag and found_tag.text != boot_tag_value:
+
+            # If the existing tag is found, but the new value is None
+            # remove it. If the existing tag is found, and the new value
+            # doesn't match update it. In either case, mark for update.
+            if boot_tag_value is None \
+               and boot is not None   \
+               and parent_tag is not None:
+                ElementTree.remove(parent_tag, tag)
+            else:
+                found_tag.text = boot_tag_value
+
+            need_update = True
+
+        # Existing tag is not found, but value is not None
+        elif found_tag is None and boot_tag_value is not None:
+
+            # Need to check for parent tag, and add it if it does not exist.
+            # Add a subelement and set the value to the new value, and then
+            # mark for update.
+            if parent_tag is not None:
+                child_tag = ElementTree.SubElement(parent_tag, tag)
+            else:
+                new_parent_tag = ElementTree.Element('os')
+                child_tag = ElementTree.SubElement(new_parent_tag, tag)
+
+            child_tag.text = boot_tag_value
+            need_update = True
 
     # Update the memory, note that libvirt outputs all memory sizes in KiB
     for mem_node_name in ['memory', 'currentMemory']:
@@ -2727,7 +2882,7 @@ def ctrl_alt_del(vm_, **kwargs):
 
 def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Start a domain based on the XML passed to the function
+    Start a transient domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2754,7 +2909,7 @@ def create_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def create_xml_path(path, **kwargs):
     '''
-    Start a domain based on the XML-file path passed to the function
+    Start a transient domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2785,7 +2940,7 @@ def create_xml_path(path, **kwargs):
 
 def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
     '''
-    Define a domain based on the XML passed to the function
+    Define a persistent domain based on the XML passed to the function
 
     :param xml: libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -2812,7 +2967,7 @@ def define_xml_str(xml, **kwargs):  # pylint: disable=redefined-outer-name
 
 def define_xml_path(path, **kwargs):
     '''
-    Define a domain based on the XML-file path passed to the function
+    Define a persistent domain based on the XML-file path passed to the function
 
     :param path: path to a file containing the libvirt XML definition of the domain
     :param connection: libvirt connection URI, overriding defaults
@@ -3138,9 +3293,9 @@ def undefine(vm_, **kwargs):
 
 def purge(vm_, dirs=False, removables=None, **kwargs):
     '''
-    Recursively destroy and delete a virtual machine, pass True for dir's to
-    also delete the directories containing the virtual machine disk images -
-    USE WITH EXTREME CAUTION!
+    Recursively destroy and delete a persistent virtual machine, pass True for
+    dir's to also delete the directories containing the virtual machine disk
+    images - USE WITH EXTREME CAUTION!
 
     Pass removables=False to avoid deleting cdrom and floppy images. To avoid
     disruption, the default but dangerous value is True. This will be changed
@@ -3193,7 +3348,7 @@ def purge(vm_, dirs=False, removables=None, **kwargs):
         # This one is only in 1.2.8+
         try:
             dom.undefineFlags(libvirt.VIR_DOMAIN_UNDEFINE_NVRAM)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             dom.undefine()
     else:
         dom.undefine()
@@ -4253,7 +4408,12 @@ def cpu_baseline(full=False, migratable=False, out='libvirt', **kwargs):
     return cpu.toxml()
 
 
-def network_define(name, bridge, forward, **kwargs):
+def network_define(name,
+                   bridge,
+                   forward,
+                   ipv4_config=None,
+                   ipv6_config=None,
+                   **kwargs):
     '''
     Create libvirt network.
 
@@ -4264,9 +4424,37 @@ def network_define(name, bridge, forward, **kwargs):
     :param tag: Vlan tag
     :param autostart: Network autostart (default True)
     :param start: Network start (default True)
+    :param ipv4_config: IP v4 configuration
+        Dictionary describing the IP v4 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+        .. versionadded:: 3000
+    :type ipv4_config: dict or None
+
+    :param ipv6_config: IP v6 configuration
+        Dictionary describing the IP v6 setup like IP range and
+        a possible DHCP configuration. The structure is documented
+        in net-define-ip_.
+
+        .. versionadded:: 3000
+    :type ipv6_config: dict or None
+
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
+
+    .. _net-define-ip:
+
+    ** IP configuration definition
+
+    Both the IPv4 and IPv6 configuration dictionaries can contain the following properties:
+
+    cidr
+        CIDR notation for the network. For example '192.168.124.0/24'
+
+    dhcp_ranges
+        A list of dictionary with ``'start'`` and ``'end'`` properties.
 
     CLI Example:
 
@@ -4281,12 +4469,14 @@ def network_define(name, bridge, forward, **kwargs):
     tag = kwargs.get('tag', None)
     autostart = kwargs.get('autostart', True)
     starting = kwargs.get('start', True)
+
     net_xml = _gen_net_xml(
         name,
         bridge,
         forward,
         vport,
-        tag,
+        tag=tag,
+        ip_configs=[config for config in [ipv4_config, ipv6_config] if config],
     )
     try:
         conn.networkDefineXML(net_xml)
@@ -4394,6 +4584,30 @@ def network_info(name=None, **kwargs):
     return result
 
 
+def network_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual network
+
+    :param name: libvirt network name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.network_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.networkLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
+
+
 def network_start(name, **kwargs):
     '''
     Start a defined virtual network.
@@ -4497,12 +4711,171 @@ def network_set_autostart(name, state='on', **kwargs):
         conn.close()
 
 
+def _parse_pools_caps(doc):
+    '''
+    Parse libvirt pool capabilities XML
+    '''
+    def _parse_pool_caps(pool):
+        pool_caps = {
+            'name': pool.get('type'),
+            'supported': pool.get('supported', 'no') == 'yes'
+        }
+        for option_kind in ['pool', 'vol']:
+            options = {}
+            default_format_node = pool.find('{0}Options/defaultFormat'.format(option_kind))
+            if default_format_node is not None:
+                options['default_format'] = default_format_node.get('type')
+            options_enums = {enum.get('name'): [value.text for value in enum.findall('value')]
+                 for enum in pool.findall('{0}Options/enum'.format(option_kind))}
+            if options_enums:
+                options.update(options_enums)
+            if options:
+                if 'options' not in pool_caps:
+                    pool_caps['options'] = {}
+                kind = option_kind if option_kind is not 'vol' else 'volume'
+                pool_caps['options'][kind] = options
+        return pool_caps
+
+    return [_parse_pool_caps(pool) for pool in doc.findall('pool')]
+
+
+def pool_capabilities(**kwargs):
+    '''
+    Return the hypervisor connection storage pool capabilities.
+
+    The returned data are either directly extracted from libvirt or computed.
+    In the latter case some pool types could be listed as supported while they
+    are not. To distinguish between the two cases, check the value of the ``computed`` property.
+
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_capabilities
+
+    '''
+    try:
+        conn = __get_conn(**kwargs)
+        has_pool_capabilities = bool(getattr(conn, 'getStoragePoolCapabilities', None))
+        if has_pool_capabilities:
+            caps = ElementTree.fromstring(conn.getStoragePoolCapabilities())
+            pool_types = _parse_pools_caps(caps)
+        else:
+            # Compute reasonable values
+            all_hypervisors = ['xen', 'kvm', 'bhyve']
+            images_formats = ['none', 'raw', 'dir', 'bochs', 'cloop', 'dmg', 'iso', 'vpc', 'vdi',
+                              'fat', 'vhd', 'ploop', 'cow', 'qcow', 'qcow2', 'qed', 'vmdk']
+            common_drivers = [
+                {
+                    'name': 'fs',
+                    'default_source_format': 'auto',
+                    'source_formats': ['auto', 'ext2', 'ext3', 'ext4', 'ufs', 'iso9660', 'udf', 'gfs', 'gfs2',
+                                       'vfat', 'hfs+', 'xfs', 'ocfs2'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {
+                    'name': 'dir',
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {'name': 'iscsi'},
+                {'name': 'scsi'},
+                {
+                    'name': 'logical',
+                    'default_source_format': 'lvm2',
+                    'source_formats': ['unknown', 'lvm2'],
+                },
+                {
+                    'name': 'netfs',
+                    'default_source_format': 'auto',
+                    'source_formats': ['auto', 'nfs', 'glusterfs', 'cifs'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {
+                    'name': 'disk',
+                    'default_source_format': 'unknown',
+                    'source_formats': ['unknown', 'dos', 'dvh', 'gpt', 'mac', 'bsd', 'pc98', 'sun', 'lvm2'],
+                    'default_target_format': 'none',
+                    'target_formats': ['none', 'linux', 'fat16', 'fat32', 'linux-swap', 'linux-lvm',
+                                       'linux-raid', 'extended']
+                },
+                {'name': 'mpath'},
+                {
+                    'name': 'rbd',
+                    'default_target_format': 'raw',
+                    'target_formats': []
+                },
+                {
+                    'name': 'sheepdog',
+                    'version': 10000,
+                    'hypervisors': ['kvm'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {
+                    'name': 'gluster',
+                    'version': 1002000,
+                    'hypervisors': ['kvm'],
+                    'default_target_format': 'raw',
+                    'target_formats': images_formats
+                },
+                {'name': 'zfs', 'version': 1002008, 'hypervisors': ['bhyve']},
+                {'name': 'iscsi-direct', 'version': 4007000, 'hypervisors': ['kvm', 'xen']}
+            ]
+
+            libvirt_version = conn.getLibVersion()
+            hypervisor = get_hypervisor()
+
+            def _get_backend_output(backend):
+                output = {
+                    'name': backend['name'],
+                    'supported': (not backend.get('version') or libvirt_version >= backend['version']) and
+                        hypervisor in backend.get('hypervisors', all_hypervisors),
+                    'options': {
+                        'pool': {
+                            'default_format': backend.get('default_source_format'),
+                            'sourceFormatType': backend.get('source_formats')
+                        },
+                        'volume': {
+                            'default_format': backend.get('default_target_format'),
+                            'targetFormatType': backend.get('target_formats')
+                        }
+                    }
+                }
+
+                # Cleanup the empty members to match the libvirt output
+                for option_kind in ['pool', 'volume']:
+                    if not [value for value in output['options'][option_kind].values() if value is not None]:
+                        del output['options'][option_kind]
+                if not output['options']:
+                    del output['options']
+
+                return output
+            pool_types = [_get_backend_output(backend) for backend in common_drivers]
+    finally:
+        conn.close()
+
+    return {
+        'computed': not has_pool_capabilities,
+        'pool_types': pool_types,
+    }
+
+
 def pool_define(name,
                 ptype,
                 target=None,
                 permissions=None,
                 source_devices=None,
                 source_dir=None,
+                source_initiator=None,
                 source_adapter=None,
                 source_hosts=None,
                 source_auth=None,
@@ -4533,6 +4906,10 @@ def pool_define(name,
     :param source_dir:
         Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
         (Default: ``None``)
+    :param source_initiator:
+        Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
+
+        .. versionadded:: 3000
     :param source_adapter:
         SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
         ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
@@ -4564,7 +4941,7 @@ def pool_define(name,
                 'username': 'admin',
                 'secret': {
                     'type': 'uuid',
-                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                    'value': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
                 }
             }
 
@@ -4575,9 +4952,13 @@ def pool_define(name,
                 'username': 'myname',
                 'secret': {
                     'type': 'usage',
-                    'uuid': 'mycluster_myname'
+                    'value': 'mycluster_myname'
                 }
             }
+
+        Since 3000, instead the source authentication can only contain ``username``
+        and ``password`` properties. In this case the libvirt secret will be defined and used.
+        For Ceph authentications a base64 encoded key is expected.
 
     :param source_name:
         Identifier of name-based sources.
@@ -4631,6 +5012,8 @@ def pool_define(name,
     .. versionadded:: 2019.2.0
     '''
     conn = __get_conn(**kwargs)
+    auth = _pool_set_secret(conn, ptype, name, source_auth)
+
     pool_xml = _gen_pool_xml(
         name,
         ptype,
@@ -4640,9 +5023,10 @@ def pool_define(name,
         source_dir=source_dir,
         source_adapter=source_adapter,
         source_hosts=source_hosts,
-        source_auth=source_auth,
+        source_auth=auth,
         source_name=source_name,
-        source_format=source_format
+        source_format=source_format,
+        source_initiator=source_initiator
     )
     try:
         if transient:
@@ -4658,6 +5042,236 @@ def pool_define(name,
 
     # libvirt function will raise a libvirtError in case of failure
     return True
+
+
+def _pool_set_secret(conn, pool_type, pool_name, source_auth, uuid=None, usage=None, test=False):
+    secret_types = {
+        'rbd': 'ceph',
+        'iscsi': 'chap',
+        'iscsi-direct': 'chap'
+    }
+    secret_type = secret_types.get(pool_type)
+    auth = source_auth
+    if source_auth and 'username' in source_auth and 'password' in source_auth:
+        if secret_type:
+            # Get the previously defined secret if any
+            secret = None
+            if usage:
+                usage_type = libvirt.VIR_SECRET_USAGE_TYPE_CEPH if secret_type == 'ceph' \
+                                else libvirt.VIR_SECRET_USAGE_TYPE_ISCSI
+                secret = conn.secretLookupByUsage(usage_type, usage)
+            elif uuid:
+                secret = conn.secretLookupByUUIDString(uuid)
+
+            # Create secret if needed
+            if not secret:
+                description = 'Passphrase for {} pool created by Salt'.format(pool_name)
+                if not usage:
+                    usage = 'pool_{}'.format(pool_name)
+                secret_xml = _gen_secret_xml(secret_type, usage, description)
+                if not test:
+                    secret = conn.secretDefineXML(secret_xml)
+
+            # Assign the password to it
+            password = auth['password']
+            if pool_type == 'rbd':
+                # RBD password are already base64-encoded, but libvirt will base64-encode them later
+                password = base64.b64decode(salt.utils.stringutils.to_bytes(password))
+            if not test:
+                secret.setValue(password)
+
+            # update auth with secret reference
+            auth['type'] = secret_type
+            auth['secret'] = {
+                'type': 'uuid' if uuid else 'usage',
+                'value': uuid if uuid else usage,
+            }
+    return auth
+
+
+def pool_update(name,
+                ptype,
+                target=None,
+                permissions=None,
+                source_devices=None,
+                source_dir=None,
+                source_initiator=None,
+                source_adapter=None,
+                source_hosts=None,
+                source_auth=None,
+                source_name=None,
+                source_format=None,
+                test=False,
+                **kwargs):
+    '''
+    Update a libvirt storage pool if needed.
+    If called with test=True, this is also reporting whether an update would be performed.
+
+    :param name: Pool name
+    :param ptype:
+        Pool type. See `libvirt documentation <https://libvirt.org/storage.html>`_  for the
+        possible values.
+    :param target: Pool full path target
+    :param permissions:
+        Permissions to set on the target folder. This is mostly used for filesystem-based
+        pool types. See :ref:`pool-define-permissions` for more details on this structure.
+    :param source_devices:
+        List of source devices for pools backed by physical devices. (Default: ``None``)
+
+        Each item in the list is a dictionary with ``path`` and optionally ``part_separator``
+        keys. The path is the qualified name for iSCSI devices.
+
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for more informations on the use of ``part_separator``
+    :param source_dir:
+        Path to the source directory for pools of type ``dir``, ``netfs`` or ``gluster``.
+        (Default: ``None``)
+    :param source_initiator:
+        Initiator IQN for libiscsi-direct pool types. (Default: ``None``)
+
+        .. versionadded:: 3000
+    :param source_adapter:
+        SCSI source definition. The value is a dictionary with ``type``, ``name``, ``parent``,
+        ``managed``, ``parent_wwnn``, ``parent_wwpn``, ``parent_fabric_wwn``, ``wwnn``, ``wwpn``
+        and ``parent_address`` keys.
+
+        The ``parent_address`` value is a dictionary with ``unique_id`` and ``address`` keys.
+        The address represents a PCI address and is itself a dictionary with ``domain``, ``bus``,
+        ``slot`` and ``function`` properties.
+        Report to `this libvirt page <https://libvirt.org/formatstorage.html#StoragePool>`_
+        for the meaning and possible values of these properties.
+    :param source_hosts:
+        List of source for pools backed by storage from remote servers. Each item is the hostname
+        optionally followed by the port separated by a colon. (Default: ``None``)
+    :param source_auth:
+        Source authentication details. (Default: ``None``)
+
+        The value is a dictionary with ``type``, ``username`` and ``secret`` keys. The type
+        can be one of ``ceph`` for Ceph RBD or ``chap`` for iSCSI sources.
+
+        The ``secret`` value links to a libvirt secret object. It is a dictionary with
+        ``type`` and ``value`` keys. The type value can be either ``uuid`` or ``usage``.
+
+        Examples:
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'ceph',
+                'username': 'admin',
+                'secret': {
+                    'type': 'uuid',
+                    'uuid': '2ec115d7-3a88-3ceb-bc12-0ac909a6fd87'
+                }
+            }
+
+        .. code-block:: python
+
+            source_auth={
+                'type': 'chap',
+                'username': 'myname',
+                'secret': {
+                    'type': 'usage',
+                    'uuid': 'mycluster_myname'
+                }
+            }
+
+        Since 3000, instead the source authentication can only contain ``username``
+        and ``password`` properties. In this case the libvirt secret will be defined and used.
+        For Ceph authentications a base64 encoded key is expected.
+
+    :param source_name:
+        Identifier of name-based sources.
+    :param source_format:
+        String representing the source format. The possible values are depending on the
+        source type. See `libvirt documentation <https://libvirt.org/storage.html>`_ for
+        the possible values.
+    :param test: run in dry-run mode if set to True
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. rubric:: Example:
+
+    Local folder pool:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_update somepool dir target=/srv/mypool \
+                                  permissions="{'mode': '0744' 'ower': 107, 'group': 107 }"
+
+    CIFS backed pool:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_update myshare netfs source_format=cifs \
+                                  source_dir=samba_share source_hosts="['example.com']" target=/mnt/cifs
+
+    .. versionadded:: 3000
+    '''
+    # Get the current definition to compare the two
+    conn = __get_conn(**kwargs)
+    needs_update = False
+    try:
+        pool = conn.storagePoolLookupByName(name)
+        old_xml = ElementTree.fromstring(pool.XMLDesc())
+
+        # If we have username and password in source_auth generate a new secret
+        # Or change the value of the existing one
+        secret_node = old_xml.find('source/auth/secret')
+        usage = secret_node.get('usage') if secret_node is not None else None
+        uuid = secret_node.get('uuid') if secret_node is not None else None
+        auth = _pool_set_secret(conn, ptype, name, source_auth, uuid=uuid, usage=usage, test=test)
+
+        # Compute new definition
+        new_xml = ElementTree.fromstring(_gen_pool_xml(
+            name,
+            ptype,
+            target,
+            permissions=permissions,
+            source_devices=source_devices,
+            source_dir=source_dir,
+            source_initiator=source_initiator,
+            source_adapter=source_adapter,
+            source_hosts=source_hosts,
+            source_auth=auth,
+            source_name=source_name,
+            source_format=source_format
+        ))
+
+        # Copy over the uuid, capacity, allocation, available elements
+        elements_to_copy = ['available', 'allocation', 'capacity', 'uuid']
+        for to_copy in elements_to_copy:
+            element = old_xml.find(to_copy)
+            new_xml.insert(1, element)
+
+        # Filter out spaces and empty elements like <source/> since those would mislead the comparison
+        def visit_xml(node, fn):
+            fn(node)
+            for child in node:
+                visit_xml(child, fn)
+
+        def space_stripper(node):
+            if node.tail is not None:
+                node.tail = node.tail.strip(' \t\n')
+            if node.text is not None:
+                node.text = node.text.strip(' \t\n')
+
+        visit_xml(old_xml, space_stripper)
+        visit_xml(new_xml, space_stripper)
+
+        def empty_node_remover(node):
+            for child in node:
+                if not child.tail and not child.text and not child.items() and not child:
+                    node.remove(child)
+        visit_xml(old_xml, empty_node_remover)
+
+        needs_update = ElementTree.tostring(old_xml) != ElementTree.tostring(new_xml)
+        if needs_update and not test:
+            conn.storagePoolDefineXML(salt.utils.stringutils.to_str(ElementTree.tostring(new_xml)))
+    finally:
+        conn.close()
+    return needs_update
 
 
 def list_pools(**kwargs):
@@ -4736,6 +5350,30 @@ def pool_info(name=None, **kwargs):
     finally:
         conn.close()
     return result
+
+
+def pool_get_xml(name, **kwargs):
+    '''
+    Return the XML definition of a virtual storage pool
+
+    :param name: libvirt storage pool name
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' virt.pool_get_xml default
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        return conn.storagePoolLookupByName(name).XMLDesc()
+    finally:
+        conn.close()
 
 
 def pool_start(name, **kwargs):
@@ -4838,13 +5476,11 @@ def pool_undefine(name, **kwargs):
         conn.close()
 
 
-def pool_delete(name, fast=True, **kwargs):
+def pool_delete(name, **kwargs):
     '''
     Delete the resources of a defined libvirt storage pool.
 
     :param name: libvirt storage pool name
-    :param fast: if set to False, zeroes out all the data.
-                 Default value is True.
     :param connection: libvirt connection URI, overriding defaults
     :param username: username to connect with, overriding defaults
     :param password: password to connect with, overriding defaults
@@ -4860,10 +5496,7 @@ def pool_delete(name, fast=True, **kwargs):
     conn = __get_conn(**kwargs)
     try:
         pool = conn.storagePoolLookupByName(name)
-        flags = libvirt.VIR_STORAGE_POOL_DELETE_NORMAL
-        if fast:
-            flags = libvirt.VIR_STORAGE_POOL_DELETE_ZEROED
-        return not bool(pool.delete(flags))
+        return not bool(pool.delete(libvirt.VIR_STORAGE_POOL_DELETE_NORMAL))
     finally:
         conn.close()
 
@@ -4942,5 +5575,150 @@ def pool_list_volumes(name, **kwargs):
     try:
         pool = conn.storagePoolLookupByName(name)
         return pool.listVolumes()
+    finally:
+        conn.close()
+
+
+def _get_storage_vol(conn, pool, vol):
+    '''
+    Helper function getting a storage volume. Will throw a libvirtError
+    if the pool or the volume couldn't be found.
+
+    :param conn: libvirt connection object to use
+    :param pool: pool name
+    :param vol: volume name
+    '''
+    pool_obj = conn.storagePoolLookupByName(pool)
+    return pool_obj.storageVolLookupByName(vol)
+
+
+def _is_valid_volume(vol):
+    '''
+    Checks whether a volume is valid for further use since those may have disappeared since
+    the last pool refresh.
+    '''
+    try:
+        # Getting info on an invalid volume raises error and libvirt logs an error
+        def discarder(ctxt, error):  # pylint: disable=unused-argument
+            log.debug("Ignore libvirt error: %s", error[2])
+        # Disable the libvirt error logging
+        libvirt.registerErrorHandler(discarder, None)
+        vol.info()
+        # Reenable the libvirt error logging
+        libvirt.registerErrorHandler(None, None)
+        return True
+    except libvirt.libvirtError as err:
+        return False
+
+
+def _get_all_volumes_paths(conn):
+    '''
+    Extract the path and backing stores path of all volumes.
+
+    :param conn: libvirt connection to use
+    '''
+    volumes = [vol for l in
+                [obj.listAllVolumes() for obj in conn.listAllStoragePools()
+                    if obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING] for vol in l]
+    return {vol.path(): [path.text for path in ElementTree.fromstring(vol.XMLDesc()).findall('.//backingStore/path')]
+            for vol in volumes if _is_valid_volume(vol)}
+
+
+def volume_infos(pool=None, volume=None, **kwargs):
+    '''
+    Provide details on a storage volume. If no volume name is provided, the infos
+    all the volumes contained in the pool are provided. If no pool is provided,
+    the infos of the volumes of all pools are output.
+
+    :param pool: libvirt storage pool name (default: ``None``)
+    :param volume: name of the volume to get infos from (default: ``None``)
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_infos <pool> <volume>
+    '''
+    result = {}
+    conn = __get_conn(**kwargs)
+    try:
+        backing_stores = _get_all_volumes_paths(conn)
+        try:
+            domains = _get_domain(conn)
+            domains_list = domains if isinstance(domains, list) else [domains]
+        except CommandExecutionError:
+            # Having no VM is not an error here.
+            domains_list = []
+        disks = {domain.name():
+                 {node.get('file') for node
+                  in ElementTree.fromstring(domain.XMLDesc(0)).findall('.//disk/source/[@file]')}
+                 for domain in domains_list}
+
+        def _volume_extract_infos(vol):
+            '''
+            Format the volume info dictionary
+
+            :param vol: the libvirt storage volume object.
+            '''
+            types = ['file', 'block', 'dir', 'network', 'netdir', 'ploop']
+            infos = vol.info()
+
+            # If we have a path, check its use.
+            used_by = []
+            if vol.path():
+                as_backing_store = {path for (path, all_paths) in backing_stores.items() if vol.path() in all_paths}
+                used_by = [vm_name for (vm_name, vm_disks) in disks.items()
+                           if vm_disks & as_backing_store or vol.path() in vm_disks]
+
+            return {
+                'type': types[infos[0]] if infos[0] < len(types) else 'unknown',
+                'key': vol.key(),
+                'path': vol.path(),
+                'capacity': infos[1],
+                'allocation': infos[2],
+                'used_by': used_by,
+            }
+
+        pools = [obj for obj in conn.listAllStoragePools()
+                    if (pool is None or obj.name() == pool) and obj.info()[0] == libvirt.VIR_STORAGE_POOL_RUNNING]
+        vols = {pool_obj.name(): {vol.name(): _volume_extract_infos(vol)
+                                  for vol in pool_obj.listAllVolumes()
+                                  if (volume is None or vol.name() == volume) and _is_valid_volume(vol)}
+                for pool_obj in pools}
+        return {pool_name: volumes for (pool_name, volumes) in vols.items() if volumes}
+    except libvirt.libvirtError as err:
+        log.debug('Silenced libvirt error: %s', str(err))
+    finally:
+        conn.close()
+    return result
+
+
+def volume_delete(pool, volume, **kwargs):
+    '''
+    Delete a libvirt managed volume.
+
+    :param pool: libvirt storage pool name
+    :param volume: name of the volume to delete
+    :param connection: libvirt connection URI, overriding defaults
+    :param username: username to connect with, overriding defaults
+    :param password: password to connect with, overriding defaults
+
+    .. versionadded:: 3000
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt "*" virt.volume_delete <pool> <volume>
+    '''
+    conn = __get_conn(**kwargs)
+    try:
+        vol = _get_storage_vol(conn, pool, volume)
+        return not bool(vol.delete())
     finally:
         conn.close()

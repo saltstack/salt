@@ -18,9 +18,9 @@ import sys
 available_backends = set()
 try:
     import ldap
-    import ldap.ldapobject
-    import ldap.modlist
-    import ldap.sasl
+    import ldap.ldapobject  # pylint: disable=no-name-in-module
+    import ldap.modlist  # pylint: disable=no-name-in-module
+    import ldap.sasl  # pylint: disable=no-name-in-module
     available_backends.add('ldap')
 except ImportError:
     pass
@@ -409,7 +409,7 @@ def add(connect_spec, dn, attributes):
     if 'unicodePwd' in attributes:
         attributes['unicodePwd'] = [_format_unicode_password(x) for x in attributes['unicodePwd']]
 
-    modlist = ldap.modlist.addModlist(attributes),
+    modlist = ldap.modlist.addModlist(attributes)
     try:
         l.c.add_s(dn, modlist)
     except ldap.LDAPError as e:

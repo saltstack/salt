@@ -21,7 +21,7 @@ import jinja2
 import yaml
 import msgpack
 import salt.ext.six as _six
-import tornado
+import salt.ext.tornado as tornado
 
 try:
     import zlib
@@ -55,7 +55,6 @@ try:
 except ImportError:
     markupsafe = None
 
-# pylint: enable=import-error,no-name-in-module
 
 try:
     # Older python where the backport from pypi is installed
@@ -66,6 +65,7 @@ except ImportError:
         from salt.ext import ssl_match_hostname
     except ImportError:
         ssl_match_hostname = None
+# pylint: enable=import-error,no-name-in-module
 
 # Import salt libs
 import salt
@@ -275,7 +275,7 @@ def get_tops(extra_mods='', so_mods=''):
             try:
                 locals()[mod] = __import__(mod)
                 moddir, modname = os.path.split(locals()[mod].__file__)
-                base, ext = os.path.splitext(modname)
+                base, _ = os.path.splitext(modname)
                 if base == '__init__':
                     tops.append(moddir)
                 else:
@@ -391,7 +391,11 @@ def gen_thin(cachedir, extra_mods='', overwrite=False, so_mods='',
             except OSError as exc:
                 log.error('Error while removing %s file: %s', thintar, exc)
                 if os.path.exists(thintar):
-                    raise salt.exceptions.SaltSystemExit('Unable to remove %s file. See logs for details.', thintar)
+                    raise salt.exceptions.SaltSystemExit(
+                        'Unable to remove {} file. See logs for details.'.format(
+                            thintar
+                        )
+                    )
         else:
             return thintar
     if _six.PY3:

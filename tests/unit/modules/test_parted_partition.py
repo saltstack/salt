@@ -13,15 +13,14 @@ from __future__ import absolute_import, unicode_literals, print_function
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
 
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import Salt libs
 from salt.exceptions import CommandExecutionError
 import salt.modules.parted_partition as parted
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PartedTestCase(TestCase, LoaderModuleMockMixin):
 
     def setup_loader_modules(self):
@@ -376,3 +375,20 @@ class PartedTestCase(TestCase, LoaderModuleMockMixin):
                 }
             }
             self.assertEqual(output, expected)
+
+    def test_disk_set(self):
+        with patch('salt.modules.parted_partition._validate_device', MagicMock()):
+            self.cmdrun.return_value = ''
+            output = parted.disk_set('/dev/sda', 'pmbr_boot', 'on')
+            self.cmdrun.assert_called_once_with(
+                ['parted', '-m', '-s', '/dev/sda', 'disk_set',
+                 'pmbr_boot', 'on'])
+            assert output == []
+
+    def test_disk_toggle(self):
+        with patch('salt.modules.parted_partition._validate_device', MagicMock()):
+            self.cmdrun.return_value = ''
+            output = parted.disk_toggle('/dev/sda', 'pmbr_boot')
+            self.cmdrun.assert_called_once_with(
+                ['parted', '-m', '-s', '/dev/sda', 'disk_toggle', 'pmbr_boot'])
+            assert output == []
