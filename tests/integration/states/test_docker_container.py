@@ -1021,7 +1021,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.assertFalse(ret['changes'])
             self.assertEqual(
                 ret['comment'],
-                'All specified paths in \'creates\' argument exist'
+                '{0} exists'.format(path)
             )
             self.run_function('docker.rm', [name], force=True)
 
