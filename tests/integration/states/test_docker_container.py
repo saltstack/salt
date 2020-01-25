@@ -1008,22 +1008,38 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
         good_file1 = _mkstemp()
         good_file2 = _mkstemp()
 
-        for path in (good_file1, [good_file1, good_file2]):
-            log.debug('Trying %s', path)
-            ret = self.run_state(
-                'docker_container.run',
-                name=name,
-                image=self.image,
-                command='whoami',
-                creates=path)
-            self.assertSaltTrueReturn(ret)
-            ret = ret[next(iter(ret))]
-            self.assertFalse(ret['changes'])
-            self.assertEqual(
-                ret['comment'],
-                '{0} exists'.format(path)
-            )
-            self.run_function('docker.rm', [name], force=True)
+        log.debug('Trying %s', good_file1)
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            creates=good_file1)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertFalse(ret['changes'])
+        self.assertEqual(
+            ret['comment'],
+            '{0} exists'.format(good_file1)
+        )
+        self.run_function('docker.rm', [name], force=True)
+
+        path = [good_file1, good_file2]
+        log.debug('Trying %s', path)
+        ret = self.run_state(
+            'docker_container.run',
+            name=name,
+            image=self.image,
+            command='whoami',
+            creates=path)
+        self.assertSaltTrueReturn(ret)
+        ret = ret[next(iter(ret))]
+        self.assertFalse(ret['changes'])
+        self.assertEqual(
+            ret['comment'],
+            'All files in creates exist'
+        )
+        self.run_function('docker.rm', [name], force=True)
 
         for path in (bad_file, [good_file1, bad_file]):
             log.debug('Trying %s', path)
