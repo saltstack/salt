@@ -329,6 +329,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             "skip_files_list_verify argument was set to True. "
             "Extraction is not needed"
         )
+
+        # Clearing the minion cache at the start to ensure that different tests of
+        # skip_files_list_verify won't affect each other
+        self.run_function("saltutil.clear_cache")
+        self.run_function("saltutil.sync_all")
+
         ret = self.run_state(
             "archive.extracted",
             name=ARCHIVE_DIR,
@@ -336,6 +342,7 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             archive_format="tar",
             skip_files_list_verify=True,
             source_hash_update=True,
+            keep_source=True,
             source_hash=ARCHIVE_TAR_SHA_HASH,
         )
 
@@ -350,6 +357,53 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
             archive_format="tar",
             skip_files_list_verify=True,
             source_hash_update=True,
+            keep_source=True,
+            source_hash=ARCHIVE_TAR_SHA_HASH,
+        )
+
+        self.assertSaltTrueReturn(ret)
+        self.assertInSaltComment(expected_comment, ret)
+
+    def test_local_archive_extracted_with_skip_files_list_verify_and_keep_source_is_false(
+        self,
+    ):
+        """
+        test archive.extracted with local file and skip_files_list_verify set to True
+        and keep_source is set to False.
+        """
+        expected_comment = (
+            "existing source sum is the same as the expected one and "
+            "skip_files_list_verify argument was set to True. "
+            "Extraction is not needed"
+        )
+        # Clearing the minion cache at the start to ensure that different tests of
+        # skip_files_list_verify won't affect each other
+        self.run_function("saltutil.clear_cache")
+        self.run_function("saltutil.sync_all")
+
+        ret = self.run_state(
+            "archive.extracted",
+            name=ARCHIVE_DIR,
+            source=self.archive_local_tar_source,
+            archive_format="tar",
+            skip_files_list_verify=True,
+            source_hash_update=True,
+            keep_source=False,
+            source_hash=ARCHIVE_TAR_SHA_HASH,
+        )
+
+        self.assertSaltTrueReturn(ret)
+
+        self._check_extracted(self.untar_file)
+
+        ret = self.run_state(
+            "archive.extracted",
+            name=ARCHIVE_DIR,
+            source=self.archive_local_tar_source,
+            archive_format="tar",
+            skip_files_list_verify=True,
+            source_hash_update=True,
+            keep_source=False,
             source_hash=ARCHIVE_TAR_SHA_HASH,
         )
 
