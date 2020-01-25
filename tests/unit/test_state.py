@@ -138,6 +138,57 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_unless(low_data, '')
             self.assertEqual(expected_result, return_result)
 
+    def test_verify_creates(self):
+        low_data = {
+            'state': 'cmd',
+            'name': 'echo "something"',
+            '__sls__': 'tests.creates',
+            '__env__': 'base',
+            '__id__': 'do_a_thing',
+            'creates': '/tmp/thing',
+            'order': 10000,
+            'fun': 'run'}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            with patch('os.path.exists') as path_mock:
+                path_mock.return_value = True
+                expected_result =  {'comment': '/tmp/thing exists', 'result': True, 'skip_watch': True}
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+                path_mock.return_value = False
+                expected_result =  {'comment': 'Creates files not found', 'result': False}
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+    def test_verify_creates_list(self):
+        low_data = {
+            'state': 'cmd',
+            'name': 'echo "something"',
+            '__sls__': 'tests.creates',
+            '__env__': 'base',
+            '__id__': 'do_a_thing',
+            'creates': ['/tmp/thing', '/tmp/thing2'],
+            'order': 10000,
+            'fun': 'run'}
+
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            with patch('os.path.exists') as path_mock:
+                path_mock.return_value = True
+                expected_result =  {'comment': 'All files in creates exist', 'result': True, 'skip_watch': True}
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+                path_mock.return_value = False
+                expected_result =  {'comment': 'Creates files not found', 'result': False}
+                return_result = state_obj._run_check_creates(low_data)
+                self.assertEqual(expected_result, return_result)
+
+
     def _expand_win_path(self, path):
         """
         Expand C:/users/admini~1/appdata/local/temp/salt-tests-tmpdir/...

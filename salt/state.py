@@ -867,6 +867,14 @@ class State(object):
                 # If either result is True, the returned result should be True
                 ret['skip_watch'] = _ret['skip_watch'] or ret['skip_watch']
 
+        if 'creates' in low_data:
+            _ret = self._run_check_creates(low_data)
+            ret['result'] = _ret['result'] or ret['result']
+            ret['comment'].append(_ret['comment'])
+            if 'skip_watch' in _ret:
+                # If either result is True, the returned result should be True
+                ret['skip_watch'] = _ret['skip_watch'] or ret['skip_watch']
+
         return ret
 
     def _run_check_function(self, entry):
@@ -989,6 +997,28 @@ class State(object):
             elif cmd != 0:
                 ret.update({'comment': 'check_cmd determined the state failed', 'result': False})
                 return ret
+        return ret
+
+    def _run_check_creates(self, low_data):
+        '''
+        Check that listed files exist
+        '''
+        ret = {'result': False}
+
+        if isinstance(low_data['creates'], six.string_types) and os.path.exists(low_data['creates']):
+            ret['comment'] = '{0} exists'.format(low_data['creates'])
+            ret['result'] = True
+            ret['skip_watch'] = True
+        elif isinstance(low_data['creates'], list) and all([
+            os.path.exists(path) for path in low_data['creates']
+        ]):
+            ret['comment'] = 'All files in creates exist'
+            ret['result'] = True
+            ret['skip_watch'] = True
+        else:
+            ret['comment'] = 'Creates files not found'
+            ret['result'] = False
+
         return ret
 
     def reset_run_num(self):
@@ -1940,7 +1970,8 @@ class State(object):
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
             if ('unless' in low and '{0[state]}.mod_run_check'.format(low) not in self.states) or \
-                    ('onlyif' in low and '{0[state]}.mod_run_check'.format(low) not in self.states):
+                    ('onlyif' in low and '{0[state]}.mod_run_check'.format(low) not in self.states) or \
+                    ('creates' in low and '{0[state]}.mod_run_check'.format(low) not in self.states):
                 ret.update(self._run_check(low))
 
             if not self.opts.get('lock_saltenv', False):
