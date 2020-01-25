@@ -43,6 +43,7 @@ from pytestsalt.utils import get_unused_localhost_port
 from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
 
 # Import Salt libs
 import salt.utils.files
@@ -1614,3 +1615,65 @@ class PatchedEnviron(object):
 
 
 patched_environ = PatchedEnviron
+
+
+class VirtualEnv(object):
+    def __init__(self, venv_dir=None):
+        self.venv_dir = venv_dir or tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        if salt.utils.platform.is_windows():
+            self.venv_python = os.path.join(self.venv_dir, 'Scripts', 'python.exe')
+        else:
+            self.venv_python = os.path.join(self.venv_dir, 'bin', 'python')
+
+    def __enter__(self):
+        try:
+            self._create_virtualenv()
+        except subprocess.CalledProcessError:
+            raise AssertionError('Failed to create virtualenv')
+        return self
+
+    def __exit__(self, *args):
+        shutil.rmtree(self.venv_dir, ignore_errors=True)
+
+    def install(self, *args):
+        subprocess.check_call(
+            [self.venv_python, '-m', 'pip', 'install'] + list(args)
+        )
+
+    def _get_real_python(self):
+        '''
+        The reason why the virtualenv creation is proxied by this function is mostly
+        because under windows, we can't seem to properly create a virtualenv off of
+        another virtualenv(we can on linux) and also because, we really don't want to
+        test virtualenv creation off of another virtualenv, we want a virtualenv created
+        from the original python.
+        Also, on windows, we must also point to the virtualenv binary outside the existing
+        virtualenv because it will fail otherwise
+        '''
+        try:
+            if salt.utils.platform.is_windows():
+                return os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+            else:
+                python_binary_names = [
+                    'python{}.{}'.format(*sys.version_info),
+                    'python{}'.format(*sys.version_info),
+                    'python'
+                ]
+                for binary_name in python_binary_names:
+                    python = os.path.join(sys.real_prefix, 'bin', binary_name)
+                    if os.path.exists(python):
+                        break
+                else:
+                    raise AssertionError(
+                        'Couldn\'t find a python binary name under \'{}\' matching: {}'.format(
+                            os.path.join(sys.real_prefix, 'bin'),
+                            python_binary_names
+                        )
+                    )
+                return python
+        except AttributeError:
+            return sys.executable
+
+    def _create_virtualenv(self):
+        sminion = create_sminion()
+        sminion.functions.virtualenv.create(self.venv_dir, python=self._get_real_python())
