@@ -35,3 +35,9 @@ Genshi
 Cheetah3==3.1.0
 Mako
 wempy; python_version <'3'
+
+# Requirements for Tornado 4.5.3 (vendored as salt.ext.tornado)
+backports-abc==0.5
+singledispatch==3.4.0.3
+# Required by Tornado to handle threads stuff.
+futures>=2.0; python_version < '3.0'
