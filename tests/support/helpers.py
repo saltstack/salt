@@ -43,6 +43,7 @@ from pytestsalt.utils import get_unused_localhost_port
 from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
 from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
 
 # Import Salt libs
 import salt.utils.files
@@ -1674,11 +1675,5 @@ class VirtualEnv(object):
             return sys.executable
 
     def _create_virtualenv(self):
-        subprocess.check_call(
-            [
-                sys.executable,
-                '-m', 'virtualenv',
-                '-p', self._get_real_python(),
-                self.venv_dir
-            ]
-        )
+        sminion = create_sminion()
+        sminion.functions.virtualenv.create(self.venv_dir, python=self._get_real_python())
