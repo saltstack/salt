@@ -15,8 +15,8 @@ import tempfile
 # Import Salt Testing libs
 from tests.support.runtests import RUNTIME_VARS
 from tests.support.helpers import with_tempdir
-from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.unit import TestCase
+from tests.support.mock import MagicMock, patch
 
 # Import salt libs
 import salt.fileclient
@@ -46,7 +46,6 @@ class MockFileclient(object):
     # pylint: enable=unused-argument,no-method-argument,method-hidden
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class PillarTestCase(TestCase):
 
     def tearDown(self):
@@ -820,7 +819,6 @@ sub_with_slashes:
         }
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.transport.client.ReqChannel.factory', MagicMock())
 class RemotePillarTestCase(TestCase):
     '''
@@ -938,7 +936,6 @@ class RemotePillarTestCase(TestCase):
             dictkey='pillar')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @patch('salt.transport.client.AsyncReqChannel.factory', MagicMock())
 class AsyncRemotePillarTestCase(TestCase):
     '''

@@ -21,11 +21,17 @@ class ConfigTest(ModuleCase):
         self.assertTrue(
             self.run_function('config.valid_fileproto', ['salt://']))
         self.assertTrue(
+            self.run_function('config.valid_fileproto', ['file://']))
+        self.assertTrue(
             self.run_function('config.valid_fileproto', ['http://']))
         self.assertTrue(
             self.run_function('config.valid_fileproto', ['https://']))
         self.assertTrue(
             self.run_function('config.valid_fileproto', ['ftp://']))
+        self.assertTrue(
+            self.run_function('config.valid_fileproto', ['s3://']))
+        self.assertTrue(
+            self.run_function('config.valid_fileproto', ['swift://']))
         self.assertFalse(
             self.run_function('config.valid_fileproto', ['cheese://']))
 
@@ -69,7 +75,7 @@ class ConfigTest(ModuleCase):
                 self.run_function(
                     'config.option',
                     ['master_port']),
-                64506)
+                self.get_config('minion')['master_port'])
         # pillar conf opt
         self.assertEqual(
                 self.run_function(

@@ -104,7 +104,7 @@ def _auth(profile=None, api_version=2, **connection_args):
     Only intended to be used within glance-enabled modules
     '''
     __utils__['versions.warn_until'](
-        'Neon',
+        'Aluminium',
         (
             'The glance module has been deprecated and will be removed in {version}.  '
             'Please update to using the glanceng module'
@@ -164,17 +164,22 @@ def _auth(profile=None, api_version=2, **connection_args):
         raise SaltInvocationError('No credentials to authenticate with.')
 
     if HAS_KEYSTONE:
-        log.debug('Calling keystoneclient.v2_0.client.Client(' +
-            '{0}, **{1})'.format(ks_endpoint, kwargs))
+        log.debug(
+            'Calling keystoneclient.v2_0.client.Client(%s, **%s)',
+            ks_endpoint, kwargs
+        )
         keystone = kstone.Client(**kwargs)
         kwargs['token'] = keystone.get_token(keystone.session)
         # This doesn't realy prevent the password to show up
         # in the minion log as keystoneclient.session is
         # logging it anyway when in debug-mode
         kwargs.pop('password')
-        log.debug('Calling glanceclient.client.Client(' +
-            '{0}, {1}, **{2})'.format(api_version,
-                g_endpoint_url, kwargs))
+        log.debug(
+            'Calling glanceclient.client.Client(%s, %s, **%s)',
+            api_version,
+            g_endpoint_url,
+            kwargs
+        )
         # may raise exc.HTTPUnauthorized, exc.HTTPNotFound
         # but we deal with those elsewhere
         return client.Client(api_version, g_endpoint_url, **kwargs)

@@ -27,6 +27,9 @@
 # modified files cause conflicts, set verify_env to False.
 #user: root
 
+# Tell the master to also use salt-ssh when running commands against minions.
+#enable_ssh_minions: False
+
 # The port used by the communication interface. The ret (return) port is the
 # interface used for the file server, authentication, job returns, etc.
 #ret_port: 4506
@@ -347,7 +350,7 @@
 # the autosign_file and the auto_accept setting.
 #autoreject_file: /etc/salt/autoreject.conf
 
-# If the autosign_grains_dir is specified, incoming keys from minons with grain
+# If the autosign_grains_dir is specified, incoming keys from minions with grain
 # values matching those defined in files in this directory will be accepted
 # automatically. This is insecure. Minions need to be configured to send the grains.
 #autosign_grains_dir: /etc/salt/autosign_grains
@@ -1296,3 +1299,9 @@
 # use OS defaults, typically 75 seconds on Linux, see
 # /proc/sys/net/ipv4/tcp_keepalive_intvl.
 #tcp_keepalive_intvl: -1
+
+
+#####         NetAPI settings          #####
+############################################
+# Allow the raw_shell parameter to be used when calling Salt SSH client via API
+#netapi_allow_raw_shell: True

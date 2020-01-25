@@ -15,6 +15,7 @@ import logging
 
 # Import salt libs
 import salt.minion
+import salt.utils.path
 import salt.utils.stringutils
 
 # Import testing libs
@@ -131,7 +132,7 @@ def build_minion_opts(minion_id=None,
                     if item.startswith(sys.base_prefix):
                         path_items.remove(item)
                 os.environ['PATH'] = os.pathsep.join(path_items)
-            virtualenv_binary = salt.utils.which('virtualenv')
+            virtualenv_binary = salt.utils.path.which('virtualenv')
             if path is not None:
                 # Restore previous environ PATH
                 os.environ['PATH'] = path

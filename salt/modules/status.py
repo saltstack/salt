@@ -1630,11 +1630,11 @@ def master(master=None, connected=True):
 
     # Connection to master is not as expected
     if master_connection_status is not connected:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        if master_connection_status:
-            event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
-        else:
-            event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
+        with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+            if master_connection_status:
+                event.fire_event({'master': master}, salt.minion.master_event(type='connected'))
+            else:
+                event.fire_event({'master': master}, salt.minion.master_event(type='disconnected'))
 
     return master_connection_status
 
@@ -1662,25 +1662,25 @@ def ping_master(master):
     opts.update(salt.minion.prep_ip_port(opts))
     try:
         opts.update(salt.minion.resolve_dns(opts, fallback=False))
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return False
 
     timeout = opts.get('auth_timeout', 60)
     load = {'cmd': 'ping'}
 
     result = False
-    channel = salt.transport.client.ReqChannel.factory(opts, crypt='clear')
-    try:
-        payload = channel.send(load, tries=0, timeout=timeout)
-        result = True
-    except Exception as e:
-        pass
+    with salt.transport.client.ReqChannel.factory(opts, crypt='clear') as channel:
+        try:
+            payload = channel.send(load, tries=0, timeout=timeout)
+            result = True
+        except Exception as e:  # pylint: disable=broad-except
+            pass
 
-    if result:
-        event = salt.utils.event.get_event('minion', opts=__opts__, listen=False)
-        event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
+        if result:
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=False) as event:
+                event.fire_event({'master': master}, salt.minion.master_event(type='failback'))
 
-    return result
+        return result
 
 
 def proxy_reconnect(proxy_name, opts=None):

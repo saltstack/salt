@@ -1159,7 +1159,7 @@ def _write_config(config, newlines=2):
             for _ in range(0, newlines):
                 fha.write(salt.utils.stringutils.to_str(os.linesep))
         return True
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.error(six.text_type(err))
         return False
 

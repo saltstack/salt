@@ -176,7 +176,7 @@ def update(version=None):
         return ret
     try:
         app.cleanup()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['_error'] = 'Unable to cleanup. Error: {0}'.format(exc)
     restarted = {}
     for service in __opts__['update_restart_services']:
@@ -922,7 +922,7 @@ def sync_pillar(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blackl
 
 def sync_executors(saltenv=None, refresh=True, extmod_whitelist=None, extmod_blacklist=None):
     '''
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     Sync executors from ``salt://_executors`` to the minion
 
@@ -1123,12 +1123,12 @@ def refresh_modules(**kwargs):
             #  If we're going to block, first setup a listener
             ret = __salt__['event.fire']({}, 'module_refresh')
         else:
-            eventer = salt.utils.event.get_event('minion', opts=__opts__, listen=True)
-            ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
-            # Wait for the finish event to fire
-            log.trace('refresh_modules waiting for module refresh to complete')
-            # Blocks until we hear this event or until the timeout expires
-            eventer.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
+            with salt.utils.event.get_event('minion', opts=__opts__, listen=True) as event_bus:
+                ret = __salt__['event.fire']({'notify': True}, 'module_refresh')
+                # Wait for the finish event to fire
+                log.trace('refresh_modules waiting for module refresh to complete')
+                # Blocks until we hear this event or until the timeout expires
+                event_bus.get_event(tag='/salt/minion/minion_mod_complete', wait=30)
     except KeyError:
         log.error('Event module not available. Module refresh failed.')
         ret = False  # Effectively a no-op, since we can't really return without an event system
@@ -1431,8 +1431,8 @@ def regen_keys():
             pass
     # TODO: move this into a channel function? Or auth?
     # create a channel again, this will force the key regen
-    channel = salt.transport.client.ReqChannel.factory(__opts__)
-    channel.close()
+    with salt.transport.client.ReqChannel.factory(__opts__) as channel:
+        log.debug('Recreating channel to force key regen')
 
 
 def revoke_auth(preserve_minion_cache=False):
@@ -1459,18 +1459,16 @@ def revoke_auth(preserve_minion_cache=False):
         masters.append(__opts__['master_uri'])
 
     for master in masters:
-        channel = salt.transport.client.ReqChannel.factory(__opts__, master_uri=master)
-        tok = channel.auth.gen_token(b'salt')
-        load = {'cmd': 'revoke_auth',
-                'id': __opts__['id'],
-                'tok': tok,
-                'preserve_minion_cache': preserve_minion_cache}
-        try:
-            channel.send(load)
-        except SaltReqTimeoutError:
-            ret = False
-        finally:
-            channel.close()
+        with salt.transport.client.ReqChannel.factory(__opts__, master_uri=master) as channel:
+            tok = channel.auth.gen_token(b'salt')
+            load = {'cmd': 'revoke_auth',
+                    'id': __opts__['id'],
+                    'tok': tok,
+                    'preserve_minion_cache': preserve_minion_cache}
+            try:
+                channel.send(load)
+            except SaltReqTimeoutError:
+                ret = False
     return ret
 
 

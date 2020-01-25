@@ -218,14 +218,12 @@ class SqlBaseExtPillar(six.with_metaclass(abc.ABCMeta, object)):
         Return a friendly name for the database, e.g. 'MySQL' or 'SQLite'.
         Used in logging output.
         '''
-        pass
 
     @abc.abstractmethod
     def _get_cursor(self):
         '''
         Yield a PEP 249 compliant Cursor as a context manager.
         '''
-        pass
 
     def extract_queries(self, args, kwargs):
         '''

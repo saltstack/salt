@@ -13,8 +13,8 @@ import stat
 import time
 
 try:
-    import haproxy.cmds
-    import haproxy.conn
+    import haproxy.cmds  # pylint: disable=no-name-in-module
+    import haproxy.conn  # pylint: disable=no-name-in-module
     HAS_HAPROXY = True
 except ImportError:
     HAS_HAPROXY = False

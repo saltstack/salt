@@ -315,7 +315,7 @@ def deluser(name, username, root=None):
             return not retcode
         else:
             return True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         return True
 
 
