@@ -66,6 +66,7 @@ from salt.ext.six.moves.urllib.parse import urlencode as _urlencode
 from salt.ext import six
 from salt.ext.six.moves import map
 from salt.ext.six.moves import range
+from salt.ext.six.moves.urllib.parse import urljoin as _urljoin
 # pylint: enable=import-error,no-name-in-module,redefined-builtin
 
 # Import Salt Libs
@@ -331,7 +332,7 @@ def _post_message(webhook, author_icon, title, report):
         'payload': json.dumps(payload, ensure_ascii=False)
     })
 
-    webhook_url = 'https://hooks.slack.com/services/{}'.format(webhook)
+    webhook_url = _urljoin('https://hooks.slack.com/services/', webhook)
     query_result = salt.utils.http.query(webhook_url, 'POST', data=data)
 
     if query_result.get('body', 'failed') == 'ok' and query_result.get('status', 0) == 200:
