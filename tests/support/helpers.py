@@ -30,8 +30,8 @@ import tempfile
 import textwrap
 import threading
 import time
-import tornado.ioloop
-import tornado.web
+import salt.ext.tornado.ioloop
+import salt.ext.tornado.web
 import types
 
 # Import 3rd-party libs
@@ -1336,7 +1336,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
     .. code-block:: python
 
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
-        class AuthenticatedHandler(tornado.web.RequestHandler):
+        class AuthenticatedHandler(salt.ext.tornado.web.RequestHandler):
             pass
     '''
     def wrapper(handler_class):
@@ -1450,20 +1450,20 @@ class Webserver(object):
         self.wait = wait
         self.handler = handler \
             if handler is not None \
-            else tornado.web.StaticFileHandler
+            else salt.ext.tornado.web.StaticFileHandler
         self.web_root = None
 
     def target(self):
         '''
         Threading target which stands up the tornado application
         '''
-        self.ioloop = tornado.ioloop.IOLoop()
+        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
         self.ioloop.make_current()
-        if self.handler == tornado.web.StaticFileHandler:
-            self.application = tornado.web.Application(
+        if self.handler == salt.ext.tornado.web.StaticFileHandler:
+            self.application = salt.ext.tornado.web.Application(
                 [(r'/(.*)', self.handler, {'path': self.root})])
         else:
-            self.application = tornado.web.Application(
+            self.application = salt.ext.tornado.web.Application(
                 [(r'/(.*)', self.handler)])
         self.application.listen(self.port)
         self.ioloop.start()
@@ -1527,7 +1527,7 @@ class Webserver(object):
         self.server_thread.join()
 
 
-class SaveRequestsPostHandler(tornado.web.RequestHandler):
+class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
     '''
     Save all requests sent to the server.
     '''
@@ -1546,7 +1546,7 @@ class SaveRequestsPostHandler(tornado.web.RequestHandler):
         raise NotImplementedError()
 
 
-class MirrorPostHandler(tornado.web.RequestHandler):
+class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
     '''
     Mirror a POST body back to the client
     '''
