@@ -20,6 +20,17 @@ compare Salt's versions, please use LooseVersion. There is also the packaging
 library you can use to compare versions. Another alternative is using the
 :py:func:`salt version module<salt.modules.salt_version>`
 
+
+Vendored Tornado Code Base
+==========================
+
+The Tornado code base has been included as ``salt.ext.tornado``. This was done
+to provide a consistent version of Tornado across all operating systems while
+we continue to work on upgrading Tornado to a recent version. New code that
+uses Tornado should import the module from ``salt.ext.tornado`` instead of
+importing the system version of Tornado.
+
+
 Saltcheck Updates
 =================
 
