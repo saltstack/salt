@@ -175,7 +175,8 @@ class VersionTestCase(TestCase):
                          'returncode.return_value': 0}
                 proc_ret = MagicMock(**attrs)
                 proc_mock = patch('subprocess.Popen', return_value=proc_ret)
+                patch_os = patch('os.path.exists', return_value=True)
 
-                with proc_mock:
+                with proc_mock, patch_os:
                     ret = getattr(salt.version, '__discover_version')(salt_ver)
                 assert ret == exp
