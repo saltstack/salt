@@ -218,7 +218,8 @@ def peer(name):
 
 
 def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
-                  transport='tcp', start=False, force=False, arbiter=False):
+                  transport='tcp', start=False, force=False, arbiter=False,
+                  disperse=False, redundancy=False):
     '''
     Create a glusterfs volume
 
@@ -245,6 +246,18 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
         is used as an arbiter brick.
 
         .. versionadded:: 2019.2.0
+
+    disperse
+        Number of bricks to use in a disperse set.
+        
+        .. versionadded:: neon
+    
+    redundancy
+        Number of redundant bricks for disperse set. \
+        If redundancy is not specified it is automatically calculated \
+        based on the number of bricks in the disperse set.
+        
+        .. versionadded:: neon
 
     device_vg
         If true, specifies volume should use block backend instead of regular \
@@ -293,6 +306,13 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
     if arbiter and replica != 3:
         raise SaltInvocationError('Arbiter configuration only valid ' +
                                   'in replica 3 volume')
+    
+    if replica and (disperse or redundancy):
+        raise SaltInvocationError('Disperse sets are exclusive with replicas')
+
+    if disperse or redundancy:
+        if len(bricks) < 3 or disperse < 3:
+            raise SaltInvocationError('Disperse sets require 3 or more bricks')
 
     # Format creation call
     cmd = 'volume create {0} '.format(name)
@@ -302,6 +322,10 @@ def create_volume(name, bricks, stripe=False, replica=False, device_vg=False,
         cmd += 'replica {0} '.format(replica)
     if arbiter:
         cmd += 'arbiter 1 '
+    if disperse:
+        cmd += 'disperse {0} '.format(disperse)
+    if redundancy:
+        cmd += 'redundancy {0} '.format(redundancy)
     if device_vg:
         cmd += 'device vg '
     if transport != 'tcp':
