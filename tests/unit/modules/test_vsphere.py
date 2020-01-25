@@ -23,19 +23,29 @@ from salt.exceptions import (
 from tests.support.mixins import LoaderModuleMockMixin
 from tests.support.unit import TestCase, skipIf
 from tests.support.mock import (
+    Mock,
     MagicMock,
     patch,
-    NO_MOCK,
-    NO_MOCK_REASON,
     call
 )
 
 # Import Third Party Libs
 try:
-    from pyVmomi import vim, vmodl  # pylint: disable=unused-import
+    from pyVmomi import vim, vmodl  # pylint: disable=unused-import,no-name-in-module
+
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
+
+try:
+    # pylint: disable=unused-import
+    from com.vmware.vapi.std_client import DynamicID
+    HAS_VSPHERE_SDK = True
+except ImportError:
+    HAS_VSPHERE_SDK = False
+
+import salt.utils.args
+import salt.utils.vmware
 
 # Globals
 HOST = '1.2.3.4'
@@ -44,11 +54,11 @@ PASSWORD = 'SuperSecret!'
 ERROR = 'Some Testing Error Message'
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class VsphereTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Unit TestCase for the salt.modules.vsphere module.
     '''
+
     def setup_loader_modules(self):
         return {vsphere: {'__virtual__': MagicMock(return_value='vsphere')}}
 
@@ -566,11 +576,11 @@ class VsphereTestCase(TestCase, LoaderModuleMockMixin):
                              vsphere._set_syslog_config_helper(HOST, USER, PASSWORD, config, 'foo'))
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.get_proxy_type
     '''
+
     def setup_loader_modules(self):
         return {vsphere: {'__virtual__': MagicMock(return_value='vsphere')}}
 
@@ -581,11 +591,11 @@ class GetProxyTypeTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual('fake_proxy_type', ret)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.supports_proxies decorator
     '''
+
     def setup_loader_modules(self):
         return {vsphere: {'__virtual__': MagicMock(return_value='vsphere')}}
 
@@ -613,11 +623,11 @@ class SupportsProxiesTestCase(TestCase, LoaderModuleMockMixin):
                          excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere._get_proxy_connection_details
     '''
+
     def setup_loader_modules(self):
         return {vsphere: {'__virtual__': MagicMock(return_value='vsphere')}}
 
@@ -679,7 +689,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='esxi')):
             with patch.dict(vsphere.__salt__,
                             {'esxi.get_details':
-                             MagicMock(return_value=self.esxi_host_details)}):
+                                 MagicMock(return_value=self.esxi_host_details)}):
                 ret = vsphere._get_proxy_connection_details()
         self.assertEqual(('fake_host', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
@@ -690,7 +700,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='esxdatacenter')):
             with patch.dict(vsphere.__salt__,
                             {'esxdatacenter.get_details': MagicMock(
-                             return_value=self.esxdatacenter_details)}):
+                                return_value=self.esxdatacenter_details)}):
                 ret = vsphere._get_proxy_connection_details()
         self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
@@ -701,7 +711,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='esxcluster')):
             with patch.dict(vsphere.__salt__,
                             {'esxcluster.get_details': MagicMock(
-                             return_value=self.esxcluster_details)}):
+                                return_value=self.esxcluster_details)}):
                 ret = vsphere._get_proxy_connection_details()
         self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
@@ -712,8 +722,8 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='esxi')):
             with patch.dict(vsphere.__salt__,
                             {'esxi.get_details':
-                             MagicMock(
-                                 return_value=self.esxi_vcenter_details)}):
+                                MagicMock(
+                                    return_value=self.esxi_vcenter_details)}):
                 ret = vsphere._get_proxy_connection_details()
         self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
@@ -724,7 +734,7 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                    MagicMock(return_value='vcenter')):
             with patch.dict(vsphere.__salt__,
                             {'vcenter.get_details': MagicMock(
-                             return_value=self.vcenter_details)}):
+                                return_value=self.vcenter_details)}):
                 ret = vsphere._get_proxy_connection_details()
         self.assertEqual(('fake_vcenter', 'fake_username', 'fake_password',
                           'fake_protocol', 'fake_port', 'fake_mechanism',
@@ -739,12 +749,12 @@ class _GetProxyConnectionDetailsTestCase(TestCase, LoaderModuleMockMixin):
                          excinfo.exception.strerror)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.gets_service_instance_via_proxy
     decorator
     '''
+
     def setup_loader_modules(self):
         patcher = patch('salt.utils.vmware.get_service_instance', MagicMock())
         patcher.start()
@@ -911,11 +921,11 @@ class GetsServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(ret, self.mock_si)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.get_service_instance_via_proxy
     '''
+
     def setup_loader_modules(self):
         patcher = patch('salt.utils.vmware.get_service_instance', MagicMock())
         patcher.start()
@@ -954,11 +964,11 @@ class GetServiceInstanceViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, mock_si)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.disconnect
     '''
+
     def setup_loader_modules(self):
         self.mock_si = MagicMock()
         self.addCleanup(delattr, self, 'mock_si')
@@ -991,11 +1001,11 @@ class DisconnectTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, True)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.test_vcenter_connection
     '''
+
     def setup_loader_modules(self):
         self.mock_si = MagicMock()
         self.addCleanup(delattr, self, 'mock_si')
@@ -1066,12 +1076,12 @@ class TestVcenterConnectionTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, False)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.list_datacenters_via_proxy
     '''
+
     def setup_loader_modules(self):
         self.mock_si = MagicMock()
         self.addCleanup(delattr, self, 'mock_si')
@@ -1152,12 +1162,12 @@ class ListDatacentersViaProxyTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, [{'name': 'fake_dc1'}, {'name': 'fake_dc2'}])
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.create_datacenter
     '''
+
     def setup_loader_modules(self):
         self.mock_si = MagicMock()
         self.addCleanup(delattr, self, 'mock_si')
@@ -1203,12 +1213,12 @@ class CreateDatacenterTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(res, {'create_datacenter': True})
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.erase_disk_partitions
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1292,12 +1302,12 @@ class EraseDiskPartitionsTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_si, self.mock_host, 'fake_disk_id', hostname='fake_host')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.remove_datastore
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1382,12 +1392,12 @@ class RemoveDatastoreTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.remove_diskgroup
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1477,13 +1487,13 @@ class RemoveDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 @skipIf(not vsphere.HAS_JSONSCHEMA, 'The \'jsonschema\' library is missing')
 class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.remove_capacity_from_diskgroup
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1646,12 +1656,12 @@ class RemoveCapacityFromDiskgroupTestCase(TestCase, LoaderModuleMockMixin):
         self.assertTrue(res)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.list_cluster
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1690,7 +1700,7 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
         # Patch __salt__ dunder
         patcher = patch.dict(vsphere.__salt__,
                              {'esxcluster.get_details':
-                              MagicMock(return_value={'cluster': 'cl'})})
+                                  MagicMock(return_value={'cluster': 'cl'})})
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -1738,12 +1748,12 @@ class ListClusterTestCase(TestCase, LoaderModuleMockMixin):
         self.mock__get_cluster_dict.assert_called_once_with('cl', self.mock_cl)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PYVMOMI, 'The \'pyvmomi\' library is missing')
 class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere.rename_datastore
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1822,11 +1832,11 @@ class RenameDatastoreTestCase(TestCase, LoaderModuleMockMixin):
             self.mock_ds_ref, 'new_ds_name')
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
     '''
     Tests for salt.modules.vsphere._get_proxy_target
     '''
+
     def setup_loader_modules(self):
         return {
             vsphere: {
@@ -1918,3 +1928,728 @@ class _GetProxyTargetTestCase(TestCase, LoaderModuleMockMixin):
             ret = vsphere._get_proxy_target(self.mock_si)
         self.mock_get_root_folder.assert_called_once_with(self.mock_si)
         self.assertEqual(ret, self.mock_root)
+
+
+@skipIf(not HAS_VSPHERE_SDK, 'The \'vsphere-automation-sdk\' library is missing')
+class TestVSphereTagging(TestCase, LoaderModuleMockMixin):
+    '''
+    Tests for:
+     - salt.modules.vsphere.create_tag_category
+     - salt.modules.vsphere.create_tag
+     - salt.modules.vsphere.delete_tag_category
+     - salt.modules.vsphere.delete_tag
+     - salt.modules.vsphere.list_tag_categories
+     - salt.modules.vsphere.list_tags
+     - salt.modules.vsphere.attach_tags
+     - salt.modules.vsphere.list_attached_tags
+    '''
+
+    def setup_loader_modules(self):
+        return {
+            vsphere: {
+                '__virtual__': MagicMock(return_value='vsphere'),
+                '_get_proxy_connection_details': MagicMock(),
+                'get_proxy_type': MagicMock(return_value='vcenter')
+            }
+        }
+
+    # Grains for expected __salt__ calls
+    details = {
+        key: None for key in [
+            'vcenter', 'username', 'password']
+    }
+
+    # Function attributes
+    func_attrs = {
+        key: None for key in [
+            'category_id', 'object_id', 'tag_id', 'name',
+            'description', 'cardinality']
+    }
+
+    # Expected returns
+    create_tag_category = {
+        'Category created':
+            'urn:vmomi:InventoryServiceTag:'
+            'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
+    }
+
+    create_tag = {
+        'Tag created':
+            'urn:vmomi:InventoryServiceTag:'
+            'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
+    }
+
+    delete_tag_category = {
+        'Category deleted':
+            'urn:vmomi:InventoryServiceTag:'
+            'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
+    }
+
+    delete_tag = {
+        'Tag deleted':
+            'urn:vmomi:InventoryServiceTag:'
+            'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
+    }
+
+    list_tag_categories_return = [
+        'urn:vmomi:InventoryServiceCategory:'
+        'b13f4959-a3f3-48d0-8080-15bb586b4355:GLOBAL',
+        'urn:vmomi:InventoryServiceCategory:'
+        'f4d41f02-c317-422d-9013-dcbebfcd54ad:GLOBAL',
+        'urn:vmomi:InventoryServiceCategory:'
+        '2db5b00b-f211-4bba-ba42-e2658ebbb283:GLOBAL',
+        'urn:vmomi:InventoryServiceCategory:'
+        'cd847c3c-687c-4bd9-8e5a-0eb536f0a01d:GLOBAL',
+        'urn:vmomi:InventoryServiceCategory:'
+        'd51c24f9-cffb-4ce0-af56-7f18b6e649af:GLOBAL'
+    ]
+
+    list_tags_return = [
+        'urn:vmomi:InventoryServiceTag:'
+        'a584a83b-3015-45ad-8057-a3630613052f:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        'db08019c-15de-4bbf-be46-d81aaf8d25c0:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        'b55ecc77-f4a5-49f8-ab52-38865467cfbe:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        'f009ab1b-e1b5-4c40-b8f7-951d9d716b39:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        '102bb4c5-9b76-4d6c-882a-76a91ee3edcc:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        '71d30f2d-bb23-48e1-995f-630adfb0dc89:GLOBAL'
+    ]
+
+    list_attached_tags_return = [
+        'urn:vmomi:InventoryServiceTag:'
+        'b55ecc77-f4a5-49f8-ab52-38865467cfbe:GLOBAL',
+        'urn:vmomi:InventoryServiceTag:'
+        'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
+    ]
+
+    list_create_category_return = [
+        'urn:vmomi:InventoryServiceCategory:'
+        '0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL'
+    ]
+
+    list_create_tag_return = [
+        'urn:vmomi:InventoryServiceCategory:'
+        '0af54c2d-e8cd-4248-931e-2f5807d8c477:GLOBAL'
+    ]
+
+    attach_tags_return = {
+        'Tag attached':
+            'urn:vmomi:InventoryServiceTag:'
+            'bb0350b4-85db-46b0-a726-e7c5989fc857:GLOBAL'
+    }
+
+    def test_create_tag_category_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            ret = vsphere.create_tag_category(
+                                self.func_attrs['name'],
+                                self.func_attrs['description'],
+                                self.func_attrs['cardinality'])
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Category created': None})
+
+    def test_create_tag_category_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                Category=Mock(
+                    CreateSpec=Mock(return_value=Mock()),
+                    create=Mock(
+                        return_value=self.create_tag_category[
+                            'Category created']))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            ret = vsphere.create_tag_category(
+                                self.func_attrs['name'],
+                                self.func_attrs['description'],
+                                self.func_attrs['cardinality'])
+
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, self.create_tag_category)
+
+    def test_create_tag_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    )as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            ret = vsphere.create_tag(
+                                self.func_attrs['name'],
+                                self.func_attrs['description'],
+                                self.func_attrs['cardinality'])
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Tag created': None})
+
+    def test_create_tag_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                Tag=Mock(
+                    CreateSpec=Mock(return_value=Mock()),
+                    create=Mock(return_value=self.create_tag[
+                        'Tag created']))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    )as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            ret = vsphere.create_tag(
+                                self.func_attrs['name'],
+                                self.func_attrs['description'],
+                                self.func_attrs['cardinality'])
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, self.create_tag)
+
+    def test_delete_tag_category_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            ret = vsphere.delete_tag_category(
+                                self.func_attrs['category_id'])
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Category deleted': None})
+
+    def test_delete_tag_category_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                Category=Mock(
+                    delete=Mock(return_value=self.delete_tag_category[
+                        'Category deleted']))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            ret = vsphere.delete_tag_category(
+                                self.func_attrs['category_id'])
+
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, self.delete_tag_category)
+
+    def test_delete_tag_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            ret = vsphere.delete_tag(
+                                self.func_attrs['tag_id'])
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Tag deleted': None})
+
+    def test_delete_tag_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                Tag=Mock(
+                    delete=Mock(return_value=self.delete_tag[
+                        'Tag deleted']))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            ret = vsphere.delete_tag(
+                                self.func_attrs['tag_id'])
+
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, self.delete_tag)
+
+    def test_list_tag_categories_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            ret = vsphere.list_tag_categories()
+                            # Check function calls and return data
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Categories': None})
+
+    def test_list_tag_categories_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                Category=Mock(
+                    list=Mock(return_value=self.list_tag_categories_return
+                              ))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            ret = vsphere.list_tag_categories()
+
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(
+                                ret, {'Categories':
+                                          self.list_tag_categories_return})
+
+    def test_list_tags_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            # Check function calls and return
+                            ret = vsphere.list_tags()
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Tags': None})
+
+    def test_list_tags_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                Tag=Mock(
+                    list=Mock(return_value=self.list_tags_return
+                              ))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            # Check function calls and return
+                            ret = vsphere.list_tags()
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret,
+                                             {'Tags': self.list_tags_return})
+
+    def test_list_attached_tags_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            with patch.object(vsphere,
+                                              'DynamicID'
+                                              ) as dynamic_id:
+                                # Check function calls and return
+                                ret = vsphere.list_attached_tags('object_id')
+                                get_proxy_type.assert_called_once()
+                                get_proxy_connection.assert_called_once()
+                                get_service_instance.assert_called_once()
+                                get_vsphere_client.assert_called_once()
+                                self.assertEqual(ret, {'Attached tags': None})
+
+    def test_list_attached_tags_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                TagAssociation=Mock(
+                    list_attached_tags=Mock(
+                        return_value=self.list_attached_tags_return
+                    ))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            with patch.object(vsphere,
+                                              'DynamicID'
+                                              ) as dynamic_id:
+                                # Check function calls and return
+                                ret = vsphere.list_attached_tags(
+                                    self.func_attrs['object_id'])
+                                get_proxy_type.assert_called_once()
+                                get_proxy_connection.assert_called_once()
+                                get_service_instance.assert_called_once()
+                                get_vsphere_client.assert_called_once()
+                                self.assertEqual(
+                                    ret, {'Attached tags':
+                                              self.list_attached_tags_return})
+
+    def test_attach_tags_client_none(self):
+        get_details = MagicMock(return_value=self.details)
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=None
+                                          ) as get_vsphere_client:
+                            # Check function calls and return
+                            ret = vsphere.attach_tag(
+                                object_id=self.func_attrs['object_id'],
+                                tag_id=self.func_attrs['tag_id'])
+                            get_proxy_type.assert_called_once()
+                            get_proxy_connection.assert_called_once()
+                            get_service_instance.assert_called_once()
+                            get_vsphere_client.assert_called_once()
+                            self.assertEqual(ret, {'Tag attached': None})
+
+    def test_attach_tags_client(self):
+        get_details = MagicMock(return_value=self.details)
+
+        #  Mock CreateSpec object and create objects
+        mock_client = Mock(
+            tagging=Mock(
+                TagAssociation=Mock(
+                    attach=Mock(return_value=self.list_attached_tags_return
+                                ))))
+
+        # Start patching each external API return with Mock Objects
+        with patch.object(vsphere,
+                          'get_proxy_type',
+                          return_value='vcenter'
+                          ) as get_proxy_type:
+            with patch.object(vsphere,
+                              '_get_proxy_connection_details',
+                              return_value=[]
+                              ) as get_proxy_connection:
+                with patch.object(salt.utils.vmware,
+                                  'get_service_instance',
+                                  return_value=None
+                                  ) as get_service_instance:
+                    with patch.dict(vsphere.__salt__,
+                                    {'vcenter.get_details': get_details},
+                                    clear=True
+                                    ) as get_vcenter_details:
+                        with patch.object(salt.utils.vmware,
+                                          'get_vsphere_client',
+                                          return_value=mock_client
+                                          ) as get_vsphere_client:
+                            with patch.object(vsphere,
+                                              'DynamicID'
+                                              ) as dynamic_id:
+                                # Check function calls and return
+                                ret = vsphere.attach_tag(
+                                    object_id=self.func_attrs['object_id'],
+                                    tag_id=self.func_attrs['tag_id'])
+                                get_proxy_type.assert_called_once()
+                                get_proxy_connection.assert_called_once()
+                                get_service_instance.assert_called_once()
+                                get_vsphere_client.assert_called_once()
+                                self.assertEqual(
+                                    ret, {'Tag attached':
+                                              self.list_attached_tags_return})

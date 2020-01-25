@@ -35,7 +35,7 @@ is done using the following YAML configuration files:
   which the VM is created (the provider settings are in the provider
   configuration explained above).  Based on your needs, you might define
   different profiles for web servers, database servers, and so on. See :ref:`VM
-  Profiles <cloud-provider-specifics>`.
+  Profiles <salt-cloud-profiles>`.
 
 Configuration Inheritance
 =========================
@@ -128,6 +128,7 @@ Cloud Provider Specifics
         Getting Started With Scaleway <scaleway>
         Getting Started With Saltify <saltify>
         Getting Started With SoftLayer <softlayer>
+        Getting Started With Tencent Cloud <tencentcloud>
         Getting Started With Vagrant <vagrant>
         Getting Started With Vexxhost <vexxhost>
         Getting Started With Virtualbox <virtualbox>

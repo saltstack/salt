@@ -291,11 +291,11 @@ Setup
 '''
 from __future__ import absolute_import, print_function, unicode_literals
 
-import tornado.websocket
+import salt.ext.tornado.websocket
 from . import event_processor
 from .saltnado import _check_cors_origin
 
-import tornado.gen
+import salt.ext.tornado.gen
 
 import salt.utils.json
 import salt.netapi
@@ -306,7 +306,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W0223,W0232
+class AllEventsHandler(salt.ext.tornado.websocket.WebSocketHandler):  # pylint: disable=W0223,W0232
     '''
     Server side websocket handler.
     '''
@@ -334,7 +334,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
         '''
         self.connected = False
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
@@ -356,7 +356,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
                     event = yield self.application.event_listener.get_event(self)
                     self.write_message(
                         salt.utils.json.dumps(event, _json_module=_json))
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     log.info('Error! Ending server side websocket connection. Reason = %s', err)
                     break
 
@@ -387,7 +387,7 @@ class AllEventsHandler(tornado.websocket.WebSocketHandler):  # pylint: disable=W
 
 class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def on_message(self, message):
         """Listens for a "websocket client ready" message.
         Once that message is received an asynchronous job
@@ -419,7 +419,7 @@ class FormattedEventsHandler(AllEventsHandler):  # pylint: disable=W0223,W0232
                     event = yield self.application.event_listener.get_event(self)
                     evt_processor.process(event, self.token, self.application.opts)
                     # self.write_message('data: {0}\n\n'.format(salt.utils.json.dumps(event, _json_module=_json)))
-                except Exception as err:
+                except Exception as err:  # pylint: disable=broad-except
                     log.debug('Error! Ending server side websocket connection. Reason = %s', err)
                     break
 

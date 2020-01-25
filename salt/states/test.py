@@ -36,6 +36,7 @@ calls, e.g. running, calling, logging, output filtering etc.
         - changes: True
         - result: False
         - comment: bar.baz
+        - warnings: A warning
 
     is-pillar-foo-present-and-bar-is-int:
       test.check_pillar:
@@ -174,7 +175,7 @@ def fail_with_changes(name, **kwargs):  # pylint: disable=unused-argument
     return ret
 
 
-def configurable_test_state(name, changes=True, result=True, comment=''):
+def configurable_test_state(name, changes=True, result=True, comment='', warnings=None):
     '''
     A configurable test state which determines its output based on the inputs.
 
@@ -195,6 +196,12 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
     comment:
         String to fill the comment field with.
         Default is ''
+
+    .. versionadded:: 3000
+
+    warnings:
+        A string (or a list of strings) to fill the warnings field with.
+        Default is None
     '''
     ret = {
         'name': name,
@@ -239,6 +246,17 @@ def configurable_test_state(name, changes=True, result=True, comment=''):
                                   '\'Result\' with invalid arguments. It must '
                                   'be either \'True\', \'False\', or '
                                   '\'Random\'')
+
+    if warnings is None:
+        pass
+    elif isinstance(warnings, six.string_types):
+        ret['warnings'] = [warnings]
+    elif isinstance(warnings, list):
+        ret['warnings'] = warnings
+    else:
+        raise SaltInvocationError('You have specified the state option '
+                                  '\'Warnings\' with invalid arguments. It must '
+                                  'be a string or a list of strings')
 
     if __opts__['test']:
         ret['result'] = True if changes is False else None

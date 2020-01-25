@@ -1076,7 +1076,7 @@ def services(services_file='/etc/services'):
     with salt.utils.files.fopen(services_file, 'r') as svc_defs:
         for svc_def in svc_defs.readlines():
             svc_def = salt.utils.stringutils.to_unicode(svc_def.strip())
-            if not len(svc_def) or svc_def.startswith('#'):
+            if not svc_def or svc_def.startswith('#'):
                 continue
             elif '#' in svc_def:
                 svc_def, comment = svc_def.split('#', 1)

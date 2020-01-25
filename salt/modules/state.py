@@ -33,6 +33,7 @@ import salt.utils.functools
 import salt.utils.hashutils
 import salt.utils.jid
 import salt.utils.json
+import salt.utils.msgpack
 import salt.utils.platform
 import salt.utils.state
 import salt.utils.stringutils
@@ -45,7 +46,6 @@ from salt.utils.odict import OrderedDict
 
 # Import 3rd-party libs
 from salt.ext import six
-import msgpack
 
 __proxyenabled__ = ['*']
 
@@ -145,7 +145,7 @@ def _snapper_pre(opts, jid):
                     snapshot_type='pre',
                     description='Salt State run for jid {0}'.format(jid),
                     __pub_jid=jid)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Failed to create snapper pre snapshot for jid: %s', jid)
     return snapper_pre
 
@@ -163,7 +163,7 @@ def _snapper_post(opts, jid, pre_num):
                     pre_number=pre_num,
                     description='Salt State run for jid {0}'.format(jid),
                     __pub_jid=jid)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Failed to create snapper pre snapshot for jid: %s', jid)
 
 
@@ -185,7 +185,7 @@ def _get_pause(jid, state_id=None):
             data[state_id] = {}
     if os.path.exists(pause_path):
         with salt.utils.files.fopen(pause_path, 'rb') as fp_:
-            data = msgpack.loads(fp_.read())
+            data = salt.utils.msgpack.loads(fp_.read())
     return data, pause_path
 
 
@@ -256,7 +256,7 @@ def soft_kill(jid, state_id=None):
     data, pause_path = _get_pause(jid, state_id)
     data[state_id]['kill'] = True
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def pause(jid, state_id=None, duration=None):
@@ -291,7 +291,7 @@ def pause(jid, state_id=None, duration=None):
     if duration:
         data[state_id]['duration'] = int(duration)
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def resume(jid, state_id=None):
@@ -325,7 +325,7 @@ def resume(jid, state_id=None):
     if state_id == '__all__':
         data = {}
     with salt.utils.files.fopen(pause_path, 'wb') as fp_:
-        fp_.write(msgpack.dumps(data))
+        fp_.write(salt.utils.msgpack.dumps(data))
 
 
 def orchestrate(mods,
@@ -683,9 +683,13 @@ def apply_(mods=None, **kwargs):
 
         # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         salt '*' state.apply stuff
+
         # Run the states configured in salt://stuff.sls (or salt://stuff/init.sls)
         # and salt://pkgs.sls (or salt://pkgs/init.sls).
         salt '*' state.apply stuff,pkgs
+
+        # Run the states configured in a more deeply nested directory such as salt://my/organized/stuff.sls (or salt://my/organized/stuff/init.sls)
+        salt '*' state.apply my.organized.stuff
 
     The following additional arguments are also accepted when applying
     individual SLS files:
@@ -1176,14 +1180,13 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
         used, all Pillar environments will be merged together.
 
     localconfig
-
         Optionally, instead of using the minion config, load minion opts from
         the file specified by this argument, and then merge them with the
         options from the minion config. This functionality allows for specific
         states to be run with their own custom minion configuration, including
         different pillars, file_roots, etc.
 
-    mock:
+    mock
         The mock option allows for the state run to execute without actually
         calling any states. This then returns a mocked return which will show
         the requisite ordering as well as fully validate the state run.
@@ -1205,9 +1208,17 @@ def sls(mods, test=None, exclude=None, queue=False, sync_mods=None, **kwargs):
 
     .. code-block:: bash
 
-        salt '*' state.sls core,edit.vim dev
-        salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
+        # Run the states configured in salt://example.sls (or salt://example/init.sls)
+        salt '*' state.apply example
 
+        # Run the states configured in salt://core.sls (or salt://core/init.sls)
+        # and salt://edit/vim.sls (or salt://edit/vim/init.sls)
+        salt '*' state.sls core,edit.vim
+
+        # Run the states configured in a more deeply nested directory such as salt://my/nested/state.sls (or salt://my/nested/state/init.sls)
+        salt '*' state.sls my.nested.state
+
+        salt '*' state.sls core exclude="[{'id': 'id_to_exclude'}, {'sls': 'sls_to_exclude'}]"
         salt '*' state.sls myslsfile pillar="{foo: 'Foo!', bar: 'Bar!'}"
     '''
     concurrent = kwargs.get('concurrent', False)
@@ -1634,6 +1645,9 @@ def show_states(queue=False, **kwargs):
             raise Exception(result)
 
         for s in result:
+            if not isinstance(s, dict):
+                _set_retcode(result)
+                return result
             states[s['__sls__']] = True
     finally:
         st_.pop_active()
@@ -2386,37 +2400,37 @@ def event(tagmatch='*',
 
         salt-call --local state.event pretty=True
     '''
-    sevent = salt.utils.event.get_event(
-                 node,
-                 sock_dir or __opts__['sock_dir'],
-                 __opts__['transport'],
-                 opts=__opts__,
-                 listen=True)
+    with salt.utils.event.get_event(
+            node,
+            sock_dir or __opts__['sock_dir'],
+            __opts__['transport'],
+            opts=__opts__,
+            listen=True) as sevent:
 
-    while True:
-        ret = sevent.get_event(full=True, auto_reconnect=True)
-        if ret is None:
-            continue
+        while True:
+            ret = sevent.get_event(full=True, auto_reconnect=True)
+            if ret is None:
+                continue
 
-        if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
-            if not quiet:
-                salt.utils.stringutils.print_cli(
-                    str('{0}\t{1}').format(  # future lint: blacklisted-function
-                        salt.utils.stringutils.to_str(ret['tag']),
-                        salt.utils.json.dumps(
-                            ret['data'],
-                            sort_keys=pretty,
-                            indent=None if not pretty else 4)
+            if salt.utils.stringutils.expr_match(ret['tag'], tagmatch):
+                if not quiet:
+                    salt.utils.stringutils.print_cli(
+                        str('{0}\t{1}').format(  # future lint: blacklisted-function
+                            salt.utils.stringutils.to_str(ret['tag']),
+                            salt.utils.json.dumps(
+                                ret['data'],
+                                sort_keys=pretty,
+                                indent=None if not pretty else 4)
+                        )
                     )
-                )
-                sys.stdout.flush()
+                    sys.stdout.flush()
 
-            if count > 0:
-                count -= 1
-                log.debug('Remaining event matches: %s', count)
+                if count > 0:
+                    count -= 1
+                    log.debug('Remaining event matches: %s', count)
 
-            if count == 0:
-                break
-        else:
-            log.debug('Skipping event tag: %s', ret['tag'])
-            continue
+                if count == 0:
+                    break
+            else:
+                log.debug('Skipping event tag: %s', ret['tag'])
+                continue

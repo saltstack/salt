@@ -70,7 +70,7 @@ def run_command(jboss_config, command, fail_on_error=True):
 
         salt '*' jboss7_cli.run_command '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_command
     '''
-    cli_command_result = __call_cli(jboss_config, command)
+    cli_command_result = _call_cli(jboss_config, command)
 
     if cli_command_result['retcode'] == 0:
         cli_command_result['success'] = True
@@ -104,7 +104,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
 
         salt '*' jboss7_cli.run_operation '{"cli_path": "integration.modules.sysmod.SysModuleTest.test_valid_docs", "controller": "10.11.12.13:9999", "cli_user": "jbossadm", "cli_password": "jbossadm"}' my_operation
     '''
-    cli_command_result = __call_cli(jboss_config, operation, retries)
+    cli_command_result = _call_cli(jboss_config, operation, retries)
 
     if cli_command_result['retcode'] == 0:
         if _is_cli_output(cli_command_result['stdout']):
@@ -116,8 +116,19 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
         if _is_cli_output(cli_command_result['stdout']):
             cli_result = _parse(cli_command_result['stdout'])
             cli_result['success'] = False
+
             match = re.search(r'^(JBAS\d+):', cli_result['failure-description'])
-            cli_result['err_code'] = match.group(1)
+            # if match is None then check for wildfly error code
+            if match is None:
+                match = re.search(r'^(WFLYCTL\d+):', cli_result['failure-description'])
+
+            if match is not None:
+                cli_result['err_code'] = match.group(1)
+            else:
+                # Could not find err_code
+                log.error("Jboss 7 operation failed! Error Code could not be found!")
+                cli_result['err_code'] = '-1'
+
             cli_result['stdout'] = cli_command_result['stdout']
         else:
             if fail_on_error:
@@ -132,7 +143,7 @@ def run_operation(jboss_config, operation, fail_on_error=True, retries=1):
     return cli_result
 
 
-def __call_cli(jboss_config, command, retries=1):
+def _call_cli(jboss_config, command, retries=1):
     command_segments = [
         jboss_config['cli_path'],
         '--connect',
@@ -158,11 +169,11 @@ def __call_cli(jboss_config, command, retries=1):
     if cli_command_result['retcode'] == 1 and 'Unable to authenticate against controller' in cli_command_result['stderr']:
         raise CommandExecutionError('Could not authenticate against controller, please check username and password for the management console. Err code: {retcode}, stdout: {stdout}, stderr: {stderr}'.format(**cli_command_result))
 
-    # It may happen that eventhough server is up it may not respond to the call
+    # TODO add WFLYCTL code
     if cli_command_result['retcode'] == 1 and 'JBAS012144' in cli_command_result['stderr'] and retries > 0:  # Cannot connect to cli
         log.debug('Command failed, retrying... (%d tries left)', retries)
         time.sleep(3)
-        return __call_cli(jboss_config, command, retries - 1)
+        return _call_cli(jboss_config, command, retries - 1)
 
     return cli_command_result
 
@@ -231,7 +242,7 @@ def _parse(cli_output):
     tokens = __tokenize(cli_output)
     result = __process_tokens(tokens)
 
-    log.debug("=== RESULT: "+pprint.pformat(result))
+    log.debug("=== RESULT: %s", pprint.pformat(result))
     return result
 
 
@@ -346,7 +357,7 @@ def __is_long(token):
 
 def __get_long(token):
     if six.PY2:
-        return long(token[0:-1])  # pylint: disable=incompatible-py3-code
+        return long(token[0:-1])  # pylint: disable=incompatible-py3-code,undefined-variable
     else:
         return int(token[0:-1])
 

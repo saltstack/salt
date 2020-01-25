@@ -522,7 +522,7 @@ def _change_state(interface, new_state):
         try:
             state = service.connect() if new_state == 'up' else service.disconnect()
             return state is None
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             raise salt.exceptions.CommandExecutionError('Couldn\'t {0} service: {1}\n'
                                                         .format('enable' if new_state == 'up' else 'disable', service))
     return True
@@ -686,7 +686,7 @@ def set_dhcp_linklocal_all(interface):
     try:
         service.set_property('IPv4.Configuration', ipv4)
         service.set_property('Nameservers.Configuration', [''])  # reset nameservers list
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         exc_msg = 'Couldn\'t set dhcp linklocal for service: {0}\nError: {1}\n'.format(service, exc)
         raise salt.exceptions.CommandExecutionError(exc_msg)
     return True
@@ -850,7 +850,7 @@ def set_static_all(interface, address, netmask, gateway, nameservers):
     try:
         service.set_property('IPv4.Configuration', ipv4)
         service.set_property('Nameservers.Configuration', [dbus.String('{0}'.format(d)) for d in nameservers])
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         exc_msg = 'Couldn\'t set manual settings for service: {0}\nError: {1}\n'.format(service, exc)
         raise salt.exceptions.CommandExecutionError(exc_msg)
     return True

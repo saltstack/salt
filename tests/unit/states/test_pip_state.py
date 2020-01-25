@@ -10,14 +10,20 @@
 # Import python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
+import sys
+import subprocess
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin, SaltReturnAssertsMixin
 from tests.support.unit import skipIf, TestCase
-from tests.support.mock import NO_MOCK, NO_MOCK_REASON, MagicMock, patch
+from tests.support.mock import MagicMock, patch
+from tests.support.helpers import dedent, VirtualEnv
 
 # Import salt libs
+import salt.version
+import salt.utils.path
 import salt.states.pip_state as pip_state
+from salt.modules.virtualenv_mod import KNOWN_BINARY_NAMES
 
 # Import 3rd-party libs
 try:
@@ -30,7 +36,6 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-@skipIf(NO_MOCK, NO_MOCK_REASON)
 @skipIf(not HAS_PIP,
         'The \'pip\' library is not importable(installed system-wide)')
 class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
@@ -281,4 +286,100 @@ class PipStateTest(TestCase, SaltReturnAssertsMixin, LoaderModuleMockMixin):
             self.assertInSaltComment(
                 'successfully installed',
                 {'test': ret}
+            )
+
+
+class PipStateUtilsTest(TestCase):
+
+    def test_has_internal_exceptions_mod_function(self):
+        assert pip_state.pip_has_internal_exceptions_mod('10.0')
+        assert pip_state.pip_has_internal_exceptions_mod('18.1')
+        assert not pip_state.pip_has_internal_exceptions_mod('9.99')
+
+    def test_has_exceptions_mod_function(self):
+        assert pip_state.pip_has_exceptions_mod('1.0')
+        assert not pip_state.pip_has_exceptions_mod('0.1')
+        assert not pip_state.pip_has_exceptions_mod('10.0')
+
+    def test_pip_purge_method_with_pip(self):
+        mock_modules = sys.modules.copy()
+        mock_modules.pop('pip', None)
+        mock_modules['pip'] = object()
+        with patch('sys.modules', mock_modules):
+            pip_state.purge_pip()
+        assert 'pip' not in mock_modules
+
+    def test_pip_purge_method_without_pip(self):
+        mock_modules = sys.modules.copy()
+        mock_modules.pop('pip', None)
+        with patch('sys.modules', mock_modules):
+            pip_state.purge_pip()
+
+
+@skipIf(salt.utils.path.which_bin(KNOWN_BINARY_NAMES) is None, 'virtualenv not installed')
+class PipStateInstallationErrorTest(TestCase):
+
+    def test_importable_installation_error(self):
+        extra_requirements = []
+        for name, version in salt.version.dependency_information():
+            if name in ['PyYAML']:
+                extra_requirements.append('{}=={}'.format(name, version))
+        failures = {}
+        pip_version_requirements = [
+            # Latest pip 8
+            '<9.0',
+            # Latest pip 9
+            '<10.0',
+            # Latest pip 18
+            '<19.0',
+            # Latest pip 19
+            '<20.0',
+            # Latest pip 20
+            '<21.0',
+            # Latest pip
+            None,
+        ]
+        code = dedent('''\
+        import sys
+        import traceback
+        try:
+            import salt.states.pip_state
+            salt.states.pip_state.InstallationError
+        except ImportError as exc:
+            traceback.print_exc(exc, file=sys.stdout)
+            sys.stdout.flush()
+            sys.exit(1)
+        except AttributeError as exc:
+            traceback.print_exc(exc, file=sys.stdout)
+            sys.stdout.flush()
+            sys.exit(2)
+        except Exception as exc:
+            traceback.print_exc(exc, file=sys.stdout)
+            sys.stdout.flush()
+            sys.exit(3)
+        sys.exit(0)
+        ''')
+        for requirement in list(pip_version_requirements):
+            try:
+                with VirtualEnv() as venv:
+                    venv.install(*extra_requirements)
+                    if requirement:
+                        venv.install('pip{}'.format(requirement))
+                    try:
+                        subprocess.check_output([venv.venv_python, '-c', code])
+                    except subprocess.CalledProcessError as exc:
+                        if exc.returncode == 1:
+                            failures[requirement] = 'Failed to import pip:\n{}'.format(exc.output)
+                        elif exc.returncode == 2:
+                            failures[requirement] = 'Failed to import InstallationError from pip:\n{}'.format(exc.output)
+                        else:
+                            failures[requirement] = exc.output
+            except Exception as exc:  # pylint: disable=broad-except
+                failures[requirement] = str(exc)
+        if failures:
+            errors = ''
+            for requirement, exception in failures.items():
+                errors += 'pip{}: {}\n\n'.format(requirement or '', exception)
+            self.fail(
+                'Failed to get InstallationError exception under at least one pip version:\n{}'.format(errors)
             )

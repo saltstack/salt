@@ -11,9 +11,9 @@ import socket
 import threading
 import logging
 
-import tornado.gen
-import tornado.ioloop
-import tornado.testing
+import salt.ext.tornado.gen
+import salt.ext.tornado.ioloop
+import salt.ext.tornado.testing
 
 import salt.config
 import salt.exceptions
@@ -26,22 +26,22 @@ from salt.ext import six
 from salt.ext.six.moves import range
 
 # Import Salt Testing libs
+from tests.support.runtests import RUNTIME_VARS
 from tests.support.mock import MagicMock
-from tests.support.paths import TMP
 from tests.support.unit import skipIf
 
 log = logging.getLogger(__name__)
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
-class BaseIPCReqCase(tornado.testing.AsyncTestCase):
+class BaseIPCReqCase(salt.ext.tornado.testing.AsyncTestCase):
     '''
     Test the req server/client pair
     '''
     def setUp(self):
         super(BaseIPCReqCase, self).setUp()
         #self._start_handlers = dict(self.io_loop._handlers)
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
 
         self.server_channel = salt.transport.ipc.IPCMessageServer(
             self.socket_path,
@@ -72,7 +72,7 @@ class BaseIPCReqCase(tornado.testing.AsyncTestCase):
         del self.server_channel
         #del self._start_handlers
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def _handle_payload(self, payload, reply_func):
         self.payloads.append(payload)
         yield reply_func(payload)
@@ -174,14 +174,14 @@ class IPCMessageClient(BaseIPCReqCase):
 
 
 @skipIf(salt.utils.platform.is_windows(), 'Windows does not support Posix IPC')
-class IPCMessagePubSubCase(tornado.testing.AsyncTestCase):
+class IPCMessagePubSubCase(salt.ext.tornado.testing.AsyncTestCase):
     '''
     Test all of the clear msg stuff
     '''
     def setUp(self):
         super(IPCMessagePubSubCase, self).setUp()
         self.opts = {'ipc_write_buffer': 0}
-        self.socket_path = os.path.join(TMP, 'ipc_test.ipc')
+        self.socket_path = os.path.join(RUNTIME_VARS.TMP, 'ipc_test.ipc')
         self.pub_channel = self._get_pub_channel()
         self.sub_channel = self._get_sub_channel()
 

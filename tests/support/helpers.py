@@ -15,13 +15,13 @@
 from __future__ import absolute_import, print_function, unicode_literals
 import base64
 import errno
+import fnmatch
 import functools
 import inspect
 import logging
 import os
 import random
 import shutil
-import signal
 import socket
 import string
 import subprocess
@@ -30,33 +30,25 @@ import tempfile
 import textwrap
 import threading
 import time
-import tornado.ioloop
-import tornado.web
+import salt.ext.tornado.ioloop
+import salt.ext.tornado.web
 import types
 
 # Import 3rd-party libs
-import psutil  # pylint: disable=3rd-party-module-not-gated
 from salt.ext import six
 from salt.ext.six.moves import range, builtins  # pylint: disable=import-error,redefined-builtin
-try:
-    from pytestsalt.utils import get_unused_localhost_port  # pylint: disable=unused-import
-except ImportError:
-    from tests.integration import get_unused_localhost_port
+from pytestsalt.utils import get_unused_localhost_port
 
 # Import Salt Tests Support libs
-from tests.support.unit import skip, _id
+from tests.support.unit import skip, _id, SkipTest
 from tests.support.mock import patch
-from tests.support.paths import FILES, TMP
+from tests.support.runtests import RUNTIME_VARS
+from tests.support.sminion import create_sminion
 
 # Import Salt libs
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-
-if salt.utils.platform.is_windows():
-    import salt.utils.win_functions
-else:
-    import pwd
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +66,7 @@ def no_symlinks():
     try:
         output = subprocess.Popen(
             ['git', 'config', '--get', 'core.symlinks'],
-            cwd=TMP,
+            cwd=RUNTIME_VARS.TMP,
             stdout=subprocess.PIPE).communicate()[0]
     except OSError as exc:
         if exc.errno != errno.ENOENT:
@@ -101,6 +93,11 @@ def destructiveTest(caller):
             def test_create_user(self):
                 pass
     '''
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, '__destructive_test__', True)
+
     if inspect.isclass(caller):
         # We're decorating a class
         old_setup = getattr(caller, 'setUp', None)
@@ -135,6 +132,11 @@ def expensiveTest(caller):
             def test_create_user(self):
                 pass
     '''
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(caller, '__expensive_test__', True)
+
     if inspect.isclass(caller):
         # We're decorating a class
         old_setup = getattr(caller, 'setUp', None)
@@ -189,7 +191,7 @@ def flaky(caller=None, condition=True, attempts=4):
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
                 setattr(caller, attrname, flaky(caller=function, condition=condition, attempts=attempts))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
@@ -198,10 +200,30 @@ def flaky(caller=None, condition=True, attempts=4):
     def wrap(cls):
         for attempt in range(0, attempts):
             try:
+                if attempt > 0:
+                    # Run through setUp again
+                    # We only run it after the first iteration(>0) because the regular
+                    # test runner will have already ran setUp the first time
+                    setup = getattr(cls, 'setUp', None)
+                    if callable(setup):
+                        setup()
                 return caller(cls)
-            except Exception as exc:
+            except SkipTest as exc:
+                cls.skipTest(exc.args[0])
+            except Exception as exc:  # pylint: disable=broad-except
+                exc_info = sys.exc_info()
+                if isinstance(exc, SkipTest):
+                    six.reraise(*exc_info)
+                if not isinstance(exc, AssertionError) and log.isEnabledFor(logging.DEBUG):
+                    log.exception(exc, exc_info=exc_info)
                 if attempt >= attempts -1:
-                    raise exc
+                    # We won't try to run tearDown once the attempts are exhausted
+                    # because the regular test runner will do that for us
+                    six.reraise(*exc_info)
+                # Run through tearDown again
+                teardown = getattr(cls, 'tearDown', None)
+                if callable(teardown):
+                    teardown()
                 backoff_time = attempt ** 2
                 log.info(
                     'Found Exception. Waiting %s seconds to retry.',
@@ -301,22 +323,22 @@ class RedirectStdStreams(object):
         if self.__redirected:
             try:
                 self.__stdout.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
             try:
                 self.__stderr.flush()
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
 
-class TestsLoggingHandler(object):
+class TstSuiteLoggingHandler(object):
     '''
     Simple logging handler which can be used to test if certain logging
     messages get emitted or not:
 
     .. code-block:: python
 
-        with TestsLoggingHandler() as handler:
+        with TstSuiteLoggingHandler() as handler:
             # (...)               Do what ever you wish here
             handler.messages    # here are the emitted log messages
 
@@ -392,27 +414,6 @@ class TestsLoggingHandler(object):
             return self.handler.release()
 
 
-def relative_import(import_name, relative_from='../'):
-    '''
-    Update sys.path to include `relative_from` before importing `import_name`
-    '''
-    try:
-        return __import__(import_name)
-    except ImportError:
-        previous_frame = inspect.getframeinfo(inspect.currentframe().f_back)
-        sys.path.insert(
-            0, os.path.realpath(
-                os.path.join(
-                    os.path.abspath(
-                        os.path.dirname(previous_frame.filename)
-                    ),
-                    relative_from
-                )
-            )
-        )
-    return __import__(import_name)
-
-
 class ForceImportErrorOn(object):
     '''
     This class is meant to be used in mock'ed test cases which require an
@@ -475,10 +476,24 @@ class ForceImportErrorOn(object):
 
     def __fake_import__(self,
                         name,
-                        globals_={} if six.PY2 else None,
-                        locals_={} if six.PY2 else None,
-                        fromlist=[] if six.PY2 else (),
-                        level=-1 if six.PY2 else 0):
+                        globals_=None,
+                        locals_=None,
+                        fromlist=None,
+                        level=None):
+        if six.PY2:
+            if globals_ is None:
+                globals_ = {}
+            if locals_ is None:
+                locals_ = {}
+
+        if level is None:
+            if six.PY2:
+                level = -1
+            else:
+                level = 0
+        if fromlist is None:
+            fromlist = []
+
         if name in self.__module_names:
             importerror_fromlist = self.__module_names.get(name)
             if importerror_fromlist is None:
@@ -997,7 +1012,7 @@ class WithTempfile(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         if 'prefix' not in kwargs:
             kwargs['prefix'] = '__salt.test.'
         self.kwargs = kwargs
@@ -1028,7 +1043,7 @@ class WithTempdir(object):
     def __init__(self, **kwargs):
         self.create = kwargs.pop('create', True)
         if 'dir' not in kwargs:
-            kwargs['dir'] = TMP
+            kwargs['dir'] = RUNTIME_VARS.TMP
         self.kwargs = kwargs
 
     def __call__(self, func):
@@ -1058,23 +1073,125 @@ def requires_system_grains(func):
     @functools.wraps(func)
     def decorator(*args, **kwargs):
         if not hasattr(requires_system_grains, '__grains__'):
-            import salt.config
-            root_dir = tempfile.mkdtemp(dir=TMP)
-            defaults = salt.config.DEFAULT_MINION_OPTS.copy()
-            defaults.pop('conf_file')
-            defaults.update({
-                'root_dir': root_dir,
-                'cachedir': 'cachedir',
-                'sock_dir': 'sock',
-                'pki_dir': 'pki',
-                'log_file': 'logs/minion',
-                'pidfile': 'pids/minion.pid'
-            })
-            opts = salt.config.minion_config(None, defaults=defaults)
+            # Late import
+            from tests.support.sminion import build_minion_opts
+            opts = build_minion_opts(minion_id='runtests-internal-sminion')
             requires_system_grains.__grains__ = salt.loader.grains(opts)
-            shutil.rmtree(root_dir, ignore_errors=True)
         kwargs['grains'] = requires_system_grains.__grains__
         return func(*args, **kwargs)
+    return decorator
+
+
+@requires_system_grains
+def runs_on(grains=None, **kwargs):
+    '''
+    Skip the test if grains don't match the values passed into **kwargs
+    if a kwarg value is a list then skip if the grains don't match any item in the list
+    '''
+    def decorator(caller):
+        @functools.wraps(caller)
+        def wrapper(cls):
+            for kw, value in kwargs.items():
+                if isinstance(value, list):
+                    if not any(str(grains.get(kw)).lower() != str(v).lower() for v in value):
+                        cls.skipTest('This test does not run on {}={}'.format(kw, grains.get(kw)))
+                else:
+                    if str(grains.get(kw)).lower() != str(value).lower():
+                        cls.skipTest('This test runs on {}={}, not {}'.format(kw, value, grains.get(kw)))
+            return caller(cls)
+        return wrapper
+    return decorator
+
+
+@requires_system_grains
+def not_runs_on(grains=None, **kwargs):
+    '''
+    Reverse of `runs_on`.
+    Skip the test if any grains match the values passed into **kwargs
+    if a kwarg value is a list then skip if the grains match any item in the list
+    '''
+    def decorator(caller):
+        @functools.wraps(caller)
+        def wrapper(cls):
+            for kw, value in kwargs.items():
+                if isinstance(value, list):
+                    if any(str(grains.get(kw)).lower() == str(v).lower() for v in value):
+                        cls.skipTest('This test does not run on {}={}'.format(kw, grains.get(kw)))
+                else:
+                    if str(grains.get(kw)).lower() == str(value).lower():
+                        cls.skipTest('This test does not run on {}={}, got {}'.format(kw, value, grains.get(kw)))
+            return caller(cls)
+        return wrapper
+    return decorator
+
+
+def _check_required_sminion_attributes(sminion_attr, *required_items):
+    '''
+    :param sminion_attr: The name of the sminion attribute to check, such as 'functions' or 'states'
+    :param required_items: The items that must be part of the designated sminion attribute for the decorated test
+    :return The packages that are not available
+    '''
+    # Late import
+    from tests.support.sminion import create_sminion
+    required_salt_items = set(required_items)
+    sminion = create_sminion(minion_id='runtests-internal-sminion')
+    available_items = list(getattr(sminion, sminion_attr))
+    not_available_items = set()
+
+    name = '__not_available_{items}s__'.format(items=sminion_attr)
+    if not hasattr(sminion, name):
+        setattr(sminion, name, set())
+
+    cached_not_available_items = getattr(sminion, name)
+
+    for not_available_item in cached_not_available_items:
+        if not_available_item in required_salt_items:
+            not_available_items.add(not_available_item)
+            required_salt_items.remove(not_available_item)
+
+    for required_item_name in required_salt_items:
+        search_name = required_item_name
+        if '.' not in search_name:
+            search_name += '.*'
+        if not fnmatch.filter(available_items, search_name):
+            not_available_items.add(required_item_name)
+            cached_not_available_items.add(required_item_name)
+
+    return not_available_items
+
+
+def requires_salt_states(*names):
+    '''
+    Makes sure the passed salt state is available. Skips the test if not
+
+    .. versionadded:: 3000
+    '''
+    not_available = _check_required_sminion_attributes('states', *names)
+
+    def decorator(caller):
+        if inspect.isclass(caller):
+            # We're decorating a class
+            old_setup = getattr(caller, 'setUp', None)
+
+            def setUp(self, *args, **kwargs):
+                if not_available:
+                    raise SkipTest('Unavailable salt states: {}'.format(*not_available))
+
+                if old_setup is not None:
+                    old_setup(self, *args, **kwargs)
+
+            caller.setUp = setUp
+            return caller
+
+        # We're simply decorating functions
+        @functools.wraps(caller)
+        def wrapper(cls):
+            if not_available:
+                raise SkipTest('Unavailable salt states: {}'.format(*not_available))
+            return caller(cls)
+
+        return wrapper
+
     return decorator
 
 
@@ -1084,75 +1201,31 @@ def requires_salt_modules(*names):
 
     .. versionadded:: 0.5.2
     '''
-    def decorator(caller):
+    not_available = _check_required_sminion_attributes('functions', *names)
 
+    def decorator(caller):
         if inspect.isclass(caller):
             # We're decorating a class
             old_setup = getattr(caller, 'setUp', None)
 
             def setUp(self, *args, **kwargs):
+                if not_available:
+                    raise SkipTest('Unavailable salt modules: {}'.format(*not_available))
                 if old_setup is not None:
                     old_setup(self, *args, **kwargs)
 
-                if not hasattr(self, 'run_function'):
-                    raise RuntimeError(
-                        '{0} does not have the \'run_function\' method which '
-                        'is necessary to collect the loaded modules'.format(
-                            self.__class__.__name__
-                        )
-                    )
-
-                if not hasattr(requires_salt_modules, '__available_modules__'):
-                    requires_salt_modules.__available_modules__ = set()
-
-                _names = []
-                for name in names:
-                    if name not in requires_salt_modules.__available_modules__:
-                        _names.append(name)
-
-                if _names:
-                    not_found_modules = self.run_function('runtests_helpers.modules_available', _names)
-                    for name in _names:
-                        if name not in not_found_modules:
-                            requires_salt_modules.__available_modules__.add(name)
-                    if not_found_modules:
-                        if len(not_found_modules) == 1:
-                            self.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                        self.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
             caller.setUp = setUp
             return caller
 
         # We're simply decorating functions
         @functools.wraps(caller)
         def wrapper(cls):
-
-            if not hasattr(cls, 'run_function'):
-                raise RuntimeError(
-                    '{0} does not have the \'run_function\' method which is '
-                    'necessary to collect the loaded modules'.format(
-                        cls.__class__.__name__
-                    )
-                )
-
-            if not hasattr(requires_salt_modules, '__available_modules__'):
-                requires_salt_modules.__available_modules__ = set()
-
-            _names = []
-            for name in names:
-                if name not in requires_salt_modules.__available_modules__:
-                    _names.append(name)
-
-            if _names:
-                not_found_modules = cls.run_function('runtests_helpers.modules_available', _names)
-                for name in _names:
-                    if name not in not_found_modules:
-                        requires_salt_modules.__available_modules__.add(name)
-                if not_found_modules:
-                    if len(not_found_modules) == 1:
-                        cls.skipTest('Salt module {0!r} is not available'.format(not_found_modules[0]))
-                    cls.skipTest('Salt modules not available: {0!r}'.format(not_found_modules))
+            if not_available:
+                raise SkipTest('Unavailable salt modules: {}'.format(*not_available))
             return caller(cls)
+
         return wrapper
+
     return decorator
 
 
@@ -1190,6 +1263,11 @@ def skip_if_binaries_missing(*binaries, **kwargs):
 
 
 def skip_if_not_root(func):
+    # Late import
+    from tests.support.runtests import RUNTIME_VARS
+    if RUNTIME_VARS.PYTEST_SESSION:
+        setattr(func, '__skip_if_not_root__', True)
+
     if not sys.platform.startswith('win'):
         if os.getuid() != 0:
             func.__unittest_skip__ = True
@@ -1201,172 +1279,6 @@ def skip_if_not_root(func):
                 func.__unittest_skip__ = True
                 func.__unittest_skip_why__ = 'You must be logged in as an Administrator to run this test'
     return func
-
-
-if sys.platform.startswith('win'):
-    SIGTERM = signal.CTRL_BREAK_EVENT  # pylint: disable=no-member
-else:
-    SIGTERM = signal.SIGTERM
-
-
-def collect_child_processes(pid):
-    '''
-    Try to collect any started child processes of the provided pid
-    '''
-    # Let's get the child processes of the started subprocess
-    try:
-        parent = psutil.Process(pid)
-        if hasattr(parent, 'children'):
-            children = parent.children(recursive=True)
-        else:
-            children = []
-    except psutil.NoSuchProcess:
-        children = []
-    return children[::-1]  # return a reversed list of the children
-
-
-def _terminate_process_list(process_list, kill=False, slow_stop=False):
-    for process in process_list[:][::-1]:  # Iterate over a reversed copy of the list
-        if not psutil.pid_exists(process.pid):
-            process_list.remove(process)
-            continue
-        try:
-            if not kill and process.status() == psutil.STATUS_ZOMBIE:
-                # Zombie processes will exit once child processes also exit
-                continue
-            try:
-                cmdline = process.cmdline()
-            except psutil.AccessDenied:
-                # OSX is more restrictive about the above information
-                cmdline = None
-            except OSError:
-                cmdline = None
-            if not cmdline:
-                try:
-                    cmdline = process.as_dict()
-                except Exception:
-                    cmdline = 'UNKNOWN PROCESS'
-            if kill:
-                log.info('Killing process(%s): %s', process.pid, cmdline)
-                process.kill()
-            else:
-                log.info('Terminating process(%s): %s', process.pid, cmdline)
-                try:
-                    if slow_stop:
-                        # Allow coverage data to be written down to disk
-                        process.send_signal(SIGTERM)
-                        try:
-                            process.wait(2)
-                        except psutil.TimeoutExpired:
-                            if psutil.pid_exists(process.pid):
-                                continue
-                    else:
-                        process.terminate()
-                except OSError as exc:
-                    if exc.errno not in (errno.ESRCH, errno.EACCES):
-                        raise
-            if not psutil.pid_exists(process.pid):
-                process_list.remove(process)
-        except psutil.NoSuchProcess:
-            process_list.remove(process)
-
-
-def terminate_process_list(process_list, kill=False, slow_stop=False):
-
-    def on_process_terminated(proc):
-        log.info('Process %s terminated with exit code: %s', getattr(proc, '_cmdline', proc), proc.returncode)
-
-    # Try to terminate processes with the provided kill and slow_stop parameters
-    log.info('Terminating process list. 1st step. kill: %s, slow stop: %s', kill, slow_stop)
-
-    # Cache the cmdline since that will be inaccessible once the process is terminated
-    for proc in process_list:
-        try:
-            cmdline = proc.cmdline()
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            # OSX is more restrictive about the above information
-            cmdline = None
-        if not cmdline:
-            try:
-                cmdline = proc
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                cmdline = '<could not be retrived; dead process: {0}>'.format(proc)
-        proc._cmdline = cmdline
-    _terminate_process_list(process_list, kill=kill, slow_stop=slow_stop)
-    psutil.wait_procs(process_list, timeout=15, callback=on_process_terminated)
-
-    if process_list:
-        # If there's still processes to be terminated, retry and kill them if slow_stop is False
-        log.info('Terminating process list. 2nd step. kill: %s, slow stop: %s', slow_stop is False, slow_stop)
-        _terminate_process_list(process_list, kill=slow_stop is False, slow_stop=slow_stop)
-        psutil.wait_procs(process_list, timeout=10, callback=on_process_terminated)
-
-    if process_list:
-        # If there's still processes to be terminated, just kill them, no slow stopping now
-        log.info('Terminating process list. 3rd step. kill: True, slow stop: False')
-        _terminate_process_list(process_list, kill=True, slow_stop=False)
-        psutil.wait_procs(process_list, timeout=5, callback=on_process_terminated)
-
-    if process_list:
-        # In there's still processes to be terminated, log a warning about it
-        log.warning('Some processes failed to properly terminate: %s', process_list)
-
-
-def terminate_process(pid=None, process=None, children=None, kill_children=False, slow_stop=False):
-    '''
-    Try to terminate/kill the started processe
-    '''
-    children = children or []
-    process_list = []
-
-    def on_process_terminated(proc):
-        if proc.returncode:
-            log.info('Process %s terminated with exit code: %s', getattr(proc, '_cmdline', proc), proc.returncode)
-        else:
-            log.info('Process %s terminated', getattr(proc, '_cmdline', proc))
-
-    if pid and not process:
-        try:
-            process = psutil.Process(pid)
-            process_list.append(process)
-        except psutil.NoSuchProcess:
-            # Process is already gone
-            process = None
-
-    if kill_children:
-        if process:
-            if not children:
-                children = collect_child_processes(process.pid)
-            else:
-                # Let's collect children again since there might be new ones
-                children.extend(collect_child_processes(pid))
-        if children:
-            process_list.extend(children)
-
-    if process_list:
-        if process:
-            log.info('Stopping process %s and respective children: %s', process, children)
-        else:
-            log.info('Terminating process list: %s', process_list)
-        terminate_process_list(process_list, kill=slow_stop is False, slow_stop=slow_stop)
-        if process and psutil.pid_exists(process.pid):
-            log.warning('Process left behind which we were unable to kill: %s', process)
-
-
-def terminate_process_pid(pid, only_children=False):
-    children = []
-    process = None
-
-    # Let's begin the shutdown routines
-    try:
-        process = psutil.Process(pid)
-        children = collect_child_processes(pid)
-    except psutil.NoSuchProcess:
-        log.info('No process with the PID %s was found running', pid)
-
-    if only_children:
-        return terminate_process(children=children, kill_children=True, slow_stop=True)
-    return terminate_process(pid=pid, process=process, children=children, kill_children=True, slow_stop=True)
 
 
 def repeat(caller=None, condition=True, times=5):
@@ -1400,7 +1312,7 @@ def repeat(caller=None, condition=True, times=5):
                 if not inspect.isfunction(function) and not inspect.ismethod(function):
                     continue
                 setattr(caller, attrname, repeat(caller=function, condition=condition, times=times))
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
                 continue
         return caller
@@ -1408,7 +1320,7 @@ def repeat(caller=None, condition=True, times=5):
     @functools.wraps(caller)
     def wrap(cls):
         result = None
-        for attempt in range(1, times+1):
+        for attempt in range(1, times + 1):
             log.info('%s test run %d of %s times', cls, attempt, times)
             caller(cls)
         return cls
@@ -1424,7 +1336,7 @@ def http_basic_auth(login_cb=lambda username, password: False):
     .. code-block:: python
 
         @http_basic_auth(lambda u, p: u == 'foo' and p == 'bar')
-        class AuthenticatedHandler(tornado.web.RequestHandler):
+        class AuthenticatedHandler(salt.ext.tornado.web.RequestHandler):
             pass
     '''
     def wrapper(handler_class):
@@ -1528,7 +1440,7 @@ class Webserver(object):
             raise ValueError('port must be an integer')
 
         if root is None:
-            root = os.path.join(FILES, 'file', 'base')
+            root = RUNTIME_VARS.BASE_FILES
         try:
             self.root = os.path.realpath(root)
         except AttributeError:
@@ -1538,17 +1450,21 @@ class Webserver(object):
         self.wait = wait
         self.handler = handler \
             if handler is not None \
-            else tornado.web.StaticFileHandler
+            else salt.ext.tornado.web.StaticFileHandler
         self.web_root = None
 
     def target(self):
         '''
         Threading target which stands up the tornado application
         '''
-        self.ioloop = tornado.ioloop.IOLoop()
+        self.ioloop = salt.ext.tornado.ioloop.IOLoop()
         self.ioloop.make_current()
-        self.application = tornado.web.Application(
-            [(r'/(.*)', self.handler, {'path': self.root})])
+        if self.handler == salt.ext.tornado.web.StaticFileHandler:
+            self.application = salt.ext.tornado.web.Application(
+                [(r'/(.*)', self.handler, {'path': self.root})])
+        else:
+            self.application = salt.ext.tornado.web.Application(
+                [(r'/(.*)', self.handler)])
         self.application.listen(self.port)
         self.ioloop.start()
 
@@ -1611,37 +1527,42 @@ class Webserver(object):
         self.server_thread.join()
 
 
-def win32_kill_process_tree(pid, sig=signal.SIGTERM, include_parent=True,
-        timeout=None, on_terminate=None):
+class SaveRequestsPostHandler(salt.ext.tornado.web.RequestHandler):
     '''
-    Kill a process tree (including grandchildren) with signal "sig" and return
-    a (gone, still_alive) tuple.  "on_terminate", if specified, is a callabck
-    function which is called as soon as a child terminates.
+    Save all requests sent to the server.
     '''
-    if pid == os.getpid():
-        raise RuntimeError("I refuse to kill myself")
-    try:
-        parent = psutil.Process(pid)
-    except psutil.NoSuchProcess:
-        log.debug("PID not found alive: %d", pid)
-        return ([], [])
-    children = parent.children(recursive=True)
-    if include_parent:
-        children.append(parent)
-    for p in children:
-        p.send_signal(sig)
-    gone, alive = psutil.wait_procs(children, timeout=timeout,
-                                    callback=on_terminate)
-    return (gone, alive)
+    received_requests = []
+
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        self.received_requests.append(self.request)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
 
 
-def this_user():
+class MirrorPostHandler(salt.ext.tornado.web.RequestHandler):
     '''
-    Get the user associated with the current process.
+    Mirror a POST body back to the client
     '''
-    if salt.utils.platform.is_windows():
-        return salt.utils.win_functions.get_current_user(with_domain=False)
-    return pwd.getpwuid(os.getuid())[0]
+    def post(self, *args):  # pylint: disable=arguments-differ
+        '''
+        Handle the post
+        '''
+        body = self.request.body
+        log.debug('Incoming body: %s  Incoming args: %s', body, args)
+        self.write(body)
+
+    def data_received(self):  # pylint: disable=arguments-differ
+        '''
+        Streaming not used for testing
+        '''
+        raise NotImplementedError()
 
 
 def dedent(text, linesep=os.linesep):
@@ -1656,3 +1577,103 @@ def dedent(text, linesep=os.linesep):
     if not isinstance(text, six.text_type):
         return salt.utils.stringutils.to_bytes(clean_text)
     return clean_text
+
+
+class PatchedEnviron(object):
+
+    def __init__(self, **kwargs):
+        self.cleanup_keys = kwargs.pop('__cleanup__', ())
+        self.kwargs = kwargs
+        self.original_environ = None
+
+    def __enter__(self):
+        self.original_environ = os.environ.copy()
+        for key in self.cleanup_keys:
+            os.environ.pop(key, None)
+
+        # Make sure there are no unicode characters in the self.kwargs if we're
+        # on Python 2. These are being added to `os.environ` and causing
+        # problems
+        if sys.version_info < (3,):
+            kwargs = self.kwargs.copy()
+            clean_kwargs = {}
+            for k in self.kwargs:
+                key = k
+                if isinstance(key, six.text_type):
+                    key = key.encode('utf-8')
+                if isinstance(self.kwargs[k], six.text_type):
+                    kwargs[k] = kwargs[k].encode('utf-8')
+                clean_kwargs[key] = kwargs[k]
+            self.kwargs = clean_kwargs
+
+        os.environ.update(**self.kwargs)
+        return self
+
+    def __exit__(self, *args):
+        os.environ.clear()
+        os.environ.update(self.original_environ)
+
+
+patched_environ = PatchedEnviron
+
+
+class VirtualEnv(object):
+    def __init__(self, venv_dir=None):
+        self.venv_dir = venv_dir or tempfile.mkdtemp(dir=RUNTIME_VARS.TMP)
+        if salt.utils.platform.is_windows():
+            self.venv_python = os.path.join(self.venv_dir, 'Scripts', 'python.exe')
+        else:
+            self.venv_python = os.path.join(self.venv_dir, 'bin', 'python')
+
+    def __enter__(self):
+        try:
+            self._create_virtualenv()
+        except subprocess.CalledProcessError:
+            raise AssertionError('Failed to create virtualenv')
+        return self
+
+    def __exit__(self, *args):
+        shutil.rmtree(self.venv_dir, ignore_errors=True)
+
+    def install(self, *args):
+        subprocess.check_call(
+            [self.venv_python, '-m', 'pip', 'install'] + list(args)
+        )
+
+    def _get_real_python(self):
+        '''
+        The reason why the virtualenv creation is proxied by this function is mostly
+        because under windows, we can't seem to properly create a virtualenv off of
+        another virtualenv(we can on linux) and also because, we really don't want to
+        test virtualenv creation off of another virtualenv, we want a virtualenv created
+        from the original python.
+        Also, on windows, we must also point to the virtualenv binary outside the existing
+        virtualenv because it will fail otherwise
+        '''
+        try:
+            if salt.utils.platform.is_windows():
+                return os.path.join(sys.real_prefix, os.path.basename(sys.executable))
+            else:
+                python_binary_names = [
+                    'python{}.{}'.format(*sys.version_info),
+                    'python{}'.format(*sys.version_info),
+                    'python'
+                ]
+                for binary_name in python_binary_names:
+                    python = os.path.join(sys.real_prefix, 'bin', binary_name)
+                    if os.path.exists(python):
+                        break
+                else:
+                    raise AssertionError(
+                        'Couldn\'t find a python binary name under \'{}\' matching: {}'.format(
+                            os.path.join(sys.real_prefix, 'bin'),
+                            python_binary_names
+                        )
+                    )
+                return python
+        except AttributeError:
+            return sys.executable
+
+    def _create_virtualenv(self):
+        sminion = create_sminion()
+        sminion.functions.virtualenv.create(self.venv_dir, python=self._get_real_python())

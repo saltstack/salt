@@ -90,3 +90,19 @@ class DecoratorTest(ModuleCase):
             ret,
             "'runtests_decorators.command_failure_nonzero_retcode_false' is not available."
         )
+
+    def test_versioned_depend_insufficient(self):
+        self.assertIn(
+            'is not available',
+            self.run_function('runtests_decorators.version_depends_false')
+        )
+
+    def test_versioned_depend_sufficient(self):
+        self.assertTrue(
+            self.run_function('runtests_decorators.version_depends_true')
+        )
+
+    def test_versioned_depend_versionless(self):
+        self.assertTrue(
+            self.run_function('runtests_decorators.version_depends_versionless_true')
+        )

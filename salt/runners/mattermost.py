@@ -180,9 +180,9 @@ def post_event(event,
     message = 'tag: {0}\r\n'.format(event['tag'])
     for key, value in six.iteritems(event['data']):
         message += '{0}: {1}\r\n'.format(key, value)
-    result = post_message(channel,
-                          username,
-                          message,
-                          api_url,
-                          hook)
+    result = post_message(message,
+                          channel=channel,
+                          username=username,
+                          api_url=api_url,
+                          hook=hook)
     return bool(result)
