@@ -350,7 +350,8 @@ def _post_message(webhook, author_icon, title, report):
     webhook_url = _urljoin('https://hooks.slack.com/services/', webhook)
     query_result = salt.utils.http.query(webhook_url, 'POST', data=data)
 
-    if query_result.get('body', 'failed') == 'ok' and query_result.get('status', 0) == 200:
+    # Sometimes the status is not available, so status 200 is assumed when it is not present
+    if query_result.get('body', 'failed') == 'ok' and query_result.get('status', 200) == 200:
         return True
     else:
         log.error('Slack incoming webhook message post result: %s', query_result)
