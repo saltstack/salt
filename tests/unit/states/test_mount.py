@@ -451,17 +451,13 @@ class MountTestCase(TestCase, LoaderModuleMockMixin):
         '''
         Test to verify that a device is mounted.
         '''
-        name = os.path.realpath('/mnt/nfs1')
+        name = '/mnt/nfs1'
         device = 'localhost:/mnt/nfsshare'
         fstype = 'nfs4'
 
-        name2 = os.path.realpath('/mnt/nfs2')
+        name2 = '/mnt/nfs2'
         device2 = 'localhost:/mnt/nfsshare'
         fstype2 = 'nfs4'
-
-        name3 = os.path.realpath('/mnt/glusterfs1')
-        device3 = 'localhost:/mnt/gluster_share'
-        fstype3 = 'glusterfs'
 
         ret = {'name': name,
                'result': False,
