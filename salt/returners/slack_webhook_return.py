@@ -2,7 +2,7 @@
 '''
 Return salt data via Slack using Incoming Webhooks
 
-:codeauthor: :email:`Carlos D. Álvaro <github@cdalvaro.io>`
+:codeauthor: `Carlos D. Álvaro <github@cdalvaro.io>`
 
 The following fields can be set in the minion conf file:
 
