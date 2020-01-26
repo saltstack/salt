@@ -21,7 +21,7 @@ import jinja2
 import yaml
 import msgpack
 import salt.ext.six as _six
-import tornado
+import salt.ext.tornado as tornado
 
 try:
     import zlib
