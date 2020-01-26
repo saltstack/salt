@@ -39,11 +39,9 @@ from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
+# inet_pton does not exist in Windows, this is a workaround
 if salt.utils.platform.is_windows():
-    # inet_pton does not exist in Windows, this is a workaround
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
-    # Attempt to import win_network
-    import salt.utils.win_network
 
 log = logging.getLogger(__name__)
 
