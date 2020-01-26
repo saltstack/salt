@@ -649,9 +649,13 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     name
         The name of the package, e.g., 'tmux'
-        CLI Example:
-        .. code-block:: bash
-            salt '*' pkg.hold <package name>
+
+    CLI Example:
+
+     .. code-block:: bash
+
+        salt '*' pkg.hold <package name>
+
     pkgs
         A list of packages to hold. Must be passed as a python list.
 
@@ -728,9 +732,13 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     name
         The name of the package, e.g., 'tmux'
-        CLI Example:
-        .. code-block:: bash
-            salt '*' pkg.unhold <package name>
+
+     CLI Example:
+
+     .. code-block:: bash
+
+        salt '*' pkg.unhold <package name>
+
     pkgs
         A list of packages to unhold. Must be passed as a python list.
 
