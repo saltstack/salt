@@ -14,6 +14,7 @@ The following fields can be set in the minion conf file:
     slack_webhook.author_icon (optional, a URL that with a small 16x16px image. Must be of type: GIF, JPEG, PNG, and BMP)
     slack_webhook.show_tasks (optional, show identifiers for changed and failed tasks. By default: False)
 
+
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
