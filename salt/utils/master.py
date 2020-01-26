@@ -352,6 +352,8 @@ class MasterPillarUtil(object):
         minion_pillars = {}
         minion_grains = {}
         minion_ids = self._tgt_to_list()
+        if self.tgt and not minion_ids:
+            return {}
         if any(arg for arg in [self.use_cached_grains, self.use_cached_pillar, self.grains_fallback, self.pillar_fallback]):
             log.debug('Getting cached minion data')
             cached_minion_grains, cached_minion_pillars = self._get_cached_minion_data(*minion_ids)
