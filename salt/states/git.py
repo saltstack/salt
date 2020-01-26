@@ -13,7 +13,6 @@ States to manage git repositories and git configuration
 from __future__ import absolute_import, print_function, unicode_literals
 
 # Import python libs
-import copy
 import errno
 import logging
 import os

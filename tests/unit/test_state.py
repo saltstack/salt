@@ -154,12 +154,12 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             with patch('os.path.exists') as path_mock:
                 path_mock.return_value = True
-                expected_result =  {'comment': '/tmp/thing exists', 'result': True, 'skip_watch': True}
+                expected_result = {'comment': '/tmp/thing exists', 'result': True, 'skip_watch': True}
                 return_result = state_obj._run_check_creates(low_data)
                 self.assertEqual(expected_result, return_result)
 
                 path_mock.return_value = False
-                expected_result =  {'comment': 'Creates files not found', 'result': False}
+                expected_result = {'comment': 'Creates files not found', 'result': False}
                 return_result = state_obj._run_check_creates(low_data)
                 self.assertEqual(expected_result, return_result)
 
@@ -179,15 +179,14 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             state_obj = salt.state.State(minion_opts)
             with patch('os.path.exists') as path_mock:
                 path_mock.return_value = True
-                expected_result =  {'comment': 'All files in creates exist', 'result': True, 'skip_watch': True}
+                expected_result = {'comment': 'All files in creates exist', 'result': True, 'skip_watch': True}
                 return_result = state_obj._run_check_creates(low_data)
                 self.assertEqual(expected_result, return_result)
 
                 path_mock.return_value = False
-                expected_result =  {'comment': 'Creates files not found', 'result': False}
+                expected_result = {'comment': 'Creates files not found', 'result': False}
                 return_result = state_obj._run_check_creates(low_data)
                 self.assertEqual(expected_result, return_result)
-
 
     def _expand_win_path(self, path):
         """
@@ -234,6 +233,27 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             minion_opts = self.get_temp_config('minion')
             state_obj = salt.state.State(minion_opts)
             return_result = state_obj._run_check_onlyif(low_data, '')
+            self.assertEqual(expected_result, return_result)
+
+    def test_verify_onlyif_list_cmd(self, name):
+        low_data = {
+            "state": "cmd",
+            "name": "echo \"something\"",
+            "__sls__": "tests.cmd",
+            "__env__": "base",
+            "__id__": "check onlyif",
+            "onlyif": [
+                "/bin/true",
+                "/bin/false"
+            ],
+            "order": 10001,
+            "fun": "run"
+        }
+        expected_result = {'comment': 'onlyif condition is false', 'result': True, 'skip_watch': True}
+        with patch('salt.state.State._gather_pillar') as state_patch:
+            minion_opts = self.get_temp_config('minion')
+            state_obj = salt.state.State(minion_opts)
+            return_result = state_obj._run_check_onlyif(low_data, {})
             self.assertEqual(expected_result, return_result)
 
     @with_tempfile()

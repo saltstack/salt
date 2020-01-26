@@ -922,7 +922,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.assertFalse(ret['changes'])
             self.assertTrue(
                 ret['comment'].startswith(
-                    'onlyif command /bin/false returned exit code of'
+                    'onlyif condition is false'
                 )
             )
             self.run_function('docker.rm', [name], force=True)
@@ -965,7 +965,7 @@ class DockerContainerTestCase(ModuleCase, SaltReturnAssertsMixin):
             self.assertFalse(ret['changes'])
             self.assertEqual(
                 ret['comment'],
-                'unless command /bin/true returned exit code of 0'
+                'unless condition is true'
             )
             self.run_function('docker.rm', [name], force=True)
 
