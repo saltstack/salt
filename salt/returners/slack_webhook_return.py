@@ -226,9 +226,9 @@ def _generate_payload(author_icon, title, report):
     return payload
 
 
-def _process_returns(returns):
+def _process_state(returns):
     '''
-    Process returns
+    Process the received output state
     :param returns A dictionary with the returns of the recipe
     :return A dictionary with Unchanges, Changed and Failed tasks
     '''
@@ -286,6 +286,18 @@ def _process_returns(returns):
     }
 
 
+def _state_return(ret):
+    '''
+    Return True if ret is a Salt state return
+    :param ret: The Salt return
+    '''
+    ret_data = ret.get('return')
+    if not isinstance(ret_data, dict):
+        return False
+
+    return ret_data and '__id__' in next(iter(ret_data.values()))
+
+
 def _generate_report(ret, show_tasks):
     '''
     Generate a report of the Salt function
@@ -302,16 +314,19 @@ def _generate_report(ret, show_tasks):
         'jid': ret.get('jid')
     }
 
-    returns = ret.get('return')
-    if isinstance(returns, dict):
-        returns = _process_returns(returns)
+    ret_return = ret.get('return')
+    if _state_return(ret):
+        ret_return = _process_state(ret_return)
         if not show_tasks:
-            del returns[CHANGED_KEY][TASKS_KEY]
-            del returns[FAILED_KEY][TASKS_KEY]
+            del ret_return[CHANGED_KEY][TASKS_KEY]
+            del ret_return[FAILED_KEY][TASKS_KEY]
+    elif isinstance(ret_return, dict):
+        ret_return = {'return': '\n{}'.format(
+            salt.utils.yaml.safe_dump(ret_return, indent=2))}
     else:
-        returns = {'return': returns}
+        ret_return = {'return': ret_return}
 
-    report.update(returns)
+    report.update(ret_return)
 
     return report
 
