@@ -643,8 +643,10 @@ def _fix_cask_namespace(name=None, pkgs=None):
 
 def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
-    .. versionadded:: Sodium
     Set package in 'hold' state, meaning it will not be upgraded.
+
+    .. versionadded:: Sodium
+
     name
         The name of the package, e.g., 'tmux'
         CLI Example:
@@ -652,9 +654,12 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
             salt '*' pkg.hold <package name>
     pkgs
         A list of packages to hold. Must be passed as a python list.
-        CLI Example:
-        .. code-block:: bash
-            salt '*' pkg.hold pkgs='["foo", "bar"]'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.hold pkgs='["foo", "bar"]'
     '''
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
@@ -716,9 +721,11 @@ pin = hold
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     '''
-    .. versionadded:: Sodium
     Set package current in 'hold' state to install state,
     meaning it will be upgraded.
+
+    .. versionadded:: Sodium
+
     name
         The name of the package, e.g., 'tmux'
         CLI Example:
@@ -726,9 +733,12 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
             salt '*' pkg.unhold <package name>
     pkgs
         A list of packages to unhold. Must be passed as a python list.
-        CLI Example:
-        .. code-block:: bash
-            salt '*' pkg.unhold pkgs='["foo", "bar"]'
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.unhold pkgs='["foo", "bar"]'
     '''
     if not name and not pkgs and not sources:
         raise SaltInvocationError(
