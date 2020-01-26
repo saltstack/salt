@@ -1969,9 +1969,8 @@ class State(object):
             # that's not found in cdata, we look for what we're being passed in
             # the original data, namely, the special dunder __env__. If that's
             # not found we default to 'base'
-            if ('unless' in low and '{0[state]}.mod_run_check'.format(low) not in self.states) or \
-                    ('onlyif' in low and '{0[state]}.mod_run_check'.format(low) not in self.states) or \
-                    ('creates' in low and '{0[state]}.mod_run_check'.format(low) not in self.states):
+            req_list = ('unless', 'onlyif', 'creates')
+            if (any(req in low for req in req_list) and '{0[state]}.mod_run_check'.format(low) not in self.states):
                 ret.update(self._run_check(low))
 
             if not self.opts.get('lock_saltenv', False):
