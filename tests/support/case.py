@@ -739,18 +739,26 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
     Execute a module function
     '''
 
-    def wait_for_all_jobs(self, minions=('minion', 'sub_minion',), sleep=.3):
+    def wait_for_all_jobs(self, minions=('minion', 'sub_minion',), master_tgt=None, sleep=.3):
         '''
         Wait for all jobs currently running on the list of minions to finish
         '''
         for minion in minions:
             while True:
-                ret = self.run_function('saltutil.running', minion_tgt=minion, timeout=300)
+                ret = self.run_function('saltutil.running', minion_tgt=minion, master_tgt=master_tgt, timeout=300)
                 if ret:
                     log.debug('Waiting for minion\'s jobs: %s', minion)
                     time.sleep(sleep)
                 else:
                     break
+
+    def wait_for_event(self, opts, wait=5, tag=''):
+        import salt.config
+        import salt.utils.event
+
+        event = salt.utils.event.get_event('master', sock_dir=opts['sock_dir'], opts=opts)
+        data = event.get_event(wait=wait, tag=tag, full=False)
+        return data
 
     def minion_run(self, _function, *args, **kw):
         '''
@@ -856,8 +864,7 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
     '''
     Execute a module function
     '''
-
-    def run_function(self, function, arg=(), minion_tgt='mm-minion', timeout=300, master_tgt='mm-master', **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='mm-minion', timeout=300, master_tgt='mm-master', asynchronous=False, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
@@ -882,16 +889,25 @@ class MultimasterModuleCase(ModuleCase, SaltMultimasterClientTestCaseMixin):
             client = self.clients[list(self.clients)[master_tgt]]
         else:
             client = self.clients[master_tgt]
-        orig = client.cmd(minion_tgt,
-                          function,
-                          arg,
-                          timeout=timeout,
-                          kwarg=kwargs)
+        if asynchronous:
+            orig = client.cmd_async(minion_tgt,
+                                    function,
+                                    arg,
+                                    kwarg=kwargs)
+        else:
+            orig = client.cmd(minion_tgt,
+                              function,
+                              arg,
+                              timeout=timeout,
+                              kwarg=kwargs)
 
         if RUNTIME_VARS.PYTEST_SESSION:
             fail_or_skip_func = self.fail
         else:
             fail_or_skip_func = self.skipTest
+
+        if asynchronous is True and isinstance(orig, str):
+            orig = {minion_tgt: orig}
 
         if minion_tgt not in orig:
             fail_or_skip_func(

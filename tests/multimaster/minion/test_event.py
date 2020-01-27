@@ -8,6 +8,7 @@ from tests.support.case import MultimasterModuleCase, MultiMasterTestShellCase
 from tests.support.helpers import skip_if_not_root, destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
+import time
 
 import salt.modules.iptables
 HAS_IPTABLES = salt.modules.iptables.__virtual__()
@@ -73,5 +74,87 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
                     'event.send',
                     ('myco/foo/bar',),
                     master_tgt='mm-master',
+                    )
+            self.assertTrue(res)
+
+    def test_master_return_strategy(self):
+        '''
+        Test minion config master_return_strategy.
+        '''
+        # GIVEN two masters, mm-master and mm-sub-master,
+        # and two minions, mm-minion and mm-sub-minion
+        # mm-minion: master_return_strategy = 'source'
+        # mm-sub-minion: master_return_strategy = 'any'
+
+        # WHEN a job is sent from one master to both minions and then the connection to that master
+        # is severed before the job returns
+        # sync_all is run from mm-master on start so we stop mm-sub-master
+        disconnect_master_rule = '-i lo -p tcp --dport {0} -j DROP'.format(
+                self.mm_sub_master_opts['ret_port'])
+        return_source_jid = self.run_function(
+            'test.sleep',
+            ['2'],
+            minion_tgt='mm-minion',
+            master_tgt='mm-sub-master',
+            asynchronous=True,
+        )
+        return_any_jid = self.run_function(
+            'test.sleep',
+            ['2'],
+            minion_tgt='mm-sub-minion',
+            master_tgt='mm-sub-master',
+            asynchronous=True,
+        )
+        # Give the job time to start then disconnect the master
+        time.sleep(.5)
+        res = self.run_function(
+            'iptables.append',
+            ('filter', 'INPUT', disconnect_master_rule),
+            master_tgt='mm-master',
+        )
+        # Workaround slow beacons.list_available response
+        if not res:
+            res = self.run_function(
+                'iptables.append',
+                ('filter', 'INPUT', disconnect_master_rule),
+                master_tgt='mm-master',
+            )
+        self.assertTrue(res)
+
+        # THEN the result from mm-sub-minion with master_return_strategy of any will arrive on
+        # mm-master whereas the result from mm-minion with master_return_strategy of source will
+        # not
+        tag='salt/job/{0}/ret/mm-sub-minion'.format(return_any_jid)
+        try:
+            ret_event = self.wait_for_event(
+                self.mm_master_opts,
+                wait=10,
+                tag=tag
+            )
+            self.assertIsNotNone(ret_event)
+
+            return_source_res = self.run_run(
+                'jobs.lookup_jid {0} --out txt'.format(return_source_jid),
+                config_dir=self.mm_master_opts['config_dir']
+            )
+            return_any_res = self.run_run(
+                'jobs.lookup_jid {0} --out txt'.format(return_any_jid),
+                config_dir=self.mm_master_opts['config_dir']
+            )
+            self.assertEqual([], return_source_res)
+            self.assertIn('True', return_any_res[0])
+        finally:
+            # Remove the firewall rule taking master online back.
+            # Since minion could be not responsive now use `salt-call --local` for this.
+            res = self.run_call(
+                    "iptables.delete filter INPUT rule='{0}'".format(disconnect_master_rule),
+                    local=True,
+                    timeout=30)
+            self.assertEqual(res, ['local:'])
+            # Ensure the master is back.
+            res = self.run_function(
+                    'event.send',
+                    ('myco/foo/bar',),
+                    master_tgt='mm-sub-master',
                     )
             self.assertTrue(res)

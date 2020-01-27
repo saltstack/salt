@@ -2423,7 +2423,12 @@ class Minion(MinionBase):
                 log.debug('Forwarding master event tag=%s', data['tag'])
                 self._fire_master(data['data'], data['tag'], data['events'], data['pretag'], sync=False)
         elif tag.startswith('master_return'):
-            log.debug('Returning results for jid=%s to %s', data.get('jid'), self.opts['master'])
+            log.debug(
+                'Returning results for jid=%s to %s:%s',
+                data.get('jid'),
+                self.opts['master'],
+                self.opts['master_port']
+            )
             self._return_pub(data)
         elif tag.startswith(master_event(type='disconnected')) or tag.startswith(master_event(type='failback')):
             # if the master disconnect event is for a different master, raise an exception
