@@ -389,6 +389,7 @@ from salt.ext import six
 import salt.utils.data
 import salt.utils.jinja
 import salt.utils.yaml
+from salt.utils.environment import globgrep_environments
 
 log = logging.getLogger(__name__)
 strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
@@ -397,20 +398,30 @@ strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     stack = {}
     stack_config_files = list(args)
+    pillarenv =  __opts__['pillarenv'] or 'base'
     traverse = {
         'pillar': functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
         'grains': functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
         'opts': functools.partial(salt.utils.data.traverse_dict_and_list, __opts__),
         }
+    log.debug('JRK ext_pillar pillarenv = %s ', pillarenv)
     for matcher, matchs in six.iteritems(kwargs):
-        t, matcher = matcher.split(':', 1)
-        if t not in traverse:
-            raise Exception('Unknown traverse option "{0}", '
-                            'should be one of {1}'.format(t, traverse.keys()))
-        cfgs = matchs.get(traverse[t](matcher, None), [])
+        log.debug('JRK ext_pillar matcher=%s matchs=%s',matcher, matchs)
+        if matcher == 'pillarenv':
+            cfgs = []
+            for glob_env in globgrep_environments(matchs, pillarenv):
+                cfgs += matchs[glob_env] if isinstance(matchs[glob_env], list) \
+                                         else [matchs[glob_env]]
+        else:
+            t, matcher = matcher.split(':', 1)
+            if t not in traverse:
+                raise Exception('Unknown traverse option "{0}", '
+                                'should be one of {1}'.format(t, traverse.keys()))
+            cfgs = matchs.get(traverse[t](matcher, None), [])
         if not isinstance(cfgs, list):
             cfgs = [cfgs]
-        stack_config_files += cfgs
+        log.debug('JRK ext_pillar cfgs = %s ', cfgs)
+        stack_config_files += [cfg.replace("__env__", pillarenv) for cfg in cfgs]
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
             log.info(
@@ -438,6 +449,7 @@ def _process_stack_cfg(cfg, stack, minion_id, pillar):
             },
         "minion_id": minion_id,
         "pillar": pillar,
+        "pillarenv":  __opts__['pillarenv']
         })
     for item in _parse_stack_cfg(
             jenv.get_template(filename).render(stack=stack)):
