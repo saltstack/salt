@@ -383,7 +383,7 @@ class PillarTestCase(TestCase):
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='dev')
         self.assertEqual(pillar.opts['pillar_roots'],
-                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/__env__']})
+                         {'base': ['/srv/pillar/base'], 'dev': ['/srv/pillar/dev']})
 
     def test_ignored_dynamic_pillarenv(self):
         opts = {
@@ -397,7 +397,8 @@ class PillarTestCase(TestCase):
             'extension_modules': '',
         }
         pillar = salt.pillar.Pillar(opts, {}, 'mocked-minion', 'base', pillarenv='base')
-        self.assertEqual(pillar.opts['pillar_roots'], {'base': ['/srv/pillar/base']})
+        self.assertEqual(pillar.opts['pillar_roots'],
+            {'__env__': ['/srv/pillar/__env__'], 'base': ['/srv/pillar/base']})
 
     @patch('salt.fileclient.Client.list_states')
     def test_malformed_pillar_sls(self, mock_list_states):
