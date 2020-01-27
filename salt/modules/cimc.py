@@ -317,7 +317,7 @@ def get_dns_servers():
         response['preferred'] = ret['outConfigs']['mgmtIf'][0]['dnsPreferred']
         response['alternate'] = ret['outConfigs']['mgmtIf'][0]['dnsAlternate']
         return response
-    except Exception:
+    except Exception: # pylint: disable=broad-except
         return "Unable to retrieve DNS Servers"
 
 
@@ -843,7 +843,7 @@ def set_dns_servers(preferred=None, alternate=None):
             return True
         else:
             return False
-    except Exception:
+    except Exception: # pylint: disable=broad-except
         return False
 
 
