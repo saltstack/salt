@@ -51,6 +51,7 @@ value to ``etcd``:
 from __future__ import absolute_import, print_function, unicode_literals
 import logging
 import base64
+import datetime
 try:
     import etcd
     HAS_ETCD = True
@@ -69,6 +70,7 @@ if HAS_ETCD:
 log = logging.getLogger(__name__)
 client = None
 path_prefix = None
+cache = None
 
 # Module properties
 
@@ -118,6 +120,26 @@ def _init_client():
         log.info("etcd: Creating dir %r", path_prefix)
         client.write(path_prefix, None, dir=True)
 
+def _cache_update(bank):
+    '''
+    Update the key cache.
+    '''
+    global cache
+    if cache is None or cache['last_update'] < datetime.datetime.now() - datetime.timedelta(seconds = 5):
+        _init_client()
+        etcd_key = '{0}/{1}'.format(path_prefix, bank.split('/')[0])
+        try:
+            data = client.read(etcd_key, recursive = True)
+            cache = {'last_update': datetime.datetime.now()}
+            cache['data'] = {}
+            for leave in data.leaves:
+                cache['data'][leave.key] = leave.value
+        except Exception as exc:
+            raise SaltCacheError(
+                'There was an error caching the key, {0}: {1}'.format(
+                    etcd_key, exc
+                )
+            )
 
 def store(bank, key, data):
     '''
@@ -138,19 +160,11 @@ def fetch(bank, key):
     '''
     Fetch a key value.
     '''
-    _init_client()
-    etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
+    _cache_update(bank)
     try:
-        value = client.read(etcd_key).value
-        return __context__['serial'].loads(base64.b64decode(value))
-    except etcd.EtcdKeyNotFound:
+        return __context__['serial'].loads(base64.b64decode(cache['data']['{0}/{1}/{2}'.format(path_prefix, bank, key)]))
+    except KeyError:
         return {}
-    except Exception as exc:
-        raise SaltCacheError(
-            'There was an error reading the key, {0}: {1}'.format(
-                etcd_key, exc
-            )
-        )
 
 
 def flush(bank, key=None):
@@ -200,17 +214,8 @@ def contains(bank, key):
     '''
     Checks if the specified bank contains the specified key.
     '''
-    _init_client()
-    etcd_key = '{0}/{1}/{2}'.format(path_prefix, bank, key)
+    _cache_update(bank)
     try:
-        r = client.read(etcd_key)
-        # return True for keys, not dirs
-        return r.dir is False
-    except etcd.EtcdKeyNotFound:
+        return '{0}/{1}/{2}'.format(path_prefix, bank, key) in cache['data']
+    except KeyError:
         return False
-    except Exception as exc:
-        raise SaltCacheError(
-            'There was an error getting the key, {0}: {1}'.format(
-                etcd_key, exc
-            )
-        )
