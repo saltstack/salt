@@ -176,20 +176,6 @@ def flush(bank, key=None):
         )
 
 
-def _walk(r):
-    '''
-    Recursively walk dirs. Return flattened list of keys.
-    r: etcd.EtcdResult
-    '''
-    if not r.dir:
-        return [r.key.split('/', 3)[3]]
-
-    keys = []
-    for c in client.read(r.key).children:
-        keys.extend(_walk(c))
-    return keys
-
-
 def ls(bank):
     '''
     Return an iterable object containing all entries stored in the specified
@@ -198,7 +184,10 @@ def ls(bank):
     _init_client()
     path = '{0}/{1}'.format(path_prefix, bank)
     try:
-        return _walk(client.read(path))
+        ret = []
+        for child in client.read(path).children:
+            ret.append(child.key.split('/', 3)[3])
+        return ret
     except Exception as exc:
         raise SaltCacheError(
             'There was an error getting the key "{0}": {1}'.format(
