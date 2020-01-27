@@ -69,7 +69,7 @@ except ImportError:
 # pylint: enable=import-error
 
 # Import tornado
-import tornado.gen  # pylint: disable=F0401
+import salt.ext.tornado.gen  # pylint: disable=F0401
 
 log = logging.getLogger(__name__)
 
@@ -352,7 +352,7 @@ class LocalClient(object):
         _res = salt.utils.minions.CkMinions(self.opts).check_minions(tgt, tgt_type=expr_form)
         return _res['minions']
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def run_job_async(
             self,
             tgt,
@@ -407,7 +407,7 @@ class LocalClient(object):
             # Convert to generic client error and pass along message
             raise SaltClientError(general_exception)
 
-        raise tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
+        raise salt.ext.tornado.gen.Return(self._check_pub_data(pub_data, listen=listen))
 
     def cmd_async(
             self,
@@ -1776,7 +1776,7 @@ class LocalClient(object):
         return {'jid': payload['load']['jid'],
                 'minions': payload['load']['minions']}
 
-    @tornado.gen.coroutine
+    @salt.ext.tornado.gen.coroutine
     def pub_async(self,
                   tgt,
                   fun,
@@ -1858,7 +1858,7 @@ class LocalClient(object):
                 # and try again if the key has changed
                 key = self.__read_master_key()
                 if key == self.key:
-                    raise tornado.gen.Return(payload)
+                    raise salt.ext.tornado.gen.Return(payload)
                 self.key = key
                 payload_kwargs['key'] = self.key
                 payload = yield channel.send(payload_kwargs)
@@ -1876,9 +1876,9 @@ class LocalClient(object):
                 raise PublishError(error)
 
             if not payload:
-                raise tornado.gen.Return(payload)
+                raise salt.ext.tornado.gen.Return(payload)
 
-        raise tornado.gen.Return({'jid': payload['load']['jid'],
+        raise salt.ext.tornado.gen.Return({'jid': payload['load']['jid'],
                                   'minions': payload['load']['minions']})
 
     # pylint: disable=W1701

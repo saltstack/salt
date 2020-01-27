@@ -388,6 +388,7 @@ execution modules
     s3
     s6
     salt_proxy
+    salt_version
     saltcheck
     saltcloudmod
     saltutil
