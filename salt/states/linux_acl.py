@@ -34,7 +34,7 @@ Ensure a Linux ACL list is present
        acl.list_present:
          - name: /root
          - acl_type: user
-         - acl_name:
+         - acl_names:
            - damian
            - homer
          - perms: rwx
@@ -47,7 +47,7 @@ Ensure a Linux ACL list does not exist
        acl.list_absent:
          - name: /root
          - acl_type: user
-         - acl_name:
+         - acl_names:
            - damian
            - homer
          - perms: rwx
@@ -233,7 +233,7 @@ def absent(name, acl_type, acl_name='', perms='', recurse=False):
     acl_type
         The type of the acl is used for, it can be 'user' or 'group'
 
-    acl_names
+    acl_name
         The user or group
 
     perms
@@ -390,11 +390,11 @@ def list_present(name, acl_type, acl_names=None, perms='', recurse=False, force=
     # The getfacl execution module lists default with empty names as being
     # applied to the user/group that owns the file, e.g.,
     # default:group::rwx would be listed as default:group:root:rwx
-    # In this case, if acl_name is empty, we really want to search for root
+    # In this case, if acl_names is empty, we really want to search for root
     # but still uses '' for other
 
     # We search through the dictionary getfacl returns for the owner of the
-    # file if acl_name is empty.
+    # file if acl_names is empty.
     if acl_names == '':
         _search_names = __current_perms[name].get('comment').get(_acl_type, '')
     else:
@@ -553,11 +553,11 @@ def list_absent(name, acl_type, acl_names=None, recurse=False):
     # The getfacl execution module lists default with empty names as being
     # applied to the user/group that owns the file, e.g.,
     # default:group::rwx would be listed as default:group:root:rwx
-    # In this case, if acl_name is empty, we really want to search for root
+    # In this case, if acl_names is empty, we really want to search for root
     # but still uses '' for other
 
     # We search through the dictionary getfacl returns for the owner of the
-    # file if acl_name is empty.
+    # file if acl_names is empty.
     if not acl_names:
         _search_names = set(__current_perms[name].get('comment').get(_acl_type, ''))
     else:
