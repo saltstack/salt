@@ -32,37 +32,13 @@ where the majority of Salt's test cases are housed.
 Getting Set Up For Tests
 ========================
 
-There are a couple of requirements, in addition to Salt's requirements, that need
-to be installed in order to run Salt's test suite. You can install these additional
-requirements using the files located in the ``salt/requirements`` directory,
-depending on your relevant version of Python:
+First of all you will need to ensure you install ``nox-py2``. This version of nox,
+allows the tests to run on both python2 and python3. Ensure you install ``nox-py2``
+and not ``nox`` as this will prevent you from running all the tests.
 
 .. code-block:: bash
 
-    pip install -r requirements/dev_python27.txt
-    pip install -r requirements/dev_python34.txt
-
-To be able to run integration tests which utilizes ZeroMQ transport, you also
-need to install additional requirements for it. Make sure you have installed
-the C/C++ compiler and development libraries and header files needed for your
-Python version.
-
-This is an example for RedHat-based operating systems:
-
-.. code-block:: bash
-
-    yum install gcc gcc-c++ python-devel
-    pip install -r requirements/zeromq.txt
-
-On Debian, Ubuntu or their derivatives run the following commands:
-
-.. code-block:: bash
-
-    apt-get install build-essential python-dev
-    pip install -r requirements/zeromq.txt
-
-This will install the latest ``pycrypto`` and ``pyzmq`` (with bundled
-``libzmq``) Python modules required for running integration tests suite.
+    pip install nox-py2
 
 
 Test Directory Structure
@@ -119,12 +95,11 @@ Running the Test Suite
 ======================
 
 Once all of the :ref:`requirements <getting_set_up_for_tests>` are installed, the
-``runtests.py`` file in the ``salt/tests`` directory is used to instantiate
-Salt's test suite:
+``nox`` command is used to instantiate Salt's test suite:
 
 .. code-block:: bash
 
-    python tests/runtests.py [OPTIONS]
+    nox -e 'pytest-zeromq-3(coverage=False)'
 
 The command above, if executed without any options, will run the entire suite of
 integration and unit tests. Some tests require certain flags to run, such as
@@ -134,19 +109,14 @@ perform the tests that don't require special attention.
 At the end of the test run, you will see a summary output of the tests that passed,
 failed, or were skipped.
 
-The test runner also includes a ``--help`` option that lists all of the various
-command line options:
+You can pass any pytest options after the nox command like so:
 
 .. code-block:: bash
 
-    python tests/runtests.py --help
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_ps.py
 
-You can also call the test runner as an executable:
-
-.. code-block:: bash
-
-    ./tests/runtests.py --help
-
+The above command will run the ``test_ps.py`` test with the zeromq transport, python3,
+and pytest. The option after ``--`` can include any pytest options.
 
 Running Integration Tests
 -------------------------
@@ -186,37 +156,26 @@ with a ``True`` response.
 Test Selection Options
 ~~~~~~~~~~~~~~~~~~~~~~
 
-If you look in the output of the ``--help`` command of the test runner, you will
-see a section called ``Tests Selection Options``. The options under this section
-contain various subsections of the integration test suite such as ``--modules``,
-``--ssh``, or ``--states``. By selecting any one of these options, the test daemons
-will spin up and the integration tests in the named subsection will run.
+If you want to run only a subset of tests, this is easily done with pytest. You only
+need to point the test runner to the directory. For example if you want to run all
+integration module tests:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --modules
-
-.. note::
-
-    The testing subsections listed in the ``Tests Selection Options`` of the
-    ``--help`` output *only* apply to the integration tests. They do not run unit
-    tests.
-
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/
 
 Running Unit Tests
 ------------------
 
-While ``./tests/runtests.py`` executes the *entire* test suite (barring any tests
-requiring special flags), the ``--unit`` flag can be used to run *only* Salt's
-unit tests. Salt's unit tests include the tests located in the ``tests/unit``
-directory.
+If you want to run only the unit tests, you can just pass the unit test directory
+as an option to the test runner.
 
 The unit tests do not spin up any Salt testing daemons as the integration tests
 do and execute very quickly compared to the integration tests.
 
 .. code-block:: bash
 
-    ./tests/runtests.py --unit
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/
 
 
 .. _running-specific-tests:
@@ -226,16 +185,14 @@ Running Specific Tests
 
 There are times when a specific test file, test class, or even a single,
 individual test need to be executed, such as when writing new tests. In these
-situations, the ``--name`` option should be used.
+situations, you should use the `pytest syntax`_ to select the specific tests.
 
 For running a single test file, such as the pillar module test file in the
-integration test directory, you must provide the file path using ``.`` instead
-of ``/`` as separators and no file extension:
+integration test directory, you must provide the file path.
 
 .. code-block:: bash
 
-    ./tests/runtests.py --name=integration.modules.test_pillar
-    ./tests/runtests.py -n integration.modules.test_pillar
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_pillar.py
 
 Some test files contain only one test class while other test files contain multiple
 test classes. To run a specific test class within the file, append the name of
@@ -243,28 +200,22 @@ the test class to the end of the file path:
 
 .. code-block:: bash
 
-    ./tests/runtests.py --name=integration.modules.test_pillar.PillarModuleTest
-    ./tests/runtests.py -n integration.modules.test_pillar.PillarModuleTest
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_pillar.py::PillarModuleTest
 
 To run a single test within a file, append both the name of the test class the
 individual test belongs to, as well as the name of the test itself:
 
 .. code-block:: bash
 
-    ./tests/runtests.py \
-      --name=integration.modules.test_pillar.PillarModuleTest.test_data
-    ./tests/runtests.py \
-      -n integration.modules.test_pillar.PillarModuleTest.test_data
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/integration/modules/test_pillar.py::PillarModuleTest::test_data
 
-The ``--name`` and ``-n`` options can be used for unit tests as well as integration
-tests. The following command is an example of how to execute a single test found in
+
+The following command is an example of how to execute a single test found in
 the ``tests/unit/modules/test_cp.py`` file:
 
 .. code-block:: bash
 
-    ./tests/runtests.py \
-      -n unit.modules.test_cp.CpTestCase.test_get_template_success
-
+    nox -e 'pytest-zeromq-3(coverage=False)' -- tests/unit/modules/test_cp.py::CpTestCase::test_get_file_not_found
 
 Writing Tests for Salt
 ======================
@@ -320,7 +271,7 @@ Args can be passed in to the ``run_function`` method as well:
         '''
         self.assertEqual(self.run_function('test.echo', ['text']), 'text')
 
-The next example is taken from the 
+The next example is taken from the
 ``tests/integration/modules/test_aliases.py`` file and
 demonstrates how to pass kwargs to the ``run_function`` call. Also note that this
 test uses another salt function to ensure the correct data is present (via the
@@ -430,7 +381,7 @@ testing the call to ``cp.hash_file``, which is used in ``cp.get_file``.
             path = 'salt://saltines'
             dest = '/srv/salt/cheese'
             ret = ''
-            self.assertEqual(cp.get_file(path, dest), ret)
+            assert cp.get_file(path, dest) == ret
 
 Note that Salt's ``cp`` module is imported at the top of the file, along with all
 of the other necessary testing imports. The ``get_file`` function is then called
@@ -440,7 +391,9 @@ the integration test examples do above.
 The call to ``cp.get_file`` returns an empty string when a ``hash_file`` isn't found.
 Therefore, the example above is a good illustration of a unit test "blocking
 the exits" via the ``@patch`` decorator, as well as testing logic via asserting
-against the ``return`` statement in the ``if`` clause.
+against the ``return`` statement in the ``if`` clause. In this example we used the
+python ``assert`` to verify the return from ``cp.get_file``. Pytest allows you to use
+these `asserts`_ when writing your tests.
 
 There are more examples of writing unit tests of varying complexities available
 in the following docs:
@@ -502,6 +455,8 @@ Python testing documentation. Please see the follow references for more informat
 * `Python Unittest`_
 * `Python's Assert Functions`_
 
+.. _asserts: https://docs.pytest.org/en/latest/assert.html
+.. _pytest syntax: https://docs.pytest.org/en/latest/usage.html#specifying-tests-selecting-tests
 .. _MagicMock: http://www.voidspace.org.uk/python/mock/index.html
 .. _Python Unittest: https://docs.python.org/2/library/unittest.html
 .. _Python's Assert Functions: https://docs.python.org/2/library/unittest.html#assert-methods
