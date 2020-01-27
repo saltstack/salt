@@ -550,4 +550,3 @@ def _parse_stack_cfg(content):
     except Exception as e:  # pylint: disable=broad-except
         pass
     return content.splitlines()
-
