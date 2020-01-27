@@ -58,7 +58,10 @@ except ImportError:
 class SMBProto(object):
     def __init__(self, server, username, password, port=445):
         connection_id = uuid.uuid4()
-        addr = socket.gethostbyname(server)
+        try:
+            addr = socket.gethostbyname(server)
+        except socket.gaierror:
+            addr = server
         self.server = server
         connection = Connection(connection_id, addr, port, require_signing=True)
         self.session = Session(connection, username, password, require_encryption=False)
