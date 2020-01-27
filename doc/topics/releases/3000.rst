@@ -5,6 +5,21 @@
 Salt 3000 Release Notes - Codename Neon
 =======================================
 
+New Versioning
+==============
+The neon release has removed the date versioning. Going forward we will
+use a non-date based version schema beginning at 3000. The version will
+be MAJOR.PATCH. For a planned release containing features and/or bug fixes
+the MAJOR version will be incremented. Please review the approved
+`SEP <https://github.com/saltstack/salt-enhancement-proposals/pull/20>`_
+for further details.
+
+The new versioning scheme is PEP 440 compliant, but distutils.StrictVersion
+will result in an error ``invalid version number``. If using StrictVersion to
+compare Salt's versions, please use LooseVersion. There is also the packaging
+library you can use to compare versions. Another alternative is using the
+:py:func:`salt version module<salt.modules.salt_version>`
+
 Saltcheck Updates
 =================
 
@@ -509,6 +524,24 @@ Enhancements to Engines
       @type file
       path /var/log/td-agent/saltstack
     </match>
+
+Enhancements to Beacons
+=======================
+
+Multiple copies of a particular Salt beacon can be configured by including
+the ``beacon_module`` parameter in the beacon configuration.
+
+ .. code-block:: yaml
+
+    beacons:
+      watch_importand_file:
+        - files:
+            /etc/important_file: {}
+        - beacon_module: inotify
+      watch_another_file:
+        - files:
+            /etc/another_file: {}
+        - beacon_module: inotify
 
 Module Changes
 ==============

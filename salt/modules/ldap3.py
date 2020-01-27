@@ -18,9 +18,9 @@ import sys
 available_backends = set()
 try:
     import ldap
-    import ldap.ldapobject
-    import ldap.modlist
-    import ldap.sasl
+    import ldap.ldapobject  # pylint: disable=no-name-in-module
+    import ldap.modlist  # pylint: disable=no-name-in-module
+    import ldap.sasl  # pylint: disable=no-name-in-module
     available_backends.add('ldap')
 except ImportError:
     pass

@@ -151,8 +151,16 @@ def add(name, beacon_data, **kwargs):
         ret['comment'] = 'Beacon {0} is already configured.'.format(name)
         return ret
 
-    if name not in list_available(return_yaml=False, **kwargs):
-        ret['comment'] = 'Beacon "{0}" is not available.'.format(name)
+    # Check to see if a beacon_module is specified, if so, verify it is
+    # valid and available beacon type.
+    if any('beacon_module' in key for key in beacon_data):
+        res = next(value for value in beacon_data if 'beacon_module' in value)
+        beacon_name = res['beacon_module']
+    else:
+        beacon_name = name
+
+    if beacon_name not in list_available(return_yaml=False):
+        ret['comment'] = 'Beacon "{0}" is not available.'.format(beacon_name)
         return ret
 
     if 'test' in kwargs and kwargs['test']:
