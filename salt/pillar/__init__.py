@@ -491,7 +491,7 @@ class Pillar(object):
             found = globgrep_environments(opts['pillar_roots'].keys(), pillarenv)
             if found:
                 found = found[0] # first match
-                log.debug("pillar_roots '%s' matches saltenv '%s'", found,pillarenv)
+                log.debug("pillar_roots '%s' matches saltenv '%s'", found, pillarenv)
                 opts['pillar_roots'][pillarenv] = [
                     path.replace("__env__", pillarenv) for path in opts['pillar_roots'].pop(found)]
         return opts
