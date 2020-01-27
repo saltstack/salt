@@ -75,6 +75,7 @@ pycryptodome==3.8.1       # via python-jose
 pycryptodomex==3.8.1 ; sys_platform == "win32"
 pycurl==7.43.0.2
 pygit2==0.28.2
+pymssql==2.1.4
 pymysql==0.9.3
 pyopenssl==19.0.0
 pyparsing==2.4.5          # via packaging
@@ -108,7 +109,6 @@ smmap==0.9.0
 strict-rfc3339==0.7
 tempora==1.14.1           # via portend
 timelib==0.2.4
-tornado==4.5.3 ; python_version >= "3.4"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
 watchdog==0.9.0

@@ -2035,7 +2035,7 @@ def downloaded(name,
     (if specified).
 
     Currently supported for the following pkg providers:
-    :mod:`yumpkg <salt.modules.yumpkg>` and :mod:`zypper <salt.modules.zypper>`
+    :mod:`yumpkg <salt.modules.yumpkg>`, :mod:`zypper <salt.modules.zypper>` and :mod:`zypper <salt.modules.aptpkg>`
 
     :param str name:
         The name of the package to be downloaded. This parameter is ignored if
@@ -2174,7 +2174,7 @@ def downloaded(name,
 
     if not ret['changes'] and not ret['comment']:
         ret['result'] = True
-        ret['comment'] = 'Packages are already downloaded: ' \
+        ret['comment'] = 'Packages downloaded: ' \
                          '{0}'.format(', '.join(targets))
 
     return ret

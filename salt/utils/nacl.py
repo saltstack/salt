@@ -46,12 +46,20 @@ def _get_config(**kwargs):
     '''
     Return configuration
     '''
+    sk_file = kwargs.get('sk_file')
+    if not sk_file:
+        sk_file = os.path.join(kwargs['opts'].get('pki_dir'), 'master/nacl')
+
+    pk_file = kwargs.get('pk_file')
+    if not pk_file:
+        pk_file = os.path.join(kwargs['opts'].get('pki_dir'), 'master/nacl.pub')
+
     config = {
-        'box_type': 'sealedbox',
+        'box_type': kwargs.get('box_type', 'sealedbox'),
         'sk': None,
-        'sk_file': os.path.join(kwargs['opts'].get('pki_dir'), 'master/nacl'),
+        'sk_file': sk_file,
         'pk': None,
-        'pk_file': os.path.join(kwargs['opts'].get('pki_dir'), 'master/nacl.pub'),
+        'pk_file': pk_file,
     }
 
     config_key = '{0}.config'.format(__virtualname__)
@@ -122,13 +130,16 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl
         salt-call nacl.keygen sk_file=/etc/salt/pki/master/nacl pk_file=/etc/salt/pki/master/nacl.pub
         salt-call --local nacl.keygen
+
+    sk_file
+      Path to where there secret key exists.
+      The argrument ``keyfile`` was deprecated
+      in favor of ``sk_file``. ``keyfile`` will
+      continue to work to ensure backwards
+      compatbility, but please use the preferred
+      ``sk_file``.
     '''
     if 'keyfile' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk_file\' argument instead.'
-        )
         sk_file = kwargs['keyfile']
 
     if sk_file is None:
@@ -190,22 +201,32 @@ def enc(data, **kwargs):
     Alias to `{box_type}_encrypt`
 
     box_type: secretbox, sealedbox(default)
+
+    sk_file
+      Path to where there secret key exists.
+      The argrument ``keyfile`` was deprecated
+      in favor of ``sk_file``. ``keyfile`` will
+      continue to work to ensure backwards
+      compatbility, but please use the preferred
+      ``sk_file``.
+    sk
+      Secret key contents. The argument ``key``
+      was deprecated in favor of ``sk``. ``key``
+      will continue to work to ensure backwards
+      compatibility, but please use the preferred
+      ``sk``.
     '''
     if 'keyfile' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk_file\' argument instead.'
-        )
         kwargs['sk_file'] = kwargs['keyfile']
 
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
+
     if 'key' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'key\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk\' argument instead.'
-        )
         kwargs['sk'] = kwargs['key']
+
+        # set boxtype to `secretbox` to maintain backward compatibility
+        kwargs['box_type'] = 'secretbox'
 
     box_type = _get_config(**kwargs)['box_type']
     if box_type == 'secretbox':
@@ -251,24 +272,28 @@ def dec(data, **kwargs):
     Alias to `{box_type}_decrypt`
 
     box_type: secretbox, sealedbox(default)
+
+    sk_file
+      Path to where there secret key exists.
+      The argrument ``keyfile`` was deprecated
+      in favor of ``sk_file``. ``keyfile`` will
+      continue to work to ensure backwards
+      compatbility, but please use the preferred
+      ``sk_file``.
+    sk
+      Secret key contents. The argument ``key``
+      was deprecated in favor of ``sk``. ``key``
+      will continue to work to ensure backwards
+      compatibility, but please use the preferred
+      ``sk``.
     '''
     if 'keyfile' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'keyfile\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk_file\' argument instead.'
-        )
         kwargs['sk_file'] = kwargs['keyfile']
 
         # set boxtype to `secretbox` to maintain backward compatibility
         kwargs['box_type'] = 'secretbox'
 
     if 'key' in kwargs:
-        salt.utils.versions.warn_until(
-            'Neon',
-            'The \'key\' argument has been deprecated and will be removed in Salt '
-            '{version}. Please use \'sk\' argument instead.'
-        )
         kwargs['sk'] = kwargs['key']
 
         # set boxtype to `secretbox` to maintain backward compatibility

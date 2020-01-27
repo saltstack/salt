@@ -763,6 +763,9 @@ def set_fstab(
             'securityfs',
             'devtmpfs',
             'cgroup',
+            'nfs',
+            'nfs4',
+            'glusterfs',
             'btrfs'])
 
         if fstype in specialFSes:

@@ -125,6 +125,14 @@ ESTAB      0      0                    127.0.0.1:56726                    127.0.
 ESTAB      0      0                    ::ffff:1.2.3.4:5678                ::ffff:1.2.3.4:4505
 '''
 
+LINUX_NETLINK_SS_OUTPUT = '''\
+State       Recv-Q Send-Q                                                            Local Address:Port                                                                           Peer Address:Port
+TIME-WAIT   0      0                                                                         [::1]:8009                                                                                  [::1]:40368
+LISTEN      0      128                                                                   127.0.0.1:5903                                                                                0.0.0.0:*
+ESTAB       0      0                                                            [::ffff:127.0.0.1]:4506                                                                    [::ffff:127.0.0.1]:32315
+ESTAB       0      0                                                                 192.168.122.1:4506                                                                       192.168.122.177:24545
+'''
+
 IPV4_SUBNETS = {True: ('10.10.0.0/24',),
                 False: ('10.10.0.0', '10.10.0.0/33', 'FOO', 9, '0.9.800.1000/24')}
 IPV6_SUBNETS = {True: ('::1/128',),
@@ -215,6 +223,15 @@ class NetworkTestCase(TestCase):
         # Check 16-char-long unicode string
         # https://github.com/saltstack/salt/issues/51258
         self.assertFalse(network.is_ipv6('sixteen-char-str'))
+
+    def test_ipv6(self):
+        self.assertTrue(network.ipv6('2001:db8:0:1:1:1:1:1'))
+        self.assertTrue(network.ipv6('0:0:0:0:0:0:0:1'))
+        self.assertTrue(network.ipv6('::1'))
+        self.assertTrue(network.ipv6('::'))
+        self.assertTrue(network.ipv6('2001:0db8:85a3:0000:0000:8a2e:0370:7334'))
+        self.assertTrue(network.ipv6('2001:0db8:85a3::8a2e:0370:7334'))
+        self.assertTrue(network.ipv6('2001:67c:2e8::/48'))
 
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
@@ -487,6 +504,19 @@ class NetworkTestCase(TestCase):
                     remotes = network._freebsd_remotes_on('4506', 'remote')
                     self.assertEqual(remotes, set(['127.0.0.1']))
 
+    def test_netlink_tool_remote_on_a(self):
+        with patch('salt.utils.platform.is_sunos', lambda: False):
+            with patch('salt.utils.platform.is_linux', lambda: True):
+                with patch('subprocess.check_output',
+                           return_value=LINUX_NETLINK_SS_OUTPUT):
+                    remotes = network._netlink_tool_remote_on('4506', 'local')
+                    self.assertEqual(remotes, set(['192.168.122.177', '::ffff:127.0.0.1']))
+
+    def test_netlink_tool_remote_on_b(self):
+        with patch('subprocess.check_output', return_value=NETLINK_SS):
+            remotes = network._netlink_tool_remote_on('4505', 'remote_port')
+            self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))
+
     def test_generate_minion_id_distinct(self):
         '''
         Test if minion IDs are distinct in the pool.
@@ -671,8 +701,3 @@ class NetworkTestCase(TestCase):
             # An exception is raised if unicode is passed to socket.getfqdn
             minion_id = network.generate_minion_id()
         assert minion_id != '', minion_id
-
-    def test_netlink_tool_remote_on(self):
-        with patch('subprocess.check_output', return_value=NETLINK_SS):
-            remotes = network._netlink_tool_remote_on('4505', 'remote_port')
-            self.assertEqual(remotes, set(['127.0.0.1', '::ffff:1.2.3.4']))

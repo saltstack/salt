@@ -20,12 +20,6 @@ from string import ascii_letters, digits
 # Import 3rd-party libs
 from salt.ext import six
 from salt.ext.six.moves import range  # pylint: disable=import-error,redefined-builtin
-# Attempt to import wmi
-try:
-    import wmi
-    import salt.utils.winapi
-except ImportError:
-    pass
 
 # Import salt libs
 import salt.utils.args
@@ -39,9 +33,11 @@ from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import LooseVersion
 
-# inet_pton does not exist in Windows, this is a workaround
 if salt.utils.platform.is_windows():
+    # inet_pton does not exist in Windows, this is a workaround
     from salt.ext import win_inet_pton  # pylint: disable=unused-import
+    # Attempt to import win_network
+    import salt.utils.win_network
 
 log = logging.getLogger(__name__)
 
@@ -997,46 +993,7 @@ def win_interfaces():
     '''
     Obtain interface information for Windows systems
     '''
-    with salt.utils.winapi.Com():
-        c = wmi.WMI()
-        ifaces = {}
-        for iface in c.Win32_NetworkAdapterConfiguration(IPEnabled=1):
-            ifaces[iface.Description] = dict()
-            if iface.MACAddress:
-                ifaces[iface.Description]['hwaddr'] = iface.MACAddress
-            if iface.IPEnabled:
-                ifaces[iface.Description]['up'] = True
-                for ip in iface.IPAddress:
-                    if '.' in ip:
-                        if 'inet' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet'] = []
-                        item = {'address': ip,
-                                'label': iface.Description}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if '.' in i), '')
-                            if broadcast:
-                                item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if '.' in i), '')
-                            if netmask:
-                                item['netmask'] = netmask
-                        ifaces[iface.Description]['inet'].append(item)
-                    if ':' in ip:
-                        if 'inet6' not in ifaces[iface.Description]:
-                            ifaces[iface.Description]['inet6'] = []
-                        item = {'address': ip}
-                        if iface.DefaultIPGateway:
-                            broadcast = next((i for i in iface.DefaultIPGateway if ':' in i), '')
-                            if broadcast:
-                                item['broadcast'] = broadcast
-                        if iface.IPSubnet:
-                            netmask = next((i for i in iface.IPSubnet if ':' in i), '')
-                            if netmask:
-                                item['netmask'] = netmask
-                        ifaces[iface.Description]['inet6'].append(item)
-            else:
-                ifaces[iface.Description]['up'] = False
-    return ifaces
+    return salt.utils.win_network.get_interface_info()
 
 
 def interfaces():
@@ -1454,7 +1411,7 @@ def _parse_tcp_line(line):
 
 def _netlink_tool_remote_on(port, which_end):
     '''
-    Returns set of ipv4 host addresses of remote established connections
+    Returns set of IPv4/IPv6 host addresses of remote established connections
     on local or remote tcp port.
 
     Parses output of shell 'ss' to get connections
@@ -1464,6 +1421,7 @@ def _netlink_tool_remote_on(port, which_end):
     LISTEN     0      511                              *:80                              *:*
     LISTEN     0      128                              *:22                              *:*
     ESTAB      0      0                      127.0.0.1:56726                  127.0.0.1:4505
+    ESTAB      0      0             [::ffff:127.0.0.1]:41323         [::ffff:127.0.0.1]:4505
     '''
     remotes = set()
     valid = False
@@ -1486,7 +1444,7 @@ def _netlink_tool_remote_on(port, which_end):
         chunks = line.split()
         remote_host, remote_port = chunks[4].rsplit(':', 1)
 
-        remotes.add(remote_host)
+        remotes.add(remote_host.strip("[]"))
 
     if valid is False:
         remotes = None
