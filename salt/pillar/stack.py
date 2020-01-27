@@ -2,7 +2,7 @@
 '''
 Simple and flexible YAML ext_pillar which can read pillar from within pillar.
 
-.. versionadded:: 2016.3.0
+. versionadded:: 2016.3.0
 
 `PillarStack <https://github.com/bbinet/pillarstack>`_ is a custom saltstack
 ``ext_pillar`` which was inspired by `varstack
@@ -550,4 +550,4 @@ def _parse_stack_cfg(content):
     except Exception as e:  # pylint: disable=broad-except
         pass
     return content.splitlines()
-                                                                                                                                                                                         
+
