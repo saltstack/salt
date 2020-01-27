@@ -235,7 +235,7 @@ class StateCompilerTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             return_result = state_obj._run_check_onlyif(low_data, '')
             self.assertEqual(expected_result, return_result)
 
-    def test_verify_onlyif_list_cmd(self, name):
+    def test_verify_onlyif_list_cmd(self):
         low_data = {
             "state": "cmd",
             "name": "echo \"something\"",
