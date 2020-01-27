@@ -19,6 +19,10 @@ compare Salt's versions, please use LooseVersion. There is also the packaging
 library you can use to compare versions. Another alternative is using the
 :py:func:`salt version module<salt.modules.salt_version>`
 
+Python 3.8 Not Supported
+==========================
+Please note that running Salt with Python 3.8 is currently not supported.
+It is recommended to not use a version higher than 3.7.
 
 Vendored Tornado Code Base
 ==========================
