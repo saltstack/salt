@@ -15,11 +15,12 @@ https://github.com/bbinet/pillarstack/issues
 It supports the following features:
 
 - multiple config files that are jinja2 templates with support for ``pillar``,
-  ``__grains__``, ``__salt__``, ``__opts__`` objects
+  ``__grains__``, ``__salt__``, ``__opts__`` objects and ``pillarenv``
 - a config file renders as an ordered list of files (paths of these files are
   relative to the current config file)
 - this list of files are read in ordered as jinja2 templates with support for
   ``stack``, ``pillar``, ``__grains__``, ``__salt__``, ``__opts__`` objects
+  and ``pillarenv``
 - all these rendered files are then parsed as ``yaml``
 - then all yaml dicts are merged in order with support for the following
   merging strategies: ``merge-first``, ``merge-last``, ``remove``, and
@@ -87,7 +88,10 @@ Here is an example of such a configuration, which should speak by itself:
 
     ext_pillar:
       - stack:
-          pillar:environment:
+          pillarenv:
+            dev*: /path/to/dev/stack.cfg
+            *: /path/to/__env__/stack.cfg
+          pillar:some_param:
             dev: /path/to/dev/stack.cfg
             prod: /path/to/prod/stack.cfg
           grains:custom:grain:
@@ -398,15 +402,13 @@ strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     stack = {}
     stack_config_files = list(args)
-    pillarenv =  __opts__['pillarenv'] or 'base'
+    pillarenv = __opts__['pillarenv'] or 'base'
     traverse = {
         'pillar': functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
         'grains': functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
         'opts': functools.partial(salt.utils.data.traverse_dict_and_list, __opts__),
         }
-    log.debug('JRK ext_pillar pillarenv = %s ', pillarenv)
     for matcher, matchs in six.iteritems(kwargs):
-        log.debug('JRK ext_pillar matcher=%s matchs=%s',matcher, matchs)
         if matcher == 'pillarenv':
             cfgs = []
             for glob_env in globgrep_environments(matchs, pillarenv):
@@ -420,7 +422,6 @@ def ext_pillar(minion_id, pillar, *args, **kwargs):
             cfgs = matchs.get(traverse[t](matcher, None), [])
         if not isinstance(cfgs, list):
             cfgs = [cfgs]
-        log.debug('JRK ext_pillar cfgs = %s ', cfgs)
         stack_config_files += [cfg.replace("__env__", pillarenv) for cfg in cfgs]
     for cfg in stack_config_files:
         if not os.path.isfile(cfg):
@@ -549,3 +550,4 @@ def _parse_stack_cfg(content):
     except Exception as e:  # pylint: disable=broad-except
         pass
     return content.splitlines()
+                                                                                                                                                                                         
