@@ -14,7 +14,6 @@ The following fields can be set in the minion conf file:
     slack_webhook.author_icon (optional, a URL that with a small 16x16px image. Must be of type: GIF, JPEG, PNG, and BMP)
     slack_webhook.show_tasks (optional, show identifiers for changed and failed tasks. By default: False)
 
-
 Alternative configuration values can be used by prefacing the configuration.
 Any values not found in the alternative configuration will be pulled from
 the default location:
@@ -32,23 +31,25 @@ Slack settings may also be configured as:
 .. code-block:: yaml
 
     slack_webhook:
-        webhook: T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
-        success_title: [{id}] | Success
-        failure_title: [{id}] | Failure
-        author_icon: https://platform.slack-edge.com/img/default_application_icon.png
-        show_tasks: true
+      webhook: T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX
+      success_title: '[{id}] | Success'
+      failure_title: '[{id}] | Failure'
+      author_icon: https://platform.slack-edge.com/img/default_application_icon.png
+      show_tasks: true
 
     alternative.slack_webhook:
-        webhook: T00000000/C00000000/YYYYYYYYYYYYYYYYYYYYYYYY
-        show_tasks: false
+      webhook: T00000000/C00000000/YYYYYYYYYYYYYYYYYYYYYYYY
+      show_tasks: false
 
-To use the Slack returner, append '--return slack_webhook' to the salt command.
+To use the Slack returner,
+append '--return slack_webhook' to the salt command.
 
 .. code-block:: bash
 
     salt '*' test.ping --return slack_webhook
 
-To use the alternative configuration, append '--return_config alternative' to the salt command.
+To use the alternative configuration,
+append '--return_config alternative' to the salt command.
 
 .. code-block:: bash
 
