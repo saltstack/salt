@@ -120,16 +120,17 @@ def _init_client():
         log.info("etcd: Creating dir %r", path_prefix)
         client.write(path_prefix, None, dir=True)
 
+
 def _cache_update(bank):
     '''
     Update the key cache.
     '''
     global cache
-    if cache is None or cache['last_update'] < datetime.datetime.now() - datetime.timedelta(seconds = 5):
+    if cache is None or cache['last_update'] < datetime.datetime.now() - datetime.timedelta(seconds=5):
         _init_client()
         etcd_key = '{0}/{1}'.format(path_prefix, bank.split('/')[0])
         try:
-            data = client.read(etcd_key, recursive = True)
+            data = client.read(etcd_key, recursive=True)
             cache = {'last_update': datetime.datetime.now()}
             cache['data'] = {}
             for leave in data.leaves:
@@ -140,6 +141,7 @@ def _cache_update(bank):
                     etcd_key, exc
                 )
             )
+
 
 def store(bank, key, data):
     '''
