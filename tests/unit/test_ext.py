@@ -16,6 +16,7 @@ import tests.support.helpers
 # Import Salt libs
 import salt.modules.cmdmod
 import salt.utils.platform
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +38,9 @@ class VendorTornadoTest(TestCase):
         tornado_source = tests.support.helpers.dedent('''
         foo = 'bar'
         ''')
-        with open(os.path.join(tmp, 'test.py'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(tmp, 'test.py'), 'w') as fp:
             fp.write(test_source)
-        with open(os.path.join(tmp, 'tornado.py'), 'w') as fp:
+        with salt.utils.files.fopen(os.path.join(tmp, 'tornado.py'), 'w') as fp:
             fp.write(tornado_source)
         # Preserve the virtual environment
         p = subprocess.Popen(
