@@ -9,6 +9,7 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import re
 
 # Import Salt Testing libs
 from tests.support.mixins import LoaderModuleMockMixin
@@ -127,3 +128,8 @@ class MdadmTestCase(TestCase, LoaderModuleMockMixin):
             self.assertEqual(mdadm.examine('/dev/md0', quiet=True), {})
             mock.assert_called_with('mdadm -Y -E /dev/md0', ignore_retcode=True,
                                     python_shell=False)
+
+    def test_device_match_regex_pattern(self):
+        assert re.match(mdadm._VOL_REGEX_PATTERN_MATCH.format("/dev/md/1"), "ARRAY /dev/md/1  metadata=1.2 UUID=51f245bc:a1402c8a:2d598e79:589c07cf name=lxtst-ob-002:1")
+        assert not re.match(mdadm._VOL_REGEX_PATTERN_MATCH.format("/dev/md/1"), "ARRAY /dev/md/10  metadata=1.2 UUID=51f245bc:a1402c8a:2d598e79:589c07cf name=lxtst-ob-002:1")
+        
