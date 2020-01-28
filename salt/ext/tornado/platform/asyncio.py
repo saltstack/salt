@@ -23,7 +23,7 @@ loops.
 from __future__ import absolute_import, division, print_function
 import functools
 
-import tornado.concurrent
+import salt.ext.tornado.concurrent
 from salt.ext.tornado.gen import convert_yielded
 from salt.ext.tornado.ioloop import IOLoop
 from salt.ext.tornado import stack_context
@@ -199,8 +199,8 @@ def to_tornado_future(asyncio_future):
 
     .. versionadded:: 4.1
     """
-    tf = tornado.concurrent.Future()
-    tornado.concurrent.chain_future(asyncio_future, tf)
+    tf = salt.ext.tornado.concurrent.Future()
+    salt.ext.tornado.concurrent.chain_future(asyncio_future, tf)
     return tf
 
 
@@ -215,7 +215,7 @@ def to_asyncio_future(tornado_future):
     """
     tornado_future = convert_yielded(tornado_future)
     af = asyncio.Future()
-    tornado.concurrent.chain_future(tornado_future, af)
+    salt.ext.tornado.concurrent.chain_future(tornado_future, af)
     return af
 
 
