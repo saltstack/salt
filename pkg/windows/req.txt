@@ -38,8 +38,3 @@ smmap==0.9.0
 timelib==0.2.4
 watchdog==0.9.0
 wheel==0.33.4
-# Requirements for Tornado 4.5.3 (vendored as salt.ext.tornado)
-backports-abc==0.5
-singledispatch==3.4.0.3
-# Required by Tornado to handle threads stuff.
-futures>=2.0; python_version < '3.0'
