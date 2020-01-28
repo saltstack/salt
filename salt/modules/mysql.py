@@ -478,7 +478,6 @@ def _grant_to_tokens(grant):
     column = False
     current_grant = ''
 
-
     for token in exploded_grant[position_tracker:]:
 
         if token == ',' and phrase == 'grants':
@@ -489,7 +488,7 @@ def _grant_to_tokens(grant):
             position_tracker += 1
             column = True
             continue
-        
+
         if token == ')' and phrase == 'grants':
             position_tracker += 1
             column = False
