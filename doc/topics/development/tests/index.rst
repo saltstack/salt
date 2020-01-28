@@ -55,7 +55,7 @@ repo or you can manually install the dependency yourself.
 
 System Dependencies
 ===================
-The system dependencies are installed from the `salt-jenkins`_ repo. The ``git.salt``
+The system dependencies are installed from the `salt-jenkins`_ repo. The ``git.minimal``
 states are what is run to determine what dependencies to install on which platform.
 We run these states only when we want to update our current VM images with new
 dependencies.
