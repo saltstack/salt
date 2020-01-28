@@ -74,7 +74,7 @@ Functions to interact with Hashicorp Vault.
         You can still use the token auth via a OS environment variable via this
         config example:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
            vault:
              url: https://vault.service.domain:8200
@@ -86,7 +86,8 @@ Functions to interact with Hashicorp Vault.
 
         And then export the VAULT_TOKEN variable in your OS:
 
-        .. code-block: bash
+        .. code-block:: bash
+
            export VAULT_TOKEN=11111111-1111-1111-1111-1111111111111
 
     policies
@@ -100,7 +101,7 @@ Functions to interact with Hashicorp Vault.
         expanded into multiple policies. For example, given the template
         ``saltstack/by-role/{grains[roles]}``, and a minion having these grains:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             grains:
                 roles:

@@ -13,7 +13,7 @@ The related documentation can be found in the `Etcd documentation`_.
 To enable this cache plugin, the master will need the python client for
 Etcd installed. This can be easily installed with pip:
 
-.. code-block: bash
+.. code-block:: bash
 
     pip install python-etcd
 

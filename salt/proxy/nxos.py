@@ -163,7 +163,7 @@ def ping():
     '''
     Ping the device on the other end of the connection
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd ping
     '''
@@ -187,7 +187,7 @@ def sendline(command):
     '''
     Run command through switch's cli
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd sendline 'show run | include "^username admin password"'
     '''
@@ -203,7 +203,7 @@ def grains():
     '''
     Get grains for proxy minion
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd grains
     '''
@@ -218,7 +218,7 @@ def grains_refresh():
     '''
     Refresh the grains from the proxy device.
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd grains_refresh
     '''
@@ -230,7 +230,7 @@ def get_user(username):
     '''
     Get username line from switch
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd get_user username=admin
     '''
@@ -241,7 +241,7 @@ def get_roles(username):
     '''
     Get roles that the username is assigned from switch
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd get_roles username=admin
     '''
@@ -258,7 +258,7 @@ def check_password(username, password, encrypted=False):
     '''
     Check if passed password is the one assigned to user
 
-    .. code-block: bash
+    .. code-block:: bash
 
         salt '*' nxos.cmd check_password username=admin password=admin
         salt '*' nxos.cmd check_password username=admin \\

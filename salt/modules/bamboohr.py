@@ -6,7 +6,7 @@ Support for BambooHR
 
 Requires a ``subdomain`` and an ``apikey`` in ``/etc/salt/minion``:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     bamboohr:
       apikey: 012345678901234567890
