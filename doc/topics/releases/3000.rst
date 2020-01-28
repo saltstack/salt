@@ -33,6 +33,12 @@ we continue to work on upgrading Tornado to a recent version. New code that
 uses Tornado should import the module from ``salt.ext.tornado`` instead of
 importing the system version of Tornado.
 
+Msgpack 1.0.0rc1 Incompatibility
+================================
+Salt is currently incompatible with mgspack 1.0.0rc1. We recommend using
+versions < 1.0.0 . This impacts the Salt Master's ability to run commands
+against minions. Please see `Issue 56007 <https://github.com/saltstack/salt/issues/56007>`_
+for more details and updates.
 
 Saltcheck Updates
 =================
