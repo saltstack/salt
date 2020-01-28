@@ -215,7 +215,8 @@ class IPv6InterfaceScoped(ipaddress.IPv6Interface, IPv6AddressScoped):
     Update
     '''
     def __init__(self, address):
-        if isinstance(address, (bytes, int)):
+        if PY3 and isinstance(address, (bytes, int)) or \
+           not PY3 and isinstance(address, int):
             IPv6AddressScoped.__init__(self, address)
             self.network = ipaddress.IPv6Network(self._ip)
             self._prefixlen = self._max_prefixlen

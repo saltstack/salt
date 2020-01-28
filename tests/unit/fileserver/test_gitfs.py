@@ -10,7 +10,7 @@ import os
 import shutil
 import tempfile
 import textwrap
-import tornado.ioloop
+import salt.ext.tornado.ioloop
 import logging
 import stat
 try:
@@ -73,7 +73,7 @@ def _rmtree_error(func, path, excinfo):
 
 def _clear_instance_map():
     try:
-        del salt.utils.gitfs.GitFS.instance_map[tornado.ioloop.IOLoop.current()]
+        del salt.utils.gitfs.GitFS.instance_map[salt.ext.tornado.ioloop.IOLoop.current()]
     except KeyError:
         pass
 

@@ -224,6 +224,15 @@ class NetworkTestCase(TestCase):
         # https://github.com/saltstack/salt/issues/51258
         self.assertFalse(network.is_ipv6('sixteen-char-str'))
 
+    def test_ipv6(self):
+        self.assertTrue(network.ipv6('2001:db8:0:1:1:1:1:1'))
+        self.assertTrue(network.ipv6('0:0:0:0:0:0:0:1'))
+        self.assertTrue(network.ipv6('::1'))
+        self.assertTrue(network.ipv6('::'))
+        self.assertTrue(network.ipv6('2001:0db8:85a3:0000:0000:8a2e:0370:7334'))
+        self.assertTrue(network.ipv6('2001:0db8:85a3::8a2e:0370:7334'))
+        self.assertTrue(network.ipv6('2001:67c:2e8::/48'))
+
     def test_parse_host_port(self):
         _ip = ipaddress.ip_address
         good_host_ports = {
