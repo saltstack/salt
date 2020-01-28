@@ -6,6 +6,20 @@ Salt package
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
 import warnings
+import sys
+import importlib
+
+class TornadoImporter(object):
+
+    def find_module(self, module_name, package_path):
+        if module_name.startswith('tornado'):
+            return self
+        return None
+
+    def load_module(self, name):
+        return importlib.import_module('salt.ext.{}'.format(name))
+
+sys.meta_path.append(TornadoImporter())
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
