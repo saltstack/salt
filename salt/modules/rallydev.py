@@ -6,7 +6,7 @@ Support for RallyDev
 
 Requires a ``username`` and a ``password`` in ``/etc/salt/minion``:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     rallydev:
       username: myuser@example.com

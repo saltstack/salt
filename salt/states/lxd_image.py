@@ -70,7 +70,7 @@ def present(name,
 
         For an LXD to LXD copy:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: lxd
@@ -89,7 +89,7 @@ def present(name,
 
         From file:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: file
@@ -98,7 +98,7 @@ def present(name,
 
         From simplestreams:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: simplestreams
@@ -107,7 +107,7 @@ def present(name,
 
         From an URL:
 
-        .. code-block: yaml
+        .. code-block:: yaml
 
             source:
                 type: url
