@@ -30,6 +30,7 @@ __virtualname__ = 'raid'
 
 _VOL_REGEX_PATTERN_MATCH = r'^ARRAY\s+{0}\s+.*$'
 
+
 def __virtual__():
     '''
     mdadm provides raid functions for Linux
