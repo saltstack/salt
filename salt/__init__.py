@@ -8,6 +8,9 @@ from __future__ import absolute_import, print_function, unicode_literals
 import warnings
 import sys
 import importlib
+import imp
+import salt.ext.six
+
 
 class TornadoImporter(object):
 
@@ -17,9 +20,14 @@ class TornadoImporter(object):
         return None
 
     def load_module(self, name):
-        return importlib.import_module('salt.ext.{}'.format(name))
+        mod = importlib.import_module('salt.ext.{}'.format(name))
+        sys.modules[name] = mod
+        return mod
 
-sys.meta_path.append(TornadoImporter())
+
+# Try our importer first
+sys.meta_path = [TornadoImporter()] + sys.meta_path
+
 
 # All salt related deprecation warnings should be shown once each!
 warnings.filterwarnings(
