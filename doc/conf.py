@@ -268,7 +268,7 @@ if on_saltstack:
     copyright = time.strftime("%Y")
 
 # < --- START do not merge these settings to other branches START ---> #
-build_type = os.environ.get('BUILD_TYPE', repo_primary_branch) # latest, previous, master, next
+build_type = os.environ.get('BUILD_TYPE', 'master') # latest, previous, master, next
 # < --- END do not merge these settings to other branches END ---> #
 
 # Set google custom search engine
