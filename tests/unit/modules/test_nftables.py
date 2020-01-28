@@ -94,18 +94,51 @@ class NftablesTestCase(TestCase, LoaderModuleMockMixin):
             with patch.object(salt.utils.files, 'fopen', MagicMock(mock_open())):
                 self.assertListEqual(nftables.get_saved_rules(), [])
 
+    # 'list_tables' function tests: 1
+
+    def test_list_tables(self):
+        '''
+        Test if it return a data structure of the current, in-memory tables
+        '''
+        list_tables = [{'family': 'inet', 'name': 'filter', 'handle': 2}]
+        list_tables_mock = MagicMock(return_value=list_tables)
+
+        with patch.object(nftables, 'list_tables', list_tables_mock):
+            self.assertListEqual(nftables.list_tables(), list_tables)
+
+        list_tables_mock = MagicMock(return_value=[])
+        with patch.object(nftables, 'list_tables', list_tables_mock):
+            self.assertListEqual(nftables.list_tables(), [])
+
     # 'get_rules' function tests: 1
 
     def test_get_rules(self):
         '''
         Test if it return a data structure of the current, in-memory rules
         '''
-        mock = MagicMock(return_value='SALT STACK')
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
-            self.assertListEqual(nftables.get_rules(), ['SALT STACK'])
+        list_tables_mock = MagicMock(return_value=[{'family': 'inet', 'name': 'filter', 'handle': 2}])
+        list_rules_return = """table inet filter {
+            chain input {
+                type filter hook input priority 0; policy accept;
+            }
 
-        mock = MagicMock(return_value=False)
-        with patch.dict(nftables.__salt__, {'cmd.run': mock}):
+            chain forward {
+                type filter hook forward priority 0; policy accept;
+            }
+
+            chain output {
+                type filter hook output priority 0; policy accept;
+            }
+        }"""
+        list_rules_mock = MagicMock(return_value=list_rules_return)
+        expected = [list_rules_return]
+
+        with patch.object(nftables, 'list_tables', list_tables_mock):
+            with patch.dict(nftables.__salt__, {'cmd.run': list_rules_mock}):
+                self.assertListEqual(nftables.get_rules(), expected)
+
+        list_tables_mock = MagicMock(return_value=[])
+        with patch.object(nftables, 'list_tables', list_tables_mock):
             self.assertListEqual(nftables.get_rules(), [])
 
     # 'save' function tests: 1

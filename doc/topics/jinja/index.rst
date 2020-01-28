@@ -1024,7 +1024,7 @@ Returns:
 ``set_dict_key_value``
 ----------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to set a value in a nested dictionary without having to worry if all the nested keys actually exist.
 Missing keys will be automatically created if they do not exist.
@@ -1057,7 +1057,7 @@ Example 2:
 ``append_dict_key_value``
 -------------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to append to a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1091,7 +1091,7 @@ Example 2:
 ``extend_dict_key_value``
 -------------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to extend a list nested (deep) in a dictionary without having to worry if all the nested keys (or the list itself) actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1124,7 +1124,7 @@ Example 2:
 ``update_dict_key_value``
 -------------------------
 
-..versionadded:: Neon
+..versionadded:: 3000
 
 Allows you to update a dictionary nested (deep) in another dictionary without having to worry if all the nested keys actually exist.
 Missing keys will automatically be created if they do not exist.
@@ -1349,7 +1349,7 @@ Returns:
 ``json_query``
 --------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 A port of Ansible ``json_query`` Jinja filter to make queries against JSON data using `JMESPath language`_.
 Could be used to filter ``pillar`` data, ``yaml`` maps, and together with :jinja_ref:`http_query`.
@@ -1395,7 +1395,7 @@ Returns:
 ``to_snake_case``
 -----------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Converts a string from camelCase (or CamelCase) to snake_case.
 
@@ -1415,7 +1415,7 @@ Returns:
 ``to_camelcase``
 ----------------
 
-.. versionadded:: Neon
+.. versionadded:: 3000
 
 Converts a string from snake_case to camelCase (or UpperCamelCase if so indicated).
 

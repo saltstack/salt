@@ -5,242 +5,109 @@ Venafi Tools for Salt
 Introduction
 ~~~~~~~~~~~~
 
-Before using these modules you need to register an account with Venafi, and
-configure it in your ``master`` configuration file.
+First, you need to configure the ``master`` file. This is because
+all module functions require either a configured ``api_key`` (for Cloud) or
+``a ttp_user`` with a ``tpp_password`` and a ``base_url`` (for Trust Platform).
 
-First, you need to add a placeholder to the ``master`` file. This is because
-the module will not load unless it finds an ``api_key`` setting, valid or not.
-Open up ``/etc/salt/master`` and add:
-
-.. code-block:: yaml
-
-    venafi:
-      api_key: None
-
-Then register your email address with Venafi using the following command:
-
-.. code-block:: bash
-
-    salt-run venafi.register <youremail@yourdomain.com>
-
-This command will not return an ``api_key`` to you; that will be send to you
-via email from Venafi. Once you have received that key, open up your ``master``
-file and set the ``api_key`` to it:
+For Venafi Cloud:
 
 .. code-block:: yaml
 
     venafi:
       api_key: abcdef01-2345-6789-abcd-ef0123456789
+      base_url: "https://cloud.venafi.example.com/"    (optional)
 
-To enable the ability for creating keys and certificates it is necessary to enable the
-external pillars.  Open the ``/etc/salt/master`` file and add:
+If you don't have a Venafi Cloud account, you can sign up for one on the `enrollment page`_.
+
+.. _enrollment page: https://www.venafi.com/platform/cloud/devops
+
+For Venafi Platform:
+
+.. code-block:: yaml
+
+    venafi:
+      base_url: "https://tpp.example.com/"
+      tpp_user: admin
+      tpp_password: "Str0ngPa$$w0rd"
+      trust_bundle: "/opt/venafi/bundle.pem"
+
+*It is not common for the Venafi Platform's REST API (WebSDK) to be secured using a certificate issued by a publicly trusted CA, therefore establishing trust for that server certificate is a critical part of your configuration. Ideally this is done by obtaining the root CA certificate in the issuing chain in PEM format and copying that file to your Salt Master (e.g. /opt/venafi/bundle.pem). You then reference that file using the 'trust_bundle' parameter as shown above.*
+
+For the Venafi module to create keys and certificates it is necessary to enable external pillars. This is done by adding the following to the ``/etc/salt/master`` file:
 
 .. code-block:: yaml
 
     ext_pillar:
       - venafi: True
 
-To modify the URL being used for the Venafi Certificate issuance modify the file
-in ``/etc/salt/master`` and add the base_url information following under the venafi tag:
-
-.. code-block:: yaml
-
-    venafi:
-      base_url: http://newurl.venafi.com
-
-
-Example Usage
-~~~~~~~~~~~~~
-Generate a CSR and submit it to Venafi for issuance, using the 'Internet' zone:
-salt-run venafi.request minion.example.com minion.example.com zone=Internet
-
-Retrieve a certificate for a previously submitted request with request ID
-aaa-bbb-ccc-dddd:
-salt-run venafi.pickup aaa-bbb-ccc-dddd
 
 Runner Functions
 ~~~~~~~~~~~~~~~~
 
-gen_key
--------
-
-Generate and return a ``private_key``. If a ``dns_name`` is passed in, the
-``private_key`` will be cached under that name.
-
-The key will be generated based on the policy values that were configured
-by the Venafi administrator. A default Certificate Use Policy is associated
-with a zone; the key type and key length parameters associated with this value
-will be used.
-
-.. code-block:: bash
-
-    salt-run venafi.gen_key minion.example.com minion.example.com zone=Internet \
-      password=SecretSauce
-
-:param str minion_id: Required. The name of the minion which hosts the domain
-    name in question.
-
-:param str dns_name: Required. The FQDN of the domain that will be hosted on
-    the minion.
-
-:param str zone: Required. Default value is "default". The zone on Venafi that
-    the domain belongs to.
-
-:param str password: Optional. If specified, the password to use to access the
-    generated key.
-
-
-gen_csr
--------
-
-Generate a csr using the host's private_key. Analogous to:
-
-.. code-block:: bash
-
-    salt-run venafi.gen_csr minion.example.com minion.example.com country=US \
-    state=California loc=Sacramento org=CompanyName org_unit=DevOps \
-    zone=Internet password=SecretSauce
-
-:param str minion_id: Required.
-
-:param str dns_name: Required.
-
-:param str zone: Optional. Default value is "default". The zone on Venafi that
-    the domain belongs to.
-
-:param str country=None: Optional. The two-letter ISO abbreviation for your
-    country.
-
-:param str state=None: Optional. The state/county/region where your
-    organisation is legally located. Must not be abbreviated.
-
-:param str loc=None: Optional. The city where your organisation is legally
-    located.
-
-:param str org=None: Optional. The exact legal name of your organisation. Do
-    not abbreviate your organisation name.
-
-:param str org_unit=None: Optional. Section of the organisation, can be left
-    empty if this does not apply to your case.
-
-:param str password=None: Optional. Password for the CSR.
-
-
 request
 -------
+This command is used to enroll a certificate from Venafi Cloud or Venafi Platform.
 
-Request a new certificate. Analogous to:
+``minion_id``
+    ID of the minion for which the certificate is being issued. Required.
 
-.. code-block:: bash
+``dns_name``
+    DNS subject name for the certificate. Required if ``csr_path`` is not specified.
 
-    salt-run venafi.request minion.example.com minion.example.com country=US \
-    state=California loc=Sacramento org=CompanyName org_unit=DevOps \
-    zone=Internet password=SecretSauce
+``csr_path``
+    Full path name of certificate signing request file to enroll. Required if ``dns_name`` is not specified.
 
-:param str minion_id: Required.
+``zone``
+    Venafi Cloud zone ID or Venafi Platform folder that specify key and certificate policy. Defaults to "Default". For Venafi Cloud, the Zone ID can be found in the Zone page for your Venafi Cloud project.
 
-:param str dns_name: Required.
+``org_unit``
+    Business Unit, Department, etc. Do not specify if it does not apply.
 
-:param str zone: Required. Default value is "default". The zone on Venafi that
-    the certificate request will be submitted to.
+``org``
+    Exact legal name of your organization. Do not abbreviate.
 
-:param str country=None: Optional. The two-letter ISO abbreviation for your
-    country.
+``loc``
+    City/locality where your organization is legally located.
 
-:param str state=None: Optional. The state/county/region where your
-    organisation is legally located. Must not be abbreviated.
+``state``
+    State or province where your organization is legally located. Must not be abbreviated.
 
-:param str loc=None: Optional. The city where your organisation is legally
-    located.
+``country``
+    Country where your organization is legally located; two-letter ISO code.
 
-:param str org=None: Optional. The exact legal name of your organisation. Do
-    not abbreviate your organisation name.
+``key_password``
+    Password for encrypting the private key.
 
-:param str org_unit=None: Optional. Section of the organisation, can be left
-    empty if this does not apply to your case.
-
-:param str password=None: Optional. Password for the CSR.
-
-:param str company_id=None: Optional, but may be configured in ``master`` file
-    instead.
-
-register
---------
-
-Register a new user account
+The syntax for requesting a new certificate with private key generation looks like this:
 
 .. code-block:: bash
 
-  salt-run venafi.register username@example.com
+    salt-run venafi.request minion.example.com dns_name=www.example.com \
+    country=US state=California loc=Sacramento org="Company Name" org_unit=DevOps \
+    zone=Internet key_password=SecretSauce
 
-:param str email: Required. The email address to use for the new Venafi account.
-
-
-show_company
-------------
-
-Show company information, especially the company id
+And the syntax for requesting a new certificate using a previously generated CSR looks like this:
 
 .. code-block:: bash
 
-  salt-run venafi.show_company example.com
-
-:param str domain: Required. The domain name to look up information for.
+    salt-run venafi.request minion.example.com csr_path=/tmp/minion.req zone=Internet
 
 
-show_csrs
+show_cert
 ---------
+This command is used to show last issued certificate for domain.
 
-Show certificate requests for the configured API key.
-
-.. code-block:: bash
-
-  salt-run venafi.show_csrs
-
-
-show_zones
-----------
-
-Show zones for the specified company id.
+``dns_name``
+    DNS subject name of the certificate to look up.
 
 .. code-block:: bash
 
-  salt-run venafi.show_zones
-
-:param str company_id: Optional. The company id to show the zones for.
-
-
-pickup, show_cert
------------------
-
-Show certificate requests for the specified certificate id. Analogous to the
-VCert pickup command.
-
-.. code-block:: bash
-
-  salt-run venafi.pickup 4295ebc0-14bf-11e7-b965-1df050017ec1
-
-:param str id\_: Required. The id of the certificate to look up.
-
-
-show_rsa
---------
-
-Show a private RSA key.
-
-.. code-block:: bash
-
-  salt-run venafi.show_rsa minion.example.com minion.example.com
-
-:param str minion_id: The name of the minion to display the key for.
-
-:param str dns_name: The domain name to display the key for.
+  salt-run venafi.show_cert www.example.com
 
 
 list_domain_cache
 -----------------
-
-List domains that have been cached on this master.
+This command lists domains that have been cached on this Salt Master.
 
 .. code-block:: bash
 
@@ -249,12 +116,36 @@ List domains that have been cached on this master.
 
 del_cached_domain
 -----------------
+This command deletes a domain from the Salt Master's cache.
 
-Delete a domain from this master's cache.
+``domains``
+    A domain name, or a comma-separated list of domain names, to delete from this master's cache.
 
 .. code-block:: bash
 
-  salt-run venafi.delete_domain_cache example.com
+  salt-run venafi.del_cached_domain www.example.com
 
-:param str domains: A domain name, or a comma-separated list of domain names,
-    to delete from this master's cache.
+
+Transfer certificate to a minion
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To transfer a cached certificate to a minion, you can use Venafi pillar.
+
+Example state (SLS) file:
+
+.. code-block:: yaml
+
+    /etc/ssl/cert/www.example.com.crt:
+      file.managed:
+          - contents_pillar: venafi:www.example.com:cert
+          - replace: True
+
+    /etc/ssl/cert/www.example.com.key:
+      file.managed:
+          - contents_pillar: venafi:www.example.com:pkey
+          - replace: True
+
+    /etc/ssl/cert/www.example.com-chain.pem:
+      file.managed:
+          - contents_pillar: venafi:www.example.com:chain
+          - replace: True
