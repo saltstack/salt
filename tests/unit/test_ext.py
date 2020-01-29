@@ -35,19 +35,26 @@ class VendorTornadoTest(TestCase):
         import tornado
         print(tornado.__name__)
         ''')
+        test_source_path = os.path.join(tmp, 'test.py')
         tornado_source = tests.support.helpers.dedent('''
         foo = 'bar'
         ''')
-        with salt.utils.files.fopen(os.path.join(tmp, 'test.py'), 'w') as fp:
+        tornado_source_path = os.path.join(tmp, 'tornado.py')
+        with salt.utils.files.fopen(test_source_path, 'w') as fp:
             fp.write(test_source)
-        with salt.utils.files.fopen(os.path.join(tmp, 'tornado.py'), 'w') as fp:
+        with salt.utils.files.fopen(tornado_source_path, 'w') as fp:
             fp.write(tornado_source)
         # Preserve the virtual environment
+        env = os.environ.copy()
+        if salt.utils.platform.is_windows():
+            env[b'PYTHONPATH'] = b';'.join(sys.path)
+        else:
+            env[b'PYTHONPATH'] = b':'.join(sys.path)
         p = subprocess.Popen(
-            [sys.executable, os.path.join(tmp, 'test.py')],
+            [sys.executable, test_source_path],
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            env={'PYTHONPATH': ':'.join(sys.path)}
+            env=env
         )
         p.wait()
         pout = p.stdout.read().strip().decode()
