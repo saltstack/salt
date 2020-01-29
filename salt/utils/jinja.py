@@ -393,7 +393,7 @@ def tojson(val, indent=None, **options):
     Jinja 2.9 or later is installed, then the upstream version of this filter
     will be used.
     """
-    options = {"ensure_ascii": True}
+    options.setdefault('ensure_ascii', True)
     if indent is not None:
         options["indent"] = indent
     return (
