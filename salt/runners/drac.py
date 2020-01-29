@@ -5,7 +5,7 @@ Manage Dell DRAC from the Master
 The login credentials need to be configured in the Salt master
 configuration file.
 
-.. code-block: yaml
+.. code-block:: yaml
 
     drac:
       username: admin

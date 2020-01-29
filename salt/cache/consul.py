@@ -15,7 +15,7 @@ The related documentation can be found in the `Consul documentation`_.
 To enable this cache plugin, the master will need the python client for
 Consul installed. This can be easily installed with pip:
 
-.. code-block: bash
+.. code-block:: bash
 
     pip install python-consul
 

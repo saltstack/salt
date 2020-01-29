@@ -31,7 +31,7 @@ Advanced Usage:
 Instead of a table name, it is possible to provide custom SQL statements to
 create the table(s) and get and set values.
 
-.. code-block: yaml
+.. code-block:: yaml
 
     myadvanced
       driver: sqlite3
