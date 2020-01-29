@@ -14,6 +14,7 @@ from tests.support.runtests import RUNTIME_VARS
 import tests.support.helpers
 
 # Import Salt libs
+import salt.ext.six
 import salt.modules.cmdmod
 import salt.utils.platform
 import salt.utils.files
@@ -47,9 +48,12 @@ class VendorTornadoTest(TestCase):
         # Preserve the virtual environment
         env = os.environ.copy()
         if salt.utils.platform.is_windows():
-            env[b'PYTHONPATH'] = b';'.join([a.encode() for a in sys.path])
+            if salt.ext.six.PY2:
+                env[b'PYTHONPATH'] = b';'.join([a.encode() for a in sys.path])
+            else:
+                env['PYTHONPATH'] = ';'.join(sys.path)
         else:
-            env[b'PYTHONPATH'] = b':'.join([a.encode() for a in sys.path])
+            env['PYTHONPATH'] = ':'.join(sys.path)
         p = subprocess.Popen(
             [sys.executable, test_source_path],
             stderr=subprocess.PIPE,
