@@ -2,6 +2,7 @@
 Unit tests for salt.utils.templates.py
 """
 
+
 import logging
 import os
 import sys
@@ -12,6 +13,7 @@ import salt.utils.files
 import salt.utils.templates
 from tests.support import mock
 from tests.support.helpers import with_tempdir
+from tests.support.mock import patch
 from tests.support.unit import TestCase, skipIf
 
 try:
@@ -55,6 +57,24 @@ class RenderTestCase(TestCase):
         ctx["var"] = "OK"
         res = salt.utils.templates.render_jinja_tmpl(tmpl, ctx)
         self.assertEqual(res, "OK")
+
+    def test_render_jinja_tojson_sorted(self):
+        templ = """thing: {{ var|tojson(sort_keys=False) }}"""
+        expected = """thing: {"z": "zzz", "y": "yyy", "x": "xxx"}"""
+
+        with patch.dict(self.context, {"var": {"z": "zzz", "y": "yyy", "x": "xxx"}}):
+            res = salt.utils.templates.render_jinja_tmpl(templ, self.context)
+
+        assert res == expected
+
+    def test_render_jinja_tojson_unsorted(self):
+        templ = """thing: {{ var|tojson(sort_keys=False) }}"""
+        expected = """thing: {"z": "zzz", "y": "yyy", "x": "xxx"}"""
+
+        with patch.dict(self.context, {"var": {"z": "zzz", "y": "yyy", "x": "xxx"}}):
+            res = salt.utils.templates.render_jinja_tmpl(templ, self.context)
+
+        assert res == expected
 
     ### Tests for mako template
     def test_render_mako_sanity(self):
