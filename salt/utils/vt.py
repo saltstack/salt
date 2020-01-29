@@ -415,9 +415,9 @@ class Terminal(object):
                 args = []
 
             if self.shell and self.args:
-                self.args = ['/bin/sh', '-c', ' '.join(args)]
+                self.args = ['/bin/bash', '-c', ' '.join(args)]
             elif self.shell:
-                self.args = ['/bin/sh']
+                self.args = ['/bin/bash']
             else:
                 self.args = args
 
