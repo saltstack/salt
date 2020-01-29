@@ -386,8 +386,8 @@ def indent(s, width=4, first=False, blank=False, indentfirst=None):
     return rv
 
 
-@jinja_filter("tojson")
-def tojson(val, indent=None):
+@jinja_filter('tojson')
+def tojson(val, indent=None, **options):
     """
     Implementation of tojson filter (only present in Jinja 2.9 and later). If
     Jinja 2.9 or later is installed, then the upstream version of this filter
