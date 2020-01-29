@@ -47,9 +47,9 @@ class VendorTornadoTest(TestCase):
         # Preserve the virtual environment
         env = os.environ.copy()
         if salt.utils.platform.is_windows():
-            env[b'PYTHONPATH'] = b';'.join(sys.path)
+            env[b'PYTHONPATH'] = b';'.join([a.encode() for a in sys.path])
         else:
-            env[b'PYTHONPATH'] = b':'.join(sys.path)
+            env[b'PYTHONPATH'] = b':'.join([a.encode() for a in sys.path])
         p = subprocess.Popen(
             [sys.executable, test_source_path],
             stderr=subprocess.PIPE,
