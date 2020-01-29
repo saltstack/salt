@@ -386,14 +386,14 @@ def indent(s, width=4, first=False, blank=False, indentfirst=None):
     return rv
 
 
-@jinja_filter('tojson')
+@jinja_filter("tojson")
 def tojson(val, indent=None, **options):
     """
-    Implementation of tojson filter (only present in Jinja 2.9 and later). If
-    Jinja 2.9 or later is installed, then the upstream version of this filter
-    will be used.
+    Implementation of tojson filter (only present in Jinja 2.9 and later).
+    Unlike the Jinja built-in filter, this allows arbitrary options to be
+    passed in to the underlying JSON library.
     """
-    options.setdefault('ensure_ascii', True)
+    options.setdefault("ensure_ascii", True)
     if indent is not None:
         options["indent"] = indent
     return (

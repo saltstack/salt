@@ -75,7 +75,7 @@ class JinjaTestCase(TestCase):
         assert result == expected, result
 
     def test_tojson_should_ascii_sort_keys_when_told(self):
-        data = {'z': 'zzz', 'y': 'yyy', 'x': 'xxx'}
+        data = {"z": "zzz", "y": "yyy", "x": "xxx"}
         expected = '{"x": "xxx", "y": "yyy", "z": "zzz"}'
 
         actual = tojson(data, sort_keys=True)
