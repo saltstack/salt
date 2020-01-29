@@ -5,14 +5,14 @@ Writes matches to disk to verify activity, helpful when testing
 Normally this is used by giving the name of the file (without a path) that the
 data will be saved to. If for instance you use ``foo`` as the name:
 
-.. code-block: yaml
+.. code-block:: yaml
 
     foo:
       file.save
 
 Then the file will be saved to:
 
-.. code-block: bash
+.. code-block:: bash
 
     <salt cachedir>/thorium/saves/foo
 

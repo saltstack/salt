@@ -383,7 +383,7 @@ def query(params=None, setname=None, requesturl=None, location=None,
 
     Default ``product`` is ``ec2``. Valid ``product`` names are:
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         - autoscaling (Auto Scaling)
         - cloudformation (CloudFormation)
