@@ -211,7 +211,7 @@ def item(*args, **kwargs):
     return ret
 
 
-def setvals(grains, destructive=False):
+def setvals(grains, destructive=False, **kwargs):
     '''
     Set new grains values in the grains config file
 
@@ -305,12 +305,12 @@ def setvals(grains, destructive=False):
         )
     if not __opts__.get('local', False):
         # Refresh the grains
-        __salt__['saltutil.refresh_grains']()
+        __salt__['saltutil.refresh_grains'](**kwargs)
     # Return the grains we just set to confirm everything was OK
     return new_grains
 
 
-def setval(key, val, destructive=False):
+def setval(key, val, destructive=False, **kwargs):
     '''
     Set a grains value in the grains config file
 
@@ -331,7 +331,7 @@ def setval(key, val, destructive=False):
         salt '*' grains.setval key val
         salt '*' grains.setval key "{'sub-key': 'val', 'sub-key2': 'val2'}"
     '''
-    return setvals({key: val}, destructive)
+    return setvals({key: val}, destructive, **kwargs)
 
 
 def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
