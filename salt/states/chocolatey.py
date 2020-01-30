@@ -215,7 +215,7 @@ def uninstalled(name, version=None, uninstall_args=None, override_args=False):
       When this is set to False uninstall_args will be appended to the end of
       the default arguments
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
       Removemypackage:
         chocolatey.uninstalled:
