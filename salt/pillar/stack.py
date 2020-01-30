@@ -402,7 +402,7 @@ strategies = ('overwrite', 'merge-first', 'merge-last', 'remove')
 def ext_pillar(minion_id, pillar, *args, **kwargs):
     stack = {}
     stack_config_files = list(args)
-    pillarenv = __opts__['pillarenv'] or 'base'
+    pillarenv = __opts__['pillarenv'] or __opts__['saltenv'] or 'base'
     traverse = {
         'pillar': functools.partial(salt.utils.data.traverse_dict_and_list, pillar),
         'grains': functools.partial(salt.utils.data.traverse_dict_and_list, __grains__),
