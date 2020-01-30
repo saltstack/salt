@@ -59,7 +59,7 @@ any of the following locations:
   in Minion config file in order to work)
 
 .. important::
-    Versions prior to Neon require that Docker credentials are configured in
+    Versions prior to 3000 require that Docker credentials are configured in
     Pillar data. Be advised that Pillar data is still recommended though,
     because this keeps the configuration from being stored on the Minion.
 
@@ -1054,7 +1054,7 @@ def compare_container_networks(first, second):
     than waiting for a new Salt release one can just set
     :conf_minion:`docker.compare_container_networks`.
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         This config option can now also be set in pillar data and grains.
         Additionally, it can be set in the master config file, provided that
         :conf_minion:`pillar_opts` is enabled on the minion.

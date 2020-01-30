@@ -1186,6 +1186,10 @@ VALID_OPTS = immutabletypes.freeze({
 
     # Thorium top file location
     'thorium_top': six.string_types,
+
+    # Allow raw_shell option when using the ssh
+    # client via the Salt API
+    'netapi_allow_raw_shell': bool,
 })
 
 # default configurations
@@ -1799,6 +1803,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze({
     'auth_events': True,
     'minion_data_cache_events': True,
     'enable_ssh_minions': False,
+    'netapi_allow_raw_shell': False,
 })
 
 

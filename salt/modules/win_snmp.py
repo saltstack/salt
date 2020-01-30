@@ -320,7 +320,7 @@ def get_community_names():
         _LOG.debug('Loading communities from Group Policy settings')
 
         current_values = __salt__['reg.list_values'](
-            _HKEY, _COMMUNITIES_GPO_KEY, include_default=False)
+            _HKEY, _COMMUNITIES_GPO_KEY)
 
         # GPO settings are different in that they do not designate permissions
         # They are a numbered list of communities like so:
@@ -348,7 +348,7 @@ def get_community_names():
         _LOG.debug('Loading communities from SNMP settings')
 
         current_values = __salt__['reg.list_values'](
-            _HKEY, _COMMUNITIES_KEY, include_default=False)
+            _HKEY, _COMMUNITIES_KEY)
 
         # The communities are stored as the community name with a numeric
         # permission value. Like this (4 = Read Only):

@@ -210,7 +210,7 @@ def value_exists(hive, key, vname, use_32bit_registry=False):
     '''
     Check that the value/data pair is found in the registry.
 
-    .. version-added:: 2018.3.4
+    .. versionadded:: 2018.3.4
 
     Args:
 

@@ -5,7 +5,7 @@ The setup script for salt
 '''
 
 # pylint: disable=file-perms,ungrouped-imports,wrong-import-order,wrong-import-position,repr-flag-used-in-string
-# pylint: disable=3rd-party-local-module-not-gated,resource-leakage
+# pylint: disable=3rd-party-local-module-not-gated,resource-leakage,blacklisted-module
 # pylint: disable=C0111,E1101,E1103,F0401,W0611,W0201,W0232,R0201,R0902,R0903
 
 # For Python 2.5.  A no-op on 2.6 and above.
@@ -14,6 +14,7 @@ from __future__ import absolute_import, print_function, with_statement
 import os
 import sys
 import glob
+import inspect
 import operator
 import platform
 try:
@@ -22,16 +23,21 @@ except ImportError:
     from urllib.request import urlopen  # pylint: disable=no-name-in-module
 from datetime import datetime
 # pylint: disable=E0611
+import setuptools
 import distutils.dist
 from distutils import log
 from distutils.cmd import Command
 from distutils.errors import DistutilsArgError
 from distutils.command.build import build
 from distutils.command.clean import clean
-from distutils.command.sdist import sdist
 from distutils.command.install_lib import install_lib
 from distutils.version import LooseVersion  # pylint: disable=blacklisted-module
 from ctypes.util import find_library
+from setuptools import setup
+from setuptools.command.develop import develop
+from setuptools.command.install import install
+from setuptools.command.sdist import sdist
+from setuptools.command.egg_info import egg_info
 # pylint: enable=E0611
 
 try:
@@ -77,36 +83,6 @@ else:
 
 # Store a reference whether if we're running under Python 3 and above
 IS_PY3 = sys.version_info > (3,)
-
-# Use setuptools only if the user opts-in by setting the USE_SETUPTOOLS env var
-# Or if setuptools was previously imported (which is the case when using
-# 'distribute')
-# This ensures consistent behavior but allows for advanced usage with
-# virtualenv, buildout, and others.
-WITH_SETUPTOOLS = False
-if 'USE_SETUPTOOLS' in os.environ or 'setuptools' in sys.modules:
-    try:
-        from setuptools import setup
-        from setuptools.command.develop import develop
-        from setuptools.command.install import install
-        from setuptools.command.sdist import sdist
-        from setuptools.command.egg_info import egg_info
-        WITH_SETUPTOOLS = True
-    except ImportError:
-        WITH_SETUPTOOLS = False
-
-if WITH_SETUPTOOLS is False:
-    import warnings
-    # pylint: disable=E0611
-    from distutils.command.install import install
-    from distutils.core import setup
-    # pylint: enable=E0611
-    warnings.filterwarnings(
-        'ignore',
-        'Unknown distribution option: \'(extras_require|tests_require|install_requires|zip_safe)\'',
-        UserWarning,
-        'distutils.dist'
-    )
 
 try:
     # Add the esky bdist target if the module is available
@@ -345,70 +321,69 @@ class WriteSaltSshPackagingFile(Command):
             # pylint: enable=E0602
 
 
-if WITH_SETUPTOOLS:
-    class Develop(develop):
-        user_options = develop.user_options + [
-            ('write-salt-version', None,
-             'Generate Salt\'s _version.py file which allows proper version '
-             'reporting. This defaults to False on develop/editable setups. '
-             'If WRITE_SALT_VERSION is found in the environment this flag is '
-             'switched to True.'),
-            ('generate-salt-syspaths', None,
-             'Generate Salt\'s _syspaths.py file which allows tweaking some '
-             'common paths that salt uses. This defaults to False on '
-             'develop/editable setups. If GENERATE_SALT_SYSPATHS is found in '
-             'the environment this flag is switched to True.'),
-            ('mimic-salt-install', None,
-             'Mimmic the install command when running the develop command. '
-             'This will generate salt\'s _version.py and _syspaths.py files. '
-             'Generate Salt\'s _syspaths.py file which allows tweaking some '
-             'This defaults to False on develop/editable setups. '
-             'If MIMIC_INSTALL is found in the environment this flag is '
-             'switched to True.')
-        ]
-        boolean_options = develop.boolean_options + [
-            'write-salt-version',
-            'generate-salt-syspaths',
-            'mimic-salt-install'
-        ]
+class Develop(develop):
+    user_options = develop.user_options + [
+        ('write-salt-version', None,
+         'Generate Salt\'s _version.py file which allows proper version '
+         'reporting. This defaults to False on develop/editable setups. '
+         'If WRITE_SALT_VERSION is found in the environment this flag is '
+         'switched to True.'),
+        ('generate-salt-syspaths', None,
+         'Generate Salt\'s _syspaths.py file which allows tweaking some '
+         'common paths that salt uses. This defaults to False on '
+         'develop/editable setups. If GENERATE_SALT_SYSPATHS is found in '
+         'the environment this flag is switched to True.'),
+        ('mimic-salt-install', None,
+         'Mimmic the install command when running the develop command. '
+         'This will generate salt\'s _version.py and _syspaths.py files. '
+         'Generate Salt\'s _syspaths.py file which allows tweaking some '
+         'This defaults to False on develop/editable setups. '
+         'If MIMIC_INSTALL is found in the environment this flag is '
+         'switched to True.')
+    ]
+    boolean_options = develop.boolean_options + [
+        'write-salt-version',
+        'generate-salt-syspaths',
+        'mimic-salt-install'
+    ]
 
-        def initialize_options(self):
-            develop.initialize_options(self)
-            self.write_salt_version = False
-            self.generate_salt_syspaths = False
-            self.mimic_salt_install = False
+    def initialize_options(self):
+        develop.initialize_options(self)
+        self.write_salt_version = False
+        self.generate_salt_syspaths = False
+        self.mimic_salt_install = False
 
-        def finalize_options(self):
-            develop.finalize_options(self)
-            if 'WRITE_SALT_VERSION' in os.environ:
-                self.write_salt_version = True
-            if 'GENERATE_SALT_SYSPATHS' in os.environ:
-                self.generate_salt_syspaths = True
-            if 'MIMIC_SALT_INSTALL' in os.environ:
-                self.mimic_salt_install = True
+    def finalize_options(self):
+        develop.finalize_options(self)
+        if 'WRITE_SALT_VERSION' in os.environ:
+            self.write_salt_version = True
+        if 'GENERATE_SALT_SYSPATHS' in os.environ:
+            self.generate_salt_syspaths = True
+        if 'MIMIC_SALT_INSTALL' in os.environ:
+            self.mimic_salt_install = True
 
-            if self.mimic_salt_install:
-                self.write_salt_version = True
-                self.generate_salt_syspaths = True
+        if self.mimic_salt_install:
+            self.write_salt_version = True
+            self.generate_salt_syspaths = True
 
-        def run(self):
-            if IS_WINDOWS_PLATFORM:
-                # Download the required DLLs
-                self.distribution.salt_download_windows_dlls = True
-                self.run_command('download-windows-dlls')
-                self.distribution.salt_download_windows_dlls = None
+    def run(self):
+        if IS_WINDOWS_PLATFORM:
+            # Download the required DLLs
+            self.distribution.salt_download_windows_dlls = True
+            self.run_command('download-windows-dlls')
+            self.distribution.salt_download_windows_dlls = None
 
-            if self.write_salt_version is True:
-                self.distribution.running_salt_install = True
-                self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
-                self.run_command('write_salt_version')
+        if self.write_salt_version is True:
+            self.distribution.running_salt_install = True
+            self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+            self.run_command('write_salt_version')
 
-            if self.generate_salt_syspaths:
-                self.distribution.salt_syspaths_hardcoded_path = SALT_SYSPATHS_HARDCODED
-                self.run_command('generate_salt_syspaths')
+        if self.generate_salt_syspaths:
+            self.distribution.salt_syspaths_hardcoded_path = SALT_SYSPATHS_HARDCODED
+            self.run_command('generate_salt_syspaths')
 
-            # Resume normal execution
-            develop.run(self)
+        # Resume normal execution
+        develop.run(self)
 
 
 class DownloadWindowsDlls(Command):
@@ -724,6 +699,15 @@ class Install(install):
         install.finalize_options(self)
 
     def run(self):
+        from distutils.version import StrictVersion
+        if StrictVersion(setuptools.__version__) < StrictVersion('9.1'):
+            sys.stderr.write(
+                '\n\nInstalling Salt requires setuptools >= 9.1\n'
+                'Available setuptools version is {}\n\n'.format(setuptools.__version__)
+            )
+            sys.stderr.flush()
+            sys.exit(1)
+
         # Let's set the running_salt_install attribute so we can add
         # _version.py in the build command
         self.distribution.running_salt_install = True
@@ -737,6 +721,38 @@ class Install(install):
             self.distribution.salt_download_windows_dlls = None
         # Run install.run
         install.run(self)
+
+    @staticmethod
+    def _called_from_setup(run_frame):
+        """
+        Attempt to detect whether run() was called from setup() or by another
+        command.  If called by setup(), the parent caller will be the
+        'run_command' method in 'distutils.dist', and *its* caller will be
+        the 'run_commands' method.  If called any other way, the
+        immediate caller *might* be 'run_command', but it won't have been
+        called by 'run_commands'. Return True in that case or if a call stack
+        is unavailable. Return False otherwise.
+        """
+        if run_frame is None:
+            # If run_frame is None, just call the parent class logic
+            return install._called_from_setup(run_frame)
+
+        # Because Salt subclasses the setuptools install command, it needs to
+        # override this static method to provide the right frame for the logic
+        # so apply.
+
+        # We first try the current run_frame in case the issue
+        # https://github.com/pypa/setuptools/issues/456 is fixed.
+        first_call = install._called_from_setup(run_frame)
+        if first_call:
+            return True
+
+        # Fallback to providing the parent frame to have the right logic kick in
+        second_call = install._called_from_setup(run_frame.f_back)
+        if second_call is None:
+            # There was no parent frame?!
+            return first_call
+        return second_call
 
 
 class InstallLib(install_lib):
@@ -875,6 +891,7 @@ class SaltDistribution(distutils.dist.Distribution):
                               'build': Build,
                               'sdist': Sdist,
                               'install': Install,
+                              'develop': Develop,
                               'write_salt_version': WriteSaltVersion,
                               'generate_salt_syspaths': GenerateSaltSyspaths,
                               'write_salt_ssh_packaging_file': WriteSaltSshPackagingFile})
@@ -883,9 +900,6 @@ class SaltDistribution(distutils.dist.Distribution):
                                   'install_lib': InstallLib})
         if IS_WINDOWS_PLATFORM:
             self.cmdclass.update({'download-windows-dlls': DownloadWindowsDlls})
-
-        if WITH_SETUPTOOLS:
-            self.cmdclass.update({'develop': Develop})
 
         self.license = 'Apache Software License 2.0'
         self.packages = self.discover_packages()

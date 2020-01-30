@@ -475,7 +475,7 @@ def create_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The `enviroment` spelling mistake has been removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
     '''
     h_client = _auth(profile)
@@ -669,7 +669,7 @@ def update_stack(name=None, template_file=None, environment=None,
     .. versionadded:: 2017.7.5,2018.3.1
 
         The spelling mistake in parameter `enviroment` was corrected to `environment`.
-        The `enviroment` spelling mistake has been removed in Salt Neon.
+        The `enviroment` spelling mistake has been removed in Salt 3000.
 
     '''
     h_client = _auth(profile)
