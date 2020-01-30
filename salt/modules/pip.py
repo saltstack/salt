@@ -87,6 +87,7 @@ import re
 import shutil
 import sys
 import tempfile
+from functools import wraps
 
 # Import Salt libs
 import salt.utils.data
@@ -120,6 +121,20 @@ def __virtual__():
     user is required to provide the location of pip each time it is used.
     '''
     return 'pip'
+
+
+def _pip_bin_env(func):
+    """
+    Binary builds need to have the 'cwd' set when using pip. This wrapper will
+    set cwd if pip is being used in 'bin_env' and 'cwd' is None.
+    """
+    @wraps(func)
+    def pip_bin_env(*args, **kwargs):
+        bin_env = kwargs.get('bin_env')
+        if bin_env is not None and kwargs.get('cwd') is None and 'pip' in os.path.basename(bin_env):
+            kwargs['cwd'] = os.path.dirname(bin_env)
+        return func(*args, **kwargs)
+    return pip_bin_env
 
 
 def _clear_context(bin_env=None):
@@ -393,6 +408,7 @@ def _format_env_vars(env_vars):
     return ret
 
 
+@_pip_bin_env
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             bin_env=None,
@@ -666,7 +682,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
     if error:
         return error
 
-    cur_version = version(bin_env)
+    cur_version = version(bin_env, cwd)
 
     if use_wheel:
         min_version = '1.4'
@@ -977,6 +993,7 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 shutil.rmtree(tempdir)
 
 
+@_pip_bin_env
 def uninstall(pkgs=None,
               requirements=None,
               bin_env=None,
@@ -1115,6 +1132,7 @@ def uninstall(pkgs=None,
                     pass
 
 
+@_pip_bin_env
 def freeze(bin_env=None,
            user=None,
            cwd=None,
@@ -1153,7 +1171,7 @@ def freeze(bin_env=None,
 
     # Include pip, setuptools, distribute, wheel
     min_version = '8.0.3'
-    cur_version = version(bin_env)
+    cur_version = version(bin_env, cwd)
     if salt.utils.versions.compare(ver1=cur_version, oper='<', ver2=min_version):
         logger.warning(
             'The version of pip installed is %s, which is older than %s. '
@@ -1178,6 +1196,7 @@ def freeze(bin_env=None,
     return result['stdout'].splitlines()
 
 
+@_pip_bin_env
 def list_(prefix=None,
           bin_env=None,
           user=None,
@@ -1205,7 +1224,7 @@ def list_(prefix=None,
     packages = {}
 
     if prefix is None or 'pip'.startswith(prefix):
-        packages['pip'] = version(bin_env)
+        packages['pip'] = version(bin_env, cwd)
 
     for line in freeze(bin_env=bin_env,
                        user=user,
@@ -1249,7 +1268,8 @@ def list_(prefix=None,
     return packages
 
 
-def version(bin_env=None):
+@_pip_bin_env
+def version(bin_env=None, cwd=None):
     '''
     .. versionadded:: 0.17.0
 
@@ -1274,7 +1294,7 @@ def version(bin_env=None):
     cmd = _get_pip_bin(bin_env)[:]
     cmd.append('--version')
 
-    ret = __salt__['cmd.run_all'](cmd, python_shell=False)
+    ret = __salt__['cmd.run_all'](cmd, cwd=cwd, python_shell=False)
     if ret['retcode']:
         raise CommandNotFoundError('Could not find a `pip` binary')
 
@@ -1287,6 +1307,7 @@ def version(bin_env=None):
     return pip_version
 
 
+@_pip_bin_env
 def list_upgrades(bin_env=None,
                   user=None,
                   cwd=None):
@@ -1302,7 +1323,7 @@ def list_upgrades(bin_env=None,
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['list', '--outdated'])
 
-    pip_version = version(bin_env)
+    pip_version = version(bin_env, cwd)
     # Pip started supporting the ability to output json starting with 9.0.0
     min_version = '9.0'
     if salt.utils.versions.compare(ver1=pip_version,
@@ -1365,6 +1386,7 @@ def list_upgrades(bin_env=None,
     return packages
 
 
+@_pip_bin_env
 def is_installed(pkgname=None,
                  bin_env=None,
                  user=None,
@@ -1416,6 +1438,7 @@ def is_installed(pkgname=None,
     return False
 
 
+@_pip_bin_env
 def upgrade_available(pkg,
                       bin_env=None,
                       user=None,
@@ -1434,6 +1457,7 @@ def upgrade_available(pkg,
     return pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd)
 
 
+@_pip_bin_env
 def upgrade(bin_env=None,
             user=None,
             cwd=None,
@@ -1492,6 +1516,7 @@ def upgrade(bin_env=None,
     return ret
 
 
+@_pip_bin_env
 def list_all_versions(pkg,
                       bin_env=None,
                       include_alpha=False,
