@@ -1109,12 +1109,22 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
     def __init__(self, opts, log_queue=None):
         super(Maintenance, self).__init__(log_queue=log_queue)
         self.opts = opts
-        self.loop_interval = 60
+
+    # __setstate__ and __getstate__ are only used on Windows.
+    # We do this so that __init__ will be invoked on Windows in the child
+    # process. These methods are only used when pickling so will not be used on
+    # non-Windows platforms.
+    def __setstate__(self, state):
+        self._is_child = True
+        self.__init__(state['opts'], log_queue=state['log_queue'])
+
+    def __getstate__(self):
+        return {'opts': self.opts,
+                'log_queue': self.log_queue}
 
     def run(self):
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
-        last_grains_refresh = int(time.time())
         grains_cache = self.opts.get('grains_cache', False)
         grains_refresh_every = self.opts.get('grains_refresh_every', 0) * 60
         grains_cache_expiration = self.opts.get('grains_cache_expiration', 300)
@@ -1126,19 +1136,21 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 'This could cause delays when interacting with grains.',
             )
 
+        last_grains_refresh = int(time.time())
         while True:
             log.trace('Running Maintenance')
             now = int(time.time())
             if grains_refresh_every > 0 and grains_refresh_every <= (now - last_grains_refresh):
                 self.handle_grains_cache()
-                last_grains_refresh = now
-            time.sleep(self.loop_interval)
+                last_grains_refresh = int(time.time())
+            time.sleep(self.opts['loop_interval'])
 
     def handle_grains_cache(self):
         if self.opts.get('grains_cache', False):
-            cache_file = os.path.join(self.opts['cachedir'], 'grains.cache.p')
             import salt.loader
             salt.loader.grains(self.opts, force_refresh=True)
+            event = salt.utils.event.get_event('minion', opts=self.opts, listen=False)
+            event.fire_event({}, tag='grains_refresh')
 
 
 class Minion(MinionBase):
@@ -2424,7 +2436,6 @@ class Minion(MinionBase):
                 self.pillar_refresh(force_refresh=True)
             else:
                 self.pillar_refresh(force_refresh=False)
-            self.grains_cache = self.opts['grains']
         elif tag.startswith('environ_setenv'):
             self.environ_setenv(tag, data)
         elif tag.startswith('_minion_mine'):
@@ -2614,7 +2625,6 @@ class Minion(MinionBase):
                 self.beacons = salt.beacons.Beacon(self.opts, self.functions)
             uid = salt.utils.user.get_uid(user=self.opts.get('user', None))
             self.proc_dir = get_proc_dir(self.opts['cachedir'], uid=uid)
-            self.grains_cache = self.opts['grains']
             self.ready = True
 
     def setup_beacons(self, before_connect=False):
@@ -3507,5 +3517,4 @@ class SProxyMinion(SMinion):
 
         #  Sync the grains here so the proxy can communicate them to the master
         self.functions['saltutil.sync_grains'](saltenv='base')
-        self.grains_cache = self.opts['grains']
         self.ready = True
