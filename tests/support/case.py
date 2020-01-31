@@ -786,11 +786,17 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         if 'f_timeout' in kwargs:
             kwargs['timeout'] = kwargs.pop('f_timeout')
         client = self.client if master_tgt is None else self.clients[master_tgt]
-        orig = client.cmd(minion_tgt,
-                          function,
-                          arg,
-                          timeout=timeout,
-                          kwarg=kwargs)
+        if asynchronous:
+            orig = client.cmd_async(minion_tgt,
+                                    function,
+                                    arg,
+                                    kwarg=kwargs)
+        else:
+            orig = client.cmd(minion_tgt,
+                              function,
+                              arg,
+                              timeout=timeout,
+                              kwarg=kwargs)
 
         if RUNTIME_VARS.PYTEST_SESSION:
             fail_or_skip_func = self.fail
