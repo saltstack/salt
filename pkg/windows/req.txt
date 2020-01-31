@@ -1,5 +1,5 @@
 -r req_win.txt
-backports-abc==0.5
+backports-abc==0.5; python_version < '3.0'
 backports.ssl-match-hostname==3.7.0.1
 certifi
 cffi==1.12.2

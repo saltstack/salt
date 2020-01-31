@@ -9,7 +9,6 @@ asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
 aws-xray-sdk==0.95        # via moto
-backports-abc==0.5
 backports.functools-lru-cache==1.5  # via cheroot
 backports.ssl-match-hostname==3.7.0.1
 boto3==1.9.132
