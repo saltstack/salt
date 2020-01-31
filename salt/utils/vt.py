@@ -414,10 +414,15 @@ class Terminal(object):
             else:
                 args = []
 
+            if os.path.exists("/bin/bash"):
+                shell_path = "/bin/bash"
+            else:
+                shell_path = "/bin/sh"
+
             if self.shell and self.args:
-                self.args = ['/bin/bash', '-c', ' '.join(args)]
+                self.args = [shell_path, '-c', ' '.join(args)]
             elif self.shell:
-                self.args = ['/bin/bash']
+                self.args = [shell_path]
             else:
                 self.args = args
 
