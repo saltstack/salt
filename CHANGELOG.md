@@ -232,6 +232,7 @@ Versions are `MAJOR.PATCH`.
 - [#55823](https://github.com/saltstack/salt/pull/55823) - Fix issue with overly long names in the LGPO module - [@twangboy](https://github.com/twangboy)
 - [#55843](https://github.com/saltstack/salt/pull/55843) - Fixed `file.mkdir` to respect `test=True` - [@mchugh19](https://github.com/mchugh19)
 - [#55845](https://github.com/saltstack/salt/pull/55845) - Fixed logging to return multiprocessing queue if it's already set - [@s0undt3ch](https://github.com/s0undt3ch)
+- [#56041](https://github.com/saltstack/salt/pull/56041) - Fixed trim_output logic in archive.extracted state - [@Oloremo](https://github.com/Oloremo)
 
 ### Added
 
