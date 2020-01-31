@@ -174,6 +174,7 @@ starts at the root of the state tree or pillar.
         - allow_updates: True
 
 .. code-block:: jinja
+
     # package_uninstall.sls (same directory as variables.sls)
     {% extends "./variables.sls" %}
 
