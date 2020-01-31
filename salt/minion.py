@@ -1106,6 +1106,9 @@ class MinionManager(MinionBase):
 
 
 class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
+    '''
+    A generalized maintenance process which performs maintenance routines.
+    '''
     def __init__(self, opts, log_queue=None):
         super(Maintenance, self).__init__(log_queue=log_queue)
         self.opts = opts
@@ -1123,6 +1126,11 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
                 'log_queue': self.log_queue}
 
     def run(self):
+        '''
+        This is the general passive maintenance process controller for the Salt minion.
+
+        This is where any data that needs to be cleanly maintained from the minion is maintained.
+        '''
         salt.utils.process.appendproctitle(self.__class__.__name__)
 
         grains_cache = self.opts.get('grains_cache', False)
@@ -1146,6 +1154,9 @@ class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
             time.sleep(self.opts['loop_interval'])
 
     def handle_grains_cache(self):
+        '''
+        Refresh the minion grain cache and upload to master
+        '''
         if self.opts.get('grains_cache', False):
             import salt.loader
             salt.loader.grains(self.opts, force_refresh=True)
