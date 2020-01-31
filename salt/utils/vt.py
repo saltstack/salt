@@ -414,10 +414,16 @@ class Terminal(object):
             else:
                 args = []
 
-            if os.path.exists("/bin/bash"):
-                shell_path = "/bin/bash"
-            else:
-                shell_path = "/bin/sh"
+            # Decide Which Shell To Use
+            shell_path = "/bin/sh"
+
+            # /bin/sh -> To Start
+            # /bin/bash -> For Most Linux
+            # /bin/ksh -> For AIX/HP-UX and the Like
+            # /usr/local/bin/tcsh -> For FreeBSDers
+            for best_shell in ["/bin/bash", "/bin/ksh", "/usr/local/bin/tcsh"]:
+                if os.path.exists(best_shell):
+                    shell_path = best_shell
 
             if self.shell and self.args:
                 self.args = [shell_path, '-c', ' '.join(args)]
