@@ -424,6 +424,7 @@ class Terminal(object):
             for best_shell in ["/bin/bash", "/bin/ksh", "/usr/local/bin/tcsh"]:
                 if os.path.exists(best_shell):
                     shell_path = best_shell
+                    break
 
             if self.shell and self.args:
                 self.args = [shell_path, '-c', ' '.join(args)]
