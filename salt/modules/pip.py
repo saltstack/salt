@@ -88,6 +88,7 @@ import shutil
 import sys
 import tempfile
 from functools import wraps
+from inspect import getfullargspec
 
 # Import Salt libs
 import salt.utils.data
@@ -133,7 +134,17 @@ def _pip_bin_env(func):
         bin_env = kwargs.get('bin_env')
         if bin_env is not None and kwargs.get('cwd') is None and 'pip' in os.path.basename(bin_env):
             kwargs['cwd'] = os.path.dirname(bin_env)
-        return func(*args, **kwargs)
+
+        param = getfullargspec(func)
+        if param.varargs is not None and param.varkw is not None:
+            return func(*args, **kwargs)
+        elif param.varargs is not None:
+            return func(*args, **{key: kwargs[key] for key in param.args if key in kwargs})
+        elif param.varargs is not None:
+            return func(**kwargs)
+        else:
+            return func(**{key: kwargs[key] for key in param.args if key in kwargs})
+
     return pip_bin_env
 
 
