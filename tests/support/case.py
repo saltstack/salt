@@ -753,7 +753,6 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
                     break
 
     def wait_for_event(self, opts, wait=5, tag=''):
-        import salt.config
         import salt.utils.event
 
         event = salt.utils.event.get_event('master', sock_dir=opts['sock_dir'], opts=opts)
@@ -767,7 +766,7 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         '''
         return self.run_function(_function, args, **kw)
 
-    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=None, **kwargs):
+    def run_function(self, function, arg=(), minion_tgt='minion', timeout=300, master_tgt=None, asynchronous=False, **kwargs):
         '''
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
