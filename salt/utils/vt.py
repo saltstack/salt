@@ -421,7 +421,7 @@ class Terminal(object):
             # /bin/bash -> For Most Linux
             # /bin/ksh -> For AIX/HP-UX and the Like
             # /usr/local/bin/tcsh -> For FreeBSDers
-            for best_shell in ["/bin/bash", "/bin/ksh", "/usr/local/bin/tcsh"]:
+            for best_shell in ["/bin/bash", "/bin/ksh", "/bin/tcsh", "/bin/csh"]:
                 if os.path.exists(best_shell):
                     shell_path = best_shell
                     break
