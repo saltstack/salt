@@ -1436,7 +1436,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze({
     'tcp_keepalive_cnt': -1,
     'tcp_keepalive_intvl': -1,
     'modules_max_memory': -1,
-    'grains_refresh_every': 0,
+    'grains_refresh_every': 5,
     'minion_id_caching': True,
     'minion_id_lowercase': False,
     'minion_id_remove_domain': False,

@@ -885,16 +885,12 @@ With ``grains_deep_merge``, the result will be:
 ``grains_refresh_every``
 ------------------------
 
-Default: ``0``
+Default: ``5``
 
 The ``grains_refresh_every`` setting allows for a minion to periodically
-check its grains to see if they have changed and, if so, to inform the master
-of the new grains. This operation is moderately expensive, therefore care
-should be taken not to set this value too low.
+refresh its grains cache. Will have no effect if ``grains_cache`` is not enabled.
 
 Note: This value is expressed in minutes.
-
-A value of 10 minutes is a reasonable default.
 
 .. code-block:: yaml
 

@@ -1073,8 +1073,17 @@ class MinionManager(MinionBase):
         # Fire off all the minion coroutines
         self._spawn_minions()
 
+        # Start ancillary processes
+        self.start_maintenance()
+
         # serve forever!
         self.io_loop.start()
+
+    def start_maintenance(self):
+        log_queue = salt.log.setup.get_multiprocessing_logging_queue()
+
+        log.debug('Creating minion maintenance process')
+        self.process_manager.add_process(Maintenance, args=(self.opts,))
 
     @property
     def restart(self):
@@ -1094,6 +1103,42 @@ class MinionManager(MinionBase):
     def destroy(self):
         for minion in self.minions:
             minion.destroy()
+
+
+class Maintenance(salt.utils.process.SignalHandlingMultiprocessingProcess):
+    def __init__(self, opts, log_queue=None):
+        super(Maintenance, self).__init__(log_queue=log_queue)
+        self.opts = opts
+        self.loop_interval = 60
+
+    def run(self):
+        salt.utils.process.appendproctitle(self.__class__.__name__)
+
+        last_grains_refresh = int(time.time())
+        grains_cache = self.opts.get('grains_cache', False)
+        grains_refresh_every = self.opts.get('grains_refresh_every', 0) * 60
+        grains_cache_expiration = self.opts.get('grains_cache_expiration', 300)
+
+        if grains_cache and grains_cache_expiration < grains_refresh_every:
+            log.warning(
+                'The grains cache ttl setting, grains_cache_expiration, is lower than the grains '
+                'cache refresh interval, grains_refresh_every. '
+                'This could cause delays when interacting with grains.',
+            )
+
+        while True:
+            log.trace('Running Maintenance')
+            now = int(time.time())
+            if grains_refresh_every > 0 and grains_refresh_every <= (now - last_grains_refresh):
+                self.handle_grains_cache()
+                last_grains_refresh = now
+            time.sleep(self.loop_interval)
+
+    def handle_grains_cache(self):
+        if self.opts.get('grains_cache', False):
+            cache_file = os.path.join(self.opts['cachedir'], 'grains.cache.p')
+            import salt.loader
+            salt.loader.grains(self.opts, force_refresh=True)
 
 
 class Minion(MinionBase):
@@ -2127,24 +2172,6 @@ class Minion(MinionBase):
                     data['arg'] = []
                 self._handle_decoded_payload(data)
 
-    def _refresh_grains_watcher(self, refresh_interval_in_minutes):
-        '''
-        Create a loop that will fire a pillar refresh to inform a master about a change in the grains of this minion
-        :param refresh_interval_in_minutes:
-        :return: None
-        '''
-        if '__update_grains' not in self.opts.get('schedule', {}):
-            if 'schedule' not in self.opts:
-                self.opts['schedule'] = {}
-            self.opts['schedule'].update({
-                '__update_grains':
-                    {
-                        'function': 'event.fire',
-                        'args': [{}, 'grains_refresh'],
-                        'minutes': refresh_interval_in_minutes
-                    }
-            })
-
     def _fire_master_minion_start(self):
         include_grains = False
         if self.opts['start_event_grains']:
@@ -2393,10 +2420,11 @@ class Minion(MinionBase):
         elif tag.startswith('manage_beacons'):
             self.manage_beacons(tag, data)
         elif tag.startswith('grains_refresh'):
-            if (data.get('force_refresh', False) or
-                    self.grains_cache != self.opts['grains']):
+            if data.get('force_refresh', False):
                 self.pillar_refresh(force_refresh=True)
-                self.grains_cache = self.opts['grains']
+            else:
+                self.pillar_refresh(force_refresh=False)
+            self.grains_cache = self.opts['grains']
         elif tag.startswith('environ_setenv'):
             self.environ_setenv(tag, data)
         elif tag.startswith('_minion_mine'):
@@ -2642,19 +2670,6 @@ class Minion(MinionBase):
                     self.returners,
                     utils=self.utils,
                     cleanup=[master_event(type='alive')])
-
-            try:
-                if self.opts['grains_refresh_every']:  # In minutes, not seconds!
-                    log.debug(
-                        'Enabling the grains refresher. Will run every %d minute(s).',
-                        self.opts['grains_refresh_every']
-                    )
-                    self._refresh_grains_watcher(abs(self.opts['grains_refresh_every']))
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error(
-                    'Exception occurred in attempt to initialize grain refresh '
-                    'routine during minion tune-in: %s', exc
-                )
 
             # TODO: actually listen to the return and change period
             def handle_schedule():

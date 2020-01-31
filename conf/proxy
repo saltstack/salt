@@ -265,17 +265,13 @@
 # often lower this value
 #loop_interval: 60
 
-# The grains_refresh_every setting allows for a minion to periodically check
-# its grains to see if they have changed and, if so, to inform the master
-# of the new grains. This operation is moderately expensive, therefore
-# care should be taken not to set this value too low.
+# The grains_refresh_every setting allows for a minion to periodically
+# refresh its grains cache. Will have no effect if 'grains_cache' is not enabled.
 #
 # Note: This value is expressed in __minutes__!
 #
-# A value of 10 minutes is a reasonable default.
-#
 # If the value is set to zero, this check is disabled.
-#grains_refresh_every: 1
+#grains_refresh_every: 5
 
 # Cache grains on the minion. Default is False.
 #grains_cache: False
