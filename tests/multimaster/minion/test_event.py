@@ -2,13 +2,13 @@
 
 # Import Python libs
 from __future__ import absolute_import, print_function, unicode_literals
+import time
 
 # Import Salt Testing libs
 from tests.support.case import MultimasterModuleCase, MultiMasterTestShellCase
 from tests.support.helpers import skip_if_not_root, destructiveTest
 from tests.support.mixins import AdaptedConfigurationTestCaseMixin
 from tests.support.unit import skipIf
-import time
 
 import salt.modules.iptables
 HAS_IPTABLES = salt.modules.iptables.__virtual__()
@@ -124,7 +124,7 @@ class TestHandleEvents(MultimasterModuleCase, MultiMasterTestShellCase, AdaptedC
         # THEN the result from mm-sub-minion with master_return_strategy of any will arrive on
         # mm-master whereas the result from mm-minion with master_return_strategy of source will
         # not
-        tag='salt/job/{0}/ret/mm-sub-minion'.format(return_any_jid)
+        tag = 'salt/job/{0}/ret/mm-sub-minion'.format(return_any_jid)
         try:
             ret_event = self.wait_for_event(
                 self.mm_master_opts,
