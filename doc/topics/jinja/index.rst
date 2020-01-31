@@ -148,8 +148,40 @@ breaks, using `whitespace control`_.
 Template Inheritance
 ====================
 
-`Template inheritance`_ works fine from state files and files. The search path
+`Template inheritance`_ works fine from state and pillar files. The search path
 starts at the root of the state tree or pillar.
+
+.. code-block:: jinja
+
+    # variables.sls
+    {% set package_name               = 'httpd' %}
+    {% set package_version            = '2.0.6~ubuntu3' %}
+    {% set package_refreshinterval    = salt.pillar.get('package_refreshinterval') %}
+
+.. code-block:: jinja
+
+    # package_install.sls (same directory as variables.sls)
+    {% extends "./variables.sls" %}
+
+    install_package:
+      pkg.installed:
+        - name: {{ package_name }}
+        - skip_verify: True
+        - skip_suggestions: True
+        - version: {{ package_version }}
+        - refresh: True
+        - cache_valid_time: {{ package_refreshinterval }}
+        - allow_updates: True
+
+.. code-block:: jinja
+    # package_uninstall.sls (same directory as variables.sls)
+    {% extends "./variables.sls" %}
+
+    uninstall_package:
+      pkg.removed:
+        - name: {{ package_name }}
+        - vesion: {{ package_version }}
+
 
 .. _`Template inheritance`: http://jinja.pocoo.org/docs/templates/#template-inheritance
 .. _`Macros`: http://jinja.pocoo.org/docs/templates/#macros
