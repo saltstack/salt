@@ -94,6 +94,13 @@ def salt_master():
     Start the salt master.
     '''
     import salt.cli.daemons
+
+    # Fix for setuptools generated scripts, so that it will
+    # work with multiprocessing fork emulation.
+    # (see multiprocessing.forking.get_preparation_data())
+    if __name__ != '__main__':
+        sys.modules['__main__'] = sys.modules[__name__]
+
 # REMOVEME after Python 2.7 support is dropped (also the six import)
     if six.PY2:
         from salt.utils.versions import warn_until
@@ -183,6 +190,13 @@ def salt_minion():
 
     import salt.cli.daemons
     import multiprocessing
+
+    # Fix for setuptools generated scripts, so that it will
+    # work with multiprocessing fork emulation.
+    # (see multiprocessing.forking.get_preparation_data())
+    if __name__ != '__main__':
+        sys.modules['__main__'] = sys.modules[__name__]
+
     if '' in sys.path:
         sys.path.remove('')
 
