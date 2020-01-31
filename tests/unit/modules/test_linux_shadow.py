@@ -3,8 +3,9 @@
     :codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
-# Import Pytohn libs
-from __future__ import absolute_import, print_function, unicode_literals
+# Import Python libs
+from __future__ import absolute_import, unicode_literals, print_function
+import textwrap
 
 # Import Salt Testing libs
 import salt.utils.platform
@@ -13,6 +14,7 @@ import salt.utils.platform
 from salt.ext import six
 from tests.support.helpers import skip_if_not_root
 from tests.support.mixins import LoaderModuleMockMixin
+from tests.support.mock import MagicMock, patch, mock_open, DEFAULT
 from tests.support.unit import TestCase, skipIf
 
 # Import salt libs
@@ -58,6 +60,84 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
                 ),
                 hash_info["pw_hash"],
             )
+
+    def test_set_password(self):
+        """
+        Test the corner case in which shadow.set_password is called for a user
+        that has an entry in /etc/passwd but not /etc/shadow.
+        """
+        data = {
+            "/etc/shadow": textwrap.dedent(
+                """\
+                foo:orighash:17955::::::
+                bar:somehash:17955::::::
+                """
+            ),
+            "*": Exception("Attempted to open something other than /etc/shadow"),
+        }
+        isfile_mock = MagicMock(
+            side_effect=lambda x: True if x == "/etc/shadow" else DEFAULT
+        )
+        shadow_info_mock = MagicMock(return_value={"passwd": "newhash"})
+
+        #
+        # CASE 1: Normal password change
+        #
+        user = "bar"
+        password = "newhash"
+        with patch(
+            "salt.utils.files.fopen", mock_open(read_data=data)
+        ) as shadow_mock, patch("os.path.isfile", isfile_mock), patch.object(
+            shadow, "info", shadow_info_mock
+        ), patch.dict(
+            shadow.__grains__, {"os": "CentOS"}
+        ):
+            result = shadow.set_password(user, password, use_usermod=False)
+
+        assert result
+        filehandles = shadow_mock.filehandles["/etc/shadow"]
+        # We should only have opened twice, once to read the contents and once
+        # to write.
+        assert len(filehandles) == 2
+        # We're rewriting the entire file
+        assert filehandles[1].mode == "w+"
+        # We should be calling writelines instead of write, to rewrite the
+        # entire file.
+        assert len(filehandles[1].writelines_calls) == 1
+        # Make sure we wrote the correct info
+        lines = filehandles[1].writelines_calls[0]
+        # Should only have the same two users in the file
+        assert len(lines) == 2
+        # The first line should be unchanged
+        assert lines[0] == "foo:orighash:17955::::::\n"
+        # The second line should have the new password hash
+        assert lines[1].split(":")[:2] == [user, password]
+
+        #
+        # CASE 2: Corner case: no /etc/shadow entry for user
+        #
+        user = "baz"
+        password = "newhash"
+        with patch(
+            "salt.utils.files.fopen", mock_open(read_data=data)
+        ) as shadow_mock, patch("os.path.isfile", isfile_mock), patch.object(
+            shadow, "info", shadow_info_mock
+        ), patch.dict(
+            shadow.__grains__, {"os": "CentOS"}
+        ):
+            result = shadow.set_password(user, password, use_usermod=False)
+
+        assert result
+        filehandles = shadow_mock.filehandles["/etc/shadow"]
+        # We should only have opened twice, once to read the contents and once
+        # to write.
+        assert len(filehandles) == 2
+        # We're just appending to the file, not rewriting
+        assert filehandles[1].mode == "a+"
+        # We should only have written to the file once
+        assert len(filehandles[1].write_calls) == 1
+        # Make sure we wrote the correct info
+        assert filehandles[1].write_calls[0].split(":")[:2] == [user, password]
 
     @skip_if_not_root
     def test_list_users(self):

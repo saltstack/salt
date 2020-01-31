@@ -15,6 +15,7 @@ import functools
 
 # Import python libs
 import os
+import logging
 
 # Import salt libs
 import salt.utils.data
@@ -38,6 +39,8 @@ except ImportError:
     HAS_CRYPT = False
 
 __virtualname__ = "shadow"
+
+log = logging.getLogger(__name__)
 
 
 def __virtual__():
@@ -388,21 +391,32 @@ def set_password(name, password, use_usermod=False, root=None):
         if not os.path.isfile(s_file):
             return ret
         lines = []
+        user_found = False
+        lstchg = six.text_type(
+            (datetime.datetime.today() - datetime.datetime(1970, 1, 1)).days
+        )
         with salt.utils.files.fopen(s_file, "rb") as fp_:
             for line in fp_:
                 line = salt.utils.stringutils.to_unicode(line)
                 comps = line.strip().split(":")
-                if comps[0] != name:
-                    lines.append(line)
-                    continue
-                changed_date = datetime.datetime.today() - datetime.datetime(1970, 1, 1)
-                comps[1] = password
-                comps[2] = six.text_type(changed_date.days)
-                line = ":".join(comps)
-                lines.append("{0}\n".format(line))
-        with salt.utils.files.fopen(s_file, "w+") as fp_:
-            lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
-            fp_.writelines(lines)
+                if comps[0] == name:
+                    user_found = True
+                    comps[1] = password
+                    comps[2] = lstchg
+                    line = ":".join(comps) + "\n"
+                lines.append(line)
+        if not user_found:
+            log.warning("shadow entry not present for user %s, adding", name)
+            with salt.utils.files.fopen(s_file, "a+") as fp_:
+                fp_.write(
+                    "{name}:{password}:{lstchg}::::::\n".format(
+                        name=name, password=password, lstchg=lstchg
+                    )
+                )
+        else:
+            with salt.utils.files.fopen(s_file, "w+") as fp_:
+                lines = [salt.utils.stringutils.to_str(_l) for _l in lines]
+                fp_.writelines(lines)
         uinfo = info(name, root=root)
         return uinfo["passwd"] == password
     else:
