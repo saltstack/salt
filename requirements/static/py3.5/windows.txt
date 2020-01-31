@@ -102,8 +102,7 @@ s3transfer==0.2.0         # via boto3
 salttesting==2017.6.1
 sed==0.3.1
 setproctitle==1.1.10
-singledispatch==3.4.0.3
-six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
+six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 smmap==0.9.0
 strict-rfc3339==0.7

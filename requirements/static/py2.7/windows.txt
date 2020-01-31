@@ -111,7 +111,7 @@ salttesting==2017.6.1
 scandir==1.10.0           # via pathlib2
 sed==0.3.1
 setproctitle==1.1.10
-singledispatch==3.4.0.3
+singledispatch==3.4.0.3 ; python_version < "3.4"
 six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 smmap==0.9.0
