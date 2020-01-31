@@ -2,6 +2,7 @@ id: mm-sub-minion
 master:
   - localhost:64506
   - localhost:64508
+master_alive_interval: 1
 master_return_strategy: any
 return_retry_timer: 1
 return_retry_timer_max: 0
