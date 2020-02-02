@@ -341,7 +341,6 @@ def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argume
     '''
     Included for API consistency
     '''
-    pass
 
 
 def get_load(jid):
@@ -515,7 +514,7 @@ def _archive_jobs(timestamp):
             sys.stderr.write(six.text_type(error))
             cursor.execute("ROLLBACK")
             raise err
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(e)
             raise
 
@@ -560,5 +559,5 @@ def clean_old_jobs():
                 _archive_jobs(stamp)
             else:
                 _purge_jobs(stamp)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             log.error(e)

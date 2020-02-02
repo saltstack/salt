@@ -301,7 +301,7 @@ class DecryptGPGPillarTest(_CommonBase):
         super(DecryptGPGPillarTest, cls).setUpClass()
         try:
             os.makedirs(cls.gpg_homedir, mode=0o700)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             cls.created_gpg_homedir = False
             raise
         else:

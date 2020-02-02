@@ -42,7 +42,7 @@ class CPModuleTest(ModuleCase):
     '''
     Validate the cp module
     '''
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         '''
         Ensure that results are decoded
 
@@ -385,6 +385,21 @@ class CPModuleTest(ModuleCase):
             ])
         self.assertIn('KNIGHT:  They\'re nervous, sire.', ret)
         self.assertNotIn('bacon', ret)
+
+    @with_tempfile()
+    def test_get_url_ftp(self, tgt):
+        '''
+        cp.get_url with https:// source given
+        '''
+        self.run_function(
+            'cp.get_url',
+            [
+                'ftp://ftp.freebsd.org/pub/FreeBSD/releases/amd64/amd64/12.0-RELEASE/MANIFEST',
+                tgt,
+            ])
+        with salt.utils.files.fopen(tgt, 'r') as instructions:
+            data = salt.utils.stringutils.to_unicode(instructions.read())
+        self.assertIn('Base system', data)
 
     # cp.get_file_str tests
 

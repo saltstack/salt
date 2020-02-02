@@ -21,7 +21,7 @@ from salt.ext.six.moves import range
 import salt.utils.pbm
 
 try:
-    from pyVmomi import vim, vmodl, pbm
+    from pyVmomi import vim, vmodl, pbm  # pylint: disable=no-name-in-module
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False

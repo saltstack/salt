@@ -1130,8 +1130,10 @@ def set_known_host(user=None,
                                       hash_known_hosts=hash_known_hosts,
                                       timeout=timeout,
                                       fingerprint_hash_type=fingerprint_hash_type)
+        # pylint: disable=not-an-iterable
         known_keys = [h['key'] for h in remote_host_entries] if remote_host_entries else []
         known_fingerprints = [h['fingerprint'] for h in remote_host_entries] if remote_host_entries else []
+        # pylint: enable=not-an-iterable
         if not remote_host_entries:
             return {'status': 'error',
                     'error': 'Unable to receive remote host keys'}

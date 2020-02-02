@@ -79,7 +79,7 @@ def condition_input(args, kwargs):
     ret = []
     for arg in args:
         if (six.PY3 and isinstance(arg, six.integer_types) and salt.utils.jid.is_jid(six.text_type(arg))) or \
-        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code
+        (six.PY2 and isinstance(arg, long)):  # pylint: disable=incompatible-py3-code,undefined-variable
             ret.append(six.text_type(arg))
         else:
             ret.append(arg)
@@ -215,7 +215,7 @@ def yamlify_arg(arg):
         else:
             # we don't support this type
             return original_arg
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # In case anything goes wrong...
         return original_arg
 
@@ -274,7 +274,7 @@ def get_function_argspec(func, is_class_method=None):
             aspec = _getargspec(func)
             del aspec.args[0]  # self
         elif inspect.isfunction(func):
-            aspec = _getargspec(func)  # pylint: disable=redefined-variable-type
+            aspec = _getargspec(func)
         elif inspect.ismethod(func):
             aspec = _getargspec(func)
             del aspec.args[0]  # self

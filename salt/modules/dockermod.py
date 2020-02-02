@@ -59,7 +59,7 @@ any of the following locations:
   in Minion config file in order to work)
 
 .. important::
-    Versions prior to Neon require that Docker credentials are configured in
+    Versions prior to 3000 require that Docker credentials are configured in
     Pillar data. Be advised that Pillar data is still recommended though,
     because this keeps the configuration from being stored on the Minion.
 
@@ -247,7 +247,7 @@ except ImportError:
 
 try:
     if six.PY2:
-        import backports.lzma as lzma
+        import backports.lzma as lzma  # pylint: disable=no-name-in-module
     else:
         import lzma
     HAS_LZMA = True
@@ -304,7 +304,7 @@ def __virtual__():
     if HAS_DOCKER_PY:
         try:
             docker_py_versioninfo = _get_docker_py_versioninfo()
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             # May fail if we try to connect to a docker daemon but can't
             return (False, 'Docker module found, but no version could be'
                     ' extracted')
@@ -316,7 +316,7 @@ def __virtual__():
         if docker_py_versioninfo >= MIN_DOCKER_PY:
             try:
                 docker_versioninfo = version().get('VersionInfo')
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 docker_versioninfo = None
 
             if docker_versioninfo is None or docker_versioninfo >= MIN_DOCKER:
@@ -395,7 +395,7 @@ def _get_client(timeout=NOTSET, **kwargs):
                 ca_cert=docker_machine_tls['CaCertPath'],
                 assert_hostname=False,
                 verify=True)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Docker machine {0} failed: {1}'.format(docker_machine, exc))
     try:
@@ -632,7 +632,7 @@ def _size_fmt(num):
             if num < 1024.0:
                 return '{0:3.1f} {1}'.format(num, unit)
             num /= 1024.0
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error('Unable to format file size for \'%s\'', num)
         return 'unknown'
 
@@ -672,7 +672,7 @@ def _client_wrapper(attr, *args, **kwargs):
     except docker.errors.DockerException as exc:
         # More general docker exception (catches InvalidVersion, etc.)
         raise CommandExecutionError(exc.__str__())
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         err = exc.__str__()
     else:
         return ret
@@ -1054,7 +1054,7 @@ def compare_container_networks(first, second):
     than waiting for a new Salt release one can just set
     :conf_minion:`docker.compare_container_networks`.
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         This config option can now also be set in pillar data and grains.
         Additionally, it can be set in the master config file, provided that
         :conf_minion:`pillar_opts` is enabled on the minion.
@@ -1103,7 +1103,7 @@ def compare_container_networks(first, second):
     for net_name in all_nets:
         try:
             connected_containers = inspect_network(net_name).get('Containers', {})
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             # Shouldn't happen unless a network was removed outside of Salt
             # between the time that a docker_container.running state started
             # and when this comparison took place.
@@ -2100,7 +2100,7 @@ def logs(name, **kwargs):
         if HAS_TIMELIB:
             try:
                 kwargs['since'] = timelib.strtodatetime(kwargs['since'])
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     'docker.logs: Failed to parse \'%s\' using timelib: %s',
                     kwargs['since'], exc
@@ -3795,7 +3795,7 @@ def export(name,
             if data:
                 out.write(data)
         out.flush()
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         try:
             os.remove(path)
         except OSError:
@@ -4228,7 +4228,7 @@ def dangling(prune=False, force=False):
     for image in dangling_images:
         try:
             ret.setdefault(image, {})['Removed'] = rmi(image, force=force)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             err = exc.__str__()
             log.error(err)
             ret.setdefault(image, {})['Comment'] = err
@@ -4451,7 +4451,7 @@ def load(path, repository=None, tag=None):
             except IndexError:
                 ret['Warning'] = ('No top-level image layers were loaded, no '
                                   'image was tagged')
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 ret['Warning'] = (
                     'Failed to tag {0} as {1}: {2}'.format(
                         top_level_images[0], tagged_image, exc
@@ -4564,7 +4564,7 @@ def pull(image,
         log.debug('pull event: %s', event)
         try:
             event = salt.utils.json.loads(event)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
                 info={'Error': exc.__str__()}
@@ -4659,7 +4659,7 @@ def push(image,
     for event in response:
         try:
             event = salt.utils.json.loads(event)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
                 'Unable to interpret API event: \'{0}\''.format(event),
                 info={'Error': exc.__str__()}
@@ -4931,7 +4931,7 @@ def save(name,
                     if data:
                         out.write(data)
                 out.flush()
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             try:
                 os.remove(path)
             except OSError:
@@ -5045,7 +5045,7 @@ def networks(names=None, ids=None):
     for idx, netinfo in enumerate(response):
         try:
             containers = inspect_network(netinfo['Id'])['Containers']
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             continue
         else:
             if containers:

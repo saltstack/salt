@@ -38,7 +38,7 @@ def get_parameter(name, withdecryption=False, resp_json=False, region=None, key=
     '''
     Retrives a parameter from SSM Parameter Store
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     .. code-block:: text
 
@@ -71,7 +71,7 @@ def put_parameter(Name,
     '''
     Sets a parameter in the SSM parameter store
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     .. code-block:: text
 
@@ -104,7 +104,7 @@ def delete_parameter(Name, region=None, key=None, keyid=None, profile=None):
     '''
     Removes a parameter from the SSM parameter store
 
-    .. versionadded:: Neon
+    .. versionadded:: 3000
 
     .. code-block:: text
         salt-call boto_ssm.delete_parameter test-param

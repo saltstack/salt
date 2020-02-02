@@ -1609,10 +1609,10 @@ def symlink(
     Create a symbolic link (symlink, soft link)
 
     If the file already exists and is a symlink pointing to any location other
-    than the specified target, the symlink will be replaced. If the symlink is
-    a regular file or directory then the state will return False. If the
-    regular file or directory is desired to be replaced with a symlink pass
-    force: True, if it is to be renamed, pass a backupname.
+    than the specified target, the symlink will be replaced. If an entry with
+    the same name exists then the state will return False. If the existing
+    entry is desired to be replaced with a symlink pass force: True, if it is
+    to be renamed, pass a backupname.
 
     name
         The location of the symlink to create
@@ -1623,9 +1623,13 @@ def symlink(
     force
         If the name of the symlink exists and is not a symlink and
         force is set to False, the state will fail. If force is set to
-        True, the file or directory in the way of the symlink file
+        True, the existing entry in the way of the symlink file
         will be deleted to make room for the symlink, unless
         backupname is set, when it will be renamed
+
+        .. versionchanged:: 3000
+            Force will now remove all types of existing file system entries,
+            not just files, directories and symlinks.
 
     backupname
         If the name of the symlink exists and is not a symlink, it will be
@@ -1845,8 +1849,8 @@ def symlink(
                             '{1}:{2}'.format(name, user, group))
             return ret
 
-    elif os.path.isfile(name) or os.path.isdir(name):
-        # It is not a link, but a file or dir
+    elif os.path.exists(name):
+        # It is not a link, but a file, dir, socket, FIFO etc.
         if backupname is not None:
             if not os.path.isabs(backupname):
                 if backupname == os.path.basename(backupname):
@@ -1866,7 +1870,7 @@ def symlink(
                     __salt__['file.remove'](backupname)
             try:
                 __salt__['file.move'](name, backupname)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 ret['changes'] = {}
                 log.debug(
                     'Encountered error renaming %s to %s',
@@ -1883,14 +1887,12 @@ def symlink(
                 __salt__['file.remove'](name)
         else:
             # Otherwise throw an error
-            if os.path.isfile(name):
-                return _error(ret,
-                              ('File exists where the symlink {0} should be'
-                               .format(name)))
-            else:
-                return _error(ret, ((
-                                        'Directory exists where the symlink {0} should be'
-                                    ).format(name)))
+            fs_entry_type = 'File' if os.path.isfile(name) else \
+                'Directory' if os.path.isdir(name) else \
+                'File system entry'
+            return _error(ret,
+                          ('{0} exists where the symlink {1} should be'
+                           .format(fs_entry_type, name)))
 
     if not os.path.exists(name):
         # The link is not present, make it
@@ -3093,7 +3095,7 @@ def managed(name,
             skip_verify,
             **kwargs
         )
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         ret['changes'] = {}
         log.debug(traceback.format_exc())
         return _error(ret, 'Unable to manage file: {0}'.format(exc))
@@ -3107,7 +3109,7 @@ def managed(name,
         if __salt__['file.file_exists'](name):
             try:
                 __salt__['file.copy'](name, tmp_filename)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 return _error(
                     ret,
                     'Unable to copy file {0} to {1}: {2}'.format(
@@ -3144,7 +3146,7 @@ def managed(name,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
                 **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             salt.utils.files.remove(tmp_filename)
@@ -3221,7 +3223,7 @@ def managed(name,
                 encoding=encoding,
                 encoding_errors=encoding_errors,
                 **kwargs)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['changes'] = {}
             log.debug(traceback.format_exc())
             return _error(ret, 'Unable to manage file: {0}'.format(exc))
@@ -5108,7 +5110,7 @@ def blockreplace(
             dry_run=__opts__['test'],
             show_changes=show_changes,
             append_newline=append_newline)
-    except Exception as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.exception('Encountered error managing block')
         ret['comment'] = (
             'Encountered error managing block: {0}. '
@@ -5186,15 +5188,9 @@ def comment(name, regex, char='#', backup='.bak'):
 
     comment_regex = char + unanchor_regex
 
-    # Check if the line is already commented
-    if __salt__['file.search'](name, comment_regex, multiline=True):
-        commented = True
-    else:
-        commented = False
-
     # Make sure the pattern appears in the file before continuing
-    if commented or not __salt__['file.search'](name, regex, multiline=True):
-        if __salt__['file.search'](name, unanchor_regex, multiline=True):
+    if not __salt__['file.search'](name, regex, multiline=True):
+        if __salt__['file.search'](name, comment_regex, multiline=True):
             ret['comment'] = 'Pattern already commented'
             ret['result'] = True
             return ret
@@ -5293,17 +5289,17 @@ def uncomment(name, regex, char='#', backup='.bak'):
     # Make sure the pattern appears in the file
     if __salt__['file.search'](
             name,
+            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
+            multiline=True):
+        # Line exists and is commented
+        pass
+    elif __salt__['file.search'](
+            name,
             '^[ \t]*{0}'.format(regex.lstrip('^')),
             multiline=True):
         ret['comment'] = 'Pattern already uncommented'
         ret['result'] = True
         return ret
-    elif __salt__['file.search'](
-            name,
-            '{0}[ \t]*{1}'.format(char, regex.lstrip('^')),
-            multiline=True):
-        # Line exists and is commented
-        pass
     else:
         return _error(ret, '{0}: Pattern not found'.format(regex))
 
@@ -5798,19 +5794,23 @@ def prepend(name,
 
     if makedirs is True:
         dirname = os.path.dirname(name)
-        if not __salt__['file.directory_exists'](dirname):
-            try:
-                _makedirs(name=name)
-            except CommandExecutionError as exc:
-                return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
+        if __opts__['test']:
+            ret['comment'] = 'Directory {0} is set to be updated'.format(dirname)
+            ret['result'] = None
+        else:
+            if not __salt__['file.directory_exists'](dirname):
+                try:
+                    _makedirs(name=name)
+                except CommandExecutionError as exc:
+                    return _error(ret, 'Drive {0} is not mapped'.format(exc.message))
 
-            check_res, check_msg, check_changes = _check_directory_win(dirname) \
-                if salt.utils.platform.is_windows() \
-                else _check_directory(dirname)
+                check_res, check_msg, check_changes = _check_directory_win(dirname) \
+                    if salt.utils.platform.is_windows() \
+                    else _check_directory(dirname)
 
-            if not check_res:
-                ret['changes'] = check_changes
-                return _error(ret, check_msg)
+                if not check_res:
+                    ret['changes'] = check_changes
+                    return _error(ret, check_msg)
 
     check_res, check_msg = _check_file(name)
     if not check_res:
@@ -6078,7 +6078,7 @@ def patch(name,
     else:
         try:
             name = os.path.expanduser(name)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['comment'] = 'Invalid path \'{0}\''.format(name)
             return ret
         else:
@@ -6101,7 +6101,7 @@ def patch(name,
     if reject_file is not None:
         try:
             reject_file_parent = os.path.dirname(reject_file)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             ret['comment'] = 'Invalid path \'{0}\' for reject_file'.format(
                 reject_file
             )
@@ -6144,7 +6144,7 @@ def patch(name,
         if option.startswith('-p'):
             try:
                 strip = int(option[2:])
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 ret['comment'] = (
                     'Invalid format for \'-p\' CLI option. Consider using '
                     'the \'strip\' option for this state.'
@@ -6155,7 +6155,7 @@ def patch(name,
                 # Assume --strip=N
                 try:
                     strip = int(option.rsplit('=', 1)[-1])
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     ret['comment'] = (
                         'Invalid format for \'-strip\' CLI option. Consider '
                         'using the \'strip\' option for this state.'
@@ -6165,7 +6165,7 @@ def patch(name,
                 # Assume --strip N and grab the next option in the list
                 try:
                     strip = int(options[index + 1])
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     ret['comment'] = (
                         'Invalid format for \'-strip\' CLI option. Consider '
                         'using the \'strip\' option for this state.'
@@ -6236,7 +6236,7 @@ def patch(name,
                              template=template,
                              context=context,
                              defaults=defaults)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             msg = 'Failed to cache patch file {0}: {1}'.format(
                 salt.utils.url.redact_http_basic_auth(source_match),
                 exc
@@ -7902,7 +7902,7 @@ def cached(name,
 
     try:
         parsed = _urlparse(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ret['comment'] = 'Only URLs or local file paths are valid input'
         return ret
 
@@ -8045,7 +8045,7 @@ def cached(name,
                 name,
                 saltenv=saltenv,
                 source_hash=source_sum.get('hsum'))
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = salt.utils.url.redact_http_basic_auth(exc.__str__())
             return ret
 
@@ -8119,7 +8119,7 @@ def not_cached(name, saltenv='base'):
 
     try:
         parsed = _urlparse(name)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         ret['comment'] = 'Only URLs or local file paths are valid input'
         return ret
     else:
@@ -8138,7 +8138,7 @@ def not_cached(name, saltenv='base'):
     if local_copy:
         try:
             os.remove(local_copy)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             ret['comment'] = 'Failed to delete {0}: {1}'.format(
                 local_copy, exc.__str__()
             )

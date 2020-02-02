@@ -479,7 +479,7 @@ class Schedule(object):
             log.info('Running Job: %s', name)
             self._run_job(func, data)
 
-    def enable_schedule(self):
+    def enable_schedule(self, persist=True):
         '''
         Enable the scheduler.
         '''
@@ -491,7 +491,10 @@ class Schedule(object):
                             'schedule': self._get_schedule()},
                            tag='/salt/minion/minion_schedule_enabled_complete')
 
-    def disable_schedule(self):
+        if persist:
+            self.persist()
+
+    def disable_schedule(self, persist=True):
         '''
         Disable the scheduler.
         '''
@@ -502,6 +505,9 @@ class Schedule(object):
             evt.fire_event({'complete': True,
                             'schedule': self._get_schedule()},
                            tag='/salt/minion/minion_schedule_disabled_complete')
+
+        if persist:
+            self.persist()
 
     def reload(self, schedule):
         '''
@@ -791,7 +797,7 @@ class Schedule(object):
                                 func, returner
                             )
 
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             log.exception('Unhandled exception running %s', ret['fun'])
             # Although catch-all exception handlers are bad, the exception here
             # is to let the exception bubble up to the top of the thread context,
@@ -830,7 +836,7 @@ class Schedule(object):
                                                                   self.opts['sock_dir'])
                     try:
                         event.fire_event(load, '__schedule_return')
-                    except Exception as exc:
+                    except Exception as exc:  # pylint: disable=broad-except
                         log.exception('Unhandled exception firing __schedule_return event')
                     finally:
                         event.destroy()
@@ -1680,7 +1686,8 @@ def clean_proc_dir(opts):
             job = None
             try:
                 job = salt.payload.Serial(opts).load(fp_)
-            except Exception:  # It's corrupted
+            except Exception:  # pylint: disable=broad-except
+                # It's corrupted
                 # Windows cannot delete an open file
                 if salt.utils.platform.is_windows():
                     fp_.close()

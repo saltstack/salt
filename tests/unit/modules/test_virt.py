@@ -2016,6 +2016,32 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         self.assertEqual(root.find('forward').attrib['mode'], 'bridge')
         self.assertEqual(root.find('virtualport').attrib['type'], 'openvswitch')
 
+    def test_network_nat(self):
+        '''
+        Test virt._get_net_xml() in a nat setup
+        '''
+        xml_data = virt._gen_net_xml('network', 'main', 'nat', None, ip_configs=[
+            {
+                'cidr': '192.168.2.0/24',
+                'dhcp_ranges': [
+                    {'start': '192.168.2.10', 'end': '192.168.2.25'},
+                    {'start': '192.168.2.110', 'end': '192.168.2.125'},
+                ]
+            }
+        ])
+        root = ET.fromstring(xml_data)
+        self.assertEqual(root.find('name').text, 'network')
+        self.assertEqual(root.find('bridge').attrib['name'], 'main')
+        self.assertEqual(root.find('forward').attrib['mode'], 'nat')
+        self.assertEqual(root.find("./ip[@address='192.168.2.0']").attrib['prefix'], '24')
+        self.assertEqual(root.find("./ip[@address='192.168.2.0']").attrib['family'], 'ipv4')
+        self.assertEqual(
+                root.find("./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.10']").attrib['end'],
+                '192.168.2.25')
+        self.assertEqual(
+                root.find("./ip[@address='192.168.2.0']/dhcp/range[@start='192.168.2.110']").attrib['end'],
+                '192.168.2.125')
+
     def test_domain_capabilities(self):
         '''
         Test the virt.domain_capabilities parsing
@@ -2321,6 +2347,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
         # pylint: enable=no-member
         net = virt.network_info('foo')
         self.assertEqual({}, net)
+
+    def test_network_get_xml(self):
+        '''
+        Test virt.network_get_xml
+        '''
+        network_mock = MagicMock()
+        network_mock.XMLDesc.return_value = '<net>Raw XML</net>'
+        self.mock_conn.networkLookupByName.return_value = network_mock
+
+        self.assertEqual('<net>Raw XML</net>', virt.network_get_xml('default'))
 
     def test_pool(self):
         '''
@@ -2723,6 +2759,16 @@ class VirtTestCase(TestCase, LoaderModuleMockMixin):
                 'target_path': '/srv/vms'
             }
         }, pool)
+
+    def test_pool_get_xml(self):
+        '''
+        Test virt.pool_get_xml
+        '''
+        pool_mock = MagicMock()
+        pool_mock.XMLDesc.return_value = '<pool>Raw XML</pool>'
+        self.mock_conn.storagePoolLookupByName.return_value = pool_mock
+
+        self.assertEqual('<pool>Raw XML</pool>', virt.pool_get_xml('default'))
 
     def test_pool_list_volumes(self):
         '''

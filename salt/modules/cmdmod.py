@@ -2383,6 +2383,22 @@ def script(source,
         on a Windows minion you must also use the ``password`` argument, and
         the target user account must be in the Administrators group.
 
+        .. note::
+
+            For Window's users, specifically Server users, it may be necessary
+            to specify your runas user using the User Logon Name instead of the
+            legacy logon name. Traditionally, logons would be in the following
+            format.
+
+                ``Domain/user``
+
+            In the event this causes issues when executing scripts, use the UPN
+            format which looks like the following.
+
+                ``user@domain.local``
+
+            More information <https://github.com/saltstack/salt/issues/55080>
+
     :param str password: Windows only. Required when specifying ``runas``. This
         parameter will be ignored on non-Windows platforms.
 
@@ -2964,7 +2980,7 @@ def run_chroot(root,
     :param list binds: List of directories that will be exported inside
         the chroot with the bind option.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3000
 
     :param dict env: Environment variables to be set prior to execution.
 
@@ -3622,7 +3638,7 @@ def powershell(cmd,
 
     try:
         return salt.utils.json.loads(response)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         log.error("Error converting PowerShell JSON return", exc_info=True)
         return {}
 
@@ -3947,7 +3963,7 @@ def powershell_all(cmd,
     # If we fail to parse stdoutput we will raise an exception
     try:
         result = salt.utils.json.loads(stdoutput)
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         err_msg = "cmd.powershell_all " + \
                   "cannot parse the Powershell output."
         response["cmd"] = cmd

@@ -67,7 +67,7 @@ from salt.exceptions import SaltClientError
 from salt.ext import six
 
 try:
-    import salt.ext.six.moves.socketserver as socketserver
+    import salt.ext.six.moves.socketserver as socketserver  # pylint: disable=no-name-in-module
 except ImportError:
     import socketserver
 
@@ -165,7 +165,7 @@ class SocketServerRequestHandler(socketserver.StreamRequestHandler):
                     # We're not on windows
                     pass
                 log.exception(exc)
-            except Exception as exc:
+            except Exception as exc:  # pylint: disable=broad-except
                 log.exception(exc)
 
 
@@ -1169,7 +1169,7 @@ class TestDaemon(object):
             if os.path.isdir(dirname):
                 try:
                     shutil.rmtree(six.text_type(dirname), onerror=remove_readonly)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     log.exception('Failed to remove directory: %s', dirname)
 
     def wait_for_jid(self, targets, jid, timeout=120):

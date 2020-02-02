@@ -137,7 +137,7 @@ class OptionParserMeta(MixInMeta):
 
 
 class CustomOption(optparse.Option, object):
-    def take_action(self, action, dest, *args, **kwargs):
+    def take_action(self, action, dest, *args, **kwargs):  # pylint: disable=arguments-differ
         # see https://github.com/python/cpython/blob/master/Lib/optparse.py#L786
         self.explicit = True
         return optparse.Option.take_action(self, action, dest, *args, **kwargs)

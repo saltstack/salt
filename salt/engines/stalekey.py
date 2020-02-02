@@ -4,13 +4,16 @@ An engine that uses presence detection to keep track of which minions
 have been recently connected and remove their keys if they have not been
 connected for a certain period of time.
 
-Requires that the minion_data_cache option be enabled.
+Requires that the :conf_master:`minion_data_cache` option be enabled.
 
 .. versionadded: 2017.7.0
 
 :configuration:
 
-    Example configuration
+    Example configuration:
+
+    .. code-block:: yaml
+
         engines:
           - stalekey:
               interval: 3600

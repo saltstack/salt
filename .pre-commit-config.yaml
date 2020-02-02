@@ -15,7 +15,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
+
       - id: pip-tools-compile
         alias: compile-darwin-py2.7-zmq-requirements
         name: Darwin Py2.7 ZeroMQ Requirements
@@ -29,8 +29,8 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
           - --passthrough-line-from-input=^pyobjc(.*)$
+
       - id: pip-tools-compile
         alias: compile-windows-py2.7-zmq-requirements
         name: Windows Py2.7 ZeroMQ Requirements
@@ -44,16 +44,6 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
-
-      - id: pip-tools-compile
-        alias: compile-lint-py2.7-requirements
-        name: Lint Py2.7 Requirements
-        files: ^requirements/static/lint\.in$
-        args:
-          - -v
-          - --py-version=2.7
-          - --platform=linux
 
       - id: pip-tools-compile
         alias: compile-cloud-py2.7-requirements
@@ -72,6 +62,7 @@ repos:
           - --py-version=2.7
           - --platform=linux
           - --out-prefix=linux
+
       - id: pip-tools-compile
         alias: compile-darwin-crypto-py2.7-requirements
         name: Darwin Py2.7 Crypto Requirements
@@ -81,6 +72,7 @@ repos:
           - --py-version=2.7
           - --platform=darwin
           - --out-prefix=darwin
+
       - id: pip-tools-compile
         alias: compile-windows-crypto-py2.7-requirements
         name: Windows Py2.7 Crypto Requirements
@@ -104,7 +96,6 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-cloud-py3.4-requirements
@@ -124,6 +115,7 @@ repos:
           - --platform=linux
           - --out-prefix=linux
 
+
       - id: pip-tools-compile
         alias: compile-linux-py3.5-zmq-requirements
         name: Linux Py3.5 ZeroMQ Requirements
@@ -136,7 +128,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
+
       - id: pip-tools-compile
         alias: compile-darwin-py3.5-zmq-requirements
         name: Darwin Py3.5 ZeroMQ Requirements
@@ -150,8 +142,8 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
           - --passthrough-line-from-input=^pyobjc(.*)$
+
       - id: pip-tools-compile
         alias: compile-windows-py3.5-zmq-requirements
         name: Windows Py3.5 ZeroMQ Requirements
@@ -165,7 +157,6 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-cloud-py3.5-requirements
@@ -193,6 +184,7 @@ repos:
           - --py-version=3.5
           - --platform=linux
           - --out-prefix=linux
+
       - id: pip-tools-compile
         alias: compile-darwin-crypto-py3.5-requirements
         name: Darwin Py3.5 Crypto Requirements
@@ -202,6 +194,7 @@ repos:
           - --py-version=3.5
           - --platform=darwin
           - --out-prefix=darwin
+
       - id: pip-tools-compile
         alias: compile-windows-crypto-py3.5-requirements
         name: Windows Py3.5 Crypto Requirements
@@ -211,6 +204,16 @@ repos:
           - --py-version=3.5
           - --platform=windows
           - --out-prefix=windows
+
+      - id: pip-tools-compile
+        alias: compile-lint-py3.5-requirements
+        name: Lint Py3.5 Requirements
+        files: ^requirements/static/lint\.in$
+        args:
+          - -v
+          - --py-version=3.5
+          - --platform=linux
+
 
       - id: pip-tools-compile
         alias: compile-linux-py3.6-zmq-requirements
@@ -224,7 +227,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
+
       - id: pip-tools-compile
         alias: compile-darwin-py3.6-zmq-requirements
         name: Darwin Py3.6 ZeroMQ Requirements
@@ -238,8 +241,8 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
           - --passthrough-line-from-input=^pyobjc(.*)$
+
       - id: pip-tools-compile
         alias: compile-windows-py3.6-zmq-requirements
         name: Windows Py3.6 ZeroMQ Requirements
@@ -253,7 +256,6 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-cloud-py3.6-requirements
@@ -281,6 +283,7 @@ repos:
           - --py-version=3.6
           - --platform=linux
           - --out-prefix=linux
+
       - id: pip-tools-compile
         alias: compile-darwin-crypto-py3.6-requirements
         name: Darwin Py3.6 Crypto Requirements
@@ -290,6 +293,7 @@ repos:
           - --py-version=3.6
           - --platform=darwin
           - --out-prefix=darwin
+
       - id: pip-tools-compile
         alias: compile-windows-crypto-py3.6-requirements
         name: Windows Py3.6 Crypto Requirements
@@ -299,6 +303,16 @@ repos:
           - --py-version=3.6
           - --platform=windows
           - --out-prefix=windows
+
+      - id: pip-tools-compile
+        alias: compile-lint-py3.6-requirements
+        name: Lint Py3.6 Requirements
+        files: ^requirements/static/lint\.in$
+        args:
+          - -v
+          - --py-version=3.6
+          - --platform=linux
+
 
       - id: pip-tools-compile
         alias: compile-linux-py3.7-zmq-requirements
@@ -312,7 +326,7 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
+
       - id: pip-tools-compile
         alias: compile-darwin-py3.7-zmq-requirements
         name: Darwin Py3.7 ZeroMQ Requirements
@@ -326,8 +340,8 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
           - --passthrough-line-from-input=^pyobjc(.*)$
+
       - id: pip-tools-compile
         alias: compile-windows-py3.7-zmq-requirements
         name: Windows Py3.7 ZeroMQ Requirements
@@ -341,7 +355,6 @@ repos:
           - --include=requirements/base.txt
           - --include=requirements/zeromq.txt
           - --include=requirements/pytest.txt
-          - --remove-line=^pycrypto==(.*)$
 
       - id: pip-tools-compile
         alias: compile-cloud-py3.7-requirements
@@ -369,6 +382,7 @@ repos:
           - --py-version=3.7
           - --platform=linux
           - --out-prefix=linux
+
       - id: pip-tools-compile
         alias: compile-darwin-crypto-py3.7-requirements
         name: Darwin Py3.7 Crypto Requirements
@@ -378,6 +392,7 @@ repos:
           - --py-version=3.7
           - --platform=darwin
           - --out-prefix=darwin
+
       - id: pip-tools-compile
         alias: compile-windows-crypto-py3.7-requirements
         name: Windows Py3.7 Crypto Requirements
@@ -387,6 +402,15 @@ repos:
           - --py-version=3.7
           - --platform=windows
           - --out-prefix=windows
+
+      - id: pip-tools-compile
+        alias: compile-lint-py3.7-requirements
+        name: Lint Py3.7 Requirements
+        files: ^requirements/static/lint\.in$
+        args:
+          - -v
+          - --py-version=3.7
+          - --platform=linux
 
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
@@ -398,7 +422,7 @@ repos:
         files: ^((setup|noxfile)|salt/.*)\.py$
         args:
           - -e
-          - lint-salt
+          - lint-salt-pre-commit
           - --
 
   - repo: https://github.com/saltstack/salt-nox-pre-commit
@@ -410,5 +434,5 @@ repos:
         files: ^tests/.*\.py$
         args:
           - -e
-          - lint-tests
+          - lint-tests-pre-commit
           - --

@@ -437,7 +437,7 @@ def extracted(name,
             minions ``hash_type`` config option to the same one that you're going
             to pass via ``source_hash`` argument.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     skip_verify : False
         If ``True``, hash verification of remote file sources (``http://``,
@@ -553,7 +553,7 @@ def extracted(name,
         then re-create that directory before extracting. Note that ``clean``
         and ``clean_parent`` are mutually exclusive.
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     user
         The user to own each extracted file. Not available on Windows.
@@ -755,7 +755,7 @@ def extracted(name,
             try:
                 not_rel = os.path.relpath(enforce_ownership_on,
                                           name).startswith('..' + os.sep)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 # A ValueError is raised on Windows when the paths passed to
                 # os.path.relpath are not on the same drive letter. Using a
                 # generic Exception here to keep other possible exception types
@@ -1028,7 +1028,7 @@ def extracted(name,
                                                source_hash_name=source_hash_name,
                                                skip_verify=skip_verify,
                                                saltenv=__env__)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             msg = 'Failed to cache {0}: {1}'.format(
                     salt.utils.url.redact_http_basic_auth(source_match),
                     exc.__str__())

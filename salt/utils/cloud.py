@@ -709,7 +709,7 @@ def wait_for_fun(fun, timeout=900, **kwargs):
             response = fun(**kwargs)
             if not isinstance(response, bool):
                 return response
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.debug('Caught exception in wait_for_fun: %s', exc)
             time.sleep(1)
             log.debug('Retrying function %s on  (try %s)', fun, trycount)
@@ -1014,7 +1014,7 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c hostname', host, username, password, port=port
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception("Unable to execute command")
         if ret_code == 0:
             log.debug('psexec connected...')
@@ -1118,7 +1118,7 @@ def validate_windows_cred(host,
             stdout, stderr, ret_code = run_psexec_command(
                 'cmd.exe', '/c hostname', host, username, password, port=445
             )
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exceoption while executing psexec")
         if ret_code == 0:
             break
@@ -1181,7 +1181,7 @@ def wait_for_passwd(host, port=22, ssh_timeout=15, username='root',
             return False
         except SaltCloudPasswordError:
             raise
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             if trycount >= maxtries:
                 return False
             time.sleep(trysleep)
@@ -1284,7 +1284,7 @@ def deploy_windows(host,
                     'C$',
                     conn=smb_conn,
                 )
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-except
                 log.debug("Exception copying master_sign.pub file %s to minion", master_sign_pub_file)
 
         # Copy over win_installer
@@ -2274,7 +2274,7 @@ def win_cmd(command, **kwargs):
         proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
-    except Exception as err:
+    except Exception as err:  # pylint: disable=broad-except
         log.exception('Failed to execute command \'%s\'', logging_command)
     # Signal an error
     return 1
@@ -2450,7 +2450,7 @@ def remove_sshkey(host, known_hosts=None):
                 known_hosts = '{0}/.ssh/known_hosts'.format(
                     pwd.getpwuid(os.getuid()).pwd_dir
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
 
     if known_hosts is not None:
@@ -3137,7 +3137,7 @@ def _strip_cache_events(data, opts):
     are configured in the main Salt Cloud configuration file, usually
     ``/etc/salt/cloud``.
 
-    .. code-block: yaml
+    .. code-block:: yaml
 
         cache_event_strip_fields:
           - password

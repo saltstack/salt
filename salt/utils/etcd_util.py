@@ -75,7 +75,6 @@ class EtcdUtilWatchTimeout(Exception):
     """
     A watch timed out without returning a result
     """
-    pass
 
 
 class EtcdClient(object):
@@ -227,7 +226,7 @@ class EtcdClient(object):
             # it uses the newer {} format syntax
             log.error("etcd: error. python-etcd does not fully support python 2.6, no error information available")
             raise
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error('etcd: uncaught exception %s', err)
             raise
         return result
@@ -282,7 +281,7 @@ class EtcdClient(object):
         except MaxRetryError as err:
             log.error("etcd: Could not connect to etcd server: %s", err)
             return None
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error('etcd: uncaught exception %s', err)
             raise
 
@@ -307,7 +306,7 @@ class EtcdClient(object):
         except MaxRetryError as err:
             log.error("etcd: Could not connect to etcd server: %s", err)
             return None
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error('etcd: uncaught exception %s', err)
             raise
 
@@ -348,7 +347,7 @@ class EtcdClient(object):
         except MaxRetryError as err:
             log.error('etcd: Could not connect to etcd server: %s', err)
             return None
-        except Exception as err:
+        except Exception as err:  # pylint: disable=broad-except
             log.error('etcd: uncaught exception %s', err)
             raise
 

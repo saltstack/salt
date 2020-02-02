@@ -23,7 +23,7 @@
 #======================================================================================================================
 set -o nounset                              # Treat unset variables as an error
 
-__ScriptVersion="2019.11.04"
+__ScriptVersion="2020.01.29"
 __ScriptName="bootstrap-salt.sh"
 
 __ScriptFullName="$0"
@@ -270,6 +270,8 @@ _QUIET_GIT_INSTALLATION=$BS_FALSE
 _REPO_URL="repo.saltstack.com"
 _PY_EXE=""
 _INSTALL_PY="$BS_FALSE"
+_TORNADO_MAX_PY3_VERSION="5.0"
+_POST_NEON_INSTALL=$BS_FALSE
 
 # Defaults for install arguments
 ITYPE="stable"
@@ -292,7 +294,7 @@ __usage() {
     - stable [version]    Install a specific version. Only supported for
                           packages available at repo.saltstack.com
     - testing             RHEL-family specific: configure EPEL testing repo
-    - git                 Install from the head of the develop branch
+    - git                 Install from the head of the master branch
     - git [ref]           Install from any git ref (such as a branch, tag, or
                           commit)
 
@@ -583,7 +585,7 @@ fi
 # If doing a git install, check what branch/tag/sha will be checked out
 if [ "$ITYPE" = "git" ]; then
     if [ "$#" -eq 0 ];then
-        GIT_REV="develop"
+        GIT_REV="master"
     else
         GIT_REV="$1"
         shift
@@ -674,7 +676,7 @@ if [ -n "$_PY_EXE" ]; then
     if [ "$(uname)" = "Darwin" ]; then
       _PY_PKG_VER=$(echo "$_PY_EXE" | sed "s/\\.//g")
     else
-      _PY_PKG_VER=$(echo "$_PY_EXE" | sed -r "s/\\.//g")
+      _PY_PKG_VER=$(echo "$_PY_EXE" | sed -E "s/\\.//g")
     fi
 
     _PY_MAJOR_VERSION=$(echo "$_PY_PKG_VER" | cut -c 7)
@@ -933,11 +935,11 @@ __strip_duplicates() {
 __sort_release_files() {
     KNOWN_RELEASE_FILES=$(echo "(arch|alpine|centos|debian|ubuntu|fedora|redhat|suse|\
         mandrake|mandriva|gentoo|slackware|turbolinux|unitedlinux|void|lsb|system|\
-        oracle|os)(-|_)(release|version)" | sed -r 's:[[:space:]]::g')
+        oracle|os)(-|_)(release|version)" | sed -E 's:[[:space:]]::g')
     primary_release_files=""
     secondary_release_files=""
     # Sort know VS un-known files first
-    for release_file in $(echo "${@}" | sed -r 's:[[:space:]]:\n:g' | sort -f | uniq); do
+    for release_file in $(echo "${@}" | sed -E 's:[[:space:]]:\n:g' | sort -f | uniq); do
         match=$(echo "$release_file" | grep -E -i "${KNOWN_RELEASE_FILES}")
         if [ "${match}" != "" ]; then
             primary_release_files="${primary_release_files} ${release_file}"
@@ -962,7 +964,7 @@ __sort_release_files() {
     done
 
     # Echo the results collapsing multiple white-space into a single white-space
-    echo "${primary_release_files} ${secondary_release_files}" | sed -r 's:[[:space:]]+:\n:g'
+    echo "${primary_release_files} ${secondary_release_files}" | sed -E 's:[[:space:]]+:\n:g'
 }
 
 
@@ -1181,17 +1183,17 @@ __gather_sunos_system_info() {
             case "$line" in
                 *OpenIndiana*oi_[0-9]*)
                     DISTRO_NAME="OpenIndiana"
-                    DISTRO_VERSION=$(echo "$line" | sed -nr "s/OpenIndiana(.*)oi_([[:digit:]]+)(.*)/\\2/p")
+                    DISTRO_VERSION=$(echo "$line" | sed -nE "s/OpenIndiana(.*)oi_([[:digit:]]+)(.*)/\\2/p")
                     break
                     ;;
                 *OpenSolaris*snv_[0-9]*)
                     DISTRO_NAME="OpenSolaris"
-                    DISTRO_VERSION=$(echo "$line" | sed -nr "s/OpenSolaris(.*)snv_([[:digit:]]+)(.*)/\\2/p")
+                    DISTRO_VERSION=$(echo "$line" | sed -nE "s/OpenSolaris(.*)snv_([[:digit:]]+)(.*)/\\2/p")
                     break
                     ;;
                 *Oracle*Solaris*[0-9]*)
                     DISTRO_NAME="Oracle Solaris"
-                    DISTRO_VERSION=$(echo "$line" | sed -nr "s/(Oracle Solaris) ([[:digit:]]+)(.*)/\\2/p")
+                    DISTRO_VERSION=$(echo "$line" | sed -nE "s/(Oracle Solaris) ([[:digit:]]+)(.*)/\\2/p")
                     break
                     ;;
                 *Solaris*)
@@ -1686,10 +1688,9 @@ __check_end_of_life_versions() {
             ;;
 
         freebsd)
-            # FreeBSD versions lower than 9.1 are not supported.
-            if { [ "$DISTRO_MAJOR_VERSION" -eq 9 ] && [ "$DISTRO_MINOR_VERSION" -lt 01 ]; } || \
-                [ "$DISTRO_MAJOR_VERSION" -lt 9 ]; then
-                echoerror "Versions lower than FreeBSD 9.1 are not supported."
+            # FreeBSD versions lower than 11 are EOL
+            if [ "$DISTRO_MAJOR_VERSION" -lt 11 ]; then
+                echoerror "Versions lower than FreeBSD 11 are EOL and no longer supported."
                 exit 1
             fi
             ;;
@@ -1712,7 +1713,7 @@ echoinfo "  Distribution: ${DISTRO_NAME} ${DISTRO_VERSION}"
 echo
 
 # Simplify distro name naming on functions
-DISTRO_NAME_L=$(echo "$DISTRO_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -re 's/([[:space:]])+/_/g')
+DISTRO_NAME_L=$(echo "$DISTRO_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-zA-Z0-9_ ]//g' | sed -Ee 's/([[:space:]])+/_/g')
 
 # Simplify version naming on functions
 if [ "$DISTRO_VERSION" = "" ] || [ ${_SIMPLIFY_VERSION} -eq $BS_FALSE ]; then
@@ -1790,7 +1791,7 @@ elif [ "${DISTRO_NAME_L}" = "debian" ]; then
   __debian_codename_translation
 fi
 
-if [ "$(echo "${DISTRO_NAME_L}" | grep -E '(debian|ubuntu|centos|red_hat|oracle|scientific|amazon|fedora)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]; then
+if [ "$(echo "${DISTRO_NAME_L}" | grep -E '(debian|ubuntu|centos|red_hat|oracle|scientific|amazon|fedora|macosx)')" = "" ] && [ "$ITYPE" = "stable" ] && [ "$STABLE_REV" != "latest" ]; then
     echoerror "${DISTRO_NAME} does not have major version pegged packages support"
     exit 1
 fi
@@ -1814,6 +1815,61 @@ fi
 if [ "${DISTRO_NAME_L}" != "ubuntu" ] && [ $_PIP_ALL -eq $BS_TRUE ]; then
     echoerror "${DISTRO_NAME} does not have -a support"
     exit 1
+fi
+
+if [ "$ITYPE" = "git" ]; then
+
+    if [ "${GIT_REV}" = "master" ]; then
+        _POST_NEON_INSTALL=$BS_TRUE
+        __TAG_REGEX_MATCH="MATCH"
+    else
+        case ${OS_NAME_L} in
+            openbsd|freebsd|netbsd|darwin )
+                __NEW_VS_TAG_REGEX_MATCH=$(echo "${GIT_REV}" | sed -E 's/^(v?3[0-9]{3}(\.[0-9]{1,2})?).*$/MATCH/')
+                if [ "$__NEW_VS_TAG_REGEX_MATCH" = "MATCH" ]; then
+                    _POST_NEON_INSTALL=$BS_TRUE
+                    __TAG_REGEX_MATCH="${__NEW_VS_TAG_REGEX_MATCH}"
+                    if [ "$(echo "${GIT_REV}" | cut -c -1)" != "v" ]; then
+                        # We do this to properly clone tags
+                        GIT_REV="v${GIT_REV}"
+                    fi
+                    echodebug "Post Neon Tag Regex Match On: ${GIT_REV}"
+                else
+                    __TAG_REGEX_MATCH=$(echo "${GIT_REV}" | sed -E 's/^(v?[0-9]{1,4}\.[0-9]{1,2})(\.[0-9]{1,2})?.*$/MATCH/')
+                    echodebug "Pre Neon Tag Regex Match On: ${GIT_REV}"
+                fi
+                ;;
+            * )
+                __NEW_VS_TAG_REGEX_MATCH=$(echo "${GIT_REV}" | sed 's/^.*\(v\?3[[:digit:]]\{3\}\(\.[[:digit:]]\{1,2\}\)\?\).*$/MATCH/')
+                if [ "$__NEW_VS_TAG_REGEX_MATCH" = "MATCH" ]; then
+                    _POST_NEON_INSTALL=$BS_TRUE
+                    __TAG_REGEX_MATCH="${__NEW_VS_TAG_REGEX_MATCH}"
+                    if [ "$(echo "${GIT_REV}" | cut -c -1)" != "v" ]; then
+                        # We do this to properly clone tags
+                        GIT_REV="v${GIT_REV}"
+                    fi
+                    echodebug "Post Neon Tag Regex Match On: ${GIT_REV}"
+                else
+                    __TAG_REGEX_MATCH=$(echo "${GIT_REV}" | sed 's/^.*\(v\?[[:digit:]]\{1,4\}\.[[:digit:]]\{1,2\}\)\(\.[[:digit:]]\{1,2\}\)\?.*$/MATCH/')
+                    echodebug "Pre Neon Tag Regex Match On: ${GIT_REV}"
+                fi
+                ;;
+        esac
+    fi
+
+    if [ "$_POST_NEON_INSTALL" -eq $BS_TRUE ]; then
+        echo
+        echowarn "Post Neon git based installations will always install salt and it's dependencies using pip"
+        echowarn "You have 10 seconds to cancel and stop the bootstrap process"
+        echo
+        sleep 10
+        _PIP_ALLOWED=$BS_TRUE
+        # Let's trigger config_salt()
+        if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
+            _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf/"
+            CONFIG_SALT_FUNC="config_salt"
+        fi
+    fi
 fi
 
 
@@ -1979,15 +2035,6 @@ __git_clone_and_checkout() {
     if [ "$_INSECURE_DL" -eq $BS_TRUE ]; then
         export GIT_SSL_NO_VERIFY=1
     fi
-
-    case ${OS_NAME_L} in
-        openbsd|freebsd|netbsd )
-            __TAG_REGEX_MATCH=$(echo "${GIT_REV}" | sed -E 's/^(v?[0-9]{1,4}\.[0-9]{1,2})(\.[0-9]{1,2})?.*$/MATCH/')
-            ;;
-        * )
-            __TAG_REGEX_MATCH=$(echo "${GIT_REV}" | sed 's/^.*\(v\?[[:digit:]]\{1,4\}\.[[:digit:]]\{1,2\}\)\(\.[[:digit:]]\{1,2\}\)\?.*$/MATCH/')
-            ;;
-    esac
 
     __SALT_GIT_CHECKOUT_PARENT_DIR=$(dirname "${_SALT_GIT_CHECKOUT_DIR}" 2>/dev/null)
     __SALT_GIT_CHECKOUT_PARENT_DIR="${__SALT_GIT_CHECKOUT_PARENT_DIR:-/tmp/git}"
@@ -2507,7 +2554,7 @@ __activate_virtualenv() {
 __install_pip_pkgs() {
     _pip_pkgs="$1"
     _py_exe="$2"
-    _py_pkg=$(echo "$_py_exe" | sed -r "s/\\.//g")
+    _py_pkg=$(echo "$_py_exe" | sed -E "s/\\.//g")
     _pip_cmd="${_py_exe} -m pip"
 
     if [ "${_py_exe}" = "" ]; then
@@ -2581,6 +2628,48 @@ __install_pip_deps() {
     # shellcheck disable=SC2086,SC2090
     pip install -U -r ${requirements_file} ${__PIP_PACKAGES}
 }   # ----------  end of function __install_pip_deps  ----------
+
+#---  FUNCTION  -------------------------------------------------------------------------------------------------------
+#          NAME:  __install_salt_from_repo_post_neon
+#   DESCRIPTION:  Return 0 or 1 if successfully able to install. Can provide a different python version to
+#                 install pip packages with. If $py_exe is not specified it will use the default python version.
+#    PARAMETERS:  py_exe
+#----------------------------------------------------------------------------------------------------------------------
+__install_salt_from_repo_post_neon() {
+    _py_exe="$1"
+
+    if [ "${_py_exe}" = "" ]; then
+        _py_exe='python'
+    fi
+
+    echodebug "__install_salt_from_repo_post_neon py_exe=$_py_exe"
+
+    _py_pkg=$(echo "$_py_exe" | sed -E "s/\\.//g")
+    _pip_cmd="${_py_exe} -m pip"
+
+    __check_pip_allowed
+
+    # Install pip and pip dependencies
+    if ! __check_command_exists "${_pip_cmd} --version"; then
+        __PACKAGES="${_py_pkg}-pip gcc"
+        # shellcheck disable=SC2086
+        if [ "$DISTRO_NAME_L" = "debian" ];then
+            __PACKAGES="${__PACKAGES} ${_py_pkg}-dev"
+            __apt_get_install_noinput ${__PACKAGES} || return 1
+        else
+            __PACKAGES="${__PACKAGES} ${_py_pkg}-devel"
+            __yum_install_noinput ${__PACKAGES} || return 1
+        fi
+
+    fi
+
+    ${_pip_cmd} install -U pip
+
+    echoinfo "Installing salt using ${_py_exe}"
+    cd "${_SALT_GIT_CHECKOUT_DIR}" || return 1
+
+    ${_pip_cmd} install . || return 1
+}   # ----------  end of function __install_salt_from_repo_post_neon  ----------
 
 
 #######################################################################################################################
@@ -2823,6 +2912,10 @@ install_ubuntu_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     __PACKAGES=""
 
     # See how we are installing packages
@@ -2910,10 +3003,17 @@ install_ubuntu_git() {
         _PYEXE=python2.7
     fi
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
-        ${_PYEXE} setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
+        # shellcheck disable=SC2086
+        "${_PYEXE}" setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     else
-        ${_PYEXE} setup.py ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
+        # shellcheck disable=SC2086
+        "${_PYEXE}" setup.py ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     fi
 
     return 0
@@ -3190,6 +3290,10 @@ install_debian_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     __PACKAGES="libzmq3 libzmq3-dev lsb-release python-apt python-backports.ssl-match-hostname"
     __PACKAGES="${__PACKAGES} python-crypto python-jinja2 python-msgpack python-m2crypto"
     __PACKAGES="${__PACKAGES} python-requests python-tornado python-yaml python-zmq"
@@ -3230,6 +3334,10 @@ install_debian_8_git_deps() {
     fi
 
     __git_clone_and_checkout || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
 
     __PACKAGES="libzmq3 libzmq3-dev lsb-release python-apt python-crypto python-jinja2"
     __PACKAGES="${__PACKAGES} python-m2crypto python-msgpack python-requests python-systemd"
@@ -3295,6 +3403,10 @@ install_debian_9_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     __PACKAGES="libzmq5 lsb-release"
 
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
@@ -3329,6 +3441,10 @@ install_debian_9_git_deps() {
 
 install_debian_10_git_deps() {
     install_debian_git_pre || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
 
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
         _py=${_PY_EXE}
@@ -3394,10 +3510,17 @@ install_debian_git() {
         _PYEXE=python
     fi
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
-        ${_PYEXE} setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
+        # shellcheck disable=SC2086
+        "${_PYEXE}" setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     else
-        ${_PYEXE} setup.py ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
+        # shellcheck disable=SC2086
+        "${_PYEXE}" setup.py ${SETUP_PY_INSTALL_ARGS} install --install-layout=deb || return 1
     fi
 }
 
@@ -3596,11 +3719,20 @@ install_fedora_git_deps() {
     fi
 
     __PACKAGES="${__PACKAGES:=}"
-    if [ "$_INSECURE_DL" -eq $BS_FALSE ] && [ "${_SALT_REPO_URL%%://*}" = "https" ]; then
-        __PACKAGES="${__PACKAGES} ca-certificates"
-    fi
     if ! __check_command_exists git; then
         __PACKAGES="${__PACKAGES} git"
+    fi
+    install_fedora_deps || return 1
+
+    __git_clone_and_checkout || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
+    __PACKAGES="${__PACKAGES:=}"
+    if [ "$_INSECURE_DL" -eq $BS_FALSE ] && [ "${_SALT_REPO_URL%%://*}" = "https" ]; then
+        __PACKAGES="${__PACKAGES} ca-certificates"
     fi
     if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
         __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-libcloud python${PY_PKG_VER}-netaddr"
@@ -3614,8 +3746,6 @@ install_fedora_git_deps() {
     fi
 
     install_fedora_deps || return 1
-
-    __git_clone_and_checkout || return 1
 
     # Fedora 28+ needs tornado <5.0 from pip
     # https://github.com/saltstack/salt-bootstrap/issues/1220
@@ -3642,6 +3772,11 @@ install_fedora_git() {
         echoinfo "Using the following python version: ${_PY_EXE} to install salt"
     else
         _PYEXE='python2'
+    fi
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
     fi
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
@@ -3804,26 +3939,28 @@ install_centos_stable_deps() {
         __PACKAGES="yum-utils chkconfig"
     fi
 
-    if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
-        # YAML module is used for generating custom master/minion configs
-        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-            __PACKAGES="${__PACKAGES} python3-pyyaml"
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_FALSE ]; then
+        if [ "$DISTRO_MAJOR_VERSION" -ge 8 ]; then
+            # YAML module is used for generating custom master/minion configs
+            if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+                __PACKAGES="${__PACKAGES} python3-pyyaml"
+            else
+                __PACKAGES="${__PACKAGES} python2-pyyaml"
+            fi
+        elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
+            # YAML module is used for generating custom master/minion configs
+            if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+                __PACKAGES="${__PACKAGES} python36-PyYAML"
+            else
+                __PACKAGES="${__PACKAGES} PyYAML"
+            fi
         else
-            __PACKAGES="${__PACKAGES} python2-pyyaml"
-        fi
-    elif [ "$DISTRO_MAJOR_VERSION" -eq 7 ]; then
-        # YAML module is used for generating custom master/minion configs
-        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-            __PACKAGES="${__PACKAGES} python36-PyYAML"
-        else
-            __PACKAGES="${__PACKAGES} PyYAML"
-        fi
-    else
-        # YAML module is used for generating custom master/minion configs
-        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
-            __PACKAGES="${__PACKAGES} python34-PyYAML"
-        else
-            __PACKAGES="${__PACKAGES} PyYAML"
+            # YAML module is used for generating custom master/minion configs
+            if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+                __PACKAGES="${__PACKAGES} python34-PyYAML"
+            else
+                __PACKAGES="${__PACKAGES} PyYAML"
+            fi
         fi
     fi
 
@@ -3906,6 +4043,9 @@ install_centos_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
 
     __PACKAGES=""
     _install_m2crypto_req=false
@@ -4002,6 +4142,12 @@ install_centos_git() {
         echoinfo "Using the following python version: ${_PY_EXE} to install salt"
     else
         _PYEXE='python2'
+    fi
+
+    echodebug "_PY_EXE: $_PY_EXE"
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
     fi
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
@@ -4534,18 +4680,24 @@ install_alpine_linux_stable_deps() {
 install_alpine_linux_git_deps() {
     install_alpine_linux_stable_deps || return 1
 
-    apk -U add python2 py-virtualenv py2-crypto py2-m2crypto py2-setuptools \
-        py2-jinja2 py2-yaml py2-markupsafe py2-msgpack py2-psutil \
-        py2-zmq zeromq py2-requests || return 1
-
     if ! __check_command_exists git; then
         apk -U add git  || return 1
     fi
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        apk -U add python2 py2-pip || return 1
+        _PY_EXE=python2
+        return 0
+    fi
+
+    apk -U add python2 py-virtualenv py2-crypto py2-m2crypto py2-setuptools \
+        py2-jinja2 py2-yaml py2-markupsafe py2-msgpack py2-psutil \
+        py2-zmq zeromq py2-requests || return 1
+
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             apk -U add py2-tornado || return 1
@@ -4581,6 +4733,12 @@ install_alpine_linux_stable() {
 }
 
 install_alpine_linux_git() {
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
         python2 setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install || return 1
     else
@@ -4598,7 +4756,7 @@ install_alpine_linux_post() {
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
         if [ -f /sbin/rc-update ]; then
-            script_url="${_SALTSTACK_REPO_URL%.git}/raw/develop/pkg/alpine/salt-$fname"
+            script_url="${_SALTSTACK_REPO_URL%.git}/raw/master/pkg/alpine/salt-$fname"
             [ -f "/etc/init.d/salt-$fname" ] || __fetch_url "/etc/init.d/salt-$fname" "$script_url"
 
             # shellcheck disable=SC2181
@@ -4789,6 +4947,10 @@ install_amazon_linux_ami_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     __PACKAGES=""
     __PIP_PACKAGES=""
 
@@ -4799,7 +4961,7 @@ install_amazon_linux_ami_git_deps() {
     fi
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __PACKAGES="${__PACKAGES} ${pkg_append}-tornado"
@@ -4830,16 +4992,23 @@ install_amazon_linux_ami_2_git_deps() {
         yum -y install ca-certificates || return 1
     fi
 
-    PIP_EXE='pip'
-    if __check_command_exists python2.7; then
-        if ! __check_command_exists pip2.7; then
-            __yum_install_noinput python2-pip
-        fi
-        PIP_EXE='/bin/pip'
-        _PY_EXE='python2.7'
-    fi
-
     install_amazon_linux_ami_2_deps || return 1
+    if __check_command_exists python3; then
+            if ! __check_command_exists pip3; then
+                __yum_install_noinput python3-pip
+            fi
+            PIP_EXE='/bin/pip3'
+            _PY_EXE='python3'
+    else
+        PIP_EXE='pip'
+        if __check_command_exists python2.7; then
+            if ! __check_command_exists pip2.7; then
+                __yum_install_noinput python2-pip
+            fi
+            PIP_EXE='/bin/pip'
+            _PY_EXE='python2.7'
+        fi
+    fi
 
     if ! __check_command_exists git; then
         __yum_install_noinput git || return 1
@@ -4847,20 +5016,33 @@ install_amazon_linux_ami_2_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     __PACKAGES=""
     __PIP_PACKAGES=""
 
-    if [ "$_INSTALL_CLOUD" -eq $BS_TRUE ]; then
+    if [ "$_INSTALL_CLOUD" -eq "$BS_TRUE" ]; then
         __check_pip_allowed "You need to allow pip based installations (-P) in order to install apache-libcloud"
-        __PACKAGES="${__PACKAGES} python27-pip"
+        if [ "$PARSED_VERSION" -eq "2" ]; then
+            if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq "3" ]; then
+                __PACKAGES="${__PACKAGES} python3-pip"
+                __PIP_PACKAGES="${__PIP_PACKAGES} tornado<$_TORNADO_MAX_PY3_VERSION"
+            else
+                __PACKAGES="${__PACKAGES} python2-pip"
+            fi
+        else
+            __PACKAGES="${__PACKAGES} python27-pip"
+        fi
         __PIP_PACKAGES="${__PIP_PACKAGES} apache-libcloud>=$_LIBCLOUD_MIN_VERSION"
     fi
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
-            __PACKAGES="${__PACKAGES} ${pkg_append}-tornado"
+            __PACKAGES="${__PACKAGES} ${pkg_append}${PY_PKG_VER}-tornado"
         fi
     fi
 
@@ -4917,18 +5099,31 @@ install_amazon_linux_ami_2_deps() {
 
     if [ $_DISABLE_REPOS -eq $BS_FALSE ] || [ "$_CUSTOM_REPO_URL" != "null" ]; then
         __REPO_FILENAME="saltstack-repo.repo"
+        __PY_VERSION_REPO="yum"
+        PY_PKG_VER=""
+        _PY_MAJOR_VERSION=$(echo "$_PY_PKG_VER" | cut -c 7)
+        repo_label="saltstack-repo"
+        repo_name="SaltStack repo for Amazon Linux 2"
+        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+            __REPO_FILENAME="saltstack-py3-repo.repo"
+            __PY_VERSION_REPO="py3"
+            PY_PKG_VER=3
+            repo_label="saltstack-py3-repo"
+            repo_name="SaltStack Python 3 repo for Amazon Linux 2"
+        fi
 
-        base_url="$HTTP_VAL://${_REPO_URL}/yum/amazon/2/\$basearch/$repo_rev/"
-        gpg_key="${base_url}SALTSTACK-GPG-KEY.pub
-        ${base_url}base/RPM-GPG-KEY-CentOS-7"
-        repo_name="SaltStack repo for Amazon Linux 2.0"
+        base_url="$HTTP_VAL://${_REPO_URL}/${__PY_VERSION_REPO}/amazon/2/\$basearch/$repo_rev/"
+        gpg_key="${base_url}SALTSTACK-GPG-KEY.pub,${base_url}base/RPM-GPG-KEY-CentOS-7"
+        if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
+            gpg_key="${base_url}SALTSTACK-GPG-KEY.pub"
+        fi
 
         # This should prob be refactored to use __install_saltstack_rhel_repository()
         # With args passed in to do the right thing.  Reformatted to be more like the
         # amazon linux yum file.
         if [ ! -s "/etc/yum.repos.d/${__REPO_FILENAME}" ]; then
           cat <<_eof > "/etc/yum.repos.d/${__REPO_FILENAME}"
-[saltstack-repo]
+[$repo_label]
 name=$repo_name
 failovermethod=priority
 priority=10
@@ -4942,9 +5137,14 @@ _eof
 
     # Package python-ordereddict-1.1-2.el6.noarch is obsoleted by python26-2.6.9-2.88.amzn1.x86_64
     # which is already installed
-    __PACKAGES="m2crypto ${pkg_append}-crypto ${pkg_append}-jinja2 PyYAML procps-ng"
-    __PACKAGES="${__PACKAGES} ${pkg_append}-msgpack ${pkg_append}-requests ${pkg_append}-zmq"
-    __PACKAGES="${__PACKAGES} ${pkg_append}-futures"
+    if [ "${PY_PKG_VER}" -eq 3 ]; then
+        __PACKAGES="${pkg_append}${PY_PKG_VER}-m2crypto ${pkg_append}${PY_PKG_VER}-pyyaml"
+    else
+        __PACKAGES="m2crypto PyYAML ${pkg_append}-futures"
+    fi
+
+    __PACKAGES="${__PACKAGES} ${pkg_append}${PY_PKG_VER}-crypto ${pkg_append}${PY_PKG_VER}-jinja2 procps-ng"
+    __PACKAGES="${__PACKAGES} ${pkg_append}${PY_PKG_VER}-msgpack ${pkg_append}${PY_PKG_VER}-requests ${pkg_append}${PY_PKG_VER}-zmq"
 
     # shellcheck disable=SC2086
     __yum_install_noinput ${__PACKAGES} || return 1
@@ -5025,6 +5225,12 @@ install_amazon_linux_ami_2_testing_post() {
     install_centos_testing_post || return 1
     return 0
 }
+
+install_amazon_linux_ami_2_check_services() {
+    install_centos_check_services || return 1
+    return 0
+}
+
 #
 #   Ended Amazon Linux AMI Install Functions
 #
@@ -5072,15 +5278,20 @@ install_arch_linux_git_deps() {
     if ! __check_command_exists git; then
         pacman -Sy --noconfirm --needed git  || return 1
     fi
+
+    __git_clone_and_checkout || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     pacman -R --noconfirm python2-distribute
     pacman -Su --noconfirm --needed python2-crypto python2-setuptools python2-jinja \
         python2-m2crypto python2-futures python2-markupsafe python2-msgpack python2-psutil \
         python2-pyzmq zeromq python2-requests python2-systemd || return 1
 
-    __git_clone_and_checkout || return 1
-
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             pacman -Su --noconfirm --needed python2-tornado
@@ -5114,6 +5325,12 @@ install_arch_linux_stable() {
 }
 
 install_arch_linux_git() {
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
         python2 setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install || return 1
     else
@@ -5240,157 +5457,34 @@ install_arch_check_services() {
 #   FreeBSD Install Functions
 #
 
-__freebsd_get_packagesite() {
-    if [ "$CPU_ARCH_L" = "amd64" ]; then
-        BSD_ARCH="x86:64"
-    elif [ "$CPU_ARCH_L" = "x86_64" ]; then
-        BSD_ARCH="x86:64"
-    elif [ "$CPU_ARCH_L" = "i386" ]; then
-        BSD_ARCH="x86:32"
-    elif [ "$CPU_ARCH_L" = "i686" ]; then
-        BSD_ARCH="x86:32"
-    fi
-
-    # Since the variable might not be set, don't, momentarily treat it as a
-    # failure
-    set +o nounset
-
-    # ABI is a std format for identifying release / architecture combos
-    ABI="freebsd:${DISTRO_MAJOR_VERSION}:${BSD_ARCH}"
-    _PACKAGESITE="http://pkg.freebsd.org/${ABI}/latest"
-    # Awkwardly, we want the `${ABI}` to be in conf file without escaping
-    PKGCONFURL="pkg+http://pkg.freebsd.org/\${ABI}/latest"
-    SALTPKGCONFURL="http://repo.saltstack.com/freebsd/\${ABI}/"
-
-    # Treat unset variables as errors once more
-    set -o nounset
-}
-
 # Using a separate conf step to head for idempotent install...
 __configure_freebsd_pkg_details() {
-    ## pkg.conf is deprecated.
-    ## We use conf files in /usr/local or /etc instead
-    mkdir -p /usr/local/etc/pkg/repos/
-    mkdir -p /etc/pkg/
-
-    ## Use new JSON-like format for pkg repo configs
-    ## check if /etc/pkg/FreeBSD.conf is already in place
-    if [ ! -f /etc/pkg/FreeBSD.conf ]; then
-      conf_file=/usr/local/etc/pkg/repos/freebsd.conf
-      {
-          echo "FreeBSD:{"
-          echo "    url: \"${PKGCONFURL}\","
-          echo "    mirror_type: \"srv\","
-          echo "    signature_type: \"fingerprints\","
-          echo "    fingerprints: \"/usr/share/keys/pkg\","
-          echo "    enabled: true"
-          echo "}"
-      } > $conf_file
-      __copyfile $conf_file /etc/pkg/FreeBSD.conf
-    fi
-    FROM_FREEBSD="-r FreeBSD"
-
-    ##### Workaround : Waiting for SaltStack Repository to be available for FreeBSD 12 ####
-    if [ "${DISTRO_MAJOR_VERSION}" -ne 12 ]; then
-        ## add saltstack freebsd repo
-        salt_conf_file=/usr/local/etc/pkg/repos/saltstack.conf
-        {
-            echo "SaltStack:{"
-            echo "    url: \"${SALTPKGCONFURL}\","
-            echo "    mirror_type: \"http\","
-            echo "    enabled: true"
-            echo "    priority: 10"
-            echo "}"
-        } > $salt_conf_file
-        FROM_SALTSTACK="-r SaltStack"
-    fi
-    ##### End Workaround : Waiting for SaltStack Repository to be available for FreeBSD 12 ####
-
-    ## ensure future ports builds use pkgng
-    echo "WITH_PKGNG=   yes" >> /etc/make.conf
-
-    /usr/local/sbin/pkg update -f || return 1
+    _SALT_ETC_DIR="/usr/local/etc/salt"
 }
 
-install_freebsd_9_stable_deps() {
-    _SALT_ETC_DIR=${BS_SALT_ETC_DIR:-/usr/local/etc/salt}
-    _PKI_DIR=${_SALT_ETC_DIR}/pki
-
-    if [ $_DISABLE_REPOS -eq $BS_FALSE ]; then
-        #make variables available even if pkg already installed
-        __freebsd_get_packagesite
-
-        if [ ! -x /usr/local/sbin/pkg ]; then
-
-            # install new `pkg` code from its own tarball.
-            fetch "${_PACKAGESITE}/Latest/pkg.txz" || return 1
-            tar xf ./pkg.txz -s ",/.*/,,g" "*/pkg-static" || return 1
-            ./pkg-static add ./pkg.txz || return 1
-            /usr/local/sbin/pkg2ng || return 1
-        fi
-
-        # Configure the pkg repository using new approach
-        __configure_freebsd_pkg_details || return 1
-    fi
-
-    # Now install swig30
-    # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y swig30 || return 1
-
-    # YAML module is used for generating custom master/minion configs
-    # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y py27-yaml || return 1
-
-    if [ "${_EXTRA_PACKAGES}" != "" ]; then
-        echoinfo "Installing the following extra packages as requested: ${_EXTRA_PACKAGES}"
-        # shellcheck disable=SC2086
-        /usr/local/sbin/pkg install ${FROM_FREEBSD} -y ${_EXTRA_PACKAGES} || return 1
-    fi
-
-    if [ "$_UPGRADE_SYS" -eq $BS_TRUE ]; then
-        pkg upgrade -y || return 1
-    fi
-
-    return 0
-}
-
-install_freebsd_10_stable_deps() {
-    install_freebsd_9_stable_deps
-}
-
-install_freebsd_11_stable_deps() {
-    install_freebsd_9_stable_deps
-}
-
-install_freebsd_12_stable_deps() {
-    install_freebsd_9_stable_deps
+install_freebsd_deps() {
+    __configure_freebsd_pkg_details
+    pkg install -y pkg
 }
 
 install_freebsd_git_deps() {
-    install_freebsd_9_stable_deps || return 1
+    install_freebsd_deps || return 1
 
+    SALT_DEPENDENCIES=$(/usr/local/sbin/pkg search -R -d py37-salt | grep 'origin:' \
+        | tail -n +2 | awk -F\" '{print $2}')
     # shellcheck disable=SC2086
-    SALT_DEPENDENCIES=$(/usr/local/sbin/pkg search ${FROM_FREEBSD} -R -d sysutils/py-salt | grep -i origin | sed -e 's/^[[:space:]]*//' | tail -n +2 | awk -F\" '{print $2}' | tr '\n' ' ')
-    # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y ${SALT_DEPENDENCIES} || return 1
-    # install python meta package
-    /usr/local/sbin/pkg install -y lang/python || return 1
+    /usr/local/sbin/pkg install -y ${SALT_DEPENDENCIES} python || return 1
 
     if ! __check_command_exists git; then
         /usr/local/sbin/pkg install -y git || return 1
     fi
-
-    /usr/local/sbin/pkg install -y www/py-requests || return 1
-
     __git_clone_and_checkout || return 1
 
-    if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
-        __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
-        if [ "${__REQUIRED_TORNADO}" != "" ]; then
-             /usr/local/sbin/pkg install -y www/py-tornado4 || return 1
-        fi
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
     fi
+
+    /usr/local/sbin/pkg install -y py37-requests || return 1
 
     echodebug "Adapting paths to FreeBSD"
     # The list of files was taken from Salt's BSD port Makefile
@@ -5430,43 +5524,26 @@ install_freebsd_git_deps() {
     return 0
 }
 
-install_freebsd_9_stable() {
-    # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_SALTSTACK} -y sysutils/py-salt || return 1
-    return 0
-}
-
-install_freebsd_10_stable() {
-    # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y sysutils/py-salt || return 1
-    return 0
-}
-
-install_freebsd_11_stable() {
+install_freebsd_stable() {
 #
 # installing latest version of salt from FreeBSD CURRENT ports repo
 #
     # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y sysutils/py-salt || return 1
-
-    return 0
-}
-
-install_freebsd_12_stable() {
-#
-# installing latest version of salt from FreeBSD CURRENT ports repo
-#
-    # shellcheck disable=SC2086
-    /usr/local/sbin/pkg install ${FROM_FREEBSD} -y sysutils/py-salt || return 1
+    /usr/local/sbin/pkg install -y py37-salt || return 1
 
     return 0
 }
 
 install_freebsd_git() {
 
-    # /usr/local/bin/python2 in FreeBSD is a symlink to /usr/local/bin/python2.7
-    __PYTHON_PATH=$(readlink -f "$(command -v python2)")
+    # /usr/local/bin/python3 in FreeBSD is a symlink to /usr/local/bin/python3.7
+    __PYTHON_PATH=$(readlink -f "$(command -v python3)")
     __ESCAPED_PYTHON_PATH=$(echo "${__PYTHON_PATH}" | sed 's/\//\\\//g')
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${__PYTHON_PATH}" || return 1
+        return 0
+    fi
 
     # Install from git
     if [ ! -f salt/syspaths.py ]; then
@@ -5499,7 +5576,7 @@ install_freebsd_git() {
     return 0
 }
 
-install_freebsd_9_stable_post() {
+install_freebsd_stable_post() {
     for fname in api master minion syndic; do
         # Skip salt-api since the service should be opt-in and not necessarily started on boot
         [ $fname = "api" ] && continue
@@ -5509,34 +5586,15 @@ install_freebsd_9_stable_post() {
         [ $fname = "master" ] && [ "$_INSTALL_MASTER" -eq $BS_FALSE ] && continue
         [ $fname = "syndic" ] && [ "$_INSTALL_SYNDIC" -eq $BS_FALSE ] && continue
 
-        enable_string="salt_${fname}_enable=\"YES\""
+        enable_string="salt_${fname}_enable=YES"
         grep "$enable_string" /etc/rc.conf >/dev/null 2>&1
-        [ $? -eq 1 ] && echo "$enable_string" >> /etc/rc.conf
+        [ $? -eq 1 ] && sysrc $enable_string
 
-        if [ $fname = "minion" ] ; then
-            grep "salt_minion_paths" /etc/rc.conf >/dev/null 2>&1
-            [ $? -eq 1 ] && echo "salt_minion_paths=\"/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin\"" >> /etc/rc.conf
-        fi
     done
 }
 
-install_freebsd_10_stable_post() {
-    install_freebsd_9_stable_post
-}
-
-install_freebsd_11_stable_post() {
-    install_freebsd_9_stable_post
-}
-
-install_freebsd_12_stable_post() {
-    install_freebsd_9_stable_post
-}
-
 install_freebsd_git_post() {
-    if [ -f $salt_conf_file ]; then
-        rm -f $salt_conf_file
-    fi
-    install_freebsd_9_stable_post || return 1
+    install_freebsd_stable_post || return 1
     return 0
 }
 
@@ -5592,6 +5650,11 @@ install_openbsd_git_deps() {
         _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf/"
         CONFIG_SALT_FUNC="config_salt"
     fi
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     return 0
 }
 
@@ -5599,6 +5662,11 @@ install_openbsd_git() {
     #
     # Install from git
     #
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     if [ ! -f salt/syspaths.py ]; then
         # We still can't provide the system paths, salt 0.16.x
         /usr/local/bin/python2.7 setup.py ${SETUP_PY_INSTALL_ARGS} install || return 1
@@ -5688,12 +5756,12 @@ install_smartos_deps() {
         if [ ! -f "$_SALT_ETC_DIR/minion" ] && [ ! -f "$_TEMP_CONFIG_DIR/minion" ]; then
             # shellcheck disable=SC2086
             curl $_CURL_ARGS -s -o "$_TEMP_CONFIG_DIR/minion" -L \
-                https://raw.githubusercontent.com/saltstack/salt/develop/conf/minion || return 1
+                https://raw.githubusercontent.com/saltstack/salt/master/conf/minion || return 1
         fi
         if [ ! -f "$_SALT_ETC_DIR/master" ] && [ ! -f $_TEMP_CONFIG_DIR/master ]; then
             # shellcheck disable=SC2086
             curl $_CURL_ARGS -s -o "$_TEMP_CONFIG_DIR/master" -L \
-                https://raw.githubusercontent.com/saltstack/salt/develop/conf/master || return 1
+                https://raw.githubusercontent.com/saltstack/salt/master/conf/master || return 1
         fi
     fi
 
@@ -5715,6 +5783,12 @@ install_smartos_git_deps() {
 
     if ! __check_command_exists git; then
         pkgin -y install git || return 1
+    fi
+
+    __git_clone_and_checkout || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
     fi
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
@@ -5741,7 +5815,6 @@ install_smartos_git_deps() {
         fi
     fi
 
-    __git_clone_and_checkout || return 1
     # Let's trigger config_salt()
     if [ "$_TEMP_CONFIG_DIR" = "null" ]; then
         _TEMP_CONFIG_DIR="${_SALT_GIT_CHECKOUT_DIR}/conf/"
@@ -5757,6 +5830,12 @@ install_smartos_stable() {
 }
 
 install_smartos_git() {
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     # Use setuptools in order to also install dependencies
     # lets force our config path on the setup for now, since salt/syspaths.py only  got fixed in 2015.5.0
     USE_SETUPTOOLS=1 /opt/local/bin/python setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install || return 1
@@ -5780,7 +5859,7 @@ install_smartos_post() {
             if [ ! -f "$_TEMP_CONFIG_DIR/salt-$fname.xml" ]; then
                 # shellcheck disable=SC2086
                 curl $_CURL_ARGS -s -o "$_TEMP_CONFIG_DIR/salt-$fname.xml" -L \
-                    "https://raw.githubusercontent.com/saltstack/salt/develop/pkg/smartos/salt-$fname.xml"
+                    "https://raw.githubusercontent.com/saltstack/salt/master/pkg/smartos/salt-$fname.xml"
             fi
             svccfg import "$_TEMP_CONFIG_DIR/salt-$fname.xml"
             if [ "${VIRTUAL_TYPE}" = "global" ]; then
@@ -5984,14 +6063,18 @@ install_opensuse_git_deps() {
         __zypper_install git  || return 1
     fi
 
-    __zypper_install patch || return 1
-
     __git_clone_and_checkout || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
+    __zypper_install patch || return 1
 
     __PACKAGES="libzmq5 python-Jinja2 python-m2crypto python-msgpack-python python-pycrypto python-pyzmq python-xml python-futures"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __PACKAGES="${__PACKAGES} python-tornado"
@@ -6037,6 +6120,12 @@ install_opensuse_stable() {
 }
 
 install_opensuse_git() {
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     python setup.py ${SETUP_PY_INSTALL_ARGS} install --prefix=/usr || return 1
     return 0
 }
@@ -6193,6 +6282,10 @@ install_opensuse_15_git_deps() {
 
     __git_clone_and_checkout || return 1
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
+
     # Py3 is the default bootstrap install for Leap 15
     # However, git installs might specify "-x python2"
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 2 ]; then
@@ -6210,7 +6303,7 @@ install_opensuse_15_git_deps() {
     __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-xml"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __PACKAGES="${__PACKAGES} python${PY_PKG_VER}-tornado"
@@ -6240,6 +6333,11 @@ install_opensuse_15_git() {
         _PYEXE=${_PY_EXE}
     else
         _PYEXE=python3
+    fi
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
     fi
 
     ${_PYEXE} setup.py ${SETUP_PY_INSTALL_ARGS} install --prefix=/usr || return 1
@@ -6300,7 +6398,7 @@ install_suse_12_git_deps() {
     __PACKAGES="${__PACKAGES} python-pyzmq python-xml"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __PACKAGES="${__PACKAGES} python-tornado"
@@ -6396,7 +6494,7 @@ install_suse_11_git_deps() {
     __PACKAGES="${__PACKAGES} python-pyzmq python-xml python-zypp"
 
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt" ]; then
-        # We're on the develop branch, install whichever tornado is on the requirements file
+        # We're on the master branch, install whichever tornado is on the requirements file
         __REQUIRED_TORNADO="$(grep tornado "${_SALT_GIT_CHECKOUT_DIR}/requirements/base.txt")"
         if [ "${__REQUIRED_TORNADO}" != "" ]; then
             __PACKAGES="${__PACKAGES} python-tornado"
@@ -6750,6 +6848,11 @@ install_macosx_stable_deps() {
 install_macosx_git_deps() {
     install_macosx_stable_deps || return 1
 
+    if ! echo "$PATH" | grep -q /usr/local/bin; then
+        echowarn "/usr/local/bin was not found in \$PATH. Adding it for the duration of the script execution."
+        export PATH=/usr/local/bin:$PATH
+    fi
+
     __fetch_url "/tmp/get-pip.py" "https://bootstrap.pypa.io/get-pip.py" || return 1
 
     if [ -n "$_PY_EXE" ]; then
@@ -6762,6 +6865,10 @@ install_macosx_git_deps() {
     $_PYEXE /tmp/get-pip.py || return 1
 
     __git_clone_and_checkout || return 1
+
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+        return 0
+    fi
 
     __PIP_REQUIREMENTS="dev_python27.txt"
     if [ -n "$_PY_EXE" ] && [ "$_PY_MAJOR_VERSION" -eq 3 ]; then
@@ -6792,6 +6899,11 @@ install_macosx_git() {
         _PYEXE=python2.7
     fi
 
+    if [ "${_POST_NEON_INSTALL}" -eq $BS_TRUE ]; then
+         __install_salt_from_repo_post_neon "${_PY_EXE}" || return 1
+        return 0
+    fi
+
     if [ -f "${_SALT_GIT_CHECKOUT_DIR}/salt/syspaths.py" ]; then
         $_PYEXE setup.py --salt-config-dir="$_SALT_ETC_DIR" --salt-cache-dir="${_SALT_CACHE_DIR}" ${SETUP_PY_INSTALL_ARGS} install --prefix=/opt/salt || return 1
     else
@@ -6802,14 +6914,18 @@ install_macosx_git() {
 }
 
 install_macosx_stable_post() {
-   if [ ! -f /etc/paths.d/salt ]; then
-       print "%s\n" "/opt/salt/bin" "/usr/local/sbin" > /etc/paths.d/salt
-   fi
+    if [ ! -f /etc/paths.d/salt ]; then
+        print "%s\n" "/opt/salt/bin" "/usr/local/sbin" > /etc/paths.d/salt
+    fi
 
-   # shellcheck disable=SC1091
-   . /etc/profile
+     # Don'f fail because of unknown variable on the next step
+    set +o nounset
+    # shellcheck disable=SC1091
+    . /etc/profile
+    # Revert nounset to it's previous state
+    set -o nounset
 
-   return 0
+    return 0
 }
 
 install_macosx_git_post() {

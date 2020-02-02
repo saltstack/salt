@@ -176,7 +176,7 @@ def option(
         Shorthand to omit all of the above and return matches only from the
         "sane defaults".
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     wildcard : False
         If used, this will perform pattern matching on keys. Note that this
@@ -189,7 +189,7 @@ def option(
 
             {'foo.bar': True, 'foo.baz': False}
 
-        .. versionadded:: Neon
+        .. versionadded:: 3000
 
     CLI Example:
 

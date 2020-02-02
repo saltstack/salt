@@ -70,12 +70,12 @@ class ArchiveTest(ModuleCase, SaltReturnAssertsMixin):
         log.debug('Checking for extracted file: %s', path)
         self.assertTrue(os.path.isfile(path))
 
-    def run_function(self, *args, **kwargs):
+    def run_function(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(ArchiveTest, self).run_function(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret
 
-    def run_state(self, *args, **kwargs):
+    def run_state(self, *args, **kwargs):  # pylint: disable=arguments-differ
         ret = super(ArchiveTest, self).run_state(*args, **kwargs)
         log.debug('ret = %s', ret)
         return ret
