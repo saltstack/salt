@@ -989,7 +989,8 @@ class MinionManager(MinionBase):
                       safe,
                       io_loop=io_loop,
                       loaded_base_name=loaded_base_name,
-                      jid_queue=jid_queue)
+                      jid_queue=jid_queue,
+                      top=True)
 
     def _check_minions(self):
         '''
@@ -1192,21 +1193,22 @@ class Minion(MinionBase):
         if signal.getsignal(signal.SIGTERM) is signal.SIG_DFL:
             # No custom signal handling was added, install our own
             signal.signal(signal.SIGTERM, self._handle_signals)
-        self.job_q = multiprocessing.Queue()
-        self.job_spawner_proc = salt.utils.process.Process(
-            target=self.job_spawner,
-            args=(
-                self.job_q,
-                self.opts,
-                self.is_ready,
-            ),
-            # These need to be passed in explicitly because once forked, the logging
-            # machiner will no longer be running in the main process, as it currently
-            # expects.
-            log_queue=salt.log.setup.get_multiprocessing_logging_queue(),
-            log_queue_level=salt.log.setup.get_multiprocessing_logging_level()
-        )
-        self.job_spawner_proc.start()
+        if top and not hasattr(self, 'job_q'):
+            self.job_q = multiprocessing.Queue()
+            self.job_spawner_proc = salt.utils.process.Process(
+                target=self.job_spawner,
+                args=(
+                    self.job_q,
+                    self.opts,
+                    self.is_ready,
+                ),
+                # These need to be passed in explicitly because once forked, the logging
+                # machiner will no longer be running in the main process, as it currently
+                # expects.
+                log_queue=salt.log.setup.get_multiprocessing_logging_queue(),
+                log_queue_level=salt.log.setup.get_multiprocessing_logging_level()
+            )
+            self.job_spawner_proc.start()
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         self._running = False
@@ -1624,33 +1626,57 @@ class Minion(MinionBase):
         run_func(minion_instance, opts, data)
 
     @classmethod
-    def job_spawner(cls, queue, opts, is_ready):
+    def job_spawner(cls, job_queue, opts, is_ready):
         minion_instance = cls(opts, proc_man=False)
         minion_instance._setup_core()
-        payload = queue.get()
-        if payload['kind'] != 'master_uri':
-            raise Exception("NOT MASTER URI")
-        minion_instance.opts['master_uri'] = payload['data']
-        minion_instance.connected = True
-        minion_instance.gen_modules(True)
         last = time.time()
+        threads = []
         while True:
-            payload = queue.get()
+            try:
+                payload = job_queue.get(block=False)
+            except queue.Empty:
+                continue
+            if payload['kind'] == 'master_uri':
+                thread = threading.Thread(
+                    target=minion_instance.spawn_job,
+                    args=(minion_instance, payload,)
+                )
+                thread.start()
+                threads.append(thread)
+            else:
+                minion_instance.spawn_job(minion_instance, payload)
+            for thread in threads[:]:
+                if not thread.is_alive():
+                    threads.remove(thread)
+            if time.time() - last >= 10:
+                minion_instance.cleanup_subprocesses()
+                last = time.time()
+
+    def spawn_job(self, minion_instance, payload):
+        salt.ext.tornado.ioloop.IOLoop().make_current()
+        try:
             if 'kind' not in payload:
                 log.error("Expect kind")
-            if payload['kind'] == 'pillar_update':
+            if payload['kind'] == 'master_uri':
+                sys.stdout.flush()
+                minion_instance.opts['master_uri'] = payload['data']
+                minion_instance.connected = True
+                minion_instance.gen_modules(True)
+            elif payload['kind'] == 'pillar_update':
                 minion_instance.opts['pillar'] = payload['data']['pillar']
                 minion_instance.opts['grains'] = payload['data']['grains']
                 minion_instance.grains_cache = minion_instance.opts['grains']
                 minion_instance.matchers_refresh()
                 minion_instance.beacons_refresh()
             elif payload['kind'] == 'payload':
+               # if payload['data']['fun']['saltutil.sync_all']:
+               #     continue
                 minion_instance.handle_payload(payload['data'])
             else:
                 log.error("unrecognized spawn kind %s", payload['kind'])
-            if time.time() - last >= 10:
-                minion_instance.cleanup_subprocesses()
-                last = time.time()
+        except Exception as exc:
+            print("WTFSON %r" %(exc))
+            sys.stdout.flush()
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
