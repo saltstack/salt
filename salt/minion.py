@@ -1707,7 +1707,7 @@ class Minion(MinionBase):
         if function_name in minion_instance.functions or allow_missing_funcs is True:
             try:
                 minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.get('pillar', {}).get('minion_blackout', False):
+                if minion_instance.connected and minion_instance.opts.get('pillar', {}).get('minion_blackout', False):
                     whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if function_name != 'saltutil.refresh_pillar' and function_name not in whitelist:
@@ -1930,7 +1930,7 @@ class Minion(MinionBase):
                 ret['success'][data['fun'][ind]] = False
             try:
                 minion_blackout_violation = False
-                if minion_instance.connected and minion_instance.get('pillar', {}).get('minion_blackout', False):
+                if minion_instance.connected and minion_instance.opts.get('pillar', {}).get('minion_blackout', False):
                     whitelist = minion_instance.opts['pillar'].get('minion_blackout_whitelist', [])
                     # this minion is blacked out. Only allow saltutil.refresh_pillar and the whitelist
                     if data['fun'][ind] != 'saltutil.refresh_pillar' and data['fun'][ind] not in whitelist:
