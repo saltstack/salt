@@ -11,6 +11,7 @@ import io
 
 class i18nTestCase(TestCase):
 
+    
     @with_tempdir()
     def test_i18n_characters_with_file_line(self, tempdir):
         tempfile = os.path.join(tempdir, 'temp_file')
