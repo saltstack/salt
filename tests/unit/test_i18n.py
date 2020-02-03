@@ -6,6 +6,7 @@
 '''
 from __future__ import absolute_import
 from tests.support.unit import TestCase
+from tests.support.helpers import with_tempdir
 import os
 import io
 
