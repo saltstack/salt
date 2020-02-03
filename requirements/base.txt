@@ -5,8 +5,7 @@ msgpack>=0.5,!=0.5.5
 PyYAML
 MarkupSafe
 requests>=1.0.0
-tornado>=4.2.1,<6.0; python_version < '3'
-tornado>=4.2.1,<6.0; python_version >= '3.4'
+tornado==5.1
 
 # Required by Tornado to handle threads stuff.
 futures>=2.0; python_version < '3.0'

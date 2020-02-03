@@ -4,7 +4,7 @@ Routines to set up a minion
 '''
 # Import python libs
 from __future__ import absolute_import, print_function, with_statement, unicode_literals
-#import functools
+import functools
 import os
 import sys
 import copy
@@ -32,7 +32,7 @@ from salt.utils.zeromq import zmq, ZMQ_VERSION_INFO
 import salt.transport.client
 import salt.defaults.exitcodes
 
-#from salt.utils.ctx import RequestContext
+from salt.utils.ctx import RequestContext
 
 # pylint: enable=no-name-in-module,redefined-builtin
 import tornado
@@ -1620,10 +1620,10 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-        #with tornado.stack_context.StackContext(functools.partial(RequestContext,
-        #                                                          {'data': data, 'opts': opts})):
-        #    with tornado.stack_context.StackContext(minion_instance.ctx):
-        run_func(minion_instance, opts, data)
+        with tornado.stack_context.StackContext(functools.partial(RequestContext,
+                                                                  {'data': data, 'opts': opts})):
+            with tornado.stack_context.StackContext(minion_instance.ctx):
+        #run_func(minion_instance, opts, data)
 
     @classmethod
     def job_spawner(cls, job_queue, opts, is_ready):
