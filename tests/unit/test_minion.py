@@ -410,9 +410,14 @@ class MinionTestCase(TestCase, AdaptedConfigurationTestCaseMixin):
             io_loop.run_sync(lambda: minion._handle_decoded_payload(job_data))
 
     def test_maintenance(self):
+        '''
+        Test basic functionality of the maintenance routine
+        '''
         class MaintenanceException(Exception):
-            '''Thrown when handle_grains_cache is called to break out of the while loop'''
-            pass
+            '''
+            Thrown when handle_grains_cache is called to break out of the while loop
+            '''
+
         opts = {'grains_cache': True, 'grains_refresh_every': 1, 'loop_interval': 1}
         with patch('salt.minion.time') as mock_time, \
                 patch.object(salt.minion.Maintenance, 'handle_grains_cache',
