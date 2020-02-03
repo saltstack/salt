@@ -28,6 +28,7 @@ import salt.utils.asynchronous
 from salt._compat import ipaddress
 from salt.utils.network import parse_host_port
 from salt.ext.six.moves import range
+from salt.ext.six.moves import queue
 from salt.utils.zeromq import zmq, ZMQ_VERSION_INFO
 import salt.transport.client
 import salt.defaults.exitcodes
@@ -1108,7 +1109,7 @@ class Minion(MinionBase):
     This class instantiates a minion, runs connections for a minion,
     and loads all of the functions into the minion
     '''
-    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None, proc_man=True):  # pylint: disable=W0231
+    def __init__(self, opts, timeout=60, safe=True, loaded_base_name=None, io_loop=None, jid_queue=None, proc_man=True, top=False):  # pylint: disable=W0231
         '''
         Pass in the options dict
         '''
@@ -1622,8 +1623,7 @@ class Minion(MinionBase):
 
         with tornado.stack_context.StackContext(functools.partial(RequestContext,
                                                                   {'data': data, 'opts': opts})):
-            with tornado.stack_context.StackContext(minion_instance.ctx):
-        #run_func(minion_instance, opts, data)
+            run_func(minion_instance, opts, data)
 
     @classmethod
     def job_spawner(cls, job_queue, opts, is_ready):
