@@ -9,6 +9,7 @@ import textwrap
 
 # Import Salt Testing libs
 import salt.utils.platform
+import salt.utils.stringutils
 
 # Import 3rd-party libs
 from salt.ext import six
@@ -67,11 +68,13 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         that has an entry in /etc/passwd but not /etc/shadow.
         """
         data = {
-            "/etc/shadow": textwrap.dedent(
-                """\
+            "/etc/shadow": salt.utils.stringutils.to_bytes(
+                textwrap.dedent(
+                    """\
                 foo:orighash:17955::::::
                 bar:somehash:17955::::::
                 """
+                )
             ),
             "*": Exception("Attempted to open something other than /etc/shadow"),
         }
@@ -85,10 +88,15 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         #
         user = "bar"
         password = "newhash"
+        user_exists_mock = MagicMock(
+            side_effect=lambda x, **y: 0 if x == ["id", user] else DEFAULT
+        )
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=data)
         ) as shadow_mock, patch("os.path.isfile", isfile_mock), patch.object(
             shadow, "info", shadow_info_mock
+        ), patch.dict(
+            shadow.__salt__, {"cmd.retcode": user_exists_mock}
         ), patch.dict(
             shadow.__grains__, {"os": "CentOS"}
         ):
@@ -118,10 +126,15 @@ class LinuxShadowTest(TestCase, LoaderModuleMockMixin):
         #
         user = "baz"
         password = "newhash"
+        user_exists_mock = MagicMock(
+            side_effect=lambda x, **y: 0 if x == ["id", user] else DEFAULT
+        )
         with patch(
             "salt.utils.files.fopen", mock_open(read_data=data)
         ) as shadow_mock, patch("os.path.isfile", isfile_mock), patch.object(
             shadow, "info", shadow_info_mock
+        ), patch.dict(
+            shadow.__salt__, {"cmd.retcode": user_exists_mock}
         ), patch.dict(
             shadow.__grains__, {"os": "CentOS"}
         ):
