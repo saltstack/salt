@@ -1465,7 +1465,6 @@ def upgrade_available(pkg,
     return pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd)
 
 
-
 def upgrade(bin_env=None,
             user=None,
             cwd=None,
