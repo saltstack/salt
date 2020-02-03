@@ -376,6 +376,10 @@ def set_password(name, password, use_usermod=False, root=None):
 
         salt '*' shadow.set_password root '$1$UYCIxa628.9qXjpQCjM4a..'
     """
+    if __salt__["cmd.retcode"](["id", name], ignore_retcode=True) != 0:
+        log.warning("user %s does not exist, cannot set password", name)
+        return False
+
     if not salt.utils.data.is_true(use_usermod):
         # Edit the shadow file directly
         # ALT Linux uses tcb to store password hashes. More information found
