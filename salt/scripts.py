@@ -553,3 +553,29 @@ def salt_extend(extension, name, description, salt_dir, merge):
                           description=description,
                           salt_dir=salt_dir,
                           merge=merge)
+
+
+def salt_unity():
+    '''
+    Change the args and redirect to another salt script
+    '''
+    avail = []
+    for fun in dir(sys.modules[__name__]):
+        if fun.startswith('salt'):
+            avail.append(fun[5:])
+    if len(sys.argv) < 2:
+        msg = 'Must pass in a salt command, available commands are:'
+        for cmd in avail:
+            msg += '\n{0}'.format(cmd)
+        print(msg)
+        sys.exit(1)
+    cmd = sys.argv[1]
+    if cmd not in avail:
+        # Fall back to the salt command
+        sys.argv[0] = 'salt'
+        s_fun = salt_main
+    else:
+        sys.argv[0] = 'salt-{0}'.format(cmd)
+        sys.argv.pop(1)
+        s_fun = getattr(sys.modules[__name__], 'salt_{0}'.format(cmd))
+    s_fun()
