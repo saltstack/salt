@@ -87,8 +87,7 @@ import re
 import shutil
 import sys
 import tempfile
-from functools import wraps
-from inspect import getfullargspec
+
 
 # Import Salt libs
 import salt.utils.data
@@ -101,6 +100,7 @@ import salt.utils.url
 import salt.utils.versions
 from salt.ext import six
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
+import salt.utils.platform
 
 # This needs to be named logger so we don't shadow it in pip.install
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -124,28 +124,17 @@ def __virtual__():
     return 'pip'
 
 
-def _pip_bin_env(func):
+def _pip_bin_env(cwd, bin_env):
     """
-    Binary builds need to have the 'cwd' set when using pip. This wrapper will
-    set cwd if pip is being used in 'bin_env' and 'cwd' is None.
+    Binary builds need to have the 'cwd' set when using pip on Windows. This will
+    set cwd if pip is being used in 'bin_env', 'cwd' is None and salt is on windows.
     """
-    @wraps(func)
-    def pip_bin_env(*args, **kwargs):
-        bin_env = kwargs.get('bin_env')
-        if bin_env is not None and kwargs.get('cwd') is None and 'pip' in os.path.basename(bin_env):
-            kwargs['cwd'] = os.path.dirname(bin_env)
 
-        param = getfullargspec(func)
-        if param.varargs is not None and param.varkw is not None:
-            return func(*args, **kwargs)
-        elif param.varargs is not None:
-            return func(*args, **{key: kwargs[key] for key in param.args if key in kwargs})
-        elif param.varargs is not None:
-            return func(**kwargs)
-        else:
-            return func(**{key: kwargs[key] for key in param.args if key in kwargs})
+    if salt.utils.platform.is_windows():
+        if bin_env is not None and cwd is None and 'pip' in os.path.basename(bin_env):
+            cwd = os.path.dirname(bin_env)
 
-    return pip_bin_env
+    return cwd
 
 
 def _clear_context(bin_env=None):
@@ -419,7 +408,6 @@ def _format_env_vars(env_vars):
     return ret
 
 
-@_pip_bin_env
 def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
             requirements=None,
             bin_env=None,
@@ -679,6 +667,8 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 editable=git+https://github.com/worldcompany/djangoembed.git#egg=djangoembed upgrade=True no_deps=True
 
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.append('install')
 
@@ -1004,7 +994,6 @@ def install(pkgs=None,  # pylint: disable=R0912,R0913,R0914
                 shutil.rmtree(tempdir)
 
 
-@_pip_bin_env
 def uninstall(pkgs=None,
               requirements=None,
               bin_env=None,
@@ -1065,6 +1054,8 @@ def uninstall(pkgs=None,
         salt '*' pip.uninstall <package name> bin_env=/path/to/virtualenv
         salt '*' pip.uninstall <package name> bin_env=/path/to/pip_bin
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['uninstall', '-y'])
 
@@ -1143,7 +1134,6 @@ def uninstall(pkgs=None,
                     pass
 
 
-@_pip_bin_env
 def freeze(bin_env=None,
            user=None,
            cwd=None,
@@ -1177,6 +1167,8 @@ def freeze(bin_env=None,
 
         salt '*' pip.freeze bin_env=/home/code/path/to/virtualenv
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.append('freeze')
 
@@ -1207,7 +1199,6 @@ def freeze(bin_env=None,
     return result['stdout'].splitlines()
 
 
-@_pip_bin_env
 def list_(prefix=None,
           bin_env=None,
           user=None,
@@ -1232,6 +1223,8 @@ def list_(prefix=None,
 
         salt '*' pip.list salt
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     packages = {}
 
     if prefix is None or 'pip'.startswith(prefix):
@@ -1279,7 +1272,6 @@ def list_(prefix=None,
     return packages
 
 
-@_pip_bin_env
 def version(bin_env=None, cwd=None):
     '''
     .. versionadded:: 0.17.0
@@ -1295,6 +1287,8 @@ def version(bin_env=None, cwd=None):
 
         salt '*' pip.version
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     contextkey = 'pip.version'
     if bin_env is not None:
         contextkey = '{0}.{1}'.format(contextkey, bin_env)
@@ -1318,7 +1312,6 @@ def version(bin_env=None, cwd=None):
     return pip_version
 
 
-@_pip_bin_env
 def list_upgrades(bin_env=None,
                   user=None,
                   cwd=None):
@@ -1331,6 +1324,8 @@ def list_upgrades(bin_env=None,
 
         salt '*' pip.list_upgrades
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['list', '--outdated'])
 
@@ -1397,7 +1392,6 @@ def list_upgrades(bin_env=None,
     return packages
 
 
-@_pip_bin_env
 def is_installed(pkgname=None,
                  bin_env=None,
                  user=None,
@@ -1421,6 +1415,8 @@ def is_installed(pkgname=None,
 
         salt '*' pip.is_installed salt
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     for line in freeze(bin_env=bin_env, user=user, cwd=cwd):
         if line.startswith('-f') or line.startswith('#'):
             # ignore -f line as it contains --find-links directory
@@ -1449,7 +1445,6 @@ def is_installed(pkgname=None,
     return False
 
 
-@_pip_bin_env
 def upgrade_available(pkg,
                       bin_env=None,
                       user=None,
@@ -1465,10 +1460,12 @@ def upgrade_available(pkg,
 
         salt '*' pip.upgrade_available <package name>
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     return pkg in list_upgrades(bin_env=bin_env, user=user, cwd=cwd)
 
 
-@_pip_bin_env
+
 def upgrade(bin_env=None,
             user=None,
             cwd=None,
@@ -1494,6 +1491,8 @@ def upgrade(bin_env=None,
 
         salt '*' pip.upgrade
     '''
+
+    cwd = _pip_bin_env(cwd, bin_env)
     ret = {'changes': {},
            'result': True,
            'comment': '',
@@ -1527,7 +1526,6 @@ def upgrade(bin_env=None,
     return ret
 
 
-@_pip_bin_env
 def list_all_versions(pkg,
                       bin_env=None,
                       include_alpha=False,
@@ -1580,6 +1578,7 @@ def list_all_versions(pkg,
 
        salt '*' pip.list_all_versions <package name>
     '''
+    cwd = _pip_bin_env(cwd, bin_env)
     cmd = _get_pip_bin(bin_env)
     cmd.extend(['install', '{0}==versions'.format(pkg)])
 
