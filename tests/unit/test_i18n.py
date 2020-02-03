@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
    Test the ability to process characters present in non English operating systems.
-   In German, volume is Datenträger, executed is ausgeführt 
+   In German, volume is Datenträger, executed is ausgeführt
    Current Windows issue: ü results in UnicodeDecodeError: 'utf8' codec can't decode byte 0xfc
 '''
 from __future__ import absolute_import
