@@ -1,2 +1,2 @@
-pycryptodome; sys.platform != 'win32'
+pycrypto>=2.6.1; sys.platform not in 'win32,darwin'
 pycryptodomex; sys.platform == 'win32'
