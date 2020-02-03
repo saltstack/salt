@@ -794,7 +794,7 @@ def get_source_sum(file_name='',
         Specific file name to look for when ``source_hash`` refers to a remote
         file, used to disambiguate ambiguous matches.
 
-    saltenv : base
+    saltenv: base
         Salt fileserver environment from which to retrieve the source_hash. This
         value will only be used when ``source_hash`` refers to a file on the
         Salt fileserver (i.e. one beginning with ``salt://``).
@@ -1127,18 +1127,18 @@ def sed(path,
         A pattern to find in order to replace with ``after``
     after
         Text that will replace ``before``
-    limit : ``''``
+    limit: ``''``
         An initial pattern to search for before searching for ``before``
-    backup : ``.bak``
+    backup: ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
-    options : ``-r -e``
+    options: ``-r -e``
         Options to pass to sed
-    flags : ``g``
+    flags: ``g``
         Flags to modify the sed search; e.g., ``i`` for case-insensitive pattern
         matching
-    negate_match : False
+    negate_match: False
         Negate the search command (``!``)
 
         .. versionadded:: 0.17.0
@@ -1259,13 +1259,13 @@ def psed(path,
         A pattern to find in order to replace with ``after``
     after
         Text that will replace ``before``
-    limit : ``''``
+    limit: ``''``
         An initial pattern to search for before searching for ``before``
-    backup : ``.bak``
+    backup: ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
-    flags : ``gMS``
+    flags: ``gMS``
         Flags to modify the search. Valid values are:
           - ``g``: Replace all occurrences of the pattern, not just the first.
           - ``I``: Ignore case.
@@ -1388,9 +1388,9 @@ def uncomment(path,
         This regex should not include the comment character. A leading ``^``
         character will be stripped for convenience (for easily switching
         between comment() and uncomment()).
-    char : ``#``
+    char: ``#``
         The character to remove in order to uncomment a line
-    backup : ``.bak``
+    backup: ``.bak``
         The file will be backed up before edit with this file extension;
         **WARNING:** each time ``sed``/``comment``/``uncomment`` is called will
         overwrite this backup
@@ -1425,10 +1425,10 @@ def comment(path,
         this pattern will be wrapped in parenthesis and will move any
         preceding/trailing ``^`` or ``$`` characters outside the parenthesis
         (e.g., the pattern ``^foo$`` will be rewritten as ``^(foo)$``)
-    char : ``#``
+    char: ``#``
         The character to be inserted at the beginning of a line in order to
         comment it out
-    backup : ``.bak``
+    backup: ``.bak``
         The file will be backed up before edit with this file extension
 
         .. warning::
@@ -2160,7 +2160,7 @@ def replace(path,
     repl
         The replacement text
 
-    count : 0
+    count: 0
         Maximum number of pattern occurrences to be replaced. If count is a
         positive integer ``n``, only ``n`` occurrences will be replaced,
         otherwise all occurrences will be replaced.
@@ -2179,13 +2179,13 @@ def replace(path,
         ``file`` may be specified which will read the entire file into memory
         before processing.
 
-    append_if_not_found : False
+    append_if_not_found: False
         .. versionadded:: 2014.7.0
 
         If set to ``True``, and pattern is not found, then the content will be
         appended to the file.
 
-    prepend_if_not_found : False
+    prepend_if_not_found: False
         .. versionadded:: 2014.7.0
 
         If set to ``True`` and pattern is not found, then the content will be
@@ -2197,21 +2197,21 @@ def replace(path,
         Content to use for append/prepend if not found. If None (default), uses
         ``repl``. Useful when ``repl`` uses references to group in pattern.
 
-    backup : .bak
+    backup: .bak
         The file extension to use for a backup of the file before editing. Set
         to ``False`` to skip making a backup.
 
-    dry_run : False
+    dry_run: False
         If set to ``True``, no changes will be made to the file, the function
         will just return the changes that would have been made (or a
         ``True``/``False`` value if ``show_changes`` is set to ``False``).
 
-    search_only : False
+    search_only: False
         If set to true, this no changes will be performed on the file, and this
         function will simply return ``True`` if the pattern was matched, and
         ``False`` if not.
 
-    show_changes : True
+    show_changes: True
         If ``True``, return a diff of changes made. Otherwise, return ``True``
         if changes were made, and ``False`` if not.
 
@@ -2221,13 +2221,13 @@ def replace(path,
             diff. This may not normally be a concern, but could impact
             performance if used with large files.
 
-    ignore_if_missing : False
+    ignore_if_missing: False
         .. versionadded:: 2015.8.0
 
         If set to ``True``, this function will simply return ``False``
         if the file doesn't exist. Otherwise, an error will be thrown.
 
-    preserve_inode : True
+    preserve_inode: True
         .. versionadded:: 2015.8.0
 
         Preserve the inode of the file, so that any hard links continue to
@@ -2238,7 +2238,7 @@ def replace(path,
         filename. Hard links will then share an inode with the backup, instead
         (if using ``backup`` to create a backup copy).
 
-    backslash_literal : False
+    backslash_literal: False
         .. versionadded:: 2016.11.7
 
         Interpret backslashes as literal backslashes for the repl and not
@@ -2547,11 +2547,11 @@ def blockreplace(path,
         The content to be used between the two lines identified by marker_start
         and marker_stop.
 
-    append_if_not_found : False
+    append_if_not_found: False
         If markers are not found and set to ``True`` then, the markers and
         content will be appended to the file.
 
-    prepend_if_not_found : False
+    prepend_if_not_found: False
         If markers are not found and set to ``True`` then, the markers and
         content will be prepended to the file.
 
@@ -2560,17 +2560,17 @@ def blockreplace(path,
         The file extension to use for a backup of the file if any edit is made.
         Set to ``False`` to skip making a backup.
 
-    dry_run : False
+    dry_run: False
         If ``True``, do not make any edits to the file and simply return the
         changes that *would* be made.
 
-    show_changes : True
+    show_changes: True
         Controls how changes are presented. If ``True``, this function will
         return a unified diff of the changes made. If False, then it will
         return a boolean (``True`` if any changes were made, otherwise
         ``False``).
 
-    append_newline : False
+    append_newline: False
         Controls whether or not a newline is appended to the content block. If
         the value of this argument is ``True`` then a newline will be added to
         the content block. If it is ``False``, then a newline will *not* be
@@ -3782,7 +3782,7 @@ def remove(path):
 
         salt '*' file.remove /tmp/foo
 
-    .. versionchanged:: Neon
+    .. versionchanged:: 3000
         The method now works on all types of file system entries, not just
         files, directories and symlinks.
     '''
@@ -5057,16 +5057,16 @@ def get_diff(file1,
             had to be a file on the salt fileserver (i.e.
             ``salt://somefile.txt``)
 
-    show_filenames : True
+    show_filenames: True
         Set to ``False`` to hide the filenames in the top two lines of the
         diff.
 
-    show_changes : True
+    show_changes: True
         If set to ``False``, and there are differences, then instead of a diff
         a simple message stating that show_changes is set to ``False`` will be
         returned.
 
-    template : False
+    template: False
         Set to ``True`` if two templates are being compared. This is not useful
         except for within states, with the ``obfuscate_templates`` option set
         to ``True``.
@@ -5303,14 +5303,14 @@ def manage_file(name,
     dir_mode
         mode for directories created with makedirs
 
-    skip_verify : False
+    skip_verify: False
         If ``True``, hash verification of remote file sources (``http://``,
         ``https://``, ``ftp://``) will be skipped, and the ``source_hash``
         argument will be ignored.
 
         .. versionadded:: 2016.3.0
 
-    keep_mode : False
+    keep_mode: False
         If ``True``, and the ``source`` is a file from the Salt fileserver (or
         a local file on the minion), the mode of the destination file will be
         set to the mode of the source file.
@@ -5330,7 +5330,7 @@ def manage_file(name,
 
         .. versionadded:: 2017.7.0
 
-    encoding_errors : 'strict'
+    encoding_errors: 'strict'
         Default is ```'strict'```.
         See https://docs.python.org/2/library/codecs.html#codec-base-classes
         for the error handling schemes.

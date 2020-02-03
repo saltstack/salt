@@ -2980,7 +2980,7 @@ def run_chroot(root,
     :param list binds: List of directories that will be exported inside
         the chroot with the bind option.
 
-        .. versionadded:: Sodium
+        .. versionadded:: 3000
 
     :param dict env: Environment variables to be set prior to execution.
 

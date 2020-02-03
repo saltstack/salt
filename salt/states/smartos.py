@@ -373,6 +373,9 @@ def config_present(name, value):
     if not __opts__['test'] and ret['changes']:
         ret['result'] = _write_config(config)
 
+        if not ret['result']:
+            ret['comment'] = 'Could not add property {0} with value "{1}" to config'.format(name, value)
+
     return ret
 
 

@@ -49,7 +49,7 @@ filters to help narrow down the results.  In the above example IP addresses
 are only returned if they are on a eth0 interface and in the 10.0.0.0/8 IP
 range.
 
-.. versionchanged:: Sodium
+.. versionchanged:: 3000
 
 The format to define mine_functions has been changed to allow the same format
 as used for module.run. The old format (above) will still be supported.
@@ -73,7 +73,7 @@ as used for module.run. The old format (above) will still be supported.
 Minion-side Access Control
 --------------------------
 
-.. versionadded:: Sodium
+.. versionadded:: 3000
 
 Mine functions can be targeted to only be available to specific minions. This
 uses the same targeting parameters as :ref:`targeting` but with keywords ``allow_tgt``
@@ -114,7 +114,7 @@ positional and key-value arguments is not supported.
         - mine_function: grains.get
         - ip_interfaces
 
-.. versionchanged:: Sodium
+.. versionchanged:: 3000
 
 With the addition of the module.run-like format for defining mine_functions, the
 method of adding aliases remains similar. Just add a ``mine_function`` kwarg with
