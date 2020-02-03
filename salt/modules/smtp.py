@@ -89,13 +89,16 @@ def send_msg(
     attachments=None,
 ):
     """
-    Send a message to an SMTP recipient. Designed for use in states.
+    Send a message to an SMTP recipient. To send a message to multiple \
+    recipients, the recipients should be in a comma-seperated Python string. \
+    Designed for use in states.
 
     CLI Examples:
 
     .. code-block:: bash
 
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' profile='my-smtp-account'
+        salt '*' smtp.send_msg 'admin@example.com,admin2@example.com' 'This is a salt module test for multiple recipients' profile='my-smtp-account'
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com'
         salt '*' smtp.send_msg 'admin@example.com' 'This is a salt module test' username='myuser' password='verybadpass' sender='admin@example.com' server='smtp.domain.com' attachments="['/var/log/messages']"
     """
