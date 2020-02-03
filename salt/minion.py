@@ -1653,7 +1653,7 @@ class Minion(MinionBase):
                 last = time.time()
 
     def spawn_job(self, minion_instance, payload):
-        salt.ext.tornado.ioloop.IOLoop().make_current()
+        tornado.ioloop.IOLoop().make_current()
         try:
             if 'kind' not in payload:
                 log.error("Expect kind")
