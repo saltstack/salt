@@ -8,7 +8,7 @@ from __future__ import absolute_import
 from tests.support.unit import TestCase
 from tests.support.helpers import with_tempdir
 import os
-import io
+import salt.utils.files
 
 
 class i18nTestCase(TestCase):
@@ -16,7 +16,7 @@ class i18nTestCase(TestCase):
     def test_i18n_characters_with_file_line(self, tempdir):
         tempfile = os.path.join(tempdir, 'temp_file')
         content_in = "äü"
-        with io.open(tempfile, 'w', encoding='utf8') as fp:
+        with salt.utils.files.fopen(tempfile, 'w', encoding='utf8') as fp:
             fp.write(content_in)
         ret = self.run_state('file.line',
                              name=tempfile,
@@ -24,6 +24,6 @@ class i18nTestCase(TestCase):
                              mode='insert',
                              location='start')
         self.assertSaltTrueReturn(ret)
-        with io.open(tempfile, 'r', encoding='utf8') as fp:
+        with salt.utils.files.fopen(tempfile, 'r', encoding='utf8') as fp:
             content_out = fp.read()
         self.assertEqual(content_in, content_out)
