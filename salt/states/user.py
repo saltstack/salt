@@ -112,12 +112,21 @@ def _changes(
     if gid is not None and lusr["gid"] not in (gid, __salt__["file.group_to_gid"](gid)):
         change["gid"] = gid
     default_grp = __salt__["file.gid_to_group"](gid if gid is not None else lusr["gid"])
-    # remove the default group from the list for comparison purposes
+    old_default_grp = __salt__["file.gid_to_group"](lusr["gid"])
+    # Remove the default group from the list for comparison purposes.
     if default_grp in lusr["groups"]:
         lusr["groups"].remove(default_grp)
+    # If the group is being changed, make sure that the old primary group is
+    # also removed from the list. Otherwise, if a user's gid is being changed
+    # and their old primary group is reassigned as an additional group, Salt
+    # will not properly detect the need for the change.
+    if old_default_grp != default_grp and old_default_grp in lusr["groups"]:
+        lusr["groups"].remove(old_default_grp)
+    # If there's a group by the same name as the user, remove it from the list
+    # for comparison purposes.
     if name in lusr["groups"] and name not in wanted_groups:
         lusr["groups"].remove(name)
-    # remove default group from wanted_groups, as this requirement is
+    # Remove default group from wanted_groups, as this requirement is
     # already met
     if default_grp in wanted_groups:
         wanted_groups.remove(default_grp)
