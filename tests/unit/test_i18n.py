@@ -12,13 +12,15 @@ import os
 
 # Import Salt Testing libs
 from tests.support.case import ModuleCase
+from tests.support.helpers import with_tempdir
+from tests.support.unit import skipIf
 
 # Import Salt libs
-from tests.support.helpers import with_tempdir
 import salt.utils.files
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
 
 @skipIf(not salt.utils.platform.is_windows(), 'Windows test only')
 class i18nTestClass(ModuleCase):
