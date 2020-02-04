@@ -9,7 +9,7 @@ asn1crypto==0.24.0        # via cryptography
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via pytest
 aws-xray-sdk==0.95        # via moto
-backports-abc==0.5
+backports-abc==0.5 ; python_version < "3.0"
 backports.functools-lru-cache==1.5  # via cheroot, jaraco.functools
 backports.ssl-match-hostname==3.7.0.1
 backports.tempfile==1.0   # via moto
@@ -111,7 +111,7 @@ salttesting==2017.6.1
 scandir==1.10.0           # via pathlib2
 sed==0.3.1
 setproctitle==1.1.10
-singledispatch==3.4.0.3
+singledispatch==3.4.0.3 ; python_version < "3.4"
 six==1.12.0               # via cheroot, cherrypy, cryptography, docker, docker-pycreds, google-auth, kubernetes, mock, more-itertools, moto, packaging, pathlib2, pygit2, pyopenssl, pytest, python-dateutil, python-jose, pyvmomi, responses, salttesting, singledispatch, tempora, websocket-client
 smmap2==2.0.5             # via gitdb2
 smmap==0.9.0
@@ -119,7 +119,6 @@ strict-rfc3339==0.7
 supervisor==3.3.5 ; python_version < "3"
 tempora==1.14.1           # via portend
 timelib==0.2.4
-tornado==4.5.3 ; python_version < "3"
 urllib3==1.24.2           # via botocore, kubernetes, python-etcd, requests
 virtualenv==16.4.3
 watchdog==0.9.0
