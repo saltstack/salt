@@ -56,6 +56,7 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
     """
 
     user_name = "salt-test"
+    alt_group = "salt-test-altgroup"
     user_home = (
         "/var/lib/{0}".format(user_name)
         if not salt.utils.platform.is_windows()
@@ -307,6 +308,44 @@ class UserTest(ModuleCase, SaltReturnAssertsMixin):
 
         user_info = self.run_function("user.info", [self.user_name])
         self.assertTrue(os.path.exists(user_info["home"]))
+
+    def test_user_present_change_gid_but_keep_group(self):
+        """
+        This tests the case in which the default group is changed at the same
+        time as it is also moved into the "groups" list.
+        """
+        # Add the groups
+        ret = self.run_state("group.present", name=self.user_name)
+        self.assertSaltTrueReturn(ret)
+        ret = self.run_state("group.present", name=self.alt_group)
+        self.assertSaltTrueReturn(ret)
+
+        # Add the user
+        ret = self.run_state("user.present", name=self.user_name, gid=self.alt_group,)
+        self.assertSaltTrueReturn(ret)
+
+        # Now change the gid and move alt_group to the groups list
+        ret = self.run_state(
+            "user.present",
+            name=self.user_name,
+            gid=self.user_name,
+            groups=[self.alt_group],
+            allow_gid_change=True,
+        )
+        self.assertSaltTrueReturn(ret)
+
+        # Be extra sure that we did what we intended
+        gid = self.run_function("file.group_to_gid", [self.user_name])
+        uinfo = self.run_function("user.info", [self.user_name])
+
+        assert uinfo["gid"] == gid, uinfo["gid"]
+        assert uinfo["groups"] == [self.user_name, self.alt_group], uinfo["groups"]
+
+        # Do the cleanup here so we don't have to put all of this in the
+        # tearDown to be executed after each test.
+        self.assertSaltTrueReturn(self.run_state("user.absent", name=self.user_name))
+        self.assertSaltTrueReturn(self.run_state("group.absent", name=self.user_name))
+        self.assertSaltTrueReturn(self.run_state("group.absent", name=self.user_name))
 
     def tearDown(self):
         if salt.utils.platform.is_darwin():
