@@ -11,7 +11,7 @@ import logging
 import os
 
 # Import Salt Testing libs
-from tests.support.unit import ModuleCase
+from tests.support.case import ModuleCase
 
 # Import Salt libs
 from tests.support.helpers import with_tempdir
