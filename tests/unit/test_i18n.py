@@ -7,20 +7,13 @@
 
 # Import Python libs
 from __future__ import absolute_import
-import errno
 import logging
 import os
-import shutil
 
 # Import Salt Testing libs
-from tests.support.mixins import AdaptedConfigurationTestCaseMixin, LoaderModuleMockMixin
-from tests.support.mock import patch, Mock, MagicMock
 from tests.support.unit import TestCase
-from tests.support.runtests import RUNTIME_VARS
 
 # Import Salt libs
-from salt.ext.six.moves import range
-from salt import fileclient
 from salt.ext import six
 from tests.support.helpers import with_tempdir
 import salt.utils.files
