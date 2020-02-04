@@ -12,7 +12,7 @@ ignore=CVS,
 
 # Add files or directories matching the regex patterns to the blacklist. The
 # regex matches against base names, not paths.
-ignore-patterns=
+ignore-patterns=salt.ext.*
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
@@ -77,6 +77,7 @@ disable=R,
   no-member,
   unsubscriptable-object,
   un-indexed-curly-braces-error,
+  whitespace-before-colon,
   indentation-is-not-a-multiple-of-four-comment,
   blacklisted-name,
   invalid-name,
@@ -126,6 +127,7 @@ disable=R,
   str-format-in-logging,
   import-outside-toplevel,
   deprecated-method,
+  repr-flag-used-in-string,
   keyword-arg-before-vararg
 
 # Enable the message, report, category or checker with the given id(s). You can
